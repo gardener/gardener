@@ -8,6 +8,10 @@ function add_kubernetes_namespace_name_to_record(tag, timestamp, record)
     end
 
     -- Set kubernetes.namespace_name to the value of namespace_name if exists
+    -- This can be used for a shared service in a shared namespace, e.g. Istio.
+    -- Thus the namespace of the service can't be used to route the logs to the matching shoot's vali.
+    -- This is handled by parsing the individual log lines to set kubernetes.namespace_name to the shoot--project--namespace for each individual log line.
+    -- The dyanmic-host-path setting reads this record to route the log line correctly.
     if record["namespace_name"] ~= nil then
     record["kubernetes"]["namespace_name"] = record["namespace_name"]
 
