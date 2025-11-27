@@ -5,10 +5,21 @@
 package flow
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"k8s.io/utils/clock"
+
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
+
+// Tasker allows multiple implementations of a task, that might wrap flow.Task with custom behavior.
+type Tasker interface {
+	// Spec returns the TaskSpec of a task.
+	Spec() *TaskSpec
+	GetID() TaskID
+}
 
 // Task is a unit of work. It has a name, a payload function and a set of dependencies.
 // A is only started once all its dependencies have been completed successfully.
@@ -19,12 +30,59 @@ type Task struct {
 	Dependencies TaskIDs
 }
 
+// GetID returns the ID of the task.
+func (t Task) GetID() TaskID {
+	return TaskID(t.Name)
+}
+
 // Spec returns the TaskSpec of a task.
-func (t *Task) Spec() *TaskSpec {
+func (t Task) Spec() *TaskSpec {
 	return &TaskSpec{
 		t.Fn,
 		t.SkipIf,
 		t.Dependencies.Copy(),
+	}
+}
+
+// RetryableTask is like Task, but it is retried until the timeout is reached.
+//
+// This is similar to a Task with a TaskFn that is wrapped with .RetryUntilTimeout(), but the task can optionally
+// specify a reporter that will be called on every retry.
+type RetryableTask struct {
+	Name         string
+	Fn           TaskFn
+	SkipIf       bool
+	Dependencies TaskIDs
+
+	Reporter TaskRetryReporter
+	Timeout  time.Duration
+	Interval time.Duration
+}
+
+// GetID returns the ID of the task.
+func (t RetryableTask) GetID() TaskID {
+	return TaskID(t.Name)
+}
+
+// Spec returns the TaskSpec of a task.
+func (t RetryableTask) Spec() *TaskSpec {
+	return &TaskSpec{
+		Fn: func(ctx context.Context) error {
+			ctx, cancel := context.WithTimeout(ctx, t.Timeout)
+			defer cancel()
+
+			return retry.Until(ctx, t.Interval, func(ctx context.Context) (done bool, err error) {
+				if err := t.Fn(ctx); err != nil {
+					if t.Reporter != nil {
+						t.Reporter.ReportRetry(ctx, t.GetID(), err)
+					}
+					return retry.MinorError(err)
+				}
+				return retry.Ok()
+			})
+		},
+		Skip:         t.SkipIf,
+		Dependencies: t.Dependencies.Copy(),
 	}
 }
 
@@ -62,8 +120,8 @@ func NewGraph(name string) *Graph {
 // This panics if
 // - There is already a Task present with the same name
 // - One of the dependencies of the Task is not present
-func (g *Graph) Add(task Task) TaskID {
-	id := TaskID(task.Name)
+func (g *Graph) Add(task Tasker) TaskID {
+	id := task.GetID()
 	if _, ok := g.tasks[id]; ok {
 		panic(fmt.Sprintf("Task with id %q already exists", id))
 	}
