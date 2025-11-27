@@ -37,7 +37,7 @@ APIMACHINERY_PKGS=(
   -k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
 )
 
-# For go-to-protobuf I need a path with `github.com/gardener/gardener` as it expects a structure like in the former GOPATH.
+# For go-to-protobuf, a path ending with `github.com/gardener/gardener` is expected, similar to the former GOPATH structure.
 TMP_DIR=$(mktemp -d)
 trap "rm -rf ${TMP_DIR}" EXIT
 mkdir -p "${TMP_DIR}/github.com/gardener/"
