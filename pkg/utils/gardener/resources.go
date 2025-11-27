@@ -102,42 +102,12 @@ func ReconcileWorkloadIdentityReferencedResources(ctx context.Context, gardenCli
 // createSecretForWorkloadIdentity creates a Secret in the target namespace in the seed for the given WorkloadIdentity.
 // The secret name is added to the secretsToRetain parameter.
 func createSecretForWorkloadIdentity(ctx context.Context, gardenClient, seedClient client.Client, workloadIdentityName, sourceNamespace, targetSecret, targetNamespace string, referringObj client.Object) error {
-	gvk, err := gardenClient.GroupVersionKindFor(referringObj)
-	if err != nil {
-		return fmt.Errorf("failed to parse the GVK of the referring object: %w", err)
-	}
-
-	contextObject := securityv1alpha1.ContextObject{
-		APIVersion: gvk.GroupVersion().String(),
-		Kind:       gvk.Kind,
-		Name:       referringObj.GetName(),
-		UID:        referringObj.GetUID(),
-	}
-	if ns := referringObj.GetNamespace(); ns != "" {
-		contextObject.Namespace = &ns
-	}
-
 	workloadIdentity := &securityv1alpha1.WorkloadIdentity{}
 	if err := gardenClient.Get(ctx, client.ObjectKey{Namespace: sourceNamespace, Name: workloadIdentityName}, workloadIdentity); err != nil {
 		return fmt.Errorf("failed to get WorkloadIdentity: %w", err)
 	}
 
-	s, err := workloadidentity.NewSecret(
-		targetSecret,
-		targetNamespace,
-		workloadidentity.For(workloadIdentityName, sourceNamespace, workloadIdentity.Spec.TargetSystem.Type),
-		workloadidentity.WithProviderConfig(workloadIdentity.Spec.TargetSystem.ProviderConfig),
-		workloadidentity.WithContextObject(contextObject),
-		workloadidentity.WithLabels(referencedWorkloadIdentitySecretLabels),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create workload identity secret %s/%s: %w", targetNamespace, targetSecret, err)
-	}
-	if err := s.Reconcile(ctx, seedClient); err != nil {
-		return fmt.Errorf("failed to reconcile workload identity secret %s/%s: %w", targetNamespace, targetSecret, err)
-	}
-
-	return nil
+	return workloadidentity.Deploy(ctx, seedClient, workloadIdentity, targetSecret, targetNamespace, nil, referencedWorkloadIdentitySecretLabels, referringObj)
 }
 
 func deleteUnreferencedWorkloadIdentitySecrets(ctx context.Context, c client.Client, namespace string, secretsToRetain sets.Set[string]) error {
