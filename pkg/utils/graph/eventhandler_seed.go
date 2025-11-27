@@ -179,7 +179,7 @@ func addSeedResources(seedSpec gardencorev1beta1.SeedSpec, g *graph, seedVertex 
 	for _, resource := range seedSpec.Resources {
 		// only v1.Secrets, v1.ConfigMaps, and security.gardener.cloud/v1alpha1.WorkloadIdentity are supported here
 		switch resource.ResourceRef.APIVersion {
-		case "v1":
+		case corev1.SchemeGroupVersion.String():
 			if resource.ResourceRef.Kind == "Secret" {
 				secretVertex := g.getOrCreateVertex(VertexTypeSecret, v1beta1constants.GardenNamespace, resource.ResourceRef.Name)
 				g.addEdge(secretVertex, seedVertex)
@@ -188,7 +188,7 @@ func addSeedResources(seedSpec gardencorev1beta1.SeedSpec, g *graph, seedVertex 
 				configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, v1beta1constants.GardenNamespace, resource.ResourceRef.Name)
 				g.addEdge(configMapVertex, seedVertex)
 			}
-		case "security.gardener.cloud/v1alpha1":
+		case securityv1alpha1.SchemeGroupVersion.String():
 			if resource.ResourceRef.Kind == "WorkloadIdentity" {
 				workloadIdentityVertex := g.getOrCreateVertex(VertexTypeWorkloadIdentity, v1beta1constants.GardenNamespace, resource.ResourceRef.Name)
 				g.addEdge(workloadIdentityVertex, seedVertex)
