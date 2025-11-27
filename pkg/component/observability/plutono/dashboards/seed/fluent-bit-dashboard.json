@@ -687,7 +687,7 @@
     },
     {
       "datasource": "prometheus-aggregate",
-      "description": "Total records send to output plugin clients",
+      "description": "Total records sent to output plugin clients",
       "fieldConfig": {
         "defaults": {
           "color": {
