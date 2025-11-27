@@ -25,7 +25,7 @@ import (
 const (
 	mediaTypeHelm = "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
 
-	inKubernetesRegistry = "local.gardener.cloud:"
+	inKubernetesRegistry = "garden.local.gardener.cloud:5001"
 )
 
 type pullSecretNamespace struct{}
@@ -122,7 +122,10 @@ func buildRef(oci *gardencorev1.OCIRepository) (name.Reference, error) {
 	}
 
 	// in the local setup we don't want to use TLS
-	if strings.Contains(ref, inKubernetesRegistry) {
+	//
+	// Allow "registry.local.gardener.cloud:5000" to make the e2e-upgrade tests work.
+	// With https://github.com/gardener/gardener/pull/13551 the local registry will be exposed under "registry.local.gardener.cloud:5000".
+	if strings.Contains(ref, inKubernetesRegistry) || strings.Contains(ref, "registry.local.gardener.cloud:5000") {
 		opts = append(opts, name.Insecure)
 	}
 
