@@ -50,7 +50,7 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 		SchemeGroupVersion.WithKind("ControllerInstallation"),
 		func(label, value string) (string, string, error) {
 			switch label {
-			case "metadata.name", core.RegistrationRefName, core.SeedRefName, core.ShootRefName:
+			case "metadata.name", core.RegistrationRefName, core.SeedRefName, core.ShootRefName, core.ShootRefNamespace:
 				return label, value, nil
 			default:
 				return "", "", fmt.Errorf("field label not supported: %s", label)

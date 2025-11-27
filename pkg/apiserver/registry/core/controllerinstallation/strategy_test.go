@@ -26,11 +26,11 @@ func TestControllerInstallation(t *testing.T) {
 var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {
 		controllerInstallation := newControllerInstallation()
-		controllerInstallation.Spec.ShootRef = &corev1.ObjectReference{Name: "abc"}
+		controllerInstallation.Spec.ShootRef = &corev1.ObjectReference{Name: "abc", Namespace: "def"}
 
 		result := controllerinstallation.ToSelectableFields(controllerInstallation)
 
-		Expect(result).To(HaveLen(4))
+		Expect(result).To(HaveLen(5))
 		Expect(result.Has("metadata.name")).To(BeTrue())
 		Expect(result.Get("metadata.name")).To(Equal("test"))
 		Expect(result.Has(core.RegistrationRefName)).To(BeTrue())
@@ -39,6 +39,8 @@ var _ = Describe("ToSelectableFields", func() {
 		Expect(result.Get(core.SeedRefName)).To(Equal("qux"))
 		Expect(result.Has(core.ShootRefName)).To(BeTrue())
 		Expect(result.Get(core.ShootRefName)).To(Equal("abc"))
+		Expect(result.Has(core.ShootRefNamespace)).To(BeTrue())
+		Expect(result.Get(core.ShootRefNamespace)).To(Equal("def"))
 	})
 })
 

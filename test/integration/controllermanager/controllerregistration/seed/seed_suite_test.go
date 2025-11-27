@@ -135,6 +135,8 @@ var _ = BeforeSuite(func() {
 	Expect(indexer.AddShootSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 	Expect(indexer.AddShootStatusSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 	Expect(indexer.AddControllerInstallationSeedRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+	Expect(indexer.AddControllerInstallationShootRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+	Expect(indexer.AddControllerInstallationShootRefNamespace(ctx, mgr.GetFieldIndexer())).To(Succeed())
 	Expect(indexer.AddControllerInstallationRegistrationRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 	By("Register controller")

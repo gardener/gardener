@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package seedfinalizer
+package clusterfinalizer
 
 import (
 	"context"
@@ -22,36 +22,46 @@ import (
 )
 
 // ControllerName is the name of this controller.
-const ControllerName = "controllerregistration-seed-finalizer"
+const ControllerName = "controllerregistration-cluster-finalizer"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, mapObjectToControllerInstallationFunc func(context.Context, client.Object) []reconcile.Request, objKind string) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
 
 	return builder.
 		ControllerManagedBy(mgr).
-		Named(ControllerName).
-		For(&gardencorev1beta1.Seed{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Named(ControllerName+"-"+objKind).
+		For(r.NewTargetObjectFunc(), builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 5,
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		Watches(
 			&gardencorev1beta1.ControllerInstallation{},
-			handler.EnqueueRequestsFromMapFunc(r.MapControllerInstallationToSeed),
+			handler.EnqueueRequestsFromMapFunc(mapObjectToControllerInstallationFunc),
 			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Delete)),
 		).
 		Complete(r)
 }
 
 // MapControllerInstallationToSeed returns a reconcile.Request object for the seed specified in the .spec.seedRef.name field.
-func (r *Reconciler) MapControllerInstallationToSeed(_ context.Context, obj client.Object) []reconcile.Request {
+func MapControllerInstallationToSeed(_ context.Context, obj client.Object) []reconcile.Request {
 	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
 	if !ok || controllerInstallation.Spec.SeedRef == nil {
 		return nil
 	}
 
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: controllerInstallation.Spec.SeedRef.Name}}}
+}
+
+// MapControllerInstallationToShoot returns a reconcile.Request object for the shoot specified in the .spec.shootRef.name field.
+func MapControllerInstallationToShoot(_ context.Context, obj client.Object) []reconcile.Request {
+	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
+	if !ok || controllerInstallation.Spec.ShootRef == nil {
+		return nil
+	}
+
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: controllerInstallation.Spec.ShootRef.Name, Namespace: controllerInstallation.Spec.ShootRef.Namespace}}}
 }

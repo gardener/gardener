@@ -120,13 +120,14 @@ func ToSelectableFields(controllerInstallation *core.ControllerInstallation) fie
 	// amount of allocations needed to create the fields.Set. If you add any
 	// field here or the number of object-meta related fields changes, this should
 	// be adjusted.
-	controllerInstallationSpecificFieldsSet := make(fields.Set, 4)
+	controllerInstallationSpecificFieldsSet := make(fields.Set, 5)
 	controllerInstallationSpecificFieldsSet[core.RegistrationRefName] = controllerInstallation.Spec.RegistrationRef.Name
 	if controllerInstallation.Spec.SeedRef != nil {
 		controllerInstallationSpecificFieldsSet[core.SeedRefName] = controllerInstallation.Spec.SeedRef.Name
 	}
 	if controllerInstallation.Spec.ShootRef != nil {
 		controllerInstallationSpecificFieldsSet[core.ShootRefName] = controllerInstallation.Spec.ShootRef.Name
+		controllerInstallationSpecificFieldsSet[core.ShootRefNamespace] = controllerInstallation.Spec.ShootRef.Namespace
 	}
 	return generic.AddObjectMetaFieldsSet(controllerInstallationSpecificFieldsSet, &controllerInstallation.ObjectMeta, false)
 }
@@ -146,7 +147,7 @@ func MatchControllerInstallation(label labels.Selector, field fields.Selector) s
 		Label:       label,
 		Field:       field,
 		GetAttrs:    GetAttrs,
-		IndexFields: []string{core.SeedRefName, core.ShootRefName, core.RegistrationRefName},
+		IndexFields: []string{core.SeedRefName, core.ShootRefName, core.ShootRefNamespace, core.RegistrationRefName},
 	}
 }
 
@@ -172,6 +173,18 @@ func ShootRefNameIndexFunc(obj any) ([]string, error) {
 		return nil, nil
 	}
 	return []string{controllerInstallation.Spec.ShootRef.Name}, nil
+}
+
+// ShootRefNamespaceIndexFunc returns spec.shootRef.namespace of given ControllerInstallation.
+func ShootRefNamespaceIndexFunc(obj any) ([]string, error) {
+	controllerInstallation, ok := obj.(*core.ControllerInstallation)
+	if !ok {
+		return nil, fmt.Errorf("expected *core.ControllerInstallation but got %T", obj)
+	}
+	if controllerInstallation.Spec.ShootRef == nil {
+		return nil, nil
+	}
+	return []string{controllerInstallation.Spec.ShootRef.Namespace}, nil
 }
 
 // RegistrationRefNameIndexFunc returns spec.registrationRef.name of given ControllerInstallation.

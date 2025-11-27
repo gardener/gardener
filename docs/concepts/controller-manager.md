@@ -113,10 +113,10 @@ This reconciliation loop watches the `ControllerRegistration` resource and adds 
 In case a deletion request comes in for the resource, i.e., if a `.metadata.deletionTimestamp` is set, it actively scans for a `ControllerInstallation` resource using this `ControllerRegistration`, and decides whether the deletion can be allowed.
 In case no related `ControllerInstallation` is present, it removes the finalizer and marks it for deletion.
 
-#### ["`Seed` Finalizer" Reconciler](../../pkg/controllermanager/controller/controllerregistration/seedfinalizer)
+#### ["Cluster Finalizer" Reconciler](../../pkg/controllermanager/controller/controllerregistration/clusterfinalizer)
 
-This loop also watches the `Seed` object and adds finalizers to it at creation.
-If a `.metadata.deletionTimestamp` is set for the seed, then the controller checks for existing `ControllerInstallation` objects which reference this seed.
+This loop also watches the `Seed` or `Shoot` objects and adds finalizers to them at creation.
+If a `.metadata.deletionTimestamp` is set for the object, then the controller checks for existing `ControllerInstallation` objects which reference this `Seed` or `Shoot`.
 If no such objects exist, then it removes the finalizer and allows the deletion.
 
 #### ["Extension `ClusterRole`" Reconciler](../../pkg/controllermanager/controller/controllerregistration/extensionclusterrole)
