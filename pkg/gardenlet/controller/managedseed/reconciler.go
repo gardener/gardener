@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -33,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles the ManagedSeed.
@@ -113,39 +111,6 @@ func (r *Reconciler) newActuator(ctx context.Context, shoot *gardencorev1beta1.S
 				return false, err
 			}
 			return true, nil
-		},
-		GetInfrastructureSecret: func(ctx context.Context) (*corev1.Secret, error) {
-			if shoot.Spec.SecretBindingName == nil && shoot.Spec.CredentialsBindingName == nil {
-				return nil, fmt.Errorf("both secretBindingName and credentialsBindingName are nil for the Shoot: %s/%s", shoot.Namespace, shoot.Name)
-			}
-
-			if shoot.Spec.SecretBindingName != nil {
-				shootSecretBinding := &gardencorev1beta1.SecretBinding{}
-				if err := r.GardenClient.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.SecretBindingName}, shootSecretBinding); err != nil {
-					return nil, err
-				}
-				return kubernetesutils.GetSecretByReference(ctx, r.GardenClient, &shootSecretBinding.SecretRef)
-			}
-
-			shootCredentialsBinding := &securityv1alpha1.CredentialsBinding{}
-			if err := r.GardenClient.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.CredentialsBindingName}, shootCredentialsBinding); err != nil {
-				return nil, err
-			}
-
-			// TODO(dimityrmirchev): only handle credentials of kind secret as this function will be eventually removed
-			if shootCredentialsBinding.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
-				shootCredentialsBinding.CredentialsRef.Kind == "Secret" {
-				secret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      shootCredentialsBinding.CredentialsRef.Name,
-						Namespace: shootCredentialsBinding.CredentialsRef.Namespace,
-					},
-				}
-
-				return secret, r.GardenClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
-			}
-
-			return nil, nil
 		},
 		GetTargetDomain: func() string {
 			if shoot.Spec.DNS == nil {
