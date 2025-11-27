@@ -81,8 +81,10 @@ func ReconcileWorkloadIdentityReferencedResources(ctx context.Context, gardenCli
 			continue
 		}
 
+		targetSecret := v1beta1constants.ReferencedWorkloadIdentityPrefix + resource.ResourceRef.Name
+		secretsToRetain.Insert(targetSecret)
 		tasks = append(tasks, func(ctx context.Context) error {
-			return createSecretForWorkloadIdentity(ctx, gardenClient, seedClient, resource.ResourceRef.Name, sourceNamespace, targetNamespace, referringObj, secretsToRetain)
+			return createSecretForWorkloadIdentity(ctx, gardenClient, seedClient, resource.ResourceRef.Name, sourceNamespace, targetSecret, targetNamespace, referringObj)
 		})
 	}
 
@@ -99,7 +101,7 @@ func ReconcileWorkloadIdentityReferencedResources(ctx context.Context, gardenCli
 
 // createSecretForWorkloadIdentity creates a Secret in the target namespace in the seed for the given WorkloadIdentity.
 // The secret name is added to the secretsToRetain parameter.
-func createSecretForWorkloadIdentity(ctx context.Context, gardenClient, seedClient client.Client, workloadIdentityName, sourceNamespace, targetNamespace string, referringObj client.Object, secretsToRetain sets.Set[string]) error {
+func createSecretForWorkloadIdentity(ctx context.Context, gardenClient, seedClient client.Client, workloadIdentityName, sourceNamespace, targetSecret, targetNamespace string, referringObj client.Object) error {
 	gvk, err := gardenClient.GroupVersionKindFor(referringObj)
 	if err != nil {
 		return fmt.Errorf("failed to parse the GVK of the referring object: %w", err)
@@ -115,16 +117,13 @@ func createSecretForWorkloadIdentity(ctx context.Context, gardenClient, seedClie
 		contextObject.Namespace = &ns
 	}
 
-	secretName := v1beta1constants.ReferencedWorkloadIdentityPrefix + workloadIdentityName
-	secretsToRetain.Insert(secretName)
-
 	workloadIdentity := &securityv1alpha1.WorkloadIdentity{}
 	if err := gardenClient.Get(ctx, client.ObjectKey{Namespace: sourceNamespace, Name: workloadIdentityName}, workloadIdentity); err != nil {
 		return fmt.Errorf("failed to get WorkloadIdentity: %w", err)
 	}
 
 	s, err := workloadidentity.NewSecret(
-		secretName,
+		targetSecret,
 		targetNamespace,
 		workloadidentity.For(workloadIdentityName, sourceNamespace, workloadIdentity.Spec.TargetSystem.Type),
 		workloadidentity.WithProviderConfig(workloadIdentity.Spec.TargetSystem.ProviderConfig),
@@ -132,10 +131,10 @@ func createSecretForWorkloadIdentity(ctx context.Context, gardenClient, seedClie
 		workloadidentity.WithLabels(referencedWorkloadIdentitySecretLabels),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create workload identity secret %s/%s: %w", targetNamespace, secretName, err)
+		return fmt.Errorf("failed to create workload identity secret %s/%s: %w", targetNamespace, targetSecret, err)
 	}
 	if err := s.Reconcile(ctx, seedClient); err != nil {
-		return fmt.Errorf("failed to reconcile workload identity secret %s/%s: %w", targetNamespace, secretName, err)
+		return fmt.Errorf("failed to reconcile workload identity secret %s/%s: %w", targetNamespace, targetSecret, err)
 	}
 
 	return nil
