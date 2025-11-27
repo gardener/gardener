@@ -54,6 +54,7 @@ import (
 var (
 	availableProxyModes = sets.New(
 		string(core.ProxyModeIPTables),
+		string(core.ProxyModeNFTables),
 		string(core.ProxyModeIPVS),
 	)
 	availableKubernetesDashboardAuthenticationModes = sets.New(
@@ -1879,7 +1880,12 @@ func validateKubeProxy(kp *core.KubeProxyConfig, version string, fldPath *field.
 			allErrs = append(allErrs, field.Required(fldPath.Child("mode"), "must be set when .spec.kubernetes.kubeProxy is set"))
 		} else if mode := *kp.Mode; !availableProxyModes.Has(string(mode)) {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("mode"), mode, sets.List(availableProxyModes)))
+		} else if *kp.Mode == core.ProxyModeNFTables {
+			if k8sLessThan131, _ := versionutils.CheckVersionMeetsConstraint(version, "< 1.31"); k8sLessThan131 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("mode"), mode, "nftables must not be set for kubernetes < 1.31"))
+			}
 		}
+
 		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kp.FeatureGates, version, fldPath.Child("featureGates"))...)
 	}
 	return allErrs
