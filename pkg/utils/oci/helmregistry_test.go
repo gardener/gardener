@@ -193,6 +193,10 @@ var _ = Describe("buildRef", func() {
 			&gardencorev1.OCIRepository{Ref: ptr.To("garden.local.gardener.cloud:5001/foo:1.0.0")},
 			name.MustParseReference("garden.local.gardener.cloud:5001/foo:1.0.0", name.Insecure),
 		),
+		Entry("configure insecure in local setup when using registry.local.gardener.cloud",
+			&gardencorev1.OCIRepository{Ref: ptr.To("registry.local.gardener.cloud:5000/foo:1.0.0")},
+			name.MustParseReference("registry.local.gardener.cloud:5000/foo:1.0.0", name.Insecure),
+		),
 	)
 })
 
