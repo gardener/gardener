@@ -33,19 +33,15 @@ import (
 	mockgardenletdepoyer "github.com/gardener/gardener/pkg/controller/gardenletdeployer/mock"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockrecord "github.com/gardener/gardener/third_party/mock/client-go/tools/record"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 const (
-	name              = "test"
-	namespace         = "garden"
-	seedName          = "test-seed"
-	secretBindingName = "test-secret-binding"
-	secretName        = "test-secret"
-	backupSecretName  = "test-backup-secret"
+	name             = "test"
+	namespace        = "garden"
+	backupSecretName = "test-backup-secret"
 )
 
 var _ = Describe("Interface", func() {
@@ -109,13 +105,6 @@ var _ = Describe("Interface", func() {
 					return false, err
 				}
 				return true, nil
-			},
-			GetInfrastructureSecret: func(ctx context.Context) (*corev1.Secret, error) {
-				shootSecretBinding := &gardencorev1beta1.SecretBinding{}
-				if err := gardenClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "test-secret-binding"}, shootSecretBinding); err != nil {
-					return nil, err
-				}
-				return kubernetesutils.GetSecretByReference(ctx, gardenClient, &shootSecretBinding.SecretRef)
 			},
 			GetTargetDomain: func() string {
 				return ""

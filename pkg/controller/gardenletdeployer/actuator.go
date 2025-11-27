@@ -60,12 +60,10 @@ type Interface interface {
 
 // Actuator is a concrete implementation of Interface.
 type Actuator struct {
-	GardenConfig            *rest.Config
-	GardenClient            client.Client
-	GetTargetClientFunc     func(ctx context.Context) (kubernetes.Interface, error)
-	CheckIfVPAAlreadyExists func(ctx context.Context) (bool, error)
-	// GetInfrastructureSecret will return the infrastructure secret or nil if other kind of credentials are used instead.
-	GetInfrastructureSecret  func(ctx context.Context) (*corev1.Secret, error) // TODO(dimityrmirchev): Deprecate and eventually remove this function.
+	GardenConfig             *rest.Config
+	GardenClient             client.Client
+	GetTargetClientFunc      func(ctx context.Context) (kubernetes.Interface, error)
+	CheckIfVPAAlreadyExists  func(ctx context.Context) (bool, error)
 	GetTargetDomain          func() string
 	ApplyGardenletChart      func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
 	DeleteGardenletChart     func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
