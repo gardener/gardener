@@ -82,3 +82,4 @@ data:
   bashrc: |
     export KUBECONFIG=/etc/kubernetes/admin.conf
     alias k=kubectl
+    alias kg='kubectl -n garden'
