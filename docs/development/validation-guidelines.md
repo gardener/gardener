@@ -119,8 +119,8 @@ The validation functions are defined in the [`github.com/gardener/gardener/pkg/a
 Most Gardener components have a component configuration that follows similar validation principles to those of the Gardener API.
 Although the component configuration APIs are internal ones, they are also subject to validation.
 For reference, check out the validation packages:
-- for the `gardener-controller-manager` component configuration - [`github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1/validation`](https://pkg.go.dev/github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1/validation)
-- for the `gardener-resource-manager` component configuration - [`github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1/validation`](https://pkg.go.dev/github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1/validation)
+- for the `gardener-controller-manager` component configuration - [`github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1/validation`](https://pkg.go.dev/github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1/validation)
+- for the `gardener-resource-manager` component configuration - [`github.com/gardener/gardener/pkg/apis/config/resourcemanager/v1alpha1/validation`](https://pkg.go.dev/github.com/gardener/gardener/pkg/apis/config/resourcemanager/v1alpha1/validation)
 
 ## Utility Functions
 

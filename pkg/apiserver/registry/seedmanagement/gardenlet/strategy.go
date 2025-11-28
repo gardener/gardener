@@ -13,9 +13,9 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 
 	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/api/seedmanagement/validation"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement/validation"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 

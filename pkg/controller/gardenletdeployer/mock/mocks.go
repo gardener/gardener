@@ -13,9 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
+	v1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	v1alpha10 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	v1alpha10 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	logr "github.com/go-logr/logr"
 	gomock "go.uber.org/mock/gomock"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -47,7 +47,7 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 }
 
 // Delete mocks base method.
-func (m *MockInterface) Delete(arg0 context.Context, arg1 logr.Logger, arg2 client.Object, arg3 []v1beta1.Condition, arg4 *v1alpha1.GardenletDeployment, arg5 *runtime.RawExtension, arg6 v1alpha1.Bootstrap, arg7 bool) ([]v1beta1.Condition, bool, bool, error) {
+func (m *MockInterface) Delete(arg0 context.Context, arg1 logr.Logger, arg2 client.Object, arg3 []v1beta1.Condition, arg4 *v1alpha10.GardenletDeployment, arg5 *runtime.RawExtension, arg6 v1alpha10.Bootstrap, arg7 bool) ([]v1beta1.Condition, bool, bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
 	ret0, _ := ret[0].([]v1beta1.Condition)
@@ -64,7 +64,7 @@ func (mr *MockInterfaceMockRecorder) Delete(arg0, arg1, arg2, arg3, arg4, arg5, 
 }
 
 // Reconcile mocks base method.
-func (m *MockInterface) Reconcile(arg0 context.Context, arg1 logr.Logger, arg2 client.Object, arg3 []v1beta1.Condition, arg4 *v1alpha1.GardenletDeployment, arg5 *runtime.RawExtension, arg6 v1alpha1.Bootstrap, arg7 bool) ([]v1beta1.Condition, error) {
+func (m *MockInterface) Reconcile(arg0 context.Context, arg1 logr.Logger, arg2 client.Object, arg3 []v1beta1.Condition, arg4 *v1alpha10.GardenletDeployment, arg5 *runtime.RawExtension, arg6 v1alpha10.Bootstrap, arg7 bool) ([]v1beta1.Condition, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Reconcile", arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
 	ret0, _ := ret[0].([]v1beta1.Condition)
@@ -103,7 +103,7 @@ func (m *MockValuesHelper) EXPECT() *MockValuesHelperMockRecorder {
 }
 
 // GetGardenletChartValues mocks base method.
-func (m *MockValuesHelper) GetGardenletChartValues(arg0 *v1alpha1.GardenletDeployment, arg1 *v1alpha10.GardenletConfiguration, arg2 string) (map[string]any, error) {
+func (m *MockValuesHelper) GetGardenletChartValues(arg0 *v1alpha10.GardenletDeployment, arg1 *v1alpha1.GardenletConfiguration, arg2 string) (map[string]any, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetGardenletChartValues", arg0, arg1, arg2)
 	ret0, _ := ret[0].(map[string]any)
@@ -118,10 +118,10 @@ func (mr *MockValuesHelperMockRecorder) GetGardenletChartValues(arg0, arg1, arg2
 }
 
 // MergeGardenletConfiguration mocks base method.
-func (m *MockValuesHelper) MergeGardenletConfiguration(config *v1alpha10.GardenletConfiguration) (*v1alpha10.GardenletConfiguration, error) {
+func (m *MockValuesHelper) MergeGardenletConfiguration(config *v1alpha1.GardenletConfiguration) (*v1alpha1.GardenletConfiguration, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "MergeGardenletConfiguration", config)
-	ret0, _ := ret[0].(*v1alpha10.GardenletConfiguration)
+	ret0, _ := ret[0].(*v1alpha1.GardenletConfiguration)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -133,10 +133,10 @@ func (mr *MockValuesHelperMockRecorder) MergeGardenletConfiguration(config any) 
 }
 
 // MergeGardenletDeployment mocks base method.
-func (m *MockValuesHelper) MergeGardenletDeployment(arg0 *v1alpha1.GardenletDeployment) (*v1alpha1.GardenletDeployment, error) {
+func (m *MockValuesHelper) MergeGardenletDeployment(arg0 *v1alpha10.GardenletDeployment) (*v1alpha10.GardenletDeployment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "MergeGardenletDeployment", arg0)
-	ret0, _ := ret[0].(*v1alpha1.GardenletDeployment)
+	ret0, _ := ret[0].(*v1alpha10.GardenletDeployment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

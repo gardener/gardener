@@ -12,10 +12,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/api/operator/v1alpha1/validation"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/validation"
 )
 
 // Handler performs validation.

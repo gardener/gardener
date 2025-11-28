@@ -9,10 +9,10 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/sets"
 
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
