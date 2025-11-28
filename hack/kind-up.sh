@@ -382,7 +382,7 @@ EOF"
 done
 
 local_address_operator="172.18.255.3"
-if [[ "$IPFAMILY" == "ipv6" ]]; then
+if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
   local_address_operator="::3"
 fi
 
