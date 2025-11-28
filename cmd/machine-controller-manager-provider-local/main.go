@@ -23,11 +23,15 @@ import (
 	"k8s.io/component-base/cli/flag"
 	"k8s.io/component-base/logs"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/provider-local/machine-provider/local"
 )
 
 func main() {
+	logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON))
+
 	s := options.NewMCServer()
 	s.AddFlags(pflag.CommandLine)
 

@@ -15,6 +15,8 @@ const (
 type ProviderSpec struct {
 	// APIVersion determines the API version for the provider APIs.
 	APIVersion string `json:"apiVersion,omitempty"`
+	// Namespace is the namespace in which the machine pods should be created.
+	Namespace string `json:"namespace,omitempty"`
 	// Image is the container image to use for the node.
 	Image string `json:"image,omitempty"`
 	// IPPoolNameV4 is the name of the crd.projectcalico.org/v1.IPPool that should be used for machine pods for IPv4
