@@ -67,6 +67,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 				resourcemanagerpredicate.NoLongerIgnored(),
 				// we need to reconcile once if the ManagedResource got marked as ignored in order to update the conditions
 				resourcemanagerpredicate.GotMarkedAsIgnored(),
+				r.ClassFilter.CleanupCompleted(),
 			),
 			// TODO: refactor this predicate chain into a single predicate.Funcs that can be properly tested as a whole
 			predicate.Or(
