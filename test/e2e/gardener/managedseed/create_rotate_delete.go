@@ -263,19 +263,19 @@ func patchGardenletKubeconfigValiditySettingsAndTriggerRotation(
 func itShouldVerifyPrometheusHealthCheck(s *ManagedSeedContext, prometheusName string) {
 	rule := &monitoringv1.PrometheusRule{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      prometheusName + "-health-down",
+			Name:      prometheusName + "-test-job-down",
 			Namespace: "garden",
 			Labels:    map[string]string{"prometheus": prometheusName},
 		},
 		Spec: monitoringv1.PrometheusRuleSpec{
 			Groups: []monitoringv1.RuleGroup{
 				{
-					Name: prometheusName + "-health-down",
+					Name: prometheusName + "-test-job-down",
 					Rules: []monitoringv1.Rule{
 						{
-							Record: "healthcheck",
-							Expr:   intstr.FromString("vector(1)"),
-							Labels: map[string]string{"task": "test"},
+							Record: "up",
+							Expr:   intstr.FromString("vector(0)"),
+							Labels: map[string]string{"job": "test"},
 						},
 					},
 				},

@@ -171,19 +171,19 @@ func addCustomMachineImage(namespacedCloudProfile *gardencorev1beta1.NamespacedC
 func itShouldVerifyShootPrometheusHealthCheck(s *ShootContext) {
 	rule := &monitoringv1.PrometheusRule{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "shoot-health-down",
+			Name:      "shoot-test-job-down",
 			Namespace: "shoot--local--" + s.Shoot.Name,
 			Labels:    map[string]string{"prometheus": "shoot"},
 		},
 		Spec: monitoringv1.PrometheusRuleSpec{
 			Groups: []monitoringv1.RuleGroup{
 				{
-					Name: "shoot-health-down",
+					Name: "shoot-test-job-down",
 					Rules: []monitoringv1.Rule{
 						{
-							Record: "healthcheck",
-							Expr:   intstr.FromString("vector(1)"),
-							Labels: map[string]string{"task": "test"},
+							Record: "up",
+							Expr:   intstr.FromString("vector(0)"),
+							Labels: map[string]string{"job": "test"},
 						},
 					},
 				},
