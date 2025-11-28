@@ -17,7 +17,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 // health contains information needed to execute health checks for a seed.
@@ -58,7 +57,7 @@ func (h *health) Check(
 	}
 
 	var checkedConditions []gardencorev1beta1.Condition
-	checkedConditions = append(checkedConditions, v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, h.checkSystemComponents(ctx, conditions.systemComponentsHealthy, managedResources), nil))
+	checkedConditions = append(checkedConditions, v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, h.checkSystemComponents(conditions.systemComponentsHealthy, managedResources), nil))
 	if newEmergencyStopShootReconciliations := h.checkEmergencyStopShootReconciliations(conditions.emergencyStopShootReconciliations); newEmergencyStopShootReconciliations != nil {
 		checkedConditions = append(checkedConditions, v1beta1helper.NewConditionOrError(h.clock, conditions.emergencyStopShootReconciliations, newEmergencyStopShootReconciliations, nil))
 	}
@@ -79,26 +78,15 @@ func (h *health) listManagedResources(ctx context.Context) ([]resourcesv1alpha1.
 	return append(managedResourceListGarden.Items, managedResourceListIstioSystem.Items...), nil
 }
 
-func (h *health) checkSystemComponents(ctx context.Context, condition gardencorev1beta1.Condition, managedResources []resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
+func (h *health) checkSystemComponents(condition gardencorev1beta1.Condition, managedResources []resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
 	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
 		return managedResource.Spec.Class != nil
 	}, nil); exitCondition != nil {
 		return exitCondition
 	}
 
-	filterFunc := func(managedResource resourcesv1alpha1.ManagedResource) bool {
-		return managedResource.Spec.Class != nil &&
-			managedResource.Labels[v1beta1constants.LabelCareConditionType] == string(v1beta1constants.ObservabilityComponentsHealthy) &&
-			managedResource.Labels[managedresources.LabelKeyManagedBy] == managedresources.LabelValueGardenlet
-	}
-
-	if exitCondition := h.healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterFunc); exitCondition != nil {
-		return exitCondition
-	}
-
 	return ptr.To(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy."))
 }
-
 func (h *health) checkEmergencyStopShootReconciliations(condition gardencorev1beta1.Condition) *gardencorev1beta1.Condition {
 	if !v1beta1helper.HasShootReconciliationsDisabledAnnotation(h.seed) {
 		return nil
