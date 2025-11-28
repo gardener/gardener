@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/versioning"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -25,11 +26,16 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	operator "github.com/gardener/gardener/pkg/apis/operator"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
 
 var (
 	gardenCoreScheme  *runtime.Scheme
 	gardenCoreDecoder runtime.Decoder
+
+	operatorScheme  *runtime.Scheme
+	operatorDecoder runtime.Decoder
 )
 
 func init() {
@@ -38,6 +44,12 @@ func init() {
 	gardenCoreDecoder = versioning.NewCodec(nil, serializer.NewCodecFactory(gardenCoreScheme).UniversalDeserializer(),
 		runtime.UnsafeObjectConvertor(gardenCoreScheme), gardenCoreScheme, gardenCoreScheme, nil,
 		runtime.DisabledGroupVersioner, runtime.InternalGroupVersioner, gardenCoreScheme.Name())
+
+	operatorScheme = runtime.NewScheme()
+	utilruntime.Must(operatorv1alpha1.AddToScheme(operatorScheme))
+	operatorDecoder = versioning.NewCodec(nil, serializer.NewCodecFactory(operatorScheme).UniversalDeserializer(),
+		runtime.UnsafeObjectConvertor(operatorScheme), operatorScheme, operatorScheme, nil,
+		runtime.DisabledGroupVersioner, runtime.InternalGroupVersioner, operatorScheme.Name())
 }
 
 // Handler validates configuration part of ConfigMaps which are referenced in Shoot resources.
@@ -51,6 +63,10 @@ type Handler struct {
 	GetConfigMapNameFromShoot   func(shoot *gardencore.Shoot) string
 	SkipValidationOnShootUpdate func(shoot, oldShoot *gardencore.Shoot) bool
 	AdmitConfig                 func(configRaw string, shootsReferencingConfigMap []*gardencore.Shoot) (int32, error)
+
+	GetNamespace               func() string
+	GetConfigMapNameFromGarden func(garden *operatorv1alpha1.Garden) string
+	AdmitGardenConfig          func(configRaw string) (int32, error)
 }
 
 // Handle validates configuration part of ConfigMaps which are referenced in Shoot resources.
@@ -60,11 +76,69 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 	switch requestGK {
 	case schema.GroupKind{Group: gardencorev1beta1.GroupName, Kind: "Shoot"}:
 		return h.admitShoot(ctx, req)
+	case schema.GroupKind{Group: operator.GroupName, Kind: "Garden"}:
+		return h.admitGarden(ctx, req)
 	case schema.GroupKind{Group: corev1.GroupName, Kind: "ConfigMap"}:
-		return h.admitConfigMap(ctx, req)
+		if h.GetConfigMapNameFromShoot != nil {
+			return h.admitConfigMapForShoots(ctx, req)
+		}
+		return h.admitConfigMapForGardens(ctx, req)
 	}
 
-	return admissionwebhook.Allowed("resource is neither of type *core.gardener.cloud/v1beta1.Shoot nor *corev1.ConfigMap")
+	return admissionwebhook.Allowed("resource is neither of type core.gardener.cloud/v1beta1.Shoot, operator.gardener.cloud/v1alpha1.Garden, nor corev1.ConfigMap")
+}
+
+// admitGarden validates configuration part of ConfigMaps which are referenced in Garden resources.
+func (h *Handler) admitGarden(ctx context.Context, request admission.Request) admission.Response {
+	garden := &operatorv1alpha1.Garden{}
+	if err := runtime.DecodeInto(operatorDecoder, request.Object.Raw, garden); err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
+	if garden.DeletionTimestamp != nil {
+		return admissionwebhook.Allowed("garden is already marked for deletion")
+	}
+
+	configMapName := h.GetConfigMapNameFromGarden(garden)
+	if configMapName == "" {
+		return admissionwebhook.Allowed("no audit policy config map reference found in garden spec")
+	}
+
+	var oldGarden *operatorv1alpha1.Garden
+	if request.Operation == admissionv1.Update {
+		oldGarden = &operatorv1alpha1.Garden{}
+		if err := runtime.DecodeInto(operatorDecoder, request.OldObject.Raw, oldGarden); err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+
+		if apiequality.Semantic.DeepEqual(oldGarden.Spec, garden.Spec) {
+			return admissionwebhook.Allowed("garden spec was not changed")
+		}
+	}
+
+	if oldGarden != nil && h.GetConfigMapNameFromGarden(oldGarden) == configMapName &&
+		oldGarden.Spec.VirtualCluster.Kubernetes.Version == garden.Spec.VirtualCluster.Kubernetes.Version {
+		return admissionwebhook.Allowed("audit policy config map reference and kubernetes version were not changed")
+	}
+
+	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: h.GetNamespace(), Name: configMapName}}
+	if err := h.APIReader.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
+		if apierrors.IsNotFound(err) {
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("referenced ConfigMap %s does not exist: %w", client.ObjectKeyFromObject(configMap), err))
+		}
+		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("could not retrieve ConfigMap %s: %w", client.ObjectKeyFromObject(configMap), err))
+	}
+
+	configRaw, err := h.rawConfigurationFromConfigMap(configMap.Data)
+	if err != nil {
+		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting ConfigMap %s: %w", client.ObjectKeyFromObject(configMap), err))
+	}
+
+	if errCode, err := h.AdmitGardenConfig(configRaw); err != nil {
+		return admission.Errored(errCode, err)
+	}
+
+	return admissionwebhook.Allowed("referenced configMap is valid")
 }
 
 func (h *Handler) admitShoot(ctx context.Context, request admission.Request) admission.Response {
@@ -129,7 +203,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 	return admissionwebhook.Allowed(fmt.Sprintf("referenced %s is valid", h.ConfigMapPurpose))
 }
 
-func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request) admission.Response {
+func (h *Handler) admitConfigMapForShoots(ctx context.Context, request admission.Request) admission.Response {
 	var (
 		newConfigMap = &corev1.ConfigMap{}
 		oldConfigMap = &corev1.ConfigMap{}
@@ -179,6 +253,58 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 	}
 
 	if errCode, err := h.AdmitConfig(configRaw, shoots); err != nil {
+		return admission.Errored(errCode, err)
+	}
+
+	return admissionwebhook.Allowed(fmt.Sprintf("referenced %s is valid", h.ConfigMapPurpose))
+}
+
+// admitConfigMapForGardens validates updated ConfigMaps if referenced by a Garden.
+func (h *Handler) admitConfigMapForGardens(ctx context.Context, request admission.Request) admission.Response {
+	var (
+		newConfigMap = &corev1.ConfigMap{}
+		oldConfigMap = &corev1.ConfigMap{}
+	)
+
+	if request.Operation != admissionv1.Update {
+		return admissionwebhook.Allowed("operation is not update, nothing to validate")
+	}
+
+	if err := h.Decoder.Decode(request, newConfigMap); err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
+	// lookup if ConfigMap is referenced by any Garden resource
+	gardenList := &operatorv1alpha1.GardenList{}
+	if err := h.Client.List(ctx, gardenList); err != nil {
+		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("could not list garden resources: %w", err))
+	}
+
+	if len(gardenList.Items) == 0 {
+		return admissionwebhook.Allowed("no garden resources found, nothing to validate")
+	}
+
+	// there can be atmost one garden resource
+	garden := gardenList.Items[0]
+
+	if h.GetConfigMapNameFromGarden(&garden) != request.Name || h.GetNamespace() != request.Namespace {
+		return admissionwebhook.Allowed("config map is not referenced by garden resource, nothing to validate")
+	}
+
+	configRaw, err := h.rawConfigurationFromConfigMap(newConfigMap.Data)
+	if err != nil {
+		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting %s from ConfigMap %s: %w", h.ConfigMapPurpose, client.ObjectKeyFromObject(newConfigMap), err))
+	}
+
+	if err = h.Decoder.DecodeRaw(request.OldObject, oldConfigMap); err != nil {
+		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("error decoding old ConfigMap: %w", err))
+	}
+
+	if oldConfigRaw, ok := oldConfigMap.Data[h.ConfigMapDataKey]; ok && oldConfigRaw == configRaw {
+		return admissionwebhook.Allowed(fmt.Sprintf("%s did not change", h.ConfigMapPurpose))
+	}
+
+	if errCode, err := h.AdmitGardenConfig(configRaw); err != nil {
 		return admission.Errored(errCode, err)
 	}
 
