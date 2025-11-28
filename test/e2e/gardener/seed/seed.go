@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -92,4 +93,26 @@ func ItShouldWaitForSeedToBeDeleted(s *SeedContext) {
 
 		s.Log.Info("Seed has been deleted")
 	}, SpecTimeout(10*time.Minute))
+}
+
+// ItShouldCreatePrometheusRuleForSeed creates a PrometheusRule and makes sure it is created.
+func ItShouldCreatePrometheusRuleForSeed(s *SeedContext, rule *monitoringv1.PrometheusRule) {
+	GinkgoHelper()
+
+	It("Create PrometheusRule "+rule.Namespace+"/"+rule.Name, func(ctx SpecContext) {
+		Eventually(ctx, func(g Gomega) {
+			g.Expect(s.SeedClient.Create(ctx, rule)).To(Succeed())
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldDeletePrometheusRuleForSeed deletes a PrometheusRule and makes sure it is deleted.
+func ItShouldDeletePrometheusRuleForSeed(s *SeedContext, rule *monitoringv1.PrometheusRule) {
+	GinkgoHelper()
+
+	It("Delete PrometheusRule "+rule.Namespace+"/"+rule.Name, func(ctx SpecContext) {
+		Eventually(ctx, func(g Gomega) {
+			g.Expect(s.SeedClient.Delete(ctx, rule)).To(Succeed())
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
 }

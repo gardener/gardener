@@ -75,7 +75,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 							"__meta_kubernetes_service_name",
 							"__meta_kubernetes_service_port_name",
 						},
-						Regex:  "prometheus-garden;" + prometheus.ServicePortName,
+						Regex:  "prometheus-garden;" + prometheus.ServicePorts().Web.Name,
 						Action: "keep",
 					},
 					{
