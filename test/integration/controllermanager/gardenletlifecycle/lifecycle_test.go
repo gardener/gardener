@@ -22,12 +22,13 @@ import (
 
 var _ = Describe("Gardenlet Lifecycle controller tests", func() {
 	var (
-		seed            *gardencorev1beta1.Seed
-		lease           *coordinationv1.Lease
-		gardenNamespace *corev1.Namespace
-		managedSeed     *seedmanagementv1alpha1.ManagedSeed
-		shoot           *gardencorev1beta1.Shoot
-		shootConditions int
+		seed                 *gardencorev1beta1.Seed
+		lease                *coordinationv1.Lease
+		gardenNamespace      *corev1.Namespace
+		managedSeed          *seedmanagementv1alpha1.ManagedSeed
+		shoot                *gardencorev1beta1.Shoot
+		shootConditions      int
+		internalDomainSecret *corev1.Secret
 	)
 
 	BeforeEach(func() {
@@ -54,12 +55,27 @@ var _ = Describe("Gardenlet Lifecycle controller tests", func() {
 				Name: "garden",
 			},
 		}
+
+		internalDomainSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "internal-domain-secret",
+				Namespace: gardenNamespace.Name,
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
 		By("Create garden Namespace")
 		Expect(testClient.Create(ctx, gardenNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
 		log.Info("Created garden Namespace", "namespace", client.ObjectKeyFromObject(gardenNamespace))
+
+		By("Create Internal Domain Secret")
+		Expect(testClient.Create(ctx, internalDomainSecret)).To(Or(Succeed(), BeAlreadyExistsError()))
+		log.Info("Created Internal Domain Secret", "secret", client.ObjectKeyFromObject(internalDomainSecret))
+
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, internalDomainSecret)).To(Or(Succeed(), BeNotFoundError()))
+		})
 
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
@@ -83,6 +99,16 @@ var _ = Describe("Gardenlet Lifecycle controller tests", func() {
 						SecretRef: corev1.SecretReference{
 							Name:      "some-secret",
 							Namespace: "some-namespace",
+						},
+					},
+					Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+						Type:   "providerType",
+						Domain: "internal.example.com",
+						CredentialsRef: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "internal-domain-secret",
+							Namespace:  gardenNamespace.Name,
 						},
 					},
 				},

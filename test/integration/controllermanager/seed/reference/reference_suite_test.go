@@ -91,6 +91,21 @@ var _ = BeforeSuite(func() {
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
+	By("Create Internal Domain Secret")
+	internalDomainSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "internal-domain-secret",
+			Namespace: testNamespace.Name,
+		},
+	}
+	Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
+	log.Info("Created Internal Domain Secret")
+
+	DeferCleanup(func() {
+		By("Delete Internal Domain Secret")
+		Expect(testClient.Delete(ctx, internalDomainSecret)).To(Succeed())
+	})
+
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:  kubernetes.GardenScheme,

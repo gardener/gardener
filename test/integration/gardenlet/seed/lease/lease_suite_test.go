@@ -95,6 +95,30 @@ var _ = BeforeSuite(func() {
 	testClient, err = client.New(restConfig, client.Options{Scheme: testScheme})
 	Expect(err).NotTo(HaveOccurred())
 
+	By("Create garden Namespace")
+	gardenNamespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "garden",
+		},
+	}
+	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
+	log.Info("Created garden Namespace", "namespaceName", gardenNamespace.Name)
+
+	DeferCleanup(func() {
+		By("Delete garden Namespace")
+		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
+	By("Create Internal Domain Secret")
+	internalDomainSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "internal-domain-secret",
+			Namespace: gardenNamespace.Name,
+		},
+	}
+	Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
+	log.Info("Created Internal Domain Secret for test", "secret", client.ObjectKeyFromObject(internalDomainSecret))
+
 	By("Create seed")
 	seed = &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
@@ -113,6 +137,16 @@ var _ = BeforeSuite(func() {
 				},
 			},
 			DNS: gardencorev1beta1.SeedDNS{
+				Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+					Type:   "provider",
+					Domain: "internal.example.com",
+					CredentialsRef: corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       "internal-domain-secret",
+						Namespace:  gardenNamespace.Name,
+					},
+				},
 				Provider: &gardencorev1beta1.SeedDNSProvider{
 					Type: "providerType",
 					SecretRef: corev1.SecretReference{

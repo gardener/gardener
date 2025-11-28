@@ -181,6 +181,18 @@ func buildManagedSeed(shoot *gardencorev1beta1.Shoot) *seedmanagementv1alpha1.Ma
 							Kind: "nginx",
 						},
 					},
+					DNS: gardencorev1beta1.SeedDNS{
+						Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+							Type:   "foo",
+							Domain: "internal.local.gardener.cloud",
+							CredentialsRef: corev1.ObjectReference{
+								APIVersion: "v1",
+								Kind:       "Secret",
+								Name:       "internal-domain-internal-local-gardener-cloud",
+								Namespace:  v1beta1constants.GardenNamespace,
+							},
+						},
+					},
 				},
 			},
 		},

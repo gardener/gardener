@@ -26,12 +26,20 @@ import (
 
 var _ = Describe("Gardenlet controller test", func() {
 	var (
-		gardenlet           *seedmanagementv1alpha1.Gardenlet
-		gardenletDeployment *appsv1.Deployment
-		seed                *gardencorev1beta1.Seed
+		gardenlet            *seedmanagementv1alpha1.Gardenlet
+		gardenletDeployment  *appsv1.Deployment
+		seed                 *gardencorev1beta1.Seed
+		internalDomainSecret *corev1.Secret
 	)
 
 	BeforeEach(func() {
+		internalDomainSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "internal-domain-secret",
+				Namespace: testNamespace.Name,
+			},
+		}
+
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
@@ -55,6 +63,16 @@ var _ = Describe("Gardenlet controller test", func() {
 						SecretRef: corev1.SecretReference{
 							Name:      "some-secret",
 							Namespace: "some-namespace",
+						},
+					},
+					Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+						Type:   "test-provider",
+						Domain: "internal.example.com",
+						CredentialsRef: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "internal-domain-secret",
+							Namespace:  testNamespace.Name,
 						},
 					},
 				},
@@ -104,6 +122,10 @@ var _ = Describe("Gardenlet controller test", func() {
 	})
 
 	JustBeforeEach(func() {
+		By("Create internal domain secret")
+		Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
+		log.Info("Created internal domain secret for test", "secret", client.ObjectKeyFromObject(internalDomainSecret))
+
 		By("Create Gardenlet")
 		Expect(testClient.Create(ctx, gardenlet)).To(Succeed())
 		log.Info("Created Gardenlet for test", "gardenlet", client.ObjectKeyFromObject(gardenlet))
@@ -122,6 +144,14 @@ var _ = Describe("Gardenlet controller test", func() {
 				g.Expect(testClient.Delete(ctx, gardenletDeployment)).To(Or(Succeed(), BeNotFoundError()))
 				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenletDeployment), gardenletDeployment)).Should(BeNotFoundError())
 			}).Should(Succeed())
+
+			By("Delete internal domain secret")
+			Expect(testClient.Delete(ctx, internalDomainSecret)).To(Or(Succeed(), BeNotFoundError()))
+
+			By("Wait for internal domain secret to be gone")
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(internalDomainSecret), internalDomainSecret)
+			}).Should(BeNotFoundError())
 		})
 	})
 
