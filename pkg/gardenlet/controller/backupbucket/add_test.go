@@ -6,6 +6,7 @@ package backupbucket_test
 
 import (
 	"context"
+	"os"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -50,6 +51,18 @@ var _ = Describe("Add", func() {
 
 		BeforeEach(func() {
 			p = reconciler.SeedNamePredicate()
+		})
+
+		It("should return true when gardenlet is responsible for self-hosted shoot", func() {
+			backupBucket.Spec.SeedName = nil
+
+			Expect(os.Setenv("NAMESPACE", "kube-system")).To(Succeed())
+			DeferCleanup(func() { Expect(os.Setenv("NAMESPACE", "")).To(Succeed()) })
+
+			Expect(p.Create(event.CreateEvent{Object: backupBucket})).To(BeTrue())
+			Expect(p.Update(event.UpdateEvent{ObjectNew: backupBucket})).To(BeTrue())
+			Expect(p.Delete(event.DeleteEvent{Object: backupBucket})).To(BeTrue())
+			Expect(p.Generic(event.GenericEvent{Object: backupBucket})).To(BeTrue())
 		})
 
 		It("should return true because the backupbucket belongs to this seed", func() {

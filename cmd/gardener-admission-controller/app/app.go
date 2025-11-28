@@ -19,6 +19,7 @@ import (
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -27,6 +28,7 @@ import (
 	"github.com/gardener/gardener/cmd/utils/initrun"
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook"
+	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
@@ -116,6 +118,11 @@ func run(ctx context.Context, log logr.Logger, cfg *admissioncontrollerconfigv1a
 		return err
 	}
 
+	log.Info("Adding field indexes to informers")
+	if err := addAllFieldIndexes(ctx, mgr.GetFieldIndexer()); err != nil {
+		return fmt.Errorf("failed adding indexes: %w", err)
+	}
+
 	log.Info("Adding webhook handlers to manager")
 	if err := webhook.AddToManager(ctx, mgr, cfg); err != nil {
 		return fmt.Errorf("failed adding webhook handlers to manager: %w", err)
@@ -123,4 +130,17 @@ func run(ctx context.Context, log logr.Logger, cfg *admissioncontrollerconfigv1a
 
 	log.Info("Starting manager")
 	return mgr.Start(ctx)
+}
+
+func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
+	for _, fn := range []func(context.Context, client.FieldIndexer) error{
+		// core API group
+		indexer.AddShootStatusUID,
+	} {
+		if err := fn(ctx, i); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

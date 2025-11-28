@@ -84,6 +84,20 @@ func AddToManager(
 	if gardenletutils.IsResponsibleForSelfHostedShoot() {
 		mgr.GetLogger().Info("Running in self-hosted shoot, registering minimal set of controllers")
 
+		if err := (&backupbucket.Reconciler{
+			Config:          *cfg.Controllers.BackupBucket,
+			GardenNamespace: metav1.NamespaceSystem,
+		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+			return fmt.Errorf("failed adding BackupBucket controller: %w", err)
+		}
+
+		if err := (&backupentry.Reconciler{
+			Config:          *cfg.Controllers.BackupEntry,
+			GardenNamespace: metav1.NamespaceSystem,
+		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+			return fmt.Errorf("failed adding BackupEntry controller: %w", err)
+		}
+
 		if err := (&gardenlet.Reconciler{
 			Config: *cfg,
 		}).AddToManager(mgr, gardenCluster, seedClientSet); err != nil {

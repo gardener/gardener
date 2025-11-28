@@ -886,7 +886,7 @@ var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {
 		result := ToSelectableFields(createNewShootObject("foo"))
 
-		Expect(result).To(HaveLen(7))
+		Expect(result).To(HaveLen(8))
 		Expect(result.Has(core.ShootSeedName)).To(BeTrue())
 		Expect(result.Get(core.ShootSeedName)).To(Equal("foo"))
 		Expect(result.Has(core.ShootCloudProfileName)).To(BeTrue())
@@ -897,6 +897,8 @@ var _ = Describe("ToSelectableFields", func() {
 		Expect(result.Get(core.ShootCloudProfileRefKind)).To(Equal("CloudProfile"))
 		Expect(result.Has(core.ShootStatusSeedName)).To(BeTrue())
 		Expect(result.Get(core.ShootStatusSeedName)).To(Equal("foo"))
+		Expect(result.Has(core.ShootStatusUID)).To(BeTrue())
+		Expect(result.Get(core.ShootStatusUID)).To(Equal("uid"))
 	})
 })
 
@@ -952,6 +954,7 @@ func createNewShootObject(seedName string) *core.Shoot {
 			},
 		},
 		Status: core.ShootStatus{
+			UID:      "uid",
 			SeedName: &seedName,
 		},
 	}
