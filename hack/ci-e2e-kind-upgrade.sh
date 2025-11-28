@@ -98,7 +98,7 @@ function install_previous_release() {
   popd >/dev/null
 }
 
-# TODO(timebertt): Remove this after v1.133 has been released.
+# TODO(timebertt): Remove this after v1.134 has been released.
 # See https://prow.gardener.cloud/view/gs/gardener-prow/pr-logs/pull/gardener_gardener/13549/pull-gardener-e2e-kind-upgrade/1993723553601556480
 # and https://gcsweb.prow.gardener.cloud/gcs/gardener-prow/pr-logs/pull/gardener_gardener/13549/pull-gardener-e2e-kind-upgrade/1993723553601556480/artifacts/gardener-local/gardener-local-control-plane/pods/garden_gardenlet-6c9469b889-68grv_ecd815cd-f5fb-4f8a-93e5-f07b97809d95/gardenlet/6.log
 function migrate_kind_network_range() {
