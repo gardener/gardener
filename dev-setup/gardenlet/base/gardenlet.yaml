@@ -74,7 +74,7 @@ spec:
           controller:
             kind: nginx
         networks:
-          nodes: 172.18.0.0/16
+          nodes: 172.18.0.0/24
           # Subnet for automatic pod IP assignment (calico default IPPool) in the kind cluster.
           pods: 10.1.0.0/16
           services: 10.2.0.0/16
