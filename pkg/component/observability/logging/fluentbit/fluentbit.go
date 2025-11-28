@@ -6,6 +6,7 @@ package fluentbit
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"time"
 
@@ -35,6 +36,15 @@ import (
 const (
 	managedResourceName = "fluent-bit"
 	fluentBitConfigName = "fluent-bit-config"
+)
+
+var (
+	//go:embed lua/modify_severity.lua
+	modify_severity_lua string
+	//go:embed lua/add_tag_to_record.lua
+	add_tag_to_record_lua string
+	//go:embed lua/add_kubernetes_namespace_name_to_record.lua
+	add_kubernetes_namespace_name_to_record_lua string
 )
 
 // Values is the values for fluent-bit configurations
@@ -74,65 +84,14 @@ func (f *fluentBit) Deploy(ctx context.Context) error {
 
 		configMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      v1beta1constants.DaemonSetNameFluentBit + "-lua-config",
+				Name:      v1beta1constants.ConfigMapNameFluentBitLua,
 				Namespace: f.namespace,
 			},
-			// spellchecker:off
 			Data: map[string]string{
-				"modify_severity.lua": `
-function cb_modify(tag, timestamp, record)
-  local unified_severity = cb_modify_unify_severity(record)
-
-  if not unified_severity then
-    return 0, 0, 0
-  end
-
-  return 1, timestamp, record
-end
-
-function cb_modify_unify_severity(record)
-  local modified = false
-  local severity = record["severity"]
-  if severity == nil or severity == "" then
-	return modified
-  end
-
-  severity = trim(severity):upper()
-
-  if severity == "I" or severity == "INF" or severity == "INFO" then
-    record["severity"] = "INFO"
-    modified = true
-  elseif severity == "W" or severity == "WRN" or severity == "WARN" or severity == "WARNING" then
-    record["severity"] = "WARN"
-    modified = true
-  elseif severity == "E" or severity == "ERR" or severity == "ERROR" or severity == "EROR" then
-    record["severity"] = "ERR"
-    modified = true
-  elseif severity == "D" or severity == "DBG" or severity == "DEBUG" then
-    record["severity"] = "DBG"
-    modified = true
-  elseif severity == "N" or severity == "NOTICE" then
-    record["severity"] = "NOTICE"
-    modified = true
-  elseif severity == "F" or severity == "FATAL" then
-    record["severity"] = "FATAL"
-    modified = true
-  end
-
-  return modified
-end
-
-function trim(s)
-  return (s:gsub("^%s*(.-)%s*$", "%1"))
-end`,
-				"add_tag_to_record.lua": `
-function add_tag_to_record(tag, timestamp, record)
-  record["tag"] = tag
-  return 1, timestamp, record
-end
-`,
+				"modify_severity.lua":                         modify_severity_lua,
+				"add_tag_to_record.lua":                       add_tag_to_record_lua,
+				"add_kubernetes_namespace_name_to_record.lua": add_kubernetes_namespace_name_to_record_lua,
 			},
-			// spellchecker:on
 		}
 		serviceMonitor = &monitoringv1.ServiceMonitor{
 			ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit", f.namespace, aggregate.Label),

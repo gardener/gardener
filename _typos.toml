@@ -27,6 +27,7 @@ uest = "uest"
 
 [files]
 extend-exclude = [
+    "*.lua",
     "*.svg",
     "*.drawio",
     "third_party/*",
