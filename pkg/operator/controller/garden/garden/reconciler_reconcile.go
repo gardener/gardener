@@ -605,7 +605,8 @@ func (r *Reconciler) reconcile(
 				if err != nil {
 					return err
 				}
-				return r.deployGardenPrometheus(ctx, log, secretsManager, c.prometheusGarden, virtualClusterClient, aggregatePrometheusIngressHost)
+				primaryIngressDomain := garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
+				return r.deployGardenPrometheus(ctx, log, secretsManager, c.prometheusGarden, virtualClusterClient, aggregatePrometheusIngressHost, primaryIngressDomain)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady, initializeVirtualClusterClient),
 		})
@@ -1014,7 +1015,7 @@ func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden
 	}
 }
 
-func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger, secretsManager secretsmanager.Interface, prometheus prometheus.Interface, virtualGardenClient client.Client, aggregatePrometheusIngressHost string) error {
+func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger, secretsManager secretsmanager.Interface, prometheus prometheus.Interface, virtualGardenClient client.Client, aggregatePrometheusIngressHost string, primaryIngressDomain string) error {
 	if err := gardenerutils.NewShootAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Reconcile(ctx, r.RuntimeClientSet.Client()); err != nil {
 		return fmt.Errorf("failed reconciling access secret for garden prometheus: %w", err)
 	}
@@ -1067,6 +1068,25 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 			}
 		}
 	}
+
+	seeds := []string{}
+	for _, seed := range seedList.Items {
+		var seedName = seed.Name
+		seeds = append(seeds, seedName)
+	}
+	joinedSeeds := strings.Join(seeds, "|")
+
+	additionalAlertRelabelConfigs := []*monitoringv1.RelabelConfig{
+		{
+			SourceLabels: []monitoringv1.LabelName{"project", "name"},
+			Regex:        ";" + joinedSeeds,
+			Action:       "replace",
+			Replacement:  ptr.To("https://dashboard." + primaryIngressDomain + "/namespace/garden/shoots/$2"),
+			TargetLabel:  "seed_dashboard_url",
+		},
+	}
+	registryAlertRelabel := prometheus.GetAdditionalAlertRelabelConfigs()
+	prometheus.SetAdditionalAlertRelabelConfigs(append(registryAlertRelabel, additionalAlertRelabelConfigs...))
 
 	prometheus.SetCentralScrapeConfigs(gardenprometheus.CentralScrapeConfigs(prometheusAggregateTargets, prometheusAggregateIngressTargets, globalMonitoringSecretRuntime))
 	return prometheus.Deploy(ctx)
