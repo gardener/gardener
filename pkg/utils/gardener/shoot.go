@@ -727,42 +727,24 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.DNSRecordResource, externalDomain.Provider))
 	}
 
-	for extensionType := range ComputeEnabledTypesForKindExtension(shoot, controllerRegistrationList) {
+	for extensionType := range ComputeEnabledTypesForKindExtensionShoot(shoot, controllerRegistrationList) {
 		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.ExtensionResource, extensionType))
 	}
 
 	return requiredExtensions
 }
 
-// ComputeEnabledTypesForKindExtension computes the enabled extension types for a given Shoot and ControllerRegistrationList.
+// ComputeEnabledTypesForKindExtensionShoot computes the enabled extension types for a given Shoot and ControllerRegistrationList.
 // It considers extensions explicitly enabled or disabled in the Shoot specification and those automatically enabled
 // based on the ControllerRegistration resources.
-func ComputeEnabledTypesForKindExtension(shoot *gardencorev1beta1.Shoot, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList) sets.Set[string] {
-	var (
-		enabledTypes  = sets.New[string]()
-		disabledTypes = sets.New[string]()
-	)
-
-	for _, extension := range shoot.Spec.Extensions {
-		if ptr.Deref(extension.Disabled, false) {
-			disabledTypes.Insert(extension.Type)
-		} else {
-			enabledTypes.Insert(extension.Type)
-		}
-	}
-
-	for _, controllerRegistration := range controllerRegistrationList.Items {
-		for _, resource := range controllerRegistration.Spec.Resources {
-			if extensionEnabledForCluster(gardencorev1beta1.ClusterTypeShoot, resource, disabledTypes) {
-				if v1beta1helper.IsWorkerless(shoot) && !ptr.Deref(resource.WorkerlessSupported, false) {
-					continue
-				}
-				enabledTypes.Insert(resource.Type)
-			}
-		}
-	}
-
-	return enabledTypes
+func ComputeEnabledTypesForKindExtensionShoot(shoot *gardencorev1beta1.Shoot, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList) sets.Set[string] {
+	return computeEnabledTypesForKindExtension(
+		gardencorev1beta1.ClusterTypeShoot,
+		shoot.Spec.Extensions,
+		controllerRegistrationList,
+		func(res gardencorev1beta1.ControllerResource) bool {
+			return !v1beta1helper.IsWorkerless(shoot) || ptr.Deref(res.WorkerlessSupported, false)
+		})
 }
 
 // ExtensionsID returns an identifier for the given extension kind/type.

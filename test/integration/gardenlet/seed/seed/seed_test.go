@@ -673,6 +673,10 @@ var _ = Describe("Seed controller tests", func() {
 					return gardenerutils.RequiredExtensionsReady(ctx, testClient, seed.Name, gardenerutils.ComputeRequiredExtensionsForSeed(seed, controllerRegistrationList))
 				}).WithTimeout(time.Minute).Should(Succeed())
 
+				By("Verify seed has extension label")
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+				Expect(seed.Labels).To(HaveKeyWithValue("extensions.extensions.gardener.cloud/"+providerName, "true"))
+
 				By("Verify that the seed system components have been deployed")
 				expectedManagedResources := []string{
 					"cluster-autoscaler",
