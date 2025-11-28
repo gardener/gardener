@@ -265,7 +265,6 @@ func newGardenletDeployer(b *botanist.GardenadmBotanist, gardenClientSet kuberne
 		CheckIfVPAAlreadyExists: func(_ context.Context) (bool, error) {
 			return false, nil
 		},
-		GetInfrastructureSecret: func(_ context.Context) (*corev1.Secret, error) { return nil, nil },
 		GetTargetDomain: func() string {
 			return ""
 		},
