@@ -35,7 +35,11 @@ parse_flags "$@"
 kind delete cluster \
   --name "$CLUSTER_NAME"
 
-docker compose -f "$(dirname "$0")/../dev-setup/registry/docker-compose.yaml" down
+# Only stop the registry containers if deleting the "main" kind cluster.
+# When deleting the secondary cluster, we might still need the registry for the other cluster.
+if [[ "$CLUSTER_NAME" != "gardener-local2" ]]; then
+  docker compose -f "$(dirname "$0")/../dev-setup/registry/docker-compose.yaml" down
+fi
 
 rm -f "$PATH_KUBECONFIG"
 if [[ "$PATH_KUBECONFIG" == *"dev-setup/gardenlet/components/kubeconfigs/seed-local2/kubeconfig" ]]; then
