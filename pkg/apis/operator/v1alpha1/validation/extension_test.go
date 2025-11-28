@@ -12,16 +12,76 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
 
 var _ = Describe("Validation Tests", func() {
-	Describe("#ValidateExtensionUpdate", func() {
-		var (
-			extension *operatorv1alpha1.Extension
+	var extension *operatorv1alpha1.Extension
 
-			test = func(oldPrimary, newPrimary *bool, matcher gomegatypes.GomegaMatcher) {
+	BeforeEach(func() {
+		extension = &operatorv1alpha1.Extension{
+			Spec: operatorv1alpha1.ExtensionSpec{
+				Deployment: &operatorv1alpha1.Deployment{
+					ExtensionDeployment: &operatorv1alpha1.ExtensionDeploymentSpec{
+						DeploymentSpec: operatorv1alpha1.DeploymentSpec{
+							Helm: &operatorv1alpha1.ExtensionHelm{
+								OCIRepository: &gardencorev1.OCIRepository{
+									Ref: ptr.To("example.com/chart:v1.0.0"),
+								},
+							},
+						},
+					},
+				},
+				Resources: []gardencorev1beta1.ControllerResource{
+					{Kind: "Extension", Type: "type-a"},
+				},
+			},
+		}
+	})
+
+	Describe("#ValidateExtension", func() {
+		validateExtensionTests(
+			func() field.ErrorList {
+				return ValidateExtension(extension)
+			},
+			func() *operatorv1alpha1.Extension {
+				return extension
+			},
+		)
+	})
+
+	Describe("#ValidateExtensionUpdate", func() {
+		// Check basic extension validation is executed during update as well
+		validateExtensionTests(
+			func() field.ErrorList {
+				return ValidateExtensionUpdate(extension, extension)
+			},
+			func() *operatorv1alpha1.Extension {
+				return extension
+			},
+		)
+
+		Context("Extension Deployment", func() {
+			It("should return an error when extension deployment helm has invalid OCI repository", func() {
+				extension.Spec.Deployment.ExtensionDeployment = &operatorv1alpha1.ExtensionDeploymentSpec{
+					DeploymentSpec: operatorv1alpha1.DeploymentSpec{
+						Helm: &operatorv1alpha1.ExtensionHelm{
+							OCIRepository: &gardencorev1.OCIRepository{},
+						},
+					},
+				}
+
+				Expect(ValidateExtensionUpdate(extension, extension)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.deployment.extension.helm.ociRepository"),
+				}))))
+			})
+		})
+
+		Context("Resources", func() {
+			test := func(oldPrimary, newPrimary *bool, matcher gomegatypes.GomegaMatcher) {
 				GinkgoHelper()
 
 				newExtension := extension.DeepCopy()
@@ -30,45 +90,275 @@ var _ = Describe("Validation Tests", func() {
 
 				Expect(ValidateExtensionUpdate(extension, newExtension)).To(matcher)
 			}
-		)
 
-		BeforeEach(func() {
-			extension = &operatorv1alpha1.Extension{
-				Spec: operatorv1alpha1.ExtensionSpec{
-					Resources: []gardencorev1beta1.ControllerResource{
-						{Kind: "kind-a", Type: "type-a"},
+			BeforeEach(func() {
+				extension.Spec = operatorv1alpha1.ExtensionSpec{
+					Deployment: &operatorv1alpha1.Deployment{
+						ExtensionDeployment: &operatorv1alpha1.ExtensionDeploymentSpec{
+							DeploymentSpec: operatorv1alpha1.DeploymentSpec{
+								Helm: &operatorv1alpha1.ExtensionHelm{
+									OCIRepository: &gardencorev1.OCIRepository{
+										Ref: ptr.To("example.com/chart:v1.0.0"),
+									},
+								},
+							},
+						},
 					},
-				},
-			}
-		})
+					Resources: []gardencorev1beta1.ControllerResource{
+						{Kind: "Extension", Type: "type-a"},
+					},
+				}
+			})
 
-		It("should return no errors when field is unchanged", func() {
-			test(ptr.To(true), ptr.To(true), BeEmpty())
-		})
+			It("should return no errors when field is unchanged", func() {
+				test(ptr.To(true), ptr.To(true), BeEmpty())
+			})
 
-		It("should return no errors when field is set from nil to true", func() {
-			test(nil, ptr.To(true), BeEmpty())
-		})
+			It("should return no errors when field is set from nil to true", func() {
+				test(nil, ptr.To(true), BeEmpty())
+			})
 
-		It("should return an error because the primary field is changed to false", func() {
-			test(ptr.To(true), ptr.To(false), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.resources[0].primary"),
-			}))))
-		})
+			It("should return an error because the primary field is changed to false", func() {
+				test(ptr.To(true), ptr.To(false), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.resources[0].primary"),
+				}))))
+			})
 
-		It("should return an error because the primary field is changed to nil", func() {
-			test(ptr.To(false), nil, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.resources[0].primary"),
-			}))))
-		})
+			It("should return an error because the primary field is changed to nil", func() {
+				test(ptr.To(false), nil, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.resources[0].primary"),
+				}))))
+			})
 
-		It("should return an error because the primary field is changed to true", func() {
-			test(ptr.To(false), ptr.To(true), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.resources[0].primary"),
-			}))))
+			It("should return an error because the primary field is changed to true", func() {
+				test(ptr.To(false), ptr.To(true), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.resources[0].primary"),
+				}))))
+			})
 		})
 	})
 })
+
+func validateExtensionTests(test func() field.ErrorList, extension func() *operatorv1alpha1.Extension) {
+	It("should return no errors for basic extension", func() {
+		Expect(test()).To(BeEmpty())
+	})
+
+	It("should return an error when deployment is nil", func() {
+		extension().Spec.Deployment = nil
+
+		Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			"Type":  Equal(field.ErrorTypeRequired),
+			"Field": Equal("spec.deployment"),
+		}))))
+	})
+
+	It("should return an error when neither extension nor admission deployment is specified", func() {
+		extension().Spec.Deployment.ExtensionDeployment = nil
+		extension().Spec.Deployment.AdmissionDeployment = nil
+
+		Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			"Type":  Equal(field.ErrorTypeRequired),
+			"Field": Equal("spec.deployment"),
+		}))))
+	})
+
+	Context("Extension Deployment", func() {
+		It("should return no errors when extension deployment is nil", func() {
+			extension().Spec.Deployment.ExtensionDeployment = nil
+			extension().Spec.Deployment.AdmissionDeployment = &operatorv1alpha1.AdmissionDeploymentSpec{
+				RuntimeCluster: &operatorv1alpha1.DeploymentSpec{
+					Helm: &operatorv1alpha1.ExtensionHelm{
+						OCIRepository: &gardencorev1.OCIRepository{
+							Ref: ptr.To("example.com/admission:v1.0.0"),
+						},
+					},
+				},
+			}
+
+			Expect(test()).To(BeEmpty())
+		})
+
+		It("should return an error when extension deployment has no helm config", func() {
+			extension().Spec.Deployment.ExtensionDeployment = &operatorv1alpha1.ExtensionDeploymentSpec{}
+
+			Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.deployment.extension.helm"),
+			}))))
+		})
+
+		It("should return an error when admission runtime deployment has no helm config", func() {
+			extension().Spec.Deployment.AdmissionDeployment = &operatorv1alpha1.AdmissionDeploymentSpec{
+				RuntimeCluster: &operatorv1alpha1.DeploymentSpec{},
+			}
+
+			Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.deployment.admission.runtimeCluster.helm"),
+			}))))
+		})
+
+		It("should return an error when admission virtual deployment has no helm config", func() {
+			extension().Spec.Deployment.AdmissionDeployment = &operatorv1alpha1.AdmissionDeploymentSpec{
+				VirtualCluster: &operatorv1alpha1.DeploymentSpec{},
+			}
+
+			Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.deployment.admission.virtualCluster.helm"),
+			}))))
+		})
+
+		It("should return an error when extension deployment helm has invalid OCI repository", func() {
+			extension().Spec.Deployment.ExtensionDeployment = &operatorv1alpha1.ExtensionDeploymentSpec{
+				DeploymentSpec: operatorv1alpha1.DeploymentSpec{
+					Helm: &operatorv1alpha1.ExtensionHelm{
+						OCIRepository: &gardencorev1.OCIRepository{},
+					},
+				},
+			}
+
+			Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.deployment.extension.helm.ociRepository"),
+			}))))
+		})
+
+		It("should return no errors when extension deployment helm has valid OCI repository with ref", func() {
+			extension().Spec.Deployment.ExtensionDeployment = &operatorv1alpha1.ExtensionDeploymentSpec{
+				DeploymentSpec: operatorv1alpha1.DeploymentSpec{
+					Helm: &operatorv1alpha1.ExtensionHelm{
+						OCIRepository: &gardencorev1.OCIRepository{
+							Ref: ptr.To("example.com/chart:v1.0.0"),
+						},
+					},
+				},
+			}
+
+			Expect(test()).To(BeEmpty())
+		})
+
+		It("should return no errors when extension deployment helm has valid OCI repository with repository and tag", func() {
+			extension().Spec.Deployment.ExtensionDeployment = &operatorv1alpha1.ExtensionDeploymentSpec{
+				DeploymentSpec: operatorv1alpha1.DeploymentSpec{
+					Helm: &operatorv1alpha1.ExtensionHelm{
+						OCIRepository: &gardencorev1.OCIRepository{
+							Repository: ptr.To("example.com/chart"),
+							Tag:        ptr.To("v1.0.0"),
+						},
+					},
+				},
+			}
+
+			Expect(test()).To(BeEmpty())
+		})
+	})
+
+	Context("Admission Deployment", func() {
+		It("should return no errors when admission deployment is nil", func() {
+			extension().Spec.Deployment.AdmissionDeployment = nil
+
+			Expect(test()).To(BeEmpty())
+		})
+
+		It("should return an error when runtime or virtual cluster deployment is nil", func() {
+			extension().Spec.Deployment.AdmissionDeployment = &operatorv1alpha1.AdmissionDeploymentSpec{}
+
+			Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.deployment.admission"),
+			}))))
+		})
+
+		It("should return an error when admission runtime cluster has invalid OCI repository", func() {
+			extension().Spec.Deployment.AdmissionDeployment = &operatorv1alpha1.AdmissionDeploymentSpec{
+				RuntimeCluster: &operatorv1alpha1.DeploymentSpec{
+					Helm: &operatorv1alpha1.ExtensionHelm{
+						OCIRepository: &gardencorev1.OCIRepository{},
+					},
+				},
+			}
+
+			Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.deployment.admission.runtimeCluster.helm.ociRepository"),
+			}))))
+		})
+
+		It("should return no errors when admission runtime cluster has valid OCI repository", func() {
+			extension().Spec.Deployment.AdmissionDeployment = &operatorv1alpha1.AdmissionDeploymentSpec{
+				RuntimeCluster: &operatorv1alpha1.DeploymentSpec{
+					Helm: &operatorv1alpha1.ExtensionHelm{
+						OCIRepository: &gardencorev1.OCIRepository{
+							Ref: ptr.To("example.com/admission:v1.0.0"),
+						},
+					},
+				},
+			}
+
+			Expect(test()).To(BeEmpty())
+		})
+
+		It("should return an error when admission virtual cluster has invalid OCI repository", func() {
+			extension().Spec.Deployment.AdmissionDeployment = &operatorv1alpha1.AdmissionDeploymentSpec{
+				VirtualCluster: &operatorv1alpha1.DeploymentSpec{
+					Helm: &operatorv1alpha1.ExtensionHelm{
+						OCIRepository: &gardencorev1.OCIRepository{},
+					},
+				},
+			}
+
+			Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.deployment.admission.virtualCluster.helm.ociRepository"),
+			}))))
+		})
+
+		It("should return no errors when admission virtual cluster has valid OCI repository", func() {
+			extension().Spec.Deployment.AdmissionDeployment = &operatorv1alpha1.AdmissionDeploymentSpec{
+				VirtualCluster: &operatorv1alpha1.DeploymentSpec{
+					Helm: &operatorv1alpha1.ExtensionHelm{
+						OCIRepository: &gardencorev1.OCIRepository{
+							Repository: ptr.To("example.com/admission"),
+							Digest:     ptr.To("sha256:abc123"),
+						},
+					},
+				},
+			}
+
+			Expect(test()).To(BeEmpty())
+		})
+
+		It("should return errors when both runtime and virtual clusters have invalid OCI repositories", func() {
+			extension().Spec.Deployment.AdmissionDeployment = &operatorv1alpha1.AdmissionDeploymentSpec{
+				RuntimeCluster: &operatorv1alpha1.DeploymentSpec{
+					Helm: &operatorv1alpha1.ExtensionHelm{
+						OCIRepository: &gardencorev1.OCIRepository{},
+					},
+				},
+				VirtualCluster: &operatorv1alpha1.DeploymentSpec{
+					Helm: &operatorv1alpha1.ExtensionHelm{
+						OCIRepository: &gardencorev1.OCIRepository{},
+					},
+				},
+			}
+
+			errs := test()
+			Expect(errs).To(HaveLen(2))
+			Expect(errs).To(ContainElements(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.deployment.admission.runtimeCluster.helm.ociRepository"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.deployment.admission.virtualCluster.helm.ociRepository"),
+				})),
+			))
+		})
+	})
+}
