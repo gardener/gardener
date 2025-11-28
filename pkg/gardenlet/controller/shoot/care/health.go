@@ -515,14 +515,6 @@ func (h *Health) checkObservabilityComponents(
 		return exitCondition, nil
 	}
 
-	filterFunc := func(managedResource resourcesv1alpha1.ManagedResource) bool {
-		return managedResource.Labels[v1beta1constants.LabelCareConditionType] == string(gardencorev1beta1.ShootObservabilityComponentsHealthy)
-	}
-
-	if exitCondition := h.healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterFunc); exitCondition != nil {
-		return exitCondition, nil
-	}
-
 	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy.")
 	return &c, nil
 }
