@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -40,7 +41,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		PrepareBinary()
 	}, NodeTimeout(5*time.Minute))
 
-	Describe("Prepare infrastructure and machines", Ordered, func() {
+	Describe("Bootstrap a self-hosted shoot with managed infrastructure", Ordered, func() {
 		const (
 			shootName   = "root"
 			technicalID = "shoot--garden--" + shootName
@@ -109,7 +110,13 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			Eventually(ctx, Object(worker)).Should(BeHealthy(health.CheckExtensionObject))
 		}, SpecTimeout(5*time.Minute))
 
-		It("should deploy a control plane machine", func(ctx SpecContext) {
+		var initialControlPlaneMachineName string
+		It("should deploy one control plane machine", func(ctx SpecContext) {
+			machineList := &machinev1alpha1.MachineList{}
+			Eventually(ctx, ObjectList(machineList, client.InNamespace(technicalID))).
+				Should(HaveField("Items", ConsistOf(HaveField("Status.CurrentStatus.Phase", machinev1alpha1.MachineAvailable))))
+			initialControlPlaneMachineName = machineList.Items[0].Name
+
 			podList := &corev1.PodList{}
 			Eventually(ctx, ObjectList(podList, client.InNamespace(technicalID), client.MatchingLabels{"app": "machine"})).
 				Should(HaveField("Items", ConsistOf(HaveField("Status.Phase", corev1.PodRunning))))
@@ -272,6 +279,16 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		It("should deploy/restore the Worker in the shoot", func(ctx SpecContext) {
 			worker := &extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: "kube-system"}}
 			Eventually(ctx, shootKomega.Object(worker)).Should(BeHealthy(health.CheckExtensionObject))
+		}, SpecTimeout(time.Minute))
+
+		It("should adopt and keep the initial control plane machine", func(ctx SpecContext) {
+			// This check verifies that the control plane machine that was created in the bootstrap cluster is adopted by
+			// gardenadm init and the machine-controller-manager running in the self-hosted shoot.
+			Eventually(ctx, shootKomega.Object(&machinev1alpha1.Machine{ObjectMeta: metav1.ObjectMeta{Name: initialControlPlaneMachineName, Namespace: "kube-system"}})).
+				Should(HaveField("Status.CurrentStatus.Phase", machinev1alpha1.MachineRunning))
+
+			Eventually(ctx, Object(&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "machine-" + initialControlPlaneMachineName, Namespace: technicalID}})).
+				Should(HaveField("Status.Phase", corev1.PodRunning))
 		}, SpecTimeout(time.Minute))
 
 		It("should create machine pods in the bootstrap cluster", func(ctx SpecContext) {
