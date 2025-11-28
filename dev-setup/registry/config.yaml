@@ -1,0 +1,20 @@
+version: 0.1
+log:
+  fields:
+    service: registry
+storage:
+  delete:
+    enabled: true
+  filesystem:
+    rootdirectory: /var/lib/registry
+  tag:
+    concurrencylimit: 5
+http:
+  addr: ":5000"
+  debug:
+    addr: ":5001"
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3

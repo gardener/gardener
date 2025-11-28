@@ -169,7 +169,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			for file, content := range map[string]string{
 				"manifests/shootstate.yaml":  "apiVersion: core.gardener.cloud/v1beta1\nkind: ShootState\n",
 				"manifests/manifests.yaml":   "apiVersion: core.gardener.cloud/v1beta1\nkind: Shoot\n",
-				"imagevector-overwrite.yaml": "garden.local.gardener.cloud:5001/local-skaffold_gardenadm",
+				"imagevector-overwrite.yaml": "registry.local.gardener.cloud:5000/local-skaffold_gardenadm",
 			} {
 				Eventually(ctx, func(g Gomega) *gbytes.Buffer {
 					stdOut, _, err := RunInMachine(ctx, technicalID, 0, "cat", "/var/lib/gardenadm/"+file)

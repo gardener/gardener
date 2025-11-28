@@ -1005,7 +1005,7 @@ build:
                 kubectl --kubeconfig="$VIRTUAL_GARDEN_KUBECONFIG" -n garden patch gardenlet self-hosted-shoot-root --type=merge -p "{\"spec\":{\"deployment\":{\"helm\":{\"ociRepository\":{\"ref\":\"$SKAFFOLD_IMAGE\"}}}}}" || true
 
   insecureRegistries:
-    - garden.local.gardener.cloud:5001
+    - registry.local.gardener.cloud:5000
   tagPolicy:
     customTemplate:
       template: '{{.version}}-{{.sha}}'
@@ -1026,7 +1026,7 @@ build:
       context: pkg/provider-local/node
       docker: {}
   insecureRegistries:
-    - garden.local.gardener.cloud:5001
+    - registry.local.gardener.cloud:5000
   tagPolicy:
     customTemplate:
       template: '{{.version}}-{{.sha}}'
@@ -1252,7 +1252,7 @@ build:
         - image: local-skaffold/gardener-extension-provider-local
           alias: IMG
   insecureRegistries:
-    - garden.local.gardener.cloud:5001
+    - registry.local.gardener.cloud:5000
   tagPolicy:
     customTemplate:
       template: '{{.version}}-{{.sha}}'

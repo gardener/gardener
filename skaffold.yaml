@@ -545,7 +545,7 @@ build:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-admission-controller
   insecureRegistries:
-    - garden.local.gardener.cloud:5001
+    - registry.local.gardener.cloud:5000
   tagPolicy:
     customTemplate:
       template: '{{.version}}-{{.sha}}'
@@ -858,7 +858,7 @@ build:
         - image: local-skaffold/gardener-extension-provider-local
           alias: IMG
   insecureRegistries:
-    - garden.local.gardener.cloud:5001
+    - registry.local.gardener.cloud:5000
   tagPolicy:
     customTemplate:
       template: '{{.version}}-{{.sha}}'
@@ -1573,7 +1573,7 @@ build:
               - image
               - gardener-node-agent
   insecureRegistries:
-    - garden.local.gardener.cloud:5001
+    - registry.local.gardener.cloud:5000
   tagPolicy:
     customTemplate:
       template: '{{.version}}-{{.sha}}'

@@ -47,13 +47,13 @@ fi
 echo "Configure seed cluster"
 "$SCRIPT_DIR"/../example/provider-extensions/seed/configure-seed.sh "$PATH_GARDEN_KUBECONFIG" "$PATH_SEED_KUBECONFIG" "$SEED_NAME" "$WORKLOAD_IDENTITY_SUPPORT"
 echo "Start bootstrapping Gardener"
-SKAFFOLD_DEFAULT_REPO=garden.local.gardener.cloud:5001 SKAFFOLD_PUSH=true skaffold run -m etcd,controlplane -p extensions
+SKAFFOLD_DEFAULT_REPO=registry.local.gardener.cloud:5000 SKAFFOLD_PUSH=true skaffold run -m etcd,controlplane -p extensions
 if [[ "$WORKLOAD_IDENTITY_SUPPORT" == "true" ]]; then
   SKAFFOLD_EXTENSIONS_PROFILE=extensions-with-workload-identity
 else
   SKAFFOLD_EXTENSIONS_PROFILE=extensions-without-workload-identity
 fi
-SKAFFOLD_DEFAULT_REPO=garden.local.gardener.cloud:5001 SKAFFOLD_PUSH=true skaffold run -m extensions-env -p "$SKAFFOLD_EXTENSIONS_PROFILE"
+SKAFFOLD_DEFAULT_REPO=registry.local.gardener.cloud:5000 SKAFFOLD_PUSH=true skaffold run -m extensions-env -p "$SKAFFOLD_EXTENSIONS_PROFILE"
 echo "Configure admission controllers"
 "$SCRIPT_DIR"/../example/provider-extensions/garden/configure-admission.sh "$PATH_GARDEN_KUBECONFIG" apply
 echo "Registering controllers"
