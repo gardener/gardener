@@ -22,6 +22,14 @@ type ProgressReporter interface {
 	Report(context.Context, *Stats)
 }
 
+// TaskRetryReporter is used to report the state of a task. This can be passed to a RetryableTask as a reporter.
+type TaskRetryReporter interface {
+	ProgressReporter
+
+	// ReportRetry reports that the task failed with the given error and will be retried.
+	ReportRetry(ctx context.Context, id TaskID, err error)
+}
+
 // MakeDescription returns a description based on the stats.
 func MakeDescription(stats *Stats) string {
 	if stats.ProgressPercent() == 0 {
