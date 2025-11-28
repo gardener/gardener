@@ -19,6 +19,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
@@ -90,8 +91,8 @@ type kubeProxy struct {
 
 // Values is a set of configuration values for the kube-proxy component.
 type Values struct {
-	// IPVSEnabled states whether IPVS is enabled.
-	IPVSEnabled bool
+	// ProxyMode defines the kernel module used for the proxy, can be one of ipvs, iptables or nftables.
+	ProxyMode gardencore.ProxyMode
 	// FeatureGates is the set of feature gates.
 	FeatureGates map[string]bool
 	// ImageAlpine is the alpine container image.

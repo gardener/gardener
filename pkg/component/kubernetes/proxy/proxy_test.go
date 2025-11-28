@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -237,7 +238,7 @@ var _ = Describe("KubeProxy", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
-			IPVSEnabled: true,
+			ProxyMode: core.ProxyModeIPVS,
 			FeatureGates: map[string]bool{
 				"Foo": true,
 				"Bar": false,
@@ -336,14 +337,20 @@ var _ = Describe("KubeProxy", func() {
 				Type:      corev1.SecretTypeOpaque,
 			}
 
-			configMapNameFor = func(ipvsEnabled bool) string {
-				if !ipvsEnabled {
+			configMapNameFor = func(mode core.ProxyMode) string {
+				switch mode {
+				case core.ProxyModeIPTables:
 					return "kube-proxy-config-c3039bb4"
+				case core.ProxyModeIPVS:
+					return "kube-proxy-config-c09a0894"
+				case core.ProxyModeNFTables:
+					return "kube-proxy-config-b9ea3e44"
+				default:
+					return "kube-proxy-config-no-valid-proxy-mode"
 				}
-				return "kube-proxy-config-c09a0894"
 			}
 
-			configMapFor = func(ipvsEnabled bool) *corev1.ConfigMap {
+			configMapFor = func(mode core.ProxyMode) *corev1.ConfigMap {
 				out := `apiVersion: kubeproxy.config.k8s.io/v1alpha1
 bindAddress: ""
 bindAddressHardFail: false
@@ -353,7 +360,7 @@ clientConnection:
   contentType: ""
   kubeconfig: /var/lib/kube-proxy-kubeconfig/kubeconfig
   qps: 0`
-				if ipvsEnabled {
+				if mode == core.ProxyModeIPVS {
 					out += `
 clusterCIDR: ""`
 				} else {
@@ -405,12 +412,18 @@ logging:
       infoBufferSize: "0"
   verbosity: 0
 metricsBindAddress: 0.0.0.0:10249`
-				if ipvsEnabled {
+				switch mode {
+				case core.ProxyModeIPVS:
 					out += `
 mode: ipvs`
-				} else {
+				case core.ProxyModeIPTables:
 					out += `
 mode: iptables`
+				case core.ProxyModeNFTables:
+					out += `
+mode: nftables`
+				default:
+					// Noop
 				}
 				out += `
 nftables:
@@ -438,7 +451,7 @@ winkernel:
 							"role":   "proxy",
 							"origin": "gardener",
 						},
-						Name:      configMapNameFor(ipvsEnabled),
+						Name:      configMapNameFor(mode),
 						Namespace: "kube-system",
 					},
 					Immutable: ptr.To(true),
@@ -523,29 +536,35 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 			daemonSetNameFor = func(pool WorkerPool) string {
 				return "kube-proxy-" + pool.Name + "-v" + pool.KubernetesVersion.String()
 			}
-			daemonSetFor = func(pool WorkerPool, ipvsEnabled, vpaEnabled bool) *appsv1.DaemonSet {
+			daemonSetFor = func(pool WorkerPool, mode core.ProxyMode, vpaEnabled bool) *appsv1.DaemonSet {
 				referenceAnnotations := func() map[string]string {
-					if ipvsEnabled {
+					if mode == core.ProxyModeIPVS {
 						return map[string]string{
 							references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName):      configMapCleanupScriptName,
 							references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName): configMapConntrackFixScriptName,
-							references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)):   configMapNameFor(ipvsEnabled),
+							references.AnnotationKey(references.KindConfigMap, configMapNameFor(mode)):          configMapNameFor(mode),
 							references.AnnotationKey(references.KindSecret, secretName):                         secretName,
 						}
 					}
 					return map[string]string{
 						references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName):      configMapCleanupScriptName,
-						references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)):   configMapNameFor(ipvsEnabled),
+						references.AnnotationKey(references.KindConfigMap, configMapNameFor(mode)):          configMapNameFor(mode),
 						references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName): configMapConntrackFixScriptName,
 						references.AnnotationKey(references.KindSecret, secretName):                         secretName,
 					}
 				}
 
 				kubeProxyMode := func() string {
-					if ipvsEnabled {
+					switch mode {
+					case core.ProxyModeIPTables:
+						return "iptables"
+					case core.ProxyModeIPVS:
 						return "ipvs"
+					case core.ProxyModeNFTables:
+						return "nftables"
+					default:
+						return "iptables"
 					}
-					return "iptables"
 				}
 
 				kubeProxyContainerLogVerbosity := 2
@@ -725,7 +744,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 										VolumeSource: corev1.VolumeSource{
 											ConfigMap: &corev1.ConfigMapVolumeSource{
 												LocalObjectReference: corev1.LocalObjectReference{
-													Name: configMapNameFor(ipvsEnabled),
+													Name: configMapNameFor(mode),
 												},
 											},
 										},
@@ -890,7 +909,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 				clusterRoleBinding,
 				service,
 				secret,
-				configMapFor(values.IPVSEnabled),
+				configMapFor(values.ProxyMode),
 				configMapConntrackFixScript,
 				configMapCleanupScript,
 			))
@@ -933,7 +952,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 					},
 				}
 
-				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.IPVSEnabled, values.VPAEnabled)))
+				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.ProxyMode, values.VPAEnabled)))
 				managedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResource.Spec.SecretRefs[0].Name, Namespace: namespace}}
 				expectedPoolMr.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
 				utilruntime.Must(references.InjectAnnotations(expectedPoolMr))
@@ -953,8 +972,8 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 			}
 		})
 
-		It("should successfully deploy the expected config when IPVS is disabled", func() {
-			values.IPVSEnabled = false
+		It("should successfully deploy the expected config when mode is NFTables", func() {
+			values.ProxyMode = core.ProxyModeNFTables
 			values.PodNetworkCIDRs = podNetworkCIDRs
 			component = New(c, namespace, values)
 
@@ -976,7 +995,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 					KeepObjects:  ptr.To(false),
 				},
 			}
-			Expect(managedResourceCentral).To(contain(configMapFor(values.IPVSEnabled)))
+			Expect(managedResourceCentral).To(contain(configMapFor(values.ProxyMode)))
 
 			managedResourceSecretCentral = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
 				Name:      managedResourceCentral.Spec.SecretRefs[0].Name,
@@ -1024,7 +1043,98 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 					Name:      managedResource.Spec.SecretRefs[0].Name,
 					Namespace: namespace,
 				}}
-				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.IPVSEnabled, values.VPAEnabled)))
+				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.ProxyMode, values.VPAEnabled)))
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Labels).To(Equal(map[string]string{
+					"component":          "kube-proxy",
+					"kubernetes-version": pool.KubernetesVersion.String(),
+					"origin":             "gardener",
+					"pool-name":          pool.Name,
+					"resources.gardener.cloud/garbage-collectable-reference": "true",
+					"role": "pool",
+				}))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				poolExpectedMr.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
+				utilruntime.Must(references.InjectAnnotations(poolExpectedMr))
+				Expect(managedResource).To(DeepEqual(poolExpectedMr))
+			}
+
+		})
+
+		It("should successfully deploy the expected config when mode is IPTables", func() {
+			values.ProxyMode = core.ProxyModeIPTables
+			values.PodNetworkCIDRs = podNetworkCIDRs
+			component = New(c, namespace, values)
+
+			Expect(component.Deploy(ctx)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceCentral), managedResourceCentral)).To(Succeed())
+			expectedMR := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            managedResourceCentral.Name,
+					Namespace:       managedResourceCentral.Namespace,
+					ResourceVersion: "1",
+					Labels: map[string]string{
+						"origin":    "gardener",
+						"component": "kube-proxy",
+					},
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+					KeepObjects:  ptr.To(false),
+				},
+			}
+			Expect(managedResourceCentral).To(contain(configMapFor(values.ProxyMode)))
+
+			managedResourceSecretCentral = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      managedResourceCentral.Spec.SecretRefs[0].Name,
+				Namespace: namespace,
+			}}
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
+			Expect(managedResourceSecretCentral.Type).To(Equal(corev1.SecretTypeOpaque))
+			Expect(managedResourceSecretCentral.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecretCentral.Labels).To(Equal(map[string]string{
+				"resources.gardener.cloud/garbage-collectable-reference": "true",
+				"component": "kube-proxy",
+				"origin":    "gardener",
+			}))
+			expectedMR.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecretCentral.Name}}
+			utilruntime.Must(references.InjectAnnotations(expectedMR))
+			Expect(managedResourceCentral).To(DeepEqual(expectedMR))
+
+			for _, pool := range values.WorkerPools {
+				By(pool.Name)
+
+				managedResource := managedResourceForPool(pool)
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				poolExpectedMr := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResource.Name,
+						Namespace:       managedResource.Namespace,
+						ResourceVersion: "1",
+						Labels: map[string]string{
+							"origin":             "gardener",
+							"component":          "kube-proxy",
+							"role":               "pool",
+							"pool-name":          pool.Name,
+							"kubernetes-version": pool.KubernetesVersion.String(),
+						},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+						KeepObjects:  ptr.To(false),
+					},
+				}
+
+				managedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+					Name:      managedResource.Spec.SecretRefs[0].Name,
+					Namespace: namespace,
+				}}
+				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.ProxyMode, values.VPAEnabled)))
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
@@ -1060,7 +1170,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 					Name:      managedResource.Spec.SecretRefs[0].Name,
 					Namespace: namespace,
 				}}
-				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.IPVSEnabled, values.VPAEnabled)))
+				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.ProxyMode, values.VPAEnabled)))
 
 				expectedMr := &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1083,7 +1193,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
 
-				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.IPVSEnabled, values.VPAEnabled)))
+				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.ProxyMode, values.VPAEnabled)))
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
