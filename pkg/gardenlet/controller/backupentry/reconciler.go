@@ -674,22 +674,10 @@ func (r *Reconciler) reconcileBackupEntryExtensionSecret(ctx context.Context, ex
 		})
 		return err
 	case *securityv1alpha1.WorkloadIdentity:
-		gvk, err := apiutil.GVKForObject(backupEntry, kubernetes.GardenScheme)
-		if err != nil {
-			return err
-		}
-		s, err := workloadidentity.NewSecret(
-			extensionSecret.Name,
-			extensionSecret.Namespace,
-			workloadidentity.For(credentials.GetName(), credentials.GetNamespace(), credentials.Spec.TargetSystem.Type),
-			workloadidentity.WithProviderConfig(credentials.Spec.TargetSystem.ProviderConfig),
-			workloadidentity.WithContextObject(securityv1alpha1.ContextObject{APIVersion: gvk.GroupVersion().String(), Kind: gvk.Kind, Namespace: ptr.To(backupEntry.GetNamespace()), Name: backupEntry.GetName(), UID: backupEntry.GetUID()}),
-			workloadidentity.WithAnnotations(map[string]string{v1beta1constants.GardenerTimestamp: now}),
+		return workloadidentity.Deploy(
+			ctx, r.SeedClient, credentials, extensionSecret.Name, extensionSecret.Namespace,
+			map[string]string{v1beta1constants.GardenerTimestamp: now}, nil, backupEntry,
 		)
-		if err != nil {
-			return err
-		}
-		return s.Reconcile(ctx, r.SeedClient)
 	default:
 		return fmt.Errorf("unsupported credentials type GVK: %q", backupCredentials.GetObjectKind().GroupVersionKind().String())
 	}

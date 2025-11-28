@@ -5,12 +5,14 @@
 package reference
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/controller/reference"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 )
@@ -18,13 +20,14 @@ import (
 // AddToManager adds the shoot-reference controller to the given manager.
 func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.ShootReferenceControllerConfiguration) error {
 	return (&reference.Reconciler{
-		ConcurrentSyncs:             cfg.ConcurrentSyncs,
-		NewObjectFunc:               func() client.Object { return &gardencorev1beta1.Shoot{} },
-		NewObjectListFunc:           func() client.ObjectList { return &gardencorev1beta1.ShootList{} },
-		GetNamespace:                func(obj client.Object) string { return obj.GetNamespace() },
-		GetReferencedSecretNames:    getReferencedSecretNames,
-		GetReferencedConfigMapNames: getReferencedConfigMapNames,
-		ReferenceChangedPredicate:   Predicate,
+		ConcurrentSyncs:                    cfg.ConcurrentSyncs,
+		NewObjectFunc:                      func() client.Object { return &gardencorev1beta1.Shoot{} },
+		NewObjectListFunc:                  func() client.ObjectList { return &gardencorev1beta1.ShootList{} },
+		GetNamespace:                       func(obj client.Object) string { return obj.GetNamespace() },
+		GetReferencedSecretNames:           getReferencedSecretNames,
+		GetReferencedConfigMapNames:        getReferencedConfigMapNames,
+		GetReferencedWorkloadIdentityNames: getReferencedWorkloadIdentityNames,
+		ReferenceChangedPredicate:          Predicate,
 	}).AddToManager(mgr, "shoot")
 }
 
@@ -59,7 +62,7 @@ func getReferencedSecretNames(obj client.Object) []string {
 	out = append(out, secretNamesForDNSProviders(shoot)...)
 	out = append(out, secretNamesForAdmissionPlugins(shoot)...)
 	out = append(out, secretNamesForStructuredAuthorization(shoot)...)
-	out = append(out, namesForReferencedResources(shoot, "Secret")...)
+	out = append(out, namesForReferencedResources(shoot, corev1.SchemeGroupVersion.String(), "Secret")...)
 	return out
 }
 
@@ -79,7 +82,18 @@ func getReferencedConfigMapNames(obj client.Object) []string {
 	if configMapName := v1beta1helper.GetShootAuthorizationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer); configMapName != "" {
 		out = append(out, configMapName)
 	}
-	out = append(out, namesForReferencedResources(shoot, "ConfigMap")...)
+	out = append(out, namesForReferencedResources(shoot, corev1.SchemeGroupVersion.String(), "ConfigMap")...)
+	return out
+}
+
+func getReferencedWorkloadIdentityNames(obj client.Object) []string {
+	shoot, ok := obj.(*gardencorev1beta1.Shoot)
+	if !ok {
+		return nil
+	}
+
+	var out []string
+	out = append(out, namesForReferencedResources(shoot, securityv1alpha1.SchemeGroupVersion.String(), "WorkloadIdentity")...)
 	return out
 }
 
@@ -127,10 +141,10 @@ func secretNamesForStructuredAuthorization(shoot *gardencorev1beta1.Shoot) []str
 	return names
 }
 
-func namesForReferencedResources(shoot *gardencorev1beta1.Shoot, kind string) []string {
+func namesForReferencedResources(shoot *gardencorev1beta1.Shoot, apiVersion, kind string) []string {
 	var names []string
 	for _, ref := range shoot.Spec.Resources {
-		if ref.ResourceRef.APIVersion == "v1" && ref.ResourceRef.Kind == kind {
+		if ref.ResourceRef.APIVersion == apiVersion && ref.ResourceRef.Kind == kind {
 			names = append(names, ref.ResourceRef.Name)
 		}
 	}

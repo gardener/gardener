@@ -15,12 +15,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 )
 
 var _ = Describe("Seed Reference controller tests", func() {
 	var (
-		secret1    *corev1.Secret
-		configMap1 *corev1.ConfigMap
+		secret1           *corev1.Secret
+		configMap1        *corev1.ConfigMap
+		workloadIdentity1 *securityv1alpha1.WorkloadIdentity
 
 		allReferencedObjects []client.Object
 		seed                 *gardencorev1beta1.Seed
@@ -29,8 +31,9 @@ var _ = Describe("Seed Reference controller tests", func() {
 	BeforeEach(func() {
 		secret1 = initializeObject("secret").(*corev1.Secret)
 		configMap1 = initializeObject("configMap").(*corev1.ConfigMap)
+		workloadIdentity1 = initializeObject("workloadIdentity").(*securityv1alpha1.WorkloadIdentity)
 
-		allReferencedObjects = []client.Object{secret1, configMap1}
+		allReferencedObjects = []client.Object{secret1, configMap1, workloadIdentity1}
 
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
@@ -81,6 +84,14 @@ var _ = Describe("Seed Reference controller tests", func() {
 							Name:       configMap1.Name,
 						},
 					},
+					{
+						Name: "baz",
+						ResourceRef: autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "security.gardener.cloud/v1alpha1",
+							Kind:       "WorkloadIdentity",
+							Name:       workloadIdentity1.Name,
+						},
+					},
 				},
 			},
 		}
@@ -118,7 +129,7 @@ var _ = Describe("Seed Reference controller tests", func() {
 			}).Should(ContainElement("gardener.cloud/reference-protection"))
 		})
 
-		It("should add finalizers to the referenced secrets and configmaps", func() {
+		It("should add finalizers to the referenced secrets, configmaps and workloadidentities", func() {
 			for _, obj := range allReferencedObjects {
 				Eventually(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
@@ -163,7 +174,7 @@ var _ = Describe("Seed Reference controller tests", func() {
 				}).Should(ContainElement("gardener.cloud/reference-protection"))
 			})
 
-			It("should not remove finalizers from the referenced secrets and configmaps because another seed still references them", func() {
+			It("should not remove finalizers from the referenced secrets, configmaps and workloadidentities because another seed still references them", func() {
 				patch := client.MergeFrom(seed.DeepCopy())
 				seed.Spec.Resources = nil
 				Expect(testClient.Patch(ctx, seed, patch)).To(Succeed())
@@ -199,6 +210,14 @@ func initializeObject(kind string) client.Object {
 		obj = &corev1.Secret{ObjectMeta: meta}
 	case "configMap":
 		obj = &corev1.ConfigMap{ObjectMeta: meta}
+	case "workloadIdentity":
+		obj = &securityv1alpha1.WorkloadIdentity{
+			ObjectMeta: meta,
+			Spec: securityv1alpha1.WorkloadIdentitySpec{
+				Audiences:    []string{"aud1"},
+				TargetSystem: securityv1alpha1.TargetSystem{Type: "test"},
+			},
+		}
 	}
 
 	By("Create " + strings.ToTitle(kind))

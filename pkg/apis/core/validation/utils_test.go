@@ -193,7 +193,7 @@ var _ = Describe("Utils tests", func() {
 		})
 
 		It("should forbid resources w/o names or w/ invalid references", func() {
-			errorList := ValidateResources([]core.NamedResourceReference{{}}, fldPath)
+			errorList := ValidateResources([]core.NamedResourceReference{{}}, fldPath, true)
 
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -212,10 +212,14 @@ var _ = Describe("Utils tests", func() {
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("resources[0].resourceRef.apiVersion"),
 				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("resources[0].resourceRef"),
+				})),
 			))
 		})
 
-		It("should forbid resources of kind other than Secret/ConfigMap", func() {
+		It("should forbid resources of kind other than Secret/ConfigMap/WorkloadIdentity", func() {
 			ref := core.NamedResourceReference{
 				Name: "test",
 				ResourceRef: autoscalingv1.CrossVersionObjectReference{
@@ -225,13 +229,13 @@ var _ = Describe("Utils tests", func() {
 				},
 			}
 
-			errorList := ValidateResources([]core.NamedResourceReference{ref}, fldPath)
+			errorList := ValidateResources([]core.NamedResourceReference{ref}, fldPath, true)
 
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeNotSupported),
-					"Field":    Equal("resources[0].resourceRef.kind"),
-					"BadValue": Equal("ServiceAccount"),
+					"Field":    Equal("resources[0].resourceRef"),
+					"BadValue": Equal("/v1, Kind=ServiceAccount"),
 				})),
 			))
 		})
@@ -255,12 +259,25 @@ var _ = Describe("Utils tests", func() {
 				},
 			}
 
-			errorList := ValidateResources([]core.NamedResourceReference{ref, ref2}, fldPath)
+			ref3 := core.NamedResourceReference{
+				Name: "test",
+				ResourceRef: autoscalingv1.CrossVersionObjectReference{
+					Kind:       "WorkloadIdentity",
+					Name:       ref.Name,
+					APIVersion: "security.gardener.cloud/v1alpha1",
+				},
+			}
+
+			errorList := ValidateResources([]core.NamedResourceReference{ref, ref2, ref3}, fldPath, true)
 
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
 					"Field": Equal("resources[1].name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("resources[2].name"),
 				})),
 			))
 		})
@@ -284,9 +301,39 @@ var _ = Describe("Utils tests", func() {
 				},
 			}
 
-			errorList := ValidateResources([]core.NamedResourceReference{ref, ref2}, fldPath)
+			ref3 := core.NamedResourceReference{
+				Name: "test-wi",
+				ResourceRef: autoscalingv1.CrossVersionObjectReference{
+					Kind:       "WorkloadIdentity",
+					Name:       "test-workload-identity",
+					APIVersion: "security.gardener.cloud/v1alpha1",
+				},
+			}
+
+			errorList := ValidateResources([]core.NamedResourceReference{ref, ref2, ref3}, fldPath, true)
 
 			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid resources of kind WorkloadIdentity when configured so", func() {
+			ref := core.NamedResourceReference{
+				Name: "test",
+				ResourceRef: autoscalingv1.CrossVersionObjectReference{
+					Kind:       "WorkloadIdentity",
+					Name:       "test-workload-identity",
+					APIVersion: "security.gardener.cloud/v1alpha1",
+				},
+			}
+
+			errorList := ValidateResources([]core.NamedResourceReference{ref}, fldPath, false)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeNotSupported),
+					"Field":    Equal("resources[0].resourceRef"),
+					"BadValue": Equal("security.gardener.cloud/v1alpha1, Kind=WorkloadIdentity"),
+				})),
+			))
 		})
 	})
 
