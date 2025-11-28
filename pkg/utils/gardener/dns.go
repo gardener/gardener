@@ -8,6 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
+
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
@@ -75,12 +78,12 @@ func GetDomainInfoFromAnnotations(annotations map[string]string) (provider strin
 }
 
 // GenerateDNSProviderName creates a name for the dns provider out of the passed `secretName` and `providerType`.
-func GenerateDNSProviderName(secretName, providerType string) string {
+func GenerateDNSProviderName(credentialsRef *autoscalingv1.CrossVersionObjectReference, providerType string) string {
 	switch {
-	case secretName != "" && providerType != "":
-		return fmt.Sprintf("%s-%s", providerType, secretName)
-	case secretName != "":
-		return secretName
+	case credentialsRef != nil && providerType != "":
+		return fmt.Sprintf("%s-%s-%s", providerType, strings.ToLower(credentialsRef.Kind), credentialsRef.Name)
+	case credentialsRef != nil:
+		return fmt.Sprintf("%s-%s", strings.ToLower(credentialsRef.Kind), credentialsRef.Name)
 	case providerType != "":
 		return providerType
 	default:

@@ -7,6 +7,7 @@ package core
 import (
 	"time"
 
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -457,6 +458,10 @@ type DNSProvider struct {
 	// provider. When not specified, the Gardener will use the cloud provider credentials referenced
 	// by the Shoot and try to find respective credentials there. Specifying this field may override
 	// this behavior, i.e. forcing the Gardener to only look into the given secret.
+	//
+	// Deprecated: This field is deprecated and will be forbidden starting from Kubernetes 1.35. Please use `CredentialsRef` instead.
+	// Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.
+	// TODO(vpnachev): Remove this field once support for Kubernetes 1.34 is dropped.
 	SecretName *string
 	// Type is the DNS provider type for the Shoot. Only relevant if not the default domain is used for
 	// this shoot.
@@ -466,6 +471,9 @@ type DNSProvider struct {
 	// Deprecated: This field is deprecated and will be removed in a future release.
 	// Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.
 	Zones *DNSIncludeExclude
+	// CredentialsRef is a reference to resource providing credentials for the DNS provider.
+	// Supported resource kinds are Secret and WorkloadIdentity.
+	CredentialsRef *autoscalingv1.CrossVersionObjectReference
 }
 
 // DNSIncludeExclude contains information about which domains shall be included/excluded.

@@ -24,7 +24,8 @@ func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.Shoot
 		GetNamespace:                func(obj client.Object) string { return obj.GetNamespace() },
 		GetReferencedSecretNames:    getReferencedSecretNames,
 		GetReferencedConfigMapNames: getReferencedConfigMapNames,
-		ReferenceChangedPredicate:   Predicate,
+		// GetReferencedWorkloadIdentityNames: TODO(vpnachev): implement when https://github.com/gardener/gardener/pull/13469 is merged
+		ReferenceChangedPredicate: Predicate,
 	}).AddToManager(mgr, "shoot")
 }
 
@@ -90,10 +91,13 @@ func secretNamesForDNSProviders(shoot *gardencorev1beta1.Shoot) []string {
 
 	var names = make([]string, 0, len(shoot.Spec.DNS.Providers))
 	for _, provider := range shoot.Spec.DNS.Providers {
-		if provider.SecretName == nil {
+		if provider.CredentialsRef == nil {
 			continue
 		}
-		names = append(names, *provider.SecretName)
+		if provider.CredentialsRef.APIVersion != "v1" || provider.CredentialsRef.Kind != "Secret" {
+			continue
+		}
+		names = append(names, provider.CredentialsRef.Name)
 	}
 
 	return names

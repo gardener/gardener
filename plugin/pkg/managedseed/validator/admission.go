@@ -27,6 +27,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementhelper "github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
@@ -502,9 +503,17 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 
 	// Initialize a reference to the primary DNS provider secret
 	var secretRef corev1.SecretReference
-	if primaryProvider.SecretName != nil {
-		secretRef.Name = *primaryProvider.SecretName
-		secretRef.Namespace = shoot.Namespace
+	if primaryProvider.CredentialsRef != nil {
+		switch apiVersion, kind := primaryProvider.CredentialsRef.APIVersion, primaryProvider.CredentialsRef.Kind; {
+		case apiVersion == corev1.SchemeGroupVersion.String() && kind == "Secret":
+			secretRef = corev1.SecretReference{
+				Name:      primaryProvider.CredentialsRef.Name,
+				Namespace: shoot.Namespace,
+			}
+		case apiVersion == securityv1alpha1.SchemeGroupVersion.String() && kind == "WorkloadIdentity":
+			// TODO(vpnachev): This code should handle dns provider credentials of type WorkloadIdentity
+			return nil, fmt.Errorf("dns provider credentials of type WorkloadIdentity are not yet supported")
+		}
 	} else if shoot.Spec.SecretBindingName != nil {
 		secretBinding, err := v.secretBindingLister.SecretBindings(shoot.Namespace).Get(*shoot.Spec.SecretBindingName)
 		if err != nil {
@@ -521,14 +530,21 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 			if apierrors.IsNotFound(err) {
 				return nil, fmt.Errorf("credentials binding %s/%s not found", shoot.Namespace, *shoot.Spec.CredentialsBindingName)
 			}
-			return nil, apierrors.NewInternalError(fmt.Errorf("could not get secret binding %s/%s: %v", shoot.Namespace, *shoot.Spec.SecretBindingName, err))
+			return nil, apierrors.NewInternalError(fmt.Errorf("could not get credentials binding %s/%s: %v", shoot.Namespace, *shoot.Spec.CredentialsBindingName, err))
 		}
-		secretRef = corev1.SecretReference{
-			Name:      credentialsBinding.CredentialsRef.Name,
-			Namespace: credentialsBinding.CredentialsRef.Namespace,
+
+		switch credentialsBinding.CredentialsRef.GroupVersionKind() {
+		case corev1.SchemeGroupVersion.WithKind("Secret"):
+			secretRef = corev1.SecretReference{
+				Name:      credentialsBinding.CredentialsRef.Name,
+				Namespace: credentialsBinding.CredentialsRef.Namespace,
+			}
+		case securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentity"):
+			// TODO(vpnachev): This code should handle dns provider credentials of type WorkloadIdentity
+			return nil, fmt.Errorf("shoot credentials of type WorkloadIdentity cannot be used as domain secret")
 		}
 	} else {
-		return nil, fmt.Errorf("cannot initialize a reference to the primary DNS provider secret of shoot %s", client.ObjectKeyFromObject(shoot))
+		return nil, fmt.Errorf("cannot initialize a reference to the primary DNS provider credentials of shoot %s", client.ObjectKeyFromObject(shoot))
 	}
 
 	return &gardencore.SeedDNSProvider{

@@ -47,7 +47,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			domain          = "my-cluster.example.com"
 			dnsProviderType = "some-provider"
-			secretName      = "some-secret"
 			purpose         = core.ShootPurposeEvaluation
 			addon           = core.Addon{Enabled: true}
 
@@ -1914,6 +1913,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("DNS section", func() {
+			var (
+				dnsSecretName           string
+				dnsWorkloadIdentityName string
+				dnsSecretRef            autoscalingv1.CrossVersionObjectReference
+				dnsWorkloadIdentityRef  autoscalingv1.CrossVersionObjectReference
+			)
+
+			BeforeEach(func() {
+				dnsSecretName = "dns-secret"
+				dnsWorkloadIdentityName = "dns-wi"
+				dnsSecretRef = autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: dnsSecretName}
+				dnsWorkloadIdentityRef = autoscalingv1.CrossVersionObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: dnsWorkloadIdentityName}
+			})
+
 			It("should forbid specifying a provider without a domain", func() {
 				shoot.Spec.DNS.Domain = nil
 
@@ -1951,11 +1964,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should forbid specifying a secret name when provider equals 'unmanaged'", func() {
+			It("should forbid specifying a credentialsRef when provider equals 'unmanaged'", func() {
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type:       ptr.To(core.DNSUnmanaged),
-						SecretName: ptr.To(""),
+						Type:           ptr.To(core.DNSUnmanaged),
+						CredentialsRef: &dnsSecretRef,
+						SecretName:     &dnsSecretName,
 					},
 				}
 
@@ -1963,14 +1977,15 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns.providers[0].secretName"),
+					"Field": Equal("spec.dns.providers[0].credentialsRef"),
 				}))))
 			})
 
 			It("should require a provider if a secret name is given", func() {
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						SecretName: ptr.To(""),
+						CredentialsRef: &dnsSecretRef,
+						SecretName:     &dnsSecretName,
 					},
 				}
 
@@ -2092,32 +2107,43 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						SecretName: &secretName,
-						Type:       &dnsProviderType,
+						SecretName:     &dnsSecretName,
+						CredentialsRef: &dnsSecretRef,
+						Type:           &dnsProviderType,
 					},
 					{
-						SecretName: &invalidSecretName,
-						Type:       &dnsProviderType,
+						SecretName:     &invalidSecretName,
+						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: invalidSecretName},
+						Type:           &dnsProviderType,
 					},
 				}
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns.providers[1]"),
-				}))))
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.dns.providers[1]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.dns.providers[1].credentialsRef.name"),
+						"Detail": ContainSubstring("a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters"),
+					})),
+				))
 			})
 
 			It("should forbid having the same provider multiple times", func() {
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						SecretName: &secretName,
-						Type:       &dnsProviderType,
+						SecretName:     &dnsSecretName,
+						CredentialsRef: &dnsSecretRef,
+						Type:           &dnsProviderType,
 					},
 					{
-						SecretName: &secretName,
-						Type:       &dnsProviderType,
+						SecretName:     &dnsSecretName,
+						CredentialsRef: &dnsSecretRef,
+						Type:           &dnsProviderType,
 					},
 				}
 
@@ -2131,7 +2157,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should allow updating the dns secret name", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.DNS.Providers[0].SecretName = ptr.To("my-dns-secret")
+				newSecretName := "my-dns-secret"
+				newShoot.Spec.DNS.Providers[0].SecretName = &newSecretName
+				newShoot.Spec.DNS.Providers[0].CredentialsRef = &autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: newSecretName}
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -2149,6 +2177,121 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.dns.providers[1].primary"),
 				}))))
+			})
+
+			It("should forbid WorkloadIdentity credentials", func() {
+				// TODO(vpnachev): Adapt this test when WorkloadIdentity for DNS providers is supported.
+				shoot.Spec.DNS.Providers[0].CredentialsRef = &dnsWorkloadIdentityRef
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.dns.providers[0].credentialsRef"),
+					"Detail": Equal("workload identity is not yet supported for DNS providers"),
+				}))))
+			})
+
+			Context("#validateDNSCredentialsRef", func() {
+				It("should forbid unset credentialsRef when secretName is set", func() {
+					shoot.Spec.DNS.Providers[0].CredentialsRef = nil
+					shoot.Spec.DNS.Providers[0].SecretName = &dnsSecretName
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.dns.providers[0].secretName"),
+						"Detail": ContainSubstring("must not be set when `credentialsRef` is not set"),
+					}))))
+				})
+
+				It("should allow both credentialsRef when secretName to be unset", func() {
+					shoot.Spec.DNS.Providers[0].CredentialsRef = nil
+					shoot.Spec.DNS.Providers[0].SecretName = nil
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(BeEmpty())
+				})
+
+				DescribeTable("forbid invalid credentialsRef fields", func(ref autoscalingv1.CrossVersionObjectReference, matcher gomegatypes.GomegaMatcher) {
+					shoot.Spec.DNS.Providers[0].CredentialsRef = &ref
+					if ref.APIVersion == "v1 " && ref.Kind == "Secret" {
+						shoot.Spec.DNS.Providers[0].SecretName = &ref.Name
+					}
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(matcher)
+
+				},
+					Entry("empty APIVersion",
+						autoscalingv1.CrossVersionObjectReference{APIVersion: "", Kind: "Secret", Name: dnsSecretName},
+						ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeRequired),
+							"Field":  Equal("spec.dns.providers[0].credentialsRef.apiVersion"),
+							"Detail": Equal("must provide an apiVersion"),
+						}))),
+					),
+					Entry("empty Kind",
+						autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "", Name: dnsSecretName},
+						ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeRequired),
+							"Field":  Equal("spec.dns.providers[0].credentialsRef.kind"),
+							"Detail": Equal("must provide a kind"),
+						}))),
+					),
+					Entry("empty Name",
+						autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: ""},
+						ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeRequired),
+							"Field":  Equal("spec.dns.providers[0].credentialsRef.name"),
+							"Detail": Equal("must provide a name"),
+						}))),
+					),
+					Entry("invalid Name",
+						autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo/bar"},
+						ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.dns.providers[0].credentialsRef.name"),
+							"Detail": ContainSubstring("a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters"),
+						}))),
+					),
+					Entry("unsupported APIVersion and Kind",
+						autoscalingv1.CrossVersionObjectReference{APIVersion: "foo/v1", Kind: "Bar", Name: dnsSecretName},
+						ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeNotSupported),
+							"Field":  Equal("spec.dns.providers[0].credentialsRef"),
+							"Detail": Equal(`supported values: "/v1, Kind=Secret", "security.gardener.cloud/v1alpha1, Kind=WorkloadIdentity"`),
+						}))),
+					),
+				)
+
+				It("should forbid credentialsRef and secretName to refer different secret", func() {
+					shoot.Spec.DNS.Providers[0].CredentialsRef = &dnsSecretRef
+					shoot.Spec.DNS.Providers[0].SecretName = ptr.To("other")
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.dns.providers[0].secretName"),
+						"Detail": ContainSubstring("must refer to the same secret as `credentialsRef`"),
+					}))))
+				})
+
+				It("should forbid secretName to be set when credentialsRef refer to resource othan than secret", func() {
+					shoot.Spec.DNS.Providers[0].CredentialsRef = &dnsWorkloadIdentityRef
+					shoot.Spec.DNS.Providers[0].SecretName = &dnsSecretName
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.dns.providers[0].secretName"),
+						"Detail": ContainSubstring("must not be set when `credentialsRef` does not refer to secret resource"),
+					}))))
+				})
 			})
 		})
 
