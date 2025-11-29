@@ -26,6 +26,14 @@ spec:
             typed_config:
               "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
               stat_prefix: {{ .TargetClusterAPIServerProxy }}
+              access_log:
+                - name: envoy.access_loggers.file
+                  typed_config:
+                    "@type": "type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog"
+                    path: /dev/stdout
+                    log_format:
+                      text_format_source:
+                        inline_string: "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% \"%UPSTREAM_TRANSPORT_FAILURE_REASON%\" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% \"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\" %UPSTREAM_CLUSTER_RAW% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%\n"
               route_config:
                 name: {{ .TargetClusterAPIServerProxy }}
                 virtual_hosts:
@@ -141,7 +149,11 @@ spec:
       value:
         name: {{ .TargetClusterAPIServerProxy }}
         type: STATIC
-        connect_timeout: 1s
+        connect_timeout: 10s
+        upstream_connection_options:
+          tcp_keepalive:
+            keepalive_interval: 75
+            keepalive_time: 7200
         load_assignment:
           cluster_name: {{ .TargetClusterAPIServerProxy }}
           endpoints:
