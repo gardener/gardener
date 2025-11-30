@@ -69,7 +69,7 @@ func generateClusterParsers() []*fluentbitv1alpha2.ClusterParser {
 			},
 			Spec: fluentbitv1alpha2.ParserSpec{
 				Regex: &fluentbitv1alpha2parser.Regex{
-					Regex: `^.*\.(?<namespace_name>[a-zA-Z0-9_-]+)\.svc\.cluster\.local.*$`,
+					Regex: `^.*\.(?<namespace_name>shoot--[a-zA-Z0-9_-]+)\.svc\.cluster\.local.*$`,
 				},
 			},
 		},
