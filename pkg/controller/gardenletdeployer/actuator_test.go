@@ -273,21 +273,15 @@ var _ = Describe("Interface", func() {
 		}
 
 		expectCreateSeedSecrets = func() {
-			// Backup secret should already exist (no longer copied from infrastructure secret)
 			// First Get: check if backup secret exists
-			gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: backupSecretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
-					*s = *backupSecret
-					return nil
-				},
-			)
 			// Second Get: patch operation to remove owner reference
 			gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: backupSecretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					*s = *backupSecret
 					return nil
 				},
-			)
+			).Times(2)
+
 			// Patch to remove owner reference and add label
 			gardenClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
 				Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"labels":{"secret.backup.gardener.cloud/status":"previously-managed"},"ownerReferences":null}}`))
@@ -547,7 +541,7 @@ var _ = Describe("Interface", func() {
 
 				_, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("could not reconcile seed test secrets: the configured backup secret does not exist and shoot infrastructure credentials will not be reused"))
+				Expect(err.Error()).To(ContainSubstring("could not reconcile seed test secrets: the configured backup secret does not exist"))
 			})
 
 			It("should remove owner reference from backup secret", func() {

@@ -446,14 +446,12 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 	}
 
 	// Get backup secret
-	backupSecret, originalErr := kubernetesutils.GetSecretByObjectReference(ctx, a.GardenClient, spec.Backup.CredentialsRef)
-
-	if client.IgnoreNotFound(originalErr) != nil {
-		return originalErr
-	}
-
-	if apierrors.IsNotFound(originalErr) {
-		return fmt.Errorf("the configured backup secret does not exist and shoot infrastructure credentials will not be reused: %w", originalErr)
+	backupSecret, err := kubernetesutils.GetSecretByObjectReference(ctx, a.GardenClient, spec.Backup.CredentialsRef)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return fmt.Errorf("the configured backup secret does not exist: %w", err)
+		}
+		return err
 	}
 
 	const (
