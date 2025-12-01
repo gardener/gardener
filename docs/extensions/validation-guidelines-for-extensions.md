@@ -41,4 +41,4 @@ With https://github.com/gardener/gardener/issues/12582, we want to adapt Gardene
   - See [example](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/pkg/provider-local/controller/worker/actuator.go#L53).
 - Webhooks of extension admission components should use `objectSelector` to filter only requests for resources that use the extension.
   - The extension admission components should use the extension-specific labels maintained on the API resources by the [`ExtensionLabels` admission plugin](../concepts/apiserver-admission-plugins.md#extensionlabels).
-- See the [General Guidelines for Gardener core components](./validation-guidelines.md#general-guidelines).
+- See the [General Guidelines for Gardener core components](../development/validation-guidelines.md#general-guidelines).

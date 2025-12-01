@@ -11,12 +11,12 @@ This is a short guide covering the adoption mechanism of `in-place` Pod resource
 
 ## Compatibility
 
-Refer to the [in-place resource updates](./in-place-resource-updates.md) guide for details on Kubernetes clusters compatibility, [Vertical Pod Autoscaler](https://github.com/kubernetes/autoscaler) feature gate definition and availability.
+Refer to the [in-place resource updates](../usage/autoscaling/in-place-resource-updates.md) guide for details on Kubernetes clusters compatibility, [Vertical Pod Autoscaler](https://github.com/kubernetes/autoscaler) feature gate definition and availability.
 
 ## Configuration
 
-Gardener provides a dedicated [resource manager](../../concepts/resource-manager.md) [webhook](../../concepts/resource-manager.md#webhooks) capable of _mutating_ VerticalPodAutoscaler resources, configured with [update mode](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/quickstart.md#contents) `Auto` or `Recreate`, with the `in-place` updates enabling `InPlaceOrRecreate`.
-Available for deployment with both [gardenlet](../../concepts/gardenlet.md) and [gardener operator](../../concepts/operator.md), the _mutating_ webhook can be activated with the following feature gate, listed within the respective component manifest. Refer to the Gardener [feature gates](../../deployment/feature_gates.md) page for additional details:
+Gardener provides a dedicated [resource manager](../concepts/resource-manager.md) [webhook](../concepts/resource-manager.md#webhooks) capable of _mutating_ VerticalPodAutoscaler resources, configured with [update mode](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/quickstart.md#contents) `Auto` or `Recreate`, with the `in-place` updates enabling `InPlaceOrRecreate`.
+Available for deployment with both [gardenlet](../concepts/gardenlet.md) and [gardener operator](../concepts/operator.md), the _mutating_ webhook can be activated with the following feature gate, listed within the respective component manifest. Refer to the Gardener [feature gates](../deployment/feature_gates.md) page for additional details:
 
 ```
 VPAInPlaceUpdates
@@ -30,7 +30,7 @@ vpa-in-place-updates.resources.gardener.cloud/skip
 
 ### gardenlet
 
-To enable the _mutating_ [resource manager](../../concepts/resource-manager.md) webhook, the `VPAInPlaceUpdates` feature gate must be set to `true`:
+To enable the _mutating_ [resource manager](../concepts/resource-manager.md) webhook, the `VPAInPlaceUpdates` feature gate must be set to `true`:
 
 ```yaml
 featureGates:
@@ -43,17 +43,17 @@ Refer to the `gardenlet` component configuration [manifest](../../../example/20-
 
 > When deployed in a `Shoot` cluster, the _mutating_ webhook targets `vertical pod autoscaler` resources __inside__ the `kube-system` and `kubernetes-dashboard` namespaces.
 
-To make use of the _mutating_ resource manager webhook, the `Shoot`'s [Vertical Pod Autoscaler](https://github.com/kubernetes/autoscaler) deployment must __not have__  the `InPlaceOrRecreate` feature gate __disabled__. Follow the [in-place resource updates](./in-place-resource-updates.md#shoot) guide for more details about the Vertical Pod Autoscaler components setup.
+To make use of the _mutating_ resource manager webhook, the `Shoot`'s [Vertical Pod Autoscaler](https://github.com/kubernetes/autoscaler) deployment must __not have__  the `InPlaceOrRecreate` feature gate __disabled__. Follow the [in-place resource updates](../usage/autoscaling/in-place-resource-updates.md#shoot) guide for more details about the Vertical Pod Autoscaler components setup.
 
 #### Seed
 
 >  When deployed in a `Seed` cluster, the _mutating_ webhook targets `vertical pod autoscaler` resources __outside__ the `kube-system` and `kubernetes-dashboard` namespaces.
 
-To make use of the _mutating_ resource manager webhook, the `Seed`'s [Vertical Pod Autoscaler](https://github.com/kubernetes/autoscaler) deployment must __not have__ the `InPlaceOrRecreate` feature gate __disabled__. Follow the [in-place resource updates](./in-place-resource-updates.md#seed) guide for more details about the Vertical Pod Autoscaler components setup.
+To make use of the _mutating_ resource manager webhook, the `Seed`'s [Vertical Pod Autoscaler](https://github.com/kubernetes/autoscaler) deployment must __not have__ the `InPlaceOrRecreate` feature gate __disabled__. Follow the [in-place resource updates](../usage/autoscaling/in-place-resource-updates.md#seed) guide for more details about the Vertical Pod Autoscaler components setup.
 
 ### Gardener Operator
 
-To enable the _mutating_ [resource manager](../../concepts/resource-manager.md) webhook, the `VPAInPlaceUpdates` feature gate must be set to `true`:
+To enable the _mutating_ [resource manager](../concepts/resource-manager.md) webhook, the `VPAInPlaceUpdates` feature gate must be set to `true`:
 
 ```yaml
 featureGates:
@@ -64,6 +64,6 @@ Refer to the `operator` component configuration [manifest](../../../example/oper
 
 ## References
 
-- [Gardener Feature Gates](../../deployment/feature_gates.md)
+- [Gardener Feature Gates](../deployment/feature_gates.md)
 - [Vertical Pod Autoscaling In-Place Updates](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/features.md#in-place-updates-inplaceorrecreate)
-- [Vertical Pod Autoscaling In-Place Updates Guide](./in-place-resource-updates.md)
+- [Vertical Pod Autoscaling In-Place Updates Guide](../usage/autoscaling/in-place-resource-updates.md)
