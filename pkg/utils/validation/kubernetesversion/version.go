@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"os"
 
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // SupportedVersions is the list of supported Kubernetes versions for all runtime and target clusters, i.e. all gardens,
