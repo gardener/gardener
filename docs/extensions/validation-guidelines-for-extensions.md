@@ -13,6 +13,14 @@ They should be validated by extension admission components.
 Provider configuration fields are of type `*runtime.RawExtension`.
 Extension admission components should decode the provider configuration and perform validation of it.
 
+### `ConfigValidator` Interfaces
+
+Validation code that performs requests to external systems (e.g. the cloud provider API) should be written in `ConfigValidator` implementations.
+Performing requests to external systems in extension admission component (or in a webhook, in general) is considered as a bad practice.
+A downtime of the external system then results in rejection of requests by the webhook.
+For this purpose, the extension library leverages the `ConfigValidator` interfaces (e.g. see the [`ConfigValidator` interface for Infrastructure](./resources/infrastructure.md#configvalidator-interface)).
+They must be used to validate the provider configuration against the cloud provider API - e.g. validate the provided AWS VPC ID exists and conforms to the provider extension requirements.
+
 ## Validation of Referenced Resources
 
 The provider configuration may contain references to another resources.
