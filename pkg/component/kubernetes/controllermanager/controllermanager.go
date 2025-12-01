@@ -677,12 +677,28 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 			nodeMonitorGracePeriod = *v
 		}
 
-		if k.values.Config.NodeCIDRMaskSize != nil {
-			if k.isDualStack() {
+		if k.isDualStack() {
+			// Dual-stack: use separate IPv4 and IPv6 flags
+			if k.values.Config.NodeCIDRMaskSize != nil {
 				command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv4=%d", *k.values.Config.NodeCIDRMaskSize))
-				command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv6=%d", 64))
-			} else {
-				command = append(command, fmt.Sprintf("--node-cidr-mask-size=%d", *k.values.Config.NodeCIDRMaskSize))
+			}
+
+			ipv6MaskSize := int32(64) // default IPv6 mask size for dual-stack
+			if k.values.Config.NodeCIDRMaskSizeIPv6 != nil {
+				ipv6MaskSize = *k.values.Config.NodeCIDRMaskSizeIPv6
+			}
+			command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv6=%d", ipv6MaskSize))
+		} else {
+			// Single-stack: use generic flag (works for both IPv4 and IPv6)
+			var maskSize *int32
+			if k.values.Config.NodeCIDRMaskSize != nil {
+				maskSize = k.values.Config.NodeCIDRMaskSize
+			} else if k.values.Config.NodeCIDRMaskSizeIPv6 != nil {
+				maskSize = k.values.Config.NodeCIDRMaskSizeIPv6
+			}
+
+			if maskSize != nil {
+				command = append(command, fmt.Sprintf("--node-cidr-mask-size=%d", *maskSize))
 			}
 		}
 
