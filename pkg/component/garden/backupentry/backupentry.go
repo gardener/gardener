@@ -142,6 +142,10 @@ func (b *backupEntry) Restore(ctx context.Context, _ *gardencorev1beta1.ShootSta
 }
 
 func (b *backupEntry) reconcile(ctx context.Context, operation string) error {
+	// Make sure .metadata.resourceVersion is not set if Get() was called before Reconcile() - otherwise, the 'Create'
+	// call below will fail with 'resourceVersion should not be set on objects to be created'.
+	b.backupEntry.SetResourceVersion("")
+
 	_, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, b.client, b.backupEntry, func() error {
 		metav1.SetMetaDataAnnotation(&b.backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 		metav1.SetMetaDataAnnotation(&b.backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
