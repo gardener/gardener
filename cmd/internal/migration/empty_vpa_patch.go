@@ -26,8 +26,8 @@ import (
 func MigrateEmptyVPAPatch(ctx context.Context, mgr manager.Manager, log logr.Logger) error {
 	log.Info("Migrating VerticalPodAutoscalers")
 
-	list := vpaautoscalingv1.VerticalPodAutoscalerList{}
-	if err := mgr.GetClient().List(ctx, &list); err != nil {
+	vpaList := vpaautoscalingv1.VerticalPodAutoscalerList{}
+	if err := mgr.GetClient().List(ctx, &vpaList); err != nil {
 		if meta.IsNoMatchError(err) {
 			log.Info("Resources kind not found, skipping migration", "kind", "VerticalPodAutoscaler")
 			return nil
@@ -35,7 +35,7 @@ func MigrateEmptyVPAPatch(ctx context.Context, mgr manager.Manager, log logr.Log
 		return fmt.Errorf("failed listing VerticalPodAutoscaler resources: %w", err)
 	}
 
-	for _, vpa := range list.Items {
+	for _, vpa := range vpaList.Items {
 		vpaHasSkipLabel := metav1.HasLabel(vpa.ObjectMeta, resourcesv1alpha1.VPAInPlaceUpdatesSkip)
 		vpaHasMutatedLabel := metav1.HasLabel(vpa.ObjectMeta, resourcesv1alpha1.VPAInPlaceUpdatesMutated)
 		if vpaHasSkipLabel || vpaHasMutatedLabel {
