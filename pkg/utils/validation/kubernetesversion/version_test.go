@@ -35,12 +35,12 @@ var _ = Describe("Version", func() {
 		},
 
 		Entry("1.28", "", "1.28", MatchError(ContainSubstring("unsupported kubernetes version"))),
-		Entry("1.29", "", "1.29", Succeed()),
+		Entry("1.29", "", "1.29", MatchError(ContainSubstring("unsupported kubernetes version"))),
 		Entry("1.30", "", "1.30", Succeed()),
 		Entry("1.31", "", "1.31", Succeed()),
 		Entry("1.32", "", "1.32", Succeed()),
 		Entry("1.33", "", "1.33", Succeed()),
-		Entry("1.34", "", "1.34", MatchError(ContainSubstring("unsupported kubernetes version"))),
+		Entry("1.35", "", "1.35", MatchError(ContainSubstring("unsupported kubernetes version"))),
 		Entry("1.34", "true", "1.34", Succeed()),
 		Entry("1.28", "true", "1.28", Succeed()),
 	)
