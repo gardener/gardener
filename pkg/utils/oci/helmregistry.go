@@ -125,6 +125,9 @@ func buildRef(oci *gardencorev1.OCIRepository) (name.Reference, error) {
 	//
 	// Allow "registry.local.gardener.cloud:5000" to make the e2e-upgrade tests work.
 	// With https://github.com/gardener/gardener/pull/13551 the local registry will be exposed under "registry.local.gardener.cloud:5000".
+	//
+	// TODO(ialidzhikov): Change the local registry to "registry.local.gardener.cloud:5000" after https://github.com/gardener/gardener/pull/13551 is merged.
+	// TODO(ialidzhikov): Remove the check for "garden.local.gardener.cloud:5001" after https://github.com/gardener/gardener/pull/13551 is released.
 	if strings.Contains(ref, inKubernetesRegistry) || strings.Contains(ref, "registry.local.gardener.cloud:5000") {
 		opts = append(opts, name.Insecure)
 	}
