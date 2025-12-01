@@ -541,7 +541,7 @@ var _ = Describe("Interface", func() {
 
 				_, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("could not reconcile seed test secrets: the configured backup secret does not exist"))
+				Expect(err).To(MatchError(ContainSubstring("could not reconcile seed test secrets: the configured backup secret does not exist")))
 			})
 
 			It("should remove owner reference from backup secret", func() {

@@ -460,7 +460,7 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 	)
 
 	// If backup secret was copied at an earlier stage, remove the ownerReference as the controller is no longer responsible for it
-	// TODO(dimityrmirchev): Remove this logic when the DoNotCopyBackupCredentials feature gate is removed
+	// TODO(dimityrmirchev): Remove this logic when the DoNotCopyBackupCredentials feature gate is removed, i.e. after v1.134 has been released.
 	if metav1.IsControlledBy(backupSecret, obj) {
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Namespace: spec.Backup.CredentialsRef.Namespace, Name: spec.Backup.CredentialsRef.Name},
