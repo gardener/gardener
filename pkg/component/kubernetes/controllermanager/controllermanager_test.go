@@ -358,6 +358,7 @@ var _ = Describe("KubeControllerManager", func() {
 										version,
 										10257,
 										config.NodeCIDRMaskSize,
+										config.NodeCIDRMaskSizeIPv6,
 										config.NodeMonitorGracePeriod,
 										namespace,
 										isWorkerless,
@@ -513,6 +514,7 @@ namespace: kube-system
 		}
 		configWithFeatureFlags           = &gardencorev1beta1.KubeControllerManagerConfig{KubernetesConfig: gardencorev1beta1.KubernetesConfig{FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false}}}
 		configWithNodeCIDRMaskSize       = &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: ptr.To[int32](26)}
+		configWithNodeCIDRMaskSizeIPv6   = &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSizeIPv6: ptr.To[int32](80)}
 		configWithPodEvictionTimeout     = &gardencorev1beta1.KubeControllerManagerConfig{PodEvictionTimeout: &podEvictionTimeout}
 		configWithNodeMonitorGracePeriod = &gardencorev1beta1.KubeControllerManagerConfig{NodeMonitorGracePeriod: &nodeMonitorGracePeriod}
 	)
@@ -672,6 +674,7 @@ namespace: kube-system
 			Entry("with non-default autoscaler config", configWithAutoscalerConfig, false, runtimeKubernetesVersion),
 			Entry("with feature flags", configWithFeatureFlags, false, runtimeKubernetesVersion),
 			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, false, runtimeKubernetesVersion),
+			Entry("with NodeCIDRMaskSizeIPv6", configWithNodeCIDRMaskSizeIPv6, false, runtimeKubernetesVersion),
 			Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, false, runtimeKubernetesVersion),
 			Entry("with NodeMonitorGracePeriod", configWithNodeMonitorGracePeriod, false, runtimeKubernetesVersion),
 		)
@@ -987,6 +990,7 @@ func commandForKubernetesVersion(
 	version *semver.Version,
 	port int32,
 	nodeCIDRMaskSize *int32,
+	nodeCIDRMaskSizeIPv6 *int32,
 	nodeMonitorGracePeriod *metav1.Duration,
 	clusterName string,
 	isWorkerless bool,
@@ -1017,10 +1021,16 @@ func commandForKubernetesVersion(
 	)
 
 	if !isWorkerless {
+		// For dual-stack clusters
 		if nodeCIDRMaskSize != nil {
 			command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv4=%d", *nodeCIDRMaskSize))
-			command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv6=%d", 64))
 		}
+		// IPv6 flag is always added in dual-stack mode
+		ipv6MaskSize := int32(64) // default
+		if nodeCIDRMaskSizeIPv6 != nil {
+			ipv6MaskSize = *nodeCIDRMaskSizeIPv6
+		}
+		command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv6=%d", ipv6MaskSize))
 
 		command = append(command,
 			"--allocate-node-cidrs=true",
