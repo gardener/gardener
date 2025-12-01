@@ -1957,6 +1957,12 @@ spec:
                               immutable.
                             format: int32
                             type: integer
+                          nodeCIDRMaskSizeIPv6:
+                            description: NodeCIDRMaskSizeIPv6 defines the mask size
+                              for node cidr in cluster (default is 64). This field
+                              is immutable.
+                            format: int32
+                            type: integer
                           nodeMonitorGracePeriod:
                             description: NodeMonitorGracePeriod defines the grace
                               period before an unresponsive node is marked unhealthy.

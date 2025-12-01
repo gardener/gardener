@@ -1256,6 +1256,9 @@ type KubeControllerManagerConfig struct {
 	// NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24). This field is immutable.
 	// +optional
 	NodeCIDRMaskSize *int32 `json:"nodeCIDRMaskSize,omitempty" protobuf:"varint,3,opt,name=nodeCIDRMaskSize"`
+	// NodeCIDRMaskSizeIPv6 defines the mask size for node cidr in cluster (default is 64). This field is immutable.
+	// +optional
+	NodeCIDRMaskSizeIPv6 *int32 `json:"nodeCIDRMaskSizeIPv6,omitempty" protobuf:"varint,4,opt,name=nodeCIDRMaskSizeIPv6"`
 	// PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.
 	// +optional
 	//
@@ -1267,10 +1270,10 @@ type KubeControllerManagerConfig struct {
 	// `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`. Setting this field is forbidden starting
 	// from Kubernetes 1.33.
 	// TODO(plkokanov): Drop this field after support for Kubernetes 1.32 is dropped.
-	PodEvictionTimeout *metav1.Duration `json:"podEvictionTimeout,omitempty" protobuf:"bytes,4,opt,name=podEvictionTimeout"`
+	PodEvictionTimeout *metav1.Duration `json:"podEvictionTimeout,omitempty" protobuf:"bytes,5,opt,name=podEvictionTimeout"`
 	// NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
 	// +optional
-	NodeMonitorGracePeriod *metav1.Duration `json:"nodeMonitorGracePeriod,omitempty" protobuf:"bytes,5,opt,name=nodeMonitorGracePeriod"`
+	NodeMonitorGracePeriod *metav1.Duration `json:"nodeMonitorGracePeriod,omitempty" protobuf:"bytes,6,opt,name=nodeMonitorGracePeriod"`
 }
 
 // HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
