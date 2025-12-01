@@ -27,6 +27,10 @@ func runMigrations(ctx context.Context, cfg *operatorconfigv1alpha1.OperatorConf
 	return nil
 }
 
+// This migration performs an empty patch updates to VerticalPodAutoscaler resources,
+// that are elighible to adopt the InPlaceOrRecreate update mode, but are filtered out, because of
+// the Resoruce Manager's alwaysUpdate=false configuration.
+// TODO(vitanovs): Remove the migration once the VPAInPlaceUpdates feature gates is deprecated.
 func migrateEmptyVPAPatch(ctx context.Context, mgr manager.Manager, log logr.Logger) error {
 	log.Info("Migrating VerticalPodAutoscalers")
 
