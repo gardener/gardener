@@ -239,11 +239,11 @@ func run(ctx context.Context, opts *Options) error {
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return b.ReconcileExtensionControllerInstallations(ctx, false)
 			}),
-			SkipIf:       podNetworkAvailable,
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerInPodNetworkReady),
 			Interval:     5 * time.Second,
 			Timeout:      30 * time.Second,
 			Reporter:     reporter,
+			SkipIf:       podNetworkAvailable,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerInPodNetworkReady),
 		})
 		waitUntilExtensionControllersInPodNetworkReady = g.Add(flow.Task{
 			Name:         "Waiting until extension controllers (in pod network) report readiness",
@@ -332,7 +332,8 @@ func run(ctx context.Context, opts *Options) error {
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
-		Log: opts.Log,
+		Log:              opts.Log,
+		ProgressReporter: reporter,
 	}); err != nil {
 		return flow.Errors(err)
 	}
@@ -439,7 +440,8 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Garden
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
-		Log: b.Logger,
+		Log:              b.Logger,
+		ProgressReporter: reporter,
 	}); err != nil {
 		return nil, flow.Errors(err)
 	}

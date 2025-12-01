@@ -7,6 +7,7 @@ package join
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -93,6 +94,7 @@ func run(ctx context.Context, opts *Options) error {
 	if !alreadyJoined {
 		var (
 			g                           = flow.NewGraph("join")
+			reporter                    = flow.NewCommandLineProgressReporter(os.Stdout)
 			gardenerNodeAgentSecretName string
 
 			retrieveShortLivedKubeconfig = g.Add(flow.Task{
@@ -136,7 +138,8 @@ func run(ctx context.Context, opts *Options) error {
 		)
 
 		if err := g.Compile().Run(ctx, flow.Opts{
-			Log: opts.Log,
+			Log:              opts.Log,
+			ProgressReporter: reporter,
 		}); err != nil {
 			return flow.Errors(err)
 		}

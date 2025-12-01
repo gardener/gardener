@@ -7,6 +7,7 @@ package connect
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -92,7 +93,8 @@ func run(ctx context.Context, opts *Options) error {
 		}
 
 		var (
-			g = flow.NewGraph("connect")
+			g        = flow.NewGraph("connect")
+			reporter = flow.NewCommandLineProgressReporter(os.Stdout)
 
 			retrieveShortLivedKubeconfig = g.Add(flow.Task{
 				Name: "Retrieving short-lived kubeconfig for garden cluster to prepare Gardener resources",
@@ -141,7 +143,8 @@ func run(ctx context.Context, opts *Options) error {
 		)
 
 		if err := g.Compile().Run(ctx, flow.Opts{
-			Log: opts.Log,
+			Log:              opts.Log,
+			ProgressReporter: reporter,
 		}); err != nil {
 			return flow.Errors(err)
 		}

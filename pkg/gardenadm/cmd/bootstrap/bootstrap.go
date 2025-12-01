@@ -95,7 +95,8 @@ func run(ctx context.Context, opts *Options) error {
 	}
 
 	var (
-		g = flow.NewGraph("bootstrap")
+		g        = flow.NewGraph("bootstrap")
+		reporter = flow.NewCommandLineProgressReporter(os.Stdout)
 
 		deployNamespace = g.Add(flow.Task{
 			Name: "Deploying control plane namespace",
@@ -111,9 +112,12 @@ func run(ctx context.Context, opts *Options) error {
 			Name: "Reconciling CustomResourceDefinitions",
 			Fn:   b.ReconcileCustomResourceDefinitions,
 		})
-		ensureCustomResourceDefinitionsReady = g.Add(flow.Task{
+		ensureCustomResourceDefinitionsReady = g.Add(flow.RetryableTask{
 			Name:         "Ensuring CustomResourceDefinitions are ready",
-			Fn:           flow.TaskFn(b.EnsureCustomResourceDefinitionsReady).RetryUntilTimeout(time.Second, time.Minute),
+			Fn:           flow.TaskFn(b.EnsureCustomResourceDefinitionsReady),
+			Interval:     time.Second,
+			Timeout:      time.Minute,
+			Reporter:     reporter,
 			Dependencies: flow.NewTaskIDs(reconcileCustomResourceDefinitions),
 		})
 		reconcileClusterResource = g.Add(flow.Task{
@@ -276,9 +280,12 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		// TODO(timebertt): destroy Bastion after successfully bootstrapping the control plane
 
-		connectToMachine = g.Add(flow.Task{
+		connectToMachine = g.Add(flow.RetryableTask{
 			Name:         "Connecting to the first control plane machine",
-			Fn:           flow.TaskFn(b.ConnectToControlPlaneMachine).RetryUntilTimeout(5*time.Second, 5*time.Minute),
+			Fn:           flow.TaskFn(b.ConnectToControlPlaneMachine),
+			Interval:     5 * time.Second,
+			Timeout:      5 * time.Minute,
+			Reporter:     reporter,
 			Dependencies: flow.NewTaskIDs(listControlPlaneMachines, deployBastion),
 		})
 		copyManifests = g.Add(flow.Task{
@@ -319,7 +326,8 @@ func run(ctx context.Context, opts *Options) error {
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
-		Log: opts.Log,
+		Log:              opts.Log,
+		ProgressReporter: reporter,
 	}); err != nil {
 		return flow.Errors(err)
 	}
