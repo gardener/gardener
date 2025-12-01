@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
@@ -47,10 +48,7 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 		vpa.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)
 	}
 
-	if vpa.Labels == nil {
-		vpa.Labels = make(map[string]string)
-	}
-	vpa.Labels[resourcesv1alpha1.VPAInPlaceUpdatesMutated] = "true"
+	metav1.SetMetaDataLabel(&vpa.ObjectMeta, resourcesv1alpha1.VPAInPlaceUpdatesMutated, "true")
 
 	return nil
 }
