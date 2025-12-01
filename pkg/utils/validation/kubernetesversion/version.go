@@ -31,7 +31,7 @@ const EXPERIMENTAL_DISABLE_VERSION_CHECK_ENV = "DO_NOT_CRASH_ON_UNSUPPORTED_KUBE
 // CheckIfSupported checks if the provided version is part of the supported Kubernetes versions list.
 func CheckIfSupported(gitVersion string) error {
 	if os.Getenv(EXPERIMENTAL_DISABLE_VERSION_CHECK_ENV) == "true" {
-		logf.Log.Info("%s set to true, not checking for k8s version compatibility", EXPERIMENTAL_DISABLE_VERSION_CHECK_ENV)
+		logf.Log.Info("not checking for k8s version compatibility because flag is set to true", "flag", EXPERIMENTAL_DISABLE_VERSION_CHECK_ENV)
 		return nil
 	}
 
