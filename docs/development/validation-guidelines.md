@@ -150,7 +150,8 @@ Frequently used validation functions for creation:
   - Use this function only for labels which are not part of the object metadata. `apivalidation.ValidateObjectMeta` already validates the object metadata labels. See [example usage](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/pkg/apis/core/validation/shoot.go#L1926).
 - [`metav1validation.ValidateLabelSelector`](https://pkg.go.dev/k8s.io/apimachinery/pkg/apis/meta/v1/validation#ValidateLabelSelector)
   - Use this function to validate fields of type `metav1.LabelSelector`. See [example usage](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/pkg/apis/core/validation/shoot.go#L272-L274).
-
+- [`apivalidation.ValidateNamespaceName`](https://pkg.go.dev/k8s.io/apimachinery/pkg/api/validation#ValidateNamespaceName), [`apivalidation.ValidateServiceAccountName`](https://pkg.go.dev/k8s.io/apimachinery/pkg/api/validation#ValidateServiceAccountName)
+  - Use these functions to validate fields which represent Namespace name (Project's `.spec.namespace` field, CredentialsBinding's `.credentialsRef.namespace` field) or ServiceAccount name (ManagedSeed's `.spec.gardenlet.deployment.serviceAccountName`).
 - [`validation.IsDNS1123Subdomain`](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/validation#IsDNS1123Subdomain)
   - Validates that the value is a DNS subdomain. See [DNS Subdomain Names](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names).
 - [`validation.IsValidIP`](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/validation#IsValidIP)
