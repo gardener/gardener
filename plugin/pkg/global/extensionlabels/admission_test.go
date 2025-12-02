@@ -43,9 +43,53 @@ var _ = Describe("ExtensionLabels tests", func() {
 			providerType1   = "provider-type-1"
 			providerType2   = "provider-type-2"
 			dnsProviderType = "dns-provider"
+			extensionType1  = "extension-type-1"
+			extensionType2  = "extension-type-2"
+			extensionType3  = "extension-type-3"
 		)
 
 		BeforeEach(func() {
+			controllerRegistrations := []*gardencorev1beta1.ControllerRegistration{{
+				ObjectMeta: metav1.ObjectMeta{Name: "registration1"},
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Resources: []gardencorev1beta1.ControllerResource{
+						{
+							Kind: extensionsv1alpha1.ExtensionResource,
+							Type: extensionType1,
+							ClusterCompatibility: []gardencorev1beta1.ClusterType{
+								gardencorev1beta1.ClusterTypeSeed,
+							},
+						},
+						{
+							Kind: extensionsv1alpha1.ExtensionResource,
+							Type: extensionType2,
+							ClusterCompatibility: []gardencorev1beta1.ClusterType{
+								gardencorev1beta1.ClusterTypeSeed,
+							},
+							AutoEnable: []gardencorev1beta1.ClusterType{
+								gardencorev1beta1.ClusterTypeSeed,
+								gardencorev1beta1.ClusterTypeShoot,
+							},
+						},
+						{
+							Kind: extensionsv1alpha1.ExtensionResource,
+							Type: extensionType3,
+							ClusterCompatibility: []gardencorev1beta1.ClusterType{
+								gardencorev1beta1.ClusterTypeShoot,
+								gardencorev1beta1.ClusterTypeSeed,
+							},
+							AutoEnable: []gardencorev1beta1.ClusterType{
+								gardencorev1beta1.ClusterTypeShoot,
+							},
+						},
+					},
+				},
+			}}
+
+			for _, reg := range controllerRegistrations {
+				Expect(gardenCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(reg)).To(Succeed())
+			}
+
 			seed = &core.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-seed",
@@ -63,6 +107,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 					Backup: &core.Backup{
 						Provider: providerType1,
 					},
+					Extensions: []core.Extension{{Type: extensionType1}},
 				},
 			}
 		})
@@ -76,6 +121,8 @@ var _ = Describe("ExtensionLabels tests", func() {
 			expectedLabels := map[string]string{
 				"provider.extensions.gardener.cloud/" + providerType1:    "true",
 				"dnsrecord.extensions.gardener.cloud/" + dnsProviderType: "true",
+				"extensions.extensions.gardener.cloud/" + extensionType1: "true",
+				"extensions.extensions.gardener.cloud/" + extensionType2: "true",
 			}
 
 			Expect(seed.ObjectMeta.Labels).To(Equal(expectedLabels))
@@ -86,6 +133,8 @@ var _ = Describe("ExtensionLabels tests", func() {
 			newSeed.Spec.Backup = &core.Backup{
 				Provider: providerType2,
 			}
+			// only use auto-enabled extensions
+			newSeed.Spec.Extensions = []core.Extension{}
 
 			attrs := admission.NewAttributesRecord(newSeed, seed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("Seed").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 			err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -97,6 +146,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 			for _, providerType := range []string{providerType1, providerType2} {
 				expectedLabels["provider.extensions.gardener.cloud/"+providerType] = "true"
 			}
+			expectedLabels["extensions.extensions.gardener.cloud/"+extensionType2] = "true"
 
 			Expect(newSeed.ObjectMeta.Labels).To(Equal(expectedLabels))
 		})

@@ -133,8 +133,15 @@ func (e *ExtensionLabels) Admit(_ context.Context, a admission.Attributes, _ adm
 			return apierrors.NewBadRequest("could not convert resource into Seed object")
 		}
 
+		controllerRegistrations, err := e.controllerRegistrationLister.List(labels.Everything())
+		if err != nil {
+			return apierrors.NewInternalError(err)
+		}
+
 		removeLabels(&seed.ObjectMeta)
-		addMetaDataLabelsSeed(seed)
+		if err := addMetaDataLabelsSeed(seed, controllerRegistrations); err != nil {
+			return fmt.Errorf("failed to add metadata labels to seed: %w", err)
+		}
 
 	case core.Kind("SecretBinding"):
 		secretBinding, ok := a.GetObject().(*core.SecretBinding)
@@ -233,7 +240,26 @@ func (e *ExtensionLabels) Admit(_ context.Context, a admission.Attributes, _ adm
 	return nil
 }
 
-func addMetaDataLabelsSeed(seed *core.Seed) {
+func addMetaDataLabelsSeed(seed *core.Seed, controllerRegistrations []*gardencorev1beta1.ControllerRegistration) error {
+	v1beta1Seed := &gardencorev1beta1.Seed{}
+	if err := kubernetes.GardenScheme.Convert(seed, v1beta1Seed, nil); err != nil {
+		return fmt.Errorf("could not convert Seed to v1beta1.Seed: %v", err)
+	}
+
+	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{
+		Items: slices.Collect(func(yield func(gardencorev1beta1.ControllerRegistration) bool) {
+			for _, registration := range controllerRegistrations {
+				if !yield(*registration) {
+					return
+				}
+			}
+		}),
+	}
+
+	for extensionType := range gardenerutils.ComputeEnabledTypesForKindExtensionSeed(v1beta1Seed, controllerRegistrationList) {
+		metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelExtensionExtensionTypePrefix+extensionType, "true")
+	}
+
 	metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+seed.Spec.Provider.Type, "true")
 	if seed.Spec.Backup != nil {
 		metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+seed.Spec.Backup.Provider, "true")
@@ -242,6 +268,8 @@ func addMetaDataLabelsSeed(seed *core.Seed) {
 	if seed.Spec.DNS.Provider != nil {
 		metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelExtensionDNSRecordTypePrefix+seed.Spec.DNS.Provider.Type, "true")
 	}
+
+	return nil
 }
 
 func addMetaDataLabelsSecretBinding(secretBinding *core.SecretBinding) {
@@ -267,7 +295,7 @@ func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*garden
 		}),
 	}
 
-	for extensionType := range gardenerutils.ComputeEnabledTypesForKindExtension(v1beta1Shoot, controllerRegistrationList) {
+	for extensionType := range gardenerutils.ComputeEnabledTypesForKindExtensionShoot(v1beta1Shoot, controllerRegistrationList) {
 		metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionExtensionTypePrefix+extensionType, "true")
 	}
 
