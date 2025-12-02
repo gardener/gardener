@@ -10,6 +10,7 @@ build:
           paths:
             - cmd/gardener-operator
             - cmd/gardener-operator/app
+            - cmd/internal/migration
             - cmd/utils
             - cmd/utils/initrun
             - extensions/pkg/apis/config/v1alpha1
