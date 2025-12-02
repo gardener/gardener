@@ -572,7 +572,7 @@ type ResourceLimit struct {
 	Resources []string `json:"resources"`
 	// Size specifies the imposed limit.
 	// +optional
-	Size *resource.Quantity `json:"size"`
+	Size *resource.Quantity `json:"size,omitempty"`
 	// Count specifies the maximum number of resources of the given kind. Only cluster-scoped resources are considered.
 	// +optional
 	Count *int64 `json:"count,omitempty"`
