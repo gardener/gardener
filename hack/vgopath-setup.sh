@@ -3,8 +3,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+
+# TODO(LucaBernstein): Remove this script after gardener/gardener@v1.142 has been released.
 echo
-echo "DEPRECATED: hack/vgopath-setup.sh is deprecated and will be removed in a future release."
+echo "DEPRECATED: hack/vgopath-setup.sh is deprecated and will be removed after gardener/gardener@v1.142 has been released."
 echo "Please remove your usage of hack/vgopath-setup.sh from the gardener/gardener repository."
 echo
 
