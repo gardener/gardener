@@ -1017,6 +1017,7 @@ deploy:
           nodeToleration.defaultUnreachableTolerationSeconds: "60"
           replicaCount: 2
           config.featureGates.IstioTLSTermination: true
+          config.featureGates.VPAInPlaceUpdates: true
         createNamespace: true
         wait: true
 profiles:
