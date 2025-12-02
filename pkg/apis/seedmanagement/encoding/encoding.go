@@ -64,7 +64,7 @@ func EncodeGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfigur
 }
 
 // EncodeGardenletConfigurationToBytes encodes the given external GardenletConfiguration version into a byte slice.
-func EncodeGardenletConfigurationToBytes(cfg runtime.Object) ([]byte, error) {
+func EncodeGardenletConfigurationToBytes(cfg *gardenletconfigv1alpha1.GardenletConfiguration) ([]byte, error) {
 	encoder, err := getEncoder(gardenletconfigv1alpha1.SchemeGroupVersion, runtime.ContentTypeJSON)
 	if err != nil {
 		return nil, err

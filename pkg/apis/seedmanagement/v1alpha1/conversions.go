@@ -6,11 +6,13 @@
 package v1alpha1
 
 import (
+	"errors"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -53,7 +55,12 @@ func Convert_seedmanagement_GardenletConfig_To_v1alpha1_GardenletConfig(in *seed
 		return err
 	}
 	if out.Config.Raw == nil && out.Config.Object != nil {
-		raw, err := encoding.EncodeGardenletConfigurationToBytes(out.Config.Object)
+		cfg, ok := out.Config.Object.(*gardenletconfigv1alpha1.GardenletConfiguration)
+		if !ok {
+			return errors.New("unknown gardenlet config object type")
+		}
+
+		raw, err := encoding.EncodeGardenletConfigurationToBytes(cfg)
 		if err != nil {
 			return err
 		}
@@ -80,7 +87,12 @@ func Convert_seedmanagement_GardenletSpec_To_v1alpha1_GardenletSpec(in *seedmana
 		return err
 	}
 	if out.Config.Raw == nil && out.Config.Object != nil {
-		raw, err := encoding.EncodeGardenletConfigurationToBytes(out.Config.Object)
+		cfg, ok := out.Config.Object.(*gardenletconfigv1alpha1.GardenletConfiguration)
+		if !ok {
+			return errors.New("unknown gardenlet config object type")
+		}
+
+		raw, err := encoding.EncodeGardenletConfigurationToBytes(cfg)
 		if err != nil {
 			return err
 		}
