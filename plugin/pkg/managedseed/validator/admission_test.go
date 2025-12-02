@@ -994,6 +994,10 @@ var _ = Describe("ManagedSeed", func() {
 		})
 	})
 
+	Describe("#Validate", func() {
+
+	})
+
 	Describe("#Register", func() {
 		It("should register the plugin", func() {
 			plugins := admission.NewPlugins()

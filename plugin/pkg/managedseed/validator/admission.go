@@ -153,7 +153,10 @@ func (v *ManagedSeed) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.MutationInterface = (*ManagedSeed)(nil)
+var (
+	_ admission.MutationInterface   = (*ManagedSeed)(nil)
+	_ admission.ValidationInterface = (*ManagedSeed)(nil)
+)
 
 // Admit validates and if appropriate mutates the given managed seed against the shoot that it references.
 func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
@@ -601,4 +604,9 @@ func (v *ManagedSeed) getShoot(ctx context.Context, namespace, name string) (*ga
 	}
 
 	return shoot, err
+}
+
+// Validate validates the given managed seed against the shoot that it references.
+func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
+	return nil
 }
