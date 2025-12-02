@@ -7,9 +7,10 @@ package app
 import (
 	"context"
 
+	"github.com/go-logr/logr"
+
 	"github.com/gardener/gardener/cmd/internal/migration"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/go-logr/logr"
 )
 
 func (g *garden) runMigrations(ctx context.Context, log logr.Logger) error {

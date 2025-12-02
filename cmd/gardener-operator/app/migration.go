@@ -7,10 +7,11 @@ package app
 import (
 	"context"
 
-	"github.com/gardener/gardener/cmd/internal/migration"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener/cmd/internal/migration"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 func runMigrations(ctx context.Context, mgr manager.Manager, log logr.Logger) error {
