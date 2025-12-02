@@ -147,6 +147,7 @@ build:
             - pkg/component/networking/istio/charts/istio/istio-crds/crd-all.gen.yaml
             - pkg/component/networking/istio/charts/istio/istio-ingress
             - pkg/component/networking/istio/charts/istio/istio-istiod
+            - pkg/component/networking/istio/lua/add_kubernetes_namespace_name_to_record.lua
             - pkg/component/networking/nginxingress
             - pkg/component/networking/nodelocaldns
             - pkg/component/networking/nodelocaldns/constants
@@ -164,7 +165,6 @@ build:
             - pkg/component/nodemanagement/nodeproblemdetector
             - pkg/component/observability/logging/eventlogger
             - pkg/component/observability/logging/fluentbit
-            - pkg/component/observability/logging/fluentbit/lua/add_kubernetes_namespace_name_to_record.lua
             - pkg/component/observability/logging/fluentbit/lua/add_tag_to_record.lua
             - pkg/component/observability/logging/fluentbit/lua/modify_severity.lua
             - pkg/component/observability/logging/fluentcustomresources
@@ -756,6 +756,7 @@ build:
             - pkg/component/networking/istio/charts/istio/istio-crds/crd-all.gen.yaml
             - pkg/component/networking/istio/charts/istio/istio-ingress
             - pkg/component/networking/istio/charts/istio/istio-istiod
+            - pkg/component/networking/istio/lua/add_kubernetes_namespace_name_to_record.lua
             - pkg/component/networking/nginxingress
             - pkg/component/networking/nodelocaldns
             - pkg/component/networking/nodelocaldns/constants
@@ -774,7 +775,6 @@ build:
             - pkg/component/observability/logging
             - pkg/component/observability/logging/eventlogger
             - pkg/component/observability/logging/fluentbit
-            - pkg/component/observability/logging/fluentbit/lua/add_kubernetes_namespace_name_to_record.lua
             - pkg/component/observability/logging/fluentbit/lua/add_tag_to_record.lua
             - pkg/component/observability/logging/fluentbit/lua/modify_severity.lua
             - pkg/component/observability/logging/fluentcustomresources

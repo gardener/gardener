@@ -43,8 +43,6 @@ var (
 	modify_severity_lua string
 	//go:embed lua/add_tag_to_record.lua
 	add_tag_to_record_lua string
-	//go:embed lua/add_kubernetes_namespace_name_to_record.lua
-	add_kubernetes_namespace_name_to_record_lua string
 )
 
 // Values is the values for fluent-bit configurations
@@ -88,9 +86,8 @@ func (f *fluentBit) Deploy(ctx context.Context) error {
 				Namespace: f.namespace,
 			},
 			Data: map[string]string{
-				"modify_severity.lua":                         modify_severity_lua,
-				"add_tag_to_record.lua":                       add_tag_to_record_lua,
-				"add_kubernetes_namespace_name_to_record.lua": add_kubernetes_namespace_name_to_record_lua,
+				"modify_severity.lua":   modify_severity_lua,
+				"add_tag_to_record.lua": add_tag_to_record_lua,
 			},
 		}
 		serviceMonitor = &monitoringv1.ServiceMonitor{

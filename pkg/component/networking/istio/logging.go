@@ -5,10 +5,11 @@
 package istio
 
 import (
+	_ "embed"
+
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
 	fluentbitv1alpha2filter "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2/plugins/filter"
 	fluentbitv1alpha2parser "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2/plugins/parser"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -18,6 +19,11 @@ import (
 
 const (
 	istioProxyParserName = "istio-proxy-parser"
+)
+
+var (
+	//go:embed lua/add_kubernetes_namespace_name_to_record.lua
+	add_kubernetes_namespace_name_to_record_lua string
 )
 
 // CentralLoggingConfiguration returns a fluent-bit parser and filter for the cluster-autoscaler logs.
@@ -46,12 +52,7 @@ func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 					{
 						Lua: &fluentbitv1alpha2filter.Lua{
 							Call: "add_kubernetes_namespace_name_to_record",
-							Script: corev1.ConfigMapKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: v1beta1constants.ConfigMapNameFluentBitLua,
-								},
-								Key: "add_kubernetes_namespace_name_to_record.lua",
-							},
+							Code: add_kubernetes_namespace_name_to_record_lua,
 						},
 					},
 				},

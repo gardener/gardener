@@ -5,6 +5,7 @@
 package istio_test
 
 import (
+	_ "embed"
 	"regexp"
 
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
@@ -12,13 +13,14 @@ import (
 	fluentbitv1alpha2parser "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2/plugins/parser"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/component/networking/istio"
 )
+
+//go:embed lua/add_kubernetes_namespace_name_to_record.lua
+var add_kubernetes_namespace_name_to_record_lua string
 
 var _ = Describe("Logging", func() {
 	Describe("#CentralLoggingConfiguration", func() {
@@ -47,12 +49,7 @@ var _ = Describe("Logging", func() {
 								{
 									Lua: &fluentbitv1alpha2filter.Lua{
 										Call: "add_kubernetes_namespace_name_to_record",
-										Script: corev1.ConfigMapKeySelector{
-											Key: "add_kubernetes_namespace_name_to_record.lua",
-											LocalObjectReference: corev1.LocalObjectReference{
-												Name: v1beta1constants.ConfigMapNameFluentBitLua,
-											},
-										},
+										Code: add_kubernetes_namespace_name_to_record_lua,
 									},
 								},
 							},
