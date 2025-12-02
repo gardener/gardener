@@ -41,11 +41,11 @@ import (
 
 func TestControllerRegistration(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration ControllerManager ControllerRegistration Suite")
+	RunSpecs(t, "Test Integration ControllerManager ControllerRegistration ControllerInstallation Suite")
 }
 
 // testID is used for generating test namespace names and other IDs
-const testID = "controllerregistration-controller-test"
+const testID = "controllerregistration-seed-controller-test"
 
 var (
 	ctx = context.Background()

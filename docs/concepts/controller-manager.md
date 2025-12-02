@@ -92,7 +92,7 @@ The `ControllerRegistration` controller makes sure that the required [Gardener E
 It also takes care of the creation and deletion of `ControllerInstallation` objects for a given seed cluster.
 The controller has three reconciliation loops.
 
-#### ["Main" Reconciler](../../pkg/controllermanager/controller/controllerregistration/seed)
+#### ["Main" Reconciler](../../pkg/controllermanager/controller/controllerregistration/controllerinstallation/seed)
 
 This reconciliation loop watches the `Seed` objects and determines which `ControllerRegistration`s are required for them and reconciles the corresponding `ControllerInstallation` resources to reach the determined state.
 To begin with, it computes the kind/type combinations of extensions required for the seed.

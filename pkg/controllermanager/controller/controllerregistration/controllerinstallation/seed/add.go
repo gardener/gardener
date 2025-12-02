@@ -21,9 +21,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerinstallation"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
@@ -34,6 +34,8 @@ const ControllerName = "controllerregistration-seed"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager) error {
+	log := mgr.GetLogger().WithValues("controller", ControllerName)
+
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
@@ -51,33 +53,33 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		}).
 		Watches(
 			&gardencorev1beta1.ControllerRegistration{},
-			handler.EnqueueRequestsFromMapFunc(r.MapToAllSeeds(mgr.GetLogger().WithValues("controller", ControllerName))),
+			handler.EnqueueRequestsFromMapFunc(r.MapToAllSeeds(log)),
 			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
 		).
 		Watches(
 			&gardencorev1beta1.BackupBucket{},
 			handler.EnqueueRequestsFromMapFunc(r.MapBackupBucketToSeed),
-			builder.WithPredicates(r.BackupBucketPredicate()),
+			builder.WithPredicates(controllerinstallation.BackupBucketPredicate(false)),
 		).
 		Watches(
 			&gardencorev1beta1.BackupEntry{},
 			handler.EnqueueRequestsFromMapFunc(r.MapBackupEntryToSeed),
-			builder.WithPredicates(r.BackupEntryPredicate()),
+			builder.WithPredicates(controllerinstallation.BackupEntryPredicate(false)),
 		).
 		Watches(
 			&gardencorev1beta1.ControllerInstallation{},
 			handler.EnqueueRequestsFromMapFunc(r.MapControllerInstallationToSeed),
-			builder.WithPredicates(r.ControllerInstallationPredicate()),
+			builder.WithPredicates(controllerinstallation.ControllerInstallationPredicate(false)),
 		).
 		Watches(
 			&gardencorev1.ControllerDeployment{},
-			handler.EnqueueRequestsFromMapFunc(r.MapControllerDeploymentToAllSeeds(mgr.GetLogger().WithValues("controller", ControllerName))),
+			handler.EnqueueRequestsFromMapFunc(r.MapControllerDeploymentToAllSeeds(log)),
 			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
 		).
 		Watches(
 			&gardencorev1beta1.Shoot{},
 			handler.EnqueueRequestsFromMapFunc(r.MapShootToSeed),
-			builder.WithPredicates(r.ShootPredicate()),
+			builder.WithPredicates(controllerinstallation.ShootPredicate(false)),
 		).
 		Complete(r)
 }
@@ -102,145 +104,6 @@ func (r *Reconciler) SeedPredicate() predicate.Predicate {
 				!apiequality.Semantic.DeepEqual(oldSeed.Labels, seed.Labels) ||
 				seed.DeletionTimestamp != nil
 		},
-	}
-}
-
-// BackupBucketPredicate returns true for all BackupBucket events when there is a non-nil .spec.seedName. For updates,
-// it only returns true when there is a change in the .spec.seedName or .spec.provider.type fields.
-func (r *Reconciler) BackupBucketPredicate() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			backupBucket, ok := e.Object.(*gardencorev1beta1.BackupBucket)
-			if !ok {
-				return false
-			}
-			return backupBucket.Spec.SeedName != nil
-		},
-
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			backupBucket, ok := e.ObjectNew.(*gardencorev1beta1.BackupBucket)
-			if !ok {
-				return false
-			}
-
-			oldBackupBucket, ok := e.ObjectOld.(*gardencorev1beta1.BackupBucket)
-			if !ok {
-				return false
-			}
-
-			return !apiequality.Semantic.DeepEqual(oldBackupBucket.Spec.SeedName, backupBucket.Spec.SeedName) ||
-				oldBackupBucket.Spec.Provider.Type != backupBucket.Spec.Provider.Type
-		},
-
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			backupBucket, ok := e.Object.(*gardencorev1beta1.BackupBucket)
-			if !ok {
-				return false
-			}
-			return backupBucket.Spec.SeedName != nil
-		},
-	}
-}
-
-// BackupEntryPredicate returns true for all BackupEntry events when there is a non-nil .spec.seedName. For updates,
-// it only returns true when there is a change in the .spec.seedName or .spec.bucketName fields.
-func (r *Reconciler) BackupEntryPredicate() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			backupEntry, ok := e.Object.(*gardencorev1beta1.BackupEntry)
-			if !ok {
-				return false
-			}
-			return backupEntry.Spec.SeedName != nil
-		},
-
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			backupEntry, ok := e.ObjectNew.(*gardencorev1beta1.BackupEntry)
-			if !ok {
-				return false
-			}
-
-			oldBackupEntry, ok := e.ObjectOld.(*gardencorev1beta1.BackupEntry)
-			if !ok {
-				return false
-			}
-
-			return !apiequality.Semantic.DeepEqual(oldBackupEntry.Spec.SeedName, backupEntry.Spec.SeedName) ||
-				oldBackupEntry.Spec.BucketName != backupEntry.Spec.BucketName
-		},
-
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			backupEntry, ok := e.Object.(*gardencorev1beta1.BackupEntry)
-			if !ok {
-				return false
-			}
-			return backupEntry.Spec.SeedName != nil
-		},
-	}
-}
-
-// ShootPredicate returns true for all Shoot events when there is a non-nil .spec.seedName. For updates, it only returns
-// true when there is a change in the .spec.seedName or .spec.provider.workers or .spec.extensions or .spec.dns or
-// .spec.networking.type or .spec.provider.type fields.
-func (r *Reconciler) ShootPredicate() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			shoot, ok := e.Object.(*gardencorev1beta1.Shoot)
-			if !ok {
-				return false
-			}
-			return shoot.Spec.SeedName != nil
-		},
-
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			shoot, ok := e.ObjectNew.(*gardencorev1beta1.Shoot)
-			if !ok {
-				return false
-			}
-
-			oldShoot, ok := e.ObjectOld.(*gardencorev1beta1.Shoot)
-			if !ok {
-				return false
-			}
-
-			return !apiequality.Semantic.DeepEqual(oldShoot.Spec.SeedName, shoot.Spec.SeedName) ||
-				!apiequality.Semantic.DeepEqual(oldShoot.Spec.Provider.Workers, shoot.Spec.Provider.Workers) ||
-				!apiequality.Semantic.DeepEqual(oldShoot.Spec.Extensions, shoot.Spec.Extensions) ||
-				!apiequality.Semantic.DeepEqual(oldShoot.Spec.DNS, shoot.Spec.DNS) ||
-				shootNetworkingTypeHasChanged(oldShoot.Spec.Networking, shoot.Spec.Networking) ||
-				oldShoot.Spec.Provider.Type != shoot.Spec.Provider.Type
-		},
-
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			shoot, ok := e.Object.(*gardencorev1beta1.Shoot)
-			if !ok {
-				return false
-			}
-			return shoot.Spec.SeedName != nil
-		},
-	}
-}
-
-// ControllerInstallationPredicate returns true for all ControllerInstallation 'create' events. For updates, it only
-// returns true when the Required condition's status has changed. For other events, false is returned.
-func (r *Reconciler) ControllerInstallationPredicate() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(_ event.CreateEvent) bool { return true },
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			controllerInstallation, ok := e.ObjectNew.(*gardencorev1beta1.ControllerInstallation)
-			if !ok {
-				return false
-			}
-
-			oldControllerInstallation, ok := e.ObjectOld.(*gardencorev1beta1.ControllerInstallation)
-			if !ok {
-				return false
-			}
-
-			return v1beta1helper.IsControllerInstallationRequired(*oldControllerInstallation) != v1beta1helper.IsControllerInstallationRequired(*controllerInstallation)
-		},
-		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
-		GenericFunc: func(_ event.GenericEvent) bool { return false },
 	}
 }
 
@@ -339,19 +202,4 @@ func (r *Reconciler) MapControllerDeploymentToAllSeeds(log logr.Logger) handler.
 
 		return nil
 	}
-}
-
-func shootNetworkingTypeHasChanged(old, new *gardencorev1beta1.Networking) bool {
-	if old == nil && new == nil {
-		return false
-	}
-	if old == nil && new != nil {
-		// if new is non-nil then return true if new has a type set
-		return new.Type != nil
-	}
-	if old != nil && new == nil {
-		// if old was non-nil and had a type set, return true
-		return old.Type != nil
-	}
-	return !ptr.Equal(old.Type, new.Type)
 }

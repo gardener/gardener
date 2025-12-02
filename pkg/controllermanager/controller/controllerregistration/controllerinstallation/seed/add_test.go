@@ -23,7 +23,7 @@ import (
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	. "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/seed"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerinstallation/seed"
 )
 
 var _ = Describe("Add", func() {

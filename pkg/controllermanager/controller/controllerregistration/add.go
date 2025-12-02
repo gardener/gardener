@@ -14,9 +14,9 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/clusterfinalizer"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerinstallation/seed"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerregistrationfinalizer"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/extensionclusterrole"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/seed"
 )
 
 // AddToManager adds all ControllerRegistration controllers to the given manager.
