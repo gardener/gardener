@@ -164,13 +164,7 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 		return fmt.Errorf("err while waiting for ready: %w", err)
 	}
 
-	// Ignore all kinds other than ManagedSeed
-	if a.GetKind().GroupKind() != seedmanagement.Kind("ManagedSeed") {
-		return nil
-	}
-
-	// Ignore updates to status or other subresources
-	if a.GetSubresource() != "" {
+	if shouldIgnore(a) {
 		return nil
 	}
 
@@ -283,6 +277,20 @@ func (v *ManagedSeed) waitUntilReady(a admission.Attributes) error {
 	}
 
 	return nil
+}
+
+func shouldIgnore(a admission.Attributes) bool {
+	// Ignore all kinds other than ManagedSeed
+	if a.GetKind().GroupKind() != seedmanagement.Kind("ManagedSeed") {
+		return true
+	}
+
+	// Ignore updates to status or other subresources
+	if a.GetSubresource() != "" {
+		return true
+	}
+
+	return false
 }
 
 func (v *ManagedSeed) validateManagedSeedCreate(managedSeed *seedmanagement.ManagedSeed, shoot *gardencorev1beta1.Shoot) (field.ErrorList, error) {
@@ -618,6 +626,10 @@ func (v *ManagedSeed) getShoot(ctx context.Context, namespace, name string) (*ga
 func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	if err := v.waitUntilReady(a); err != nil {
 		return fmt.Errorf("err while waiting for ready: %w", err)
+	}
+
+	if shouldIgnore(a) {
+		return nil
 	}
 
 	return nil
