@@ -9214,7 +9214,8 @@ Kubernetes meta/v1.Duration
 </td>
 <td>
 <em>(Optional)</em>
-<p>RotationPeriod is the period between a completed rotation and the start of a new rotation (default: 7d).</p>
+<p>RotationPeriod is the period between a completed rotation and the start of a new rotation (default: 7d).
+The allowed rotation period is between 30m and 90d.</p>
 </td>
 </tr>
 </tbody>
