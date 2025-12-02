@@ -12,6 +12,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,10 +49,15 @@ func MigrateVPAEmptyPatch(ctx context.Context, mgr manager.Manager, log logr.Log
 			continue
 		}
 
+		updateMode := ptr.Deref(vpa.Spec.UpdatePolicy.UpdateMode, vpaautoscalingv1.UpdateModeRecreate)
+		if updateMode != vpaautoscalingv1.UpdateModeAuto && updateMode != vpaautoscalingv1.UpdateModeRecreate {
+			continue
+		}
+
 		vpaKey := client.ObjectKeyFromObject(&vpa)
 		log.Info("Updating VerticalPodAutoscaler resource", "vpa", vpaKey)
 
-		patch := client.MergeFrom(vpa.DeepCopy())
+		patch := client.RawPatch(types.MergePatchType, []byte("{}"))
 		if err := mgr.GetClient().Patch(ctx, &vpa, patch); err != nil {
 			if apierrors.IsNotFound(err) {
 				log.Info("Resource not found, skipping migration", "vpa", vpaKey)
