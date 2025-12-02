@@ -15,7 +15,11 @@ import (
 
 func (g *garden) runMigrations(ctx context.Context, log logr.Logger) error {
 	if features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates) {
-		if err := migration.MigrateEmptyVPAPatch(ctx, g.mgr, log); err != nil {
+		if err := migration.MigrateVPAEmptyPatch(ctx, g.mgr, log); err != nil {
+			return err
+		}
+	} else {
+		if err := migration.MigrateVPAUpdateModeToRecreate(ctx, g.mgr, log); err != nil {
 			return err
 		}
 	}
