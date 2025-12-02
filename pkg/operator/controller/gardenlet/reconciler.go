@@ -25,7 +25,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
@@ -95,24 +94,6 @@ func (r *Reconciler) newActuator(gardenlet *seedmanagementv1alpha1.Gardenlet) ga
 		},
 		CheckIfVPAAlreadyExists: func(_ context.Context) (bool, error) {
 			return false, nil
-		},
-		GetInfrastructureSecret: func(ctx context.Context) (*corev1.Secret, error) {
-			seedTemplate, _, err := helper.ExtractSeedTemplateAndGardenletConfig(gardenlet.GetName(), &gardenlet.Spec.Config)
-			if err != nil {
-				return nil, fmt.Errorf("failed to extract seed template and gardenlet config: %w", err)
-			}
-			if seedTemplate == nil {
-				return nil, fmt.Errorf("seed template is unset in gardenlet config")
-			}
-
-			if seedTemplate.Spec.Backup == nil {
-				return nil, nil
-			}
-			if seedTemplate.Spec.Backup.CredentialsRef.APIVersion != corev1.SchemeGroupVersion.String() ||
-				seedTemplate.Spec.Backup.CredentialsRef.Kind != "Secret" {
-				return nil, nil
-			}
-			return kubernetesutils.GetSecretByObjectReference(ctx, r.VirtualClient, seedTemplate.Spec.Backup.CredentialsRef)
 		},
 		GetTargetDomain: func() string {
 			return ""

@@ -6,7 +6,6 @@ package gardenletdeployer
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 	"time"
@@ -17,14 +16,12 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -35,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils"
@@ -64,12 +60,10 @@ type Interface interface {
 
 // Actuator is a concrete implementation of Interface.
 type Actuator struct {
-	GardenConfig            *rest.Config
-	GardenClient            client.Client
-	GetTargetClientFunc     func(ctx context.Context) (kubernetes.Interface, error)
-	CheckIfVPAAlreadyExists func(ctx context.Context) (bool, error)
-	// GetInfrastructureSecret will return the infrastructure secret or nil if other kind of credentials are used instead.
-	GetInfrastructureSecret  func(ctx context.Context) (*corev1.Secret, error) // TODO(dimityrmirchev): Deprecate and eventually remove this function.
+	GardenConfig             *rest.Config
+	GardenClient             client.Client
+	GetTargetClientFunc      func(ctx context.Context) (kubernetes.Interface, error)
+	CheckIfVPAAlreadyExists  func(ctx context.Context) (bool, error)
 	GetTargetDomain          func() string
 	ApplyGardenletChart      func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
 	DeleteGardenletChart     func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
@@ -451,26 +445,13 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 		return nil
 	}
 
-	// If backup is specified and DoNotCopyBackupCredentials feature gate is disabled,
-	// create or update the backup secret if it doesn't exist or is owned by the object.
-	var (
-		checksum     string
-		allowCopying = !utilfeature.DefaultFeatureGate.Enabled(features.DoNotCopyBackupCredentials)
-	)
-
 	// Get backup secret
-	backupSecret, originalErr := kubernetesutils.GetSecretByObjectReference(ctx, a.GardenClient, spec.Backup.CredentialsRef)
-
-	if client.IgnoreNotFound(originalErr) != nil {
-		return originalErr
-	}
-
-	if apierrors.IsNotFound(originalErr) && !allowCopying {
-		return fmt.Errorf("the configured backup secret does not exist, however the feature gate DoNotCopyBackupCredentials is enabled and shoot infrastructure credentials will not be reused: %w", originalErr)
-	}
-
-	if originalErr == nil {
-		checksum = utils.ComputeSecretChecksum(backupSecret.Data)[:8]
+	backupSecret, err := kubernetesutils.GetSecretByObjectReference(ctx, a.GardenClient, spec.Backup.CredentialsRef)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return fmt.Errorf("the configured backup secret does not exist: %w", err)
+		}
+		return err
 	}
 
 	const (
@@ -478,44 +459,9 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 		secretStatusLabelValue = "previously-managed"
 	)
 
-	// Create or update backup secret if it doesn't exist, or is owned by the object, or was previously managed by this controller
-	if allowCopying && (apierrors.IsNotFound(originalErr) || metav1.IsControlledBy(backupSecret, obj) || backupSecret.Labels[secretStatusLabelKey] == secretStatusLabelValue) {
-		gvk, err := apiutil.GVKForObject(obj, a.GardenClient.Scheme())
-		if err != nil {
-			return fmt.Errorf("could not get GroupVersionKind from object %v: %w", obj, err)
-		}
-
-		infrastructureSecret, err := a.GetInfrastructureSecret(ctx)
-		if err != nil {
-			return err
-		}
-
-		// If there is no infrastructure Secret, e.g. WorkloadIdentity is used instead
-		// we skip the copying as it is not supported.
-		if infrastructureSecret != nil {
-			secret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Namespace: spec.Backup.CredentialsRef.Namespace, Name: spec.Backup.CredentialsRef.Name},
-			}
-
-			if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.GardenClient, secret, func() error {
-				secret.OwnerReferences = []metav1.OwnerReference{
-					*metav1.NewControllerRef(obj, gvk),
-				}
-				secret.Type = corev1.SecretTypeOpaque
-				secret.Data = infrastructureSecret.Data
-				delete(secret.Labels, secretStatusLabelKey)
-				return nil
-			}); err != nil {
-				return err
-			}
-
-			checksum = utils.ComputeSecretChecksum(secret.Data)[:8]
-		} else if apierrors.IsNotFound(originalErr) {
-			return errors.New("backup is configured to reference a credential, but there is no infrastructure credential to copy")
-		}
-	} else if !allowCopying && metav1.IsControlledBy(backupSecret, obj) {
-		// backup secret was copied at an earlier stage
-		// remove the ownerReference as the controller is no longer responsible for it
+	// If backup secret was copied at an earlier stage, remove the ownerReference as the controller is no longer responsible for it
+	// TODO(dimityrmirchev): Remove this logic when the DoNotCopyBackupCredentials feature gate is removed, i.e. after v1.134 has been released.
+	if metav1.IsControlledBy(backupSecret, obj) {
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Namespace: spec.Backup.CredentialsRef.Namespace, Name: spec.Backup.CredentialsRef.Name},
 		}
@@ -539,7 +485,7 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 		gardenletDeployment = &seedmanagementv1alpha1.GardenletDeployment{}
 	}
 	gardenletDeployment.PodAnnotations = utils.MergeStringMaps(gardenletDeployment.PodAnnotations, map[string]string{
-		"checksum/seed-backup-secret": spec.Backup.CredentialsRef.Name + "-" + checksum,
+		"checksum/seed-backup-secret": spec.Backup.CredentialsRef.Name + "-" + utils.ComputeSecretChecksum(backupSecret.Data)[:8],
 	})
 
 	return nil
