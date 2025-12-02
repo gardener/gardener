@@ -106,7 +106,7 @@ In case of `Shoot`s, the `gardener` finalizer can only be removed if the last op
 
 ## `ManagedSeed`
 
-**Type**: Mutating. **Enabled by default**: Yes.
+**Type**: Validating and Mutating. **Enabled by default**: Yes.
 
 This admission controller reacts on `CREATE` and `UPDATE` operations for `ManagedSeeds`s.
 It validates certain configuration values in the specification against the referred `Shoot`, for example Seed provider, network ranges, DNS domain, etc.
