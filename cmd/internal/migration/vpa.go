@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -20,11 +21,11 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
-// MigrateEmptyVPAPatch performs an empty patch updates to VerticalPodAutoscaler resources,
+// MigrateVPAEmptyPatch performs an empty patch updates to VerticalPodAutoscaler resources,
 // that are elighible to adopt the InPlaceOrRecreate update mode, but are filtered out, because of
 // the Resource Manager's alwaysUpdate=false configuration.
 // TODO(vitanovs): Remove the migration once the VPAInPlaceUpdates feature gates promoted to GA.
-func MigrateEmptyVPAPatch(ctx context.Context, mgr manager.Manager, log logr.Logger) error {
+func MigrateVPAEmptyPatch(ctx context.Context, mgr manager.Manager, log logr.Logger) error {
 	log.Info("Migrating VerticalPodAutoscalers")
 
 	vpaList := vpaautoscalingv1.VerticalPodAutoscalerList{}
@@ -57,6 +58,51 @@ func MigrateEmptyVPAPatch(ctx context.Context, mgr manager.Manager, log logr.Log
 				continue
 			}
 			return fmt.Errorf("failed updating VerticalPodAutoscaler '%s': %w", vpaKey, err)
+		}
+	}
+	return nil
+}
+
+// MigrateVPAUpdateModeToRecreate applies a patch to VerticalPodAutoscaler resources that
+// sets their update modes to Recreate, in order to undo the change applied by a GRM mutation webhook.
+// TODO(vitanovs): Remove the migration once the VPAInPlaceUpdates feature gates promoted to GA.
+func MigrateVPAUpdateModeToRecreate(ctx context.Context, mgr manager.Manager, log logr.Logger) error {
+	log.Info("Migrating VerticalPodAutoscalers to update mode Recreate")
+
+	vpaList := vpaautoscalingv1.VerticalPodAutoscalerList{}
+	if err := mgr.GetClient().List(ctx, &vpaList); err != nil {
+		if meta.IsNoMatchError(err) {
+			log.Info("Resources kind not found, skipping update mode migration", "kind", "VerticalPodAutoscaler")
+			return nil
+		}
+		return fmt.Errorf("failed listing VerticalPodAutoscaler resources: %w", err)
+	}
+
+	for _, vpa := range vpaList.Items {
+		vpaHasSkipLabel := metav1.HasLabel(vpa.ObjectMeta, resourcesv1alpha1.VPAInPlaceUpdatesSkip)
+		vpaHasMutatedLabel := metav1.HasLabel(vpa.ObjectMeta, resourcesv1alpha1.VPAInPlaceUpdatesMutated)
+		if vpaHasSkipLabel || !vpaHasMutatedLabel {
+			continue
+		}
+
+		if vpa.Namespace == metav1.NamespaceSystem || vpa.Namespace == v1beta1constants.KubernetesDashboardNamespace {
+			continue
+		}
+
+		vpaKey := client.ObjectKeyFromObject(&vpa)
+		log.Info("Migrating VerticalPodAutoscaler resource update mode to Recreate", "vpa", vpaKey)
+
+		patch := client.MergeFrom(vpa.DeepCopy())
+
+		vpa.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeRecreate)
+		delete(vpa.Labels, resourcesv1alpha1.VPAInPlaceUpdatesMutated)
+
+		if err := mgr.GetClient().Patch(ctx, &vpa, patch); err != nil {
+			if apierrors.IsNotFound(err) {
+				log.Info("Resource not found, skipping update mode migration", "vpa", vpaKey)
+				continue
+			}
+			return fmt.Errorf("failed migrating VerticalPodAutoscaler '%s' update mode: %w", vpaKey, err)
 		}
 	}
 	return nil
