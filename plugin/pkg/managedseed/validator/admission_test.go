@@ -1006,7 +1006,38 @@ var _ = Describe("ManagedSeed", func() {
 	})
 
 	Describe("#Validate", func() {
+		var (
+			ctx              context.Context
+			managedSeed      *seedmanagement.ManagedSeed
+			admissionHandler *ManagedSeed
+		)
 
+		BeforeEach(func() {
+			ctx = context.Background()
+			managedSeed = &seedmanagement.ManagedSeed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: seedmanagement.ManagedSeedSpec{
+					Shoot: &seedmanagement.Shoot{
+						Name: name,
+					},
+				},
+			}
+
+			var err error
+			admissionHandler, err = New()
+			Expect(err).ToNot(HaveOccurred())
+			admissionHandler.AssignReadyFunc(func() bool { return true })
+		})
+
+		It("should do nothing if the resource is not a ManagedSeed", func() {
+			attrs := admission.NewAttributesRecord(nil, nil, core.Kind(name).WithVersion("version"), managedSeed.Namespace, managedSeed.Name, core.Resource("foos").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+			err := admissionHandler.Validate(ctx, attrs, nil)
+			Expect(err).NotTo(HaveOccurred())
+		})
 	})
 
 	Describe("#Register", func() {
