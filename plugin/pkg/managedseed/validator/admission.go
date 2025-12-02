@@ -160,19 +160,8 @@ var (
 
 // Admit validates and if appropriate mutates the given managed seed against the shoot that it references.
 func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
-	// Wait until the caches have been synced
-	if v.readyFunc == nil {
-		v.AssignReadyFunc(func() bool {
-			for _, readyFunc := range readyFuncs {
-				if !readyFunc() {
-					return false
-				}
-			}
-			return true
-		})
-	}
-	if !v.WaitForReady() {
-		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
+	if err := v.waitUntilReady(a); err != nil {
+		return fmt.Errorf("err while waiting for ready: %w", err)
 	}
 
 	// Ignore all kinds other than ManagedSeed
@@ -272,6 +261,25 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 
 	if len(allErrs) > 0 {
 		return apierrors.NewInvalid(gk, managedSeed.Name, allErrs)
+	}
+
+	return nil
+}
+
+func (v *ManagedSeed) waitUntilReady(a admission.Attributes) error {
+	// Wait until the caches have been synced
+	if v.readyFunc == nil {
+		v.AssignReadyFunc(func() bool {
+			for _, readyFunc := range readyFuncs {
+				if !readyFunc() {
+					return false
+				}
+			}
+			return true
+		})
+	}
+	if !v.WaitForReady() {
+		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
 	}
 
 	return nil
@@ -608,5 +616,9 @@ func (v *ManagedSeed) getShoot(ctx context.Context, namespace, name string) (*ga
 
 // Validate validates the given managed seed against the shoot that it references.
 func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
+	if err := v.waitUntilReady(a); err != nil {
+		return fmt.Errorf("err while waiting for ready: %w", err)
+	}
+
 	return nil
 }
