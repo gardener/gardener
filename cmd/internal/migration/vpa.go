@@ -7,7 +7,9 @@ package migration
 import (
 	"context"
 	"fmt"
+	"math"
 
+	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -20,6 +22,11 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+)
+
+const (
+	// vpasChunkSize defines the number of VPA resources within a parallel processed chunk.
+	vpasChunkSize = 100
 )
 
 // MigrateVPAEmptyPatch performs an empty patch updates to VerticalPodAutoscaler resources,
@@ -84,32 +91,38 @@ func MigrateVPAUpdateModeToRecreate(ctx context.Context, mgr manager.Manager, lo
 		return fmt.Errorf("failed listing VerticalPodAutoscaler resources: %w", err)
 	}
 
+	var tasks []flow.TaskFn
 	for _, vpa := range vpaList.Items {
-		vpaHasSkipLabel := metav1.HasLabel(vpa.ObjectMeta, resourcesv1alpha1.VPAInPlaceUpdatesSkip)
-		vpaHasMutatedLabel := metav1.HasLabel(vpa.ObjectMeta, resourcesv1alpha1.VPAInPlaceUpdatesMutated)
-		if vpaHasSkipLabel || !vpaHasMutatedLabel {
-			continue
-		}
-
-		if vpa.Namespace == metav1.NamespaceSystem || vpa.Namespace == v1beta1constants.KubernetesDashboardNamespace {
-			continue
-		}
-
-		vpaKey := client.ObjectKeyFromObject(&vpa)
-		log.Info("Migrating VerticalPodAutoscaler resource update mode to Recreate", "vpa", vpaKey)
-
-		patch := client.MergeFrom(vpa.DeepCopy())
-
-		vpa.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeRecreate)
-		delete(vpa.Labels, resourcesv1alpha1.VPAInPlaceUpdatesMutated)
-
-		if err := mgr.GetClient().Patch(ctx, &vpa, patch); err != nil {
-			if apierrors.IsNotFound(err) {
-				log.Info("Resource not found, skipping update mode migration", "vpa", vpaKey)
-				continue
+		task := func(ctx context.Context) error {
+			vpaHasSkipLabel := metav1.HasLabel(vpa.ObjectMeta, resourcesv1alpha1.VPAInPlaceUpdatesSkip)
+			vpaHasMutatedLabel := metav1.HasLabel(vpa.ObjectMeta, resourcesv1alpha1.VPAInPlaceUpdatesMutated)
+			if vpaHasSkipLabel || !vpaHasMutatedLabel {
+				return nil
 			}
-			return fmt.Errorf("failed migrating VerticalPodAutoscaler '%s' update mode: %w", vpaKey, err)
+
+			if vpa.Namespace == metav1.NamespaceSystem || vpa.Namespace == v1beta1constants.KubernetesDashboardNamespace {
+				return nil
+			}
+
+			vpaKey := client.ObjectKeyFromObject(&vpa)
+			log.Info("Migrating VerticalPodAutoscaler resource update mode to Recreate", "vpa", vpaKey)
+
+			patch := client.MergeFrom(vpa.DeepCopy())
+
+			vpa.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeRecreate)
+			delete(vpa.Labels, resourcesv1alpha1.VPAInPlaceUpdatesMutated)
+
+			if err := mgr.GetClient().Patch(ctx, &vpa, patch); err != nil {
+				if apierrors.IsNotFound(err) {
+					log.Info("Resource not found, skipping update mode migration", "vpa", vpaKey)
+				}
+				return fmt.Errorf("failed migrating VerticalPodAutoscaler '%s' update mode: %w", vpaKey, err)
+			}
+			return nil
 		}
+		tasks = append(tasks, task)
 	}
-	return nil
+
+	workersCount := int(math.Ceil(float64(len(vpaList.Items) / vpasChunkSize)))
+	return flow.ParallelN(workersCount, tasks...)(ctx)
 }
