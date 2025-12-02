@@ -1,7 +1,7 @@
 apiVersion: seedmanagement.gardener.cloud/v1alpha1
 kind: ManagedSeedSet
 metadata:
-  name: my-managed-seed-set
+  name: my-mss
   namespace: garden # Must be garden
 spec:
   replicas: 1
