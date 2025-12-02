@@ -126,7 +126,11 @@ type actuator struct {
 }
 
 const (
-	// ControlPlaneShootChartResourceName is the name of the managed resource for the control plane
+	// ControlPlaneSeedChartResourceName is the name of the managed resource for the control plane seed
+	ControlPlaneSeedChartResourceName = "extension-controlplane-seed"
+	// ControlPlaneSeedConfigurationChartResourceName is the name of the managed resource for the control plane configuration chart
+	ControlPlaneSeedConfigurationChartResourceName = "extension-controlplane-configuration-seed"
+	// ControlPlaneShootChartResourceName is the name of the managed resource for the control plane shoot
 	ControlPlaneShootChartResourceName = "extension-controlplane-shoot"
 	// ControlPlaneShootCRDsChartResourceName is the name of the managed resource for the extension control plane shoot CRDs
 	ControlPlaneShootCRDsChartResourceName = "extension-controlplane-shoot-crds"
@@ -187,16 +191,24 @@ func (a *actuator) Reconcile(
 		}
 	}
 
+	// Apply control plane chart
+	version := cluster.Shoot.Spec.Kubernetes.Version
+
+	// Create shoot chart renderer
+	chartRenderer, err := a.chartRendererFactory.NewChartRendererForShoot(version)
+	if err != nil {
+		return false, fmt.Errorf("could not create chart renderer for shoot '%s': %w", cp.Namespace, err)
+	}
+
 	// Get config chart values
 	if a.configChart != nil {
 		values, err := a.vp.GetConfigChartValues(ctx, cp, cluster)
 		if err != nil {
 			return false, err
 		}
-
 		// Apply config chart
 		log.Info("Applying configuration chart")
-		if err := a.configChart.Apply(ctx, a.gardenerClientset.ChartApplier(), cp.Namespace, nil, "", "", values); err != nil {
+		if err := managedresources.RenderChartAndCreateForSeed(ctx, cp.Namespace, ControlPlaneSeedConfigurationChartResourceName, a.client, chartRenderer, a.configChart, values, a.imageVector, cp.Namespace, a.gardenerClientset.Version(), version); err != nil {
 			return false, fmt.Errorf("could not apply configuration chart for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
 		}
 	}
@@ -231,9 +243,6 @@ func (a *actuator) Reconcile(
 		}
 	}
 
-	// Apply control plane chart
-	version := cluster.Shoot.Spec.Kubernetes.Version
-
 	if a.controlPlaneChart != nil {
 		// Get control plane chart values
 		values, err := a.vp.GetControlPlaneChartValues(ctx, cp, cluster, sm, checksums, scaledDown)
@@ -242,15 +251,10 @@ func (a *actuator) Reconcile(
 		}
 
 		log.Info("Applying control plane chart")
-		if err := a.controlPlaneChart.Apply(ctx, a.gardenerClientset.ChartApplier(), cp.Namespace, a.imageVector, a.gardenerClientset.Version(), version, values); err != nil {
+
+		if err := managedresources.RenderChartAndCreateForSeed(ctx, cp.Namespace, ControlPlaneSeedChartResourceName, a.client, chartRenderer, a.controlPlaneChart, values, a.imageVector, cp.Namespace, a.gardenerClientset.Version(), version); err != nil {
 			return false, fmt.Errorf("could not apply control plane chart for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
 		}
-	}
-
-	// Create shoot chart renderer
-	chartRenderer, err := a.chartRendererFactory.NewChartRendererForShoot(version)
-	if err != nil {
-		return false, fmt.Errorf("could not create chart renderer for shoot '%s': %w", cp.Namespace, err)
 	}
 
 	if a.controlPlaneShootChart != nil {
@@ -327,6 +331,16 @@ func (a *actuator) ForceDelete(
 func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) error {
 	forceDelete := cluster != nil && v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot)
 
+	// Apply control plane chart
+	version := cluster.Shoot.Spec.Kubernetes.Version
+	runtimeVersion := a.gardenerClientset.Version()
+
+	// Create shoot chart renderer
+	chartRenderer, err := a.chartRendererFactory.NewChartRendererForShoot(version)
+	if err != nil {
+		return fmt.Errorf("could not create chart renderer for shoot '%s': %w", cp.Namespace, err)
+	}
+
 	// Get config chart values
 	if a.configChart != nil {
 		values, err := a.vp.GetConfigChartValues(ctx, cp, cluster)
@@ -335,8 +349,8 @@ func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1
 		}
 
 		// Apply config chart
-		log.Info("Applying configuration chart before deletion")
-		if err := a.configChart.Apply(ctx, a.gardenerClientset.ChartApplier(), cp.Namespace, nil, "", "", values); err != nil {
+		log.Info("Applying configuration chart")
+		if err := managedresources.RenderChartAndCreateForSeed(ctx, cp.Namespace, ControlPlaneSeedConfigurationChartResourceName, a.client, chartRenderer, a.configChart, values, a.imageVector, cp.Namespace, runtimeVersion, version); err != nil {
 			return fmt.Errorf("could not apply configuration chart before deletion of controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
 		}
 	}
@@ -379,17 +393,17 @@ func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1
 
 	// Delete control plane objects
 	if a.controlPlaneChart != nil {
-		log.Info("Deleting control plane objects")
-		if err := a.controlPlaneChart.Delete(ctx, a.client, cp.Namespace); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("could not delete control plane objects for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
+		log.Info("Deleting control plane managed resource")
+		if err := managedresources.Delete(ctx, a.client, cp.Namespace, ControlPlaneSeedChartResourceName, false); err != nil {
+			return fmt.Errorf("could not delete managed resource for seed controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
 		}
 	}
 
 	if a.configChart != nil {
 		// Delete config objects
-		log.Info("Deleting configuration objects")
-		if err := a.configChart.Delete(ctx, a.client, cp.Namespace); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("could not delete configuration objects for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
+		log.Info("Deleting control plane configuration managed resource")
+		if err := managedresources.Delete(ctx, a.client, cp.Namespace, ControlPlaneSeedConfigurationChartResourceName, false); err != nil {
+			return fmt.Errorf("could not delete managed resource for seed controlplane configuration '%s': %w", client.ObjectKeyFromObject(cp), err)
 		}
 	}
 
