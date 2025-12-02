@@ -363,7 +363,7 @@ shootdnsrewriting_groups() {
 export -f shootdnsrewriting_groups
 
 shootresourcereservation_groups() {
-  echo "GeneratingAPI groups for plugin/pkg/shoot/resourcereservation/apis/shootresourcereservation"
+  echo "Generating API groups for plugin/pkg/shoot/resourcereservation/apis/shootresourcereservation"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
