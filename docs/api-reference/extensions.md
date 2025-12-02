@@ -3124,6 +3124,8 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 </em>
 </td>
 <td>
+<em>(Optional)</em>
+<p>Controllers holds a list of controller configurations.</p>
 </td>
 </tr>
 </tbody>

@@ -812,6 +812,7 @@ spec:
                   type: object
                 type: array
               controllers:
+                description: Controllers holds a list of controller configurations.
                 items:
                   properties:
                     active:
