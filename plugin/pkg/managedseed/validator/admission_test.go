@@ -251,18 +251,17 @@ var _ = Describe("ManagedSeed", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should forbid the ManagedSeed creation with namespace different from garden", func() {
-			managedSeed.Namespace = "foo"
+		It("should forbid when object is not ManagedSeed", func() {
+			project := core.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-project",
+				},
+			}
+			attrs := admission.NewAttributesRecord(&project, nil, seedmanagementv1alpha1.Kind("ManagedSeed").WithVersion("v1alpha1"), managedSeed.Namespace, managedSeed.Name, seedmanagementv1alpha1.Resource("managedseeds").WithVersion("v1alpha1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-			Expect(err).To(BeInvalidError())
-			Expect(getErrorList(err)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("metadata.namespace"),
-					"Detail": ContainSubstring("namespace must be garden"),
-				})),
-			))
+			err := admissionHandler.Admit(context.TODO(), attrs, nil)
+			Expect(err).To(BeBadRequestError())
+			Expect(err).To(MatchError("could not convert object to ManagedSeed"))
 		})
 
 		It("should forbid the ManagedSeed creation if a Shoot name is not specified", func() {
@@ -1037,6 +1036,33 @@ var _ = Describe("ManagedSeed", func() {
 
 			err := admissionHandler.Validate(ctx, attrs, nil)
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should forbid when object is not ManagedSeed", func() {
+			project := core.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-project",
+				},
+			}
+			attrs := admission.NewAttributesRecord(&project, nil, seedmanagementv1alpha1.Kind("ManagedSeed").WithVersion("v1alpha1"), managedSeed.Namespace, managedSeed.Name, seedmanagementv1alpha1.Resource("managedseeds").WithVersion("v1alpha1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+			err := admissionHandler.Validate(ctx, attrs, nil)
+			Expect(err).To(BeBadRequestError())
+			Expect(err).To(MatchError("could not convert object to ManagedSeed"))
+		})
+
+		It("should forbid the ManagedSeed creation with namespace different from garden", func() {
+			managedSeed.Namespace = "foo"
+
+			err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("metadata.namespace"),
+					"Detail": ContainSubstring("namespace must be garden"),
+				})),
+			))
 		})
 	})
 

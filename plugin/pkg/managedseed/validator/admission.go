@@ -158,6 +158,10 @@ var (
 	_ admission.ValidationInterface = (*ManagedSeed)(nil)
 )
 
+var (
+	gk = schema.GroupKind{Group: seedmanagement.GroupName, Kind: "ManagedSeed"}
+)
+
 // Admit validates and if appropriate mutates the given managed seed against the shoot that it references.
 func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	if err := v.waitUntilReady(a); err != nil {
@@ -175,13 +179,6 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 	}
 
 	var allErrs field.ErrorList
-	gk := schema.GroupKind{Group: seedmanagement.GroupName, Kind: "ManagedSeed"}
-
-	// Ensure namespace is garden
-	// Garden namespace validation can be disabled by disabling the ManagedSeed plugin for integration test.
-	if managedSeed.Namespace != v1beta1constants.GardenNamespace {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(field.NewPath("metadata", "namespace"), managedSeed.Namespace, "namespace must be garden")))
-	}
 
 	// Ensure shoot and shoot name are specified
 	shootPath := field.NewPath("spec", "shoot")
@@ -630,6 +627,20 @@ func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ ad
 
 	if shouldIgnore(a) {
 		return nil
+	}
+
+	// Convert object to ManagedSeed
+	managedSeed, ok := a.GetObject().(*seedmanagement.ManagedSeed)
+	if !ok {
+		return apierrors.NewBadRequest("could not convert object to ManagedSeed")
+	}
+
+	var allErrs field.ErrorList
+
+	// Ensure namespace is garden
+	// Garden namespace validation can be disabled by disabling the ManagedSeed plugin for integration test.
+	if managedSeed.Namespace != v1beta1constants.GardenNamespace {
+		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(field.NewPath("metadata", "namespace"), managedSeed.Namespace, "namespace must be garden")))
 	}
 
 	return nil
