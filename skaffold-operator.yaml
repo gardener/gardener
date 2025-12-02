@@ -26,6 +26,7 @@ build:
             - pkg/api/core/v1beta1/helper
             - pkg/api/core/validation
             - pkg/api/extensions
+            - pkg/api/extensions/v1alpha1/helper
             - pkg/api/extensions/validation
             - pkg/api/indexer
             - pkg/api/operator/v1alpha1/conversion
@@ -49,7 +50,6 @@ build:
             - pkg/apis/core/v1beta1/constants
             - pkg/apis/extensions
             - pkg/apis/extensions/v1alpha1
-            - pkg/apis/extensions/v1alpha1/helper
             - pkg/apis/operations
             - pkg/apis/operations/install
             - pkg/apis/operations/v1alpha1
@@ -253,8 +253,10 @@ build:
             - pkg/api/core/helper
             - pkg/api/core/v1beta1/helper
             - pkg/api/extensions
+            - pkg/api/extensions/v1alpha1/helper
             - pkg/api/extensions/validation
             - pkg/api/indexer
+            - pkg/api/resources/v1alpha1/helper
             - pkg/apis/authentication
             - pkg/apis/authentication/install
             - pkg/apis/authentication/v1alpha1
@@ -268,7 +270,6 @@ build:
             - pkg/apis/core/v1beta1/constants
             - pkg/apis/extensions
             - pkg/apis/extensions/v1alpha1
-            - pkg/apis/extensions/v1alpha1/helper
             - pkg/apis/operations
             - pkg/apis/operations/install
             - pkg/apis/operations/v1alpha1
@@ -276,7 +277,6 @@ build:
             - pkg/apis/operator/v1alpha1
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
-            - pkg/apis/resources/v1alpha1/helper
             - pkg/apis/security
             - pkg/apis/security/install
             - pkg/apis/security/v1alpha1
@@ -374,6 +374,7 @@ build:
             - pkg/api/core/v1beta1/helper
             - pkg/api/core/validation
             - pkg/api/extensions
+            - pkg/api/extensions/v1alpha1/helper
             - pkg/api/operations/validation
             - pkg/api/security/validation
             - pkg/api/seedmanagement/helper
@@ -393,7 +394,6 @@ build:
             - pkg/apis/core/v1beta1/constants
             - pkg/apis/extensions
             - pkg/apis/extensions/v1alpha1
-            - pkg/apis/extensions/v1alpha1/helper
             - pkg/apis/operations
             - pkg/apis/operations/install
             - pkg/apis/operations/v1alpha1
@@ -593,6 +593,7 @@ build:
             - pkg/api/core/helper
             - pkg/api/core/v1beta1/helper
             - pkg/api/extensions
+            - pkg/api/extensions/v1alpha1/helper
             - pkg/api/indexer
             - pkg/apis/authentication
             - pkg/apis/authentication/install
@@ -607,7 +608,6 @@ build:
             - pkg/apis/core/v1beta1/constants
             - pkg/apis/extensions
             - pkg/apis/extensions/v1alpha1
-            - pkg/apis/extensions/v1alpha1/helper
             - pkg/apis/operations
             - pkg/apis/operations/install
             - pkg/apis/operations/v1alpha1
@@ -723,6 +723,7 @@ build:
             - pkg/api/core/helper
             - pkg/api/core/v1beta1/helper
             - pkg/api/extensions
+            - pkg/api/extensions/v1alpha1/helper
             - pkg/api/indexer
             - pkg/apis/authentication
             - pkg/apis/authentication/install
@@ -737,7 +738,6 @@ build:
             - pkg/apis/core/v1beta1/constants
             - pkg/apis/extensions
             - pkg/apis/extensions/v1alpha1
-            - pkg/apis/extensions/v1alpha1/helper
             - pkg/apis/operations
             - pkg/apis/operations/install
             - pkg/apis/operations/v1alpha1
@@ -1013,6 +1013,7 @@ build:
             - pkg/api/core/helper
             - pkg/api/core/v1beta1/helper
             - pkg/api/extensions
+            - pkg/api/extensions/v1alpha1/helper
             - pkg/api/operator/v1alpha1/helper
             - pkg/apis/authentication
             - pkg/apis/authentication/install
@@ -1026,7 +1027,6 @@ build:
             - pkg/apis/core/v1beta1/constants
             - pkg/apis/extensions
             - pkg/apis/extensions/v1alpha1
-            - pkg/apis/extensions/v1alpha1/helper
             - pkg/apis/operations
             - pkg/apis/operations/install
             - pkg/apis/operations/v1alpha1
@@ -1157,6 +1157,7 @@ build:
             - pkg/api/core/helper
             - pkg/api/core/v1beta1/helper
             - pkg/api/extensions
+            - pkg/api/extensions/v1alpha1/helper
             - pkg/api/operator/v1alpha1/helper
             - pkg/apis/authentication
             - pkg/apis/authentication/install
@@ -1170,7 +1171,6 @@ build:
             - pkg/apis/core/v1beta1/constants
             - pkg/apis/extensions
             - pkg/apis/extensions/v1alpha1
-            - pkg/apis/extensions/v1alpha1/helper
             - pkg/apis/operations
             - pkg/apis/operations/install
             - pkg/apis/operations/v1alpha1
