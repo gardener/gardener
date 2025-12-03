@@ -15,7 +15,6 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "hideControls": false,
   "links": [],
   "panels": [],
   "schemaVersion": 27,
@@ -30,6 +29,6 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "New dashboard",
-  "uid": "control-plane-costs"
+  "title": "Shoot Control Plane Cost Calculator",
+  "uid": "control-plane-cost-calculator"
 }
