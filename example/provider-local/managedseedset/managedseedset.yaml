@@ -28,7 +28,7 @@ spec:
               dns:
                 ingress:
                   # "replica-name" in DNS domains will be replaced by the actual replica name
-                  domain: replica-name.garden.shoot.dev.k8s-hana.ondemand.com
+                  domain: replica-name.ingress.dev.my-seed.example.com
   shootTemplate:
     # <See `example/90-shoot.yaml` for more details>
     metadata:
