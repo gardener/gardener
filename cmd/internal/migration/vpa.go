@@ -8,11 +8,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
@@ -21,6 +22,8 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 const (
@@ -35,8 +38,21 @@ const (
 func MigrateVPAEmptyPatch(ctx context.Context, mgr manager.Manager, log logr.Logger) error {
 	log.Info("Migrating VerticalPodAutoscalers")
 
-	vpaList := vpaautoscalingv1.VerticalPodAutoscalerList{}
-	if err := mgr.GetClient().List(ctx, &vpaList); err != nil {
+	var (
+		vpaLabelSkipShouldNotExist    = utils.MustNewRequirement(resourcesv1alpha1.VPAInPlaceUpdatesSkip, selection.DoesNotExist)
+		vpaLabelMutatedShouldNotExist = utils.MustNewRequirement(resourcesv1alpha1.VPAInPlaceUpdatesMutated, selection.DoesNotExist)
+		labelSelector                 = labels.NewSelector().Add(
+			vpaLabelMutatedShouldNotExist,
+			vpaLabelSkipShouldNotExist,
+		)
+
+		vpaList     = vpaautoscalingv1.VerticalPodAutoscalerList{}
+		vpaListOpts = client.ListOptions{
+			LabelSelector: labelSelector,
+		}
+	)
+
+	if err := mgr.GetClient().List(ctx, &vpaList, &vpaListOpts); err != nil {
 		if meta.IsNoMatchError(err) {
 			log.Info("Resources kind not found, skipping migration", "kind", "VerticalPodAutoscaler")
 			return nil
@@ -47,12 +63,6 @@ func MigrateVPAEmptyPatch(ctx context.Context, mgr manager.Manager, log logr.Log
 	var tasks []flow.TaskFn
 	for _, vpa := range vpaList.Items {
 		task := func(ctx context.Context) error {
-			vpaHasSkipLabel := metav1.HasLabel(vpa.ObjectMeta, resourcesv1alpha1.VPAInPlaceUpdatesSkip)
-			vpaHasMutatedLabel := metav1.HasLabel(vpa.ObjectMeta, resourcesv1alpha1.VPAInPlaceUpdatesMutated)
-			if vpaHasSkipLabel || vpaHasMutatedLabel {
-				return nil
-			}
-
 			if vpa.Namespace == metav1.NamespaceSystem || vpa.Namespace == v1beta1constants.KubernetesDashboardNamespace {
 				return nil
 			}
@@ -88,8 +98,21 @@ func MigrateVPAEmptyPatch(ctx context.Context, mgr manager.Manager, log logr.Log
 func MigrateVPAUpdateModeToRecreate(ctx context.Context, mgr manager.Manager, log logr.Logger) error {
 	log.Info("Migrating VerticalPodAutoscalers to update mode Recreate")
 
-	vpaList := vpaautoscalingv1.VerticalPodAutoscalerList{}
-	if err := mgr.GetClient().List(ctx, &vpaList); err != nil {
+	var (
+		vpaLabelSkipShouldNotExist = utils.MustNewRequirement(resourcesv1alpha1.VPAInPlaceUpdatesSkip, selection.DoesNotExist)
+		vpaLabelMutatedShouldExist = utils.MustNewRequirement(resourcesv1alpha1.VPAInPlaceUpdatesMutated, selection.Exists)
+		labelSelector              = labels.NewSelector().Add(
+			vpaLabelMutatedShouldExist,
+			vpaLabelSkipShouldNotExist,
+		)
+
+		vpaList     = vpaautoscalingv1.VerticalPodAutoscalerList{}
+		vpaListOpts = client.ListOptions{
+			LabelSelector: labelSelector,
+		}
+	)
+
+	if err := mgr.GetClient().List(ctx, &vpaList, &vpaListOpts); err != nil {
 		if meta.IsNoMatchError(err) {
 			log.Info("Resources kind not found, skipping update mode migration", "kind", "VerticalPodAutoscaler")
 			return nil
@@ -100,12 +123,6 @@ func MigrateVPAUpdateModeToRecreate(ctx context.Context, mgr manager.Manager, lo
 	var tasks []flow.TaskFn
 	for _, vpa := range vpaList.Items {
 		task := func(ctx context.Context) error {
-			vpaHasSkipLabel := metav1.HasLabel(vpa.ObjectMeta, resourcesv1alpha1.VPAInPlaceUpdatesSkip)
-			vpaHasMutatedLabel := metav1.HasLabel(vpa.ObjectMeta, resourcesv1alpha1.VPAInPlaceUpdatesMutated)
-			if vpaHasSkipLabel || !vpaHasMutatedLabel {
-				return nil
-			}
-
 			if vpa.Namespace == metav1.NamespaceSystem || vpa.Namespace == v1beta1constants.KubernetesDashboardNamespace {
 				return nil
 			}
