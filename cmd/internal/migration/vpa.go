@@ -7,7 +7,6 @@ package migration
 import (
 	"context"
 	"fmt"
-	"math"
 
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/go-logr/logr"
@@ -25,8 +24,8 @@ import (
 )
 
 const (
-	// vpasChunkSize defines the number of VPA resources within a parallel processed chunk.
-	vpasChunkSize = 100
+	// vpaParallelWorkersCount defines the number of workers processing the VPAs resources in parallel.
+	vpaParallelWorkersCount = 5
 )
 
 // MigrateVPAEmptyPatch performs an empty patch updates to VerticalPodAutoscaler resources,
@@ -80,8 +79,7 @@ func MigrateVPAEmptyPatch(ctx context.Context, mgr manager.Manager, log logr.Log
 		tasks = append(tasks, task)
 	}
 
-	workersCount := int(math.Ceil(float64(len(vpaList.Items) / vpasChunkSize)))
-	return flow.ParallelN(workersCount, tasks...)(ctx)
+	return flow.ParallelN(vpaParallelWorkersCount, tasks...)(ctx)
 }
 
 // MigrateVPAUpdateModeToRecreate applies a patch to VerticalPodAutoscaler resources that
@@ -131,6 +129,5 @@ func MigrateVPAUpdateModeToRecreate(ctx context.Context, mgr manager.Manager, lo
 		tasks = append(tasks, task)
 	}
 
-	workersCount := int(math.Ceil(float64(len(vpaList.Items) / vpasChunkSize)))
-	return flow.ParallelN(workersCount, tasks...)(ctx)
+	return flow.ParallelN(vpaParallelWorkersCount, tasks...)(ctx)
 }
