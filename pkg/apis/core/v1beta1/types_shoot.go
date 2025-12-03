@@ -904,6 +904,8 @@ var (
 	DefaultMemoryAggregationInterval = metav1.Duration{Duration: 24 * time.Hour}
 	// DefaultMemoryAggregationIntervalCount is the default value for the MemoryAggregationIntervalCount field in the VPA configuration.
 	DefaultMemoryAggregationIntervalCount = int64(8)
+	// DefaultUpdateWorkerCount is the default value for the UpdateWorkerCount field in the VPA configuration
+	DefaultUpdateWorkerCount = int32(10)
 )
 
 // KubernetesConfig contains common configuration fields for the control plane components.
