@@ -42,8 +42,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
 	}
 
-	partialShootMetadata := &metav1.PartialObjectMetadata{}
-	partialShootMetadata.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
+	shootMeta := &metav1.PartialObjectMetadata{}
+	shootMeta.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
 
 	return builder.
 		ControllerManagedBy(mgr).
@@ -52,7 +52,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Owns(&corev1.Namespace{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Delete))).
 		Owns(&rbacv1.RoleBinding{}, builder.WithPredicates(r.RoleBindingPredicate())).
 		Watches(
-			partialShootMetadata,
+			shootMeta,
 			handler.EnqueueRequestsFromMapFunc(r.MapShootToProjectInDeletion(mgr.GetLogger().WithValues("controller", ControllerName))),
 			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Delete)),
 		).
@@ -73,13 +73,13 @@ func (r *Reconciler) MapShootToProjectInDeletion(log logr.Logger) handler.MapFun
 			return nil
 		}
 
-		shootsExist, err := kubernetesutils.ResourcesExist(ctx, r.Client, &gardencorev1beta1.ShootList{}, r.Client.Scheme(), client.InNamespace(shoot.Namespace))
+		projectNamespaceStillContainsShoots, err := kubernetesutils.ResourcesExist(ctx, r.Client, &gardencorev1beta1.ShootList{}, r.Client.Scheme(), client.InNamespace(shoot.Namespace))
 		if err != nil {
 			log.Error(err, "Failed to check if namespace still contains shoots", "namespace", shoot.Namespace)
 			return nil
 		}
 
-		if shootsExist {
+		if projectNamespaceStillContainsShoots {
 			return nil
 		}
 

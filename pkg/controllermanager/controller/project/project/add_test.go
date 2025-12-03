@@ -32,7 +32,7 @@ var _ = Describe("Add", func() {
 		reconciler = &project.Reconciler{}
 	})
 
-	Describe("RoleBindingPredicate", func() {
+	Describe("#RoleBindingPredicate", func() {
 		var (
 			p           predicate.Predicate
 			roleBinding *rbacv1.RoleBinding
@@ -129,7 +129,7 @@ var _ = Describe("Add", func() {
 			Expect(reconciler.MapShootToProjectInDeletion(log)(ctx, &gardencorev1beta1.Project{})).To(BeEmpty())
 		})
 
-		Context("when other shoots exist in namespace", func() {
+		When("other shoots exist in namespace", func() {
 			var (
 				namespace = "garden-test"
 
@@ -162,7 +162,7 @@ var _ = Describe("Add", func() {
 			})
 		})
 
-		Context("when no other shoots exist", func() {
+		When("no other shoots exist", func() {
 			var (
 				namespace   = "garden-test"
 				projectName = "test-project"

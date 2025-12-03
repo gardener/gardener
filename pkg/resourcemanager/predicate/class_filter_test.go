@@ -203,13 +203,13 @@ var _ = Describe("ClassFilter", func() {
 			predicate = NewClassFilter("").CleanupCompleted()
 		})
 
-		Context("#Create", func() {
+		Describe("#Create", func() {
 			It("should always return false", func() {
 				Expect(predicate.Create(event.CreateEvent{Object: &resourcesv1alpha1.ManagedResource{}})).To(BeFalse())
 			})
 		})
 
-		Context("#Update", func() {
+		Describe("#Update", func() {
 			DescribeTable("should return correct result based on cleanup requirements",
 				func(oldMR, newMR *resourcesv1alpha1.ManagedResource, expected bool) {
 					got := predicate.Update(event.UpdateEvent{
