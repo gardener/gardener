@@ -26,8 +26,9 @@ spec:
                 name: my-managed-seed-set
             spec:
               dns:
-                # "replica-name" in DNS domains will be replaced by the actual replica name
-                ingressDomain: replica-name.garden.shoot.dev.k8s-hana.ondemand.com
+                ingress:
+                  # "replica-name" in DNS domains will be replaced by the actual replica name
+                  domain: replica-name.garden.shoot.dev.k8s-hana.ondemand.com
   shootTemplate:
     # <See `90-shoot.yaml` for more details>
     metadata:
