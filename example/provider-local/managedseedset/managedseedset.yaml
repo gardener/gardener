@@ -1,3 +1,4 @@
+# Please note: The `ManagedSeedSet` is a WIP feature. This example is primarily meant to support further development in the local setup.
 apiVersion: seedmanagement.gardener.cloud/v1alpha1
 kind: ManagedSeedSet
 metadata:
