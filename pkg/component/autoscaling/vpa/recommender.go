@@ -77,6 +77,8 @@ type ValuesRecommender struct {
 	PriorityClassName string
 	// Replicas is the number of pod replicas.
 	Replicas *int32
+	// UpdateWorkerCount is the number of workers used for updating VPAs and VPACheckpoints in parallel
+	UpdateWorkerCount *int64
 }
 
 func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
@@ -346,6 +348,7 @@ func (v *vpa) computeRecommenderArgs() []string {
 		"--leader-elect=true",
 		"--leader-elect-resource-name=" + recommender,
 		fmt.Sprintf("--leader-elect-resource-namespace=%s", v.namespaceForApplicationClassResource()),
+		fmt.Sprintf("--update-worker-count=%d", ptr.Deref(v.values.Recommender.UpdateWorkerCount, gardencorev1beta1.DefaultUpdateWorkerCount)),
 	}
 
 	if v.values.ClusterType == component.ClusterTypeShoot {
