@@ -45,35 +45,43 @@ func MigrateVPAEmptyPatch(ctx context.Context, mgr manager.Manager, log logr.Log
 		return fmt.Errorf("failed listing VerticalPodAutoscaler resources: %w", err)
 	}
 
+	var tasks []flow.TaskFn
 	for _, vpa := range vpaList.Items {
-		vpaHasSkipLabel := metav1.HasLabel(vpa.ObjectMeta, resourcesv1alpha1.VPAInPlaceUpdatesSkip)
-		vpaHasMutatedLabel := metav1.HasLabel(vpa.ObjectMeta, resourcesv1alpha1.VPAInPlaceUpdatesMutated)
-		if vpaHasSkipLabel || vpaHasMutatedLabel {
-			continue
-		}
-
-		if vpa.Namespace == metav1.NamespaceSystem || vpa.Namespace == v1beta1constants.KubernetesDashboardNamespace {
-			continue
-		}
-
-		updateMode := ptr.Deref(vpa.Spec.UpdatePolicy.UpdateMode, vpaautoscalingv1.UpdateModeRecreate)
-		if updateMode != vpaautoscalingv1.UpdateModeAuto && updateMode != vpaautoscalingv1.UpdateModeRecreate {
-			continue
-		}
-
-		vpaKey := client.ObjectKeyFromObject(&vpa)
-		log.Info("Updating VerticalPodAutoscaler resource", "vpa", vpaKey)
-
-		patch := client.RawPatch(types.MergePatchType, []byte("{}"))
-		if err := mgr.GetClient().Patch(ctx, &vpa, patch); err != nil {
-			if apierrors.IsNotFound(err) {
-				log.Info("Resource not found, skipping migration", "vpa", vpaKey)
-				continue
+		task := func(ctx context.Context) error {
+			vpaHasSkipLabel := metav1.HasLabel(vpa.ObjectMeta, resourcesv1alpha1.VPAInPlaceUpdatesSkip)
+			vpaHasMutatedLabel := metav1.HasLabel(vpa.ObjectMeta, resourcesv1alpha1.VPAInPlaceUpdatesMutated)
+			if vpaHasSkipLabel || vpaHasMutatedLabel {
+				return nil
 			}
-			return fmt.Errorf("failed updating VerticalPodAutoscaler '%s': %w", vpaKey, err)
+
+			if vpa.Namespace == metav1.NamespaceSystem || vpa.Namespace == v1beta1constants.KubernetesDashboardNamespace {
+				return nil
+			}
+
+			updateMode := ptr.Deref(vpa.Spec.UpdatePolicy.UpdateMode, vpaautoscalingv1.UpdateModeRecreate)
+			if updateMode != vpaautoscalingv1.UpdateModeAuto && updateMode != vpaautoscalingv1.UpdateModeRecreate {
+				return nil
+			}
+
+			vpaKey := client.ObjectKeyFromObject(&vpa)
+			log.Info("Updating VerticalPodAutoscaler resource", "vpa", vpaKey)
+
+			patch := client.RawPatch(types.MergePatchType, []byte("{}"))
+			if err := mgr.GetClient().Patch(ctx, &vpa, patch); err != nil {
+				if apierrors.IsNotFound(err) {
+					log.Info("Resource not found, skipping migration", "vpa", vpaKey)
+					return nil
+				}
+				return fmt.Errorf("failed updating VerticalPodAutoscaler '%s': %w", vpaKey, err)
+			}
+
+			return nil
 		}
+		tasks = append(tasks, task)
 	}
-	return nil
+
+	workersCount := int(math.Ceil(float64(len(vpaList.Items) / vpasChunkSize)))
+	return flow.ParallelN(workersCount, tasks...)(ctx)
 }
 
 // MigrateVPAUpdateModeToRecreate applies a patch to VerticalPodAutoscaler resources that
