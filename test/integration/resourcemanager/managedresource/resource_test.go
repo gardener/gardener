@@ -49,7 +49,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 		configMap *corev1.ConfigMap
 	)
 
-	BeforeEach(func() {
+	BeforeEach(OncePerOrdered, func() {
 		// use unique resource names specific to test case
 		// If we use the same names for all test cases, failing cases will cause cascading failures because of AlreadyExistsErrors.
 		// We want to avoid cascading failures because they are distracting from the actual root failure, and we want to
@@ -93,7 +93,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 		fakeClock.SetTime(time.Now())
 	})
 
-	JustBeforeEach(func() {
+	JustBeforeEach(OncePerOrdered, func() {
 		if secretForManagedResource != nil {
 			By("Create Secret for test")
 			log.Info("Create Secret for test", "secret", objectKey)
@@ -105,7 +105,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 		Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 	})
 
-	AfterEach(func() {
+	AfterEach(OncePerOrdered, func() {
 		By("Delete ManagedResource")
 		Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
 
@@ -423,7 +423,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 	})
 
 	Describe("Resource class", func() {
-		BeforeEach(func() {
+		BeforeEach(OncePerOrdered, func() {
 			managedResource.Spec.Class = ptr.To("test")
 		})
 
@@ -438,37 +438,38 @@ var _ = Describe("ManagedResource controller tests", func() {
 			}).Should(BeEmpty())
 		})
 
-		It("should transfer responsibility if class changes", func() {
-			By("Add finalizer to ManagedResource for other class")
-			patch := client.MergeFrom(managedResource.DeepCopy())
-			controllerutil.AddFinalizer(managedResource, "resources.gardener.cloud/gardener-resource-manager-test")
-			Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
+		When("transferring responsibility on class changes", Ordered, func() {
+			It("should add finalizer to ManagedResource for other class", func() {
+				patch := client.MergeFrom(managedResource.DeepCopy())
+				controllerutil.AddFinalizer(managedResource, "resources.gardener.cloud/gardener-resource-manager-test")
+				Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
+			})
 
-			By("Change class of ManagedResource to default to transfer responsibility")
-			patch = client.MergeFrom(managedResource.DeepCopy())
-			managedResource.Spec.Class = ptr.To(filter.ResourceClass())
-			Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
+			It("should not remove finalizer for test class after class of ManagedResource is changed to default", func() {
+				patch := client.MergeFrom(managedResource.DeepCopy())
+				managedResource.Spec.Class = ptr.To(filter.ResourceClass())
+				Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
 
-			By("Ensure that the finalizer for the test class is not removed after the class is changed")
-			Consistently(func(g Gomega) []string {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				return managedResource.Finalizers
-			}).Should(ContainElement("resources.gardener.cloud/gardener-resource-manager-test"))
+				Consistently(func(g Gomega) []string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Finalizers
+				}).Should(ContainElement("resources.gardener.cloud/gardener-resource-manager-test"))
+			})
 
-			By("Remove the finalizer for the test class to finish responsibility transfer")
-			patch = client.MergeFrom(managedResource.DeepCopy())
-			controllerutil.RemoveFinalizer(managedResource, "resources.gardener.cloud/gardener-resource-manager-test")
-			Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
+			It("should finish responsibility transfer when finalizer for test class is removed", func() {
+				patch := client.MergeFrom(managedResource.DeepCopy())
+				controllerutil.RemoveFinalizer(managedResource, "resources.gardener.cloud/gardener-resource-manager-test")
+				Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
 
-			By("Ensure that finalizer for default class is added and that resources are created")
-			Eventually(func(g Gomega) []string {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				return managedResource.Finalizers
-			}).Should(ContainElement("resources.gardener.cloud/gardener-resource-manager"))
+				Eventually(func(g Gomega) []string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Finalizers
+				}).Should(ContainElement("resources.gardener.cloud/gardener-resource-manager"))
 
-			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-			}).Should(Succeed())
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
+				}).Should(Succeed())
+			})
 		})
 	})
 
