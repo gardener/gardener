@@ -231,8 +231,8 @@ Frequently used ones are:
   - Consider if updates to the field value should be allowed and are supported by the underlying controller. If not, consider making the field immutable. Add a doc string to the field to denote the immutability constraint.
 - Introducing new validation for existing field or making existing validation more restrictive might be a breaking change.
   - When working with existing field, aim to add validation which is obvious and unlikely to break a working functionality.
-  - If breaking change is inevitable and it is likely to break a working functionality consider the following alternatives:
+  - If a breaking change is inevitable and it is likely to break a working functionality, consider the following alternatives:
     - Consider using "ratcheting" validation to incrementally tighten validation. See [Ratcheting validation](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api_changes.md#ratcheting-validation).
-      - An example usage of "ratcheting" validation - allow invalid field value if the value is not updated; otherwise - do not allow. Example: https://github.com/gardener/gardener/pull/10664
+      - An example usage of "ratcheting" validation - allow invalid field value if the value is not updated; otherwise, do not allow. Example: https://github.com/gardener/gardener/pull/10664
     - Consider using a feature gate to roll out the breaking change. The feature gate gives control when to impose the breaking change. In case of issues, it is possible to revert back to the old behavior by disabling the feature gate.
-    - In case the functionality is _relevant to the majority of the end-users_ , consider imposing the breaking change only with the upcoming minor Kubernetes version. This way, end-users are forced to actively adapt their manifests when performing Kubernetes upgrades.
+    - In case the functionality is _relevant to the majority of the end-users_, consider imposing the breaking change only with the upcoming minor Kubernetes version. This way, end-users are forced to actively adapt their manifests when performing Kubernetes upgrades.
