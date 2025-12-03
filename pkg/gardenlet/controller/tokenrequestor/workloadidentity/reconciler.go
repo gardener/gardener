@@ -57,13 +57,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, nil
 	}
 
-	mustRequeue, requeueAfter, err := r.shouldRequeue(secret)
+	requeueAfter, err := r.computeRequeueAfterDuration(secret)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	if mustRequeue {
+	if requeueAfter > 0 {
 		log.Info("No need to generate new token, renewal is scheduled", "after", requeueAfter)
-		return reconcile.Result{Requeue: true, RequeueAfter: requeueAfter}, nil
+		return reconcile.Result{RequeueAfter: requeueAfter}, nil
 	}
 
 	log.Info("Requesting new token")
@@ -96,7 +96,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	log.Info("Successfully requested token and scheduled renewal", "after", renewDuration)
-	return reconcile.Result{Requeue: true, RequeueAfter: renewDuration}, nil
+	return reconcile.Result{RequeueAfter: renewDuration}, nil
 }
 
 func (r *Reconciler) reconcileSecret(ctx context.Context, log logr.Logger, secret *corev1.Secret, token string, renewDuration time.Duration) error {
@@ -112,26 +112,27 @@ func (r *Reconciler) reconcileSecret(ctx context.Context, log logr.Logger, secre
 	return r.SeedClient.Patch(ctx, secret, patch)
 }
 
-func (r *Reconciler) shouldRequeue(secret *corev1.Secret) (bool, time.Duration, error) {
+func (r *Reconciler) computeRequeueAfterDuration(secret *corev1.Secret) (time.Duration, error) {
 	renewTimestamp := secret.Annotations[securityv1alpha1constants.AnnotationWorkloadIdentityTokenRenewTimestamp]
 	if len(renewTimestamp) == 0 {
-		return false, 0, nil
+		return 0, nil
 	}
 
 	if _, ok := secret.Data[securityv1alpha1constants.DataKeyToken]; !ok {
-		return false, 0, nil
+		return 0, nil
 	}
 
 	renewTime, err := time.Parse(time.RFC3339, renewTimestamp)
 	if err != nil {
-		return false, 0, fmt.Errorf("could not parse renew timestamp: %w", err)
+		return 0, fmt.Errorf("could not parse renew timestamp: %w", err)
 	}
 
-	if r.Clock.Now().UTC().Before(renewTime.UTC()) {
-		return true, renewTime.UTC().Sub(r.Clock.Now().UTC()), nil
+	now := r.Clock.Now().UTC()
+	if now.Before(renewTime.UTC()) {
+		return renewTime.UTC().Sub(now), nil
 	}
 
-	return false, 0, nil
+	return 0, nil
 }
 
 func (r *Reconciler) renewDuration(expirationTimestamp time.Time) time.Duration {

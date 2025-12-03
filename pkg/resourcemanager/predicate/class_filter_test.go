@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	. "github.com/gardener/gardener/pkg/resourcemanager/predicate"
@@ -191,6 +192,49 @@ var _ = Describe("ClassFilter", func() {
 				Expect(filter.Responsible(&resourcesv1alpha1.ManagedResource{Spec: resourcesv1alpha1.ManagedResourceSpec{Class: ptr.To("")}})).To(BeTrue())
 				Expect(filter.Responsible(&resourcesv1alpha1.ManagedResource{Spec: resourcesv1alpha1.ManagedResourceSpec{Class: ptr.To("foo")}})).To(BeTrue())
 				Expect(filter.Responsible(&resourcesv1alpha1.ManagedResource{Spec: resourcesv1alpha1.ManagedResourceSpec{Class: ptr.To("bar")}})).To(BeTrue())
+			})
+		})
+	})
+
+	Describe("#CleanupCompletedPredicate", func() {
+		var predicate predicate.Predicate
+
+		BeforeEach(func() {
+			predicate = NewClassFilter("").CleanupCompleted()
+		})
+
+		Describe("#Create", func() {
+			It("should always return false", func() {
+				Expect(predicate.Create(event.CreateEvent{Object: &resourcesv1alpha1.ManagedResource{}})).To(BeFalse())
+			})
+		})
+
+		Describe("#Update", func() {
+			DescribeTable("should return correct result based on cleanup requirements",
+				func(oldMR, newMR *resourcesv1alpha1.ManagedResource, expected bool) {
+					got := predicate.Update(event.UpdateEvent{
+						ObjectOld: oldMR,
+						ObjectNew: newMR,
+					})
+					Expect(got).To(Equal(expected))
+				},
+				Entry("when cleanup was required and is now completed", mrDifferentFinalizerSameClass, mrWithoutFinalizerSameClass, true),
+				Entry("when cleanup was not required in old object", mrWithoutFinalizerSameClass, mrWithoutFinalizerSameClass, false),
+				Entry("when cleanup is still required", mrDifferentFinalizerSameClass, mrDifferentFinalizerSameClass, false),
+				Entry("when neither old nor new require cleanup", mrSameFinalizerSameClass, mrSameFinalizerSameClass, false),
+				Entry("when old object was responsible but new is not", mrSameFinalizerSameClass, mrWithoutFinalizerDifferentClass, false),
+			)
+		})
+
+		Describe("#Delete", func() {
+			It("should always return false", func() {
+				Expect(predicate.Delete(event.DeleteEvent{Object: &resourcesv1alpha1.ManagedResource{}})).To(BeFalse())
+			})
+		})
+
+		Describe("#Generic", func() {
+			It("should always return false", func() {
+				Expect(predicate.Generic(event.GenericEvent{Object: &resourcesv1alpha1.ManagedResource{}})).To(BeFalse())
 			})
 		})
 	})

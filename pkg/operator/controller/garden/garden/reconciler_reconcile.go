@@ -654,7 +654,7 @@ func (r *Reconciler) reconcile(
 
 	if !enableAdmissionControllerAuthorizers {
 		log.Info("Triggering a second reconciliation to enable authorizers in gardener-admission-controller")
-		return reconcile.Result{Requeue: true}, nil
+		return reconcile.Result{RequeueAfter: controllerutils.DefaultRequeueAfterDuration}, nil
 	}
 
 	if err := r.updateHelmChartRefForGardenlets(ctx, log, virtualClusterClient); err != nil {
