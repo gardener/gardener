@@ -20,8 +20,9 @@ gardenadm init --config-dir /path/to/manifests
 ### Options
 
 ```
-  -d, --config-dir string   Path to a directory containing the Gardener configuration files for the init command, i.e., files containing resources like CloudProfile, Shoot, etc. The files must be in YAML/JSON and have .{yaml,yml,json} file extensions to be considered.
-  -h, --help                help for init
+  -d, --config-dir string    Path to a directory containing the Gardener configuration files for the init command, i.e., files containing resources like CloudProfile, Shoot, etc. The files must be in YAML/JSON and have .{yaml,yml,json} file extensions to be considered.
+  -h, --help                 help for init
+      --use-bootstrap-etcd   If set, the control plane continues using the bootstrap etcd instead of transitioning to etcd-druid. This is useful for testing purposes to save time.
 ```
 
 ### Options inherited from parent commands

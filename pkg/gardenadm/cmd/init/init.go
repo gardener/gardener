@@ -260,13 +260,13 @@ func run(ctx context.Context, opts *Options) error {
 		reconcileBackupBucket = g.Add(flow.Task{
 			Name:         "Deploying BackupBucket for ETCD data",
 			Fn:           b.ReconcileBackupBucket,
-			SkipIf:       !allowBackup,
+			SkipIf:       !allowBackup || opts.UseBootstrapEtcd,
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})
 		reconcileBackupEntry = g.Add(flow.Task{
 			Name:         "Deploying BackupEntry for ETCD data",
 			Fn:           b.ReconcileBackupEntry,
-			SkipIf:       !allowBackup,
+			SkipIf:       !allowBackup || opts.UseBootstrapEtcd,
 			Dependencies: flow.NewTaskIDs(reconcileBackupBucket),
 		})
 		deployControlPlane = g.Add(flow.Task{
@@ -287,11 +287,13 @@ func run(ctx context.Context, opts *Options) error {
 		deployEtcds = g.Add(flow.Task{
 			Name:         "Deploying main and events ETCDs",
 			Fn:           b.DeployEtcd,
+			SkipIf:       opts.UseBootstrapEtcd,
 			Dependencies: flow.NewTaskIDs(deployEtcdDruid, reconcileBackupEntry),
 		})
 		waitUntilEtcdsReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event ETCDs have been reconciled",
 			Fn:           b.WaitUntilEtcdsReconciled,
+			SkipIf:       opts.UseBootstrapEtcd,
 			Dependencies: flow.NewTaskIDs(deployEtcds),
 		})
 		deployControlPlaneDeployments = g.Add(flow.Task{
@@ -307,6 +309,7 @@ func run(ctx context.Context, opts *Options) error {
 		_ = g.Add(flow.Task{
 			Name:         "Finalizing ETCD bootstrap transition (cleanup bootstrap ETCD left-overs)",
 			Fn:           b.FinalizeEtcdBootstrapTransition,
+			SkipIf:       opts.UseBootstrapEtcd,
 			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneDeploymentsReady),
 		})
 		finalizeGardenerNodeAgentBootstrapping = g.Add(flow.Task{

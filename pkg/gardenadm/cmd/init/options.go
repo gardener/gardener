@@ -14,6 +14,9 @@ import (
 type Options struct {
 	*cmd.Options
 	cmd.ManifestOptions
+
+	// UseBootstrapEtcd indicates whether to use the bootstrap etcd instead of transitioning to etcd-druid.
+	UseBootstrapEtcd bool
 }
 
 // ParseArgs parses the arguments to the options.
@@ -33,4 +36,5 @@ func (o *Options) Complete() error {
 
 func (o *Options) addFlags(fs *pflag.FlagSet) {
 	o.ManifestOptions.AddFlags(fs)
+	fs.BoolVar(&o.UseBootstrapEtcd, "use-bootstrap-etcd", false, "If set, the control plane continues using the bootstrap etcd instead of transitioning to etcd-druid. This is useful for testing purposes to save time.")
 }
