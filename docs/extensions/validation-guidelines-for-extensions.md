@@ -15,11 +15,16 @@ Extension admission components should decode the provider configuration and perf
 
 ### `ConfigValidator` Interfaces
 
-Validation code that performs requests to external systems (e.g. the cloud provider API) should be written in `ConfigValidator` implementations.
-Performing requests to external systems in the extension admission component (or in a webhook, in general) is considered a bad practice.
+Validation code that performs requests to an external system (e.g. the cloud provider API) should be written in `ConfigValidator` implementations.
+Performing requests to an external system in the extension admission component (or in a webhook, in general) is considered a bad practice.
 A downtime of the external system then results in rejection of requests by the webhook.
 For this purpose, the extension library leverages the `ConfigValidator` interfaces (e.g. see the [`ConfigValidator` interface for Infrastructure](./resources/infrastructure.md#configvalidator-interface)).
-They must be used to validate the provider configuration against the cloud provider API - e.g. validate the provided AWS VPC ID exists and conforms to the provider extension requirements.
+They validate the provider configuration against the cloud provider API - e.g. validate the provided AWS VPC ID exists and conforms to the provider extension requirements.
+The `ConfigValidator` implementations are invoked by the corresponding extension controller before the main reconciliation logic of the extension resource.
+A validation failure in the provider configuration results in a reconciliation error.
+Usually, an appropriate non-retryable error code is returned and later on propagated up to the Shoot status.
+A failure to perform request to the cloud provider API results in a reconciliation error.
+In this way, a failure to perform the validation due to unavailability of a cloud provider API results in a reconciliation error instead of a rejected CREATE/UPDATE request for a Shoot by an extension admission component.
 
 ## Validation of Referenced Resources
 
