@@ -113,7 +113,11 @@ func WaitUntilObjectReadyWithHealthFunction(
 		if postReadyFunc != nil {
 			if err := postReadyFunc(); err != nil {
 				lastObservedError = err
-				return retry.SevereError(err)
+
+				if retry.IsRetriable(err) {
+					return retry.MinorOrSevereError(retryCountUntilSevere, int(severeThreshold.Nanoseconds()/interval.Nanoseconds()), err)
+				}
+				return retry.MinorError(err)
 			}
 		}
 

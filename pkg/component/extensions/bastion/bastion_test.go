@@ -71,8 +71,6 @@ var _ = Describe("Bastion", func() {
 		b.WaitInterval = time.Millisecond
 		b.WaitSevereThreshold = 250 * time.Millisecond
 		b.WaitTimeout = 500 * time.Millisecond
-		b.ConnectRetryInterval = 5 * time.Millisecond
-		b.ConnectRetryTimeout = 50 * time.Millisecond
 
 		bastion = &extensionsv1alpha1.Bastion{
 			ObjectMeta: metav1.ObjectMeta{
@@ -230,8 +228,8 @@ systemctl start sshd || systemctl start ssh
 					}
 
 					Expect(b.Wait(ctx)).To(MatchError(ContainSubstring("connection refused")))
-					// Should have retried multiple times (50ms timeout / 5ms interval = ~10 attempts - some buffer)
-					Expect(callCount).To(BeNumerically(">", 5))
+					// Should have retried multiple times (more than x times)
+					Expect(callCount).To(BeNumerically(">", 10))
 				})
 
 				When("the Bastion has an ingress hostname instead of IP", func() {
