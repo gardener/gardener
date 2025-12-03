@@ -80,8 +80,9 @@ var _ = Describe("#Service", func() {
 				Name:      expectedName,
 				Namespace: namespace.Name,
 				Labels: map[string]string{
-					"app":  "kubernetes",
-					"role": "apiserver",
+					"app":                   "kubernetes",
+					"role":                  "apiserver",
+					"metrics-scrape-target": "true",
 				},
 			},
 			Spec: corev1.ServiceSpec{
@@ -257,6 +258,26 @@ var _ = Describe("#Service", func() {
 				Expect(actual.Labels).To(HaveKeyWithValue("endpoint-slice-hints.resources.gardener.cloud/consider", "true"))
 			})
 		})
+	})
+
+	Context("when service has a suffix", func() {
+		BeforeEach(func() {
+			values.NameSuffix = "-foo"
+			expectedName = expectedName + "-foo"
+			expected.Name = expectedName
+
+			expected.Annotations = utils.MergeStringMaps(map[string]string{
+				"foo":                          "bar",
+				"networking.istio.io/exportTo": "*",
+			}, netpolAnnotations())
+
+			expected.Labels = map[string]string{
+				"app":  "kubernetes",
+				"role": "apiserver",
+			}
+		})
+
+		assertService()
 	})
 })
 
