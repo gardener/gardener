@@ -47,9 +47,10 @@ func (b *Botanist) createConstraintRemovalFunction(isSingleStack, allNodesMigrat
 		if isSingleStack && !allNodesMigrated {
 			return nil // Don't remove constraint yet
 		}
-
+		if v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady) == nil {
+			return nil // Constraint already removed
+		}
 		shoot.Status.Constraints = v1beta1helper.RemoveConditions(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
-
 		if !isSingleStack && !b.hasDNSMigrationConstraint(shoot) {
 			b.addDNSMigrationConstraint(shoot)
 		}

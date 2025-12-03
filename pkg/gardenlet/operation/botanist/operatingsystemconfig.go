@@ -128,6 +128,14 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	for _, ip := range b.Shoot.Networks.CoreDNS {
 		clusterDNSAddresses = append(clusterDNSAddresses, ip.String())
 	}
+
+	// During dual-stack migration, until kube-dns is migrated to  dual-stack, we only use the primary addresses.
+	nodesCondition := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
+	dnsCondition := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDNSServiceMigrationReady)
+	if (dnsCondition != nil && dnsCondition.Status != gardencorev1beta1.ConditionTrue) || (nodesCondition != nil) {
+		clusterDNSAddresses = clusterDNSAddresses[:1]
+	}
+
 	if b.Shoot.NodeLocalDNSEnabled && b.Shoot.IPVSEnabled() {
 		// If IPVS is enabled then instruct the kubelet to create pods resolving DNS to the `nodelocaldns` network
 		// interface link-local ip address. For more information checkout the usage documentation under

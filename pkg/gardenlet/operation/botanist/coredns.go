@@ -67,11 +67,6 @@ func (b *Botanist) DeployCoreDNS(ctx context.Context) error {
 		return err
 	}
 
-	minPodIPCount, err := b.getMinCoreDNSPodIPCount(ctx)
-	if err != nil {
-		return err
-	}
-
 	shootIPFamilies := b.Shoot.GetInfo().Spec.Networking.IPFamilies
 	if len(shootIPFamilies) == 0 {
 		return fmt.Errorf("no IP families configured in shoot spec")
@@ -81,9 +76,9 @@ func (b *Botanist) DeployCoreDNS(ctx context.Context) error {
 		return fmt.Errorf("no CoreDNS cluster IPs available")
 	}
 
-	// Use single-stack configuration if any CoreDNS pod has only one IP
-	// This ensures we don't configure dual-stack service before all pods are ready
-	if minPodIPCount == 1 && len(shootIPFamilies) >= 1 {
+	nodesCondition := v1beta1helper.GetCondition(b.Shoot.GetInfo().Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
+	dnsCondition := v1beta1helper.GetCondition(b.Shoot.GetInfo().Status.Constraints, gardencorev1beta1.ShootDNSServiceMigrationReady)
+	if (dnsCondition != nil && dnsCondition.Status != gardencorev1beta1.ConditionTrue) || (nodesCondition != nil) {
 		b.Shoot.Components.SystemComponents.CoreDNS.SetIPFamilies([]gardencorev1beta1.IPFamily{shootIPFamilies[0]})
 		b.Shoot.Components.SystemComponents.CoreDNS.SetClusterIPs([]net.IP{b.Shoot.Networks.CoreDNS[0]})
 	} else {
@@ -109,7 +104,15 @@ func (b *Botanist) getCoreDNSRestartedAtAnnotations(ctx context.Context) (map[st
 		return map[string]string{key: NowFunc().UTC().Format(time.RFC3339)}, nil
 	}
 
-	if constraint := v1beta1helper.GetCondition(b.Shoot.GetInfo().Status.Constraints, gardencorev1beta1.ShootDNSServiceMigrationReady); constraint != nil && constraint.Status == gardencorev1beta1.ConditionProgressing {
+	minPodIPCount, err := b.getMinCoreDNSPodIPCount(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	constraint := v1beta1helper.GetCondition(b.Shoot.GetInfo().Status.Constraints, gardencorev1beta1.ShootDNSServiceMigrationReady)
+	if constraint != nil &&
+		constraint.Status == gardencorev1beta1.ConditionProgressing &&
+		minPodIPCount < len(b.Shoot.GetInfo().Spec.Networking.IPFamilies) {
 		return map[string]string{key: NowFunc().UTC().Format(time.RFC3339)}, nil
 	}
 
