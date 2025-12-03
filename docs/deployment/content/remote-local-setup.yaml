@@ -89,17 +89,37 @@ spec:
           echo stern           && go install github.com/stern/stern@latest
           echo neat            && krew install neat
           echo node-shell      && krew install node-shell
+          echo ""                                                                        >> /etc/hosts
+          echo "### Gardener IPv4 hosts ###"                                             >> /etc/hosts
           bash -c "
             echo {{p,g}-seed,{gu,p,v}-local--local}.ingress.local.seed.local.gardener.cloud \
                  api.{e2e-managedseed.garden,local.local}.{internal,external}.local.gardener.cloud \
                  api.e2e-{hib,upg-hib,wake-up,wake-up-ncp,migrate,rotate,default,upd-node,upgrade,upg-ha}{,-wl}.local.{internal,external}.local.gardener.cloud \
                  api.e2e-upd-node-ovr.local.{internal,external}.local.gardener.cloud \
-                 api.e2e-{unpriv,mgr-hib,force-delete,fd-hib,auth-{one,two},layer4-lb,default-ip,rot-{ip,noroll}}.local.{internal,external}.local.gardener.cloud \
-                 gu-local--e2e-{rotate{,-wl},rot-{ip,noroll}}.ingress.local.seed.local.gardener.cloud
-            " | sed 's/ /\n/g' | sed 's/^/172.18.255.1 /' | sort      >> /etc/hosts
-          echo "172.18.255.3 api.virtual-garden.local.gardener.cloud" >> /etc/hosts
-          echo "127.0.0.1 garden.local.gardener.cloud"                >> /etc/hosts
-          
+                 api.e2e-{unpriv,mgr-hib,force-delete,fd-hib,auth-{one,two},layer4-lb,default-ip,rot-{{,nr-}ip,noroll,etcd}}.local.{internal,external}.local.gardener.cloud \
+                 gu-local--e2e-{rotate{,-wl},rot-{{,nr-}ip,noroll,etcd}}.ingress.local.seed.local.gardener.cloud
+            " | sed 's/ /\n/g' | sed 's/^/172.18.255.1 /' | sort                         >> /etc/hosts
+          echo "172.18.255.3 api.virtual-garden.local.gardener.cloud"                    >> /etc/hosts
+          echo "172.18.255.3 plutono-garden.ingress.runtime-garden.local.gardener.cloud" >> /etc/hosts
+          echo "172.18.255.3 dashboard.ingress.runtime-garden.local.gardener.cloud"      >> /etc/hosts
+          echo "172.18.255.3 discovery.ingress.runtime-garden.local.gardener.cloud"      >> /etc/hosts
+          echo "127.0.0.1 garden.local.gardener.cloud"                                   >> /etc/hosts
+          echo ""                                                                        >> /etc/hosts
+          echo "### Gardener IPv6 hosts ###"                                             >> /etc/hosts
+          bash -c "
+            echo {{p,g}-seed,{gu,p,v}-local--local}.ingress.local.seed.local.gardener.cloud \
+                 api.{e2e-managedseed.garden,local.local}.{internal,external}.local.gardener.cloud \
+                 api.e2e-{hib,upg-hib,wake-up,wake-up-ncp,migrate,rotate,default,upd-node,upgrade,upg-ha}{,-wl}.local.{internal,external}.local.gardener.cloud \
+                 api.e2e-upd-node-ovr.local.{internal,external}.local.gardener.cloud \
+                 api.e2e-{unpriv,mgr-hib,force-delete,fd-hib,auth-{one,two},layer4-lb,default-ip,rot-{{,nr-}ip,noroll,etcd}}.local.{internal,external}.local.gardener.cloud \
+                 gu-local--e2e-{rotate{,-wl},rot-{{,nr-}ip,noroll,etcd}}.ingress.local.seed.local.gardener.cloud
+              " | sed 's/ /\n/g' | sed 's/^/::1 /' | sort                                >> /etc/hosts
+          echo "::3 api.virtual-garden.local.gardener.cloud"                             >> /etc/hosts
+          echo "::3 plutono-garden.ingress.runtime-garden.local.gardener.cloud"          >> /etc/hosts
+          echo "::3 dashboard.ingress.runtime-garden.local.gardener.cloud"               >> /etc/hosts
+          echo "::3 discovery.ingress.runtime-garden.local.gardener.cloud"               >> /etc/hosts
+          echo "::1 garden.local.gardener.cloud"                                         >> /etc/hosts
+
           # Resolve e.g. gu-local--e2e-rot{ate{-wl},-noroll}.ingress.$seed_name. ... to 127.0.0.1 for the e2e tests:
           echo '
           address=/.seed.local.gardener.cloud/127.0.0.1
@@ -125,11 +145,13 @@ spec:
           There are multiple variants of the local setup of Gardener
           that can be prepared in a tmux session for convenience:
 
-          - '${g}prepare-gardener.sh${n}'          A basic 'make kind-up gardener-up' setup
-          - '${g}prepare-operator.sh${n}'          A 'make kind-multi-zone-up operator-up' setup
-             ${g}                   ${n}           with several tmux windows
-          - '${g}prepare-operator-complete.sh${n}' A 'make kind-multi-zone-up operator-up operator-seed-up' setup,
-             ${g}                            ${n}  a complete local "development landscape"
+          - '${g}prepare-gardener.sh${n}'                        A basic 'make kind-up gardener-up' setup
+          - '${g}prepare-operator.sh${n}'                        A 'make kind-multi-zone-up operator-up' setup
+             ${g}                   ${n}                         with several tmux windows
+          - '${g}prepare-operator-complete.sh${n}'               A 'make kind-multi-zone-up operator-up operator-seed-up' setup,
+             ${g}                            ${n}                a complete local "development landscape"
+          - '${g}IPFAMILY=ipv6 prepare-operator-complete.sh${n}' As 'prepare-operator-complete.sh' but using IPv6. It requires
+             ${g}                                          ${n}  a shoot with IPv6 enabled.
 
           The "Gardener HA" tmux session is prepared by default.
           To switch to another tmux session, please run the respective script.
@@ -469,10 +491,17 @@ spec:
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             watch -c "k get -n garden-local shoot local -o yaml | yq -P -C '[.status.conditions[] | del(.lastTransitionTime, .lastUpdateTime)]' | grep --color=Always -E '\"False\"| Unknown| Progressing|$'"
           EOF
-          new_window "shoot lifecycle" "Create" <<"EOF"
-            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
-            k apply -f example/provider-local/shoot.yaml
+          if [[ "$IPFAMILY" == "ipv6" ]]; then
+            new_window "shoot lifecycle" "Create" <<"EOF"
+              export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
+              k apply -f example/provider-local/shoot-ipv6.yaml
           EOF
+          else
+            new_window "shoot lifecycle" "Create" <<"EOF"
+              export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
+              k apply -f example/provider-local/shoot.yaml
+          EOF
+          fi
           new_pane "Reconcile" <<"EOF"
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             k annotate shoot local -n garden-local 'gardener.cloud/operation=reconcile'
@@ -485,14 +514,28 @@ spec:
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             watch k get -A seeds,shoots,managedseeds
           EOF
-          new_pane "create shoot" Enter <<"EOF"
-            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
-            k apply -f example/provider-local/managedseeds/shoot-managedseed.yaml
+          if [[ "$IPFAMILY" == "ipv6" ]]; then
+            new_pane "create shoot" <<"EOF"
+              export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
+              k apply -f example/provider-local/managedseeds/shoot-managedseed-ipv6.yaml
           EOF
-          new_pane "create managed seed" Enter <<"EOF"
-            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
-            k apply -f example/provider-local/managedseeds/managedseed.yaml
+          else
+            new_pane "create shoot" <<"EOF"
+              export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
+              k apply -f example/provider-local/managedseeds/shoot-managedseed.yaml
           EOF
+          fi
+          if [[ "$IPFAMILY" == "ipv6" ]]; then
+            new_pane "create managed seed" <<"EOF"
+              export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
+              k apply -f example/provider-local/managedseeds/managedseed-ipv6.yaml
+          EOF
+          else
+            new_pane "create managed seed" <<"EOF"
+              export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
+              k apply -f example/provider-local/managedseeds/managedseed.yaml
+          EOF
+          fi
           new_pane "managed seed pods" <<"EOF"
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             generate-admin-kubeconf.sh --namespace garden --shoot-name managedseed > /tmp/shoot.kubeconfig && while true; do clear; k --kubeconfig /tmp/shoot.kubeconfig get pods -A -o wide; sleep 10s; done
