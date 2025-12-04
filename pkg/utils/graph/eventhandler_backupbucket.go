@@ -12,21 +12,19 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 )
 
-func (g *graph) setupBackupBucketWatch(ctx context.Context, informer cache.Informer) error {
+func (g *graph) setupBackupBucketWatch(_ context.Context, informer cache.Informer) error {
 	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
 			if !ok {
 				return
 			}
-			g.handleBackupBucketCreateOrUpdate(ctx, backupBucket)
+			g.handleBackupBucketCreateOrUpdate(backupBucket)
 		},
 
 		UpdateFunc: func(oldObj, newObj any) {
@@ -43,7 +41,7 @@ func (g *graph) setupBackupBucketWatch(ctx context.Context, informer cache.Infor
 			if !apiequality.Semantic.DeepEqual(oldBackupBucket.Spec.SeedName, newBackupBucket.Spec.SeedName) ||
 				!apiequality.Semantic.DeepEqual(oldBackupBucket.Spec.CredentialsRef, newBackupBucket.Spec.CredentialsRef) ||
 				!apiequality.Semantic.DeepEqual(oldBackupBucket.Status.GeneratedSecretRef, newBackupBucket.Status.GeneratedSecretRef) {
-				g.handleBackupBucketCreateOrUpdate(ctx, newBackupBucket)
+				g.handleBackupBucketCreateOrUpdate(newBackupBucket)
 			}
 		},
 
@@ -61,7 +59,7 @@ func (g *graph) setupBackupBucketWatch(ctx context.Context, informer cache.Infor
 	return err
 }
 
-func (g *graph) handleBackupBucketCreateOrUpdate(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket) {
+func (g *graph) handleBackupBucketCreateOrUpdate(backupBucket *gardencorev1beta1.BackupBucket) {
 	start := time.Now()
 	defer func() {
 		metricUpdateDuration.WithLabelValues("BackupBucket", "CreateOrUpdate").Observe(time.Since(start).Seconds())
@@ -100,17 +98,9 @@ func (g *graph) handleBackupBucketCreateOrUpdate(ctx context.Context, backupBuck
 		g.addEdge(generatedSecretVertex, backupBucketVertex)
 	}
 
-	if g.forSelfHostedShoots {
-		shootList := &gardencorev1beta1.ShootList{}
-		if err := g.client.List(ctx, shootList, client.MatchingFields{core.ShootStatusUID: backupBucket.Name}); err != nil {
-			// There is nothing meaningful we can do with this error, so we don't return it
-			g.logger.Error(err, "Failed to list shoots with .status.uid field selector", "status.uid", backupBucket.Name)
-		}
-
-		for _, shoot := range shootList.Items {
-			shootVertex := g.getOrCreateVertex(VertexTypeShoot, shoot.Namespace, shoot.Name)
-			g.addEdge(backupBucketVertex, shootVertex)
-		}
+	if backupBucket.Spec.ShootRef != nil {
+		shootVertex := g.getOrCreateVertex(VertexTypeShoot, backupBucket.Spec.ShootRef.Namespace, backupBucket.Spec.ShootRef.Name)
+		g.addEdge(backupBucketVertex, shootVertex)
 	}
 }
 

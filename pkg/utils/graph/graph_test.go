@@ -21,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	toolscache "k8s.io/client-go/tools/cache"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache/informertest"
@@ -30,8 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllertest"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/gardener/gardener/pkg/api/indexer"
-	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
@@ -2545,11 +2542,7 @@ var _ = Describe("graph for shoots", func() {
 		scheme := kubernetes.GardenScheme
 		Expect(metav1.AddMetaToScheme(scheme)).To(Succeed())
 
-		fakeClient = fakeclient.
-			NewClientBuilder().
-			WithScheme(kubernetes.GardenScheme).
-			WithIndex(&gardencorev1beta1.Shoot{}, core.ShootStatusUID, indexer.ShootStatusUIDIndexerFunc).
-			Build()
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		fakeInformerBackupBucket = &controllertest.FakeInformer{}
 		fakeInformerBackupEntry = &controllertest.FakeInformer{}
 		fakeInformerCertificateSigningRequest = &controllertest.FakeInformer{}
@@ -2673,6 +2666,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 			ObjectMeta: metav1.ObjectMeta{Name: "backupbucket1"},
 			Spec: gardencorev1beta1.BackupBucketSpec{
 				CredentialsRef: &backupBucket1SecretCredentialsRef,
+				ShootRef:       &corev1.ObjectReference{Name: shoot1.Name, Namespace: shoot1.Namespace},
 			},
 			Status: gardencorev1beta1.BackupBucketStatus{
 				GeneratedSecretRef: &backupBucket1GeneratedSecretRef,
@@ -2691,17 +2685,12 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 			},
 			Spec: gardencorev1beta1.BackupEntrySpec{
 				BucketName: backupBucket1.Name,
+				ShootRef:   &corev1.ObjectReference{Name: shoot1.Name, Namespace: "backupentry1namespace"},
 			},
 		}
 	})
 
 	It("should behave as expected for gardencorev1beta1.BackupBucket", func() {
-		shoot := &gardencorev1beta1.Shoot{
-			ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace},
-			Status:     gardencorev1beta1.ShootStatus{UID: types.UID(backupBucket1.Name)},
-		}
-		Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-
 		By("Add")
 		fakeInformerBackupBucket.Add(backupBucket1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(4))
@@ -2709,7 +2698,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1SecretCredentialsRef.Namespace, backupBucket1SecretCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, backupBucket1WorkloadIdentityCredentialsRef.Namespace, backupBucket1WorkloadIdentityCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1GeneratedSecretRef.Namespace, backupBucket1GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 
 		By("Update (irrelevant change)")
 		backupBucket1Copy := backupBucket1.DeepCopy()
@@ -2720,7 +2709,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1SecretCredentialsRef.Namespace, backupBucket1SecretCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, backupBucket1WorkloadIdentityCredentialsRef.Namespace, backupBucket1WorkloadIdentityCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1GeneratedSecretRef.Namespace, backupBucket1GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 
 		By("Update (credentials ref) to another secret")
 		backupBucket1Copy = backupBucket1.DeepCopy()
@@ -2732,7 +2721,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1.Spec.CredentialsRef.Namespace, backupBucket1.Spec.CredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, backupBucket1WorkloadIdentityCredentialsRef.Namespace, backupBucket1WorkloadIdentityCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1GeneratedSecretRef.Namespace, backupBucket1GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 
 		By("Update (credentials ref) to WorkloadIdentity")
 		backupBucket1Copy = backupBucket1.DeepCopy()
@@ -2744,7 +2733,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1Copy.Spec.CredentialsRef.Namespace, backupBucket1Copy.Spec.CredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, backupBucket1.Spec.CredentialsRef.Namespace, backupBucket1.Spec.CredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1GeneratedSecretRef.Namespace, backupBucket1GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 
 		By("Update (generated secret ref)")
 		backupBucket1Copy = backupBucket1.DeepCopy()
@@ -2756,7 +2745,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, backupBucket1.Spec.CredentialsRef.Namespace, backupBucket1.Spec.CredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1GeneratedSecretRef.Namespace, backupBucket1GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1.Status.GeneratedSecretRef.Namespace, backupBucket1.Status.GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 
 		By("Delete")
 		fakeInformerBackupBucket.Delete(backupBucket1)
@@ -2765,7 +2754,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1SecretCredentialsRef.Namespace, backupBucket1SecretCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, backupBucket1.Spec.CredentialsRef.Namespace, backupBucket1.Spec.CredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1.Status.GeneratedSecretRef.Namespace, backupBucket1.Status.GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
 	})
 
 	It("should behave as expected for gardencorev1beta1.BackupEntry", func() {
@@ -2800,10 +2789,10 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 		backupEntry1Copy = backupEntry1.DeepCopy()
 		backupEntry1.OwnerReferences = nil
 		fakeInformerBackupEntry.Update(backupEntry1Copy, backupEntry1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(2))
-		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
 		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupEntry1.Spec.BucketName, VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeShoot, backupEntry1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeShoot, backupEntry1.Namespace, shoot1.Name)).To(BeTrue())
 
 		By("Delete")
 		fakeInformerBackupEntry.Delete(backupEntry1)

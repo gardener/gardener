@@ -88,7 +88,9 @@ var _ = Describe("BackupEntry", func() {
 				SeedName:   &seedName,
 			},
 		}
+	})
 
+	JustBeforeEach(func() {
 		defaultDepWaiter = New(log, c, values, time.Millisecond, 500*time.Millisecond)
 	})
 
@@ -135,6 +137,34 @@ var _ = Describe("BackupEntry", func() {
 			expected.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationReconcile
 
 			Expect(actual).To(DeepEqual(expected))
+		})
+
+		When("Shoot is present", func() {
+			BeforeEach(func() {
+				values.SeedName = nil
+				values.Shoot = &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "shoot-name", Namespace: "shoot-namespace"}}
+
+				expected.Spec.SeedName = nil
+				expected.Spec.ShootRef = &corev1.ObjectReference{
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+					Kind:       "Shoot",
+					Name:       "shoot-name",
+					Namespace:  "shoot-namespace",
+				}
+			})
+
+			It("should create correct BackupEntry (newly created)", func() {
+				defer test.WithVars(&TimeNow, mockNow.Do)()
+				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				actual := &gardencorev1beta1.BackupEntry{}
+				Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, actual)).To(Succeed())
+				expected.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationReconcile
+
+				Expect(actual).To(DeepEqual(expected))
+			})
 		})
 	})
 

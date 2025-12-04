@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,6 +46,9 @@ type Values struct {
 	OwnerReference *metav1.OwnerReference
 	// SeedName is the name of the seed to which the BackupEntry shall be scheduled.
 	SeedName *string
+	// Shoot is an optional Shoot object related to the BackupEntry. This should only be set when the Shoot is
+	// self-hosted.
+	Shoot *gardencorev1beta1.Shoot
 	// BucketName is the name of the bucket in which the BackupEntry shall be reconciled. This value is only used if the
 	// BackupEntry does not exist yet. Otherwise, the existing `.spec.bucketName` will be kept even if the BucketName in
 	// these values differs.
@@ -160,6 +164,15 @@ func (b *backupEntry) reconcile(ctx context.Context, operation string) error {
 
 		b.backupEntry.Spec.BucketName = b.values.BucketName
 		b.backupEntry.Spec.SeedName = b.values.SeedName
+
+		if b.values.Shoot != nil {
+			b.backupEntry.Spec.ShootRef = &corev1.ObjectReference{
+				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+				Kind:       "Shoot",
+				Name:       b.values.Shoot.Name,
+				Namespace:  b.values.Shoot.Namespace,
+			}
+		}
 
 		return nil
 	})

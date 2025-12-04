@@ -273,6 +273,7 @@ func prepareGardenerResources(ctx context.Context, b *botanist.GardenadmBotanist
 			Config:        v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil),
 			DefaultRegion: b.Shoot.GetInfo().Spec.Region,
 			Clock:         b.Clock,
+			Shoot:         b.Shoot.GetInfo(),
 		}, corebackupbucket.DefaultInterval, corebackupbucket.DefaultTimeout).Deploy(ctx); err != nil {
 			return fmt.Errorf("failed reconciling core.gardener.cloud/v1beta1.BackupBucket resource: %w", err)
 		}

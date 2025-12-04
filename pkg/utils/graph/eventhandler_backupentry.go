@@ -90,9 +90,14 @@ func (g *graph) handleBackupEntryCreateOrUpdate(backupEntry *gardencorev1beta1.B
 		g.addEdge(backupEntryVertex, seedVertex)
 	}
 
-	if shootName := gardenerutils.GetShootNameFromOwnerReferences(backupEntry); shootName != "" {
-		shootVertex := g.getOrCreateVertex(VertexTypeShoot, backupEntry.Namespace, shootName)
+	if g.forSelfHostedShoots && backupEntry.Spec.ShootRef != nil {
+		shootVertex := g.getOrCreateVertex(VertexTypeShoot, backupEntry.Namespace, backupEntry.Spec.ShootRef.Name)
 		g.addEdge(backupEntryVertex, shootVertex)
+	} else if !g.forSelfHostedShoots {
+		if shootName := gardenerutils.GetShootNameFromOwnerReferences(backupEntry); shootName != "" {
+			shootVertex := g.getOrCreateVertex(VertexTypeShoot, backupEntry.Namespace, shootName)
+			g.addEdge(backupEntryVertex, shootVertex)
+		}
 	}
 }
 
