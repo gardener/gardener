@@ -634,7 +634,7 @@ var _ = Describe("extensions", func() {
 				Expect(expected.Status.State).To(Equal(expectedState))
 			})
 
-			It("should not update the state if the extension controller has already picked up the object", func() {
+			It("should not overwrite the extension object's state if already present", func() {
 				defer test.WithVars(
 					&TimeNow, mockNow.Do,
 				)()
@@ -644,9 +644,6 @@ var _ = Describe("extensions", func() {
 
 				changedStatus := &runtime.RawExtension{
 					Raw: []byte(`{"data":"changed-value"}`),
-				}
-				expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
-					State: gardencorev1beta1.LastOperationStateProcessing,
 				}
 				expected.Status.State = changedStatus
 				Expect(c.Status().Update(ctx, expected)).To(Succeed())
