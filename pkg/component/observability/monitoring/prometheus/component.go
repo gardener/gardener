@@ -52,9 +52,7 @@ type Interface interface {
 	// SetNamespaceUID sets the namespace UID.
 	SetNamespaceUID(name types.UID)
 	// SetAdditionalAlertRelabelConfigs sets the additional alert relabel configs.
-	SetAdditionalAlertRelabelConfigs([]*monitoringv1.RelabelConfig)
-	// GetAdditionalAlertRelabelConfigs get the additional alert relabel configs.
-	GetAdditionalAlertRelabelConfigs() []*monitoringv1.RelabelConfig
+	SetAdditionalAlertRelabelConfigs([]monitoringv1.RelabelConfig)
 }
 
 // Values contains configuration values for the prometheus resources.
@@ -343,24 +341,8 @@ func (p *prometheus) name() string {
 	return "prometheus-" + p.values.Name
 }
 
-func (p *prometheus) SetAdditionalAlertRelabelConfigs(configs []*monitoringv1.RelabelConfig) {
-	vals := make([]monitoringv1.RelabelConfig, len(configs))
-	for i, cfg := range configs {
-		vals[i] = *cfg
-	}
-	p.values.AdditionalAlertRelabelConfigs = vals
-}
-
-func (p *prometheus) GetAdditionalAlertRelabelConfigs() []*monitoringv1.RelabelConfig {
-	vals := p.values.AdditionalAlertRelabelConfigs
-	out := make([]*monitoringv1.RelabelConfig, len(vals))
-
-	for i := range vals {
-		cfg := vals[i]
-		out[i] = &cfg
-	}
-
-	return out
+func (p *prometheus) SetAdditionalAlertRelabelConfigs(configs []monitoringv1.RelabelConfig) {
+	p.values.AdditionalAlertRelabelConfigs = configs
 }
 
 func (p *prometheus) addCentralConfigsToRegistry(registry *managedresources.Registry) error {

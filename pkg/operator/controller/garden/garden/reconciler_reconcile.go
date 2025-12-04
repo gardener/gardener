@@ -1076,7 +1076,21 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 	}
 	joinedSeeds := strings.Join(seeds, "|")
 
-	additionalAlertRelabelConfigs := []*monitoringv1.RelabelConfig{
+	additionalAlertRelabelConfigs := []monitoringv1.RelabelConfig{
+		{
+			SourceLabels: []monitoringv1.LabelName{"project", "name"},
+			Regex:        "(.+);(.+)",
+			Action:       "replace",
+			Replacement:  ptr.To("https://dashboard." + primaryIngressDomain + "/namespace/garden-$1/shoots/$2"),
+			TargetLabel:  "shoot_dashboard_url",
+		},
+		{
+			SourceLabels: []monitoringv1.LabelName{"project", "name"},
+			Regex:        "garden;(.+)",
+			Action:       "replace",
+			Replacement:  ptr.To("https://dashboard." + primaryIngressDomain + "/namespace/garden/shoots/$1"),
+			TargetLabel:  "shoot_dashboard_url",
+		},
 		{
 			SourceLabels: []monitoringv1.LabelName{"project", "name"},
 			Regex:        ";" + joinedSeeds,
@@ -1085,8 +1099,7 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 			TargetLabel:  "seed_dashboard_url",
 		},
 	}
-	registryAlertRelabel := prometheus.GetAdditionalAlertRelabelConfigs()
-	prometheus.SetAdditionalAlertRelabelConfigs(append(registryAlertRelabel, additionalAlertRelabelConfigs...))
+	prometheus.SetAdditionalAlertRelabelConfigs(additionalAlertRelabelConfigs)
 
 	prometheus.SetCentralScrapeConfigs(gardenprometheus.CentralScrapeConfigs(prometheusAggregateTargets, prometheusAggregateIngressTargets, globalMonitoringSecretRuntime))
 	return prometheus.Deploy(ctx)
