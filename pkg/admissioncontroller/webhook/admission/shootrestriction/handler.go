@@ -133,7 +133,7 @@ func (h *Handler) admitSecret(ctx context.Context, gardenletShootInfo types.Name
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
 
-	// Check if the secret is related to a BackupBucket assigned to the seed the gardenlet is responsible for.
+	// Check if the secret is related to a BackupBucket assigned to the Shoot the gardenlet is responsible for.
 	if strings.HasPrefix(request.Name, v1beta1constants.SecretPrefixGeneratedBackupBucket) {
 		backupBucket := &gardencorev1beta1.BackupBucket{}
 		if err := h.Client.Get(ctx, client.ObjectKey{Name: strings.TrimPrefix(request.Name, v1beta1constants.SecretPrefixGeneratedBackupBucket)}, backupBucket); err != nil {
