@@ -50,7 +50,7 @@ type BackupBucketSpec struct {
 	// SecretRef is tombstoned to show why 3 is reserved protobuf tag.
 	// SecretRef corev1.SecretReference `json:"secretRef" protobuf:"bytes,3,opt,name=secretRef"`
 
-	// SeedName holds the name of the seed allocated to BackupBucket for running controller.
+	// SeedName is the name of the Seed this BackupBucket is associated with. Mutually exclusive with ShootRef.
 	// This field is immutable.
 	// +optional
 	SeedName *string `json:"seedName,omitempty" protobuf:"bytes,4,opt,name=seedName"`
@@ -60,6 +60,10 @@ type BackupBucketSpec struct {
 	// security.gardener.cloud/v1alpha1.WorkloadIdentity
 	// +optional
 	CredentialsRef *corev1.ObjectReference `json:"credentialsRef,omitempty" protobuf:"bytes,5,opt,name=credentialsRef"`
+	// ShootRef is the reference of the Shoot this BackupBucket is associated with. Mutually exclusive with SeedName.
+	// This field is immutable.
+	// +optional
+	ShootRef *corev1.ObjectReference `json:"shootRef,omitempty" protobuf:"bytes,6,opt,name=shootRef"`
 }
 
 // BackupBucketStatus holds the most recently observed status of the Backup Bucket.

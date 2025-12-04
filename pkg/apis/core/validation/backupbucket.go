@@ -43,8 +43,25 @@ func ValidateBackupBucketSpec(spec *core.BackupBucketSpec, fldPath *field.Path) 
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider.region"), spec.Provider.Region, "region must not be empty"))
 	}
 
-	if spec.SeedName != nil && len(*spec.SeedName) == 0 {
+	if spec.SeedName == nil && spec.ShootRef == nil {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), spec.SeedName, "either .spec.seedName or .spec.shootRef must be set"))
+	} else if spec.SeedName != nil && spec.ShootRef != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), spec.SeedName, "not both .spec.seedName and .spec.shootRef can be set at the same time"))
+	} else if spec.SeedName != nil && len(*spec.SeedName) == 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), spec.SeedName, "seed must not be empty"))
+	} else if spec.ShootRef != nil {
+		if expectedAPIVersion := "core.gardener.cloud/v1beta1"; spec.ShootRef.APIVersion != expectedAPIVersion {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("shootRef").Child("apiVersion"), "must be "+expectedAPIVersion))
+		}
+		if expectedKind := "Shoot"; spec.ShootRef.Kind != expectedKind {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("shootRef").Child("kind"), "must be "+expectedKind))
+		}
+		if len(spec.ShootRef.Name) == 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("shootRef").Child("name"), spec.ShootRef.Name, "name must not be empty"))
+		}
+		if len(spec.ShootRef.Namespace) == 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("shootRef").Child("namespace"), spec.ShootRef.Namespace, "namespace must not be empty"))
+		}
 	}
 
 	allErrs = append(allErrs, validateCredentials(spec, fldPath)...)

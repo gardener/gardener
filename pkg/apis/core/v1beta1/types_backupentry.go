@@ -5,6 +5,7 @@
 package v1beta1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -47,9 +48,13 @@ type BackupEntryList struct {
 type BackupEntrySpec struct {
 	// BucketName is the name of backup bucket for this Backup Entry.
 	BucketName string `json:"bucketName" protobuf:"bytes,1,opt,name=bucketName"`
-	// SeedName holds the name of the seed to which this BackupEntry is scheduled
+	// SeedName is the name of the Seed this BackupEntry is associated with. Mutually exclusive with ShootRef.
 	// +optional
 	SeedName *string `json:"seedName,omitempty" protobuf:"bytes,2,opt,name=seedName"`
+	// ShootRef is the reference of the Shoot this BackupBucket is associated with. Mutually exclusive with SeedName.
+	// This field is immutable.
+	// +optional
+	ShootRef *corev1.ObjectReference `json:"shootRef,omitempty" protobuf:"bytes,3,opt,name=shootRef"`
 }
 
 // BackupEntryStatus holds the most recently observed status of the Backup Entry.
