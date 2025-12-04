@@ -150,6 +150,8 @@ Frequently used validation functions for creation:
   - Use this function only for labels which are not part of the object metadata. `apivalidation.ValidateObjectMeta` already validates the object metadata labels. See [example usage](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/pkg/apis/core/validation/shoot.go#L1926).
 - [`metav1validation.ValidateLabelSelector`](https://pkg.go.dev/k8s.io/apimachinery/pkg/apis/meta/v1/validation#ValidateLabelSelector)
   - Use this function to validate fields of type `metav1.LabelSelector`. See [example usage](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/pkg/apis/core/validation/shoot.go#L272-L274).
+- [`apivalidation.ValidateNamespaceName`](https://pkg.go.dev/k8s.io/apimachinery/pkg/api/validation#ValidateNamespaceName), [`apivalidation.ValidateServiceAccountName`](https://pkg.go.dev/k8s.io/apimachinery/pkg/api/validation#ValidateServiceAccountName)
+  - Use these functions to validate fields which represent Namespace name (Project's `.spec.namespace` field, CredentialsBinding's `.credentialsRef.namespace` field) or ServiceAccount name (ManagedSeed's `.spec.gardenlet.deployment.serviceAccountName`).
 - [`validation.IsDNS1123Subdomain`](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/validation#IsDNS1123Subdomain)
   - Validates that the value is a DNS subdomain. See [DNS Subdomain Names](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names).
 - [`validation.IsValidIP`](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/validation#IsValidIP)
@@ -229,7 +231,8 @@ Frequently used ones are:
   - Consider if updates to the field value should be allowed and are supported by the underlying controller. If not, consider making the field immutable. Add a doc string to the field to denote the immutability constraint.
 - Introducing new validation for existing field or making existing validation more restrictive might be a breaking change.
   - When working with existing field, aim to add validation which is obvious and unlikely to break a working functionality.
-  - If breaking change is inevitable and it is likely to break a working functionality:
-    - In case the functionality is _relevant to end-users_ , consider imposing the breaking change only with the upcoming minor Kubernetes version. This way, end-users are forced to actively adapt their manifests when performing Kubernetes upgrades.
+  - If a breaking change is inevitable and it is likely to break a working functionality, consider the following alternatives:
     - Consider using "ratcheting" validation to incrementally tighten validation. See [Ratcheting validation](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api_changes.md#ratcheting-validation).
+      - An example usage of "ratcheting" validation - allow invalid field value if the value is not updated; otherwise, do not allow. Example: https://github.com/gardener/gardener/pull/10664
     - Consider using a feature gate to roll out the breaking change. The feature gate gives control when to impose the breaking change. In case of issues, it is possible to revert back to the old behavior by disabling the feature gate.
+    - In case the functionality is _relevant to the majority of the end-users_, consider imposing the breaking change only with the upcoming minor Kubernetes version. This way, end-users are forced to actively adapt their manifests when performing Kubernetes upgrades.
