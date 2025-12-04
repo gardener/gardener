@@ -345,10 +345,9 @@ func ToSelectableFields(shoot *core.Shoot) fields.Set {
 	// amount of allocations needed to create the fields.Set. If you add any
 	// field here or the number of object-meta related fields changes, this should
 	// be adjusted.
-	shootSpecificFieldsSet := make(fields.Set, 8)
+	shootSpecificFieldsSet := make(fields.Set, 7)
 	shootSpecificFieldsSet[core.ShootSeedName] = getSeedName(shoot)
 	shootSpecificFieldsSet[core.ShootStatusSeedName] = getStatusSeedName(shoot)
-	shootSpecificFieldsSet[core.ShootStatusUID] = string(shoot.Status.UID)
 	if shoot.Spec.CloudProfileName != nil {
 		shootSpecificFieldsSet[core.ShootCloudProfileName] = *shoot.Spec.CloudProfileName
 	}
