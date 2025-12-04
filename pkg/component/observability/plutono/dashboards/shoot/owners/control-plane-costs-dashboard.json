@@ -25,7 +25,7 @@
         "x": 0,
         "y": 0
       },
-      "id": 9,
+      "id": 11,
       "panels": [],
       "repeat": "month",
       "scopedVars": {
@@ -206,6 +206,20 @@
       "type": "piechart"
     },
     {
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "id": 9,
+      "panels": [],
+      "repeat": null,
+      "title": "Historical Cost",
+      "type": "row"
+    },
+    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -221,7 +235,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 9
+        "y": 19
       },
       "hiddenSeries": false,
       "id": 4,
