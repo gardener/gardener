@@ -26,6 +26,15 @@
         "y": 0
       },
       "id": 9,
+      "panels": [],
+      "repeat": "month",
+      "scopedVars": {
+        "month": {
+          "selected": true,
+          "text": "12",
+          "value": "12"
+        }
+      },
       "title": "Monthly Cost",
       "type": "row"
     },
