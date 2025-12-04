@@ -39,7 +39,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 11,
+        "w": 12,
         "x": 0,
         "y": 0
       },
@@ -72,6 +72,103 @@
       ],
       "title": "Monthly Cost",
       "type": "stat"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 7,
+      "maxPerRow": 2,
+      "options": {
+        "displayLabels": [],
+        "legend": {
+          "displayMode": "list",
+          "placement": "right",
+          "values": []
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {}
+      },
+      "pluginVersion": "7.5.44",
+      "repeat": null,
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum by(year, month) (metering:memory_usage_seconds * $base_fee / (30 * 24 * 60 * 60))",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "Base Fee {{ year }}-{{ month }}",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum by (year, month) (metering:cpu_requests:sum_by_namespace:sum_over_time * 60 * $cpu_price / (30 * 24 * 60 * 60))",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "CPU Costs {{ year }}-{{ month }}",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum by (year, month) (metering:memory_requests:sum_by_namespace:sum_over_time * 60 / 1e9 * $memory_price / (30 * 24 * 60 * 60))",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "Memory Costs {{ year }}-{{ month }}",
+          "refId": "C"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum by (year, month) (metering:persistent_volume_claims:sum_by_namespace:sum_over_time * 60 / 1e9 * $disk_price / (30 * 24 * 60 * 60))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Disk Costs {{ year }}-{{ month }}",
+          "refId": "D"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum by (year, month) ((metering:network_transmit:sum_by_namespace:sum_over_time + metering:network_receive:sum_by_namespace:sum_over_time) * 60 / 1e12 * $network_price)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Network Costs {{ year }}-{{ month }}",
+          "refId": "E"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Monthly Cost Distribution",
+      "type": "piechart"
     },
     {
       "aliasColors": {},
