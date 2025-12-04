@@ -12,10 +12,10 @@
       }
     ]
   },
-  "editable": true,
+  "editable": false,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1763396492868,
+  "iteration": 1764857281400,
   "links": [],
   "panels": [
     {
@@ -73,7 +73,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.43",
+      "pluginVersion": "7.5.44",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -247,7 +247,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.43",
+      "pluginVersion": "7.5.44",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -355,7 +355,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.43",
+      "pluginVersion": "7.5.44",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -464,7 +464,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.43",
+      "pluginVersion": "7.5.44",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -573,7 +573,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.43",
+      "pluginVersion": "7.5.44",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -695,7 +695,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.43",
+      "pluginVersion": "7.5.44",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -706,15 +706,15 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_in_place_updated_pods_total{pod=\"$pod\", vpa_namespace=\"$namespace\"}[$__rate_interval]))) by (vpa_name)",
+          "expr": "sum(ceil(increase(vpa_updater_in_place_updated_pods_total{pod=\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
           "hide": false,
           "interval": "",
-          "legendFormat": "{{vpa_name}}",
+          "legendFormat": "{{vpa_namespace}}/{{vpa_name}}",
           "refId": "Succeeded Pod updates by VPA"
         },
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_in_place_updated_pods_total{pod=\"$pod\", vpa_namespace=\"$namespace\"}[$__rate_interval])))",
+          "expr": "sum(ceil(increase(vpa_updater_in_place_updated_pods_total{pod=\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval])))",
           "hide": false,
           "interval": "",
           "legendFormat": "Total",
@@ -804,7 +804,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.43",
+      "pluginVersion": "7.5.44",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -815,15 +815,15 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_failed_in_place_update_attempts_total{pod=\"$pod\", vpa_namespace=\"$namespace\"}[$__rate_interval]))) by (vpa_name)",
+          "expr": "sum(ceil(increase(vpa_updater_failed_in_place_update_attempts_total{pod=\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
           "hide": false,
           "interval": "",
-          "legendFormat": "{{vpa_name}}",
+          "legendFormat": "{{vpa_namespace}}/{{vpa_name}}",
           "refId": "Failed Pod updates by VPA"
         },
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_failed_in_place_update_attempts_total{pod=\"$pod\", vpa_namespace=\"$namespace\"}[$__rate_interval])))",
+          "expr": "sum(ceil(increase(vpa_updater_failed_in_place_update_attempts_total{pod=\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval])))",
           "hide": false,
           "interval": "",
           "legendFormat": "Total",
@@ -927,7 +927,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.43",
+      "pluginVersion": "7.5.44",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -938,15 +938,15 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_evicted_pods_total{pod=\"$pod\", vpa_namespace=\"$namespace\"}[$__rate_interval]))) by (vpa_name)",
+          "expr": "sum(ceil(increase(vpa_updater_evicted_pods_total{pod=\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
           "hide": false,
           "interval": "",
-          "legendFormat": "{{vpa_name}}",
+          "legendFormat": "{{vpa_namespace}}/{{vpa_name}}",
           "refId": "Succeeded Pod evictions by VPA"
         },
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_evicted_pods_total{pod=\"$pod\", vpa_namespace=\"$namespace\"}[$__rate_interval])))",
+          "expr": "sum(ceil(increase(vpa_updater_evicted_pods_total{pod=\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval])))",
           "hide": false,
           "interval": "",
           "legendFormat": "Total",
@@ -1036,7 +1036,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.43",
+      "pluginVersion": "7.5.44",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1047,15 +1047,15 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_failed_eviction_attempts_total{pod=\"$pod\", vpa_namespace=\"$namespace\"}[$__rate_interval]))) by (vpa_name)",
+          "expr": "sum(ceil(increase(vpa_updater_failed_eviction_attempts_total{pod=\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
           "hide": false,
           "interval": "",
-          "legendFormat": "{{vpa_name}}",
+          "legendFormat": "{{vpa_namespace}}/{{vpa_name}}",
           "refId": "Failed Pod evictions by VPA"
         },
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_failed_eviction_attempts_total{pod=\"$pod\", vpa_namespace=\"$namespace\"}[$__rate_interval])))",
+          "expr": "sum(ceil(increase(vpa_updater_failed_eviction_attempts_total{pod=\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval])))",
           "hide": false,
           "interval": "",
           "legendFormat": "Total",
@@ -1166,7 +1166,7 @@
         "hide": 0,
         "includeAll": false,
         "label": "namespace",
-        "multi": false,
+        "multi": true,
         "name": "namespace",
         "options": [],
         "query": {
