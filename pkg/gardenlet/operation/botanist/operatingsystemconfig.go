@@ -59,6 +59,11 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 		openTelemetryCollectorLogShipperEnabled, openTelemetryIngressHost = true, b.ComputeOpenTelemetryCollectorHost()
 	}
 
+	region := ""
+	if !b.Shoot.HasManagedInfrastructure() {
+		region = b.Shoot.GetInfo().Spec.Region
+	}
+
 	return operatingsystemconfig.New(
 		b.Logger,
 		b.SeedClientSet.Client(),
@@ -82,6 +87,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 				NodeMonitorGracePeriod:                  *b.Shoot.GetInfo().Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod,
 				PrimaryIPFamily:                         b.Shoot.GetInfo().Spec.Networking.IPFamilies[0],
 				KubeProxyConfig:                         b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy,
+				Region:                                  region,
 			},
 		},
 		operatingsystemconfig.DefaultInterval,
