@@ -35,7 +35,7 @@
           "value": "12"
         }
       },
-      "title": "Monthly Cost",
+      "title": "Billing Period $year-$month",
       "type": "row"
     },
     {
@@ -98,7 +98,7 @@
           "refId": "A"
         }
       ],
-      "title": "Monthly Cost",
+      "title": "Accumulated Cost",
       "type": "stat"
     },
     {
@@ -132,9 +132,12 @@
       "options": {
         "displayLabels": [],
         "legend": {
-          "displayMode": "list",
+          "displayMode": "table",
           "placement": "right",
-          "values": []
+          "values": [
+            "value",
+            "percent"
+          ]
         },
         "pieType": "pie",
         "reduceOptions": {
@@ -162,7 +165,7 @@
           "expr": "sum by(year, month) (metering:memory_usage_seconds{year=\"$year\", month=\"$month\"} * $base_fee / (30 * 24 * 60 * 60))",
           "instant": false,
           "interval": "",
-          "legendFormat": "Base Fee {{ year }}-{{ month }}",
+          "legendFormat": "Base Fee",
           "refId": "A"
         },
         {
@@ -171,7 +174,7 @@
           "hide": false,
           "instant": false,
           "interval": "",
-          "legendFormat": "CPU Costs {{ year }}-{{ month }}",
+          "legendFormat": "CPU",
           "refId": "B"
         },
         {
@@ -180,7 +183,7 @@
           "hide": false,
           "instant": false,
           "interval": "",
-          "legendFormat": "Memory Costs {{ year }}-{{ month }}",
+          "legendFormat": "Memory",
           "refId": "C"
         },
         {
@@ -188,7 +191,7 @@
           "expr": "sum by (year, month) (metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 / 1e9 * $disk_price / (30 * 24 * 60 * 60))",
           "hide": false,
           "interval": "",
-          "legendFormat": "Disk Costs {{ year }}-{{ month }}",
+          "legendFormat": "Disk",
           "refId": "D"
         },
         {
@@ -196,13 +199,13 @@
           "expr": "sum by (year, month) ((metering:network_transmit:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"}) * 60 / 1e12 * $network_price)",
           "hide": false,
           "interval": "",
-          "legendFormat": "Network Costs {{ year }}-{{ month }}",
+          "legendFormat": "Network",
           "refId": "E"
         }
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Monthly Cost Distribution",
+      "title": "Accumulated Cost By Component",
       "type": "piechart"
     },
     {
@@ -216,7 +219,7 @@
       "id": 9,
       "panels": [],
       "repeat": null,
-      "title": "Historical Cost",
+      "title": "Accumulated Cost Over Time",
       "type": "row"
     },
     {
@@ -240,10 +243,14 @@
       "hiddenSeries": false,
       "id": 4,
       "legend": {
+        "alignAsTable": true,
         "avg": false,
         "current": false,
+        "hideEmpty": false,
+        "hideZero": false,
         "max": false,
         "min": false,
+        "rightSide": true,
         "show": true,
         "total": false,
         "values": false
@@ -275,7 +282,7 @@
           "exemplar": true,
           "expr": "sum by (year, month) ((metering:memory_usage_seconds{year=~\"$year\", month=~\"$month\"} * $base_fee + metering:cpu_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 * $cpu_price + metering:memory_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $memory_price + metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $disk_price) / (30 * 24 * 60 * 60) + (metering:network_transmit:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"}) * 60 / 1e12 * $network_price)",
           "interval": "",
-          "legendFormat": "{{ year }}-{{ month }}",
+          "legendFormat": "Total {{ year }}-{{ month }}",
           "refId": "A"
         }
       ],
@@ -283,7 +290,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Historical Cost",
+      "title": "Accumulated Cost Over Time",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -343,10 +350,12 @@
       "hiddenSeries": false,
       "id": 13,
       "legend": {
+        "alignAsTable": true,
         "avg": false,
         "current": false,
         "max": false,
         "min": false,
+        "rightSide": true,
         "show": true,
         "total": false,
         "values": false
@@ -371,7 +380,7 @@
           "exemplar": true,
           "expr": "sum by (year, month) (metering:memory_usage_seconds{year=~\"$year\", month=~\"$month\"} * $base_fee) / (30 * 24 * 60 * 60)",
           "interval": "",
-          "legendFormat": "Base Fee",
+          "legendFormat": "Base Fee {{ year }}-{{ month }}",
           "refId": "A"
         },
         {
@@ -379,7 +388,7 @@
           "expr": "sum by (year, month) (metering:cpu_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 * $cpu_price / (30 * 24 * 60 * 60))",
           "hide": false,
           "interval": "",
-          "legendFormat": "CPU Cost",
+          "legendFormat": "CPU {{ year }}-{{ month }}",
           "refId": "B"
         },
         {
@@ -387,7 +396,7 @@
           "expr": "sum by (year, month) (metering:memory_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $memory_price / (30 * 24 * 60 * 60))",
           "hide": false,
           "interval": "",
-          "legendFormat": "Memory Cost",
+          "legendFormat": "Memory {{ year }}-{{ month }}",
           "refId": "C"
         },
         {
@@ -395,7 +404,7 @@
           "expr": "sum by (year, month) (metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $disk_price) / (30 * 24 * 60 * 60)",
           "hide": false,
           "interval": "",
-          "legendFormat": "Disk Cost",
+          "legendFormat": "Disk {{ year }}-{{ month }}",
           "refId": "D"
         },
         {
@@ -403,7 +412,7 @@
           "expr": "sum by (year, month) ((metering:network_transmit:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"}) * 60 / 1e12 * $network_price)",
           "hide": false,
           "interval": "",
-          "legendFormat": "Network Cost",
+          "legendFormat": "Network {{ year }}-{{ month }}",
           "refId": "E"
         }
       ],
@@ -411,7 +420,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Cost Distribution",
+      "title": "Accumulated Cost By Component Over Time",
       "tooltip": {
         "shared": true,
         "sort": 0,
