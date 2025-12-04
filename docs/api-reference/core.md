@@ -5223,8 +5223,7 @@ provider. When not specified, the Gardener will use the cloud provider credentia
 by the Shoot and try to find respective credentials there (primary provider only). Specifying this field may override
 this behavior, i.e. forcing the Gardener to only look into the given secret.</p>
 <p>Deprecated: This field is deprecated and will be forbidden starting from Kubernetes 1.35. Please use <code>CredentialsRef</code> instead.
-Until removed, this field is synced with the <code>CredentialsRef</code> field when it refers to a secret.
-TODO(vpnachev): Remove this field once support for Kubernetes 1.34 is dropped.</p>
+Until removed, this field is synced with the <code>CredentialsRef</code> field when it refers to a secret.</p>
 </td>
 </tr>
 <tr>

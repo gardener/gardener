@@ -571,9 +571,8 @@ type DNSProvider struct {
 	//
 	// Deprecated: This field is deprecated and will be forbidden starting from Kubernetes 1.35. Please use `CredentialsRef` instead.
 	// Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.
-	// TODO(vpnachev): Remove this field once support for Kubernetes 1.34 is dropped.
 	// +optional
-	SecretName *string `json:"secretName,omitempty" protobuf:"bytes,3,opt,name=secretName"`
+	SecretName *string `json:"secretName,omitempty" protobuf:"bytes,3,opt,name=secretName"` // TODO(vpnachev): Remove this field once support for Kubernetes 1.34 is dropped.
 	// Type is the DNS provider type.
 	// +optional
 	Type *string `json:"type,omitempty" protobuf:"bytes,4,opt,name=type"`

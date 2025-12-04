@@ -971,9 +971,15 @@ func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
 		}
 	}
 
+	type credentialConfig struct {
+		ProviderType string `json:"providerType"`
+		GVK          string `json:"gvk"`
+		Name         string `json:"name"`
+	}
+
 	var (
-		names        = sets.New[string]()
-		primaryFound bool
+		usedCredentials = sets.New[credentialConfig]()
+		primaryFound    bool
 	)
 	for i, provider := range dns.Providers {
 		idxPath := fldPath.Child("providers").Index(i)
@@ -981,15 +987,16 @@ func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
 		allErrs = append(allErrs, validateDNSCredentialsRef(provider, idxPath)...)
 
 		if provider.CredentialsRef != nil && provider.Type != nil {
-			providerName := gardenerutils.GenerateDNSProviderName(provider.CredentialsRef, *provider.Type)
-			if names.Has(providerName) {
-				allErrs = append(allErrs, field.Invalid(idxPath, providerName, "combination of .credentialsRef and .type must be unique across dns providers"))
+			credential := credentialConfig{
+				ProviderType: *provider.Type,
+				GVK:          fmt.Sprintf("%s/%s", provider.CredentialsRef.APIVersion, provider.CredentialsRef.Kind),
+				Name:         provider.CredentialsRef.Name,
+			}
+			if usedCredentials.Has(credential) {
+				allErrs = append(allErrs, field.Invalid(idxPath, credential, "combination of .credentialsRef and .type must be unique across dns providers"))
 				continue
 			}
-			for _, err := range validation.IsDNS1123Subdomain(providerName) {
-				allErrs = append(allErrs, field.Invalid(idxPath, providerName, fmt.Sprintf("combination of .credentialsRef and .type is invalid: %q", err)))
-			}
-			names.Insert(providerName)
+			usedCredentials.Insert(credential)
 		}
 
 		if provider.Primary != nil && *provider.Primary {

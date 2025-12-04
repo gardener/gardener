@@ -193,9 +193,7 @@ func (g *graph) HandleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 				case apiVersion == securityv1alpha1.SchemeGroupVersion.String() && kind == "WorkloadIdentity":
 					credentialsVertex = g.getOrCreateVertex(VertexTypeWorkloadIdentity, shoot.Namespace, provider.CredentialsRef.Name)
 				}
-				if credentialsVertex != nil {
-					g.addEdge(credentialsVertex, shootVertex)
-				}
+				g.addEdge(credentialsVertex, shootVertex)
 			}
 		}
 	}

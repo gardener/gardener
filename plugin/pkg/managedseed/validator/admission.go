@@ -513,6 +513,8 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 		case apiVersion == securityv1alpha1.SchemeGroupVersion.String() && kind == "WorkloadIdentity":
 			// TODO(vpnachev): This code should handle dns provider credentials of type WorkloadIdentity
 			return nil, fmt.Errorf("dns provider credentials of type WorkloadIdentity are not yet supported")
+		default:
+			return nil, fmt.Errorf("primery DNS provider set to use unsupported credentials type of apiVersion=%q kind=%q", apiVersion, kind)
 		}
 	} else if shoot.Spec.SecretBindingName != nil {
 		secretBinding, err := v.secretBindingLister.SecretBindings(shoot.Namespace).Get(*shoot.Spec.SecretBindingName)
@@ -533,15 +535,17 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 			return nil, apierrors.NewInternalError(fmt.Errorf("could not get credentials binding %s/%s: %v", shoot.Namespace, *shoot.Spec.CredentialsBindingName, err))
 		}
 
-		switch credentialsBinding.CredentialsRef.GroupVersionKind() {
-		case corev1.SchemeGroupVersion.WithKind("Secret"):
+		switch apiVersion, kind := credentialsBinding.CredentialsRef.APIVersion, credentialsBinding.CredentialsRef.Kind; {
+		case apiVersion == corev1.SchemeGroupVersion.String() && kind == "Secret":
 			secretRef = corev1.SecretReference{
 				Name:      credentialsBinding.CredentialsRef.Name,
 				Namespace: credentialsBinding.CredentialsRef.Namespace,
 			}
-		case securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentity"):
+		case apiVersion == securityv1alpha1.SchemeGroupVersion.String() && kind == "WorkloadIdentity":
 			// TODO(vpnachev): This code should handle dns provider credentials of type WorkloadIdentity
 			return nil, fmt.Errorf("shoot credentials of type WorkloadIdentity cannot be used as domain secret")
+		default:
+			return nil, fmt.Errorf("shoot credentials of type apiVersion=%q kind=%q cannot be used as domain secret", apiVersion, kind)
 		}
 	} else {
 		return nil, fmt.Errorf("cannot initialize a reference to the primary DNS provider credentials of shoot %s", client.ObjectKeyFromObject(shoot))
