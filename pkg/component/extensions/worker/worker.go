@@ -342,7 +342,19 @@ func (w *worker) Wait(ctx context.Context) error {
 		w.waitInterval,
 		w.waitSevereThreshold,
 		w.waitTimeout,
-		nil,
+		func() error {
+			// In Restore, we add the machine-state from the ShootState to Worker.status.state, so that the extension
+			// controller can pick it up and restore the MachineDeployments, MachineSets, and Machines.
+			// After the Worker has been successfully restored/reconciled, we need to clear Worker.status.state to not keep
+			// stale state information around.
+			if w.worker.Status.State == nil {
+				return nil
+			}
+
+			patch := client.MergeFromWithOptions(w.worker.DeepCopy(), client.MergeFromWithOptimisticLock{})
+			w.worker.Status.State = nil
+			return w.client.Status().Patch(ctx, w.worker, patch)
+		},
 	)
 }
 

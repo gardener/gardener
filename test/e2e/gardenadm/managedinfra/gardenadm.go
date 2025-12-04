@@ -278,7 +278,10 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 
 		It("should deploy/restore the Worker in the shoot", func(ctx SpecContext) {
 			worker := &extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: "kube-system"}}
-			Eventually(ctx, shootKomega.Object(worker)).Should(BeHealthy(health.CheckExtensionObject))
+			Eventually(ctx, shootKomega.Object(worker)).Should(And(
+				BeHealthy(health.CheckExtensionObject),
+				HaveField("Status.DefaultStatus.State", BeNil()), // ensure machine state is removed after restoration
+			))
 		}, SpecTimeout(time.Minute))
 
 		It("should adopt and keep the initial control plane machine", func(ctx SpecContext) {
