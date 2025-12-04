@@ -210,7 +210,7 @@ func (a *actuator) Reconcile(
 	}
 
 	var (
-		requeue    = false
+		requeue    bool
 		scaledDown = false
 	)
 
@@ -292,10 +292,12 @@ func (a *actuator) Reconcile(
 	}
 
 	// Get status of controllers
-	cp.Status.Controllers, requeue, err = a.vp.GetControllersStatus(ctx, cp, cluster)
+	var controllersRequeue bool
+	cp.Status.Controllers, controllersRequeue, err = a.vp.GetControllersStatus(ctx, cp, cluster)
 	if err != nil {
 		return false, err
 	}
+	requeue = requeue || controllersRequeue
 
 	if err := a.client.Status().Update(ctx, cp); err != nil {
 		return false, fmt.Errorf("failed to update controlplane status: %w", err)

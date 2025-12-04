@@ -2604,6 +2604,7 @@ DefaultStatus
 <a href="#extensions.gardener.cloud/v1alpha1.DefaultStatus">DefaultStatus</a>)
 </p>
 <p>
+<p>ControllerConfig holds information about a controller.</p>
 </p>
 <table>
 <thead>

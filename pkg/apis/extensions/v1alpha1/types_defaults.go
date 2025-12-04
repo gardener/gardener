@@ -87,6 +87,7 @@ type DefaultStatus struct {
 	Controllers []ControllerConfig `json:"controllers,omitempty"`
 }
 
+// ControllerConfig holds information about a controller.
 type ControllerConfig struct {
 	Name   string `json:"name"`
 	Active bool   `json:"active"`

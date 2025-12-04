@@ -32,8 +32,9 @@ func NewValuesProvider(mgr manager.Manager) genericactuator.ValuesProvider {
 }
 
 type valuesProvider struct {
-	client client.Client
 	genericactuator.NoopValuesProvider
+
+	client client.Client
 }
 
 func getSecretConfigs(namespace string) []extensionssecretsmanager.SecretConfigWithOptions {
@@ -111,8 +112,8 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 }
 
 // GetControllersStatus returns status of controllers and if a requeue is required.
-func (vp *valuesProvider) GetControllersStatus(ctx context.Context,
-	cp *extensionsv1alpha1.ControlPlane,
+func (vp *valuesProvider) GetControllersStatus(_ context.Context,
+	_ *extensionsv1alpha1.ControlPlane,
 	_ *extensionscontroller.Cluster,
 ) ([]extensionsv1alpha1.ControllerConfig, bool, error) {
 	// names originating from https://github.com/kubernetes/cloud-provider/blob/master/names/controller_names.go

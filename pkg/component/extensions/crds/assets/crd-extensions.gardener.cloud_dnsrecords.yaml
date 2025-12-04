@@ -178,6 +178,7 @@ spec:
               controllers:
                 description: Controllers holds a list of controller configurations.
                 items:
+                  description: ControllerConfig holds information about a controller.
                   properties:
                     active:
                       type: boolean
