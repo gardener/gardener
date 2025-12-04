@@ -193,6 +193,7 @@ func (a *actuator) Reconcile(
 
 	// Apply control plane chart
 	version := cluster.Shoot.Spec.Kubernetes.Version
+	runtimeVersion := a.gardenerClientset.Version()
 
 	// Create shoot chart renderer
 	chartRenderer, err := a.chartRendererFactory.NewChartRendererForShoot(version)
@@ -208,7 +209,7 @@ func (a *actuator) Reconcile(
 		}
 		// Apply config chart
 		log.Info("Applying configuration chart")
-		if err := managedresources.RenderChartAndCreateForSeed(ctx, cp.Namespace, ControlPlaneSeedConfigurationChartResourceName, a.client, chartRenderer, a.configChart, values, a.imageVector, cp.Namespace, a.gardenerClientset.Version(), version); err != nil {
+		if err := managedresources.RenderChartAndCreateForSeed(ctx, cp.Namespace, ControlPlaneSeedConfigurationChartResourceName, a.client, chartRenderer, a.configChart, values, a.imageVector, cp.Namespace, runtimeVersion, version); err != nil {
 			return false, fmt.Errorf("could not apply configuration chart for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
 		}
 	}
@@ -252,7 +253,7 @@ func (a *actuator) Reconcile(
 
 		log.Info("Applying control plane chart")
 
-		if err := managedresources.RenderChartAndCreateForSeed(ctx, cp.Namespace, ControlPlaneSeedChartResourceName, a.client, chartRenderer, a.controlPlaneChart, values, a.imageVector, cp.Namespace, a.gardenerClientset.Version(), version); err != nil {
+		if err := managedresources.RenderChartAndCreateForSeed(ctx, cp.Namespace, ControlPlaneSeedChartResourceName, a.client, chartRenderer, a.controlPlaneChart, values, a.imageVector, cp.Namespace, runtimeVersion, version); err != nil {
 			return false, fmt.Errorf("could not apply control plane chart for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
 		}
 	}
