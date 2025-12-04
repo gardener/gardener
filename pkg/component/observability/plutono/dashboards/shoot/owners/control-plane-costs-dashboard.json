@@ -232,7 +232,7 @@
         "defaults": {},
         "overrides": []
       },
-      "fill": 1,
+      "fill": 6,
       "fillGradient": 0,
       "gridPos": {
         "h": 9,
@@ -243,20 +243,20 @@
       "hiddenSeries": false,
       "id": 4,
       "legend": {
-        "alignAsTable": true,
+        "alignAsTable": false,
         "avg": false,
         "current": false,
         "hideEmpty": false,
         "hideZero": false,
         "max": false,
         "min": false,
-        "rightSide": true,
+        "rightSide": false,
         "show": true,
         "total": false,
         "values": false
       },
       "lines": true,
-      "linewidth": 1,
+      "linewidth": 0,
       "nullPointMode": "null",
       "options": {
         "alertThreshold": true
@@ -280,9 +280,9 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (year, month) ((metering:memory_usage_seconds{year=~\"$year\", month=~\"$month\"} * $base_fee + metering:cpu_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 * $cpu_price + metering:memory_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $memory_price + metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $disk_price) / (30 * 24 * 60 * 60) + (metering:network_transmit:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"}) * 60 / 1e12 * $network_price)",
+          "expr": "sum((metering:memory_usage_seconds{year=~\"$year\", month=~\"$month\"} * $base_fee + metering:cpu_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 * $cpu_price + metering:memory_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $memory_price + metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $disk_price) / (30 * 24 * 60 * 60) + (metering:network_transmit:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"}) * 60 / 1e12 * $network_price)",
           "interval": "",
-          "legendFormat": "Total {{ year }}-{{ month }}",
+          "legendFormat": "Total",
           "refId": "A"
         }
       ],
@@ -339,7 +339,7 @@
         "defaults": {},
         "overrides": []
       },
-      "fill": 1,
+      "fill": 6,
       "fillGradient": 0,
       "gridPos": {
         "h": 9,
@@ -350,18 +350,18 @@
       "hiddenSeries": false,
       "id": 13,
       "legend": {
-        "alignAsTable": true,
+        "alignAsTable": false,
         "avg": false,
         "current": false,
         "max": false,
         "min": false,
-        "rightSide": true,
+        "rightSide": false,
         "show": true,
         "total": false,
         "values": false
       },
       "lines": true,
-      "linewidth": 1,
+      "linewidth": 0,
       "nullPointMode": "null",
       "options": {
         "alertThreshold": true
@@ -373,46 +373,46 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (year, month) (metering:memory_usage_seconds{year=~\"$year\", month=~\"$month\"} * $base_fee) / (30 * 24 * 60 * 60)",
+          "expr": "sum(metering:memory_usage_seconds{year=~\"$year\", month=~\"$month\"} * $base_fee) / (30 * 24 * 60 * 60)",
           "interval": "",
-          "legendFormat": "Base Fee {{ year }}-{{ month }}",
+          "legendFormat": "Base Fee",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "sum by (year, month) (metering:cpu_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 * $cpu_price / (30 * 24 * 60 * 60))",
+          "expr": "sum(metering:cpu_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 * $cpu_price / (30 * 24 * 60 * 60))",
           "hide": false,
           "interval": "",
-          "legendFormat": "CPU {{ year }}-{{ month }}",
+          "legendFormat": "CPU",
           "refId": "B"
         },
         {
           "exemplar": true,
-          "expr": "sum by (year, month) (metering:memory_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $memory_price / (30 * 24 * 60 * 60))",
+          "expr": "sum(metering:memory_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $memory_price / (30 * 24 * 60 * 60))",
           "hide": false,
           "interval": "",
-          "legendFormat": "Memory {{ year }}-{{ month }}",
+          "legendFormat": "Memory",
           "refId": "C"
         },
         {
           "exemplar": true,
-          "expr": "sum by (year, month) (metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $disk_price) / (30 * 24 * 60 * 60)",
+          "expr": "sum(metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $disk_price) / (30 * 24 * 60 * 60)",
           "hide": false,
           "interval": "",
-          "legendFormat": "Disk {{ year }}-{{ month }}",
+          "legendFormat": "Disk",
           "refId": "D"
         },
         {
           "exemplar": true,
-          "expr": "sum by (year, month) ((metering:network_transmit:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"}) * 60 / 1e12 * $network_price)",
+          "expr": "sum((metering:network_transmit:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"}) * 60 / 1e12 * $network_price)",
           "hide": false,
           "interval": "",
-          "legendFormat": "Network {{ year }}-{{ month }}",
+          "legendFormat": "Network",
           "refId": "E"
         }
       ],
