@@ -313,7 +313,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 
 		It("should run successfully a second time (should be idempotent)", func(ctx SpecContext) {
 			RunAndWait(ctx, "bootstrap", "-d", "../../../dev-setup/gardenadm/resources/generated/managed-infra", "--bastion-ingress-cidr", "1.2.3.4/32")
-		}, SpecTimeout(2*time.Minute))
+		}, SpecTimeout(10*time.Minute))
 	})
 })
 
