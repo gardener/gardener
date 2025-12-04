@@ -113,16 +113,16 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
 // AllFeatureGates is the list of all feature gates.
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	DefaultSeccompProfile:         {Default: false, PreRelease: featuregate.Alpha},
-	NewWorkerPoolHash:             {Default: true, PreRelease: featuregate.Beta},
-	InPlaceNodeUpdates:            {Default: false, PreRelease: featuregate.Alpha},
-	IstioTLSTermination:           {Default: false, PreRelease: featuregate.Alpha},
-	CloudProfileCapabilities:      {Default: false, PreRelease: featuregate.Alpha},
-	DoNotCopyBackupCredentials:    {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	OpenTelemetryCollector:        {Default: false, PreRelease: featuregate.Alpha},
-	UseUnifiedHTTPProxyPort:       {Default: false, PreRelease: featuregate.Alpha},
-	VPAInPlaceUpdates:             {Default: false, PreRelease: featuregate.Alpha},
-	CustomDNSServerInNodeLocalDNS: {Default: true, PreRelease: featuregate.Beta},
+	DefaultSeccompProfile:                       {Default: false, PreRelease: featuregate.Alpha},
+	NewWorkerPoolHash:                           {Default: true, PreRelease: featuregate.Beta},
+	InPlaceNodeUpdates:                          {Default: false, PreRelease: featuregate.Alpha},
+	IstioTLSTermination:                         {Default: false, PreRelease: featuregate.Alpha},
+	CloudProfileCapabilities:                    {Default: false, PreRelease: featuregate.Alpha},
+	DoNotCopyBackupCredentials:                  {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	OpenTelemetryCollector:                      {Default: false, PreRelease: featuregate.Alpha},
+	UseUnifiedHTTPProxyPort:                     {Default: false, PreRelease: featuregate.Alpha},
+	VPAInPlaceUpdates:                           {Default: false, PreRelease: featuregate.Alpha},
+	CustomDNSServerInNodeLocalDNS:               {Default: true, PreRelease: featuregate.Beta},
 	CloudProfileVersionClassificationLifecycles: {Default: false, PreRelease: featuregate.Alpha},
 }
 
