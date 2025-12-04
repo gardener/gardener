@@ -488,14 +488,11 @@ func (c *mutationContext) ensureMachineImage(oldWorkers []core.Worker, worker co
 		}
 
 		if oldWorker.Machine.Image.Name == worker.Machine.Image.Name {
-			// image name was not changed -> keep version from the new worker if specified, otherwise use the old worker image version
-			if len(worker.Machine.Image.Version) != 0 {
-				return getDefaultMachineImage(c.cloudProfileSpec.MachineImages, worker.Machine.Image, worker.Machine.Architecture, machineType, c.cloudProfileSpec.MachineCapabilities, helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), fldPath)
+			// image name was not changed
+			if len(worker.Machine.Image.Version) == 0 || worker.Machine.Image.Version == oldWorker.Machine.Image.Version {
+				// if the version from the new worker is not specified or it is equal to the old worker image version -> keep the old one
+				return oldWorker.Machine.Image, nil
 			}
-			return oldWorker.Machine.Image, nil
-		} else if len(worker.Machine.Image.Version) != 0 {
-			// image name was changed -> keep version from new worker if specified, otherwise default the image version
-			return getDefaultMachineImage(c.cloudProfileSpec.MachineImages, worker.Machine.Image, worker.Machine.Architecture, machineType, c.cloudProfileSpec.MachineCapabilities, helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), fldPath)
 		}
 	}
 
