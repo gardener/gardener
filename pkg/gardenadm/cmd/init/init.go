@@ -77,6 +77,7 @@ func run(ctx context.Context, opts *Options) error {
 
 	var (
 		g                = flow.NewGraph("init")
+		reporter         = flow.NewCommandLineProgressReporter(os.Stdout)
 		allowBackup      = v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil) != nil
 		kubeProxyEnabled = v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 
@@ -94,9 +95,12 @@ func run(ctx context.Context, opts *Options) error {
 			Name: "Reconciling CustomResourceDefinitions",
 			Fn:   b.ReconcileCustomResourceDefinitions,
 		})
-		ensureCustomResourceDefinitionsReady = g.Add(flow.Task{
+		ensureCustomResourceDefinitionsReady = g.Add(flow.RetryableTask{
 			Name:         "Ensuring CustomResourceDefinitions are ready",
-			Fn:           flow.TaskFn(b.EnsureCustomResourceDefinitionsReady).RetryUntilTimeout(time.Second, time.Minute),
+			Fn:           flow.TaskFn(b.EnsureCustomResourceDefinitionsReady),
+			Interval:     time.Second,
+			Timeout:      time.Minute,
+			Reporter:     reporter,
 			Dependencies: flow.NewTaskIDs(reconcileCustomResourceDefinitions),
 		})
 		reconcileClusterResource = g.Add(flow.Task{
@@ -116,9 +120,12 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.ActivateGardenerNodeAgent,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
-		approveGardenerNodeAgentCSR = g.Add(flow.Task{
+		approveGardenerNodeAgentCSR = g.Add(flow.RetryableTask{
 			Name:         "Approving gardener-node-agent client certificate signing request",
-			Fn:           flow.TaskFn(b.ApproveNodeAgentCertificateSigningRequest).RetryUntilTimeout(2*time.Second, time.Minute),
+			Fn:           flow.TaskFn(b.ApproveNodeAgentCertificateSigningRequest),
+			Interval:     2 * time.Second,
+			Timeout:      time.Minute,
+			Reporter:     reporter,
 			Dependencies: flow.NewTaskIDs(activateGardenerNodeAgent),
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
@@ -227,11 +234,14 @@ func run(ctx context.Context, opts *Options) error {
 			SkipIf:       podNetworkAvailable,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManagerIntoPodNetwork),
 		})
-		deployExtensionControllersIntoPodNetwork = g.Add(flow.Task{
+		deployExtensionControllersIntoPodNetwork = g.Add(flow.RetryableTask{
 			Name: "Redeploying extension controllers into pod network",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return b.ReconcileExtensionControllerInstallations(ctx, false)
-			}).RetryUntilTimeout(5*time.Second, 30*time.Second),
+			}),
+			Interval:     5 * time.Second,
+			Timeout:      30 * time.Second,
+			Reporter:     reporter,
 			SkipIf:       podNetworkAvailable,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerInPodNetworkReady),
 		})
@@ -325,7 +335,8 @@ func run(ctx context.Context, opts *Options) error {
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
-		Log: opts.Log,
+		Log:              opts.Log,
+		ProgressReporter: reporter,
 	}); err != nil {
 		return flow.Errors(err)
 	}
@@ -385,6 +396,7 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Garden
 	var (
 		clientSet kubernetes.Interface
 		g         = flow.NewGraph("bootstrap")
+		reporter  = flow.NewCommandLineProgressReporter(os.Stdout)
 
 		initializeSecretsManagement = g.Add(flow.Task{
 			Name:   "Initializing secrets management",
@@ -409,12 +421,15 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Garden
 			SkipIf:       kubeconfigFileExists,
 			Dependencies: flow.NewTaskIDs(writeKubeletBootstrapKubeconfig, deployOperatingSystemConfigSecretForNodeAgent),
 		})
-		initializeClientSet = g.Add(flow.Task{
+		initializeClientSet = g.Add(flow.RetryableTask{
 			Name: "Initializing connection to Kubernetes control plane",
 			Fn: flow.TaskFn(func(_ context.Context) error {
 				clientSet, err = b.CreateClientSet(ctx)
 				return err
-			}).RetryUntilTimeout(2*time.Second, time.Minute),
+			}),
+			Interval:     2 * time.Second,
+			Timeout:      time.Minute,
+			Reporter:     reporter,
 			Dependencies: flow.NewTaskIDs(applyOperatingSystemConfig),
 		})
 		_ = g.Add(flow.Task{
@@ -428,7 +443,8 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Garden
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
-		Log: b.Logger,
+		Log:              b.Logger,
+		ProgressReporter: reporter,
 	}); err != nil {
 		return nil, flow.Errors(err)
 	}
