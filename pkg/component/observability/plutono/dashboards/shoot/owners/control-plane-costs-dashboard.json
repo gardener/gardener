@@ -285,6 +285,68 @@
   "templating": {
     "list": [
       {
+        "allValue": null,
+        "current": {
+          "selected": false,
+          "text": "2025",
+          "value": "2025"
+        },
+        "datasource": null,
+        "definition": "label_values(metering:memory_usage_seconds, year)",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": "Billing Year",
+        "multi": true,
+        "name": "year",
+        "options": [],
+        "query": {
+          "query": "label_values(metering:memory_usage_seconds, year)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": false,
+          "text": "12",
+          "value": "12"
+        },
+        "datasource": null,
+        "definition": "label_values(metering:memory_usage_seconds, month)",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": "Billing Month",
+        "multi": true,
+        "name": "month",
+        "options": [],
+        "query": {
+          "query": "label_values(metering:memory_usage_seconds, month)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
         "current": {
           "selected": false,
           "text": "0",
