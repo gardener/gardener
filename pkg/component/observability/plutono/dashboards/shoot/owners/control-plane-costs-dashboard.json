@@ -321,6 +321,134 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "hiddenSeries": false,
+      "id": 13,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.44",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum by (year, month) (metering:memory_usage_seconds{year=~\"$year\", month=~\"$month\"} * $base_fee) / (30 * 24 * 60 * 60)",
+          "interval": "",
+          "legendFormat": "Base Fee",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum by (year, month) (metering:cpu_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 * $cpu_price / (30 * 24 * 60 * 60))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "CPU Cost",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum by (year, month) (metering:memory_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $memory_price / (30 * 24 * 60 * 60))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Memory Cost",
+          "refId": "C"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum by (year, month) (metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $disk_price) / (30 * 24 * 60 * 60)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Disk Cost",
+          "refId": "D"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum by (year, month) ((metering:network_transmit:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"}) * 60 / 1e12 * $network_price)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Network Cost",
+          "refId": "E"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Cost Distribution",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:236",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "$$hashKey": "object:237",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     }
   ],
   "schemaVersion": 27,
