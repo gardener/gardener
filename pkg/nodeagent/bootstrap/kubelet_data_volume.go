@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/afero"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 )
 
 var (

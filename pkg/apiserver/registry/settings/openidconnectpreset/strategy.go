@@ -12,8 +12,8 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 
 	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/api/settings/validation"
 	"github.com/gardener/gardener/pkg/apis/settings"
-	"github.com/gardener/gardener/pkg/apis/settings/validation"
 )
 
 type oidcPresetStrategy struct {

@@ -31,6 +31,9 @@ jobs:
       packages: write
     with:
       release-commit-target: branch
+      github-tag-template: '${version}'
+      github-additional-tag-templates: |
+        pkg/apis/${version}
       next-version: ${{ inputs.next-version }}
       next-version-callback-action-path:
       slack-channel-id: C9CEBQPGE # #sap-tech-gardener
