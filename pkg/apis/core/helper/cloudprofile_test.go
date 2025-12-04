@@ -404,7 +404,6 @@ var _ = Describe("CloudProfile Helper", func() {
 					"image-2": sets.New("version-1"),
 				},
 			))
-			// TODO(LucaBernstein, vknabel): Add RemovedVersionClassifications case
 			Expect(diff.AddedImages.UnsortedList()).To(ConsistOf("image-3"))
 			Expect(diff.AddedVersions).To(BeEquivalentTo(
 				map[string]sets.Set[string]{
