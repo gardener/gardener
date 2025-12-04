@@ -1070,11 +1070,16 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 	}
 
 	seeds := []string{}
+	// The seed dashboard url only for managed seeds
 	for _, seed := range seedList.Items {
-		var seedName = seed.Name
-		seeds = append(seeds, seedName)
+		if err := virtualGardenClient.Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: seed.Name}, &metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: seedmanagementv1alpha1.SchemeGroupVersion.String(), Kind: "ManagedSeed"}}); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf("failed checking whether seed %s is a managed seed: %w", seed.Name, err)
+			}
+			continue
+		}
+		seeds = append(seeds, seed.Name)
 	}
-	joinedSeeds := strings.Join(seeds, "|")
 
 	additionalAlertRelabelConfigs := []monitoringv1.RelabelConfig{
 		{
@@ -1093,7 +1098,7 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 		},
 		{
 			SourceLabels: []monitoringv1.LabelName{"project", "name"},
-			Regex:        ";" + joinedSeeds,
+			Regex:        ";" + strings.Join(seeds, "|"),
 			Action:       "replace",
 			Replacement:  ptr.To("https://dashboard." + primaryIngressDomain + "/namespace/garden/shoots/$2"),
 			TargetLabel:  "seed_dashboard_url",
