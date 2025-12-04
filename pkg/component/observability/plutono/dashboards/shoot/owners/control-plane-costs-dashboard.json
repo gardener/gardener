@@ -81,10 +81,17 @@
         "textMode": "auto"
       },
       "pluginVersion": "7.5.44",
+      "scopedVars": {
+        "month": {
+          "selected": true,
+          "text": "12",
+          "value": "12"
+        }
+      },
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (year, month) ((metering:memory_usage_seconds * $base_fee + metering:cpu_requests:sum_by_namespace:sum_over_time * 60 * $cpu_price + metering:memory_requests:sum_by_namespace:sum_over_time * 60 / 1e9 * $memory_price + metering:persistent_volume_claims:sum_by_namespace:sum_over_time * 60 / 1e9 * $disk_price) / (30 * 24 * 60 * 60) + (metering:network_transmit:sum_by_namespace:sum_over_time + metering:network_receive:sum_by_namespace:sum_over_time) * 60 / 1e12 * $network_price)",
+          "expr": "sum by (year, month) ((metering:memory_usage_seconds{year=\"$year\", month=\"$month\"} * $base_fee + metering:cpu_requests:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 * $cpu_price + metering:memory_requests:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 / 1e9 * $memory_price + metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 / 1e9 * $disk_price) / (30 * 24 * 60 * 60) + (metering:network_transmit:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"}) * 60 / 1e12 * $network_price)",
           "instant": false,
           "interval": "",
           "legendFormat": "{{ year }}-{{ month }}",
@@ -142,10 +149,17 @@
       "pluginVersion": "7.5.44",
       "repeat": null,
       "repeatDirection": "h",
+      "scopedVars": {
+        "month": {
+          "selected": true,
+          "text": "12",
+          "value": "12"
+        }
+      },
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by(year, month) (metering:memory_usage_seconds * $base_fee / (30 * 24 * 60 * 60))",
+          "expr": "sum by(year, month) (metering:memory_usage_seconds{year=\"$year\", month=\"$month\"} * $base_fee / (30 * 24 * 60 * 60))",
           "instant": false,
           "interval": "",
           "legendFormat": "Base Fee {{ year }}-{{ month }}",
@@ -153,7 +167,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (year, month) (metering:cpu_requests:sum_by_namespace:sum_over_time * 60 * $cpu_price / (30 * 24 * 60 * 60))",
+          "expr": "sum by (year, month) (metering:cpu_requests:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 * $cpu_price / (30 * 24 * 60 * 60))",
           "hide": false,
           "instant": false,
           "interval": "",
@@ -162,7 +176,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (year, month) (metering:memory_requests:sum_by_namespace:sum_over_time * 60 / 1e9 * $memory_price / (30 * 24 * 60 * 60))",
+          "expr": "sum by (year, month) (metering:memory_requests:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 / 1e9 * $memory_price / (30 * 24 * 60 * 60))",
           "hide": false,
           "instant": false,
           "interval": "",
@@ -171,7 +185,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (year, month) (metering:persistent_volume_claims:sum_by_namespace:sum_over_time * 60 / 1e9 * $disk_price / (30 * 24 * 60 * 60))",
+          "expr": "sum by (year, month) (metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 / 1e9 * $disk_price / (30 * 24 * 60 * 60))",
           "hide": false,
           "interval": "",
           "legendFormat": "Disk Costs {{ year }}-{{ month }}",
@@ -179,7 +193,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (year, month) ((metering:network_transmit:sum_by_namespace:sum_over_time + metering:network_receive:sum_by_namespace:sum_over_time) * 60 / 1e12 * $network_price)",
+          "expr": "sum by (year, month) ((metering:network_transmit:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"}) * 60 / 1e12 * $network_price)",
           "hide": false,
           "interval": "",
           "legendFormat": "Network Costs {{ year }}-{{ month }}",
@@ -231,6 +245,13 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
+      "scopedVars": {
+        "month": {
+          "selected": true,
+          "text": "12",
+          "value": "12"
+        }
+      },
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
@@ -238,7 +259,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (year, month) ((metering:memory_usage_seconds * $base_fee + metering:cpu_requests:sum_by_namespace:sum_over_time * 60 * $cpu_price + metering:memory_requests:sum_by_namespace:sum_over_time * 60 / 1e9 * $memory_price + metering:persistent_volume_claims:sum_by_namespace:sum_over_time * 60 / 1e9 * $disk_price) / (30 * 24 * 60 * 60) + (metering:network_transmit:sum_by_namespace:sum_over_time + metering:network_receive:sum_by_namespace:sum_over_time) * 60 / 1e12 * $network_price)",
+          "expr": "sum by (year, month) ((metering:memory_usage_seconds{year=~\"$year\", month=~\"$month\"} * $base_fee + metering:cpu_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 * $cpu_price + metering:memory_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $memory_price + metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $disk_price) / (30 * 24 * 60 * 60) + (metering:network_transmit:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"}) * 60 / 1e12 * $network_price)",
           "interval": "",
           "legendFormat": "{{ year }}-{{ month }}",
           "refId": "A"
