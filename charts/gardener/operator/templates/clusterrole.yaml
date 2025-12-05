@@ -240,6 +240,14 @@ rules:
   - update
   - delete
 - apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - prometheuses
+  verbs:
+  - list
+  - watch
+  - get
+- apiGroups:
   - scheduling.k8s.io
   resources:
   - priorityclasses

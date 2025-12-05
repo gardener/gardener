@@ -15,6 +15,10 @@ import (
 )
 
 var (
+	//go:embed assets/prometheusrules/health.yaml
+	healthYAML []byte
+	health     *monitoringv1.PrometheusRule
+
 	//go:embed assets/prometheusrules/metering.rules.yaml
 	meteringYAML []byte
 	metering     *monitoringv1.PrometheusRule
@@ -29,6 +33,9 @@ var (
 )
 
 func init() {
+	health = &monitoringv1.PrometheusRule{}
+	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, healthYAML, health))
+
 	metering = &monitoringv1.PrometheusRule{}
 	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, meteringYAML, metering))
 
@@ -41,5 +48,5 @@ func init() {
 
 // CentralPrometheusRules returns the central PrometheusRule resources for the cache prometheus.
 func CentralPrometheusRules() []*monitoringv1.PrometheusRule {
-	return []*monitoringv1.PrometheusRule{metering.DeepCopy(), meteringStateful.DeepCopy(), recordingRules.DeepCopy()}
+	return []*monitoringv1.PrometheusRule{health.DeepCopy(), metering.DeepCopy(), meteringStateful.DeepCopy(), recordingRules.DeepCopy()}
 }

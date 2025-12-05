@@ -65,6 +65,10 @@ spec:
         seccompprofile.resources.gardener.cloud/skip: "true"
         networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080: allowed
         networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443: allowed
+        networking.resources.gardener.cloud/to-all-shoots-prometheus-shoot-tcp-9090: allowed
+        networking.resources.gardener.cloud/to-prometheus-aggregate-tcp-9090: allowed
+        networking.resources.gardener.cloud/to-prometheus-cache-tcp-9090: allowed
+        networking.resources.gardener.cloud/to-prometheus-seed-tcp-9090: allowed
         {{- if .Values.podLabels }}
 {{ toYaml .Values.podLabels | indent 8 }}
         {{- end }}
