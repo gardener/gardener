@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/Masterminds/semver/v3"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -491,31 +492,22 @@ func FindPrimaryDNSProvider(providers []gardencorev1beta1.DNSProvider) *gardenco
 	return nil
 }
 
-// ShootDNSProviderSecretNamesEqual returns true when all the secretNames in the `.spec.dns.providers[]` list are the
+// ShootDNSProviderCredentialsRefsEqual returns true when all the credentialsRefs in the `.spec.dns.providers[]` list are the
 // same.
-func ShootDNSProviderSecretNamesEqual(oldDNS, newDNS *gardencorev1beta1.DNS) bool {
-	var (
-		oldNames = sets.New[string]()
-		newNames = sets.New[string]()
-	)
-
-	if oldDNS != nil {
-		for _, provider := range oldDNS.Providers {
-			if provider.SecretName != nil {
-				oldNames.Insert(*provider.SecretName)
+func ShootDNSProviderCredentialsRefsEqual(oldDNS, newDNS *gardencorev1beta1.DNS) bool {
+	var dnsToSet = func(dns *gardencorev1beta1.DNS) sets.Set[autoscalingv1.CrossVersionObjectReference] {
+		refs := sets.New[autoscalingv1.CrossVersionObjectReference]()
+		if dns != nil {
+			for _, provider := range dns.Providers {
+				if provider.CredentialsRef != nil {
+					refs.Insert(*provider.CredentialsRef)
+				}
 			}
 		}
+		return refs
 	}
 
-	if newDNS != nil {
-		for _, provider := range newDNS.Providers {
-			if provider.SecretName != nil {
-				newNames.Insert(*provider.SecretName)
-			}
-		}
-	}
-
-	return oldNames.Equal(newNames)
+	return dnsToSet(oldDNS).Equal(dnsToSet(newDNS))
 }
 
 // CalculateEffectiveKubernetesVersion if a shoot has kubernetes version specified by worker group, return this,

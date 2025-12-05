@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega/gbytes"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -222,13 +223,21 @@ var _ = Describe("Discover", func() {
 					DNS: &gardencorev1beta1.DNS{
 						Providers: []gardencorev1beta1.DNSProvider{
 							{
-								Type:       ptr.To(extensionTypeDNS),
-								Primary:    ptr.To(true),
-								SecretName: ptr.To(secretDNS.Name),
+								Type:    ptr.To(extensionTypeDNS),
+								Primary: ptr.To(true),
+								CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+									APIVersion: "v1",
+									Kind:       "Secret",
+									Name:       secretDNS.Name,
+								},
 							},
 							{
-								Type:       ptr.To("unused"),
-								SecretName: ptr.To("dns-credentials-unused"),
+								Type: ptr.To("unused"),
+								CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+									APIVersion: "v1",
+									Kind:       "Secret",
+									Name:       "dns-credentials-unused",
+								},
 							},
 						},
 					},
