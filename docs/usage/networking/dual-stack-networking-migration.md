@@ -78,7 +78,7 @@ Once all nodes are migrated, the remaining control plane components and the Cont
 
 ### Step 6: Restart of CoreDNS Pods
 
-With the next reconciliation, CoreDNS pods are restarted to obtain IPv6 addresses. The constraint `DNSServiceMigrationReady` is set to status `true` once all pods have both IPv4 and IPv6 addresses.
+With the next reconciliation, CoreDNS pods are restarted to obtain IPv6 addresses. The constraint `DNSServiceMigrationReady` is set to status `true` once all pods have both IPv4 and IPv6 addresses. As pods are restarted asynchronously, this will take an other reconiliation.
 
 ### Step 7: Switch Service `kube-dns` to Dual-Stack
 

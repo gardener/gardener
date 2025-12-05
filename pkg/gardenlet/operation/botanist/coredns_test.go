@@ -16,10 +16,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockcoredns "github.com/gardener/gardener/pkg/component/networking/coredns/mock"
@@ -32,11 +34,13 @@ import (
 
 var _ = Describe("CoreDNS", func() {
 	var (
-		ctrl     *gomock.Controller
-		botanist *Botanist
+		ctrl      *gomock.Controller
+		botanist  *Botanist
+		mockClock *testing.FakeClock
 	)
 
 	BeforeEach(func() {
+		mockClock = testing.NewFakeClock(time.Date(2025, 3, 30, 3, 33, 33, 33, time.UTC))
 		ctrl = gomock.NewController(GinkgoT())
 		botanist = &Botanist{Operation: &operation.Operation{}}
 		botanist.Shoot = &shootpkg.Shoot{}
@@ -47,6 +51,7 @@ var _ = Describe("CoreDNS", func() {
 				},
 			},
 		})
+		botanist.Clock = mockClock
 	})
 
 	AfterEach(func() {
@@ -231,27 +236,20 @@ var _ = Describe("CoreDNS", func() {
 			Expect(botanist.DeployCoreDNS(ctx)).To(Succeed())
 		})
 
-		It("should use single-stack during migration when pods only have one IP", func() {
+		It("should use single-stack during migration when nodes migration constraint is present", func() {
+
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Networking: &gardencorev1beta1.Networking{
 						IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6},
 					},
 				},
+				Status: gardencorev1beta1.ShootStatus{
+					Constraints: []gardencorev1beta1.Condition{
+						v1beta1helper.InitConditionWithClock(mockClock, gardencorev1beta1.ShootDualStackNodesMigrationReady),
+					},
+				},
 			})
-
-			// Create pod with only single IP to simulate migration state
-			podWithSingleIP := &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "coredns-pod",
-					Namespace: metav1.NamespaceSystem,
-					Labels:    map[string]string{"k8s-app": "kube-dns"},
-				},
-				Status: corev1.PodStatus{
-					PodIPs: []corev1.PodIP{{IP: "10.0.0.1"}},
-				},
-			}
-			Expect(c.Create(ctx, podWithSingleIP)).To(Succeed())
 
 			kubernetesClient.EXPECT().Client().Return(c).AnyTimes()
 
@@ -260,6 +258,66 @@ var _ = Describe("CoreDNS", func() {
 			coreDNS.EXPECT().SetPodAnnotations(nil)
 			coreDNS.EXPECT().SetIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4})
 			coreDNS.EXPECT().SetClusterIPs([]net.IP{net.ParseIP("18.19.20.21")})
+			coreDNS.EXPECT().Deploy(ctx)
+
+			Expect(botanist.DeployCoreDNS(ctx)).To(Succeed())
+		})
+
+		It("should use single-stack during migration when dual-stack migration constraint is progressing", func() {
+			constraint := v1beta1helper.InitConditionWithClock(mockClock, gardencorev1beta1.ShootDNSServiceMigrationReady)
+			nowFunc := func() time.Time {
+				return time.Date(1, 1, 1, 1, 1, 1, 1, time.UTC)
+			}
+			defer test.WithVar(&NowFunc, nowFunc)()
+
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6},
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					Constraints: []gardencorev1beta1.Condition{
+						v1beta1helper.UpdatedConditionWithClock(mockClock, constraint, gardencorev1beta1.ConditionProgressing, "DNSServiceMigration", "The shoot is migrating the kube-dns service."),
+					},
+				},
+			})
+
+			kubernetesClient.EXPECT().Client().Return(c).AnyTimes()
+
+			coreDNS.EXPECT().SetNodeNetworkCIDRs(botanist.Shoot.Networks.Nodes)
+			coreDNS.EXPECT().SetPodNetworkCIDRs(botanist.Shoot.Networks.Pods)
+			coreDNS.EXPECT().SetPodAnnotations(map[string]string{"gardener.cloud/restarted-at": nowFunc().Format(time.RFC3339)})
+			coreDNS.EXPECT().SetIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4})
+			coreDNS.EXPECT().SetClusterIPs([]net.IP{net.ParseIP("18.19.20.21")})
+			coreDNS.EXPECT().Deploy(ctx)
+
+			Expect(botanist.DeployCoreDNS(ctx)).To(Succeed())
+		})
+
+		It("should use dual-stack during migration when dual-stack migration constraint is true", func() {
+			constraint := v1beta1helper.InitConditionWithClock(mockClock, gardencorev1beta1.ShootDNSServiceMigrationReady)
+
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6},
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					Constraints: []gardencorev1beta1.Condition{
+						v1beta1helper.UpdatedConditionWithClock(mockClock, constraint, gardencorev1beta1.ConditionTrue, "DNSServiceMigration", "The shoot is migrating the kube-dns service."),
+					},
+				},
+			})
+
+			kubernetesClient.EXPECT().Client().Return(c).AnyTimes()
+
+			coreDNS.EXPECT().SetNodeNetworkCIDRs(botanist.Shoot.Networks.Nodes)
+			coreDNS.EXPECT().SetPodNetworkCIDRs(botanist.Shoot.Networks.Pods)
+			coreDNS.EXPECT().SetPodAnnotations(nil)
+			coreDNS.EXPECT().SetIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6})
+			coreDNS.EXPECT().SetClusterIPs([]net.IP{net.ParseIP("18.19.20.21"), net.ParseIP("2001:db8::1")})
 			coreDNS.EXPECT().Deploy(ctx)
 
 			Expect(botanist.DeployCoreDNS(ctx)).To(Succeed())
