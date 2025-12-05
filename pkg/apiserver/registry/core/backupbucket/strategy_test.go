@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	backupbucketregistry "github.com/gardener/gardener/pkg/apiserver/registry/core/backupbucket"
@@ -20,11 +21,15 @@ import (
 
 var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {
-		result := backupbucketregistry.ToSelectableFields(newBackupBucket("foo"))
+		result := backupbucketregistry.ToSelectableFields(newBackupBucket())
 
-		Expect(result).To(HaveLen(3))
+		Expect(result).To(HaveLen(5))
 		Expect(result.Has(core.BackupBucketSeedName)).To(BeTrue())
 		Expect(result.Get(core.BackupBucketSeedName)).To(Equal("foo"))
+		Expect(result.Has(core.BackupBucketShootRefName)).To(BeTrue())
+		Expect(result.Get(core.BackupBucketShootRefName)).To(Equal("shoot-name"))
+		Expect(result.Has(core.BackupBucketShootRefNamespace)).To(BeTrue())
+		Expect(result.Get(core.BackupBucketShootRefNamespace)).To(Equal("shoot-namespace"))
 	})
 })
 
@@ -35,19 +40,56 @@ var _ = Describe("GetAttrs", func() {
 	})
 
 	It("should return correct result", func() {
-		ls, fs, err := backupbucketregistry.GetAttrs(newBackupBucket("foo"))
+		ls, fs, err := backupbucketregistry.GetAttrs(newBackupBucket())
 
 		Expect(ls).To(HaveLen(1))
 		Expect(ls.Get("foo")).To(Equal("bar"))
 		Expect(fs.Get(core.BackupBucketSeedName)).To(Equal("foo"))
+		Expect(fs.Get(core.BackupBucketShootRefName)).To(Equal("shoot-name"))
+		Expect(fs.Get(core.BackupBucketShootRefNamespace)).To(Equal("shoot-namespace"))
 		Expect(err).NotTo(HaveOccurred())
 	})
 })
 
-var _ = Describe("SeedNameTriggerFunc", func() {
+var _ = Describe("SeedNameIndexFunc", func() {
 	It("should return spec.seedName", func() {
-		actual := backupbucketregistry.SeedNameTriggerFunc(newBackupBucket("foo"))
-		Expect(actual).To(Equal("foo"))
+		result, err := backupbucketregistry.SeedNameIndexFunc(newBackupBucket())
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(ConsistOf("foo"))
+	})
+})
+
+var _ = Describe("ShootRefNameIndexFunc", func() {
+	It("should return nothing because spec.shootRef is not set", func() {
+		backupBucket := newBackupBucket()
+		backupBucket.Spec.ShootRef = nil
+
+		result, err := backupbucketregistry.ShootRefNameIndexFunc(backupBucket)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(ConsistOf(BeEmpty()))
+	})
+
+	It("should return spec.shootRef.name", func() {
+		result, err := backupbucketregistry.ShootRefNameIndexFunc(newBackupBucket())
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(ConsistOf("shoot-name"))
+	})
+})
+
+var _ = Describe("ShootRefNamespaceIndexFunc", func() {
+	It("should return nothing because spec.shootRef is not set", func() {
+		backupBucket := newBackupBucket()
+		backupBucket.Spec.ShootRef = nil
+
+		result, err := backupbucketregistry.ShootRefNamespaceIndexFunc(backupBucket)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(ConsistOf(BeEmpty()))
+	})
+
+	It("should return spec.shootRef.namespace", func() {
+		result, err := backupbucketregistry.ShootRefNamespaceIndexFunc(newBackupBucket())
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(ConsistOf("shoot-namespace"))
 	})
 })
 
@@ -60,7 +102,7 @@ var _ = Describe("MatchBackupBucket", func() {
 
 		Expect(result.Label).To(Equal(ls))
 		Expect(result.Field).To(Equal(fs))
-		Expect(result.IndexFields).To(ConsistOf(core.BackupBucketSeedName))
+		Expect(result.IndexFields).To(ConsistOf(core.BackupBucketSeedName, core.BackupBucketShootRefName, core.BackupBucketShootRefNamespace))
 	})
 })
 
@@ -154,7 +196,7 @@ var _ = Describe("Strategy", func() {
 	})
 })
 
-func newBackupBucket(seedName string) *core.BackupBucket {
+func newBackupBucket() *core.BackupBucket {
 	return &core.BackupBucket{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
@@ -162,7 +204,11 @@ func newBackupBucket(seedName string) *core.BackupBucket {
 			Labels:    map[string]string{"foo": "bar"},
 		},
 		Spec: core.BackupBucketSpec{
-			SeedName: &seedName,
+			SeedName: ptr.To("foo"),
+			ShootRef: &corev1.ObjectReference{
+				Name:      "shoot-name",
+				Namespace: "shoot-namespace",
+			},
 		},
 	}
 }

@@ -415,6 +415,11 @@ func (in *BackupBucketSpec) DeepCopyInto(out *BackupBucketSpec) {
 		*out = new(v1.ObjectReference)
 		**out = **in
 	}
+	if in.ShootRef != nil {
+		in, out := &in.ShootRef, &out.ShootRef
+		*out = new(v1.ObjectReference)
+		**out = **in
+	}
 	return
 }
 
@@ -531,6 +536,11 @@ func (in *BackupEntrySpec) DeepCopyInto(out *BackupEntrySpec) {
 	if in.SeedName != nil {
 		in, out := &in.SeedName, &out.SeedName
 		*out = new(string)
+		**out = **in
+	}
+	if in.ShootRef != nil {
+		in, out := &in.ShootRef, &out.ShootRef
+		*out = new(v1.ObjectReference)
 		**out = **in
 	}
 	return

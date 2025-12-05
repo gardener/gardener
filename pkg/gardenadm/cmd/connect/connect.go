@@ -25,8 +25,10 @@ import (
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	corebackupbucket "github.com/gardener/gardener/pkg/component/garden/backupbucket"
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
@@ -249,10 +251,39 @@ func prepareGardenerResources(ctx context.Context, b *botanist.GardenadmBotanist
 		b.Logger.Info("CredentialsBinding resource ensured in garden cluster")
 	}
 
-	if err := b.GardenClient.Create(ctx, b.Shoot.GetInfo().DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+	shoot := b.Shoot.GetInfo().DeepCopy()
+	shoot.Status = gardencorev1beta1.ShootStatus{} // we don't want to copy the in-memory status, otherwise we cannot compute a patch further below
+	if err := b.GardenClient.Create(ctx, shoot); client.IgnoreAlreadyExists(err) != nil {
 		return fmt.Errorf("failed creating Shoot resource %s in garden cluster: %w", client.ObjectKeyFromObject(b.Shoot.GetInfo()), err)
 	}
+
+	patch := client.MergeFrom(shoot.DeepCopy())
+	shoot.Status = b.Shoot.GetInfo().Status
+	if err := b.GardenClient.Status().Patch(ctx, shoot, patch); err != nil {
+		return fmt.Errorf("failed patching Shoot %s status in garden cluster: %w", client.ObjectKeyFromObject(b.Shoot.GetInfo()), err)
+	}
+	b.Shoot.SetInfo(shoot)
 	b.Logger.Info("Shoot resource ensured in garden cluster")
+
+	// TODO(rfranzke): Remove this from here once the `gardenlet` runs the `shoot/shoot` reconciler (which will also
+	//  create/reconcile the Backup{Bucket,Entry} resources).
+	if v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil) != nil {
+		if err := corebackupbucket.New(b.Logger, b.GardenClient, &corebackupbucket.Values{
+			Name:          string(b.Shoot.GetInfo().Status.UID),
+			Config:        v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil),
+			DefaultRegion: b.Shoot.GetInfo().Spec.Region,
+			Clock:         b.Clock,
+			Shoot:         b.Shoot.GetInfo(),
+		}, corebackupbucket.DefaultInterval, corebackupbucket.DefaultTimeout).Deploy(ctx); err != nil {
+			return fmt.Errorf("failed reconciling core.gardener.cloud/v1beta1.BackupBucket resource: %w", err)
+		}
+		b.Logger.Info("BackupBucket resource ensured in garden cluster")
+
+		if err := b.DefaultCoreBackupEntry().Deploy(ctx); err != nil {
+			return fmt.Errorf("failed creating core.gardener.cloud/v1beta1.BackupEntry resource in garden cluster: %w", err)
+		}
+		b.Logger.Info("BackupEntry resource ensured in garden cluster")
+	}
 
 	return nil
 }

@@ -13,6 +13,7 @@ import (
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apiserver/registry/core/backupbucket"
@@ -57,7 +58,11 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	options := &generic.StoreOptions{
 		RESTOptions: optsGetter,
 		AttrFunc:    backupbucket.GetAttrs,
-		TriggerFunc: map[string]storage.IndexerFunc{core.BackupBucketSeedName: backupbucket.SeedNameTriggerFunc},
+		Indexers: &cache.Indexers{
+			storage.FieldIndex(core.BackupBucketSeedName):          backupbucket.SeedNameIndexFunc,
+			storage.FieldIndex(core.BackupBucketShootRefName):      backupbucket.ShootRefNameIndexFunc,
+			storage.FieldIndex(core.BackupBucketShootRefNamespace): backupbucket.ShootRefNamespaceIndexFunc,
+		},
 	}
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err)

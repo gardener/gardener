@@ -18,6 +18,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -153,8 +154,12 @@ func ToSelectableFields(backupEntry *core.BackupEntry) fields.Set {
 	// field here or the number of object-meta related fields changes, this should
 	// be adjusted.
 	backupEntrySpecificFieldsSet := make(fields.Set, 4)
-	backupEntrySpecificFieldsSet[core.BackupEntrySeedName] = getSeedName(backupEntry)
+	backupEntrySpecificFieldsSet[core.BackupEntrySeedName] = ptr.Deref(backupEntry.Spec.SeedName, "")
 	backupEntrySpecificFieldsSet[core.BackupEntryBucketName] = backupEntry.Spec.BucketName
+	if backupEntry.Spec.ShootRef != nil {
+		backupEntrySpecificFieldsSet[core.BackupEntryShootRefName] = backupEntry.Spec.ShootRef.Name
+		backupEntrySpecificFieldsSet[core.BackupEntryShootRefNamespace] = backupEntry.Spec.ShootRef.Namespace
+	}
 	return generic.AddObjectMetaFieldsSet(backupEntrySpecificFieldsSet, &backupEntry.ObjectMeta, true)
 }
 
@@ -173,7 +178,7 @@ func MatchBackupEntry(label labels.Selector, field fields.Selector) storage.Sele
 		Label:       label,
 		Field:       field,
 		GetAttrs:    GetAttrs,
-		IndexFields: []string{core.BackupEntrySeedName, core.BackupEntryBucketName},
+		IndexFields: []string{core.BackupEntrySeedName, core.BackupEntryBucketName, core.BackupEntryShootRefName, core.BackupEntryShootRefNamespace},
 	}
 }
 
@@ -184,14 +189,35 @@ func SeedNameIndexFunc(obj any) ([]string, error) {
 		return nil, fmt.Errorf("expected *core.BackupEntry but got %T", obj)
 	}
 
-	return []string{getSeedName(backupEntry)}, nil
+	return []string{ptr.Deref(backupEntry.Spec.SeedName, "")}, nil
 }
 
-func getSeedName(backupEntry *core.BackupEntry) string {
-	if backupEntry.Spec.SeedName == nil {
-		return ""
+// ShootRefNameIndexFunc returns spec.shootRef.name of given BackupEntry.
+func ShootRefNameIndexFunc(obj any) ([]string, error) {
+	backupEntry, ok := obj.(*core.BackupEntry)
+	if !ok {
+		return nil, fmt.Errorf("expected *core.BackupEntry but got %T", obj)
 	}
-	return *backupEntry.Spec.SeedName
+
+	if backupEntry.Spec.ShootRef == nil {
+		return []string{""}, nil
+	}
+
+	return []string{backupEntry.Spec.ShootRef.Name}, nil
+}
+
+// ShootRefNamespaceIndexFunc returns spec.shootRef.namespace of given BackupEntry.
+func ShootRefNamespaceIndexFunc(obj any) ([]string, error) {
+	backupEntry, ok := obj.(*core.BackupEntry)
+	if !ok {
+		return nil, fmt.Errorf("expected *core.BackupEntry but got %T", obj)
+	}
+
+	if backupEntry.Spec.ShootRef == nil {
+		return []string{""}, nil
+	}
+
+	return []string{backupEntry.Spec.ShootRef.Namespace}, nil
 }
 
 // BucketNameIndexFunc returns spec.BucketName of given BackupEntry.

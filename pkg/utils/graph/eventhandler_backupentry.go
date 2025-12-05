@@ -69,7 +69,9 @@ func (g *graph) handleBackupEntryCreateOrUpdate(backupEntry *gardencorev1beta1.B
 
 	g.deleteAllIncomingEdges(VertexTypeBackupBucket, VertexTypeBackupEntry, backupEntry.Namespace, backupEntry.Name)
 	g.deleteAllOutgoingEdges(VertexTypeBackupEntry, backupEntry.Namespace, backupEntry.Name, VertexTypeShoot)
-	g.deleteAllOutgoingEdges(VertexTypeBackupEntry, backupEntry.Namespace, backupEntry.Name, VertexTypeSeed)
+	if !g.forSelfHostedShoots {
+		g.deleteAllOutgoingEdges(VertexTypeBackupEntry, backupEntry.Namespace, backupEntry.Name, VertexTypeSeed)
+	}
 
 	var (
 		backupEntryVertex  = g.getOrCreateVertex(VertexTypeBackupEntry, backupEntry.Namespace, backupEntry.Name)
@@ -88,9 +90,14 @@ func (g *graph) handleBackupEntryCreateOrUpdate(backupEntry *gardencorev1beta1.B
 		g.addEdge(backupEntryVertex, seedVertex)
 	}
 
-	if shootName := gardenerutils.GetShootNameFromOwnerReferences(backupEntry); shootName != "" {
-		shootVertex := g.getOrCreateVertex(VertexTypeShoot, backupEntry.Namespace, shootName)
+	if g.forSelfHostedShoots && backupEntry.Spec.ShootRef != nil {
+		shootVertex := g.getOrCreateVertex(VertexTypeShoot, backupEntry.Namespace, backupEntry.Spec.ShootRef.Name)
 		g.addEdge(backupEntryVertex, shootVertex)
+	} else if !g.forSelfHostedShoots {
+		if shootName := gardenerutils.GetShootNameFromOwnerReferences(backupEntry); shootName != "" {
+			shootVertex := g.getOrCreateVertex(VertexTypeShoot, backupEntry.Namespace, shootName)
+			g.addEdge(backupEntryVertex, shootVertex)
+		}
 	}
 }
 

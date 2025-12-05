@@ -5,6 +5,7 @@
 package core
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -44,8 +45,11 @@ type BackupEntryList struct {
 type BackupEntrySpec struct {
 	// BucketName is the name of backup bucket for this Backup Entry.
 	BucketName string
-	// SeedName holds the name of the seed to which this BackupEntry is scheduled
+	// SeedName is the name of the Seed this BackupEntry is associated with. Mutually exclusive with ShootRef.
 	SeedName *string
+	// ShootRef is the reference of the Shoot this BackupBucket is associated with. Mutually exclusive with SeedName.
+	// This field is immutable.
+	ShootRef *corev1.ObjectReference
 }
 
 // BackupEntryStatus holds the most recently observed status of the Backup Entry.

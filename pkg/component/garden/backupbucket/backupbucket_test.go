@@ -176,6 +176,29 @@ var _ = Describe("BackupBucket", func() {
 				Expect(actual).To(DeepEqual(expectedBackupBucket))
 			})
 		})
+
+		When("shoot is present", func() {
+			BeforeEach(func() {
+				values.Shoot = &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "shoot-name", Namespace: "shoot-namespace"}}
+			})
+
+			It("should create correct BackupBucket (newly created)", func() {
+				Expect(deployer.Deploy(ctx)).To(Succeed())
+
+				actual := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: backupBucketName}}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(actual), actual)).To(Succeed())
+
+				expectedBackupBucket.Spec.ShootRef = &corev1.ObjectReference{
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+					Kind:       "Shoot",
+					Name:       "shoot-name",
+					Namespace:  "shoot-namespace",
+				}
+				metav1.SetMetaDataAnnotation(&expectedBackupBucket.ObjectMeta, "gardener.cloud/operation", "reconcile")
+				metav1.SetMetaDataAnnotation(&expectedBackupBucket.ObjectMeta, "gardener.cloud/timestamp", fakeClock.Now().UTC().Format(time.RFC3339Nano))
+				Expect(actual).To(DeepEqual(expectedBackupBucket))
+			})
+		})
 	})
 
 	Describe("#Destroy", func() {

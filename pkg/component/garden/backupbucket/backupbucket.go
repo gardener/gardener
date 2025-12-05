@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
@@ -41,6 +42,8 @@ type Values struct {
 	DefaultRegion string
 	// Seed is an optional Seed object related to the BackupBucket.
 	Seed *gardencorev1beta1.Seed
+	// Shoot is an optional Shoot object related to the BackupBucket.
+	Shoot *gardencorev1beta1.Shoot
 	// Clock is a clock.
 	Clock clock.Clock
 }
@@ -105,6 +108,14 @@ func (b *backupBucket) Deploy(ctx context.Context) error {
 			ownerRef := metav1.NewControllerRef(b.values.Seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))
 			b.backupBucket.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 			b.backupBucket.Spec.SeedName = &b.values.Seed.Name
+		} else if b.values.Shoot != nil {
+			// Cluster-scoped objects cannot have a namespaced owner, so we don't set the owner reference here
+			b.backupBucket.Spec.ShootRef = &corev1.ObjectReference{
+				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+				Kind:       "Shoot",
+				Name:       b.values.Shoot.Name,
+				Namespace:  b.values.Shoot.Namespace,
+			}
 		}
 
 		return nil

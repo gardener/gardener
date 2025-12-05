@@ -15,6 +15,8 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,6 +26,7 @@ import (
 	shootidentity "github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity/shoot"
 	admissionwebhook "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -33,10 +36,14 @@ import (
 var (
 	// Only take v1beta1 for the core.gardener.cloud API group because the Authorize function only checks the resource
 	// group and the resource (but it ignores the version).
+	backupBucketResource              = gardencorev1beta1.Resource("backupbuckets")
+	backupEntryResource               = gardencorev1beta1.Resource("backupentries")
 	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
+	configMapResource                 = corev1.Resource("configmaps")
 	gardenletResource                 = seedmanagementv1alpha1.Resource("gardenlets")
 	leaseResource                     = coordinationv1.Resource("leases")
 	projectResource                   = gardencorev1beta1.Resource("projects")
+	secretResource                    = corev1.Resource("secrets")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
 	shootStateResource                = gardencorev1beta1.Resource("shootstates")
 )
@@ -49,7 +56,7 @@ type Handler struct {
 }
 
 // Handle restricts requests made by gardenlets.
-func (h *Handler) Handle(_ context.Context, request admission.Request) admission.Response {
+func (h *Handler) Handle(ctx context.Context, request admission.Request) admission.Response {
 	shootNamespace, shootName, isSelfHostedShoot, userType := shootidentity.FromAuthenticationV1UserInfo(request.UserInfo)
 	if !isSelfHostedShoot {
 		return admissionwebhook.Allowed("")
@@ -61,7 +68,7 @@ func (h *Handler) Handle(_ context.Context, request admission.Request) admission
 	)
 
 	if userType == gardenletidentity.UserTypeGardenadm {
-		return h.admitGardenadmRequests(gardenletShootInfo, request)
+		return h.admitGardenadmRequests(ctx, gardenletShootInfo, request)
 	}
 
 	requestResource := schema.GroupResource{Group: request.Resource.Group, Resource: request.Resource.Resource}
@@ -74,6 +81,9 @@ func (h *Handler) Handle(_ context.Context, request admission.Request) admission
 
 	case leaseResource:
 		return h.admitCreateWithResourcePrefix(gardenletShootInfo, request)
+
+	case secretResource:
+		return h.admitSecret(ctx, gardenletShootInfo, request)
 
 	case shootStateResource:
 		return h.admitShootState(gardenletShootInfo, request)
@@ -115,6 +125,31 @@ func (h *Handler) admitCertificateSigningRequest(gardenletShootInfo types.Namesp
 
 	namespace, name, _, _ := shootidentity.FromCertificateSigningRequest(x509cr)
 	return h.admit(gardenletShootInfo, types.NamespacedName{Name: name, Namespace: namespace})
+}
+
+func (h *Handler) admitSecret(ctx context.Context, gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Create {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	// Check if the secret is related to a BackupBucket assigned to the Shoot the gardenlet is responsible for.
+	if strings.HasPrefix(request.Name, v1beta1constants.SecretPrefixGeneratedBackupBucket) {
+		backupBucket := &gardencorev1beta1.BackupBucket{}
+		if err := h.Client.Get(ctx, client.ObjectKey{Name: strings.TrimPrefix(request.Name, v1beta1constants.SecretPrefixGeneratedBackupBucket)}, backupBucket); err != nil {
+			if apierrors.IsNotFound(err) {
+				return admission.Errored(http.StatusForbidden, err)
+			}
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+
+		if backupBucket.Spec.ShootRef == nil {
+			return admission.Errored(http.StatusForbidden, fmt.Errorf(".spec.shootRef must be set in the BackupBucket resource %q belonging to this Secret", backupBucket.Name))
+		}
+
+		return h.admit(gardenletShootInfo, types.NamespacedName{Name: backupBucket.Spec.ShootRef.Name, Namespace: backupBucket.Spec.ShootRef.Namespace})
+	}
+
+	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to shoot %s", gardenletShootInfo))
 }
 
 func (h *Handler) admitShootState(gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {

@@ -96,6 +96,7 @@ func (b *GardenadmBotanist) reconcileCoreBackupBucketResource(ctx context.Contex
 		Config:        v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil),
 		DefaultRegion: b.Shoot.GetInfo().Spec.Region,
 		Clock:         b.Clock,
+		Shoot:         b.Shoot.GetInfo(),
 	}, corebackupbucket.DefaultInterval, corebackupbucket.DefaultTimeout)
 
 	if err := component.Deploy(ctx); err != nil {

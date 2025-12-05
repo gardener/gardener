@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity"
 	shootidentity "github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity/shoot"
 	authwebhook "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth"
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -54,6 +55,8 @@ var (
 
 	// Only take v1beta1 for the core.gardener.cloud API group because the Authorize function only checks the resource
 	// group and the resource (but it ignores the version).
+	backupBucketResource              = gardencorev1beta1.Resource("backupbuckets")
+	backupEntryResource               = gardencorev1beta1.Resource("backupentries")
 	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
 	cloudProfileResource              = gardencorev1beta1.Resource("cloudprofiles")
 	configMapResource                 = corev1.Resource("configmaps")
@@ -96,6 +99,28 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 	if attrs.IsResourceRequest() {
 		requestResource := schema.GroupResource{Group: attrs.GetAPIGroup(), Resource: attrs.GetResource()}
 		switch requestResource {
+		case backupBucketResource:
+			return requestAuthorizer.Check(graph.VertexTypeBackupBucket, attrs,
+				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch", "delete"),
+				authwebhook.WithAlwaysAllowedVerbs("create"),
+				authwebhook.WithAllowedSubresources("status", "finalizers"),
+				authwebhook.WithFieldSelectors(map[string]string{
+					core.BackupBucketShootRefName:      shootName,
+					core.BackupBucketShootRefNamespace: shootNamespace,
+				}),
+			)
+
+		case backupEntryResource:
+			return requestAuthorizer.Check(graph.VertexTypeBackupEntry, attrs,
+				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch", "delete"),
+				authwebhook.WithAlwaysAllowedVerbs("create"),
+				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithFieldSelectors(map[string]string{
+					core.BackupEntryShootRefName:      shootName,
+					core.BackupEntryShootRefNamespace: shootNamespace,
+				}),
+			)
+
 		case certificateSigningRequestResource:
 			if userType == gardenletidentity.UserTypeExtension {
 				return requestAuthorizer.CheckRead(graph.VertexTypeCertificateSigningRequest, attrs)
@@ -191,5 +216,8 @@ func (a *authorizer) authorizeSecret(ctx context.Context, requestAuthorizer *aut
 		}
 	}
 
-	return auth.DecisionNoOpinion, "", nil
+	return requestAuthorizer.Check(graph.VertexTypeSecret, attrs,
+		authwebhook.WithAllowedVerbs("get", "list", "watch", "patch", "update", "delete"),
+		authwebhook.WithAlwaysAllowedVerbs("create"),
+	)
 }

@@ -910,6 +910,7 @@ build:
             - pkg/admissioncontroller/webhook/auth/seed
             - pkg/admissioncontroller/webhook/auth/shoot
             - pkg/api
+            - pkg/api/indexer
             - pkg/apis/authentication
             - pkg/apis/authentication/install
             - pkg/apis/authentication/v1alpha1

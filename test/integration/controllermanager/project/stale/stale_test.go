@@ -146,6 +146,7 @@ var _ = Describe("Project Stale controller tests", func() {
 				},
 				Spec: gardencorev1beta1.BackupEntrySpec{
 					BucketName: "foo",
+					SeedName:   ptr.To("bar"),
 				},
 			}
 

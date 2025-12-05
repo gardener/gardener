@@ -60,8 +60,10 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 			RESTOptions: optsGetter,
 			AttrFunc:    backupentry.GetAttrs,
 			Indexers: &cache.Indexers{
-				storage.FieldIndex(core.BackupEntrySeedName):   backupentry.SeedNameIndexFunc,
-				storage.FieldIndex(core.BackupEntryBucketName): backupentry.BucketNameIndexFunc,
+				storage.FieldIndex(core.BackupEntrySeedName):          backupentry.SeedNameIndexFunc,
+				storage.FieldIndex(core.BackupEntryShootRefName):      backupentry.ShootRefNameIndexFunc,
+				storage.FieldIndex(core.BackupEntryShootRefNamespace): backupentry.ShootRefNamespaceIndexFunc,
+				storage.FieldIndex(core.BackupEntryBucketName):        backupentry.BucketNameIndexFunc,
 			},
 		}
 	)

@@ -1610,7 +1610,7 @@ func schema_pkg_apis_core_v1beta1_BackupBucketSpec(ref common.ReferenceCallback)
 					},
 					"seedName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedName holds the name of the seed allocated to BackupBucket for running controller. This field is immutable.",
+							Description: "SeedName is the name of the Seed this BackupBucket is associated with. Mutually exclusive with ShootRef. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -1618,6 +1618,12 @@ func schema_pkg_apis_core_v1beta1_BackupBucketSpec(ref common.ReferenceCallback)
 					"credentialsRef": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CredentialsRef is reference to a resource holding the credentials used for authentication with the object store service where the backups are stored. Supported referenced resources are v1.Secrets and security.gardener.cloud/v1alpha1.WorkloadIdentity",
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+						},
+					},
+					"shootRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootRef is the reference of the Shoot this BackupBucket is associated with. Mutually exclusive with SeedName. This field is immutable.",
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
@@ -1795,15 +1801,23 @@ func schema_pkg_apis_core_v1beta1_BackupEntrySpec(ref common.ReferenceCallback) 
 					},
 					"seedName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedName holds the name of the seed to which this BackupEntry is scheduled",
+							Description: "SeedName is the name of the Seed this BackupEntry is associated with. Mutually exclusive with ShootRef.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"shootRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootRef is the reference of the Shoot this BackupBucket is associated with. Mutually exclusive with SeedName. This field is immutable.",
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
 				},
 				Required: []string{"bucketName"},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.ObjectReference"},
 	}
 }
 

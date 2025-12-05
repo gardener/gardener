@@ -2437,6 +2437,7 @@ func autoConvert_v1beta1_BackupBucketSpec_To_core_BackupBucketSpec(in *BackupBuc
 	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
 	out.CredentialsRef = (*v1.ObjectReference)(unsafe.Pointer(in.CredentialsRef))
+	out.ShootRef = (*v1.ObjectReference)(unsafe.Pointer(in.ShootRef))
 	return nil
 }
 
@@ -2452,6 +2453,7 @@ func autoConvert_core_BackupBucketSpec_To_v1beta1_BackupBucketSpec(in *core.Back
 	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
 	out.CredentialsRef = (*v1.ObjectReference)(unsafe.Pointer(in.CredentialsRef))
+	out.ShootRef = (*v1.ObjectReference)(unsafe.Pointer(in.ShootRef))
 	return nil
 }
 
@@ -2545,6 +2547,7 @@ func Convert_core_BackupEntryList_To_v1beta1_BackupEntryList(in *core.BackupEntr
 func autoConvert_v1beta1_BackupEntrySpec_To_core_BackupEntrySpec(in *BackupEntrySpec, out *core.BackupEntrySpec, s conversion.Scope) error {
 	out.BucketName = in.BucketName
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
+	out.ShootRef = (*v1.ObjectReference)(unsafe.Pointer(in.ShootRef))
 	return nil
 }
 
@@ -2556,6 +2559,7 @@ func Convert_v1beta1_BackupEntrySpec_To_core_BackupEntrySpec(in *BackupEntrySpec
 func autoConvert_core_BackupEntrySpec_To_v1beta1_BackupEntrySpec(in *core.BackupEntrySpec, out *BackupEntrySpec, s conversion.Scope) error {
 	out.BucketName = in.BucketName
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
+	out.ShootRef = (*v1.ObjectReference)(unsafe.Pointer(in.ShootRef))
 	return nil
 }
 

@@ -203,7 +203,7 @@ message BackupBucketSpec {
   // +optional
   optional .k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 
-  // SeedName holds the name of the seed allocated to BackupBucket for running controller.
+  // SeedName is the name of the Seed this BackupBucket is associated with. Mutually exclusive with ShootRef.
   // This field is immutable.
   // +optional
   optional string seedName = 4;
@@ -214,6 +214,11 @@ message BackupBucketSpec {
   // security.gardener.cloud/v1alpha1.WorkloadIdentity
   // +optional
   optional .k8s.io.api.core.v1.ObjectReference credentialsRef = 5;
+
+  // ShootRef is the reference of the Shoot this BackupBucket is associated with. Mutually exclusive with SeedName.
+  // This field is immutable.
+  // +optional
+  optional .k8s.io.api.core.v1.ObjectReference shootRef = 6;
 }
 
 // BackupBucketStatus holds the most recently observed status of the Backup Bucket.
@@ -270,9 +275,14 @@ message BackupEntrySpec {
   // BucketName is the name of backup bucket for this Backup Entry.
   optional string bucketName = 1;
 
-  // SeedName holds the name of the seed to which this BackupEntry is scheduled
+  // SeedName is the name of the Seed this BackupEntry is associated with. Mutually exclusive with ShootRef.
   // +optional
   optional string seedName = 2;
+
+  // ShootRef is the reference of the Shoot this BackupBucket is associated with. Mutually exclusive with SeedName.
+  // This field is immutable.
+  // +optional
+  optional .k8s.io.api.core.v1.ObjectReference shootRef = 3;
 }
 
 // BackupEntryStatus holds the most recently observed status of the Backup Entry.
