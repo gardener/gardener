@@ -63,9 +63,8 @@ var (
 	testClient client.Client
 	mgrClient  client.Reader
 
-	testNamespace        *corev1.Namespace
-	project              *gardencorev1beta1.Project
-	internalDomainSecret *corev1.Secret
+	testNamespace *corev1.Namespace
+	project       *gardencorev1beta1.Project
 
 	fakeClock *testclock.FakeClock
 	testRunID string
@@ -124,16 +123,6 @@ var _ = BeforeSuite(func() {
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 	testRunID = testNamespace.Name
-
-	By("Create Internal Domain Secret")
-	internalDomainSecret = &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "internal-domain-secret",
-			Namespace: testNamespace.Name,
-		},
-	}
-	Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
-	log.Info("Created Internal Domain Secret for test", "secret", client.ObjectKeyFromObject(internalDomainSecret))
 
 	DeferCleanup(func() {
 		By("Delete test Namespace")

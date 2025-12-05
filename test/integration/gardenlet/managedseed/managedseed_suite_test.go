@@ -70,7 +70,6 @@ var (
 	gardenNamespaceGarden *corev1.Namespace
 	gardenNamespaceSeed   *corev1.Namespace
 	seed                  *gardencorev1beta1.Seed
-	internalDomainSecret  *corev1.Secret
 	err                   error
 )
 

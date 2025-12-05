@@ -74,7 +74,6 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 
 			By("Create Seed manually as ManagedSeed controller is not running in the test")
 			seed.Name = managedSeedList.Items[0].Name
-
 			Expect(testClient.Create(ctx, seed)).To(Succeed())
 			log.Info("Created Seed for ManagedSeed", "seed", client.ObjectKeyFromObject(seed), "managedSeed", client.ObjectKeyFromObject(&managedSeedList.Items[0]))
 
