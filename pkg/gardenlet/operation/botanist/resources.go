@@ -6,10 +6,14 @@ package botanist
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -76,6 +80,32 @@ func (b *Botanist) PopulateStaticManifestsFromSeedToShoot(ctx context.Context) e
 	secretListGardenNamespace := &corev1.SecretList{}
 	if err := b.SeedClientSet.Client().List(ctx, secretListGardenNamespace, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{v1beta1constants.LabelShootStaticManifests: "true"}); err != nil {
 		return fmt.Errorf("failed listing secrets with static manifests in %s namespace: %w", v1beta1constants.GardenNamespace, err)
+	}
+
+	// remove Secrets whose selectors don't apply to the current Shoot
+	var errs []error
+	secretListGardenNamespace.Items = slices.DeleteFunc(secretListGardenNamespace.Items, func(secret corev1.Secret) bool {
+		selectorJSON, ok := secret.Annotations[v1beta1constants.AnnotationStaticManifestsShootSelector]
+		if !ok {
+			return false
+		}
+
+		var selector metav1.LabelSelector
+		if err := json.Unmarshal([]byte(selectorJSON), &selector); err != nil {
+			errs = append(errs, fmt.Errorf("failed unmarshalling shoot selector %q for secret %q: %w", selectorJSON, client.ObjectKeyFromObject(&secret), err))
+			return false
+		}
+
+		labelSelector, err := metav1.LabelSelectorAsSelector(&selector)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed parsing label selector %q for secret %q: %w", selectorJSON, client.ObjectKeyFromObject(&secret), err))
+			return false
+		}
+
+		return !labelSelector.Matches(labels.Set(b.Shoot.GetInfo().Labels))
+	})
+	if len(errs) > 0 {
+		return errors.Join(errs...)
 	}
 
 	secretListShootControlPlaneNamespace := &corev1.SecretList{}

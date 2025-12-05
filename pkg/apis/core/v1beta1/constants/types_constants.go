@@ -1097,7 +1097,12 @@ const (
 	// LabelShootEndpointAdvertise is the name of the label which controls
 	// whether an endpoint is advertised for a shoot.
 	LabelShootEndpointAdvertise = LabelShootEndpointPrefix + "advertise"
+
 	// LabelShootStaticManifests is the name of a label on Secrets in the garden namespace of seeds which contain static
 	// manifests that should be propagated to all shoots.
 	LabelShootStaticManifests = "shoot.gardener.cloud/static-manifests"
+	// AnnotationStaticManifestsShootSelector is the name of an annotation on Secrets in the garden namespace of seeds
+	// that contains a label selector for shoots. The static manifests will only be propagated for shoots matching the
+	// selector.
+	AnnotationStaticManifestsShootSelector = "static-manifests.shoot.gardener.cloud/selector"
 )

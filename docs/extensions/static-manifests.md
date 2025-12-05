@@ -93,6 +93,60 @@ data:
   manifests.yaml: <base64-encoded-yaml-content>
 ```
 
+#### Optional: Target Specific Shoots with a Selector
+
+By default, manifests are propagated to **all** Shoot clusters running on the seed.
+To target only specific Shoots, add the `static-manifests.shoot.gardener.cloud/selector` annotation with a JSON-encoded `metav1.LabelSelector`:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: production-manifests
+  namespace: garden
+  labels:
+    shoot.gardener.cloud/static-manifests: "true"
+  annotations:
+    static-manifests.shoot.gardener.cloud/selector: |
+      {"matchLabels":{"environment":"production"}}
+type: Opaque
+data:
+  manifests.yaml: <base64-encoded-yaml-content>
+```
+
+The annotation value must be a valid JSON representation of a Kubernetes `metav1.LabelSelector` that matches against Shoot labels.
+
+**Examples:**
+
+Simple label matching:
+```yaml
+static-manifests.shoot.gardener.cloud/selector: |
+  {"matchLabels":{"environment":"production"}}
+```
+
+Multiple labels (AND logic):
+```yaml
+static-manifests.shoot.gardener.cloud/selector: |
+  {"matchLabels":{"environment":"production","region":"us-east"}}
+```
+
+Match expressions (advanced selectors):
+```yaml
+static-manifests.shoot.gardener.cloud/selector: |
+  {"matchExpressions":[{"key":"environment","operator":"In","values":["production","staging"]}]}
+```
+
+Combining matchLabels and matchExpressions:
+```yaml
+static-manifests.shoot.gardener.cloud/selector: |
+  {
+    "matchLabels":{"team":"platform"},
+    "matchExpressions":[{"key":"environment","operator":"NotIn","values":["development"]}]
+  }
+```
+
+If the selector annotation contains invalid JSON or cannot be parsed as a valid `metav1.LabelSelector`, the Secret will be skipped and an error will be logged.
+
 ### Step 3: Verify Propagation
 
 After the next Shoot reconciliation, verify that the manifests have been propagated:
@@ -138,9 +192,10 @@ To stop propagating manifests to Shoot clusters:
 ## Important Considerations
 
 - **No Templating or Dynamic Logic**: Manifests must be completely static. No templating, variable substitution, or dynamic logic is supported. The same exact manifests are deployed to all Shoot clusters without modification. If you need per-Shoot customization, Shoot-specific values, or sophisticated logic (e.g., conditional deployment, templating based on Shoot properties), you must write a Gardener extension instead.
+- **Shoot Selector**: Use the `static-manifests.shoot.gardener.cloud/selector` annotation to target specific Shoots based on their labels. Without this annotation, manifests are propagated to all Shoots. Invalid selectors will cause the Secret to be skipped with an error logged.
 - **Namespace Scoping**: Ensure manifests use appropriate namespaces. Resources without a namespace will be created in the default namespace of the Shoot cluster.
 - **Resource Conflicts**: Avoid creating resources that might conflict with Gardener-managed resources or Shoot-specific configurations.
 - **Secret Naming**: Use descriptive names for `Secret`s to distinguish between different sets of manifests.
-- **Multiple Secrets**: You can create multiple labeled `Secret`s in the `garden` namespace; all will be propagated.
+- **Multiple Secrets**: You can create multiple labeled `Secret`s in the `garden` namespace; all will be propagated (subject to their selectors).
 - **Label Requirement**: The label `shoot.gardener.cloud/static-manifests=true` is mandatory. `Secret`s without this label will not be propagated.
 - **Reconciliation Timing**: Changes may take time to propagate depending on the Shoot reconciliation schedule.
