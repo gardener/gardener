@@ -5,6 +5,7 @@
 package seed
 
 import (
+	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -19,49 +20,68 @@ import (
 	. "github.com/gardener/gardener/test/e2e/gardener"
 )
 
+// InitializeSeedClient initializes the context's seed clients from the garden/seed-<name> kubeconfig secret.
+// Requires ItShouldGetResponsibleSeed to be called first.
+func InitializeSeedClient(ctx context.Context, s *SeedContext) {
+	GinkgoHelper()
+
+	Expect(s.Seed).NotTo(BeNil(), "ItShouldGetResponsibleSeed should be called first")
+
+	seedSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "seed-" + s.Seed.Name,
+			Namespace: "garden",
+		},
+	}
+	Eventually(ctx, s.GardenKomega.Object(seedSecret)).Should(
+		HaveField("Data", HaveKey(kubernetes.KubeConfig)),
+		"secret %v should contain the seed kubeconfig",
+	)
+
+	clientSet, err := kubernetes.NewClientFromSecretObject(seedSecret,
+		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
+		kubernetes.WithDisabledCachedClient(),
+	)
+	Expect(err).NotTo(HaveOccurred())
+	s.WithSeedClientSet(clientSet)
+}
+
 // ItShouldInitializeSeedClient initializes the context's seed clients from the garden/seed-<name> kubeconfig secret.
 // Requires ItShouldGetResponsibleSeed to be called first.
+//
+// Deprecated: Instead, use the `InitializeSeedClient` function. For more details, see https://github.com/gardener/gardener/issues/13134.
 func ItShouldInitializeSeedClient(s *SeedContext) {
 	GinkgoHelper()
 
 	It("Initialize Seed client", func(ctx SpecContext) {
-		Expect(s.Seed).NotTo(BeNil(), "ItShouldGetResponsibleSeed should be called first")
-
-		seedSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "seed-" + s.Seed.Name,
-				Namespace: "garden",
-			},
-		}
-		Eventually(ctx, s.GardenKomega.Object(seedSecret)).Should(
-			HaveField("Data", HaveKey(kubernetes.KubeConfig)),
-			"secret %v should contain the seed kubeconfig",
-		)
-
-		clientSet, err := kubernetes.NewClientFromSecretObject(seedSecret,
-			kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
-			kubernetes.WithDisabledCachedClient(),
-		)
-		Expect(err).NotTo(HaveOccurred())
-		s.WithSeedClientSet(clientSet)
+		InitializeSeedClient(ctx, s)
 	}, SpecTimeout(time.Minute))
 }
 
-// ItShouldAnnotateSeed sets the given annotation within the seed metadata to the specified value and patches the seed object
+// AnnotateSeed sets the given annotation within the seed metadata to the specified value and patches the seed object.
+func AnnotateSeed(ctx context.Context, s *SeedContext, annotations map[string]string) {
+	GinkgoHelper()
+
+	patch := client.MergeFrom(s.Seed.DeepCopy())
+
+	for key, value := range annotations {
+		s.Log.Info("Setting annotation", "annotation", key, "value", value)
+		metav1.SetMetaDataAnnotation(&s.Seed.ObjectMeta, key, value)
+	}
+
+	Eventually(ctx, func() error {
+		return s.GardenClient.Patch(ctx, s.Seed, patch)
+	}).Should(Succeed())
+}
+
+// ItShouldAnnotateSeed sets the given annotation within the seed metadata to the specified value and patches the seed object.
+//
+// Deprecated: Instead, use the `AnnotateSeed` function. For more details, see https://github.com/gardener/gardener/issues/13134.
 func ItShouldAnnotateSeed(s *SeedContext, annotations map[string]string) {
 	GinkgoHelper()
 
 	It("Annotate Seed", func(ctx SpecContext) {
-		patch := client.MergeFrom(s.Seed.DeepCopy())
-
-		for key, value := range annotations {
-			s.Log.Info("Setting annotation", "annotation", key, "value", value)
-			metav1.SetMetaDataAnnotation(&s.Seed.ObjectMeta, key, value)
-		}
-
-		Eventually(ctx, func() error {
-			return s.GardenClient.Patch(ctx, s.Seed, patch)
-		}).Should(Succeed())
+		AnnotateSeed(ctx, s, annotations)
 	}, SpecTimeout(time.Minute))
 }
 
