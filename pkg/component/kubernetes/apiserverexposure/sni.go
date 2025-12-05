@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -164,6 +165,7 @@ type envoyFilterAPIServerProxyTemplateValues struct {
 	Name                                      string
 	Namespace                                 string
 	ControlPlaneNamespace                     string
+	ControlPlaneNamespaceUID                  string
 	Host                                      string
 	MutualTLSHost                             string
 	ConnectionUpgradeHost                     string
@@ -172,7 +174,6 @@ type envoyFilterAPIServerProxyTemplateValues struct {
 	APIServerRequestHeaderUserName            string
 	APIServerRequestHeaderGroup               string
 	APIServerAuthenticationDynamicMetadataKey string
-	IstioTLSTermination                       bool
 	IstioTLSSecret                            string
 	TargetClusterAPIServerProxy               string
 }
@@ -184,6 +185,8 @@ type envoyFilterIstioTLSTerminationTemplateValues struct {
 	IngressGatewayLabels             map[string]string
 	Name                             string
 	Namespace                        string
+	ControlPlaneNamespace            string
+	ControlPlaneNamespaceUID         string
 	MutualTLSHost                    string
 	ConnectionUpgradeHost            string
 	Port                             int
@@ -213,6 +216,11 @@ func (s *sni) Deploy(ctx context.Context) error {
 		connectionUpgradeHostName = fmt.Sprintf("%s%s.%s.svc.%s", s.name, ConnectionUpgradeServiceNameSuffix, s.namespace, gardencorev1beta1.DefaultDomain)
 	)
 
+	namespace := &corev1.Namespace{}
+	if err := s.client.Get(ctx, client.ObjectKey{Name: s.namespace}, namespace); err != nil {
+		return fmt.Errorf("failed to get control plane namespace %q: %w", s.namespace, err)
+	}
+
 	istioGatewayConfigurations, err := s.istioGatewayConfigurations()
 	if err != nil {
 		return fmt.Errorf("failed to create istio gateway configuration: %w", err)
@@ -240,7 +248,8 @@ func (s *sni) Deploy(ctx context.Context) error {
 			IngressGatewayLabels:           values.IstioIngressGateway.Labels,
 			Name:                           envoyFilter.Name,
 			Namespace:                      envoyFilter.Namespace,
-			ControlPlaneNamespace:          s.namespace,
+			ControlPlaneNamespace:          namespace.Name,
+			ControlPlaneNamespaceUID:       string(namespace.UID),
 			Host:                           hostName,
 			MutualTLSHost:                  mTLSHostName,
 			ConnectionUpgradeHost:          connectionUpgradeHostName,
@@ -249,9 +258,8 @@ func (s *sni) Deploy(ctx context.Context) error {
 			APIServerRequestHeaderUserName: kubeapiserverconstants.RequestHeaderUserName,
 			APIServerRequestHeaderGroup:    kubeapiserverconstants.RequestHeaderGroup,
 			APIServerAuthenticationDynamicMetadataKey: authenticationDynamicMetadataKeyAPIServerProxy,
-			IstioTLSTermination:                       values.IstioTLSTermination,
-			IstioTLSSecret:                            s.emptyIstioTLSSecret().Name,
-			TargetClusterAPIServerProxy:               targetClusterAPIServerProxy,
+			IstioTLSSecret:              s.emptyIstioTLSSecret().Name,
+			TargetClusterAPIServerProxy: targetClusterAPIServerProxy,
 		}); err != nil {
 			return err
 		}
@@ -260,7 +268,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		registry.AddSerialized(filename, envoyFilterAPIServerProxy.Bytes())
 	}
 
-	if err := s.reconcileIstioTLSSecrets(ctx); err != nil {
+	if err := s.reconcileIstioTLSSecrets(ctx, namespace); err != nil {
 		return err
 	}
 
@@ -287,6 +295,8 @@ func (s *sni) Deploy(ctx context.Context) error {
 				IngressGatewayLabels:             configuration.istioIngressGateway.Labels,
 				Name:                             envoyFilter.Name,
 				Namespace:                        envoyFilter.Namespace,
+				ControlPlaneNamespace:            namespace.Name,
+				ControlPlaneNamespaceUID:         string(namespace.UID),
 				Port:                             kubeapiserverconstants.Port,
 				MutualTLSHost:                    mTLSHostName,
 				ConnectionUpgradeHost:            connectionUpgradeHostName,
@@ -474,7 +484,7 @@ func (s *sni) emptyIstioWildcardTLSSecret() *corev1.Secret {
 	}
 }
 
-func (s *sni) reconcileIstioTLSSecrets(ctx context.Context) error {
+func (s *sni) reconcileIstioTLSSecrets(ctx context.Context, ownerNamespace *corev1.Namespace) error {
 	if !s.valuesFunc().IstioTLSTermination {
 		return managedresources.DeleteForSeed(ctx, s.client, s.namespace, managedResourceNameIstioTLSSecrets)
 	}
@@ -505,6 +515,18 @@ func (s *sni) reconcileIstioTLSSecrets(ctx context.Context) error {
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
+	ownerNamespaceGVK, err := apiutil.GVKForObject(ownerNamespace, kubernetes.SeedScheme)
+	if err != nil {
+		return fmt.Errorf("failed to get GVK for namespace %q: %w", ownerNamespace.Name, err)
+	}
+	ownerReference := metav1.OwnerReference{
+		APIVersion:         ownerNamespaceGVK.GroupVersion().String(),
+		Kind:               ownerNamespaceGVK.Kind,
+		Name:               ownerNamespace.Name,
+		UID:                ownerNamespace.UID,
+		BlockOwnerDeletion: ptr.To(true),
+	}
+
 	var serializeObjects []client.Object
 
 	istioTLSSecret := s.emptyIstioTLSSecret()
@@ -513,6 +535,7 @@ func (s *sni) reconcileIstioTLSSecrets(ctx context.Context) error {
 		"key":    secretServer.Data[secretsutils.DataKeyPrivateKey],
 		"cert":   secretServer.Data[secretsutils.DataKeyCertificate],
 	}
+	istioTLSSecret.OwnerReferences = []metav1.OwnerReference{ownerReference}
 	serializeObjects = append(serializeObjects, istioTLSSecret)
 
 	istioMTLSSecret := s.emptyIstioMTLSSecret()
@@ -521,11 +544,13 @@ func (s *sni) reconcileIstioTLSSecrets(ctx context.Context) error {
 		"key":    secretIstioClientCertificate.Data[secretsutils.DataKeyPrivateKey],
 		"cert":   secretIstioClientCertificate.Data[secretsutils.DataKeyCertificate],
 	}
+	istioMTLSSecret.OwnerReferences = []metav1.OwnerReference{ownerReference}
 	serializeObjects = append(serializeObjects, istioMTLSSecret)
 
 	if s.valuesFunc().WildcardConfiguration != nil && s.valuesFunc().WildcardConfiguration.IstioIngressGateway != nil {
 		istioWildcardMTLSSecret := istioMTLSSecret.DeepCopy()
 		istioWildcardMTLSSecret.Namespace = s.valuesFunc().WildcardConfiguration.IstioIngressGateway.Namespace
+		istioWildcardMTLSSecret.OwnerReferences = []metav1.OwnerReference{ownerReference}
 		serializeObjects = append(serializeObjects, istioWildcardMTLSSecret)
 	}
 
@@ -536,6 +561,7 @@ func (s *sni) reconcileIstioTLSSecrets(ctx context.Context) error {
 			"key":    s.valuesFunc().WildcardConfiguration.TLSSecret.Data[secretsutils.DataKeyPrivateKey],
 			"cert":   s.valuesFunc().WildcardConfiguration.TLSSecret.Data[secretsutils.DataKeyCertificate],
 		}
+		istioWildcardTLSSecret.OwnerReferences = []metav1.OwnerReference{ownerReference}
 		serializeObjects = append(serializeObjects, istioWildcardTLSSecret)
 	}
 
