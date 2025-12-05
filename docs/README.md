@@ -237,6 +237,7 @@
 * [Extending project roles](extensions/project-roles.md)
 * [Referenced resources](extensions/referenced-resources.md)
 * [Validation Guidelines For Extensions](extensions/validation-guidelines-for-extensions.md)
+* [Static Manifest Propagation From Seed To Shoot](extensions/static-manifests.md)
 
 ## Deployment
 
