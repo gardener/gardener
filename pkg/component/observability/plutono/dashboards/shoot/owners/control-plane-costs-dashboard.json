@@ -472,7 +472,7 @@
         "hide": 0,
         "includeAll": false,
         "label": "Billing Year",
-        "multi": true,
+        "multi": false,
         "name": "year",
         "options": [],
         "query": {
@@ -497,7 +497,7 @@
           "value": "12"
         },
         "datasource": null,
-        "definition": "label_values(metering:memory_usage_seconds, month)",
+        "definition": "label_values(metering:memory_usage_seconds{year=\"$year\"}, month)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -507,7 +507,7 @@
         "name": "month",
         "options": [],
         "query": {
-          "query": "label_values(metering:memory_usage_seconds, month)",
+          "query": "label_values(metering:memory_usage_seconds{year=\"$year\"}, month)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
