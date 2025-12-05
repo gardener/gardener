@@ -209,20 +209,6 @@
       "type": "piechart"
     },
     {
-      "datasource": null,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 18
-      },
-      "id": 9,
-      "panels": [],
-      "repeat": null,
-      "title": "Accumulated Cost Over Time",
-      "type": "row"
-    },
-    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -235,10 +221,10 @@
       "fill": 6,
       "fillGradient": 0,
       "gridPos": {
-        "h": 9,
-        "w": 24,
+        "h": 8,
+        "w": 12,
         "x": 0,
-        "y": 19
+        "y": 9
       },
       "hiddenSeries": false,
       "id": 4,
@@ -342,10 +328,10 @@
       "fill": 6,
       "fillGradient": 0,
       "gridPos": {
-        "h": 9,
-        "w": 24,
-        "x": 0,
-        "y": 28
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
       },
       "hiddenSeries": false,
       "id": 13,
@@ -371,6 +357,13 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
+      "scopedVars": {
+        "month": {
+          "selected": true,
+          "text": "12",
+          "value": "12"
+        }
+      },
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": true,
