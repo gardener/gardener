@@ -12,10 +12,10 @@
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1764857281400,
+  "iteration": 1764935817718,
   "links": [],
   "panels": [
     {
@@ -85,7 +85,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(vpa_updater_controlled_pods_total{pod=\"$pod\"}) by (update_mode)",
+          "expr": "sum(vpa_updater_controlled_pods_total{pod=~\"$pod\"}) by (update_mode)",
           "hide": false,
           "interval": "",
           "legendFormat": "{{update_mode}}",
@@ -93,7 +93,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(vpa_updater_controlled_pods_total{pod=\"$pod\"})",
+          "expr": "sum(vpa_updater_controlled_pods_total{pod=~\"$pod\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "Total",
@@ -198,7 +198,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(vpa_updater_controlled_pods_total{pod=\"$pod\"}) by (update_mode)",
+          "expr": "sum(vpa_updater_controlled_pods_total{pod=~\"$pod\"}) by (update_mode)",
           "interval": "",
           "legendFormat": "{{update_mode}}",
           "refId": "A"
@@ -258,7 +258,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(vpa_updater_in_place_updatable_pods_total{pod=\"$pod\"})",
+          "expr": "sum(vpa_updater_in_place_updatable_pods_total{pod=~\"$pod\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "Pending in-place update",
@@ -266,7 +266,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(vpa_updater_controlled_pods_total{pod=\"$pod\", update_mode=\"InPlaceOrRecreate\"})",
+          "expr": "sum(vpa_updater_controlled_pods_total{pod=~\"$pod\", update_mode=\"InPlaceOrRecreate\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "Total",
@@ -366,14 +366,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(vpa_updater_vpas_with_in_place_updatable_pods_total{pod=\"$pod\"})",
+          "expr": "sum(vpa_updater_vpas_with_in_place_updatable_pods_total{pod=~\"$pod\"})",
           "interval": "",
           "legendFormat": "Matching in-place update criteria",
           "refId": "Matching criteria"
         },
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_vpas_with_in_place_updated_pods_total{pod=\"$pod\"}[$__rate_interval])))",
+          "expr": "sum(ceil(increase(vpa_updater_vpas_with_in_place_updated_pods_total{pod=~\"$pod\"}[$__rate_interval])))",
           "hide": false,
           "interval": "",
           "legendFormat": "Successfully in-place updated",
@@ -475,7 +475,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(vpa_updater_evictable_pods_total{pod=\"$pod\"}) by (update_mode)",
+          "expr": "sum(vpa_updater_evictable_pods_total{pod=~\"$pod\"}) by (update_mode)",
           "hide": false,
           "interval": "",
           "legendFormat": "Pending eviction with '{{update_mode}}' mode",
@@ -483,7 +483,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(vpa_updater_controlled_pods_total{pod=\"$pod\", update_mode!=\"InPlaceOrRecreate\"})",
+          "expr": "sum(vpa_updater_controlled_pods_total{pod=~\"$pod\", update_mode!=\"InPlaceOrRecreate\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "Total",
@@ -584,14 +584,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(vpa_updater_vpas_with_evictable_pods_total{pod=\"$pod\"}) by (update_mode)",
+          "expr": "sum(vpa_updater_vpas_with_evictable_pods_total{pod=~\"$pod\"}) by (update_mode)",
           "interval": "",
           "legendFormat": "Matching eviction with '{{update_mode}}' mode",
           "refId": "Matching criteria"
         },
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_vpas_with_evicted_pods_total{pod=\"$pod\"}[$__rate_interval]))) by (update_mode)",
+          "expr": "sum(ceil(increase(vpa_updater_vpas_with_evicted_pods_total{pod=~\"$pod\"}[$__rate_interval]))) by (update_mode)",
           "hide": false,
           "interval": "",
           "legendFormat": "Successfully evicted with '{{update_mode}}' mode",
@@ -706,7 +706,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_in_place_updated_pods_total{pod=\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
+          "expr": "sum(ceil(increase(vpa_updater_in_place_updated_pods_total{pod=~\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
           "hide": false,
           "interval": "",
           "legendFormat": "{{vpa_namespace}}/{{vpa_name}}",
@@ -714,7 +714,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_in_place_updated_pods_total{pod=\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval])))",
+          "expr": "sum(ceil(increase(vpa_updater_in_place_updated_pods_total{pod=~\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval])))",
           "hide": false,
           "interval": "",
           "legendFormat": "Total",
@@ -815,7 +815,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_failed_in_place_update_attempts_total{pod=\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
+          "expr": "sum(ceil(increase(vpa_updater_failed_in_place_update_attempts_total{pod=~\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
           "hide": false,
           "interval": "",
           "legendFormat": "{{vpa_namespace}}/{{vpa_name}}",
@@ -823,7 +823,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_failed_in_place_update_attempts_total{pod=\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval])))",
+          "expr": "sum(ceil(increase(vpa_updater_failed_in_place_update_attempts_total{pod=~\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval])))",
           "hide": false,
           "interval": "",
           "legendFormat": "Total",
@@ -938,7 +938,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_evicted_pods_total{pod=\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
+          "expr": "sum(ceil(increase(vpa_updater_evicted_pods_total{pod=~\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
           "hide": false,
           "interval": "",
           "legendFormat": "{{vpa_namespace}}/{{vpa_name}}",
@@ -946,7 +946,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_evicted_pods_total{pod=\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval])))",
+          "expr": "sum(ceil(increase(vpa_updater_evicted_pods_total{pod=~\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval])))",
           "hide": false,
           "interval": "",
           "legendFormat": "Total",
@@ -1047,7 +1047,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_failed_eviction_attempts_total{pod=\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
+          "expr": "sum(ceil(increase(vpa_updater_failed_eviction_attempts_total{pod=~\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
           "hide": false,
           "interval": "",
           "legendFormat": "{{vpa_namespace}}/{{vpa_name}}",
@@ -1055,7 +1055,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_failed_eviction_attempts_total{pod=\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval])))",
+          "expr": "sum(ceil(increase(vpa_updater_failed_eviction_attempts_total{pod=~\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval])))",
           "hide": false,
           "interval": "",
           "legendFormat": "Total",
@@ -1140,7 +1140,7 @@
         "hide": 0,
         "includeAll": false,
         "label": "pod",
-        "multi": false,
+        "multi": true,
         "name": "pod",
         "options": [],
         "query": {
@@ -1160,7 +1160,7 @@
       {
         "allValue": null,
         "datasource": "${datasource}",
-        "definition": "query_result(vpa_updater_in_place_updated_pods_total{pod=\"$pod\"} or vpa_updater_evicted_pods_total{pod=\"$pod\"} or vpa_updater_failed_in_place_update_attempts_total{pod=\"$pod\"} or vpa_updater_failed_eviction_attempts_total{pod=\"$pod\"})",
+        "definition": "query_result(vpa_updater_in_place_updated_pods_total{pod=~\"$pod\"} or vpa_updater_evicted_pods_total{pod=~\"$pod\"} or vpa_updater_failed_in_place_update_attempts_total{pod=~\"$pod\"} or vpa_updater_failed_eviction_attempts_total{pod=~\"$pod\"})",
         "description": null,
         "error": null,
         "hide": 0,
@@ -1170,7 +1170,7 @@
         "name": "namespace",
         "options": [],
         "query": {
-          "query": "query_result(vpa_updater_in_place_updated_pods_total{pod=\"$pod\"} or vpa_updater_evicted_pods_total{pod=\"$pod\"} or vpa_updater_failed_in_place_update_attempts_total{pod=\"$pod\"} or vpa_updater_failed_eviction_attempts_total{pod=\"$pod\"})",
+          "query": "query_result(vpa_updater_in_place_updated_pods_total{pod=~\"$pod\"} or vpa_updater_evicted_pods_total{pod=~\"$pod\"} or vpa_updater_failed_in_place_update_attempts_total{pod=~\"$pod\"} or vpa_updater_failed_eviction_attempts_total{pod=~\"$pod\"})",
           "refId": "prometheus-namespace-Variable-Query"
         },
         "refresh": 1,
