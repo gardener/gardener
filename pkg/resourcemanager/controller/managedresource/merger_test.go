@@ -46,14 +46,6 @@ var _ = Describe("merger", func() {
 					UID:                        "8c3d49f6-e177-4938-8547-c61283a84876",
 					GenerateName:               "foo",
 					DeletionGracePeriodSeconds: ptr.To[int64](30),
-					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion:         "v1",
-						Kind:               "Namespace",
-						Name:               "default",
-						UID:                "18590d53-3e4d-4616-b411-88212dc69ac6",
-						Controller:         ptr.To(true),
-						BlockOwnerDeletion: ptr.To(true),
-					}},
 				},
 			}
 
@@ -74,6 +66,43 @@ var _ = Describe("merger", func() {
 
 			Expect(merge(origin, desired, current, false, nil, false, nil, false)).NotTo(HaveOccurred(), "merge should be successful")
 			Expect(current.Object["metadata"]).To(Equal(expected.Object["metadata"]))
+		})
+
+		It("should remove current metadata.ownerReferences", func() {
+			current.SetOwnerReferences([]metav1.OwnerReference{{
+				APIVersion:         "v1",
+				Kind:               "Namespace",
+				Name:               "default",
+				UID:                "18590d53-3e4d-4616-b411-88212dc69ac6",
+				Controller:         ptr.To(true),
+				BlockOwnerDeletion: ptr.To(true),
+			}})
+
+			Expect(merge(origin, desired, current, false, nil, false, nil, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(current.GetOwnerReferences()).To(BeNil())
+		})
+
+		It("should overwrite current metadata.ownerReferences", func() {
+			current.SetOwnerReferences([]metav1.OwnerReference{{
+				APIVersion:         "v1",
+				Kind:               "Namespace",
+				Name:               "default",
+				UID:                "18590d53-3e4d-4616-b411-88212dc69ac6",
+				Controller:         ptr.To(true),
+				BlockOwnerDeletion: ptr.To(true),
+			}})
+
+			desired.SetOwnerReferences([]metav1.OwnerReference{{
+				APIVersion:         "v1",
+				Kind:               "Deployment",
+				Name:               "default",
+				UID:                "28590d53-3e4d-4616-b411-99212dc69ac6",
+				Controller:         ptr.To(true),
+				BlockOwnerDeletion: ptr.To(true),
+			}})
+
+			Expect(merge(origin, desired, current, false, nil, false, nil, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(current.GetOwnerReferences()).To(Equal(desired.GetOwnerReferences()))
 		})
 
 		It("should force overwrite current .metadata.labels", func() {
