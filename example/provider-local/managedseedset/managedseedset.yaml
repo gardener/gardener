@@ -1,0 +1,72 @@
+# Please note: The `ManagedSeedSet` is a WIP feature. This example is primarily meant to support further development in the local setup.
+apiVersion: seedmanagement.gardener.cloud/v1alpha1
+kind: ManagedSeedSet
+metadata:
+  name: my-mss
+  namespace: garden # Must be garden
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: my-managed-seed-set
+  template:
+    # <See `example/55-managedseed-gardenlet.yaml` for more details>
+    metadata:
+      labels:
+        name: my-managed-seed-set
+    spec:
+      # shoot.name must not be specified
+      gardenlet:
+        config: # GardenletConfiguration resource
+          # <See `example/20-componentconfig-gardenlet.yaml` for more details>
+          apiVersion: gardenlet.config.gardener.cloud/v1alpha1
+          kind: GardenletConfiguration
+          seedConfig:
+            metadata:
+              labels:
+                name: my-managed-seed-set
+            spec:
+              dns:
+                ingress:
+                  # "replica-name" in DNS domains will be replaced by the actual replica name
+                  domain: replica-name.ingress.local.seed.local.gardener.cloud
+  shootTemplate:
+    # <See `example/90-shoot.yaml` for more details>
+    metadata:
+      labels:
+        name: my-managed-seed-set
+    spec:
+      dns:
+      # "replica-name" in DNS domains will be replaced by the actual replica name
+      #domain: replica-name.crazy-botany.core.my-custom-domain.com
+      # copied from: example/provider-local/shoot.yaml
+      cloudProfile:
+        kind: CloudProfile
+        name: local
+      credentialsBindingName: local # dummy, doesn't contain any credentials
+      region: local
+      networking:
+        type: calico
+        # Must be within 10.0.0.0/16 (subnet of kind pod CIDR 10.0.0.0/15, but disjoint with seed pod CIDR 10.1.0.0/16).
+        nodes: 10.0.0.0/16
+      provider:
+        type: local
+        workers:
+          - name: local
+            machine:
+              type: local
+            cri:
+              name: containerd
+            minimum: 1
+            maximum: 2
+            maxSurge: 1
+            maxUnavailable: 0
+      kubernetes:
+        version: 1.34.0
+        kubelet:
+          seccompDefault: true
+          serializeImagePulls: false
+          registryPullQPS: 10
+          registryBurst: 20
+          protectKernelDefaults: true
+          streamingConnectionIdleTimeout: 5m

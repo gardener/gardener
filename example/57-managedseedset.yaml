@@ -1,7 +1,7 @@
 apiVersion: seedmanagement.gardener.cloud/v1alpha1
 kind: ManagedSeedSet
 metadata:
-  name: my-managed-seed-set
+  name: my-mss
   namespace: garden # Must be garden
 spec:
   replicas: 1
@@ -26,8 +26,9 @@ spec:
                 name: my-managed-seed-set
             spec:
               dns:
-                # "replica-name" in DNS domains will be replaced by the actual replica name
-                ingressDomain: replica-name.garden.shoot.dev.k8s-hana.ondemand.com
+                ingress:
+                  # "replica-name" in DNS domains will be replaced by the actual replica name
+                  domain: replica-name.ingress.crazy-botany.core.my-custom-domain.com
   shootTemplate:
     # <See `90-shoot.yaml` for more details>
     metadata:
@@ -36,4 +37,4 @@ spec:
     spec:
       dns:
         # "replica-name" in DNS domains will be replaced by the actual replica name
-        domain: replica-name.garden.shoot.dev.k8s-hana.ondemand.com
+        domain: replica-name.crazy-botany.core.my-custom-domain.com
