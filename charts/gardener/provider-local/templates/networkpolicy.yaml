@@ -13,9 +13,15 @@ spec:
       networking.gardener.cloud/to-kind-network: allowed
   egress:
   - to:
+    # kind network CIDR
     - ipBlock:
-        cidr: 172.18.0.0/16
+        cidr: 172.18.0.0/24
     - ipBlock:
         cidr: fd00:10::/64
+    # range for "load balancer" IPs (manually added to loopback interface on host)
+    - ipBlock:
+        cidr: 172.18.255.0/24
+    - ipBlock:
+        cidr: ::/120
   policyTypes:
   - Egress

@@ -85,7 +85,7 @@ setup_kind_network() {
     network="$(docker network inspect $existing_network_id | yq '.[]')"
     network_options="$(echo "$network" | yq '.EnableIPv6 + "," + .Options["com.docker.network.bridge.enable_ip_masquerade"]')"
     network_ipam="$(echo "$network" | yq '.IPAM.Config' -o=json -I=0 | sed -E 's/"IPRange":"",//g')"
-    expected_network_ipam='[{"Subnet":"172.18.0.0/16","Gateway":"172.18.0.1"},{"Subnet":"fd00:10::/64","Gateway":"fd00:10::1"}]'
+    expected_network_ipam='[{"Subnet":"172.18.0.0/24","Gateway":"172.18.0.1"},{"Subnet":"fd00:10::/64","Gateway":"fd00:10::1"}]'
 
     if [ "$network_options" = 'true,true' ] && [ "$network_ipam" = "$expected_network_ipam" ] ; then
       # kind network is already configured correctly, nothing to do
@@ -98,7 +98,7 @@ setup_kind_network() {
 
   # (re-)create kind network with expected settings
   docker network create kind --driver=bridge \
-    --subnet 172.18.0.0/16 --gateway 172.18.0.1 \
+    --subnet 172.18.0.0/24 --gateway 172.18.0.1 \
     --ipv6 --subnet fd00:10::/64 --gateway fd00:10::1 \
     --opt com.docker.network.bridge.enable_ip_masquerade=true
 }
@@ -381,16 +381,21 @@ EOF"
   docker exec "$node" sh -c "systemctl enable gardener-local-kind-add-hosts.service"
 done
 
+local_address_operator="172.18.255.3"
+if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
+  local_address_operator="::3"
+fi
+
 # Inject garden.local.gardener.cloud into coredns config (after ready plugin, before kubernetes plugin)
 kubectl -n kube-system get configmap coredns -ojson | \
   yq '.data.Corefile' | \
   sed '0,/ready.*$/s//&'"\n\
     hosts {\n\
       $garden_cluster_ip garden.local.gardener.cloud\n\
-      $garden_cluster_ip gardener.virtual-garden.local.gardener.cloud\n\
-      $garden_cluster_ip api.virtual-garden.local.gardener.cloud\n\
-      $garden_cluster_ip dashboard.ingress.runtime-garden.local.gardener.cloud\n\
-      $garden_cluster_ip discovery.ingress.runtime-garden.local.gardener.cloud\n\
+      $local_address_operator gardener.virtual-garden.local.gardener.cloud\n\
+      $local_address_operator api.virtual-garden.local.gardener.cloud\n\
+      $local_address_operator dashboard.ingress.runtime-garden.local.gardener.cloud\n\
+      $local_address_operator discovery.ingress.runtime-garden.local.gardener.cloud\n\
       fallthrough\n\
     }\
 "'/' | \
