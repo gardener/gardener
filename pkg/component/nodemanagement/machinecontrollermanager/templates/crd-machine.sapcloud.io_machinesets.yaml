@@ -281,8 +281,9 @@ spec:
                                         to a node.
                                       type: string
                                     timeAdded:
-                                      description: TimeAdded represents the time at
-                                        which the taint was added.
+                                      description: |-
+                                        TimeAdded represents the time at which the taint was added.
+                                        It is only written for NoExecute taints.
                                       format: date-time
                                       type: string
                                     value:

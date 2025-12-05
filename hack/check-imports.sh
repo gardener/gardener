@@ -21,9 +21,6 @@ echo "> Check Imports"
 
 this_module=$(go list -m)
 
-# setup virtual GOPATH
-source $(dirname $0)/vgopath-setup.sh
-
 packages=()
 for p in "$@"; do
   packages+=("$this_module/${p#./}")
