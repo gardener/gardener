@@ -25,7 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity"
 	shootidentity "github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity/shoot"
 	admissionwebhook "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission"
-	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -143,15 +142,11 @@ func (h *Handler) admitSecret(ctx context.Context, gardenletShootInfo types.Name
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 
-		shootList := &gardencorev1beta1.ShootList{}
-		if err := h.Client.List(ctx, shootList, client.MatchingFields{core.ShootStatusUID: backupBucket.Name}); err != nil {
-			return admission.Errored(http.StatusInternalServerError, err)
-		}
-		if length := len(shootList.Items); length != 1 {
-			return admission.Errored(http.StatusForbidden, fmt.Errorf("expected exactly one Shoot with .status.uid=%s but got %d", backupBucket.Name, length))
+		if backupBucket.Spec.ShootRef == nil {
+			return admission.Errored(http.StatusForbidden, fmt.Errorf(".spec.shootRef must be set in the BackupBucket resource %q belonging to this Secret", backupBucket.Name))
 		}
 
-		return h.admit(gardenletShootInfo, types.NamespacedName{Name: shootList.Items[0].Name, Namespace: shootList.Items[0].Namespace})
+		return h.admit(gardenletShootInfo, types.NamespacedName{Name: backupBucket.Spec.ShootRef.Name, Namespace: backupBucket.Spec.ShootRef.Namespace})
 	}
 
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to shoot %s", gardenletShootInfo))

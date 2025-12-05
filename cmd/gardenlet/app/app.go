@@ -357,17 +357,18 @@ func (g *garden) Start(ctx context.Context) error {
 		} else {
 			opts.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
 				// gardenlet should watch only objects which are related to the shoot it is responsible for.
-				backupEntryName, err := gardenerutils.GenerateBackupEntryName(metav1.NamespaceSystem, g.selfHostedShootInfo.StatusUID, g.selfHostedShootInfo.UID)
-				if err != nil {
-					return nil, fmt.Errorf("failed generating expected BackupEntry name for self-hosted shoot: %w", err)
-				}
-
 				opts.ByObject = map[client.Object]cache.ByObject{
 					&gardencorev1beta1.BackupBucket{}: {
-						Field: fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: string(g.selfHostedShootInfo.StatusUID)}),
+						Field: fields.SelectorFromSet(fields.Set{
+							gardencore.BackupBucketShootRefName:      g.selfHostedShootInfo.Meta.Name,
+							gardencore.BackupBucketShootRefNamespace: g.selfHostedShootInfo.Meta.Namespace,
+						}),
 					},
 					&gardencorev1beta1.BackupEntry{}: {
-						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: backupEntryName}),
+						Field: fields.SelectorFromSet(fields.Set{
+							gardencore.BackupEntryShootRefName:      g.selfHostedShootInfo.Meta.Name,
+							gardencore.BackupEntryShootRefNamespace: g.selfHostedShootInfo.Meta.Namespace,
+						}),
 						Namespaces: map[string]cache.Config{g.selfHostedShootInfo.Meta.Namespace: {}},
 					},
 					&gardencorev1beta1.Shoot{}: {

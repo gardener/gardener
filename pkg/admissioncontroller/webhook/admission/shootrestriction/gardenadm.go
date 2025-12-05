@@ -10,18 +10,15 @@ import (
 	"net/http"
 
 	admissionv1 "k8s.io/api/admission/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-func (h *Handler) admitGardenadmRequests(ctx context.Context, gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {
+func (h *Handler) admitGardenadmRequests(_ context.Context, gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {
 	requestResource := schema.GroupResource{Group: request.Resource.Group, Resource: request.Resource.Resource}
 	switch requestResource {
 	case backupBucketResource:
@@ -29,17 +26,13 @@ func (h *Handler) admitGardenadmRequests(ctx context.Context, gardenletShootInfo
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 		}
 
-		shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: gardenletShootInfo.Name, Namespace: gardenletShootInfo.Namespace}}
-		if err := h.Client.Get(ctx, client.ObjectKeyFromObject(shoot), shoot); err != nil {
-			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("failed reading Shoot resource %q for gardenlet: %w", gardenletShootInfo.String(), err))
-		}
-
 		backupBucket := &gardencorev1beta1.BackupBucket{}
 		if err := h.Decoder.Decode(request, backupBucket); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
 		}
 
-		if backupBucket.Name == string(shoot.Status.UID) {
+		if shootRef := backupBucket.Spec.ShootRef; shootRef != nil &&
+			shootRef.Name == gardenletShootInfo.Name && shootRef.Namespace == gardenletShootInfo.Namespace {
 			return admission.Allowed("")
 		}
 
@@ -50,22 +43,13 @@ func (h *Handler) admitGardenadmRequests(ctx context.Context, gardenletShootInfo
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 		}
 
-		shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: gardenletShootInfo.Name, Namespace: gardenletShootInfo.Namespace}}
-		if err := h.Client.Get(ctx, client.ObjectKeyFromObject(shoot), shoot); err != nil {
-			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("failed reading Shoot resource %q for gardenlet: %w", gardenletShootInfo.String(), err))
-		}
-
-		expectedBackupEntryName, err := gardenerutils.GenerateBackupEntryName(metav1.NamespaceSystem, shoot.Status.UID, shoot.UID)
-		if err != nil {
-			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("failed computing expected BackupEntry name for shoot: %w", err))
-		}
-
 		backupEntry := &gardencorev1beta1.BackupEntry{}
 		if err := h.Decoder.Decode(request, backupEntry); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
 		}
 
-		if backupEntry.Name == expectedBackupEntryName && backupEntry.Namespace == gardenletShootInfo.Namespace {
+		if shootRef := backupEntry.Spec.ShootRef; shootRef != nil &&
+			shootRef.Name == gardenletShootInfo.Name && shootRef.Namespace == gardenletShootInfo.Namespace {
 			return admission.Allowed("")
 		}
 

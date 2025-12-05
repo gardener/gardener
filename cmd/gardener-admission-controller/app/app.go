@@ -135,7 +135,10 @@ func run(ctx context.Context, log logr.Logger, cfg *admissioncontrollerconfigv1a
 func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 	for _, fn := range []func(context.Context, client.FieldIndexer) error{
 		// core API group
-		indexer.AddShootStatusUID,
+		indexer.AddBackupBucketShootRefName,
+		indexer.AddBackupBucketShootRefNamespace,
+		indexer.AddBackupEntryShootRefName,
+		indexer.AddBackupEntryShootRefNamespace,
 	} {
 		if err := fn(ctx, i); err != nil {
 			return err

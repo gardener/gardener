@@ -28,8 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/shootrestriction"
-	"github.com/gardener/gardener/pkg/api/indexer"
-	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -65,11 +63,7 @@ var _ = Describe("handler", func() {
 	)
 
 	BeforeEach(func() {
-		fakeClient = fakeclient.
-			NewClientBuilder().
-			WithScheme(kubernetes.GardenScheme).
-			WithIndex(&gardencorev1beta1.Shoot{}, core.ShootStatusUID, indexer.ShootStatusUIDIndexerFunc).
-			Build()
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		decoder = admission.NewDecoder(kubernetes.GardenScheme)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -487,30 +481,12 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 							}))
 						})
 
-						It("should return an error because the related Shoot could not be found", func() {
-							backupBucket := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: name}}
-							Expect(fakeClient.Create(ctx, backupBucket)).To(Succeed())
-
-							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-								AdmissionResponse: admissionv1.AdmissionResponse{
-									Allowed: false,
-									Result: &metav1.Status{
-										Code:    int32(http.StatusForbidden),
-										Message: fmt.Sprintf("expected exactly one Shoot with .status.uid=%s but got 0", name),
-									},
-								},
-							}))
-						})
-
 						It("should forbid because the related Shoot does not belong to gardenlet's shoot", func() {
-							backupBucket := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: name}}
-							Expect(fakeClient.Create(ctx, backupBucket)).To(Succeed())
-
-							shoot := &gardencorev1beta1.Shoot{
-								ObjectMeta: metav1.ObjectMeta{Name: "some-other", Namespace: "shoot"},
-								Status:     gardencorev1beta1.ShootStatus{UID: types.UID(name)},
+							backupBucket := &gardencorev1beta1.BackupBucket{
+								ObjectMeta: metav1.ObjectMeta{Name: name},
+								Spec:       gardencorev1beta1.BackupBucketSpec{ShootRef: &corev1.ObjectReference{Name: "other-shoot", Namespace: "other-namespace"}},
 							}
-							Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+							Expect(fakeClient.Create(ctx, backupBucket)).To(Succeed())
 
 							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 								AdmissionResponse: admissionv1.AdmissionResponse{
@@ -524,7 +500,10 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 						})
 
 						It("should allow because the related BackupBucket does belong to gardenlet's seed", func() {
-							backupBucket := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: name}}
+							backupBucket := &gardencorev1beta1.BackupBucket{
+								ObjectMeta: metav1.ObjectMeta{Name: name},
+								Spec:       gardencorev1beta1.BackupBucketSpec{ShootRef: &corev1.ObjectReference{Name: shootName, Namespace: shootNamespace}},
+							}
 							Expect(fakeClient.Create(ctx, backupBucket)).To(Succeed())
 
 							shoot := &gardencorev1beta1.Shoot{
@@ -642,27 +621,6 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 						request.Operation = admissionv1.Create
 					})
 
-					It("should deny the request because reading related Shoot object fails", func() {
-						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupBucket{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-								Kind:       "BackupBucket",
-							},
-						})
-						Expect(err).NotTo(HaveOccurred())
-						request.Object.Raw = objData
-
-						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-							AdmissionResponse: admissionv1.AdmissionResponse{
-								Allowed: false,
-								Result: &metav1.Status{
-									Code:    int32(http.StatusInternalServerError),
-									Message: fmt.Sprintf(`failed reading Shoot resource "%s/%s" for gardenlet: shoots.core.gardener.cloud "%[2]s" not found`, shootNamespace, shootName),
-								},
-							},
-						}))
-					})
-
 					It("should return an error because decoding the object failed", func() {
 						shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
 						Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
@@ -680,20 +638,17 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 						}))
 					})
 
-					It("should deny the request because BackupBucket name does not match shoot status UID", func() {
-						shoot := &gardencorev1beta1.Shoot{
-							ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace},
-							Status:     gardencorev1beta1.ShootStatus{UID: "status-uid"},
-						}
-						Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-
+					It("should deny the request because BackupBucket does not reference the Shoot", func() {
 						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupBucket{
 							TypeMeta: metav1.TypeMeta{
 								APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 								Kind:       "BackupBucket",
 							},
 							ObjectMeta: metav1.ObjectMeta{
-								Name: "not-the-shoot-status-uid",
+								Name: "some-name",
+							},
+							Spec: gardencorev1beta1.BackupBucketSpec{
+								ShootRef: &corev1.ObjectReference{Name: "other-shoot", Namespace: shootNamespace},
 							},
 						})
 						Expect(err).NotTo(HaveOccurred())
@@ -710,20 +665,17 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 						}))
 					})
 
-					It("should allow the request because BackupBucket name matches shoot status UID", func() {
-						shoot := &gardencorev1beta1.Shoot{
-							ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace},
-							Status:     gardencorev1beta1.ShootStatus{UID: "status-uid"},
-						}
-						Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-
+					It("should allow the request because BackupBucket references the Shoot", func() {
 						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupBucket{
 							TypeMeta: metav1.TypeMeta{
 								APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 								Kind:       "BackupBucket",
 							},
 							ObjectMeta: metav1.ObjectMeta{
-								Name: string(shoot.Status.UID),
+								Name: "some-name",
+							},
+							Spec: gardencorev1beta1.BackupBucketSpec{
+								ShootRef: &corev1.ObjectReference{Name: shootName, Namespace: shootNamespace},
 							},
 						})
 						Expect(err).NotTo(HaveOccurred())
@@ -775,42 +727,6 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 						request.Operation = admissionv1.Create
 					})
 
-					It("should deny the request because reading related Shoot object fails", func() {
-						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupEntry{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-								Kind:       "BackupEntry",
-							},
-						})
-						Expect(err).NotTo(HaveOccurred())
-						request.Object.Raw = objData
-
-						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-							AdmissionResponse: admissionv1.AdmissionResponse{
-								Allowed: false,
-								Result: &metav1.Status{
-									Code:    int32(http.StatusInternalServerError),
-									Message: fmt.Sprintf(`failed reading Shoot resource "%s/%s" for gardenlet: shoots.core.gardener.cloud "%[2]s" not found`, shootNamespace, shootName),
-								},
-							},
-						}))
-					})
-
-					It("should return an error because computing the expected BackupEntry name failed", func() {
-						shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
-						Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-
-						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-							AdmissionResponse: admissionv1.AdmissionResponse{
-								Allowed: false,
-								Result: &metav1.Status{
-									Code:    int32(http.StatusInternalServerError),
-									Message: "failed computing expected BackupEntry name for shoot: can't generate backup entry name with an empty shoot UID",
-								},
-							},
-						}))
-					})
-
 					It("should return an error because decoding the object failed", func() {
 						shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace, UID: types.UID("1234")}}
 						Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
@@ -828,21 +744,18 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 						}))
 					})
 
-					It("should deny the request because BackupEntry name does not match expected name", func() {
-						shoot := &gardencorev1beta1.Shoot{
-							ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace},
-							Status:     gardencorev1beta1.ShootStatus{UID: "status-uid"},
-						}
-						Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-
+					It("should deny the request because BackupEntry does not reference the Shoot", func() {
 						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupEntry{
 							TypeMeta: metav1.TypeMeta{
 								APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 								Kind:       "BackupEntry",
 							},
 							ObjectMeta: metav1.ObjectMeta{
-								Name:      "kube-system--not-the-shoot-status-uid",
+								Name:      "some-name",
 								Namespace: shootNamespace,
+							},
+							Spec: gardencorev1beta1.BackupEntrySpec{
+								ShootRef: &corev1.ObjectReference{Name: "other-shoot", Namespace: shootNamespace},
 							},
 						})
 						Expect(err).NotTo(HaveOccurred())
@@ -859,21 +772,18 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 						}))
 					})
 
-					It("should deny the request because BackupEntry name does not match expected namespace", func() {
-						shoot := &gardencorev1beta1.Shoot{
-							ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace},
-							Status:     gardencorev1beta1.ShootStatus{UID: "status-uid"},
-						}
-						Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-
+					It("should deny the request because BackupEntry's Shoot reference is for another namespace", func() {
 						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupEntry{
 							TypeMeta: metav1.TypeMeta{
 								APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 								Kind:       "BackupEntry",
 							},
 							ObjectMeta: metav1.ObjectMeta{
-								Name:      "kube-system--status-uid",
-								Namespace: "other-namespace",
+								Name:      "some-name",
+								Namespace: shootNamespace,
+							},
+							Spec: gardencorev1beta1.BackupEntrySpec{
+								ShootRef: &corev1.ObjectReference{Name: shootName, Namespace: "other-namespace"},
 							},
 						})
 						Expect(err).NotTo(HaveOccurred())
@@ -890,21 +800,18 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 						}))
 					})
 
-					It("should allow the request because BackupEntry name matches shoot status UID", func() {
-						shoot := &gardencorev1beta1.Shoot{
-							ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace},
-							Status:     gardencorev1beta1.ShootStatus{UID: "status-uid"},
-						}
-						Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-
+					It("should allow the request because BackupEntry references the Shoot", func() {
 						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupEntry{
 							TypeMeta: metav1.TypeMeta{
 								APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 								Kind:       "BackupEntry",
 							},
 							ObjectMeta: metav1.ObjectMeta{
-								Name:      "kube-system--status-uid",
+								Name:      "some-name",
 								Namespace: shootNamespace,
+							},
+							Spec: gardencorev1beta1.BackupEntrySpec{
+								ShootRef: &corev1.ObjectReference{Name: shootName, Namespace: shootNamespace},
 							},
 						})
 						Expect(err).NotTo(HaveOccurred())
