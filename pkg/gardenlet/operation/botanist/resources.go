@@ -7,15 +7,21 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"slices"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
-const managedResourceName = "referenced-resources"
+const managedResourceNameReferencedResources = "referenced-resources"
 
 // DeployReferencedResources reads all referenced resources from the Garden cluster and writes a managed resource to the Seed cluster.
 func (b *Botanist) DeployReferencedResources(ctx context.Context) error {
@@ -25,8 +31,9 @@ func (b *Botanist) DeployReferencedResources(ctx context.Context) error {
 	}
 
 	// Create managed resource from the slice of unstructured objects
+
 	if err := managedresources.CreateFromUnstructured(
-		ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, managedResourceName,
+		ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, managedResourceNameReferencedResources,
 		false, v1beta1constants.SeedResourceManagerClass, unstructuredObjs, false, nil,
 	); err != nil {
 		return fmt.Errorf("failed to create managed resource for referenced resources: %w", err)
@@ -49,9 +56,73 @@ func (b *Botanist) DestroyReferencedResources(ctx context.Context) error {
 		return fmt.Errorf("failed to destroy referenced workload identities: %w", err)
 	}
 
-	if err := client.IgnoreNotFound(managedresources.Delete(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, managedResourceName, false)); err != nil {
+	if err := client.IgnoreNotFound(managedresources.Delete(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, managedResourceNameReferencedResources, false)); err != nil {
 		return fmt.Errorf("failed to delete managed resource for referenced resources: %w", err)
 	}
 
 	return nil
+}
+
+// PopulateStaticManifestsFromSeedToShoot reads all Secrets in the seed's garden namespace labeled with
+// shoot.gardener.cloud/static-manifests=true and copies them into the Shoot namespace. A ManagedResource is created
+// referencing all of them.
+func (b *Botanist) PopulateStaticManifestsFromSeedToShoot(ctx context.Context) error {
+	var (
+		managedResourceName = "static-manifests-propagated-from-seed"
+		secretNamePrefix    = "static-manifests-"
+		managedResource     = managedresources.NewForShoot(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, managedResourceName, managedresources.LabelValueGardener, false)
+	)
+
+	secretListGardenNamespace := &corev1.SecretList{}
+	if err := b.SeedClientSet.Client().List(ctx, secretListGardenNamespace, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{v1beta1constants.LabelShootStaticManifests: "true"}); err != nil {
+		return fmt.Errorf("failed listing secrets with static manifests in %s namespace: %w", v1beta1constants.GardenNamespace, err)
+	}
+
+	secretListShootControlPlaneNamespace := &corev1.SecretList{}
+	if err := b.SeedClientSet.Client().List(ctx, secretListShootControlPlaneNamespace, client.InNamespace(b.Shoot.ControlPlaneNamespace), client.MatchingLabels{v1beta1constants.LabelShootStaticManifests: "true"}); err != nil {
+		return fmt.Errorf("failed listing secrets with static manifests in %s namespace: %w", b.Shoot.ControlPlaneNamespace, err)
+	}
+
+	var tasks []flow.TaskFn
+
+	// populate current secrets into Shoot's control plane namespace
+	for _, secret := range secretListGardenNamespace.Items {
+		secretInShootNamespace := secret.DeepCopy()
+		secretInShootNamespace.SetName(secretNamePrefix + secret.Name)
+		secretInShootNamespace.SetNamespace(b.Shoot.ControlPlaneNamespace)
+		secretInShootNamespace.SetResourceVersion("")
+		secretInShootNamespace.SetManagedFields(nil)
+
+		tasks = append(tasks, func(ctx context.Context) error {
+			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.SeedClientSet.Client(), secretInShootNamespace, func() error {
+				secretInShootNamespace.Immutable = ptr.To(false)
+				secretInShootNamespace.Type = secret.Type
+				secretInShootNamespace.Data = secret.Data
+				return nil
+			})
+			return err
+		})
+
+		managedResource.WithSecretRef(secretInShootNamespace.Name)
+	}
+
+	// cleanup old Secrets from Shoot's control plane namespace
+	for _, secret := range secretListShootControlPlaneNamespace.Items {
+		if !slices.ContainsFunc(secretListGardenNamespace.Items, func(s corev1.Secret) bool {
+			return secret.Name == secretNamePrefix+s.Name
+		}) {
+			tasks = append(tasks, func(ctx context.Context) error {
+				return kubernetesutils.DeleteObject(ctx, b.SeedClientSet.Client(), &secret)
+			})
+		}
+	}
+
+	if err := flow.Parallel(tasks...)(ctx); err != nil {
+		return fmt.Errorf("failed reconciling Secrets with static manifests in Shoot namespace: %w", err)
+	}
+
+	if len(secretListGardenNamespace.Items) == 0 {
+		return managedResource.Delete(ctx)
+	}
+	return managedResource.Reconcile(ctx)
 }
