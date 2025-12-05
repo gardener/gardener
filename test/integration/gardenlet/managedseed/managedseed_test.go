@@ -288,6 +288,18 @@ var _ = Describe("ManagedSeed controller test", func() {
 								Namespace:  backupSecret.Namespace,
 							},
 						},
+						DNS: gardencorev1beta1.SeedDNS{
+							Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+								Type:   "provider",
+								Domain: "internal.example.com",
+								CredentialsRef: corev1.ObjectReference{
+									APIVersion: "v1",
+									Kind:       "Secret",
+									Name:       "some-secret",
+									Namespace:  "some-namespace",
+								},
+							},
+						},
 					},
 				},
 			},

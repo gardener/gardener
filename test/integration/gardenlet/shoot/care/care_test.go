@@ -27,7 +27,6 @@ var _ = Describe("Shoot Care controller tests", func() {
 	var (
 		seedNamespace             *corev1.Namespace
 		secret                    *corev1.Secret
-		internalDomainSecret      *corev1.Secret
 		secretBinding             *gardencorev1beta1.SecretBinding
 		shoot                     *gardencorev1beta1.Shoot
 		cluster                   *extensionsv1alpha1.Cluster
@@ -44,19 +43,6 @@ var _ = Describe("Shoot Care controller tests", func() {
 				Labels: map[string]string{testID: testRunID},
 			},
 		}
-
-		internalDomainSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "secret-",
-			Namespace:    seedNamespace.Name,
-			Labels: map[string]string{
-				"gardener.cloud/role": "internal-domain",
-				testID:                testRunID,
-			},
-			Annotations: map[string]string{
-				"dns.gardener.cloud/provider": "test",
-				"dns.gardener.cloud/domain":   "example.com",
-			},
-		}}
 
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -134,11 +120,14 @@ var _ = Describe("Shoot Care controller tests", func() {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(seedNamespace), seedNamespace)
 		}).Should(Succeed())
 
-		By("Create InternalDomainSecret")
-		Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
-
 		By("Wait until the manager cache observes the internal domain secret")
 		Eventually(func() error {
+			internalDomainSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "internal-domain-secret",
+					Namespace: testNamespace.Name,
+				},
+			}
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(internalDomainSecret), internalDomainSecret)
 		}).Should(Succeed())
 
@@ -167,14 +156,6 @@ var _ = Describe("Shoot Care controller tests", func() {
 			By("Ensure Namespace is gone")
 			Eventually(func() error {
 				return mgrClient.Get(ctx, client.ObjectKeyFromObject(seedNamespace), seedNamespace)
-			}).Should(BeNotFoundError())
-
-			By("Delete Secret")
-			Expect(testClient.Delete(ctx, internalDomainSecret)).To(Succeed())
-
-			By("Ensure Secret is gone")
-			Eventually(func() error {
-				return mgrClient.Get(ctx, client.ObjectKeyFromObject(internalDomainSecret), internalDomainSecret)
 			}).Should(BeNotFoundError())
 
 			By("Delete Shoot")

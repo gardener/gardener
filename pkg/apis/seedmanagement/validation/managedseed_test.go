@@ -55,6 +55,16 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 							Namespace: "namespace",
 						},
 					},
+					Internal: &core.SeedDNSProviderConfig{
+						Type:   "foo",
+						Domain: "internal.example.com",
+						CredentialsRef: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "internal-secret",
+							Namespace:  "namespace",
+						},
+					},
 				},
 				Ingress: &core.Ingress{
 					Domain: "ingress.test.example.com",

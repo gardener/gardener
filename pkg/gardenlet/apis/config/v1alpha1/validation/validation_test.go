@@ -78,6 +78,16 @@ var _ = Describe("GardenletConfiguration", func() {
 									Namespace: "namespace",
 								},
 							},
+							Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+								Type:   "foo",
+								Domain: "test.internal.example.com",
+								CredentialsRef: corev1.ObjectReference{
+									APIVersion: "v1",
+									Kind:       "Secret",
+									Name:       "secret",
+									Namespace:  "namespace",
+								},
+							},
 						},
 						Ingress: &gardencorev1beta1.Ingress{
 							Domain: "ingress.test.example.com",
