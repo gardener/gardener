@@ -266,7 +266,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum((metering:memory_usage_seconds{year=~\"$year\", month=~\"$month\"} * $base_fee + metering:cpu_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 * $cpu_price + metering:memory_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $memory_price + metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $disk_price) / (30 * 24 * 60 * 60) + (metering:network_transmit:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"}) * 60 / 1e12 * $network_price)",
+          "expr": "sum((metering:memory_usage_seconds{year=\"$year\", month=\"$month\"} * $base_fee + metering:cpu_requests:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 * $cpu_price + metering:memory_requests:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 / 1e9 * $memory_price + metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 / 1e9 * $disk_price) / (30 * 24 * 60 * 60) + (metering:network_transmit:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"}) * 60 / 1e12 * $network_price)",
           "interval": "",
           "legendFormat": "Total",
           "refId": "A"
@@ -371,14 +371,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(metering:memory_usage_seconds{year=~\"$year\", month=~\"$month\"} * $base_fee) / (30 * 24 * 60 * 60)",
+          "expr": "sum(metering:memory_usage_seconds{year=\"$year\", month=\"$month\"} * $base_fee) / (30 * 24 * 60 * 60)",
           "interval": "",
           "legendFormat": "Base Fee",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "sum(metering:cpu_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 * $cpu_price / (30 * 24 * 60 * 60))",
+          "expr": "sum(metering:cpu_requests:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 * $cpu_price / (30 * 24 * 60 * 60))",
           "hide": false,
           "interval": "",
           "legendFormat": "CPU",
@@ -386,7 +386,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(metering:memory_requests:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $memory_price / (30 * 24 * 60 * 60))",
+          "expr": "sum(metering:memory_requests:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 / 1e9 * $memory_price / (30 * 24 * 60 * 60))",
           "hide": false,
           "interval": "",
           "legendFormat": "Memory",
@@ -394,7 +394,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} * 60 / 1e9 * $disk_price) / (30 * 24 * 60 * 60)",
+          "expr": "sum(metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 / 1e9 * $disk_price) / (30 * 24 * 60 * 60)",
           "hide": false,
           "interval": "",
           "legendFormat": "Disk",
@@ -402,7 +402,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum((metering:network_transmit:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=~\"$year\", month=~\"$month\"}) * 60 / 1e12 * $network_price)",
+          "expr": "sum((metering:network_transmit:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"}) * 60 / 1e12 * $network_price)",
           "hide": false,
           "interval": "",
           "legendFormat": "Network",
