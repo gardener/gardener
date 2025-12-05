@@ -37,14 +37,15 @@ var _ = Describe("#Service", func() {
 		values           *ServiceValues
 		expected         *corev1.Service
 
-		ingressIP        string
-		clusterIP        string
-		clusterIPsFunc   func([]string)
-		ingressIPFunc    func(string)
-		namePrefix       string
-		namespace        *corev1.Namespace
-		expectedName     string
-		sniServiceObjKey client.ObjectKey
+		ingressIP         string
+		clusterIP         string
+		clusterIPsFunc    func([]string)
+		ingressIPFunc     func(string)
+		namePrefix        string
+		namespace         *corev1.Namespace
+		expectedName      string
+		sniServiceObjKey  client.ObjectKey
+		customAnnotations map[string]string
 	)
 
 	BeforeEach(func() {
@@ -72,17 +73,15 @@ var _ = Describe("#Service", func() {
 			NamePrefix: namePrefix,
 		}
 		expected = &corev1.Service{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: corev1.SchemeGroupVersion.String(),
-				Kind:       "Service",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      expectedName,
 				Namespace: namespace.Name,
 				Labels: map[string]string{
-					"app":  "kubernetes",
-					"role": "apiserver",
+					"app":                   "kubernetes",
+					"role":                  "apiserver",
+					"metrics-scrape-target": "true",
 				},
+				ResourceVersion: "2",
 			},
 			Spec: corev1.ServiceSpec{
 				Type: corev1.ServiceTypeClusterIP,
@@ -119,8 +118,20 @@ var _ = Describe("#Service", func() {
 	})
 
 	JustBeforeEach(func() {
-		Expect(c.Create(ctx, expected)).To(Succeed())
-		expected.ResourceVersion = "2"
+		expected.Name = expectedName
+		initialService := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        expectedName,
+				Namespace:   namespace.Name,
+				Annotations: customAnnotations,
+			},
+			Spec: corev1.ServiceSpec{
+				ClusterIP:  "1.1.1.1",
+				ClusterIPs: []string{"1.1.1.1"},
+			},
+		}
+
+		Expect(c.Create(ctx, initialService)).To(Succeed())
 
 		defaultDepWaiter = NewService(
 			log,
@@ -169,7 +180,6 @@ var _ = Describe("#Service", func() {
 	Context("when service is not in shoot namespace", func() {
 		BeforeEach(func() {
 			expected.Annotations = utils.MergeStringMaps(map[string]string{
-				"foo":                          "bar",
 				"networking.istio.io/exportTo": "*",
 			}, netpolAnnotations())
 		})
@@ -183,7 +193,6 @@ var _ = Describe("#Service", func() {
 			Expect(c.Update(ctx, namespace)).To(Succeed())
 
 			expected.Annotations = utils.MergeStringMaps(map[string]string{
-				"foo":                          "bar",
 				"networking.istio.io/exportTo": "*",
 			}, shootNetpolAnnotations())
 		})
@@ -258,6 +267,37 @@ var _ = Describe("#Service", func() {
 			})
 		})
 	})
+
+	Context("when service has a suffix", func() {
+		BeforeEach(func() {
+			values.NameSuffix = "-foo"
+			expectedName = expectedName + "-foo"
+
+			expected.Annotations = utils.MergeStringMaps(map[string]string{
+				"networking.istio.io/exportTo": "*",
+			}, netpolAnnotations())
+
+			expected.Labels = map[string]string{
+				"app":  "kubernetes",
+				"role": "apiserver",
+			}
+		})
+
+		assertService()
+	})
+
+	Context("when the service has custom annotations", func() {
+		BeforeEach(func() {
+			customAnnotations = map[string]string{"foo": "bar"}
+			expected.Annotations = utils.MergeStringMaps(map[string]string{
+				"foo":                          "bar",
+				"networking.istio.io/exportTo": "*",
+			}, netpolAnnotations())
+		})
+
+		assertService()
+	})
+
 })
 
 func netpolAnnotations() map[string]string {

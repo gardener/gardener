@@ -155,6 +155,11 @@ func (s *service) Deploy(ctx context.Context) error {
 		gardenerutils.ReconcileTopologyAwareRoutingSettings(obj, s.values.topologyAwareRoutingEnabled, s.values.runtimeKubernetesVersion)
 
 		obj.Labels = utils.MergeStringMaps(obj.Labels, getLabels())
+		// Only the primary service should be scraped for metrics. Otherwise, we would have duplicate metrics.
+		if s.values.nameSuffix == "" {
+			obj.Labels[kubeapiserver.LabelMetricsScrapeTarget] = "true"
+		}
+
 		obj.Spec.Type = corev1.ServiceTypeClusterIP
 		obj.Spec.Selector = getLabels()
 		obj.Spec.Ports = kubernetesutils.ReconcileServicePorts(obj.Spec.Ports, []corev1.ServicePort{

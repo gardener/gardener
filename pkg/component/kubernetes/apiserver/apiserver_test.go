@@ -496,8 +496,9 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					Spec: monitoringv1.ServiceMonitorSpec{
 						Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-							"app":  "kubernetes",
-							"role": "apiserver",
+							"app":                   "kubernetes",
+							"role":                  "apiserver",
+							"metrics-scrape-target": "true",
 						}},
 						Endpoints: []monitoringv1.Endpoint{{
 							TargetPort: ptr.To(intstr.FromInt32(443)),
