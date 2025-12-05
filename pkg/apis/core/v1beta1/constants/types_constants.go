@@ -151,6 +151,8 @@ const (
 	// DaemonSetNameFluentBit is a constant for the name of a Kubernetes Daemonset object that contains
 	// the fluent-bit pod.
 	DaemonSetNameFluentBit = "fluent-bit"
+	// ConfigMapNameFluentBitLua is a constant for the name of a Kubernetes Configmap which holds the lua scripts for fluent-bit.
+	ConfigMapNameFluentBitLua = "fluent-bit-lua-config"
 	// DeploymentNameKubeStateMetrics is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-state-metrics pod.
 	DeploymentNameKubeStateMetrics = "kube-state-metrics"
