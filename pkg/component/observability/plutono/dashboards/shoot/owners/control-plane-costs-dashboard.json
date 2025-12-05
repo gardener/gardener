@@ -19,11 +19,35 @@
   "panels": [
     {
       "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 15,
+      "options": {
+        "content": "<span style=\"color:yellow\"><i>Disclaimer: The following cost calculation is a mere estimation and it is in no way meant to be binding.</i></span>",
+        "mode": "html"
+      },
+      "pluginVersion": "7.5.44",
+      "timeFrom": null,
+      "timeShift": null,
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 2
       },
       "id": 11,
       "panels": [],
@@ -62,7 +86,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 1
+        "y": 3
       },
       "id": 2,
       "options": {
@@ -125,7 +149,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 1
+        "y": 3
       },
       "id": 7,
       "maxPerRow": 2,
@@ -224,7 +248,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 9
+        "y": 11
       },
       "hiddenSeries": false,
       "id": 4,
@@ -331,7 +355,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 9
+        "y": 11
       },
       "hiddenSeries": false,
       "id": 13,
