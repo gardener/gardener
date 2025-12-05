@@ -237,6 +237,7 @@ var _ = Describe("Interface", func() {
 			shootClient.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(
 				func(_ context.Context, ns *corev1.Namespace, _ ...client.CreateOption) error {
 					Expect(ns.Name).To(Equal(v1beta1constants.GardenNamespace))
+					Expect(ns.Labels).To(HaveKeyWithValue("gardener.cloud/role", "garden"))
 					return nil
 				},
 			)

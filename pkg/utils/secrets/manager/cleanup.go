@@ -20,9 +20,7 @@ func (m *manager) Cleanup(ctx context.Context) error {
 
 	var fns []flow.TaskFn
 
-	for _, s := range secretList.Items {
-		secret := s
-
+	for _, secret := range secretList.Items {
 		name := secret.Labels[LabelKeyName]
 		if v, ok := secret.Labels[LabelKeyBundleFor]; ok {
 			name = v
@@ -36,7 +34,7 @@ func (m *manager) Cleanup(ctx context.Context) error {
 		}
 
 		fns = append(fns, func(ctx context.Context) error {
-			m.logger.Info("Deleting stale secret", "namespace", secret.Namespace, "name", secret.Name)
+			m.logger.Info("Deleting stale secret", "secret", client.ObjectKeyFromObject(&secret))
 			return client.IgnoreNotFound(m.client.Delete(ctx, &secret))
 		})
 	}

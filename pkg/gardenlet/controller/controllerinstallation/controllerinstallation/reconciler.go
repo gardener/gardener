@@ -78,6 +78,9 @@ type Reconciler struct {
 	// to nodes even when they are not ready yet. Furthermore, the replicas are set to 1 and a usable port range is
 	// provided.
 	BootstrapControlPlaneNode bool
+	// ForSelfHostedShoot should be set to true if this reconciler is run in the context of a self-hosted shoot (e.g.,
+	// in gardenadm or in the shoot gardenlet).
+	ForSelfHostedShoot bool
 }
 
 // Reconcile reconciles ControllerInstallations and deploys them into the seed cluster or the self-hosted shoot cluster.
@@ -348,7 +351,7 @@ func (r *Reconciler) reconcile(
 				})
 			})
 		},
-		r.MutateSpecForControlPlaneNodeBootstrapping,
+		r.MutateSpecForSelfHostedShootExtensions,
 	); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to inject garden access secrets: %w", err)
 	}
@@ -581,26 +584,32 @@ func objectEnablesGardenKubeconfig(o runtime.Object) bool {
 	return !ok || v == "true"
 }
 
-// MutateSpecForControlPlaneNodeBootstrapping adapts host network, replicas, tolerations and usable ports range for
+// MutateSpecForSelfHostedShootExtensions adapts host network, replicas, tolerations and usable ports range for
 // self-hosted shoot clusters if necessary.
-func (r *Reconciler) MutateSpecForControlPlaneNodeBootstrapping(obj runtime.Object) error {
-	if !r.BootstrapControlPlaneNode {
+func (r *Reconciler) MutateSpecForSelfHostedShootExtensions(obj runtime.Object) error {
+	if !r.ForSelfHostedShoot {
 		return nil
 	}
 
-	if deployment, ok := obj.(*appsv1.Deployment); ok {
-		deployment.Spec.Replicas = ptr.To(int32(1))
-		deployment.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
-		deployment.Spec.Strategy.RollingUpdate = nil
+	if r.BootstrapControlPlaneNode {
+		if deployment, ok := obj.(*appsv1.Deployment); ok {
+			deployment.Spec.Replicas = ptr.To(int32(1))
+			deployment.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
+			deployment.Spec.Strategy.RollingUpdate = nil
+		}
 	}
+
 	return kubernetesutils.VisitPodSpec(obj, func(podSpec *corev1.PodSpec) {
-		podSpec.HostNetwork = r.BootstrapControlPlaneNode
+		if r.BootstrapControlPlaneNode {
+			podSpec.HostNetwork = r.BootstrapControlPlaneNode
+			kubernetesutils.InjectKubernetesServiceHostEnv(podSpec.InitContainers, "localhost")
+			kubernetesutils.InjectKubernetesServiceHostEnv(podSpec.Containers, "localhost")
+		}
+
 		podSpec.Tolerations = append(podSpec.Tolerations,
 			corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule},
 			corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoExecute},
 		)
-		kubernetesutils.InjectKubernetesServiceHostEnv(podSpec.InitContainers, "localhost")
-		kubernetesutils.InjectKubernetesServiceHostEnv(podSpec.Containers, "localhost")
 	})
 }
 

@@ -6,6 +6,8 @@ package manager
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -74,7 +76,7 @@ type (
 		store                       secretStore
 		logger                      logr.Logger
 		client                      client.Client
-		namespace                   string
+		namespaces                  []string
 		identity                    string
 		lastRotationInitiationTimes nameToUnixTime
 	}
@@ -119,19 +121,23 @@ func New(
 	logger logr.Logger,
 	clock clock.Clock,
 	c client.Client,
-	namespace string,
 	identity string,
 	rotation Config,
+	namespaces ...string,
 ) (
 	Interface,
 	error,
 ) {
+	if len(namespaces) == 0 {
+		return nil, errors.New("must specify at least one namespace")
+	}
+
 	m := &manager{
 		store:                       make(secretStore),
 		clock:                       clock,
-		logger:                      logger.WithValues("namespace", namespace),
+		logger:                      logger,
 		client:                      c,
-		namespace:                   namespace,
+		namespaces:                  namespaces,
 		identity:                    identity,
 		lastRotationInitiationTimes: make(nameToUnixTime),
 	}
@@ -144,11 +150,21 @@ func New(
 }
 
 func (m *manager) listSecrets(ctx context.Context) (*corev1.SecretList, error) {
-	secretList := &corev1.SecretList{}
-	return secretList, m.client.List(ctx, secretList, client.InNamespace(m.namespace), client.MatchingLabels{
-		LabelKeyManagedBy:       LabelValueSecretsManager,
-		LabelKeyManagerIdentity: m.identity,
-	})
+	secretListAllNamespaces := &corev1.SecretList{}
+
+	for _, namespace := range m.namespaces {
+		secretList := &corev1.SecretList{}
+		if err := m.client.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+			LabelKeyManagedBy:       LabelValueSecretsManager,
+			LabelKeyManagerIdentity: m.identity,
+		}); err != nil {
+			return nil, fmt.Errorf("failed to list secrets in namespace %q: %w", namespace, err)
+		}
+
+		secretListAllNamespaces.Items = append(secretListAllNamespaces.Items, secretList.Items...)
+	}
+
+	return secretListAllNamespaces, nil
 }
 
 func (m *manager) initialize(ctx context.Context, rotation Config) error {
@@ -181,7 +197,7 @@ func (m *manager) initialize(ctx context.Context, rotation Config) error {
 		}
 
 		if mustRenew {
-			m.logger.Info("Preparing secret for automatic renewal", "secret", secret.Name, "issuedAt", secret.Labels[LabelKeyIssuedAtTime], "validUntil", secret.Labels[LabelKeyValidUntilTime])
+			m.logger.Info("Preparing secret for automatic renewal", "secret", client.ObjectKeyFromObject(&secret), "issuedAt", secret.Labels[LabelKeyIssuedAtTime], "validUntil", secret.Labels[LabelKeyValidUntilTime])
 			m.lastRotationInitiationTimes[name] = unixTime(m.clock.Now())
 		}
 	}

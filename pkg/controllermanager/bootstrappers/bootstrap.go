@@ -43,7 +43,7 @@ func (b *Bootstrapper) Start(parentCtx context.Context) error {
 		return fmt.Errorf("failed creating kubernetes client: %w", err)
 	}
 
-	secretsManager, err := secretsmanager.New(ctx, b.Log.WithName("secretsmanager"), clock.RealClock{}, b.Client, v1beta1constants.GardenNamespace, v1beta1constants.SecretManagerIdentityControllerManager, secretsmanager.Config{})
+	secretsManager, err := secretsmanager.New(ctx, b.Log.WithName("secretsmanager"), clock.RealClock{}, b.Client, v1beta1constants.SecretManagerIdentityControllerManager, secretsmanager.Config{}, v1beta1constants.GardenNamespace)
 	if err != nil {
 		return fmt.Errorf("failed creating new secrets manager: %w", err)
 	}
