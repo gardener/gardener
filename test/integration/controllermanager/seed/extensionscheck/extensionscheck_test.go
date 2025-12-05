@@ -59,8 +59,8 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 						CredentialsRef: corev1.ObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
-							Name:       "internal-domain-secret",
-							Namespace:  "garden",
+							Name:       "some-secret",
+							Namespace:  "some-namespace",
 						},
 					},
 				},

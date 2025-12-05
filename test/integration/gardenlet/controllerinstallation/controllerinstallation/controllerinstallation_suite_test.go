@@ -74,7 +74,6 @@ var (
 	seed                  *gardencorev1beta1.Seed
 	seedNamespace         *corev1.Namespace
 	gardenNamespace       *corev1.Namespace
-	internalDomainSecret  *corev1.Secret
 	identity              = &gardencorev1beta1.Gardener{Version: "1.2.3"}
 	gardenClusterIdentity = "test-garden"
 )
@@ -123,25 +122,6 @@ var _ = BeforeSuite(func() {
 	testClient, err = client.New(restConfig, client.Options{Scheme: testScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("Create garden namespace")
-	gardenNamespace = &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "garden",
-		},
-	}
-	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
-	log.Info("Created garden namespace for test", "namespaceName", gardenNamespace)
-
-	By("Create Internal Domain Secret")
-	internalDomainSecret = &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "internal-domain-secret",
-			Namespace: "garden",
-		},
-	}
-	Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
-	log.Info("Created Internal Domain Secret for test", "secret", client.ObjectKeyFromObject(internalDomainSecret))
-
 	By("Create seed")
 	seed = &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
@@ -174,8 +154,8 @@ var _ = BeforeSuite(func() {
 					CredentialsRef: corev1.ObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
-						Name:       "internal-domain-secret",
-						Namespace:  "garden",
+						Name:       "some-secret",
+						Namespace:  "some-namespace",
 					},
 				},
 			},
@@ -211,6 +191,15 @@ var _ = BeforeSuite(func() {
 		By("Delete seed namespace")
 		Expect(testClient.Delete(ctx, seedNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
+
+	By("Create garden namespace")
+	gardenNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "garden",
+		},
+	}
+	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
+	log.Info("Created garden namespace for test", "namespaceName", gardenNamespace)
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{

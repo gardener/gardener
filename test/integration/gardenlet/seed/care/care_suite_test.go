@@ -122,14 +122,4 @@ var _ = BeforeSuite(func() {
 		By("Delete seed Namespace")
 		Expect(testClient.Delete(ctx, seedNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
-
-	By("Create Internal Domain Secret")
-	internalDomainSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "internal-domain-secret",
-			Namespace: seedNamespace.Name,
-		},
-	}
-	Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
-	log.Info("Created Internal Domain Secret for test", "secret", client.ObjectKeyFromObject(internalDomainSecret))
 })

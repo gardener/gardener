@@ -27,15 +27,14 @@ import (
 
 var _ = Describe("ManagedSeedSet controller test", func() {
 	var (
-		shoot                *gardencorev1beta1.Shoot
-		seed                 *gardencorev1beta1.Seed
-		internalDomainSecret *corev1.Secret
-		gardenletConfig      *gardenletconfigv1alpha1.GardenletConfiguration
-		managedSeed          *seedmanagementv1alpha1.ManagedSeed
-		managedSeedSet       *seedmanagementv1alpha1.ManagedSeedSet
-		selector             labels.Selector
-		shootList            *gardencorev1beta1.ShootList
-		managedSeedList      *seedmanagementv1alpha1.ManagedSeedList
+		shoot           *gardencorev1beta1.Shoot
+		seed            *gardencorev1beta1.Seed
+		gardenletConfig *gardenletconfigv1alpha1.GardenletConfiguration
+		managedSeed     *seedmanagementv1alpha1.ManagedSeed
+		managedSeedSet  *seedmanagementv1alpha1.ManagedSeedSet
+		selector        labels.Selector
+		shootList       *gardencorev1beta1.ShootList
+		managedSeedList *seedmanagementv1alpha1.ManagedSeedList
 
 		makeShootStateSucceeded = func() {
 			Eventually(func(g Gomega) {
@@ -76,17 +75,6 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 			By("Create Seed manually as ManagedSeed controller is not running in the test")
 			seed.Name = managedSeedList.Items[0].Name
 
-			internalDomainSecret = &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "internal-domain-secret",
-					Namespace: gardenNamespace.Name,
-				},
-			}
-
-			By("Create Internal Domain Secret")
-			Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
-			log.Info("Created Internal Domain Secret", "secret", client.ObjectKeyFromObject(internalDomainSecret))
-
 			Expect(testClient.Create(ctx, seed)).To(Succeed())
 			log.Info("Created Seed for ManagedSeed", "seed", client.ObjectKeyFromObject(seed), "managedSeed", client.ObjectKeyFromObject(&managedSeedList.Items[0]))
 
@@ -96,9 +84,6 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 				Eventually(func() error {
 					return mgrClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
 				}).Should(BeNotFoundError())
-
-				By("Delete Internal Domain Secret")
-				Expect(testClient.Delete(ctx, internalDomainSecret)).To(Or(Succeed(), BeNotFoundError()))
 			})
 
 			By("Mark the Seed as Ready")
@@ -145,8 +130,8 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 						CredentialsRef: corev1.ObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
-							Name:       "internal-domain-secret",
-							Namespace:  gardenNamespace.Name,
+							Name:       "some-secret",
+							Namespace:  "some-namespace",
 						},
 					},
 				},

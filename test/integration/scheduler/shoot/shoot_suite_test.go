@@ -46,10 +46,9 @@ var (
 	testClient client.Client
 	mgrClient  client.Reader
 
-	testNamespace        *corev1.Namespace
-	testSecretBinding    *gardencorev1beta1.SecretBinding
-	testProject          *gardencorev1beta1.Project
-	internalDomainSecret *corev1.Secret
+	testNamespace     *corev1.Namespace
+	testSecretBinding *gardencorev1beta1.SecretBinding
+	testProject       *gardencorev1beta1.Project
 )
 
 var _ = BeforeSuite(func() {
@@ -149,20 +148,5 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(func() {
 		By("Delete SecretBinding")
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, testSecretBinding))).To(Succeed())
-	})
-
-	By("Create internal domain secret")
-	internalDomainSecret = &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "internal-domain-secret",
-			Namespace: testNamespace.Name,
-		},
-	}
-	Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
-	log.Info("Created internal domain secret for test", "secret", client.ObjectKeyFromObject(internalDomainSecret))
-
-	DeferCleanup(func() {
-		By("Delete internal domain secret")
-		Expect(client.IgnoreNotFound(testClient.Delete(ctx, internalDomainSecret))).To(Succeed())
 	})
 })

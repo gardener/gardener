@@ -693,8 +693,8 @@ func createSeed(region string, zones []string, accessRestrictions []gardencorev1
 					CredentialsRef: corev1.ObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
-						Name:       internalDomainSecret.Name,
-						Namespace:  internalDomainSecret.Namespace,
+						Name:       "some-secret",
+						Namespace:  "some-namespace",
 					},
 				},
 				Defaults: []gardencorev1beta1.SeedDNSProviderConfig{

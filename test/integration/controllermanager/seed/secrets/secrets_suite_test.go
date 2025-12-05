@@ -87,21 +87,6 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 	testRunID = testNamespace.Name
 
-	By("Create Internal Domain Secret")
-	internalDomainSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "internal-domain-secret",
-			Namespace: testNamespace.Name,
-		},
-	}
-	Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
-	log.Info("Created Internal Domain Secret")
-
-	DeferCleanup(func() {
-		By("Delete Internal Domain Secret")
-		Expect(testClient.Delete(ctx, internalDomainSecret)).To(Succeed())
-	})
-
 	DeferCleanup(func() {
 		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))

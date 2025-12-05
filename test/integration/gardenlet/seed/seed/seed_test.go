@@ -205,21 +205,6 @@ var _ = Describe("Seed controller tests", func() {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(dnsProviderSecret), dnsProviderSecret)
 		}).Should(Succeed())
 
-		By("Create Internal Domain Secret")
-		internalDomainSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "internal-domain-secret",
-				Namespace: testNamespace.Name,
-			},
-		}
-		Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
-		log.Info("Created Internal Domain Secret for test", "secret", client.ObjectKeyFromObject(internalDomainSecret))
-
-		By("Wait until the manager cache observes the Internal Domain Secret")
-		Eventually(func() error {
-			return mgrClient.Get(ctx, client.ObjectKeyFromObject(internalDomainSecret), internalDomainSecret)
-		}).Should(Succeed())
-
 		providerName = "provider-type"
 		extensionData = []byte(`{"someField":"someValue"}`)
 
@@ -252,8 +237,8 @@ var _ = Describe("Seed controller tests", func() {
 						CredentialsRef: corev1.ObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
-							Name:       "internal-domain-secret",
-							Namespace:  testNamespace.Name,
+							Name:       "some-secret",
+							Namespace:  "some-namespace",
 						},
 					},
 					Provider: &gardencorev1beta1.SeedDNSProvider{

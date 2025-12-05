@@ -48,9 +48,8 @@ var (
 	testClient client.Client
 	mgrClient  client.Client
 
-	testNamespace        *corev1.Namespace
-	internalDomainSecret *corev1.Secret
-	testRunID            string
+	testNamespace *corev1.Namespace
+	testRunID     string
 )
 
 var _ = BeforeSuite(func() {
@@ -87,16 +86,6 @@ var _ = BeforeSuite(func() {
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 	testRunID = testNamespace.Name
-
-	By("Create Internal Domain Secret")
-	internalDomainSecret = &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "internal-domain-secret",
-			Namespace: testNamespace.Name,
-		},
-	}
-	Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
-	log.Info("Created Internal Domain Secret for test", "secret", client.ObjectKeyFromObject(internalDomainSecret))
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{

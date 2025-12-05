@@ -183,7 +183,7 @@ func buildManagedSeed(shoot *gardencorev1beta1.Shoot) *seedmanagementv1alpha1.Ma
 					},
 					DNS: gardencorev1beta1.SeedDNS{
 						Internal: &gardencorev1beta1.SeedDNSProviderConfig{
-							Type:   "foo",
+							Type:   "local",
 							Domain: "internal.local.gardener.cloud",
 							CredentialsRef: corev1.ObjectReference{
 								APIVersion: "v1",

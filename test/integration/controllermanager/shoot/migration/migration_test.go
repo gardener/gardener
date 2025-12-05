@@ -94,8 +94,8 @@ var _ = Describe("Shoot Migration controller tests", Ordered, func() {
 						CredentialsRef: corev1.ObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
-							Name:       "internal-domain-secret",
-							Namespace:  testNamespace.Name,
+							Name:       "some-secret",
+							Namespace:  "some-namespace",
 						},
 					},
 				},
