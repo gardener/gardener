@@ -28,7 +28,7 @@ spec:
               dns:
                 ingress:
                   # "replica-name" in DNS domains will be replaced by the actual replica name
-                  domain: replica-name.ingress.local.seed.local.gardener.cloud
+                  domain: replica-name.ingress.crazy-botany.core.my-custom-domain.com
   shootTemplate:
     # <See `90-shoot.yaml` for more details>
     metadata:
