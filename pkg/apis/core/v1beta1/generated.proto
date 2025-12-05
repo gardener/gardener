@@ -3684,6 +3684,11 @@ message VerticalPodAutoscaler {
   // Defaults to nil (no maximum).
   // +optional
   map<string, .k8s.io.apimachinery.pkg.api.resource.Quantity> maxAllowed = 20;
+
+  // UpdateWorkerCount is the number of workers used for updating VPAs and VPACheckpoints in parallel
+  // (default: 10)
+  // +optional
+  optional int64 updateWorkerCount = 21;
 }
 
 // Volume contains information about the volume type, size, and encryption.
