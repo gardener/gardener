@@ -224,6 +224,10 @@ var _ = Describe("NginxIngress", func() {
 				Values:            []string{address},
 				AnnotateOperation: false,
 				IPStack:           "ipv4",
+				Labels: map[string]string{
+					"role":                "external",
+					"gardener.cloud/role": "ingress",
+				},
 			}))
 		})
 
@@ -271,6 +275,10 @@ var _ = Describe("NginxIngress", func() {
 				Values:            []string{address},
 				AnnotateOperation: false,
 				IPStack:           "ipv4",
+				Labels: map[string]string{
+					"role":                "external",
+					"gardener.cloud/role": "ingress",
+				},
 			}))
 		})
 
@@ -296,6 +304,10 @@ var _ = Describe("NginxIngress", func() {
 					Annotations: map[string]string{
 						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+					},
+					Labels: map[string]string{
+						"role":                "external",
+						"gardener.cloud/role": "ingress",
 					},
 				},
 				Spec: extensionsv1alpha1.DNSRecordSpec{
@@ -346,7 +358,7 @@ var _ = Describe("NginxIngress", func() {
 		})
 
 		Context("restore", func() {
-			var shootState = &gardencorev1beta1.ShootState{}
+			shootState := &gardencorev1beta1.ShootState{}
 
 			BeforeEach(func() {
 				b.Shoot.SetShootState(shootState)
