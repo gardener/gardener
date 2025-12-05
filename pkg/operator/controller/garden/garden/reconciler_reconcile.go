@@ -1069,16 +1069,14 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 		}
 	}
 
-	seeds := []string{}
-	// The seed dashboard url only for managed seeds
-	for _, seed := range seedList.Items {
-		if err := virtualGardenClient.Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: seed.Name}, &metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: seedmanagementv1alpha1.SchemeGroupVersion.String(), Kind: "ManagedSeed"}}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return fmt.Errorf("failed checking whether seed %s is a managed seed: %w", seed.Name, err)
-			}
-			continue
-		}
-		seeds = append(seeds, seed.Name)
+	managedSeedList := &seedmanagementv1alpha1.ManagedSeedList{}
+	if err := virtualGardenClient.List(ctx, managedSeedList); err != nil {
+		return fmt.Errorf("failed listing managed seeds in virtual garden: %w", err)
+	}
+
+	var managedSeedNames []string
+	for _, managedSeed := range managedSeedList.Items {
+		managedSeedNames = append(managedSeedNames, managedSeed.Name)
 	}
 
 	additionalAlertRelabelConfigs := []monitoringv1.RelabelConfig{
@@ -1087,21 +1085,21 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 			Regex:        "(.+);(.+)",
 			Action:       "replace",
 			Replacement:  ptr.To("https://dashboard." + primaryIngressDomain + "/namespace/garden-$1/shoots/$2"),
-			TargetLabel:  "shoot_dashboard_url",
+			TargetLabel:  "dashboard_url",
 		},
 		{
 			SourceLabels: []monitoringv1.LabelName{"project", "name"},
 			Regex:        "garden;(.+)",
 			Action:       "replace",
 			Replacement:  ptr.To("https://dashboard." + primaryIngressDomain + "/namespace/garden/shoots/$1"),
-			TargetLabel:  "shoot_dashboard_url",
+			TargetLabel:  "dashboard_url",
 		},
 		{
 			SourceLabels: []monitoringv1.LabelName{"project", "name"},
-			Regex:        ";" + strings.Join(seeds, "|"),
+			Regex:        ";" + strings.Join(managedSeedNames, "|"),
 			Action:       "replace",
 			Replacement:  ptr.To("https://dashboard." + primaryIngressDomain + "/namespace/garden/shoots/$2"),
-			TargetLabel:  "seed_dashboard_url",
+			TargetLabel:  "dashboard_url",
 		},
 	}
 	prometheus.SetAdditionalAlertRelabelConfigs(additionalAlertRelabelConfigs)
