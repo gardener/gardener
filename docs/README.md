@@ -162,6 +162,7 @@
 * [GEP-33: Machine Image Capabilities](proposals/33-machine-image-capabilities.md)
 * [GEP-34: Introducing OpenTelemetry Operator and Collectors in Shoot Control Planes](proposals/34-observability2.0-opentelemetry-operator-and-collectors.md)
 * [GEP-35: Migrating from Vali to VictoriaLogs](proposals/35-observability2.0-victoria-logs.md)
+* [GEP-36: Self-Hosted Shoot Exposure](proposals/36-self-hosted-shoot-exposure.md)
 
 ## Development
 
