@@ -448,7 +448,7 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 			o.waitInterval,
 			o.waitSevereThreshold,
 			o.waitTimeout,
-			func() error {
+			func(ctx context.Context) error {
 				if purpose != extensionsv1alpha1.OperatingSystemConfigPurposeProvision {
 					return nil
 				}

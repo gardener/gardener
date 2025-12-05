@@ -129,7 +129,7 @@ func (c *controlPlaneBootstrap) Wait(ctx context.Context) error {
 		c.waitInterval,
 		c.waitSevereThreshold,
 		c.waitTimeout,
-		func() error {
+		func(ctx context.Context) error {
 			if c.osc.Object.Status.CloudConfig == nil {
 				return fmt.Errorf("no cloud config information provided in status")
 			}

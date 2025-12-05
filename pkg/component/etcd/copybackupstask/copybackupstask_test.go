@@ -147,9 +147,11 @@ var _ = Describe("CopyBackupsTask", func() {
 		})
 
 		It("should return error if Failed condition with status True has been added", func() {
+			var callCount int
 			c.EXPECT().
-				Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), expected).
+				Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidcorev1alpha1.EtcdCopyBackupsTask{})).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidcorev1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
+					callCount++
 					etcdCopyBackupsTask.Status.ObservedGeneration = &expected.Generation
 					etcdCopyBackupsTask.Status.Conditions = []druidcorev1alpha1.Condition{
 						{
@@ -162,6 +164,7 @@ var _ = Describe("CopyBackupsTask", func() {
 					return nil
 				}).AnyTimes()
 			Expect(etcdCopyBackupsTask.Wait(ctx)).To(HaveOccurred())
+			Expect(callCount).To(BeNumerically(">", 1), "should have retried multiple times")
 		})
 
 		It("should be successful if Successful condition with status True has been added", func() {

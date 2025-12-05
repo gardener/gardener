@@ -342,7 +342,7 @@ func (w *worker) Wait(ctx context.Context) error {
 		w.waitInterval,
 		w.waitSevereThreshold,
 		w.waitTimeout,
-		func() error {
+		func(ctx context.Context) error {
 			// In Restore, we add the machine-state from the ShootState to Worker.status.state, so that the extension
 			// controller can pick it up and restore the MachineDeployments, MachineSets, and Machines.
 			// After the Worker has been successfully restored/reconciled, we need to clear Worker.status.state to not keep
@@ -370,7 +370,7 @@ func (w *worker) WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx context.Cont
 		w.waitInterval,
 		w.waitSevereThreshold,
 		w.waitTimeout,
-		func() error {
+		func(_ context.Context) error {
 			w.machineDeployments = w.worker.Status.MachineDeployments
 			return nil
 		},

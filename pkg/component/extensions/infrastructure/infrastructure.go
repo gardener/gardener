@@ -198,7 +198,7 @@ func (i *infrastructure) Wait(ctx context.Context) error {
 		i.waitInterval,
 		i.waitSevereThreshold,
 		i.waitTimeout,
-		func() error {
+		func(_ context.Context) error {
 			i.extractStatus(i.infrastructure.Status)
 			return nil
 		})

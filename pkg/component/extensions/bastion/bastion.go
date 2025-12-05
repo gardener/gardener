@@ -76,7 +76,7 @@ func New(
 
 		Clock:               &clock.RealClock{},
 		WaitInterval:        5 * time.Second,
-		WaitSevereThreshold: 30 * time.Second,
+		WaitSevereThreshold: 6 * time.Minute,
 		WaitTimeout:         15 * time.Minute,
 		SSHDial:             sshutils.Dial,
 
@@ -129,7 +129,7 @@ func (b *Bastion) Wait(ctx context.Context) error {
 		b.WaitInterval,
 		b.WaitSevereThreshold,
 		b.WaitTimeout,
-		func() error {
+		func(ctx context.Context) error {
 			return b.connect(ctx)
 		},
 	)
