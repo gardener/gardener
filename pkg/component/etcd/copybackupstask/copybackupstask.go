@@ -179,7 +179,7 @@ func waitForConditions(obj client.Object) error {
 }
 
 // checkConditions checks the EtcdCopyBackupsTask conditions to determine if the copy operation has completed successfully or not.
-func (e *etcdCopyBackupsTask) checkConditions() error {
+func (e *etcdCopyBackupsTask) checkConditions(_ context.Context) error {
 	for _, condition := range e.task.Status.Conditions {
 		if condition.Type == druidcorev1alpha1.EtcdCopyBackupsTaskFailed && condition.Status == druidcorev1alpha1.ConditionTrue {
 			return fmt.Errorf("condition %s has status %s: %s", condition.Type, condition.Status, condition.Message)

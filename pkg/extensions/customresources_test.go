@@ -155,7 +155,7 @@ var _ = Describe("extensions", func() {
 			err := WaitUntilExtensionObjectReady(
 				ctx, c, log,
 				passedObj, extensionsv1alpha1.WorkerResource,
-				defaultInterval, defaultThreshold, defaultTimeout, func() error {
+				defaultInterval, defaultThreshold, defaultTimeout, func(_ context.Context) error {
 					val++
 					return nil
 				},
@@ -328,7 +328,7 @@ var _ = Describe("extensions", func() {
 					return nil
 				},
 				expected, extensionsv1alpha1.WorkerResource,
-				defaultInterval, defaultThreshold, defaultTimeout, func() error {
+				defaultInterval, defaultThreshold, defaultTimeout, func(_ context.Context) error {
 					val++
 					return nil
 				},

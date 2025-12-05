@@ -883,6 +883,6 @@ func waitUntilLoadBalancerIsReadyInTest(_ context.Context, _ logr.Logger, _ clie
 	return "someingress.example.com", nil
 }
 
-func waitUntilExtensionObjectReadyInTest(_ context.Context, _ client.Client, _ logr.Logger, _ extensionsv1alpha1.Object, _ string, _, _, _ time.Duration, _ func() error) error {
+func waitUntilExtensionObjectReadyInTest(_ context.Context, _ client.Client, _ logr.Logger, _ extensionsv1alpha1.Object, _ string, _, _, _ time.Duration, _ func(context.Context) error) error {
 	return nil
 }

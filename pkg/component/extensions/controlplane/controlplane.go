@@ -175,7 +175,7 @@ func (c *controlPlane) Wait(ctx context.Context) error {
 		c.waitInterval,
 		c.waitSevereThreshold,
 		c.waitTimeout,
-		func() error {
+		func(_ context.Context) error {
 			c.providerStatus = c.controlPlane.Status.ProviderStatus
 			return nil
 		},

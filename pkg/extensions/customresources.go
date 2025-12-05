@@ -45,7 +45,7 @@ func WaitUntilExtensionObjectReady(
 	interval time.Duration,
 	severeThreshold time.Duration,
 	timeout time.Duration,
-	postReadyFunc func() error,
+	postReadyFunc func(context.Context) error,
 ) error {
 	return WaitUntilObjectReadyWithHealthFunction(ctx, c, log, health.CheckExtensionObject, obj, kind, interval, severeThreshold, timeout, postReadyFunc)
 }
@@ -64,7 +64,7 @@ func WaitUntilObjectReadyWithHealthFunction(
 	interval time.Duration,
 	severeThreshold time.Duration,
 	timeout time.Duration,
-	postReadyFunc func() error,
+	postReadyFunc func(context.Context) error,
 ) error {
 	var (
 		lastObservedError     error
@@ -111,7 +111,7 @@ func WaitUntilObjectReadyWithHealthFunction(
 		}
 
 		if postReadyFunc != nil {
-			if err := postReadyFunc(); err != nil {
+			if err := postReadyFunc(ctx); err != nil {
 				lastObservedError = err
 
 				if retry.IsRetriable(err) {
