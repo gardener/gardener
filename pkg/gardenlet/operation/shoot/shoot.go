@@ -507,12 +507,13 @@ func (s *Shoot) ComputeOutOfClusterAPIServerAddress(preferInternalClusterDomain 
 	return v1beta1helper.GetAPIServerDomain(*s.ExternalClusterDomain)
 }
 
-// IPVSEnabled returns true if IPVS is enabled for the shoot.
-func (s *Shoot) IPVSEnabled() bool {
+// ProxyMode returns the kube-proxy mode config for the shoot.
+func (s *Shoot) ProxyMode() gardencorev1beta1.ProxyMode {
 	shoot := s.GetInfo()
-	return shoot.Spec.Kubernetes.KubeProxy != nil &&
-		shoot.Spec.Kubernetes.KubeProxy.Mode != nil &&
-		*shoot.Spec.Kubernetes.KubeProxy.Mode == gardencorev1beta1.ProxyModeIPVS
+	if shoot.Spec.Kubernetes.KubeProxy != nil && shoot.Spec.Kubernetes.KubeProxy.Mode != nil {
+		return *shoot.Spec.Kubernetes.KubeProxy.Mode
+	}
+	return gardencorev1beta1.ProxyModeIPTables
 }
 
 // IsShootControlPlaneLoggingEnabled return true if the Shoot controlplane logging is enabled

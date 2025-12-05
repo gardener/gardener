@@ -68,7 +68,7 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 	for _, ip := range b.Shoot.Networks.CoreDNS {
 		coreDNS = append(coreDNS, ip.String())
 	}
-	if b.Shoot.IPVSEnabled() {
+	if b.Shoot.ProxyMode() == gardencorev1beta1.ProxyModeIPVS {
 		clusterDNS = coreDNS
 	} else {
 		dnsServers = coreDNS
