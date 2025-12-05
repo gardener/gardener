@@ -36,6 +36,26 @@ const SecretLabelKeyManagedResource = "managed-resource"
 
 // DefaultOperatingSystemConfig creates the default deployer for the OperatingSystemConfig custom resource.
 func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interface, error) {
+	values, err := b.OperatingSystemConfigValues()
+	if err != nil {
+		return nil, fmt.Errorf("failed creating operating system config values: %w", err)
+	}
+
+	return operatingsystemconfig.New(
+		b.Logger,
+		b.SeedClientSet.Client(),
+		b.SecretsManager,
+		values,
+		operatingsystemconfig.DefaultInterval,
+		operatingsystemconfig.DefaultSevereThreshold,
+		operatingsystemconfig.DefaultTimeout,
+	), nil
+}
+
+// OperatingSystemConfigValues computes the values for the OperatingSystemConfig custom resource.
+// It can be used both in the DefaultOperatingSystemConfig and in the ControlPlaneBootstrapOperatingSystemConfig.
+// Reusing the same values in both places ensures that the computed OperatingSystemConfig hashes are the same.
+func (b *Botanist) OperatingSystemConfigValues() (*operatingsystemconfig.Values, error) {
 	oscImages, err := imagevectorutils.FindImages(imagevector.Containers(), []string{imagevector.ContainerImageNamePauseContainer, imagevector.ContainerImageNameValitail, imagevector.ContainerImageNameOpentelemetryCollector}, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
@@ -59,35 +79,27 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 		openTelemetryCollectorLogShipperEnabled, openTelemetryIngressHost = true, b.ComputeOpenTelemetryCollectorHost()
 	}
 
-	return operatingsystemconfig.New(
-		b.Logger,
-		b.SeedClientSet.Client(),
-		b.SecretsManager,
-		&operatingsystemconfig.Values{
-			Namespace:         b.Shoot.ControlPlaneNamespace,
-			KubernetesVersion: b.Shoot.KubernetesVersion,
-			Workers:           b.Shoot.GetInfo().Spec.Provider.Workers,
-			OriginalValues: operatingsystemconfig.OriginalValues{
-				ClusterDomain:                           gardencorev1beta1.DefaultDomain,
-				Images:                                  oscImages,
-				KubeletConfig:                           b.Shoot.GetInfo().Spec.Kubernetes.Kubelet,
-				KubeProxyEnabled:                        v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy),
-				MachineTypes:                            b.Shoot.CloudProfile.Spec.MachineTypes,
-				SSHAccessEnabled:                        v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo()),
-				ValitailEnabled:                         valitailEnabled,
-				ValiIngressHostName:                     valiIngressHost,
-				OpenTelemetryCollectorLogShipperEnabled: openTelemetryCollectorLogShipperEnabled,
-				OpenTelemetryIngressHostName:            openTelemetryIngressHost,
-				NodeLocalDNSEnabled:                     v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents),
-				NodeMonitorGracePeriod:                  *b.Shoot.GetInfo().Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod,
-				PrimaryIPFamily:                         b.Shoot.GetInfo().Spec.Networking.IPFamilies[0],
-				KubeProxyConfig:                         b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy,
-			},
+	return &operatingsystemconfig.Values{
+		Namespace:         b.Shoot.ControlPlaneNamespace,
+		KubernetesVersion: b.Shoot.KubernetesVersion,
+		Workers:           b.Shoot.GetInfo().Spec.Provider.Workers,
+		OriginalValues: operatingsystemconfig.OriginalValues{
+			ClusterDomain:                           gardencorev1beta1.DefaultDomain,
+			Images:                                  oscImages,
+			KubeletConfig:                           b.Shoot.GetInfo().Spec.Kubernetes.Kubelet,
+			KubeProxyEnabled:                        v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy),
+			MachineTypes:                            b.Shoot.CloudProfile.Spec.MachineTypes,
+			SSHAccessEnabled:                        v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo()),
+			ValitailEnabled:                         valitailEnabled,
+			ValiIngressHostName:                     valiIngressHost,
+			OpenTelemetryCollectorLogShipperEnabled: openTelemetryCollectorLogShipperEnabled,
+			OpenTelemetryIngressHostName:            openTelemetryIngressHost,
+			NodeLocalDNSEnabled:                     v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents),
+			NodeMonitorGracePeriod:                  *b.Shoot.GetInfo().Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod,
+			PrimaryIPFamily:                         b.Shoot.GetInfo().Spec.Networking.IPFamilies[0],
+			KubeProxyConfig:                         b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy,
 		},
-		operatingsystemconfig.DefaultInterval,
-		operatingsystemconfig.DefaultSevereThreshold,
-		operatingsystemconfig.DefaultTimeout,
-	), nil
+	}, nil
 }
 
 // DeployOperatingSystemConfig deploys the OperatingSystemConfig custom resource and triggers the restore operation in

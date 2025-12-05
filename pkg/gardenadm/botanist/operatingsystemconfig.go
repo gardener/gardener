@@ -241,12 +241,17 @@ func (b *GardenadmBotanist) ControlPlaneBootstrapOperatingSystemConfig() (operat
 		return nil, fmt.Errorf("did not find the control plane worker pool of the shoot")
 	}
 
+	values, err := b.OperatingSystemConfigValues()
+	if err != nil {
+		return nil, fmt.Errorf("failed creating operating system config values: %w", err)
+	}
+
 	return operatingsystemconfig.NewControlPlaneBootstrap(
 		b.Logger,
 		b.SeedClientSet.Client(),
 		b.SecretsManager,
 		&operatingsystemconfig.ControlPlaneBootstrapValues{
-			Namespace:      b.Shoot.ControlPlaneNamespace,
+			Values:         values,
 			Worker:         worker,
 			GardenadmImage: image.String(),
 		},

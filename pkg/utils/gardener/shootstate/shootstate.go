@@ -132,14 +132,9 @@ func computeGardenerData(
 	}
 
 	if machineState != nil {
-		machineStateJSON, err := json.Marshal(machineState)
+		machineStateJSONCompressed, err := MarshalMachineState(machineState)
 		if err != nil {
-			return nil, fmt.Errorf("failed marshalling machine state to JSON: %w", err)
-		}
-
-		machineStateJSONCompressed, err := compressMachineState(machineStateJSON)
-		if err != nil {
-			return nil, fmt.Errorf("failed compressing machine state data: %w", err)
+			return nil, err
 		}
 
 		if machineStateJSONCompressed != nil {

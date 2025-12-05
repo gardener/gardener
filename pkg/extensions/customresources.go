@@ -23,6 +23,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	unstructuredutils "github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
@@ -269,9 +270,10 @@ func RestoreExtensionObjectState(
 	extensionObj extensionsv1alpha1.Object,
 	kind string,
 ) error {
-	if extensionObj.GetExtensionStatus().GetLastOperation() != nil {
-		// Extension controller has already started restoration/reconciliation of this extension object.
-		// Don't overwrite its status anymore to avoid conflicts and potential state loss.
+	if extensionObj.GetExtensionStatus().GetState() != nil {
+		// The extension object status contains state, so we either already restored it or the extension controller has
+		// already started restoration/reconciliation of this object.
+		// Don't overwrite status.state anymore to avoid conflicts and potential state loss.
 		// This can happen if `gardenadm init` is re-run with a `ShootState` manifest because it always sets the operation
 		// of the in-memory Shoot object to `Restore` which triggers restoration of all extension objects.
 		return nil
@@ -297,6 +299,7 @@ func RestoreExtensionObjectState(
 			}
 		}
 	}
+
 	if shootState.Spec.Resources != nil {
 		list := v1beta1helper.ResourceDataList(shootState.Spec.Resources)
 		for _, resourceRef := range resourceRefs {
@@ -312,6 +315,68 @@ func RestoreExtensionObjectState(
 			}
 		}
 	}
+
+	if worker, ok := extensionObj.(*extensionsv1alpha1.Worker); ok {
+		if err := RestoreWorkerState(ctx, c, shootState, worker); err != nil {
+			return fmt.Errorf("failed restoring Worker state: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// RestoreWorkerState restores machine state from ShootState gardener data into the Worker.status.state field.
+// Historically, the ShootState object was fetched from the garden cluster by the extension's Worker controller.
+// However, when bootstrapping self-hosted shoots with managed infrastructure, the ShootState is not transported
+// via the garden cluster, but passed to `gardenadm init` as a manifest in the config directory.
+// Therefore, the extension's Worker controller cannot fetch the ShootState and we need to pass the machine state
+// via the Worker.status.state here.
+func RestoreWorkerState(ctx context.Context, c client.Client, shootState *gardencorev1beta1.ShootState, worker *extensionsv1alpha1.Worker) error {
+	// Read machine state from ShootState gardener data.
+	var state []byte
+	gardenerData := v1beta1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+	if machineState := gardenerData.Get(v1beta1constants.DataTypeMachineState); machineState != nil && machineState.Type == v1beta1constants.DataTypeMachineState {
+		state = machineState.Data.Raw
+	}
+
+	if len(state) == 0 {
+		return nil
+	}
+
+	if worker.Status.State != nil && len(worker.Status.State.Raw) > 0 {
+		return fmt.Errorf("cannot restore machine state from gardener data in ShootState because ShootState already contains state of Worker. "+
+			"Ensure that the %s provider extension doesn't write Worker.status.state during the Migrate operation", worker.Spec.Type)
+	}
+
+	// Update namespaces in the machine state to the worker's namespace.
+	// This is necessary for `gardenadm bootstrap`, where the `Machines` are created in the shoot namespace in the
+	// bootstrap cluster, but restored in the kube-system namespace in the self-hosted shoot cluster.
+	machineState, err := shootstate.UnmarshalMachineState(state)
+	if err != nil {
+		return err
+	}
+
+	for _, machineDeploymentState := range machineState.MachineDeployments {
+		for i := range machineDeploymentState.Machines {
+			machineDeploymentState.Machines[i].Namespace = worker.Namespace
+		}
+		for i := range machineDeploymentState.MachineSets {
+			machineDeploymentState.MachineSets[i].Namespace = worker.Namespace
+		}
+	}
+
+	state, err = shootstate.MarshalMachineState(machineState)
+	if err != nil {
+		return err
+	}
+
+	// Patch the updated machine state into the Worker.status.state field.
+	patch := client.MergeFrom(worker.DeepCopy())
+	worker.Status.State = &runtime.RawExtension{Raw: state}
+	if err := c.Status().Patch(ctx, worker, patch); err != nil {
+		return fmt.Errorf("failed restoring worker state: %w", err)
+	}
+
 	return nil
 }
 

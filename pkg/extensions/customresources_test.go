@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"time"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -26,6 +27,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -632,7 +634,7 @@ var _ = Describe("extensions", func() {
 				Expect(expected.Status.State).To(Equal(expectedState))
 			})
 
-			It("should not update the state if the extension controller has already picked up the object", func() {
+			It("should not overwrite the extension object's state if already present", func() {
 				defer test.WithVars(
 					&TimeNow, mockNow.Do,
 				)()
@@ -642,9 +644,6 @@ var _ = Describe("extensions", func() {
 
 				changedStatus := &runtime.RawExtension{
 					Raw: []byte(`{"data":"changed-value"}`),
-				}
-				expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
-					State: gardencorev1beta1.LastOperationStateProcessing,
 				}
 				expected.Status.State = changedStatus
 				Expect(c.Status().Update(ctx, expected)).To(Succeed())
@@ -657,6 +656,134 @@ var _ = Describe("extensions", func() {
 					extensionsv1alpha1.WorkerResource,
 				)).To(Succeed())
 				Expect(expected.Status.State).To(Equal(changedStatus))
+			})
+		})
+
+		Describe("#RestoreWorkerState", func() {
+			var (
+				machineState     *shootstate.MachineState
+				machineStateData []byte
+			)
+
+			BeforeEach(func() {
+				machineState = &shootstate.MachineState{
+					MachineDeployments: map[string]*shootstate.MachineDeploymentState{
+						"shoot--foo--bar-worker-z1": {
+							Replicas: 3,
+							MachineSets: []machinev1alpha1.MachineSet{
+								{
+									ObjectMeta: metav1.ObjectMeta{
+										Name:      "shoot--foo--bar-worker-z1-hash1",
+										Namespace: namespace,
+									},
+									Spec: machinev1alpha1.MachineSetSpec{
+										Replicas: 3,
+										MachineClass: machinev1alpha1.ClassSpec{
+											Name: "shoot--foo--bar-worker-z1-hash1",
+										},
+										Template: machinev1alpha1.MachineTemplateSpec{
+											Spec: machinev1alpha1.MachineSpec{
+												Class: machinev1alpha1.ClassSpec{
+													Name: "shoot--foo--bar-worker-z1-hash1",
+												},
+											},
+										},
+									},
+								},
+								{
+									ObjectMeta: metav1.ObjectMeta{
+										Name:      "shoot--foo--bar-worker-z1-hash2",
+										Namespace: namespace,
+									},
+									Spec: machinev1alpha1.MachineSetSpec{
+										Replicas: 3,
+										MachineClass: machinev1alpha1.ClassSpec{
+											Name: "shoot--foo--bar-worker-z1-hash2",
+										},
+										Template: machinev1alpha1.MachineTemplateSpec{
+											Spec: machinev1alpha1.MachineSpec{
+												Class: machinev1alpha1.ClassSpec{
+													Name: "shoot--foo--bar-worker-z1-hash2",
+												},
+											},
+										},
+									},
+								},
+							},
+							Machines: []machinev1alpha1.Machine{
+								{
+									ObjectMeta: metav1.ObjectMeta{
+										Name:      "shoot--foo--bar-worker-z1-hash1-abcde",
+										Namespace: namespace,
+									},
+									Spec: machinev1alpha1.MachineSpec{
+										Class: machinev1alpha1.ClassSpec{
+											Name: "shoot--foo--bar-worker-z1-hash1-abcde",
+										},
+									},
+								},
+								{
+									ObjectMeta: metav1.ObjectMeta{
+										Name:      "shoot--foo--bar-worker-z1-hash2-abcde",
+										Namespace: namespace,
+									},
+									Spec: machinev1alpha1.MachineSpec{
+										Class: machinev1alpha1.ClassSpec{
+											Name: "shoot--foo--bar-worker-z1-hash2-abcde",
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				var err error
+				machineStateData, err = shootstate.MarshalMachineState(machineState)
+				Expect(err).NotTo(HaveOccurred())
+
+				shootState.Spec.Gardener = []gardencorev1beta1.GardenerResourceData{{
+					Name: "machine-state",
+					Type: "machine-state",
+					Data: runtime.RawExtension{
+						Raw: machineStateData,
+					},
+				}}
+			})
+
+			It("should fail if the worker object already has a state", func() {
+				expected.Status.State = &runtime.RawExtension{Raw: []byte(`{"data":"some-existing-value"}`)}
+
+				Expect(RestoreWorkerState(ctx, c, shootState, expected)).Error().To(MatchError(ContainSubstring("already contains state")))
+			})
+
+			It("should copy the machine-state to the worker status", func() {
+				Expect(c.Create(ctx, expected)).To(Succeed())
+
+				Expect(RestoreWorkerState(ctx, c, shootState, expected)).To(Succeed())
+
+				actual := &extensionsv1alpha1.Worker{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
+				Expect(actual.Status.State.Raw).To(HaveValue(Equal(machineStateData)))
+			})
+
+			It("should update the namespace of the machine-state", func() {
+				expected.Namespace = "kube-system"
+				Expect(c.Create(ctx, expected)).To(Succeed())
+
+				Expect(RestoreWorkerState(ctx, c, shootState, expected)).To(Succeed())
+
+				actual := &extensionsv1alpha1.Worker{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
+
+				machineState.MachineDeployments["shoot--foo--bar-worker-z1"].Machines[0].Namespace = expected.Namespace
+				machineState.MachineDeployments["shoot--foo--bar-worker-z1"].Machines[1].Namespace = expected.Namespace
+				machineState.MachineDeployments["shoot--foo--bar-worker-z1"].MachineSets[0].Namespace = expected.Namespace
+				machineState.MachineDeployments["shoot--foo--bar-worker-z1"].MachineSets[1].Namespace = expected.Namespace
+
+				actualMachineState, err := shootstate.UnmarshalMachineState(actual.Status.State.Raw)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actualMachineState).To(Equal(machineState))
 			})
 		})
 	})

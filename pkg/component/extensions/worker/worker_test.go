@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -33,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
@@ -158,7 +160,7 @@ var _ = Describe("Worker", func() {
 
 		s := runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
-		c = fake.NewClientBuilder().WithScheme(s).Build()
+		c = fake.NewClientBuilder().WithScheme(s).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build()
 
 		values = &worker.Values{
 			Name:                         name,
@@ -568,15 +570,18 @@ var _ = Describe("Worker", func() {
 
 			By("Patch object")
 			patch := client.MergeFrom(w.DeepCopy())
-			w.Status.LastError = nil
 			// remove operation annotation, add old timestamp annotation
 			w.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 			}
+			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
+
+			patch = client.MergeFrom(w.DeepCopy())
+			w.Status.LastError = nil
 			w.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
 			}
-			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
+			Expect(c.Status().Patch(ctx, w, patch)).To(Succeed(), "patching worker status succeeds")
 
 			By("Wait")
 			Expect(defaultDepWaiter.Wait(ctx)).NotTo(Succeed(), "worker indicates error")
@@ -594,19 +599,89 @@ var _ = Describe("Worker", func() {
 
 			By("Patch object")
 			patch := client.MergeFrom(w.DeepCopy())
-			w.Status.LastError = nil
 			// remove operation annotation, add up-to-date timestamp annotation
 			w.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
+			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
+
+			patch = client.MergeFrom(w.DeepCopy())
+			w.Status.LastError = nil
 			w.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State:          gardencorev1beta1.LastOperationStateSucceeded,
 				LastUpdateTime: metav1.Time{Time: now.UTC().Add(time.Second)},
 			}
-			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
+			Expect(c.Status().Patch(ctx, w, patch)).To(Succeed(), "patching worker status succeeds")
 
 			By("Wait")
 			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "worker is ready")
+		})
+
+		It("should remove the state added by Restore", func() {
+			state, err := shootstate.MarshalMachineState(&shootstate.MachineState{
+				MachineDeployments: map[string]*shootstate.MachineDeploymentState{
+					namespace + "-worker-z0": {
+						Replicas: 1,
+						MachineSets: []machinev1alpha1.MachineSet{{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      namespace + "-worker-z0-abcde",
+								Namespace: namespace,
+							},
+						}},
+						Machines: []machinev1alpha1.Machine{{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      namespace + "-worker-z0-abcde-xyz",
+								Namespace: namespace,
+							},
+						}},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			shootState := &gardencorev1beta1.ShootState{
+				Spec: gardencorev1beta1.ShootStateSpec{
+					Gardener: []gardencorev1beta1.GardenerResourceData{{
+						Name: "machine-state",
+						Type: "machine-state",
+						Data: runtime.RawExtension{Raw: state},
+					}},
+				},
+			}
+
+			By("Restore")
+			defer test.WithVars(
+				&worker.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			Expect(defaultDepWaiter.Restore(ctx, shootState)).To(Succeed(), "restore should succeed")
+
+			By("Verifying Worker.status.state")
+			worker := empty.DeepCopy()
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(worker), worker)).To(Succeed())
+			Expect(worker.Annotations).To(HaveKeyWithValue("gardener.cloud/operation", "restore"))
+			Expect(worker.Status.State).To(Equal(&runtime.RawExtension{Raw: state}), "restore should add the machine state to Worker.status.state")
+
+			By("Patch worker to be ready")
+			patch := client.MergeFrom(worker.DeepCopy())
+			delete(worker.Annotations, "gardener.cloud/operation")
+			Expect(c.Patch(ctx, worker, patch)).To(Succeed(), "patching worker succeeds")
+
+			patch = client.MergeFrom(worker.DeepCopy())
+			worker.Status.ObservedGeneration = worker.Generation
+			worker.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				LastUpdateTime: metav1.Time{Time: now.UTC().Add(time.Second)},
+			}
+			Expect(c.Status().Patch(ctx, worker, patch)).To(Succeed(), "patching worker status succeeds")
+
+			By("Wait")
+			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "wait should succeed")
+
+			By("Verifying Worker.status.state")
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(worker), worker)).To(Succeed())
+			Expect(worker.Status.State).To(BeNil())
 		})
 	})
 
@@ -638,15 +713,18 @@ var _ = Describe("Worker", func() {
 
 			By("Patch object")
 			patch := client.MergeFrom(w.DeepCopy())
-			w.Status.LastError = nil
 			// remove operation annotation, add old timestamp annotation
 			w.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 			}
+			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
+
+			patch = client.MergeFrom(w.DeepCopy())
+			w.Status.LastError = nil
 			w.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
 			}
-			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
+			Expect(c.Status().Patch(ctx, w, patch)).To(Succeed(), "patching worker status succeeds")
 
 			By("Wait")
 			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).NotTo(Succeed(), "worker indicates error")
@@ -686,13 +764,16 @@ var _ = Describe("Worker", func() {
 			w.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
+			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
+
+			patch = client.MergeFrom(w.DeepCopy())
 			w.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State:          gardencorev1beta1.LastOperationStateSucceeded,
 				LastUpdateTime: metav1.Time{Time: now.UTC().Add(time.Second)},
 			}
 			// update the MachineDeploymentsLastUpdateTime in the worker status
 			w.Status.MachineDeploymentsLastUpdateTime = &metav1Now
-			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
+			Expect(c.Status().Patch(ctx, w, patch)).To(Succeed(), "patching worker status succeeds")
 
 			By("WaitUntilWorkerStatusMachineDeploymentsUpdated")
 			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(Succeed(), "worker status is updated with latest machine deployments")
@@ -718,6 +799,9 @@ var _ = Describe("Worker", func() {
 			w.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
+			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
+
+			patch = client.MergeFrom(w.DeepCopy())
 			w.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State:          gardencorev1beta1.LastOperationStateSucceeded,
 				LastUpdateTime: metav1.Time{Time: now.UTC().Add(time.Second)},
@@ -725,7 +809,7 @@ var _ = Describe("Worker", func() {
 			// update the MachineDeploymentsLastUpdateTime in the worker status
 			lastUpdateTime := metav1.NewTime(metav1Now.Add(1 * time.Second))
 			w.Status.MachineDeploymentsLastUpdateTime = &lastUpdateTime
-			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
+			Expect(c.Status().Patch(ctx, w, patch)).To(Succeed(), "patching worker status succeeds")
 
 			By("WaitUntilWorkerStatusMachineDeploymentsUpdated")
 			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(Succeed(), "worker status is updated with latest machine deployments")

@@ -15,7 +15,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	apiv1alpha1 "github.com/gardener/gardener/pkg/provider-local/machine-provider/api/v1alpha1"
 )
+
+var log = logf.Log.WithName("machine-provider-local")
 
 const (
 	fieldOwner        = client.FieldOwner("machine-controller-manager-provider-local")
@@ -32,7 +37,7 @@ func NewDriver(client client.Client) driver.Driver {
 }
 
 type localDriver struct {
-	client client.Client
+	runtimeClient client.Client
 }
 
 // GenerateMachineClassForMigration is not implemented.
@@ -45,7 +50,7 @@ func (*localDriver) InitializeMachine(context.Context, *driver.InitializeMachine
 	return nil, status.Error(codes.Unimplemented, "InitializeMachine is not yet implemented")
 }
 
-func serviceForMachine(machine *machinev1alpha1.Machine, machineClass *machinev1alpha1.MachineClass) *corev1.Service {
+func serviceForMachine(machine *machinev1alpha1.Machine, machineClass *machinev1alpha1.MachineClass, providerSpec *apiv1alpha1.ProviderSpec) *corev1.Service {
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
@@ -53,12 +58,12 @@ func serviceForMachine(machine *machinev1alpha1.Machine, machineClass *machinev1
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podName(machine.Name),
-			Namespace: getNamespaceForMachine(machine, machineClass),
+			Namespace: getNamespaceForMachine(machine, machineClass, providerSpec),
 		},
 	}
 }
 
-func podForMachine(machine *machinev1alpha1.Machine, machineClass *machinev1alpha1.MachineClass) *corev1.Pod {
+func podForMachine(machine *machinev1alpha1.Machine, machineClass *machinev1alpha1.MachineClass, providerSpec *apiv1alpha1.ProviderSpec) *corev1.Pod {
 	return &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
@@ -66,12 +71,12 @@ func podForMachine(machine *machinev1alpha1.Machine, machineClass *machinev1alph
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podName(machine.Name),
-			Namespace: getNamespaceForMachine(machine, machineClass),
+			Namespace: getNamespaceForMachine(machine, machineClass, providerSpec),
 		},
 	}
 }
 
-func userDataSecretForMachine(machine *machinev1alpha1.Machine, machineClass *machinev1alpha1.MachineClass) *corev1.Secret {
+func userDataSecretForMachine(machine *machinev1alpha1.Machine, machineClass *machinev1alpha1.MachineClass, providerSpec *apiv1alpha1.ProviderSpec) *corev1.Secret {
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
@@ -79,7 +84,7 @@ func userDataSecretForMachine(machine *machinev1alpha1.Machine, machineClass *ma
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podName(machine.Name) + "-userdata",
-			Namespace: getNamespaceForMachine(machine, machineClass),
+			Namespace: getNamespaceForMachine(machine, machineClass, providerSpec),
 		},
 	}
 }
@@ -92,9 +97,13 @@ func machineName(podName string) string {
 	return strings.TrimPrefix(podName, machinePrefix)
 }
 
-// TODO(scheererj): Remove the empty namespace mitigation after https://github.com/gardener/machine-controller-manager/pull/932 has been adopted
-func getNamespaceForMachine(machine *machinev1alpha1.Machine, machineClass *machinev1alpha1.MachineClass) string {
+func getNamespaceForMachine(machine *machinev1alpha1.Machine, machineClass *machinev1alpha1.MachineClass, providerSpec *apiv1alpha1.ProviderSpec) string {
+	if providerSpec.Namespace != "" {
+		return providerSpec.Namespace
+	}
+
 	// machine.Namespace may be empty due to machine controller manager omitting namespace
+	// TODO(scheererj): Remove the empty namespace mitigation after https://github.com/gardener/machine-controller-manager/pull/932 has been adopted
 	if machine.Namespace != "" {
 		return machine.Namespace
 	}

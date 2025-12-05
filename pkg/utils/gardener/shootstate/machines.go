@@ -151,6 +151,21 @@ type compressedMachineState struct {
 	State []byte `json:"state"`
 }
 
+// MarshalMachineState encodes and compresses the machine state data.
+func MarshalMachineState(machineState *MachineState) ([]byte, error) {
+	machineStateJSON, err := json.Marshal(machineState)
+	if err != nil {
+		return nil, fmt.Errorf("failed marshalling machine state to JSON: %w", err)
+	}
+
+	machineStateJSONCompressed, err := compressMachineState(machineStateJSON)
+	if err != nil {
+		return nil, fmt.Errorf("failed compressing machine state data: %w", err)
+	}
+
+	return machineStateJSONCompressed, nil
+}
+
 func compressMachineState(state []byte) ([]byte, error) {
 	if len(state) == 0 || string(state) == "{}" {
 		return nil, nil
@@ -178,8 +193,30 @@ func compressMachineState(state []byte) ([]byte, error) {
 	return json.Marshal(&compressedMachineState{State: stateCompressed.Bytes()})
 }
 
-// DecompressMachineState decompresses the machine state data.
-func DecompressMachineState(stateCompressed []byte) ([]byte, error) {
+// UnmarshalMachineState decompresses and decodes the machine state data.
+func UnmarshalMachineState(stateCompressed []byte) (*MachineState, error) {
+	if len(stateCompressed) == 0 {
+		return &MachineState{}, nil
+	}
+
+	state, err := decompressMachineState(stateCompressed)
+	if err != nil {
+		return nil, fmt.Errorf("failed decompressing machine state: %w", err)
+	}
+	if len(state) == 0 {
+		return &MachineState{}, nil
+	}
+
+	// Parse the worker state to MachineDeploymentStates
+	machineState := &MachineState{MachineDeployments: make(map[string]*MachineDeploymentState)}
+	if err := json.Unmarshal(state, &machineState); err != nil {
+		return nil, fmt.Errorf("failed decoding machine state: %w", err)
+	}
+
+	return machineState, nil
+}
+
+func decompressMachineState(stateCompressed []byte) ([]byte, error) {
 	if len(stateCompressed) == 0 {
 		return nil, nil
 	}
@@ -187,6 +224,10 @@ func DecompressMachineState(stateCompressed []byte) ([]byte, error) {
 	var machineState compressedMachineState
 	if err := json.Unmarshal(stateCompressed, &machineState); err != nil {
 		return nil, fmt.Errorf("failed unmarshalling JSON to compressed machine state structure: %w", err)
+	}
+
+	if len(machineState.State) == 0 {
+		return nil, nil
 	}
 
 	gzipReader, err := gzip.NewReader(bytes.NewReader(machineState.State))

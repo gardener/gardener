@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	genericworkeractuator "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
@@ -39,13 +38,13 @@ func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
 	}
 
 	for _, obj := range w.machineClassSecrets {
-		if err := w.client.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+		if err := w.runtimeClient.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 			return fmt.Errorf("failed to apply machine class secret %s: %w", obj.GetName(), err)
 		}
 	}
 
 	for _, obj := range w.machineClasses {
-		if err := w.client.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+		if err := w.runtimeClient.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 			return fmt.Errorf("failed to apply machine class %s: %w", obj.GetName(), err)
 		}
 	}
@@ -84,13 +83,13 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 		}
 		machineImages = appendMachineImage(machineImages, *image, w.cluster.CloudProfile.Spec.MachineCapabilities)
 
-		userData, err := worker.FetchUserData(ctx, w.client, w.worker.Namespace, pool)
+		userData, err := worker.FetchUserData(ctx, w.runtimeClient, w.worker.Namespace, pool)
 		if err != nil {
 			return err
 		}
 
 		var (
-			deploymentName = fmt.Sprintf("%s-%s", w.worker.Namespace, pool.Name)
+			deploymentName = fmt.Sprintf("%s-%s", w.cluster.Shoot.Status.TechnicalID, pool.Name)
 			className      = fmt.Sprintf("%s-%s", deploymentName, workerPoolHash)
 		)
 
@@ -109,7 +108,8 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 		})
 
 		providerConfig := map[string]interface{}{
-			"image": image.Image,
+			"image":     image.Image,
+			"namespace": w.cluster.Shoot.Status.TechnicalID,
 		}
 
 		for _, ipFamily := range w.cluster.Shoot.Spec.Networking.IPFamilies {
@@ -118,7 +118,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 				key = "ipPoolNameV6"
 			}
 
-			providerConfig[key] = infrastructure.IPPoolName(w.worker.Namespace, string(ipFamily))
+			providerConfig[key] = infrastructure.IPPoolName(w.cluster.Shoot.Status.TechnicalID, string(ipFamily))
 		}
 
 		providerConfigBytes, err := json.Marshal(providerConfig)
@@ -254,11 +254,12 @@ func (w *workerDelegate) PreReconcileHook(ctx context.Context) error {
 	}
 
 	for _, obj := range []client.Object{role, roleBinding} {
-		if err := controllerutil.SetControllerReference(w.worker, obj, w.client.Scheme()); err != nil {
-			return fmt.Errorf("error setting controller reference on %T %s: %w", obj, obj.GetName(), err)
-		}
-
-		if err := w.client.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+		// We cannot set an ownerReference here, because the Role/RoleBinding might live in another cluster than the Worker.
+		// E.g., this is the case for `gardenadm bootstrap`, where the Worker lives in the self-hosted shoot cluster and the
+		// machine pods and thus also the Role/RoleBinding live in the bootstrap kind cluster.
+		// On the other hand, not setting an ownerReference is not a problem, because when the worker is deleted, the
+		// namespace will also be deleted, automatically cleaning up these objects as well.
+		if err := w.providerClient.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 			return fmt.Errorf("error applying %T %s: %w", obj, obj.GetName(), err)
 		}
 	}
@@ -271,7 +272,7 @@ func (w *workerDelegate) PostReconcileHook(ctx context.Context) error {
 	// Overwrite only if Machine Image Version is not present to prevent overwriting the new version after an in-place update.
 
 	podList := &corev1.PodList{}
-	if err := w.client.List(ctx, podList, client.InNamespace(w.worker.Namespace), client.MatchingLabels{
+	if err := w.providerClient.List(ctx, podList, client.InNamespace(w.cluster.Shoot.Status.TechnicalID), client.MatchingLabels{
 		"app":              "machine",
 		"machine-provider": "local",
 	}); err != nil {

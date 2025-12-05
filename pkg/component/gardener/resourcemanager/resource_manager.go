@@ -332,6 +332,8 @@ type Values struct {
 	NodeAgentAuthorizerEnabled bool
 	// NodeAgentAuthorizerAuthorizeWithSelectors specifies if node-agent-authorizer should allow authorization to use field selectors.
 	NodeAgentAuthorizerAuthorizeWithSelectors *bool
+	// MachineNamespace is the namespace in the source cluster in which the Machine objects are stored.
+	MachineNamespace *string
 	// PodKubeAPIServerLoadBalancingWebhook specifies the settings of pod-kube-apiserver-load-balancing webhook.
 	PodKubeAPIServerLoadBalancingWebhook PodKubeAPIServerLoadBalancingWebhook
 	// VPAInPlaceUpdatesEnabled specifies if a vpa-in-place-pod-vertical-scaling webhook should be enabled.
@@ -616,7 +618,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			NodeAgentAuthorizer: resourcemanagerconfigv1alpha1.NodeAgentAuthorizerWebhookConfig{
 				Enabled:                r.values.NodeAgentAuthorizerEnabled,
 				AuthorizeWithSelectors: r.values.NodeAgentAuthorizerAuthorizeWithSelectors,
-				MachineNamespace:       r.values.WatchedNamespace,
+				MachineNamespace:       r.values.MachineNamespace,
 			},
 			SeccompProfile: resourcemanagerconfigv1alpha1.SeccompProfileWebhookConfig{
 				Enabled: r.values.DefaultSeccompProfileEnabled,
@@ -662,7 +664,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	if v := r.values.MaxConcurrentCSRApproverWorkers; v != nil {
 		config.Controllers.CSRApprover.Enabled = true
 		config.Controllers.CSRApprover.ConcurrentSyncs = v
-		config.Controllers.CSRApprover.MachineNamespace = r.values.WatchedNamespace
+		config.Controllers.CSRApprover.MachineNamespace = r.values.MachineNamespace
 	}
 
 	if v := r.values.MaxConcurrentTokenRequestorWorkers; v != nil {
