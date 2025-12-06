@@ -13,7 +13,7 @@ source $(dirname "${0}")/ci-common.sh
 
 clamp_mss_to_pmtu
 
-ensure_glgc_resolves_to_localhost
+ensure_local_gardener_cloud_hosts
 
 # test setup
 make kind-multi-node-up

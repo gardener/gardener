@@ -104,6 +104,7 @@ spec:
           echo "172.18.255.3 dashboard.ingress.runtime-garden.local.gardener.cloud"      >> /etc/hosts
           echo "172.18.255.3 discovery.ingress.runtime-garden.local.gardener.cloud"      >> /etc/hosts
           echo "127.0.0.1 garden.local.gardener.cloud"                                   >> /etc/hosts
+          echo "127.0.0.1 registry.local.gardener.cloud"                                 >> /etc/hosts
           echo ""                                                                        >> /etc/hosts
           echo "### Gardener IPv6 hosts ###"                                             >> /etc/hosts
           bash -c "
@@ -119,6 +120,7 @@ spec:
           echo "::3 dashboard.ingress.runtime-garden.local.gardener.cloud"               >> /etc/hosts
           echo "::3 discovery.ingress.runtime-garden.local.gardener.cloud"               >> /etc/hosts
           echo "::1 garden.local.gardener.cloud"                                         >> /etc/hosts
+          echo "::1 registry.local.gardener.cloud"                                       >> /etc/hosts
 
           # Resolve e.g. gu-local--e2e-rot{ate{-wl},-noroll}.ingress.$seed_name. ... to 127.0.0.1 for the e2e tests:
           echo '
