@@ -286,6 +286,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 				PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane300,
 				ServiceAccountName:            serviceAccount.Name,
 				TerminationGracePeriodSeconds: ptr.To[int64](5),
+				Tolerations:                   []corev1.Toleration{{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists}},
 			},
 		}
 
