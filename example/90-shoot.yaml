@@ -272,7 +272,7 @@ spec:
   # kubeProxy:
   #   featureGates:
   #     SomeKubernetesFeature: true
-  #   mode: IPVS
+  #   mode: IPVS # {IPTables,NFTables,IPVS}
   #   enabled: true
   # kubelet:
   #   cpuCFSQuota: true
