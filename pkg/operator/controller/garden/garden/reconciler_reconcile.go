@@ -1096,9 +1096,9 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 		},
 		{
 			SourceLabels: []monitoringv1.LabelName{"project", "name"},
-			Regex:        ";" + strings.Join(managedSeedNames, "|"),
+			Regex:        ";(" + strings.Join(managedSeedNames, "|") + ")",
 			Action:       "replace",
-			Replacement:  ptr.To("https://dashboard." + primaryIngressDomain + "/namespace/garden/shoots/$2"),
+			Replacement:  ptr.To("https://dashboard." + primaryIngressDomain + "/namespace/garden/shoots/$1"),
 			TargetLabel:  "dashboard_url",
 		},
 	}
