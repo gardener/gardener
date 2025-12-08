@@ -464,6 +464,8 @@ const (
 	LabelBackupProvider = "backup.gardener.cloud/provider"
 	// LabelSeedProvider is used to identify the seed provider.
 	LabelSeedProvider = "seed.gardener.cloud/provider"
+	// LabelSeedRegion is used to identify the seed region.
+	LabelSeedRegion = "seed.gardener.cloud/region"
 	// LabelShootProvider is used to identify the shoot provider.
 	LabelShootProvider = "shoot.gardener.cloud/provider"
 	// LabelShootProviderPrefix is used to prefix label that indicates the provider type.

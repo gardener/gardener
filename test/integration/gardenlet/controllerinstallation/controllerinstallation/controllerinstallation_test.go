@@ -308,6 +308,8 @@ var _ = Describe("ControllerInstallation controller tests", func() {
       dnsrecord.extensions.gardener.cloud/` + seed.Spec.DNS.Provider.Type + `: "true"
       name.seed.gardener.cloud/` + seed.Name + `: "true"
       provider.extensions.gardener.cloud/` + seed.Spec.Provider.Type + `: "true"
+      seed.gardener.cloud/provider: ` + seed.Spec.Provider.Type + `
+      seed.gardener.cloud/region: ` + seed.Spec.Provider.Region + `
     name: ` + seed.Name + `
     networks:
       ipFamilies:
