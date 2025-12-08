@@ -33,12 +33,12 @@ type ControllerOptions struct {
 // AddFlags implements Flagger.AddFlags.
 func (c *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&c.MaxConcurrentReconciles, cmd.MaxConcurrentReconcilesFlag, c.MaxConcurrentReconciles, "The maximum number of concurrent reconciliations.")
-	fs.StringVar(&c.HostIP, "host-ip", c.HostIP, "Overwrite Host IP to use for kube-apiserver service LoadBalancer")
-	fs.StringVar(&c.VirtualGardenIP, "virtual-garden-ip", c.VirtualGardenIP, "Overwrite IP to use for istio ingress gateway service LoadBalancer for virtual garden")
-	fs.StringVar(&c.Zone0IP, "zone-0-ip", c.Zone0IP, "Overwrite IP to use for kube-apiserver service LoadBalancer in zone 0")
-	fs.StringVar(&c.Zone1IP, "zone-1-ip", c.Zone1IP, "Overwrite IP to use for kube-apiserver service LoadBalancer in zone 1")
-	fs.StringVar(&c.Zone2IP, "zone-2-ip", c.Zone2IP, "Overwrite IP to use for kube-apiserver service LoadBalancer in zone 2")
-	fs.StringVar(&c.BastionIP, "bastion-ip", c.BastionIP, "Overwrite Bastion IP to use for Bastion service LoadBalancer")
+	fs.StringVar(&c.HostIP, "host-ip", c.HostIP, "Overwrite LoadBalancer IP to use for istio ingress-gateway service for seed")
+	fs.StringVar(&c.VirtualGardenIP, "virtual-garden-ip", c.VirtualGardenIP, "Overwrite LoadBalancer IP to use for istio ingress-gateway service for virtual garden")
+	fs.StringVar(&c.Zone0IP, "zone-0-ip", c.Zone0IP, "Overwrite LoadBalancer IP to use for istio ingress-gateway service for seed in zone 0")
+	fs.StringVar(&c.Zone1IP, "zone-1-ip", c.Zone1IP, "Overwrite LoadBalancer IP to use for istio ingress-gateway service for seed in zone 1")
+	fs.StringVar(&c.Zone2IP, "zone-2-ip", c.Zone2IP, "Overwrite LoadBalancer IP to use for istio ingress-gateway service for seed in zone 2")
+	fs.StringVar(&c.BastionIP, "bastion-ip", c.BastionIP, "Overwrite LoadBalancer IP to use for bastion service")
 }
 
 // Complete implements Completer.Complete.

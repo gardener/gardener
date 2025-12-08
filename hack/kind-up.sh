@@ -334,7 +334,8 @@ if [[ "$CLUSTER_NAME" == "gardener-operator-local" ]] ; then
   sed "s/127\.0\.0\.1:[0-9]\+/$CLUSTER_NAME-control-plane:6443/g" "$PATH_KUBECONFIG" > "$(dirname "$0")/../dev-setup/gardenconfig/components/credentials/secret-project-garden-with-kind-kubeconfig/kubeconfig"
 fi
 
-# Prepare garden.local.gardener.cloud hostname that can be used everywhere to talk to the garden cluster.
+# Prepare garden.local.gardener.cloud hostname that can be used everywhere to talk to the garden cluster (which is the
+# first kind cluster in the local setup not using the gardener-operator, i.e., no virtual garden).
 # Historically, we used the docker container name for this, but this differs between clusters with different names
 # and doesn't work in IPv6 kind clusters: https://github.com/kubernetes-sigs/kind/issues/3114
 # Hence, we "manually" inject a host configuration into the cluster that always resolves to the kind container's IP,
@@ -381,9 +382,9 @@ EOF"
   docker exec "$node" sh -c "systemctl enable gardener-local-kind-add-hosts.service"
 done
 
-local_address_operator="172.18.255.3"
+local_address_virtual_garden="172.18.255.3"
 if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-  local_address_operator="::3"
+  local_address_virtual_garden="::3"
 fi
 
 # Inject garden.local.gardener.cloud into coredns config (after ready plugin, before kubernetes plugin)
@@ -392,10 +393,10 @@ kubectl -n kube-system get configmap coredns -ojson | \
   sed '0,/ready.*$/s//&'"\n\
     hosts {\n\
       $garden_cluster_ip garden.local.gardener.cloud\n\
-      $local_address_operator gardener.virtual-garden.local.gardener.cloud\n\
-      $local_address_operator api.virtual-garden.local.gardener.cloud\n\
-      $local_address_operator dashboard.ingress.runtime-garden.local.gardener.cloud\n\
-      $local_address_operator discovery.ingress.runtime-garden.local.gardener.cloud\n\
+      $local_address_virtual_garden gardener.virtual-garden.local.gardener.cloud\n\
+      $local_address_virtual_garden api.virtual-garden.local.gardener.cloud\n\
+      $local_address_virtual_garden dashboard.ingress.runtime-garden.local.gardener.cloud\n\
+      $local_address_virtual_garden discovery.ingress.runtime-garden.local.gardener.cloud\n\
       fallthrough\n\
     }\
 "'/' | \
