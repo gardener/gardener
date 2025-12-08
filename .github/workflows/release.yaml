@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    if: startsWith(github.ref, 'refs/heads/release-v')
+    if: ${{ github.repository == 'gardener/gardener' && startsWith(github.ref, 'refs/heads/release-v') }}
     uses: ./.github/workflows/build.yaml
     permissions:
       contents: write
@@ -20,7 +20,7 @@ jobs:
       mode: release
 
   release-to-github-and-bump:
-    if: startsWith(github.ref, 'refs/heads/release-v')
+    if: ${{ github.repository == 'gardener/gardener' && startsWith(github.ref, 'refs/heads/release-v') }}
     uses: gardener/cc-utils/.github/workflows/release.yaml@master
     needs:
       - build

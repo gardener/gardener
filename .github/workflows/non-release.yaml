@@ -7,6 +7,7 @@ on:
 
 jobs:
   build:
+    if: ${{ github.repository == 'gardener/gardener' }}
     uses: ./.github/workflows/build.yaml
     with:
       mode: snapshot
@@ -17,6 +18,7 @@ jobs:
       id-token: write
 
   component-descriptor:
+    if: ${{ github.repository == 'gardener/gardener' }}
     uses: gardener/cc-utils/.github/workflows/post-build.yaml@master
     needs:
       - build
