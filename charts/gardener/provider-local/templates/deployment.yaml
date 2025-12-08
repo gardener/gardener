@@ -66,6 +66,7 @@ spec:
         - --ingress-max-concurrent-reconciles={{ .Values.controllers.ingress.concurrentSyncs }}
         - --service-max-concurrent-reconciles={{ .Values.controllers.service.concurrentSyncs }}
         - --service-host-ip={{ .Values.controllers.service.hostIP }}
+        - --service-virtual-garden-ip={{ .Values.controllers.service.virtualGardenIP }}
         - --service-zone-0-ip={{ .Values.controllers.service.zone0IP }}
         - --service-zone-1-ip={{ .Values.controllers.service.zone1IP }}
         - --service-zone-2-ip={{ .Values.controllers.service.zone2IP }}

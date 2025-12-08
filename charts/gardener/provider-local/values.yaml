@@ -35,6 +35,7 @@ controllers:
   service:
     concurrentSyncs: 5
     hostIP: "172.18.255.1"
+    virtualGardenIP: "172.18.255.3"
     zone0IP: "172.18.255.10"
     zone1IP: "172.18.255.11"
     zone2IP: "172.18.255.12"

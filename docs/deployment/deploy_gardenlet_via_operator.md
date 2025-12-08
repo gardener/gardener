@@ -92,7 +92,7 @@ spec:
             kind: nginx
           domain: ingress.local.seed.local.gardener.cloud
         networks:
-          nodes: 172.18.0.0/16
+          nodes: 172.18.0.0/24
           pods: 10.1.0.0/16
           services: 10.2.0.0/16
           shootDefaults:
