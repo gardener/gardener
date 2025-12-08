@@ -27,7 +27,7 @@ func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordExternal) || b.IsRestorePhase(),
 		IPStack:           gardenerutils.GetIPStackForShoot(b.Shoot.GetInfo()),
 		Labels: map[string]string{
-			v1beta1constants.LabelRole:  v1beta1constants.DNSRecordExternalName,
+			v1beta1constants.LabelRole:  v1beta1constants.LabelDNSRecordExternal,
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		},
 	}
@@ -64,7 +64,7 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 			b.IsRestorePhase(),
 		IPStack: gardenerutils.GetIPStackForShoot(b.Shoot.GetInfo()),
 		Labels: map[string]string{
-			v1beta1constants.LabelRole:  v1beta1constants.DNSRecordInternalName,
+			v1beta1constants.LabelRole:  v1beta1constants.LabelDNSRecordInternal,
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		},
 	}
