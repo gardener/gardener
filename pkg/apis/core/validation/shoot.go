@@ -1881,11 +1881,21 @@ func validateKubeProxy(kp *core.KubeProxyConfig, version string, fldPath *field.
 		} else if mode := *kp.Mode; !availableProxyModes.Has(string(mode)) {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("mode"), mode, sets.List(availableProxyModes)))
 		} else if *kp.Mode == core.ProxyModeNFTables {
-			if k8sLessThan131, _ := versionutils.CheckVersionMeetsConstraint(version, "< 1.31"); k8sLessThan131 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("mode"), mode, "nftables must not be set for kubernetes < 1.31"))
+			shootKubernetesVersion, err := semver.NewVersion(version)
+			if err != nil {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("mode"), mode, fmt.Sprintf("unable to parse kubernetes version %q: %v", version, err)))
+				return allErrs
+			}
+			if versionutils.ConstraintK8sLess131.Check(shootKubernetesVersion) {
+				if value, ok := kp.FeatureGates["NFTablesProxyMode"]; !ok || !value {
+					allErrs = append(allErrs, field.Invalid(fldPath.Child("mode"), mode, "NFTables mode requires feature gate NFTablesProxyMode=true for Kubernetes < 1.31"))
+				}
+			} else {
+				if value, ok := kp.FeatureGates["NFTablesProxyMode"]; ok && !value {
+					allErrs = append(allErrs, field.Invalid(fldPath.Child("mode"), mode, "NFTables mode cannot be used when feature gate NFTablesProxyMode is explicitly set to false"))
+				}
 			}
 		}
-
 		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kp.FeatureGates, version, fldPath.Child("featureGates"))...)
 	}
 	return allErrs
