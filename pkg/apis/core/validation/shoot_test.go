@@ -3905,8 +3905,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 					),
 				),
 				Entry("with invalid updateWorkerCount value",
-					core.VerticalPodAutoscaler{UpdateWorkerCount: ptr.To[int64](-1)},
-					ConsistOf(field.Invalid(field.NewPath("updateWorkerCount"), int64(-1), "must be non-negative")),
+					core.VerticalPodAutoscaler{UpdateWorkerCount: ptr.To[int64](0)},
+					ConsistOf(field.Invalid(field.NewPath("updateWorkerCount"), int64(0), "must be greater than 0")),
 				),
 				Entry("with valid fields",
 					core.VerticalPodAutoscaler{

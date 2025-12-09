@@ -1481,8 +1481,8 @@ func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, fldPat
 	allErrs = append(allErrs, featuresvalidation.ValidateVpaFeatureGates(autoScaler.FeatureGates, fldPath.Child("featureGates"))...)
 	allErrs = append(allErrs, ValidateVerticalPodAutoscalerMaxAllowed(autoScaler.MaxAllowed, fldPath)...)
 
-	if workerCount := autoScaler.UpdateWorkerCount; workerCount != nil {
-		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(*workerCount, fldPath.Child("updateWorkerCount"))...)
+	if workerCount := autoScaler.UpdateWorkerCount; workerCount != nil && *workerCount <= 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("updateWorkerCount"), *autoScaler.UpdateWorkerCount, "must be greater than 0"))
 	}
 	return allErrs
 }
