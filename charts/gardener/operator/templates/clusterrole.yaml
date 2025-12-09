@@ -168,6 +168,7 @@ rules:
   resources:
   - etcds
   - etcdcopybackupstasks
+  - etcdopstasks
   verbs:
   - get
   - list

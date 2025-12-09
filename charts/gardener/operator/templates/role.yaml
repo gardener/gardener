@@ -107,6 +107,7 @@ rules:
   resources:
   - etcds
   - etcdcopybackupstasks
+  - etcdopstasks
   verbs:
   - create
   - delete

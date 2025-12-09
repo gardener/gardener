@@ -437,6 +437,7 @@ spec:
 		deployedCRDs := []string{
 			"etcds.druid.gardener.cloud",
 			"etcdcopybackupstasks.druid.gardener.cloud",
+			"etcdopstasks.druid.gardener.cloud",
 			"managedresources.resources.gardener.cloud",
 			"verticalpodautoscalers.autoscaling.k8s.io",
 			"verticalpodautoscalercheckpoints.autoscaling.k8s.io",
