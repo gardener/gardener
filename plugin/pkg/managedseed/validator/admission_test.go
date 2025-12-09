@@ -295,20 +295,6 @@ var _ = Describe("ManagedSeed", func() {
 			))
 		})
 
-		It("should forbid the ManagedSeed if the Shoot does not have any worker", func() {
-			shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{}
-
-			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-			Expect(err).To(BeInvalidError())
-			Expect(getErrorList(err)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.shoot.name"),
-					"Detail": ContainSubstring("workerless shoot cannot be used to create managed seed"),
-				})),
-			))
-		})
-
 		It("should forbid the ManagedSeed creation if the Shoot is already registered as Seed", func() {
 			anotherManagedSeed := &seedmanagementv1alpha1.ManagedSeed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -995,6 +981,12 @@ var _ = Describe("ManagedSeed", func() {
 							Enabled: true,
 						},
 					},
+					Provider: gardencorev1beta1.Provider{
+						Type: provider,
+						Workers: []gardencorev1beta1.Worker{
+							{Zones: []string{zone1, zone2}},
+						},
+					},
 				},
 			}
 
@@ -1121,6 +1113,20 @@ var _ = Describe("ManagedSeed", func() {
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.shoot.name"),
 					"Detail": ContainSubstring("shoot VPA has to be enabled for managed seeds"),
+				})),
+			))
+		})
+
+		It("should forbid the ManagedSeed if the Shoot does not have any worker", func() {
+			shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{}
+
+			err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("workerless shoot cannot be used to create managed seed"),
 				})),
 			))
 		})
