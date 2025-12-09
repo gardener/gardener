@@ -178,28 +178,15 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 		return apierrors.NewBadRequest("could not convert object to ManagedSeed")
 	}
 
+	shoot, statusErr := v.fetchManagedSeedShoot(ctx, managedSeed)
+	if statusErr != nil {
+		return statusErr
+	}
+
 	var allErrs field.ErrorList
 
-	// Ensure shoot and shoot name are specified
-	shootPath := field.NewPath("spec", "shoot")
-	shootNamePath := shootPath.Child("name")
-
-	if managedSeed.Spec.Shoot == nil {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Required(shootPath, "shoot is required")))
-	}
-	if managedSeed.Spec.Shoot.Name == "" {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Required(shootNamePath, "shoot name is required")))
-	}
-
-	shoot, err := v.getShoot(ctx, managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s/%s not found", managedSeed.Namespace, managedSeed.Spec.Shoot.Name))))
-		}
-		return apierrors.NewInternalError(fmt.Errorf("could not get shoot %s/%s: %v", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err))
-	}
-
 	// Ensure shoot can be registered as seed
+	shootNamePath := field.NewPath("spec", "shoot", "name")
 	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil || *shoot.Spec.DNS.Domain == "" {
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s does not specify a domain", client.ObjectKeyFromObject(shoot)))))
 	}
@@ -288,6 +275,29 @@ func shouldIgnore(a admission.Attributes) bool {
 	}
 
 	return false
+}
+
+func (v *ManagedSeed) fetchManagedSeedShoot(ctx context.Context, managedSeed *seedmanagement.ManagedSeed) (*gardencorev1beta1.Shoot, *apierrors.StatusError) {
+	// Ensure shoot and shoot name are specified
+	shootPath := field.NewPath("spec", "shoot")
+	shootNamePath := shootPath.Child("name")
+
+	if managedSeed.Spec.Shoot == nil {
+		return nil, apierrors.NewInvalid(gk, managedSeed.Name, field.ErrorList{field.Required(shootPath, "shoot is required")})
+	}
+	if managedSeed.Spec.Shoot.Name == "" {
+		return nil, apierrors.NewInvalid(gk, managedSeed.Name, field.ErrorList{field.Required(shootNamePath, "shoot name is required")})
+	}
+
+	shoot, err := v.getShoot(ctx, managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, apierrors.NewInvalid(gk, managedSeed.Name, field.ErrorList{field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s/%s not found", managedSeed.Namespace, managedSeed.Spec.Shoot.Name))})
+		}
+		return nil, apierrors.NewInternalError(fmt.Errorf("could not get shoot %s/%s: %v", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err))
+	}
+
+	return shoot, nil
 }
 
 func (v *ManagedSeed) validateManagedSeedCreate(managedSeed *seedmanagement.ManagedSeed, shoot *gardencorev1beta1.Shoot) (field.ErrorList, error) {
@@ -641,6 +651,11 @@ func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ ad
 	// Garden namespace validation can be disabled by disabling the ManagedSeed plugin for integration test.
 	if managedSeed.Namespace != v1beta1constants.GardenNamespace {
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(field.NewPath("metadata", "namespace"), managedSeed.Namespace, "namespace must be garden")))
+	}
+
+	_, statusErr := v.fetchManagedSeedShoot(ctx, managedSeed)
+	if statusErr != nil {
+		return statusErr
 	}
 
 	return nil
