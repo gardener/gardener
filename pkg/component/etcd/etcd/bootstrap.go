@@ -193,12 +193,12 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				},
 				{
 					APIGroups: []string{druidcorev1alpha1.SchemeGroupVersion.Group},
-					Resources: []string{"etcds", "etcdcopybackupstasks"},
+					Resources: []string{"etcds", "etcdcopybackupstasks", "etcdopstasks"},
 					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 				},
 				{
 					APIGroups: []string{druidcorev1alpha1.SchemeGroupVersion.Group},
-					Resources: []string{"etcds/status", "etcds/finalizers", "etcdcopybackupstasks/status", "etcdcopybackupstasks/finalizers"},
+					Resources: []string{"etcds/status", "etcds/finalizers", "etcdcopybackupstasks/status", "etcdcopybackupstasks/finalizers", "etcdopstasks/status", "etcdopstasks/finalizers"},
 					Verbs:     []string{"get", "update", "patch", "create"},
 				},
 				{
@@ -599,6 +599,8 @@ func getDruidDeployArgs(etcdConfig *gardenletconfigv1alpha1.ETCDConfig, namespac
 		"--enable-backup-compaction=" + strconv.FormatBool(*etcdConfig.BackupCompactionController.EnableBackupCompaction),
 		"--compaction-workers=" + strconv.FormatInt(*etcdConfig.BackupCompactionController.Workers, 10),
 		"--etcd-events-threshold=" + strconv.FormatInt(*etcdConfig.BackupCompactionController.EventsThreshold, 10),
+		"--etcd-ops-task-workers=3",
+		"--etcd-ops-task-requeue-interval=15s",
 		fmt.Sprintf("--reconciler-service-account=%s%s:%s", serviceaccount.ServiceAccountUsernamePrefix, namespace, druidServiceAccountName),
 	}
 

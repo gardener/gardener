@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	druidapicommon "github.com/gardener/etcd-druid/api/common"
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -129,7 +130,7 @@ var _ = Describe("#Wait", func() {
 		)()
 		mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 		delete(expected.Annotations, v1beta1constants.GardenerOperation)
-		expected.Status.LastErrors = []druidcorev1alpha1.LastError{}
+		expected.Status.LastErrors = []druidapicommon.LastError{}
 		expected.Status.ObservedGeneration = ptr.To(expected.Generation)
 		expected.Status.Conditions = []druidcorev1alpha1.Condition{
 			{
@@ -341,7 +342,7 @@ var _ = Describe("#CheckEtcdObject", func() {
 	})
 
 	It("should return error if reconciliation failed", func() {
-		obj.Status.LastErrors = []druidcorev1alpha1.LastError{{Code: "ERROR_FOO", Description: "foo", ObservedAt: metav1.Now()}}
+		obj.Status.LastErrors = []druidapicommon.LastError{{Code: "ERROR_FOO", Description: "foo", ObservedAt: metav1.Now()}}
 		err := CheckEtcdObject(obj)
 		Expect(err).To(MatchError(fmt.Sprintf("errors during reconciliation: %+v", obj.Status.LastErrors)))
 		Expect(retry.IsRetriable(err)).To(BeTrue())
