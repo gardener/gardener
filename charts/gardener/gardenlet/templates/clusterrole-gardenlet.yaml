@@ -134,6 +134,7 @@ rules:
   resourceNames:
   - etcds.druid.gardener.cloud
   - etcdcopybackupstasks.druid.gardener.cloud
+  - etcdopstasks.druid.gardener.cloud
   - destinationrules.networking.istio.io
   - envoyfilters.networking.istio.io
   - gateways.networking.istio.io
@@ -245,6 +246,7 @@ rules:
   resources:
   - etcds
   - etcdcopybackupstasks
+  - etcdopstasks
   verbs:
   - create
   - delete

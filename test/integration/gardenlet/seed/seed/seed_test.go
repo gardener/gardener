@@ -515,6 +515,7 @@ var _ = Describe("Seed controller tests", func() {
 						// etcd-druid
 						"etcds.druid.gardener.cloud",
 						"etcdcopybackupstasks.druid.gardener.cloud",
+						"etcdopstasks.druid.gardener.cloud",
 						"managedresources.resources.gardener.cloud",
 						// istio
 						"destinationrules.networking.istio.io",

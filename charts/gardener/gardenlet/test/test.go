@@ -193,6 +193,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 				ResourceNames: []string{
 					"etcds.druid.gardener.cloud",
 					"etcdcopybackupstasks.druid.gardener.cloud",
+					"etcdopstasks.druid.gardener.cloud",
 					"destinationrules.networking.istio.io",
 					"envoyfilters.networking.istio.io",
 					"gateways.networking.istio.io",
@@ -276,7 +277,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{"druid.gardener.cloud"},
-				Resources: []string{"etcds", "etcdcopybackupstasks"},
+				Resources: []string{"etcds", "etcdcopybackupstasks", "etcdopstasks"},
 				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
 			},
 			{

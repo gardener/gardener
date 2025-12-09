@@ -179,12 +179,12 @@ var _ = Describe("Etcd", func() {
 					},
 					{
 						APIGroups: []string{druidcorev1alpha1.GroupName},
-						Resources: []string{"etcds", "etcdcopybackupstasks"},
+						Resources: []string{"etcds", "etcdcopybackupstasks", "etcdopstasks"},
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 					},
 					{
 						APIGroups: []string{druidcorev1alpha1.GroupName},
-						Resources: []string{"etcds/status", "etcds/finalizers", "etcdcopybackupstasks/status", "etcdcopybackupstasks/finalizers"},
+						Resources: []string{"etcds/status", "etcds/finalizers", "etcdcopybackupstasks/status", "etcdcopybackupstasks/finalizers", "etcdopstasks/status", "etcdopstasks/finalizers"},
 						Verbs:     []string{"get", "update", "patch", "create"},
 					},
 					{
@@ -319,6 +319,8 @@ var _ = Describe("Etcd", func() {
 										"--enable-backup-compaction=true",
 										"--compaction-workers=3",
 										"--etcd-events-threshold=1000000",
+										"--etcd-ops-task-workers=3",
+										"--etcd-ops-task-requeue-interval=15s",
 										"--reconciler-service-account=system:serviceaccount:" + namespace + ":etcd-druid",
 										"--metrics-scrape-wait-duration=1m0s",
 										"--active-deadline-duration=3h0m0s",
@@ -416,6 +418,8 @@ var _ = Describe("Etcd", func() {
 										"--enable-backup-compaction=true",
 										"--compaction-workers=3",
 										"--etcd-events-threshold=1000000",
+										"--etcd-ops-task-workers=3",
+										"--etcd-ops-task-requeue-interval=15s",
 										"--reconciler-service-account=system:serviceaccount:" + namespace + ":etcd-druid",
 										"--metrics-scrape-wait-duration=1m0s",
 										"--active-deadline-duration=3h0m0s",
