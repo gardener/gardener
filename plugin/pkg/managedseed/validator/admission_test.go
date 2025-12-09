@@ -284,8 +284,9 @@ var _ = Describe("ManagedSeed", func() {
 			Expect(err).To(BeInvalidError())
 			Expect(getErrorList(err)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.shoot.name"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("shoot garden/foo not found"),
 				})),
 			))
 		})
