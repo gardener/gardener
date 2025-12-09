@@ -279,6 +279,9 @@ var _ = Describe("ManagedSeed", func() {
 
 		It("should forbid the ManagedSeed creation if the Shoot does not exist", func() {
 			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Delete(shoot)).To(Succeed())
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+				return true, nil, apierrors.NewNotFound(gardencorev1beta1.Resource("shoot"), name)
+			})
 
 			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 			Expect(err).To(BeInvalidError())
