@@ -486,7 +486,7 @@ func extractObjectsFromSecret(decoder runtime.Decoder, secret *corev1.Secret) ([
 		}
 
 		for _, objRaw := range strings.Split(string(data), "---\n") {
-			if objRaw == "" {
+			if strings.TrimSpace(objRaw) == "" {
 				continue
 			}
 
