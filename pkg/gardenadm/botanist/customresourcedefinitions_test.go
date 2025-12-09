@@ -90,6 +90,7 @@ var _ = Describe("CustomResourceDefinitions", func() {
 					HaveField("ObjectMeta.Name", "controlplanes.extensions.gardener.cloud"),
 					HaveField("ObjectMeta.Name", "dnsrecords.extensions.gardener.cloud"),
 					HaveField("ObjectMeta.Name", "etcdcopybackupstasks.druid.gardener.cloud"),
+					HaveField("ObjectMeta.Name", "etcdopstasks.druid.gardener.cloud"),
 					HaveField("ObjectMeta.Name", "etcds.druid.gardener.cloud"),
 					HaveField("ObjectMeta.Name", "extensions.extensions.gardener.cloud"),
 					HaveField("ObjectMeta.Name", "filters.fluentbit.fluent.io"),
