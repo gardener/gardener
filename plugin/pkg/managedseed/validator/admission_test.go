@@ -309,26 +309,6 @@ var _ = Describe("ManagedSeed", func() {
 			))
 		})
 
-		It("should forbid the ManagedSeed creation if the Shoot enables the nginx-ingress addon", func() {
-			shoot.Spec.Addons = &gardencorev1beta1.Addons{
-				NginxIngress: &gardencorev1beta1.NginxIngress{
-					Addon: gardencorev1beta1.Addon{
-						Enabled: true,
-					},
-				},
-			}
-
-			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-			Expect(err).To(BeInvalidError())
-			Expect(getErrorList(err)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.shoot.name"),
-					"Detail": ContainSubstring("shoot ingress addon is not supported for managed seeds - use the managed seed ingress controller"),
-				})),
-			))
-		})
-
 		It("should forbid the ManagedSeed creation if the Shoot does not enable VPA", func() {
 			shoot.Spec.Kubernetes.VerticalPodAutoscaler.Enabled = false
 
@@ -1115,6 +1095,26 @@ var _ = Describe("ManagedSeed", func() {
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.shoot.name"),
 					"Detail": ContainSubstring("shoot garden/foo does not specify a domain"),
+				})),
+			))
+		})
+
+		It("should forbid the ManagedSeed creation if the Shoot enables the nginx-ingress addon", func() {
+			shoot.Spec.Addons = &gardencorev1beta1.Addons{
+				NginxIngress: &gardencorev1beta1.NginxIngress{
+					Addon: gardencorev1beta1.Addon{
+						Enabled: true,
+					},
+				},
+			}
+
+			err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("shoot ingress addon is not supported for managed seeds - use the managed seed ingress controller"),
 				})),
 			))
 		})
