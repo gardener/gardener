@@ -1006,9 +1006,12 @@ var _ = Describe("ManagedSeed", func() {
 
 	Describe("#Validate", func() {
 		var (
-			ctx              context.Context
-			managedSeed      *seedmanagement.ManagedSeed
-			admissionHandler *ManagedSeed
+			ctx                 context.Context
+			managedSeed         *seedmanagement.ManagedSeed
+			shoot               *gardencorev1beta1.Shoot
+			coreInformerFactory gardencoreinformers.SharedInformerFactory
+			coreClient          *corefake.Clientset
+			admissionHandler    *ManagedSeed
 		)
 
 		BeforeEach(func() {
@@ -1025,10 +1028,25 @@ var _ = Describe("ManagedSeed", func() {
 				},
 			}
 
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+			}
+
 			var err error
 			admissionHandler, err = New()
 			Expect(err).ToNot(HaveOccurred())
 			admissionHandler.AssignReadyFunc(func() bool { return true })
+
+			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
+
+			coreClient = &corefake.Clientset{}
+			admissionHandler.SetCoreClientSet(coreClient)
+
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 		})
 
 		It("should do nothing if the resource is not a ManagedSeed", func() {
@@ -1061,6 +1079,37 @@ var _ = Describe("ManagedSeed", func() {
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("metadata.namespace"),
 					"Detail": ContainSubstring("namespace must be garden"),
+				})),
+			))
+		})
+
+		It("should forbid the ManagedSeed creation if a Shoot name is not specified", func() {
+			managedSeed.Spec.Shoot.Name = ""
+
+			err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("shoot name is required"),
+				})),
+			))
+		})
+
+		It("should forbid the ManagedSeed creation if the Shoot does not exist", func() {
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Delete(shoot)).To(Succeed())
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+				return true, nil, apierrors.NewNotFound(gardencorev1beta1.Resource("shoot"), name)
+			})
+
+			err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("shoot garden/foo not found"),
 				})),
 			))
 		})
