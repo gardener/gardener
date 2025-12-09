@@ -304,19 +304,6 @@ var _ = Describe("ManagedSeed", func() {
 			))
 		})
 
-		It("should forbid the ManagedSeed creation if the Shoot does not enable VPA", func() {
-			shoot.Spec.Kubernetes.VerticalPodAutoscaler.Enabled = false
-
-			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-			Expect(err).To(BeInvalidError())
-			Expect(getErrorList(err)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.shoot.name"),
-				})),
-			))
-		})
-
 		It("should forbid the ManagedSeed creation if the Shoot is already registered as Seed", func() {
 			anotherManagedSeed := &seedmanagementv1alpha1.ManagedSeed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -995,6 +982,12 @@ var _ = Describe("ManagedSeed", func() {
 					DNS: &gardencorev1beta1.DNS{
 						Domain: ptr.To(domain),
 					},
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						Version: "1.33.3",
+						VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
+							Enabled: true,
+						},
+					},
 				},
 			}
 
@@ -1107,6 +1100,20 @@ var _ = Describe("ManagedSeed", func() {
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.shoot.name"),
 					"Detail": ContainSubstring("shoot ingress addon is not supported for managed seeds - use the managed seed ingress controller"),
+				})),
+			))
+		})
+
+		It("should forbid the ManagedSeed creation if the Shoot does not enable VPA", func() {
+			shoot.Spec.Kubernetes.VerticalPodAutoscaler.Enabled = false
+
+			err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("shoot VPA has to be enabled for managed seeds"),
 				})),
 			))
 		})
