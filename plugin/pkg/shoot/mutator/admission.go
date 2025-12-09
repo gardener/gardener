@@ -230,25 +230,30 @@ func (c *mutationContext) addMetadataAnnotations(a admission.Attributes) {
 	if !newIsHibernated && oldIsHibernated {
 		addInfrastructureDeploymentTask(c.shoot)
 		addDNSRecordDeploymentTasks(c.shoot)
-	} else {
-		if !reflect.DeepEqual(c.oldShoot.Spec.DNS, c.shoot.Spec.DNS) {
-			addDNSRecordDeploymentTasks(c.shoot)
-		}
+	}
 
-		if !reflect.DeepEqual(c.oldShoot.Spec.Provider.InfrastructureConfig, c.shoot.Spec.Provider.InfrastructureConfig) ||
-			c.oldShoot.Spec.Networking != nil && c.oldShoot.Spec.Networking.IPFamilies != nil && len(c.oldShoot.Spec.Networking.IPFamilies) < len(c.shoot.Spec.Networking.IPFamilies) {
-			addInfrastructureDeploymentTask(c.shoot)
-		} else if c.oldShoot.Spec.Provider.WorkersSettings != nil &&
-			c.oldShoot.Spec.Provider.WorkersSettings.SSHAccess != nil &&
-			c.oldShoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled != c.shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled { // We rely that SSHAccess is defaulted in the shoot creation, that is why we do not check for nils for the new shoot object.
-			addInfrastructureDeploymentTask(c.shoot)
-		} else if sets.New(
-			v1beta1constants.ShootOperationRotateSSHKeypair,
-			v1beta1constants.OperationRotateCredentialsStart,
-			v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
-		).HasAny(v1beta1helper.GetShootGardenerOperations(c.shoot.Annotations)...) {
-			addInfrastructureDeploymentTask(c.shoot)
-		}
+	if !reflect.DeepEqual(c.oldShoot.Spec.Provider.InfrastructureConfig, c.shoot.Spec.Provider.InfrastructureConfig) ||
+		c.oldShoot.Spec.Networking != nil && c.oldShoot.Spec.Networking.IPFamilies != nil && len(c.oldShoot.Spec.Networking.IPFamilies) < len(c.shoot.Spec.Networking.IPFamilies) {
+		addInfrastructureDeploymentTask(c.shoot)
+	}
+
+	// We rely that SSHAccess is defaulted in the shoot creation, that is why we do not check for nils for the new shoot object.
+	if c.oldShoot.Spec.Provider.WorkersSettings != nil &&
+		c.oldShoot.Spec.Provider.WorkersSettings.SSHAccess != nil &&
+		c.oldShoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled != c.shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled {
+		addInfrastructureDeploymentTask(c.shoot)
+	}
+
+	if !reflect.DeepEqual(c.oldShoot.Spec.DNS, c.shoot.Spec.DNS) {
+		addDNSRecordDeploymentTasks(c.shoot)
+	}
+
+	if sets.New(
+		v1beta1constants.ShootOperationRotateSSHKeypair,
+		v1beta1constants.OperationRotateCredentialsStart,
+		v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
+	).HasAny(v1beta1helper.GetShootGardenerOperations(c.shoot.Annotations)...) {
+		addInfrastructureDeploymentTask(c.shoot)
 	}
 
 	if c.shoot.Spec.Maintenance != nil &&
