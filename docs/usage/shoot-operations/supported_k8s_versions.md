@@ -8,11 +8,11 @@ Currently, Gardener supports the following Kubernetes versions:
 
 ## Garden Clusters
 
-The minimum version of a garden cluster that can be used to run Gardener is **`1.30.x`**.
+The minimum version of a garden cluster that can be used to run Gardener is **`1.30.x`** up to **`1.34.x`**.
 
 ## Seed Clusters
 
-The minimum version of a seed cluster that can be connected to Gardener is **`1.30.x`**.
+The minimum version of a seed cluster that can be connected to Gardener is **`1.30.x`** up to **`1.34.x`**.
 
 ## Shoot Clusters
 
