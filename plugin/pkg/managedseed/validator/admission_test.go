@@ -295,34 +295,6 @@ var _ = Describe("ManagedSeed", func() {
 			))
 		})
 
-		It("should forbid the ManagedSeed creation if the Shoot is already registered as Seed", func() {
-			anotherManagedSeed := &seedmanagementv1alpha1.ManagedSeed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: namespace,
-				},
-				Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-					Shoot: &seedmanagementv1alpha1.Shoot{
-						Name: name,
-					},
-				},
-			}
-
-			seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
-				return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*anotherManagedSeed}}, nil
-			})
-
-			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-			Expect(err).To(BeInvalidError())
-			Expect(getErrorList(err)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.shoot.name"),
-					"Detail": ContainSubstring("shoot garden/foo already registered as seed by managed seed garden/bar"),
-				})),
-			))
-		})
-
 		Context("gardenlet", func() {
 			var (
 				seedx *gardencorev1beta1.Seed
@@ -944,12 +916,13 @@ var _ = Describe("ManagedSeed", func() {
 
 	Describe("#Validate", func() {
 		var (
-			ctx                 context.Context
-			managedSeed         *seedmanagement.ManagedSeed
-			shoot               *gardencorev1beta1.Shoot
-			coreInformerFactory gardencoreinformers.SharedInformerFactory
-			coreClient          *corefake.Clientset
-			admissionHandler    *ManagedSeed
+			ctx                  context.Context
+			managedSeed          *seedmanagement.ManagedSeed
+			shoot                *gardencorev1beta1.Shoot
+			coreInformerFactory  gardencoreinformers.SharedInformerFactory
+			coreClient           *corefake.Clientset
+			seedManagementClient *fakeseedmanagement.Clientset
+			admissionHandler     *ManagedSeed
 		)
 
 		BeforeEach(func() {
@@ -1000,6 +973,9 @@ var _ = Describe("ManagedSeed", func() {
 
 			coreClient = &corefake.Clientset{}
 			admissionHandler.SetCoreClientSet(coreClient)
+
+			seedManagementClient = &fakeseedmanagement.Clientset{}
+			admissionHandler.SetSeedManagementClientSet(seedManagementClient)
 
 			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 		})
@@ -1127,6 +1103,34 @@ var _ = Describe("ManagedSeed", func() {
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.shoot.name"),
 					"Detail": ContainSubstring("workerless shoot cannot be used to create managed seed"),
+				})),
+			))
+		})
+
+		It("should forbid the ManagedSeed creation if the Shoot is already registered as Seed", func() {
+			anotherManagedSeed := &seedmanagementv1alpha1.ManagedSeed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: namespace,
+				},
+				Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+					Shoot: &seedmanagementv1alpha1.Shoot{
+						Name: name,
+					},
+				},
+			}
+
+			seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
+				return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*anotherManagedSeed}}, nil
+			})
+
+			err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("shoot garden/foo already registered as seed by managed seed garden/bar"),
 				})),
 			))
 		})

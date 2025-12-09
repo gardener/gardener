@@ -183,19 +183,7 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 		return statusErr
 	}
 
-	var (
-		allErrs       field.ErrorList
-		shootNamePath = field.NewPath("spec", "shoot", "name")
-	)
-
-	// Ensure shoot is not already registered as seed
-	ms, err := admissionutils.GetManagedSeed(ctx, v.seedManagementClient, managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
-	if err != nil {
-		return apierrors.NewInternalError(fmt.Errorf("could not get managed seed for shoot %s/%s: %v", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err))
-	}
-	if ms != nil && ms.Name != managedSeed.Name {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s already registered as seed by managed seed %s", client.ObjectKeyFromObject(shoot), client.ObjectKeyFromObject(ms)))))
-	}
+	var allErrs field.ErrorList
 
 	// Admit gardenlet against shoot
 	errs, err := v.admitGardenlet(&managedSeed.Spec.Gardenlet, shoot, field.NewPath("spec", "gardenlet"))
@@ -659,6 +647,15 @@ func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ ad
 	}
 	if v1beta1helper.IsWorkerless(shoot) {
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "workerless shoot cannot be used to create managed seed")))
+	}
+
+	// Ensure shoot is not already registered as seed
+	ms, err := admissionutils.GetManagedSeed(ctx, v.seedManagementClient, managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
+	if err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("could not get managed seed for shoot %s/%s: %v", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err))
+	}
+	if ms != nil && ms.Name != managedSeed.Name {
+		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s already registered as seed by managed seed %s", client.ObjectKeyFromObject(shoot), client.ObjectKeyFromObject(ms)))))
 	}
 
 	return nil
