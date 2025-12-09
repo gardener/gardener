@@ -258,8 +258,9 @@ var _ = Describe("ManagedSeed", func() {
 			Expect(err).To(BeInvalidError())
 			Expect(getErrorList(err)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("metadata.namespace"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("metadata.namespace"),
+					"Detail": ContainSubstring("namespace must be garden"),
 				})),
 			))
 		})
@@ -271,8 +272,9 @@ var _ = Describe("ManagedSeed", func() {
 			Expect(err).To(BeInvalidError())
 			Expect(getErrorList(err)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.shoot.name"),
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("shoot name is required"),
 				})),
 			))
 		})
@@ -315,8 +317,9 @@ var _ = Describe("ManagedSeed", func() {
 			Expect(err).To(BeInvalidError())
 			Expect(getErrorList(err)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.shoot.name"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("shoot garden/foo does not specify a domain"),
 				})),
 			))
 		})
@@ -334,8 +337,9 @@ var _ = Describe("ManagedSeed", func() {
 			Expect(err).To(BeInvalidError())
 			Expect(getErrorList(err)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.shoot.name"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("shoot ingress addon is not supported for managed seeds - use the managed seed ingress controller"),
 				})),
 			))
 		})
@@ -347,8 +351,9 @@ var _ = Describe("ManagedSeed", func() {
 			Expect(err).To(BeInvalidError())
 			Expect(getErrorList(err)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.shoot.name"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("shoot VPA has to be enabled for managed seeds"),
 				})),
 			))
 		})
@@ -374,8 +379,9 @@ var _ = Describe("ManagedSeed", func() {
 			Expect(err).To(BeInvalidError())
 			Expect(getErrorList(err)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.shoot.name"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("shoot garden/foo already registered as seed by managed seed garden/bar"),
 				})),
 			))
 		})
@@ -614,6 +620,7 @@ var _ = Describe("ManagedSeed", func() {
 
 				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 				Expect(err).To(BeInternalServerError())
+				Expect(err).To(MatchError(ContainSubstring("expected *gardenletconfigv1alpha1.GardenletConfiguration but got *v1.Pod")))
 			})
 
 			It("should forbid the ManagedSeed creation if the seed spec contains invalid values", func() {
