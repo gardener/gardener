@@ -9,6 +9,7 @@ This document describes the steps needed to perform in order to confidently add 
 - Bump Golang dependencies for `k8s.io/*` and `sigs.k8s.io/controller-runtime` ([example](https://github.com/gardener/gardener/issues/11186)) [[ref](#bump-golang-dependencies-for-k8sio-and-sigsk8siocontroller-runtime)]
 - Prepare a short (~30-60 min) session for a special edition of Gardener's Review Meeting on new key features and changes in the release
 - Drop support for all but the greatest/latest 4 Kubernetes minor versions (the newly added plus three prior). Drop all lower/older versions and adapt accordingly ([example](https://github.com/gardener/gardener/pull/10664))
+  - Removing support is only possible if the Kubernetes version to be dropped has been supported for at least 14 months. See [Supported Kubernetes Versions](../usage/shoot-operations/supported_k8s_versions.md) for details.
 
 Version | Expected Release Date | Release Responsibles                                                                         |
 --------|-----------------------|----------------------------------------------------------------------------------------------|
