@@ -187,9 +187,6 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 
 	// Ensure shoot can be registered as seed
 	shootNamePath := field.NewPath("spec", "shoot", "name")
-	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil || *shoot.Spec.DNS.Domain == "" {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s does not specify a domain", client.ObjectKeyFromObject(shoot)))))
-	}
 	if v1beta1helper.NginxIngressEnabled(shoot.Spec.Addons) {
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot ingress addon is not supported for managed seeds - use the managed seed ingress controller")))
 	}
@@ -653,9 +650,15 @@ func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ ad
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(field.NewPath("metadata", "namespace"), managedSeed.Namespace, "namespace must be garden")))
 	}
 
-	_, statusErr := v.fetchManagedSeedShoot(ctx, managedSeed)
+	shoot, statusErr := v.fetchManagedSeedShoot(ctx, managedSeed)
 	if statusErr != nil {
 		return statusErr
+	}
+
+	// Ensure shoot can be registered as seed
+	shootNamePath := field.NewPath("spec", "shoot", "name")
+	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil || *shoot.Spec.DNS.Domain == "" {
+		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s does not specify a domain", client.ObjectKeyFromObject(shoot)))))
 	}
 
 	return nil

@@ -304,19 +304,6 @@ var _ = Describe("ManagedSeed", func() {
 			))
 		})
 
-		It("should forbid the ManagedSeed creation if the Shoot does not specify a domain", func() {
-			shoot.Spec.DNS = nil
-
-			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-			Expect(err).To(BeInvalidError())
-			Expect(getErrorList(err)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.shoot.name"),
-				})),
-			))
-		})
-
 		It("should forbid the ManagedSeed creation if the Shoot enables the nginx-ingress addon", func() {
 			shoot.Spec.Addons = &gardencorev1beta1.Addons{
 				NginxIngress: &gardencorev1beta1.NginxIngress{
@@ -1023,6 +1010,11 @@ var _ = Describe("ManagedSeed", func() {
 					Name:      name,
 					Namespace: namespace,
 				},
+				Spec: gardencorev1beta1.ShootSpec{
+					DNS: &gardencorev1beta1.DNS{
+						Domain: ptr.To(domain),
+					},
+				},
 			}
 
 			var err error
@@ -1100,6 +1092,20 @@ var _ = Describe("ManagedSeed", func() {
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.shoot.name"),
 					"Detail": ContainSubstring("shoot garden/foo not found"),
+				})),
+			))
+		})
+
+		It("should forbid the ManagedSeed creation if the Shoot does not specify a domain", func() {
+			shoot.Spec.DNS = nil
+
+			err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("shoot garden/foo does not specify a domain"),
 				})),
 			))
 		})
