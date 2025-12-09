@@ -183,13 +183,10 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 		return statusErr
 	}
 
-	var allErrs field.ErrorList
-
-	// Ensure shoot can be registered as seed
-	shootNamePath := field.NewPath("spec", "shoot", "name")
-	if v1beta1helper.IsWorkerless(shoot) {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "workerless shoot cannot be used to create managed seed")))
-	}
+	var (
+		allErrs       field.ErrorList
+		shootNamePath = field.NewPath("spec", "shoot", "name")
+	)
 
 	// Ensure shoot is not already registered as seed
 	ms, err := admissionutils.GetManagedSeed(ctx, v.seedManagementClient, managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
@@ -659,6 +656,9 @@ func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ ad
 	}
 	if !v1beta1helper.ShootWantsVerticalPodAutoscaler(shoot) {
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot VPA has to be enabled for managed seeds")))
+	}
+	if v1beta1helper.IsWorkerless(shoot) {
+		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "workerless shoot cannot be used to create managed seed")))
 	}
 
 	return nil
