@@ -111,6 +111,14 @@ var _ = Describe("#SNI", func() {
 
 		sm = fakesecretsmanager.New(c, namespace)
 
+		expectedOwnerReferences := []metav1.OwnerReference{{
+			APIVersion:         "v1",
+			Kind:               "Namespace",
+			Name:               "test-namespace",
+			UID:                "foo",
+			BlockOwnerDeletion: ptr.To(true),
+		}}
+
 		expectedDestinationRule = &istionetworkingv1beta1.DestinationRule{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-apiserver",
@@ -150,28 +158,34 @@ var _ = Describe("#SNI", func() {
 			},
 		}
 		expectedEnvoyFilterObjectMetaAPIServerProxy = metav1.ObjectMeta{
-			Name:      namespace + "-apiserver-proxy",
-			Namespace: istioNamespace,
+			Name:            namespace + "-apiserver-proxy",
+			Namespace:       istioNamespace,
+			OwnerReferences: expectedOwnerReferences,
 		}
 		expectedEnvoyFilterObjectMetaIstioTLSTermination = metav1.ObjectMeta{
-			Name:      namespace + "-istio-tls-termination",
-			Namespace: istioNamespace,
+			Name:            namespace + "-istio-tls-termination",
+			Namespace:       istioNamespace,
+			OwnerReferences: expectedOwnerReferences,
 		}
 		expectedWildcardEnvoyFilterObjectMetaIstioTLSTermination = metav1.ObjectMeta{
-			Name:      namespace + "-istio-tls-termination",
-			Namespace: istioWildcardNamespace,
+			Name:            namespace + "-istio-tls-termination",
+			Namespace:       istioWildcardNamespace,
+			OwnerReferences: expectedOwnerReferences,
 		}
 		expectedSecretObjectMetaIstioMTLS = metav1.ObjectMeta{
-			Name:      namespace + "-kube-apiserver-istio-mtls",
-			Namespace: istioNamespace,
+			Name:            namespace + "-kube-apiserver-istio-mtls",
+			Namespace:       istioNamespace,
+			OwnerReferences: expectedOwnerReferences,
 		}
 		expectedWildcardSecretObjectMetaIstioMTLS = metav1.ObjectMeta{
-			Name:      namespace + "-kube-apiserver-istio-mtls",
-			Namespace: istioWildcardNamespace,
+			Name:            namespace + "-kube-apiserver-istio-mtls",
+			Namespace:       istioWildcardNamespace,
+			OwnerReferences: expectedOwnerReferences,
 		}
 		expectedSecretObjectMetaIstioTLS = metav1.ObjectMeta{
-			Name:      namespace + "-kube-apiserver-tls",
-			Namespace: istioNamespace,
+			Name:            namespace + "-kube-apiserver-tls",
+			Namespace:       istioNamespace,
+			OwnerReferences: expectedOwnerReferences,
 		}
 		expectedGateway = &istionetworkingv1beta1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{
@@ -306,6 +320,8 @@ var _ = Describe("#SNI", func() {
 	})
 
 	JustBeforeEach(func() {
+		By("Create namespace")
+		Expect(c.Create(ctx, &corev1.Namespace{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"}, ObjectMeta: metav1.ObjectMeta{Name: namespace, UID: "foo"}})).To(Succeed())
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-client", Namespace: namespace}})).To(Succeed())

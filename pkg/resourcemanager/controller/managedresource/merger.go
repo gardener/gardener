@@ -82,6 +82,8 @@ func merge(origin string, desired, current *unstructured.Unstructured, forceOver
 	ann[resourcesv1alpha1.OriginAnnotation] = origin
 	newObject.SetAnnotations(ann)
 
+	newObject.SetOwnerReferences(desired.GetOwnerReferences())
+
 	// keep status of old object if it is set and not empty
 	var oldStatus map[string]any
 	if oldStatusInterface, containsStatus := oldObject.Object["status"]; containsStatus {
