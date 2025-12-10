@@ -7,6 +7,7 @@ package backupbucket
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/fields"
@@ -16,6 +17,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -126,8 +128,12 @@ func ToSelectableFields(backupBucket *core.BackupBucket) fields.Set {
 	// amount of allocations needed to create the fields.Set. If you add any
 	// field here or the number of object-meta related fields changes, this should
 	// be adjusted.
-	backupBucketSpecificFieldsSet := make(fields.Set, 3)
-	backupBucketSpecificFieldsSet[core.BackupBucketSeedName] = getSeedName(backupBucket)
+	backupBucketSpecificFieldsSet := make(fields.Set, 5)
+	backupBucketSpecificFieldsSet[core.BackupBucketSeedName] = ptr.Deref(backupBucket.Spec.SeedName, "")
+	if backupBucket.Spec.ShootRef != nil {
+		backupBucketSpecificFieldsSet[core.BackupBucketShootRefName] = backupBucket.Spec.ShootRef.Name
+		backupBucketSpecificFieldsSet[core.BackupBucketShootRefNamespace] = backupBucket.Spec.ShootRef.Namespace
+	}
 	return generic.AddObjectMetaFieldsSet(backupBucketSpecificFieldsSet, &backupBucket.ObjectMeta, true)
 }
 
@@ -146,23 +152,44 @@ func MatchBackupBucket(label labels.Selector, field fields.Selector) storage.Sel
 		Label:       label,
 		Field:       field,
 		GetAttrs:    GetAttrs,
-		IndexFields: []string{core.BackupBucketSeedName},
+		IndexFields: []string{core.BackupBucketSeedName, core.BackupBucketShootRefName, core.BackupBucketShootRefNamespace},
 	}
 }
 
-// SeedNameTriggerFunc returns spec.seedName of given BackupBucket.
-func SeedNameTriggerFunc(obj runtime.Object) string {
+// SeedNameIndexFunc returns spec.seedName of given BackupBucket.
+func SeedNameIndexFunc(obj any) ([]string, error) {
 	backupBucket, ok := obj.(*core.BackupBucket)
 	if !ok {
-		return ""
+		return nil, fmt.Errorf("expected *core.BackupBucket but got %T", obj)
 	}
 
-	return getSeedName(backupBucket)
+	return []string{ptr.Deref(backupBucket.Spec.SeedName, "")}, nil
 }
 
-func getSeedName(backupBucket *core.BackupBucket) string {
-	if backupBucket.Spec.SeedName == nil {
-		return ""
+// ShootRefNameIndexFunc returns spec.shootRef.name of given BackupBucket.
+func ShootRefNameIndexFunc(obj any) ([]string, error) {
+	backupBucket, ok := obj.(*core.BackupBucket)
+	if !ok {
+		return nil, fmt.Errorf("expected *core.BackupBucket but got %T", obj)
 	}
-	return *backupBucket.Spec.SeedName
+
+	if backupBucket.Spec.ShootRef == nil {
+		return []string{""}, nil
+	}
+
+	return []string{backupBucket.Spec.ShootRef.Name}, nil
+}
+
+// ShootRefNamespaceIndexFunc returns spec.shootRef.namespace of given BackupBucket.
+func ShootRefNamespaceIndexFunc(obj any) ([]string, error) {
+	backupBucket, ok := obj.(*core.BackupBucket)
+	if !ok {
+		return nil, fmt.Errorf("expected *core.BackupBucket but got %T", obj)
+	}
+
+	if backupBucket.Spec.ShootRef == nil {
+		return []string{""}, nil
+	}
+
+	return []string{backupBucket.Spec.ShootRef.Namespace}, nil
 }

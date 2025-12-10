@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -137,11 +138,15 @@ var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {
 		result := backupentryregistry.ToSelectableFields(newBackupEntry("foo", "dash"))
 
-		Expect(result).To(HaveLen(4))
+		Expect(result).To(HaveLen(6))
 		Expect(result.Has(core.BackupEntrySeedName)).To(BeTrue())
 		Expect(result.Get(core.BackupEntrySeedName)).To(Equal("foo"))
 		Expect(result.Has(core.BackupEntryBucketName)).To(BeTrue())
 		Expect(result.Get(core.BackupEntryBucketName)).To(Equal("dash"))
+		Expect(result.Has(core.BackupEntryShootRefName)).To(BeTrue())
+		Expect(result.Get(core.BackupEntryShootRefName)).To(Equal("shoot-name"))
+		Expect(result.Has(core.BackupEntryShootRefNamespace)).To(BeTrue())
+		Expect(result.Get(core.BackupEntryShootRefNamespace)).To(Equal("shoot-namespace"))
 	})
 })
 
@@ -169,6 +174,40 @@ var _ = Describe("SeedNameIndexFunc", func() {
 	})
 })
 
+var _ = Describe("ShootRefNameIndexFunc", func() {
+	It("should return nothing because spec.shootRef is not set", func() {
+		backupEntry := newBackupEntry("foo", "dash")
+		backupEntry.Spec.ShootRef = nil
+
+		result, err := backupentryregistry.ShootRefNameIndexFunc(backupEntry)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(ConsistOf(BeEmpty()))
+	})
+
+	It("should return spec.shootRef.name", func() {
+		result, err := backupentryregistry.ShootRefNameIndexFunc(newBackupEntry("foo", "dash"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(ConsistOf("shoot-name"))
+	})
+})
+
+var _ = Describe("ShootRefNamespaceIndexFunc", func() {
+	It("should return nothing because spec.shootRef is not set", func() {
+		backupEntry := newBackupEntry("foo", "dash")
+		backupEntry.Spec.ShootRef = nil
+
+		result, err := backupentryregistry.ShootRefNamespaceIndexFunc(backupEntry)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(ConsistOf(BeEmpty()))
+	})
+
+	It("should return spec.shootRef.namespace", func() {
+		result, err := backupentryregistry.ShootRefNamespaceIndexFunc(newBackupEntry("foo", "dash"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(ConsistOf("shoot-namespace"))
+	})
+})
+
 var _ = Describe("BucketNameIndexFunc", func() {
 	It("should return spec.BucketName", func() {
 		result, err := backupentryregistry.BucketNameIndexFunc(newBackupEntry("foo", "dash"))
@@ -186,7 +225,7 @@ var _ = Describe("MatchBackupEntry", func() {
 
 		Expect(result.Label).To(Equal(ls))
 		Expect(result.Field).To(Equal(fs))
-		Expect(result.IndexFields).To(ConsistOf(core.BackupEntrySeedName, core.BackupEntryBucketName))
+		Expect(result.IndexFields).To(ConsistOf(core.BackupEntrySeedName, core.BackupEntryBucketName, core.BackupEntryShootRefName, core.BackupEntryShootRefNamespace))
 	})
 })
 
@@ -200,6 +239,10 @@ func newBackupEntry(seedName string, bucketName string) *core.BackupEntry {
 		Spec: core.BackupEntrySpec{
 			SeedName:   &seedName,
 			BucketName: bucketName,
+			ShootRef: &corev1.ObjectReference{
+				Name:      "shoot-name",
+				Namespace: "shoot-namespace",
+			},
 		},
 	}
 }

@@ -12,15 +12,18 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	admissionv1 "k8s.io/api/admission/v1"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -29,7 +32,6 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
-	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
 )
 
 var _ = Describe("handler", func() {
@@ -37,9 +39,8 @@ var _ = Describe("handler", func() {
 		ctx = context.TODO()
 		err error
 
-		ctrl      *gomock.Controller
-		mockCache *mockcache.MockCache
-		decoder   admission.Decoder
+		fakeClient client.Client
+		decoder    admission.Decoder
 
 		log     logr.Logger
 		handler admission.Handler
@@ -62,8 +63,7 @@ var _ = Describe("handler", func() {
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		mockCache = mockcache.NewMockCache(ctrl)
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		decoder = admission.NewDecoder(kubernetes.GardenScheme)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -71,7 +71,7 @@ var _ = Describe("handler", func() {
 		request = admission.Request{}
 		encoder = &json.Serializer{}
 
-		handler = &Handler{Logger: log, Client: mockCache, Decoder: decoder}
+		handler = &Handler{Logger: log, Client: fakeClient, Decoder: decoder}
 
 		shootNamespace = "shoot-namespace"
 		shootName = "shoot-name"
@@ -424,69 +424,466 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 					})
 				})
 			})
-		})
 
-		Context("when requested for ShootStates", func() {
-			var name string
+			Context("when requested for Secrets", func() {
+				var name, namespace string
 
-			BeforeEach(func() {
-				name = "foo"
+				BeforeEach(func() {
+					name, namespace = "foo", "bar"
 
-				request.Name = name
-				request.UserInfo = gardenletUser
-				request.Resource = metav1.GroupVersionResource{
-					Group:    gardencorev1beta1.SchemeGroupVersion.Group,
-					Version:  gardencorev1beta1.SchemeGroupVersion.Version,
-					Resource: "shootstates",
-				}
+					request.Name = name
+					request.Namespace = namespace
+					request.UserInfo = gardenletUser
+					request.Resource = metav1.GroupVersionResource{
+						Group:    corev1.SchemeGroupVersion.Group,
+						Resource: "secrets",
+					}
+				})
+
+				DescribeTable("should not allow the request because no allowed verb",
+					func(operation admissionv1.Operation) {
+						request.Operation = operation
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: fmt.Sprintf("unexpected operation: %q", operation),
+								},
+							},
+						}))
+					},
+
+					Entry("update", admissionv1.Update),
+					Entry("delete", admissionv1.Delete),
+				)
+
+				Context("when operation is create", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Create
+					})
+
+					Context("BackupBucket secret", func() {
+						BeforeEach(func() {
+							request.Name = "generated-bucket-" + name
+						})
+
+						It("should return an error because the related BackupBucket was not found", func() {
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusForbidden),
+										Message: fmt.Sprintf("backupbuckets.core.gardener.cloud %q not found", name),
+									},
+								},
+							}))
+						})
+
+						It("should forbid because the related Shoot does not belong to gardenlet's shoot", func() {
+							backupBucket := &gardencorev1beta1.BackupBucket{
+								ObjectMeta: metav1.ObjectMeta{Name: name},
+								Spec:       gardencorev1beta1.BackupBucketSpec{ShootRef: &corev1.ObjectReference{Name: "other-shoot", Namespace: "other-namespace"}},
+							}
+							Expect(fakeClient.Create(ctx, backupBucket)).To(Succeed())
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusForbidden),
+										Message: fmt.Sprintf("object does not belong to shoot %s/%s", shootNamespace, shootName),
+									},
+								},
+							}))
+						})
+
+						It("should allow because the related BackupBucket does belong to gardenlet's seed", func() {
+							backupBucket := &gardencorev1beta1.BackupBucket{
+								ObjectMeta: metav1.ObjectMeta{Name: name},
+								Spec:       gardencorev1beta1.BackupBucketSpec{ShootRef: &corev1.ObjectReference{Name: shootName, Namespace: shootNamespace}},
+							}
+							Expect(fakeClient.Create(ctx, backupBucket)).To(Succeed())
+
+							shoot := &gardencorev1beta1.Shoot{
+								ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace},
+								Status:     gardencorev1beta1.ShootStatus{UID: types.UID(name)},
+							}
+							Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+						})
+					})
+				})
 			})
 
-			DescribeTable("should not allow the request because no allowed verb",
-				func(operation admissionv1.Operation) {
-					request.Operation = operation
+			Context("when requested for ShootStates", func() {
+				var name string
 
-					Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-						AdmissionResponse: admissionv1.AdmissionResponse{
-							Allowed: false,
-							Result: &metav1.Status{
-								Code:    int32(http.StatusBadRequest),
-								Message: fmt.Sprintf("unexpected operation: %q", operation),
-							},
-						},
-					}))
-				},
-
-				Entry("update", admissionv1.Update),
-				Entry("delete", admissionv1.Delete),
-			)
-
-			Context("when operation is create", func() {
 				BeforeEach(func() {
-					request.Operation = admissionv1.Create
+					name = "foo"
+
+					request.Name = name
+					request.UserInfo = gardenletUser
+					request.Resource = metav1.GroupVersionResource{
+						Group:    gardencorev1beta1.SchemeGroupVersion.Group,
+						Version:  gardencorev1beta1.SchemeGroupVersion.Version,
+						Resource: "shootstates",
+					}
 				})
 
-				It("should return an error because the requestor is not responsible for the resource", func() {
-					Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-						AdmissionResponse: admissionv1.AdmissionResponse{
-							Allowed: false,
-							Result: &metav1.Status{
-								Code:    int32(http.StatusForbidden),
-								Message: "object does not belong to shoot " + shootNamespace + "/" + shootName,
+				DescribeTable("should not allow the request because no allowed verb",
+					func(operation admissionv1.Operation) {
+						request.Operation = operation
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: fmt.Sprintf("unexpected operation: %q", operation),
+								},
 							},
-						},
-					}))
-				})
+						}))
+					},
 
-				It("should return success because the requestor is responsible for the resource", func() {
-					request.Name = shootName
-					request.Namespace = shootNamespace
+					Entry("update", admissionv1.Update),
+					Entry("delete", admissionv1.Delete),
+				)
 
-					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				Context("when operation is create", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Create
+					})
+
+					It("should return an error because the requestor is not responsible for the resource", func() {
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: "object does not belong to shoot " + shootNamespace + "/" + shootName,
+								},
+							},
+						}))
+					})
+
+					It("should return success because the requestor is responsible for the resource", func() {
+						request.Name = shootName
+						request.Namespace = shootNamespace
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
 				})
 			})
 		})
 
 		Context("gardenadm client", func() {
+			Context("when requested for BackupBuckets", func() {
+				var (
+					name string
+				)
+
+				BeforeEach(func() {
+					name = "foo"
+
+					request.Name = name
+					request.UserInfo = gardenadmUser
+					request.Resource = metav1.GroupVersionResource{
+						Group:    gardencorev1beta1.SchemeGroupVersion.Group,
+						Version:  gardencorev1beta1.SchemeGroupVersion.Version,
+						Resource: "backupbuckets",
+					}
+				})
+
+				DescribeTable("should not allow the request because no allowed verb",
+					func(operation admissionv1.Operation) {
+						request.Operation = operation
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: fmt.Sprintf("unexpected operation: %q", operation),
+								},
+							},
+						}))
+					},
+
+					Entry("update", admissionv1.Update),
+					Entry("delete", admissionv1.Delete),
+				)
+
+				Context("when operation is create", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Create
+					})
+
+					It("should return an error because decoding the object failed", func() {
+						shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
+						Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+						request.Object.Raw = []byte(`{]`)
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: "couldn't get version/kind; json parse error: invalid character ']' looking for beginning of object key string",
+								},
+							},
+						}))
+					})
+
+					It("should deny the request because BackupBucket does not reference the Shoot", func() {
+						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupBucket{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+								Kind:       "BackupBucket",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "some-name",
+							},
+							Spec: gardencorev1beta1.BackupBucketSpec{
+								ShootRef: &corev1.ObjectReference{Name: "other-shoot", Namespace: shootNamespace},
+							},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("object does not belong to shoot %s/%s", shootNamespace, shootName),
+								},
+							},
+						}))
+					})
+
+					It("should allow the request because BackupBucket references the Shoot", func() {
+						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupBucket{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+								Kind:       "BackupBucket",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "some-name",
+							},
+							Spec: gardencorev1beta1.BackupBucketSpec{
+								ShootRef: &corev1.ObjectReference{Name: shootName, Namespace: shootNamespace},
+							},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+				})
+			})
+
+			Context("when requested for BackupEntries", func() {
+				var (
+					name string
+				)
+
+				BeforeEach(func() {
+					name = "foo"
+
+					request.Name = name
+					request.UserInfo = gardenadmUser
+					request.Resource = metav1.GroupVersionResource{
+						Group:    gardencorev1beta1.SchemeGroupVersion.Group,
+						Version:  gardencorev1beta1.SchemeGroupVersion.Version,
+						Resource: "backupentries",
+					}
+				})
+
+				DescribeTable("should not allow the request because no allowed verb",
+					func(operation admissionv1.Operation) {
+						request.Operation = operation
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: fmt.Sprintf("unexpected operation: %q", operation),
+								},
+							},
+						}))
+					},
+
+					Entry("update", admissionv1.Update),
+					Entry("delete", admissionv1.Delete),
+				)
+
+				Context("when operation is create", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Create
+					})
+
+					It("should return an error because decoding the object failed", func() {
+						shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace, UID: types.UID("1234")}}
+						Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+						request.Object.Raw = []byte(`{]`)
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: "couldn't get version/kind; json parse error: invalid character ']' looking for beginning of object key string",
+								},
+							},
+						}))
+					})
+
+					It("should deny the request because BackupEntry does not reference the Shoot", func() {
+						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupEntry{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+								Kind:       "BackupEntry",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-name",
+								Namespace: shootNamespace,
+							},
+							Spec: gardencorev1beta1.BackupEntrySpec{
+								ShootRef: &corev1.ObjectReference{Name: "other-shoot", Namespace: shootNamespace},
+							},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("object does not belong to shoot %s/%s", shootNamespace, shootName),
+								},
+							},
+						}))
+					})
+
+					It("should deny the request because BackupEntry's Shoot reference is for another namespace", func() {
+						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupEntry{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+								Kind:       "BackupEntry",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-name",
+								Namespace: shootNamespace,
+							},
+							Spec: gardencorev1beta1.BackupEntrySpec{
+								ShootRef: &corev1.ObjectReference{Name: shootName, Namespace: "other-namespace"},
+							},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("object does not belong to shoot %s/%s", shootNamespace, shootName),
+								},
+							},
+						}))
+					})
+
+					It("should allow the request because BackupEntry references the Shoot", func() {
+						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupEntry{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+								Kind:       "BackupEntry",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-name",
+								Namespace: shootNamespace,
+							},
+							Spec: gardencorev1beta1.BackupEntrySpec{
+								ShootRef: &corev1.ObjectReference{Name: shootName, Namespace: shootNamespace},
+							},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+				})
+			})
+
+			Context("when requested for ConfigMaps", func() {
+				var (
+					name, namespace string
+				)
+
+				BeforeEach(func() {
+					name, namespace = "foo", "bar"
+
+					request.Name = name
+					request.Namespace = namespace
+					request.UserInfo = gardenadmUser
+					request.Resource = metav1.GroupVersionResource{
+						Group:    corev1.SchemeGroupVersion.Group,
+						Version:  corev1.SchemeGroupVersion.Version,
+						Resource: "configmaps",
+					}
+				})
+
+				DescribeTable("should not allow the request because no allowed verb",
+					func(operation admissionv1.Operation) {
+						request.Operation = operation
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: fmt.Sprintf("unexpected operation: %q", operation),
+								},
+							},
+						}))
+					},
+
+					Entry("update", admissionv1.Update),
+					Entry("delete", admissionv1.Delete),
+				)
+
+				Context("when operation is create", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Create
+					})
+
+					It("should deny the request because object namespace does not match shoot namespaces", func() {
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("object does not belong to shoot %s/%s", shootNamespace, shootName),
+								},
+							},
+						}))
+					})
+
+					It("should allow the request because object namespace matches shoot namespaces", func() {
+						request.Namespace = shootNamespace
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+				})
+			})
+
 			Context("when requested for Projects", func() {
 				var (
 					name string
@@ -578,6 +975,68 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 						})
 						Expect(err).NotTo(HaveOccurred())
 						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+				})
+			})
+
+			Context("when requested for Secrets", func() {
+				var (
+					name, namespace string
+				)
+
+				BeforeEach(func() {
+					name, namespace = "foo", "bar"
+
+					request.Name = name
+					request.Namespace = namespace
+					request.UserInfo = gardenadmUser
+					request.Resource = metav1.GroupVersionResource{
+						Group:    corev1.SchemeGroupVersion.Group,
+						Version:  corev1.SchemeGroupVersion.Version,
+						Resource: "secrets",
+					}
+				})
+
+				DescribeTable("should not allow the request because no allowed verb",
+					func(operation admissionv1.Operation) {
+						request.Operation = operation
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: fmt.Sprintf("unexpected operation: %q", operation),
+								},
+							},
+						}))
+					},
+
+					Entry("update", admissionv1.Update),
+					Entry("delete", admissionv1.Delete),
+				)
+
+				Context("when operation is create", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Create
+					})
+
+					It("should deny the request because object namespace does not match shoot namespaces", func() {
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("object does not belong to shoot %s/%s", shootNamespace, shootName),
+								},
+							},
+						}))
+					})
+
+					It("should allow the request because object namespace matches shoot namespaces", func() {
+						request.Namespace = shootNamespace
 
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})

@@ -188,7 +188,7 @@ func (a *RequestAuthorizer) Check(fromType graph.VertexType, attrs auth.Attribut
 			return auth.DecisionNoOpinion, "", fmt.Errorf("failed checking if authorization with selectors is possible: %w", err)
 		} else if canAuthorizeWithSelectors {
 			if ok, reason := a.checkListWatchRequests(attrs, req.listWatchSelector); !ok {
-				log.Info("Denying list/watch request because field/label selectors don't the 'to object'", "fields", req.listWatchSelector.fields, "labels", req.listWatchSelector.labels)
+				log.Info("Denying list/watch request because field/label selectors don't match the 'to object'", "fields", req.listWatchSelector.fields, "labels", req.listWatchSelector.labels)
 				return auth.DecisionNoOpinion, reason, nil
 			} else {
 				return auth.DecisionAllow, "", nil
@@ -221,7 +221,7 @@ func (a *RequestAuthorizer) checkListWatchRequests(attrs auth.Attributes, select
 	for _, req := range labelSelectorRequirements {
 		for key, value := range selector.labels {
 			if req.Matches(labels.Set{key: value}) {
-				return true, "label selector provided and matches  name of 'to object'"
+				return true, "label selector provided and matches name of 'to object'"
 			}
 		}
 	}

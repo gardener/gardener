@@ -71,6 +71,8 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 
 	if g.forSelfHostedShoots {
 		setups = append(setups,
+			resourceSetup{&gardencorev1beta1.BackupBucket{}, g.setupBackupBucketWatch},
+			resourceSetup{&gardencorev1beta1.BackupEntry{}, g.setupBackupEntryWatch},
 			resourceSetup{&certificatesv1.CertificateSigningRequest{}, g.setupCertificateSigningRequestWatch},
 			resourceSetup{&seedmanagementv1alpha1.Gardenlet{}, g.setupGardenletWatch},
 			resourceSetup{&gardencorev1beta1.Shoot{}, g.setupShootWatch},

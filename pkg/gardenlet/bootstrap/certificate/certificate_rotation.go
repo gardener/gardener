@@ -15,7 +15,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,6 +26,7 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/certificatesigningrequest"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -56,7 +56,7 @@ func NewCertificateManager(
 	gardenCluster cluster.Cluster,
 	seedClient client.Client,
 	config *gardenletconfigv1alpha1.GardenletConfiguration,
-	selfHostedShootMeta *types.NamespacedName,
+	selfHostedShootInfo *gardenletutils.SelfHostedShootInfo,
 ) (
 	*Manager,
 	error,
@@ -72,8 +72,8 @@ func NewCertificateManager(
 	}
 
 	logger := log.WithName("certificate-manager")
-	if selfHostedShootMeta != nil {
-		logger = logger.WithValues("shootNamespace", selfHostedShootMeta.Namespace, "shootName", selfHostedShootMeta.Name)
+	if selfHostedShootInfo != nil {
+		logger = logger.WithValues("shootNamespace", selfHostedShootInfo.Meta.Namespace, "shootName", selfHostedShootInfo.Meta.Name)
 	} else {
 		logger = logger.WithValues("seedName", gardenletbootstraputil.GetSeedName(config.SeedConfig))
 	}
@@ -84,8 +84,8 @@ func NewCertificateManager(
 		seedClient:             seedClient,
 		gardenClientConnection: config.GardenClientConnection,
 		newTargetedObject: func() client.Object {
-			if selfHostedShootMeta != nil {
-				return &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: selfHostedShootMeta.Namespace, Name: selfHostedShootMeta.Name}}
+			if selfHostedShootInfo != nil {
+				return &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: selfHostedShootInfo.Meta.Namespace, Name: selfHostedShootInfo.Meta.Name}}
 			}
 			return &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: gardenletbootstraputil.GetSeedName(config.SeedConfig)}}
 		},

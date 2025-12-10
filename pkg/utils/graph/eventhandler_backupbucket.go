@@ -69,7 +69,11 @@ func (g *graph) handleBackupBucketCreateOrUpdate(backupBucket *gardencorev1beta1
 
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeBackupBucket, "", backupBucket.Name)
 	g.deleteAllIncomingEdges(VertexTypeWorkloadIdentity, VertexTypeBackupBucket, "", backupBucket.Name)
-	g.deleteAllOutgoingEdges(VertexTypeBackupBucket, "", backupBucket.Name, VertexTypeSeed)
+	if g.forSelfHostedShoots {
+		g.deleteAllOutgoingEdges(VertexTypeBackupBucket, "", backupBucket.Name, VertexTypeShoot)
+	} else {
+		g.deleteAllOutgoingEdges(VertexTypeBackupBucket, "", backupBucket.Name, VertexTypeSeed)
+	}
 
 	var (
 		backupBucketVertex = g.getOrCreateVertex(VertexTypeBackupBucket, "", backupBucket.Name)
@@ -92,6 +96,11 @@ func (g *graph) handleBackupBucketCreateOrUpdate(backupBucket *gardencorev1beta1
 	if backupBucket.Status.GeneratedSecretRef != nil {
 		generatedSecretVertex := g.getOrCreateVertex(VertexTypeSecret, backupBucket.Status.GeneratedSecretRef.Namespace, backupBucket.Status.GeneratedSecretRef.Name)
 		g.addEdge(generatedSecretVertex, backupBucketVertex)
+	}
+
+	if backupBucket.Spec.ShootRef != nil {
+		shootVertex := g.getOrCreateVertex(VertexTypeShoot, backupBucket.Spec.ShootRef.Namespace, backupBucket.Spec.ShootRef.Name)
+		g.addEdge(backupBucketVertex, shootVertex)
 	}
 }
 

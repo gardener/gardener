@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -44,18 +45,26 @@ var _ = Describe("validation", func() {
 
 	Describe("#ValidateBackupBucket", func() {
 		It("should not return any errors", func() {
-			errorList := ValidateBackupBucket(backupBucket)
+			Expect(ValidateBackupBucket(backupBucket)).To(BeEmpty())
+		})
 
-			Expect(errorList).To(BeEmpty())
+		It("should not return any errors when shootRef is set", func() {
+			backupBucket.Spec.SeedName = nil
+			backupBucket.Spec.ShootRef = &corev1.ObjectReference{
+				APIVersion: "core.gardener.cloud/v1beta1",
+				Kind:       "Shoot",
+				Name:       "shoot-name",
+				Namespace:  "shoot-namespace",
+			}
+
+			Expect(ValidateBackupBucket(backupBucket)).To(BeEmpty())
 		})
 
 		DescribeTable("BackupBucket metadata",
 			func(objectMeta metav1.ObjectMeta, matcher gomegatypes.GomegaMatcher) {
 				backupBucket.ObjectMeta = objectMeta
 
-				errorList := ValidateBackupBucket(backupBucket)
-
-				Expect(errorList).To(matcher)
+				Expect(ValidateBackupBucket(backupBucket)).To(matcher)
 			},
 
 			Entry("should forbid BackupBucket with empty metadata",
@@ -92,14 +101,12 @@ var _ = Describe("validation", func() {
 			backupBucket.Spec.Provider.Type = ""
 			backupBucket.Spec.Provider.Region = ""
 			backupBucket.Spec.CredentialsRef = nil
-			backupBucket.Spec.SeedName = nil
 
-			errorList := ValidateBackupBucket(backupBucket)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.provider.type"),
-			})),
+			Expect(ValidateBackupBucket(backupBucket)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.provider.type"),
+				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.provider.region"),
@@ -109,10 +116,63 @@ var _ = Describe("validation", func() {
 					"Field":  Equal("spec.credentialsRef"),
 					"Detail": Equal(`must be set and refer a Secret or WorkloadIdentity`),
 				})),
+			))
+		})
+
+		It("should forbid specifying neither seedName nor shootRef", func() {
+			backupBucket.Spec.SeedName = nil
+
+			Expect(ValidateBackupBucket(backupBucket)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.seedName"),
+			}))))
+		})
+
+		It("should forbid specifying both seedName and shootRef", func() {
+			backupBucket.Spec.ShootRef = &corev1.ObjectReference{
+				APIVersion: "core.gardener.cloud/v1beta1",
+				Kind:       "Shoot",
+				Name:       "shoot-name",
+				Namespace:  "shoot-namespace",
+			}
+
+			Expect(ValidateBackupBucket(backupBucket)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.seedName"),
+			}))))
+		})
+
+		It("should forbid specifying an empty seed name", func() {
+			backupBucket.Spec.SeedName = ptr.To("")
+
+			Expect(ValidateBackupBucket(backupBucket)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.seedName"),
+			}))))
+		})
+
+		It("should forbid specifying an invalid shoot ref", func() {
+			backupBucket.Spec.SeedName = nil
+			backupBucket.Spec.ShootRef = &corev1.ObjectReference{}
+
+			Expect(ValidateBackupBucket(backupBucket)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.shootRef.apiVersion"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.shootRef.kind"),
+				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.seedName"),
-				}))))
+					"Field": Equal("spec.shootRef.name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.shootRef.namespace"),
+				})),
+			))
 		})
 
 		It("should forbid updating some keys", func() {
@@ -122,9 +182,7 @@ var _ = Describe("validation", func() {
 			seed := "another-seed"
 			newBackupBucket.Spec.SeedName = &seed
 
-			errorList := ValidateBackupBucketUpdate(newBackupBucket, backupBucket)
-
-			Expect(errorList).To(ConsistOf(
+			Expect(ValidateBackupBucketUpdate(newBackupBucket, backupBucket)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.provider"),
@@ -204,7 +262,6 @@ var _ = Describe("validation", func() {
 			})
 		})
 	})
-
 })
 
 func prepareBackupBucketForUpdate(obj *core.BackupBucket) *core.BackupBucket {

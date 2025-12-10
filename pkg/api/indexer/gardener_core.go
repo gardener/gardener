@@ -33,6 +33,24 @@ func BackupBucketSeedNameIndexerFunc(obj client.Object) []string {
 	return []string{ptr.Deref(backupBucket.Spec.SeedName, "")}
 }
 
+// BackupBucketShootRefNameIndexerFunc extracts the .spec.shootRef.Name field of a BackupBucket.
+func BackupBucketShootRefNameIndexerFunc(obj client.Object) []string {
+	backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
+	if !ok || backupBucket.Spec.ShootRef == nil {
+		return []string{""}
+	}
+	return []string{backupBucket.Spec.ShootRef.Name}
+}
+
+// BackupBucketShootRefNamespaceIndexerFunc extracts the .spec.shootRef.Namespace field of a BackupBucket.
+func BackupBucketShootRefNamespaceIndexerFunc(obj client.Object) []string {
+	backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
+	if !ok || backupBucket.Spec.ShootRef == nil {
+		return []string{""}
+	}
+	return []string{backupBucket.Spec.ShootRef.Namespace}
+}
+
 // BackupEntryBucketNameIndexerFunc extracts the .spec.bucketName field of a BackupEntry.
 func BackupEntryBucketNameIndexerFunc(obj client.Object) []string {
 	backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
@@ -40,6 +58,24 @@ func BackupEntryBucketNameIndexerFunc(obj client.Object) []string {
 		return []string{""}
 	}
 	return []string{backupEntry.Spec.BucketName}
+}
+
+// BackupEntryShootRefNameIndexerFunc extracts the .spec.shootRef.Name field of a BackupEntry.
+func BackupEntryShootRefNameIndexerFunc(obj client.Object) []string {
+	backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
+	if !ok || backupEntry.Spec.ShootRef == nil {
+		return []string{""}
+	}
+	return []string{backupEntry.Spec.ShootRef.Name}
+}
+
+// BackupEntryShootRefNamespaceIndexerFunc extracts the .spec.shootRef.Namespace field of a BackupEntry.
+func BackupEntryShootRefNamespaceIndexerFunc(obj client.Object) []string {
+	backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
+	if !ok || backupEntry.Spec.ShootRef == nil {
+		return []string{""}
+	}
+	return []string{backupEntry.Spec.ShootRef.Namespace}
 }
 
 // ControllerInstallationSeedRefNameIndexerFunc extracts the .spec.seedRef.name field of a ControllerInstallation.
@@ -122,6 +158,22 @@ func AddBackupBucketSeedName(ctx context.Context, indexer client.FieldIndexer) e
 	return nil
 }
 
+// AddBackupBucketShootRefName adds an index for core.BackupBucketShootRefName to the given indexer.
+func AddBackupBucketShootRefName(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.BackupBucket{}, core.BackupBucketShootRefName, BackupBucketShootRefNameIndexerFunc); err != nil {
+		return fmt.Errorf("failed to add indexer for %s to BackupBucket Informer: %w", core.BackupBucketShootRefName, err)
+	}
+	return nil
+}
+
+// AddBackupBucketShootRefNamespace adds an index for core.BackupBucketShootRefNamespace to the given indexer.
+func AddBackupBucketShootRefNamespace(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.BackupBucket{}, core.BackupBucketShootRefNamespace, BackupBucketShootRefNamespaceIndexerFunc); err != nil {
+		return fmt.Errorf("failed to add indexer for %s to BackupBucket Informer: %w", core.BackupBucketShootRefNamespace, err)
+	}
+	return nil
+}
+
 // AddBackupEntrySeedName adds an index for core.BackupEntrySeedName to the given indexer.
 func AddBackupEntrySeedName(ctx context.Context, indexer client.FieldIndexer) error {
 	if err := indexer.IndexField(ctx, &gardencorev1beta1.BackupEntry{}, core.BackupEntrySeedName, func(obj client.Object) []string {
@@ -132,6 +184,22 @@ func AddBackupEntrySeedName(ctx context.Context, indexer client.FieldIndexer) er
 		return []string{ptr.Deref(backupEntry.Spec.SeedName, "")}
 	}); err != nil {
 		return fmt.Errorf("failed to add indexer for %s to BackupEntry Informer: %w", core.BackupEntrySeedName, err)
+	}
+	return nil
+}
+
+// AddBackupEntryShootRefName adds an index for core.BackupEntryShootRefName to the given indexer.
+func AddBackupEntryShootRefName(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.BackupEntry{}, core.BackupEntryShootRefName, BackupEntryShootRefNameIndexerFunc); err != nil {
+		return fmt.Errorf("failed to add indexer for %s to BackupEntry Informer: %w", core.BackupEntryShootRefName, err)
+	}
+	return nil
+}
+
+// AddBackupEntryShootRefNamespace adds an index for core.BackupEntryShootRefNamespace to the given indexer.
+func AddBackupEntryShootRefNamespace(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.BackupEntry{}, core.BackupEntryShootRefNamespace, BackupEntryShootRefNamespaceIndexerFunc); err != nil {
+		return fmt.Errorf("failed to add indexer for %s to BackupEntry Informer: %w", core.BackupEntryShootRefNamespace, err)
 	}
 	return nil
 }

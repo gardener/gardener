@@ -135,7 +135,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SeedName holds the name of the seed allocated to BackupBucket for running controller.
+<p>SeedName is the name of the Seed this BackupBucket is associated with. Mutually exclusive with ShootRef.
 This field is immutable.</p>
 </td>
 </tr>
@@ -154,6 +154,21 @@ Kubernetes core/v1.ObjectReference
 authentication with the object store service where the backups are stored.
 Supported referenced resources are v1.Secrets and
 security.gardener.cloud/v1alpha1.WorkloadIdentity</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>shootRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ShootRef is the reference of the Shoot this BackupBucket is associated with. Mutually exclusive with SeedName.
+This field is immutable.</p>
 </td>
 </tr>
 </table>
@@ -254,7 +269,22 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SeedName holds the name of the seed to which this BackupEntry is scheduled</p>
+<p>SeedName is the name of the Seed this BackupEntry is associated with. Mutually exclusive with ShootRef.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>shootRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ShootRef is the reference of the Shoot this BackupBucket is associated with. Mutually exclusive with SeedName.
+This field is immutable.</p>
 </td>
 </tr>
 </table>
@@ -3000,7 +3030,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SeedName holds the name of the seed allocated to BackupBucket for running controller.
+<p>SeedName is the name of the Seed this BackupBucket is associated with. Mutually exclusive with ShootRef.
 This field is immutable.</p>
 </td>
 </tr>
@@ -3019,6 +3049,21 @@ Kubernetes core/v1.ObjectReference
 authentication with the object store service where the backups are stored.
 Supported referenced resources are v1.Secrets and
 security.gardener.cloud/v1alpha1.WorkloadIdentity</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>shootRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ShootRef is the reference of the Shoot this BackupBucket is associated with. Mutually exclusive with SeedName.
+This field is immutable.</p>
 </td>
 </tr>
 </tbody>
@@ -3149,7 +3194,22 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SeedName holds the name of the seed to which this BackupEntry is scheduled</p>
+<p>SeedName is the name of the Seed this BackupEntry is associated with. Mutually exclusive with ShootRef.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>shootRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ShootRef is the reference of the Shoot this BackupBucket is associated with. Mutually exclusive with SeedName.
+This field is immutable.</p>
 </td>
 </tr>
 </tbody>

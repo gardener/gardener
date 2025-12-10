@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,6 +46,9 @@ type Values struct {
 	OwnerReference *metav1.OwnerReference
 	// SeedName is the name of the seed to which the BackupEntry shall be scheduled.
 	SeedName *string
+	// Shoot is an optional Shoot object related to the BackupEntry. This should only be set when the Shoot is
+	// self-hosted.
+	Shoot *gardencorev1beta1.Shoot
 	// BucketName is the name of the bucket in which the BackupEntry shall be reconciled. This value is only used if the
 	// BackupEntry does not exist yet. Otherwise, the existing `.spec.bucketName` will be kept even if the BucketName in
 	// these values differs.
@@ -102,19 +106,7 @@ type backupEntry struct {
 
 // Deploy uses the garden client to create or update the BackupEntry resource in the project namespace in the Garden.
 func (b *backupEntry) Deploy(ctx context.Context) error {
-	var (
-		bucketName = b.values.BucketName
-		seedName   = b.values.SeedName
-	)
-
-	if err := b.client.Get(ctx, client.ObjectKeyFromObject(b.backupEntry), b.backupEntry); err == nil {
-		bucketName = b.backupEntry.Spec.BucketName
-		seedName = b.backupEntry.Spec.SeedName
-	} else if client.IgnoreNotFound(err) != nil {
-		return err
-	}
-
-	return b.reconcile(ctx, b.backupEntry, seedName, bucketName, v1beta1constants.GardenerOperationReconcile)
+	return b.reconcile(ctx, v1beta1constants.GardenerOperationReconcile)
 }
 
 // Wait waits until the BackupEntry resource is ready.
@@ -150,24 +142,37 @@ func (b *backupEntry) WaitMigrate(ctx context.Context) error {
 // Restore uses the garden client to update the BackupEntry and set the name of the new seed to which it shall be scheduled.
 // If the BackupEntry was deleted it will be recreated.
 func (b *backupEntry) Restore(ctx context.Context, _ *gardencorev1beta1.ShootState) error {
-	return b.reconcile(ctx, b.backupEntry, b.values.SeedName, b.values.BucketName, v1beta1constants.GardenerOperationRestore)
+	return b.reconcile(ctx, v1beta1constants.GardenerOperationRestore)
 }
 
-func (b *backupEntry) reconcile(ctx context.Context, backupEntry *gardencorev1beta1.BackupEntry, seedName *string, bucketName string, operation string) error {
-	_, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, b.client, backupEntry, func() error {
-		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
+func (b *backupEntry) reconcile(ctx context.Context, operation string) error {
+	// Make sure .metadata.resourceVersion is not set if Get() was called before Reconcile() - otherwise, the 'Create'
+	// call below will fail with 'resourceVersion should not be set on objects to be created'.
+	b.backupEntry.SetResourceVersion("")
+
+	_, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, b.client, b.backupEntry, func() error {
+		metav1.SetMetaDataAnnotation(&b.backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+		metav1.SetMetaDataAnnotation(&b.backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 
 		if b.values.ShootPurpose != nil {
-			metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.ShootPurpose, string(*b.values.ShootPurpose))
+			metav1.SetMetaDataAnnotation(&b.backupEntry.ObjectMeta, v1beta1constants.ShootPurpose, string(*b.values.ShootPurpose))
 		}
 
 		if b.values.OwnerReference != nil {
-			backupEntry.OwnerReferences = []metav1.OwnerReference{*b.values.OwnerReference}
+			b.backupEntry.OwnerReferences = []metav1.OwnerReference{*b.values.OwnerReference}
 		}
 
-		backupEntry.Spec.BucketName = bucketName
-		backupEntry.Spec.SeedName = seedName
+		b.backupEntry.Spec.BucketName = b.values.BucketName
+		b.backupEntry.Spec.SeedName = b.values.SeedName
+
+		if b.values.Shoot != nil {
+			b.backupEntry.Spec.ShootRef = &corev1.ObjectReference{
+				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+				Kind:       "Shoot",
+				Name:       b.values.Shoot.Name,
+				Namespace:  b.values.Shoot.Namespace,
+			}
+		}
 
 		return nil
 	})
