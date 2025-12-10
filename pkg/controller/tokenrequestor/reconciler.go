@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -68,7 +69,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, nil
 	}
 
-	requeueAfter, err := r.computeRequeueAfterDuration(ctx, secret)
+	serviceAccount, err := r.reconcileServiceAccount(ctx, secret)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	requeueAfter, err := r.computeRequeueAfterDuration(ctx, secret, serviceAccount)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -78,11 +84,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	log.Info("Requesting new token")
-
-	serviceAccount, err := r.reconcileServiceAccount(ctx, secret)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
 
 	expirationSeconds, err := tokenExpirationSeconds(secret)
 	if err != nil {
@@ -198,7 +199,7 @@ func (r *Reconciler) createServiceAccountToken(ctx context.Context, sa *corev1.S
 	return tokenRequest, nil
 }
 
-func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, secret *corev1.Secret) (time.Duration, error) {
+func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, secret *corev1.Secret, serviceAccount *corev1.ServiceAccount) (time.Duration, error) {
 	var (
 		secretContainingToken = secret // token is expected in source secret by default
 		renewTimestamp        = secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
@@ -236,6 +237,13 @@ func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, secret *co
 		if !isBundleOk {
 			return 0, nil
 		}
+	}
+
+	// Check if the token belongs to the current ServiceAccount by verifying the UID.
+	// If there is a mismatch, a new token needs to be requested.
+	serviceAccountTokenUid := kubernetes.ExtractServiceAccountUID(string(secret.Data[resourcesv1alpha1.DataKeyToken]))
+	if serviceAccountTokenUid != "" && serviceAccountTokenUid != string(serviceAccount.UID) {
+		return 0, nil
 	}
 
 	renewTime, err := time.Parse(time.RFC3339, renewTimestamp)
