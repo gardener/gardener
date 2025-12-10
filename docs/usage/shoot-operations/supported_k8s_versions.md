@@ -6,7 +6,7 @@ title: Supported Kubernetes Versions
 
 Currently, Gardener supports the following Kubernetes versions:
 
-| Kubernetes version                                                         | Gardener version                                                         | Support added | Supported until |
+| Kubernetes version                                                         | Since Gardener version                                                   | Support added | Supported until |
 |----------------------------------------------------------------------------|--------------------------------------------------------------------------|---------------|-----------------|
 | [`v1.30`](https://kubernetes.io/blog/2024/04/17/kubernetes-v1-30-release/) | [`v1.95.0`](https://github.com/gardener/gardener/releases/tag/v1.95.0)   | `2024-05-16`  | `2025-07-16`    |
 | [`v1.31`](https://kubernetes.io/blog/2024/08/13/kubernetes-v1-31-release/) | [`v1.106.0`](https://github.com/gardener/gardener/releases/tag/v1.106.0) | `2024-10-21`  | `2025-12-21`    |
