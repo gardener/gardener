@@ -65,7 +65,7 @@ GO_ADD_LICENSE_VERSION ?= v1.2.0
 GOIMPORTSREVISER_VERSION ?= v3.11.0
 GO_VULN_CHECK_VERSION ?= latest
 # renovate: datasource=github-releases depName=helm/helm
-HELM_VERSION ?= v3.19.2
+HELM_VERSION ?= v3.19.3
 # renovate: datasource=github-releases depName=kubernetes-sigs/kind
 KIND_VERSION ?= v0.30.0
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
