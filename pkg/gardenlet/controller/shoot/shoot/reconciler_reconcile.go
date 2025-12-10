@@ -226,7 +226,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		_ = g.Add(flow.Task{
 			Name:         "Ensuring advertised addresses for the Shoot",
 			Fn:           botanist.UpdateAdvertisedAddresses,
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, waitUntilKubeAPIServerServiceIsReady),
 		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
 			Name: "Deploying internal domain DNS record",
