@@ -29,6 +29,8 @@ var SupportedVersions = []string{
 const envExperimentalDisableKubernetesVersionCheck = "EXPERIMENTAL_DISABLE_KUBERNETES_VERSION_CHECK"
 
 // CheckIfSupported checks if the provided version is part of the supported Kubernetes versions list.
+// Experimental: If the environment variable `EXPERIMENTAL_DISABLE_KUBERNETES_VERSION_CHECK` is set to "true",
+// the check will be skipped.
 func CheckIfSupported(gitVersion string) error {
 	if os.Getenv(envExperimentalDisableKubernetesVersionCheck) == "true" {
 		return nil
