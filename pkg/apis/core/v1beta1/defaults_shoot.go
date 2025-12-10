@@ -195,6 +195,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 // SetDefaults_MaintenanceRotationConfig sets default values for MaintenanceRotationConfig objects.
 func SetDefaults_MaintenanceRotationConfig(obj *MaintenanceRotationConfig) {
+	if obj.Enabled == nil {
+		obj.Enabled = ptr.To(false)
+	}
 	if obj.RotationPeriod == nil {
 		obj.RotationPeriod = &metav1.Duration{Duration: 7 * 24 * time.Hour}
 	}
