@@ -5,11 +5,13 @@
 package managedresources_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/andybalholm/brotli"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -859,6 +861,198 @@ var _ = Describe("managedresources", func() {
 			objects, err := GetObjects(ctx, fakeClient, namespace, name)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(objects).To(DeepEqual(expectedObjects))
+		})
+	})
+
+	Describe("#ExtractObjectsFromSecret", func() {
+		var decoder runtime.Decoder
+
+		BeforeEach(func() {
+			decoder = serializer.NewCodecFactory(kubernetesscheme.Scheme).UniversalDeserializer()
+		})
+
+		It("should extract objects from a secret with uncompressed data", func() {
+			configMap := &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "ConfigMap",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cm",
+					Namespace: "test-ns",
+				},
+				Data: map[string]string{"key": "value"},
+			}
+
+			secret := &corev1.Secret{
+				Data: map[string][]byte{
+					"data": []byte(`apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-cm
+  namespace: test-ns
+data:
+  key: value`),
+				},
+			}
+
+			objects, err := ExtractObjectsFromSecret(decoder, secret)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(objects).To(HaveLen(1))
+			Expect(objects[0]).To(Equal(configMap))
+		})
+
+		It("should extract multiple objects from a secret with YAML separator", func() {
+			configMap := &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "ConfigMap",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cm",
+					Namespace: "test-ns",
+				},
+			}
+
+			secret := &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Secret",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret",
+					Namespace: "test-ns",
+				},
+			}
+
+			secretData := &corev1.Secret{
+				Data: map[string][]byte{
+					"data": []byte(`apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-cm
+  namespace: test-ns
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-secret
+  namespace: test-ns`),
+				},
+			}
+
+			objects, err := ExtractObjectsFromSecret(decoder, secretData)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(objects).To(HaveLen(2))
+			Expect(objects[0]).To(Equal(configMap))
+			Expect(objects[1]).To(Equal(secret))
+		})
+
+		It("should extract objects from a secret with brotli compressed data", func() {
+			configMap := &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "ConfigMap",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cm",
+					Namespace: "test-ns",
+				},
+				Data: map[string]string{"key": "value"},
+			}
+
+			rawData := []byte(`apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-cm
+  namespace: test-ns
+data:
+  key: value`)
+
+			var buf bytes.Buffer
+			writer := brotli.NewWriter(&buf)
+			_, err := writer.Write(rawData)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(writer.Close()).To(Succeed())
+
+			secret := &corev1.Secret{
+				Data: map[string][]byte{
+					"data.yaml.br": buf.Bytes(),
+				},
+			}
+
+			objects, err := ExtractObjectsFromSecret(decoder, secret)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(objects).To(HaveLen(1))
+			Expect(objects[0]).To(Equal(configMap))
+		})
+
+		It("should skip empty objects when trimmed", func() {
+			configMap := &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "ConfigMap",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cm",
+					Namespace: "test-ns",
+				},
+			}
+
+			secret := &corev1.Secret{
+				Data: map[string][]byte{
+					"data": []byte(`
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-cm
+  namespace: test-ns
+---
+  
+---
+`),
+				},
+			}
+
+			objects, err := ExtractObjectsFromSecret(decoder, secret)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(objects).To(HaveLen(1))
+			Expect(objects[0]).To(Equal(configMap))
+		})
+
+		It("should return error when brotli decompression fails", func() {
+			secret := &corev1.Secret{
+				Data: map[string][]byte{
+					"data.yaml.br": []byte("invalid-brotli-data"),
+				},
+			}
+
+			_, err := ExtractObjectsFromSecret(decoder, secret)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("could not read brotli compressed data"))
+		})
+
+		It("should return error when object decoding fails", func() {
+			secret := &corev1.Secret{
+				Data: map[string][]byte{
+					"data": []byte("invalid: yaml: content"),
+				},
+			}
+
+			_, err := ExtractObjectsFromSecret(decoder, secret)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("could not decode object"))
+		})
+
+		It("should handle empty secret data", func() {
+			secret := &corev1.Secret{
+				Data: map[string][]byte{},
+			}
+
+			objects, err := ExtractObjectsFromSecret(decoder, secret)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(objects).To(BeEmpty())
 		})
 	})
 })

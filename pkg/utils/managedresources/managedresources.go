@@ -457,7 +457,7 @@ func GetObjects(ctx context.Context, c client.Client, namespace, name string) ([
 			return nil, fmt.Errorf("could not get secret %q: %w", client.ObjectKey{Name: secretRef.Name, Namespace: managedResource.Namespace}, err)
 		}
 
-		objectsFromSecret, err := extractObjectsFromSecret(decoder, secret)
+		objectsFromSecret, err := ExtractObjectsFromSecret(decoder, secret)
 		if err != nil {
 			return nil, fmt.Errorf("could not extract objects from secret %q: %w", client.ObjectKeyFromObject(secret), err)
 		}
@@ -468,7 +468,8 @@ func GetObjects(ctx context.Context, c client.Client, namespace, name string) ([
 	return objects, nil
 }
 
-func extractObjectsFromSecret(decoder runtime.Decoder, secret *corev1.Secret) ([]client.Object, error) {
+// ExtractObjectsFromSecret extracts and decodes all objects stored in the given secret.
+func ExtractObjectsFromSecret(decoder runtime.Decoder, secret *corev1.Secret) ([]client.Object, error) {
 	var objects []client.Object
 
 	for key, value := range secret.Data {
