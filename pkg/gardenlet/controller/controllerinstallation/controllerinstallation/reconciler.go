@@ -604,6 +604,10 @@ func (r *Reconciler) MutateSpecForSelfHostedShootExtensions(obj runtime.Object) 
 			podSpec.HostNetwork = r.BootstrapControlPlaneNode
 			kubernetesutils.InjectKubernetesServiceHostEnv(podSpec.InitContainers, "localhost")
 			kubernetesutils.InjectKubernetesServiceHostEnv(podSpec.Containers, "localhost")
+
+			// extensions must even start on unready nodes in order to deploy the CNI plugin (nodes only become ready
+			// when networking is available)
+			podSpec.Tolerations = append(podSpec.Tolerations, corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule})
 		}
 
 		podSpec.Tolerations = append(podSpec.Tolerations, corev1.Toleration{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists})

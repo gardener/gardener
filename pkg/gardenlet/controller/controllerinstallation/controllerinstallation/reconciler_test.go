@@ -94,9 +94,11 @@ var _ = Describe("Reconciler", func() {
 						for _, container := range podSpec.Containers {
 							Expect(container.Env).To(ContainElement(corev1.EnvVar{Name: "KUBERNETES_SERVICE_HOST", Value: "localhost"}), fmt.Sprintf("container %s should have KUBERNETES_SERVICE_HOST env var", container.Name))
 						}
+
+						Expect(podSpec.Tolerations).To(ContainElement(corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule}))
 					}
 
-					Expect(podSpec.Tolerations).To(Equal([]corev1.Toleration{{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists}}))
+					Expect(podSpec.Tolerations).To(ContainElement(corev1.Toleration{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists}))
 				}
 
 				assert = func(bootstrapControlPlaneNode bool) {
