@@ -9,6 +9,9 @@ They enable project administrators to create and manage cloud profiles specific 
 As opposed to `CloudProfile`s, `NamespacedCloudProfile`s are namespaced and thus limit configuration options for `Shoot`s, such as special machine types, to the associated project only.
 These profiles inherit from a parent `CloudProfile` and can override or extend certain fields while maintaining backward compatibility.
 
+> [!NOTE]
+> The ability for project administrators to create and manage `NamespacedCloudProfile`s is a configurable feature that may not be enabled in your Gardener environment. Please contact your landscape operator to confirm availability and request access if needed.
+
 Project viewers have the permission to see `NamespacedCloudProfile`s associated with a particular project.
 Project administrators can generally create, edit, or delete `NamespacedCloudProfile`s but with some exceptions (see the [restrictions](#field-modification-restrictions) outlined below).
 
@@ -22,9 +25,10 @@ Please see [this](../../../example/35-namespacedcloudprofile.yaml) example manif
 
 In order to make changes to specific fields in the `NamespacedCloudProfile`, a user must be granted custom RBAC verbs.
 Modifications of these fields need to be performed with caution and might require additional validation steps or accompanying changes.
-By default, only landscape operators have the permission to change these fields, as they are usually able to judge the implications.
+Permissions for modifying these fields are configured by landscape operators. If you require access to modify any of these restricted fields, please create a support ticket.
 
 Changing the following fields require the corresponding custom verbs:
+
 * For changing the `.spec.kubernetes` field, the custom verb `modify-spec-kubernetes` is required.
 * For changing the `.spec.machineImages` field, the custom verb `modify-spec-machineimages` is required.
 * For changing the `.spec.providerConfig` field, the custom verb `modify-spec-providerconfig` is required.
