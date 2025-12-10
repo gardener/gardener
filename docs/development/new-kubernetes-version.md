@@ -205,6 +205,9 @@ Typically, the following validations should be performed:
 If everything looks good, then go ahead and file the PR ([example PR](https://github.com/gardener/gardener-extension-provider-aws/pull/480)).
 Generally, it is again great if you add the PRs also to the umbrella issue so that they can be tracked more easily.
 
+Once the release is published that adds support for the new Kubernetes version, update the [Supported Kubernetes Versions](../usage/shoot-operations/supported_k8s_versions.md) table accordingly.
+We consider a new Kubernetes version supported by Gardener with the release of `gardener/gardener` and keep support for at least 14 months after the publish date of the release.
+
 ### Bump Golang dependencies for `k8s.io/*` and `sigs.k8s.io/controller-runtime`
 
 The versions of the upstream Go dependencies `k8s.io/*` and `sigs.k8s.io/controller-runtime` should be updated to the latest version that is compatible with the new Kubernetes version.
