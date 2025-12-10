@@ -39,13 +39,6 @@
 {{- end -}}
 {{- end -}}
 
-{{- define "extraPortMappings.registry" -}}
-{{- if .Values.registry.deployed -}}
-- containerPort: 5001
-  hostPort: 5001
-{{- end -}}
-{{- end -}}
-
 {{- define "extraPortMappings.gardener.seed.dns" -}}
 {{- if .Values.gardener.controlPlane.deployed -}}
 - containerPort: 30053

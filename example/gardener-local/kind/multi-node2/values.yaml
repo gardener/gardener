@@ -8,9 +8,6 @@ gardener:
     bastion:
       listenAddresses: []
 
-registry:
-  deployed: false
-
 workers:
 - zone: "0"
 - zone: "0"

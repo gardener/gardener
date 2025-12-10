@@ -1,5 +1,5 @@
 # europe-docker.pkg.dev upstream is required for loading the Hyperkube image.
 server = "https://europe-docker.pkg.dev"
 
-[host."http://garden.local.gardener.cloud:5008"]
+[host."http://europe-docker-pkg-dev.registry-cache.local.gardener.cloud:5000"]
   capabilities = ["pull", "resolve"]

@@ -9,14 +9,14 @@ set -o nounset
 set -o pipefail
 
 WITH_LPP_RESIZE_SUPPORT=${WITH_LPP_RESIZE_SUPPORT:-false}
-REGISTRY_CACHE=${CI:-false}
+USE_PROW_REGISTRY_CACHE=${CI:-false}
 CLUSTER_NAME=""
 PATH_CLUSTER_VALUES=""
 PATH_KUBECONFIG=""
-DEPLOY_REGISTRY=true
 MULTI_ZONAL=false
 CHART=$(dirname "$0")/../example/gardener-local/kind/cluster
 ADDITIONAL_ARGS=""
+REGISTRY_COMPOSE_FILE="$(dirname "$0")/../dev-setup/registry/docker-compose.yaml"
 
 parse_flags() {
   while test $# -gt 0; do
@@ -33,9 +33,6 @@ parse_flags() {
     --path-kubeconfig)
       shift; PATH_KUBECONFIG="$1"
       ;;
-    --skip-registry)
-      DEPLOY_REGISTRY=false
-      ;;
     --multi-zonal)
       MULTI_ZONAL=true
       ;;
@@ -50,23 +47,23 @@ parse_flags() {
 }
 
 check_local_dns_records() {
-  local glgc_ip_address
-  glgc_ip_address=""
+  local local_registry_ip_address
+  local_registry_ip_address=""
 
   if [[ "$OSTYPE" == "darwin"* ]]; then
     # Suppress exit code using "|| true"
-    glgc_ip_address=$(dscacheutil -q host -a name garden.local.gardener.cloud | grep "ip_address" | head -n 1| cut -d' ' -f2 || true)
+    local_registry_ip_address=$(dscacheutil -q host -a name registry.local.gardener.cloud | grep "ip_address" | head -n 1| cut -d' ' -f2 || true)
   elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     # Suppress exit code using "|| true"
-    glgc_ip_address="$(getent ahosts garden.local.gardener.cloud || true)"
+    local_registry_ip_address="$(getent ahosts registry.local.gardener.cloud || true)"
   else
-    echo "Warning: Unknown OS. Make sure garden.local.gardener.cloud resolves to 127.0.0.1"
+    echo "Warning: Unknown OS. Make sure registry.local.gardener.cloud resolves to 127.0.0.1"
     return 0
   fi
 
-  if ! echo "$glgc_ip_address" | grep -q "127.0.0.1" ; then
-      echo "Error: garden.local.gardener.cloud does not resolve to 127.0.0.1. Please add a line for it in /etc/hosts"
-      echo "Command output: $glgc_ip_address"
+  if ! echo "$local_registry_ip_address" | grep -q "127.0.0.1" ; then
+      echo "Error: registry.local.gardener.cloud does not resolve to 127.0.0.1. Please add a line for it in /etc/hosts"
+      echo "Command output: $local_registry_ip_address"
       echo "Content of '/etc/hosts':\n$(cat /etc/hosts)"
       exit 1
   fi
@@ -109,14 +106,16 @@ setup_kind_network() {
 # - https://kind.sigs.k8s.io/docs/user/local-registry/
 setup_containerd_registry_mirrors() {
   NODES=("$@")
-  REGISTRY_HOSTNAME="garden.local.gardener.cloud"
 
   for NODE in "${NODES[@]}"; do
-    setup_containerd_registry_mirror $NODE "gcr.io" "https://gcr.io" "http://${REGISTRY_HOSTNAME}:5003"
-    setup_containerd_registry_mirror $NODE "registry.k8s.io" "https://registry.k8s.io" "http://${REGISTRY_HOSTNAME}:5006"
-    setup_containerd_registry_mirror $NODE "quay.io" "https://quay.io" "http://${REGISTRY_HOSTNAME}:5007"
-    setup_containerd_registry_mirror $NODE "europe-docker.pkg.dev" "https://europe-docker.pkg.dev" "http://${REGISTRY_HOSTNAME}:5008"
-    setup_containerd_registry_mirror $NODE "garden.local.gardener.cloud:5001" "http://garden.local.gardener.cloud:5001" "http://${REGISTRY_HOSTNAME}:5001"
+    # For the local registry, we don't need a mirror config for switching the URL, but only for configuring containerd
+    # to use HTTP instead of HTTPS. Probably, we could use the insecure registries config for this. However, configuring
+    # mirrors is supported by gardener-node-agent via the OSC, so we use the same approach everywhere.
+    setup_containerd_registry_mirror "$NODE" "registry.local.gardener.cloud:5000" "http://registry.local.gardener.cloud:5000" "http://registry.local.gardener.cloud:5000"
+    setup_containerd_registry_mirror "$NODE" "gcr.io" "https://gcr.io" "http://gcr.registry-cache.local.gardener.cloud:5000"
+    setup_containerd_registry_mirror "$NODE" "registry.k8s.io" "https://registry.k8s.io" "http://k8s.registry-cache.local.gardener.cloud:5000"
+    setup_containerd_registry_mirror "$NODE" "quay.io" "https://quay.io" "http://quay.registry-cache.local.gardener.cloud:5000"
+    setup_containerd_registry_mirror "$NODE" "europe-docker.pkg.dev" "https://europe-docker.pkg.dev" "http://europe-docker-pkg-dev.registry-cache.local.gardener.cloud:5000"
   done
 }
 
@@ -138,19 +137,39 @@ server = "${UPSTREAM_SERVER}"
 EOF
 }
 
-check_registry_cache_availability() {
-  local registry_cache_ip
-  local registry_cache_dns
-  if [[ "$REGISTRY_CACHE" != "true" ]]; then
+change_registry_upstream_urls_to_prow_caches() {
+  if [[ "$USE_PROW_REGISTRY_CACHE" != "true" ]]; then
     return
   fi
-  echo "Registry-cache enabled. Checking if registry-cache instances are deployed in prow cluster."
-  for registry_cache_dns in $(kubectl create -k "$(dirname "$0")/../example/gardener-local/registry-prow" --dry-run=client -o yaml | grep kube-system.svc.cluster.local | awk '{ print $2 }' | sed -e "s/^http:\/\///" -e "s/:5000$//"); do
+
+  local mutated_compose_file="${REGISTRY_COMPOSE_FILE%.yaml}-prow.yaml"
+  cp "$REGISTRY_COMPOSE_FILE" "$mutated_compose_file"
+  REGISTRY_COMPOSE_FILE="$mutated_compose_file"
+
+  declare -A prow_registry_cache_urls=(
+    [gcr]="http://registry-gcr-io.kube-system.svc.cluster.local:5000"
+    [k8s]="http://registry-registry-k8s-io.kube-system.svc.cluster.local:5000"
+    [quay]="http://registry-quay-io.kube-system.svc.cluster.local:5000"
+    [europe-docker-pkg-dev]="http://registry-europe-docker-pkg-dev.kube-system.svc.cluster.local:5000"
+  )
+
+  echo "Running in CI. Checking availability of registry-cache instances in prow cluster"
+
+  for key in "${!prow_registry_cache_urls[@]}"; do
+    registry_cache_url="${prow_registry_cache_urls[$key]}"
+
+    # Extract DNS from URL (remove http:// and :5000)
+    registry_cache_dns="${registry_cache_url#http://}"
+    registry_cache_dns="${registry_cache_dns%:5000}"
+
     registry_cache_ip=$(getent hosts "$registry_cache_dns" | awk '{ print $1 }' || true)
     if [[ "$registry_cache_ip" == "" ]]; then
-      echo "Unable to resolve IP of $registry_cache_dns in prow cluster. Disabling registry-cache."
-      REGISTRY_CACHE=false
+      echo "Unable to resolve IP of $key registry cache in prow cluster ($registry_cache_dns). Not using it as upstream."
+      continue
     fi
+
+    echo "Using $key registry cache in prow cluster ($registry_cache_dns) as upstream for local registry cache."
+    yq -i ".services.registry-cache-${key}.environment.REGISTRY_PROXY_REMOTEURL = \"${registry_cache_url}\"" "$REGISTRY_COMPOSE_FILE"
   done
 }
 
@@ -263,6 +282,10 @@ fi
 ./hack/kind-setup-loopback-devices.sh --cluster-name "${CLUSTER_NAME}" --ip-family "${IPFAMILY}" "${additional_params}"
 
 setup_kind_network
+
+change_registry_upstream_urls_to_prow_caches
+
+docker compose -f "$REGISTRY_COMPOSE_FILE" up -d
 
 if [[ "$IPFAMILY" == "ipv6" ]]; then
   ADDITIONAL_ARGS="$ADDITIONAL_ARGS --values $CHART/values-ipv6.yaml"
@@ -525,17 +548,6 @@ fi
 
 kubectl -n kube-system rollout restart deployment coredns
 
-if [[ "$DEPLOY_REGISTRY" == "true" ]]; then
-  check_registry_cache_availability
-  if [[ "$REGISTRY_CACHE" == "true" ]]; then
-    echo "Deploying local container registries in registry-cache configuration"
-    kubectl apply -k "$(dirname "$0")/../example/gardener-local/registry-prow" --server-side
-  else
-    echo "Deploying local container registries in default configuration"
-    kubectl apply -k "$(dirname "$0")/../example/gardener-local/registry" --server-side
-  fi
-  kubectl wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
-fi
 kubectl apply -k "$(dirname "$0")/../dev-setup/kind/calico/overlays/$IPFAMILY" --server-side
 kubectl apply -k "$(dirname "$0")/../dev-setup/kind/metrics-server"            --server-side
 kubectl apply -k "$(dirname "$0")/../dev-setup/kind/node-status-capacity"      --server-side
