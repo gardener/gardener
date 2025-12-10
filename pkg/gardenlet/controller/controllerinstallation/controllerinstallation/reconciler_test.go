@@ -96,7 +96,7 @@ var _ = Describe("Reconciler", func() {
 						}
 					}
 
-					Expect(podSpec.Tolerations).To(Equal([]corev1.Toleration{{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule}}))
+					Expect(podSpec.Tolerations).To(Equal([]corev1.Toleration{{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists}}))
 				}
 
 				assert = func(bootstrapControlPlaneNode bool) {
