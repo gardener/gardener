@@ -20,12 +20,14 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
+	"k8s.io/pod-security-admission/api"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -476,4 +478,23 @@ func GetRequiredGardenWildcardCertificate(ctx context.Context, c client.Client, 
 	}
 
 	return tlsSecret, nil
+}
+
+// ReconcileGardenNamespace ensures that the Garden namespace exists with the appropriate labels and annotations.
+func ReconcileGardenNamespace(ctx context.Context, client client.Client, namespaceName string, zones []string, manageMetadata bool, mutateFn func(namespace *corev1.Namespace)) error {
+	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespaceName}}
+	_, err := controllerutils.CreateOrGetAndMergePatch(ctx, client, namespace, func() error {
+		if manageMetadata {
+			metav1.SetMetaDataLabel(&namespace.ObjectMeta, api.EnforceLevelLabel, string(api.LevelPrivileged))
+			metav1.SetMetaDataLabel(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
+			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleGarden)
+			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
+		}
+
+		if mutateFn != nil {
+			mutateFn(namespace)
+		}
+		return nil
+	})
+	return err
 }

@@ -285,6 +285,7 @@ var _ = Describe("MachineControllerManager", func() {
 						PriorityClassName:             "gardener-system-300",
 						ServiceAccountName:            "machine-controller-manager",
 						TerminationGracePeriodSeconds: ptr.To[int64](5),
+						Tolerations:                   []corev1.Toleration{{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists}},
 					},
 				},
 			},

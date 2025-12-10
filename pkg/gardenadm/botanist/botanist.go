@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/extensions/bastion"
+	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/gardenadm"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -52,14 +53,13 @@ const GardenadmBaseDir = "/var/lib/gardenadm"
 type GardenadmBotanist struct {
 	*botanistpkg.Botanist
 
-	HostName   string
-	DBus       dbus.DBus
-	FS         afero.Afero
-	Extensions []Extension
-	Resources  gardenadm.Resources
+	HostName string
+	DBus     dbus.DBus
+	FS       afero.Afero
 
-	// Bastion is only set for `gardenadm bootstrap`.
-	Bastion *bastion.Bastion
+	Resources  gardenadm.Resources
+	Components Components
+	Extensions []Extension
 
 	operatingSystemConfigSecret       *corev1.Secret
 	gardenerResourceManagerServiceIPs []string
@@ -71,6 +71,15 @@ type GardenadmBotanist struct {
 	// sshConnection is the SSH connection to the first control plane machine. It is set by ConnectToControlPlaneMachine
 	// during `gardenadm bootstrap`.
 	sshConnection *sshutils.Connection
+}
+
+// Components contains deployable components for self-hosted shoots.
+type Components struct {
+	// Bastion is only set for `gardenadm bootstrap`.
+	Bastion *bastion.Bastion
+	// RuntimeResourceManager is the gardener-resource-manager instance responsible for runtime operations running in
+	// the garden namespace.
+	RuntimeResourceManager resourcemanager.Interface
 }
 
 // Extension contains the resources needed for an extension registration.
@@ -151,8 +160,13 @@ func NewGardenadmBotanist(
 		return nil, fmt.Errorf("failed creating botanist: %w", err)
 	}
 
-	if !gardenadmBotanist.Shoot.RunsControlPlane() {
-		gardenadmBotanist.Bastion = gardenadmBotanist.DefaultBastion()
+	if gardenadmBotanist.Shoot.RunsControlPlane() {
+		gardenadmBotanist.Components.RuntimeResourceManager, err = gardenadmBotanist.NewRuntimeGardenerResourceManager()
+		if err != nil {
+			return nil, fmt.Errorf("failed creating runtime gardener resource manager: %w", err)
+		}
+	} else {
+		gardenadmBotanist.Components.Bastion = gardenadmBotanist.DefaultBastion()
 
 		// For `gardenadm bootstrap`, we don't initialize the control plane machines with a "full OSC".
 		// Instead, we provide a small alternative OSC, that only fetches the `gardenadm` binary from the registry.

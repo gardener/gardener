@@ -28,7 +28,7 @@ var _ = Describe("Reconciler", func() {
 		reconciler = &Reconciler{}
 	})
 
-	Describe("#MutateSpecForControlPlaneNodeBootstrapping", func() {
+	Describe("#MutateSpecForSelfHostedShootExtensions", func() {
 		var (
 			pod         *corev1.Pod
 			deployment  *appsv1.Deployment
@@ -52,83 +52,113 @@ var _ = Describe("Reconciler", func() {
 			cronJob = &batchv1.CronJob{Spec: batchv1.CronJobSpec{JobTemplate: batchv1.JobTemplateSpec{Spec: batchv1.JobSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}}}
 		})
 
-		It("should not change objects if not bootstrapping control plane node", func() {
-			reconciler.BootstrapControlPlaneNode = false
+		It("should not change objects if not responsible for self-hosted shoots", func() {
+			reconciler.ForSelfHostedShoot = false
 
 			p := pod.DeepCopy()
-			Expect(reconciler.MutateSpecForControlPlaneNodeBootstrapping(p)).To(Succeed())
+			Expect(reconciler.MutateSpecForSelfHostedShootExtensions(p)).To(Succeed())
 			Expect(p).To(Equal(pod))
 
 			d := deployment.DeepCopy()
-			Expect(reconciler.MutateSpecForControlPlaneNodeBootstrapping(d)).To(Succeed())
+			Expect(reconciler.MutateSpecForSelfHostedShootExtensions(d)).To(Succeed())
 			Expect(d).To(Equal(deployment))
 
 			s := statefulSet.DeepCopy()
-			Expect(reconciler.MutateSpecForControlPlaneNodeBootstrapping(s)).To(Succeed())
+			Expect(reconciler.MutateSpecForSelfHostedShootExtensions(s)).To(Succeed())
 			Expect(s).To(Equal(statefulSet))
 
 			ds := daemonSet.DeepCopy()
-			Expect(reconciler.MutateSpecForControlPlaneNodeBootstrapping(ds)).To(Succeed())
+			Expect(reconciler.MutateSpecForSelfHostedShootExtensions(ds)).To(Succeed())
 			Expect(ds).To(Equal(daemonSet))
 
 			j := job.DeepCopy()
-			Expect(reconciler.MutateSpecForControlPlaneNodeBootstrapping(j)).To(Succeed())
+			Expect(reconciler.MutateSpecForSelfHostedShootExtensions(j)).To(Succeed())
 			Expect(j).To(Equal(job))
 
 			c := cronJob.DeepCopy()
-			Expect(reconciler.MutateSpecForControlPlaneNodeBootstrapping(c)).To(Succeed())
+			Expect(reconciler.MutateSpecForSelfHostedShootExtensions(c)).To(Succeed())
 			Expect(c).To(Equal(cronJob))
 		})
 
-		It("should adapt objects if bootstrapping control plane node", func() {
-			reconciler.BootstrapControlPlaneNode = true
+		When("responsible for self-hosted shoots", func() {
+			var (
+				checkPodSpec = func(podSpec *corev1.PodSpec, bootstrapControlPlaneNode bool) {
+					GinkgoHelper()
 
-			checkPodSpec := func(podSpec *corev1.PodSpec) {
-				GinkgoHelper()
+					if bootstrapControlPlaneNode {
+						Expect(podSpec.HostNetwork).To(BeTrue())
 
-				Expect(podSpec.HostNetwork).To(BeTrue())
-				Expect(podSpec.Tolerations).To(Equal([]corev1.Toleration{
-					{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule},
-					{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoExecute},
-				}))
+						for _, container := range podSpec.InitContainers {
+							Expect(container.Env).To(ContainElement(corev1.EnvVar{Name: "KUBERNETES_SERVICE_HOST", Value: "localhost"}), fmt.Sprintf("init container %s should have KUBERNETES_SERVICE_HOST env var", container.Name))
+						}
+						for _, container := range podSpec.Containers {
+							Expect(container.Env).To(ContainElement(corev1.EnvVar{Name: "KUBERNETES_SERVICE_HOST", Value: "localhost"}), fmt.Sprintf("container %s should have KUBERNETES_SERVICE_HOST env var", container.Name))
+						}
 
-				for _, container := range podSpec.InitContainers {
-					Expect(container.Env).To(ContainElement(corev1.EnvVar{Name: "KUBERNETES_SERVICE_HOST", Value: "localhost"}), fmt.Sprintf("init container %s should have KUBERNETES_SERVICE_HOST env var", container.Name))
+						Expect(podSpec.Tolerations).To(ContainElement(corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule}))
+					}
+
+					Expect(podSpec.Tolerations).To(ContainElement(corev1.Toleration{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists}))
 				}
-				for _, container := range podSpec.Containers {
-					Expect(container.Env).To(ContainElement(corev1.EnvVar{Name: "KUBERNETES_SERVICE_HOST", Value: "localhost"}), fmt.Sprintf("container %s should have KUBERNETES_SERVICE_HOST env var", container.Name))
-				}
-			}
 
-			for _, obj := range []struct {
-				object    runtime.Object
-				checkFunc func()
-			}{
-				{pod, func() {
-					checkPodSpec(&pod.Spec)
-				}},
-				{deployment, func() {
-					Expect(deployment.Spec.Replicas).To(Equal(ptr.To(int32(1))))
-					Expect(deployment.Spec.Strategy.Type).To(Equal(appsv1.RecreateDeploymentStrategyType))
-					Expect(deployment.Spec.Strategy.RollingUpdate).To(BeNil())
-					checkPodSpec(&deployment.Spec.Template.Spec)
-				}},
-				{statefulSet, func() {
-					checkPodSpec(&statefulSet.Spec.Template.Spec)
-				}},
-				{daemonSet, func() {
-					checkPodSpec(&daemonSet.Spec.Template.Spec)
-				}},
-				{job, func() {
-					checkPodSpec(&job.Spec.Template.Spec)
-				}},
-				{cronJob, func() {
-					checkPodSpec(&cronJob.Spec.JobTemplate.Spec.Template.Spec)
-				}},
-			} {
-				Expect(reconciler.MutateSpecForControlPlaneNodeBootstrapping(obj.object)).To(Succeed(), "for %T", obj.object)
-				obj.checkFunc()
-			}
+				assert = func(bootstrapControlPlaneNode bool) {
+					for _, obj := range []struct {
+						object    runtime.Object
+						checkFunc func()
+					}{
+						{pod, func() {
+							checkPodSpec(&pod.Spec, bootstrapControlPlaneNode)
+						}},
+						{deployment, func() {
+							if bootstrapControlPlaneNode {
+								Expect(deployment.Spec.Replicas).To(Equal(ptr.To(int32(1))))
+								Expect(deployment.Spec.Strategy.Type).To(Equal(appsv1.RecreateDeploymentStrategyType))
+								Expect(deployment.Spec.Strategy.RollingUpdate).To(BeNil())
+							}
+							checkPodSpec(&deployment.Spec.Template.Spec, bootstrapControlPlaneNode)
+						}},
+						{statefulSet, func() {
+							checkPodSpec(&statefulSet.Spec.Template.Spec, bootstrapControlPlaneNode)
+						}},
+						{daemonSet, func() {
+							checkPodSpec(&daemonSet.Spec.Template.Spec, bootstrapControlPlaneNode)
+						}},
+						{job, func() {
+							checkPodSpec(&job.Spec.Template.Spec, bootstrapControlPlaneNode)
+						}},
+						{cronJob, func() {
+							checkPodSpec(&cronJob.Spec.JobTemplate.Spec.Template.Spec, bootstrapControlPlaneNode)
+						}},
+					} {
+						Expect(reconciler.MutateSpecForSelfHostedShootExtensions(obj.object)).To(Succeed(), "for %T", obj.object)
+						obj.checkFunc()
+					}
+				}
+			)
+
+			BeforeEach(func() {
+				reconciler.ForSelfHostedShoot = true
+			})
+
+			When("BootstrapControlPlaneNode is true", func() {
+				BeforeEach(func() {
+					reconciler.BootstrapControlPlaneNode = true
+				})
+
+				It("should mutate the objects", func() {
+					assert(reconciler.BootstrapControlPlaneNode)
+				})
+			})
+
+			When("BootstrapControlPlaneNode is false", func() {
+				BeforeEach(func() {
+					reconciler.BootstrapControlPlaneNode = false
+				})
+
+				It("should mutate the objects", func() {
+					assert(reconciler.BootstrapControlPlaneNode)
+				})
+			})
 		})
 	})
 

@@ -24,6 +24,7 @@ var _ = Describe("Cleanup", func() {
 	const (
 		testIdentity = "test"
 		namespace    = "shoot--foo--bar"
+		namespace2   = "shoot--bar--foo"
 	)
 
 	var (
@@ -36,12 +37,12 @@ var _ = Describe("Cleanup", func() {
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 
-		mgr, err := New(ctx, logr.Discard(), clock.RealClock{}, fakeClient, namespace, testIdentity, Config{})
+		mgr, err := New(ctx, logr.Discard(), clock.RealClock{}, fakeClient, testIdentity, Config{}, namespace, namespace2)
 		Expect(err).NotTo(HaveOccurred())
 		m = mgr.(*manager)
 	})
 
-	secretList := func(identity string) []*corev1.Secret {
+	secretList := func(identity, namespace string) []*corev1.Secret {
 		secrets := []*corev1.Secret{
 			{ObjectMeta: metav1.ObjectMeta{Name: "secret1", Labels: map[string]string{"name": "first"}}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "secret2", Labels: map[string]string{"name": "first"}}},
@@ -54,6 +55,7 @@ var _ = Describe("Cleanup", func() {
 		}
 
 		for i := range secrets {
+			secrets[i].Name += namespace
 			secrets[i].Namespace = namespace
 			secrets[i].Labels["managed-by"] = "secrets-manager"
 			secrets[i].Labels["manager-identity"] = identity
@@ -68,32 +70,46 @@ var _ = Describe("Cleanup", func() {
 		})
 
 		It("should delete all secrets not part of the internal store", func() {
-			secrets := secretList(testIdentity)
-			for i := range secrets {
-				Expect(fakeClient.Create(ctx, secrets[i])).To(Succeed())
+			secretsInNamespace1 := secretList(testIdentity, namespace)
+			for i := range secretsInNamespace1 {
+				Expect(fakeClient.Create(ctx, secretsInNamespace1[i])).To(Succeed())
 			}
 
-			Expect(m.addToStore("first", secrets[0], current)).To(Succeed())
-			Expect(m.addToStore("first", secrets[1], old)).To(Succeed())
-			Expect(m.addToStore("first", secrets[2], bundle)).To(Succeed())
-			Expect(m.addToStore("second", secrets[3], current)).To(Succeed())
-			Expect(m.addToStore("third", secrets[4], current)).To(Succeed())
-			Expect(m.addToStore("third", secrets[5], old)).To(Succeed())
+			Expect(m.addToStore("first", secretsInNamespace1[0], current)).To(Succeed())
+			Expect(m.addToStore("first", secretsInNamespace1[1], old)).To(Succeed())
+			Expect(m.addToStore("first", secretsInNamespace1[2], bundle)).To(Succeed())
+			Expect(m.addToStore("second", secretsInNamespace1[3], current)).To(Succeed())
+			Expect(m.addToStore("third", secretsInNamespace1[4], current)).To(Succeed())
+			Expect(m.addToStore("third", secretsInNamespace1[5], old)).To(Succeed())
+
+			secretsInNamespace2 := secretList(testIdentity, namespace2)
+			for i := range secretsInNamespace2 {
+				Expect(fakeClient.Create(ctx, secretsInNamespace2[i])).To(Succeed())
+			}
 
 			Expect(m.Cleanup(ctx)).To(Succeed())
 
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secrets[0]), &corev1.Secret{})).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secrets[1]), &corev1.Secret{})).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secrets[2]), &corev1.Secret{})).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secrets[3]), &corev1.Secret{})).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secrets[4]), &corev1.Secret{})).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secrets[5]), &corev1.Secret{})).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secrets[6]), &corev1.Secret{})).To(BeNotFoundError())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secrets[7]), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretsInNamespace1[0]), &corev1.Secret{})).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretsInNamespace1[1]), &corev1.Secret{})).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretsInNamespace1[2]), &corev1.Secret{})).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretsInNamespace1[3]), &corev1.Secret{})).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretsInNamespace1[4]), &corev1.Secret{})).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretsInNamespace1[5]), &corev1.Secret{})).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretsInNamespace1[6]), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretsInNamespace1[7]), &corev1.Secret{})).To(BeNotFoundError())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretsInNamespace2[0]), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretsInNamespace2[1]), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretsInNamespace2[2]), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretsInNamespace2[3]), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretsInNamespace2[4]), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretsInNamespace2[5]), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretsInNamespace2[6]), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretsInNamespace2[7]), &corev1.Secret{})).To(BeNotFoundError())
 		})
 
 		It("should not touch secrets from other manager instance", func() {
-			secrets := secretList(testIdentity + "other")
+			secrets := secretList(testIdentity, "other")
 			for i := range secrets {
 				Expect(fakeClient.Create(ctx, secrets[i])).To(Succeed())
 			}

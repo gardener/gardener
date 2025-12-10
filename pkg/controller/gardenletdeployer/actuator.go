@@ -283,6 +283,9 @@ func (a *Actuator) ensureGardenNamespace(ctx context.Context, targetClient clien
 	gardenNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: a.GardenletNamespaceTarget,
+			Labels: map[string]string{
+				v1beta1constants.GardenRole: v1beta1constants.GardenRoleGarden,
+			},
 		},
 	}
 	if err := targetClient.Get(ctx, client.ObjectKeyFromObject(gardenNamespace), gardenNamespace); err != nil {

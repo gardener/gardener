@@ -171,6 +171,7 @@ func (b *GardenadmBotanist) ReconcileExtensionControllerInstallations(ctx contex
 		Identity:                  &b.Shoot.GetInfo().Status.Gardener,
 		GardenNamespace:           b.Shoot.ControlPlaneNamespace,
 		BootstrapControlPlaneNode: bootstrapMode,
+		ForSelfHostedShoot:        true,
 	}
 
 	for _, extension := range b.Extensions {

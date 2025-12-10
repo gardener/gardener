@@ -36,19 +36,32 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	var (
 		b   = &Botanist{Operation: o}
 		err error
+
+		secretsManagerIdentity = v1beta1constants.SecretManagerIdentityGardenlet
+		namespaces             = []string{b.Shoot.ControlPlaneNamespace}
 	)
+
+	if o.Shoot.IsSelfHosted() {
+		// `gardenadm init` will generate secrets for gardener-resource-manager and etcd-druid in the `garden` namespace
+		// with the `self-hosted-shoot` identity. Later, when `gardener-operator` or the seed `gardenlet` will take over
+		// management of those shared components, they will generate new secrets with their identity and thereby orphan
+		// the existing ones. When the shoot `gardenlet` reconciles the self-hosted shoot, calling the secrets manager
+		// `Cleanup` will delete the orphaned secrets from the `garden` namespace.
+		secretsManagerIdentity = v1beta1constants.SecretManagerIdentitySelfHostedShoot
+		namespaces = append(namespaces, v1beta1constants.GardenNamespace)
+	}
 
 	o.SecretsManager, err = secretsmanager.New(
 		ctx,
 		b.Logger.WithName("secretsmanager"),
 		clock.RealClock{},
 		b.SeedClientSet.Client(),
-		b.Shoot.ControlPlaneNamespace,
-		v1beta1constants.SecretManagerIdentityGardenlet,
+		secretsManagerIdentity,
 		secretsmanager.Config{
 			CASecretAutoRotation: false,
 			SecretNamesToTimes:   b.lastSecretRotationStartTimes(),
 		},
+		namespaces...,
 	)
 	if err != nil {
 		return nil, err

@@ -69,10 +69,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 	if b.Shoot.IsSelfHosted() {
 		values.KubernetesServiceHost = nil
 
-		if b.Shoot.RunsControlPlane() {
-			newFunc = shared.NewCombinedGardenerResourceManager
-			values.TargetNamespaces = nil
-		} else {
+		if !b.Shoot.RunsControlPlane() {
 			newFunc = shared.NewRuntimeGardenerResourceManager
 			values.HighAvailabilityConfigWebhookEnabled = false
 			values.PriorityClassName = v1beta1constants.PriorityClassNameSeedSystemCritical
