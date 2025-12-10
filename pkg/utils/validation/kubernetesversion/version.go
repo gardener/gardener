@@ -33,6 +33,7 @@ const envExperimentalDisableKubernetesVersionCheck = "EXPERIMENTAL_DISABLE_KUBER
 // the check will be skipped.
 func CheckIfSupported(gitVersion string) error {
 	if os.Getenv(envExperimentalDisableKubernetesVersionCheck) == "true" {
+		logf.Log.Info("Skipping the check if the Kubernetes version is supported because flag is set to true", "flag", envExperimentalDisableKubernetesVersionCheck)
 		return nil
 	}
 
