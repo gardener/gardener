@@ -96,10 +96,7 @@ var _ = Describe("Reconciler", func() {
 						}
 					}
 
-					Expect(podSpec.Tolerations).To(Equal([]corev1.Toleration{
-						{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule},
-						{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoExecute},
-					}))
+					Expect(podSpec.Tolerations).To(Equal([]corev1.Toleration{{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule}}))
 				}
 
 				assert = func(bootstrapControlPlaneNode bool) {

@@ -353,11 +353,10 @@ type ResponsibilityMode string
 
 const (
 	// ForRuntime is a deployment mode for a gardener-resource-manager deployed in a seed, in the garden runtime cluster
-	// or in the self-hosted shoot, taking over responsibilities for the runtime cluster only.
+	// or in the self-hosted shoot's garden namespace, taking over responsibilities for the runtime cluster only.
 	ForRuntime ResponsibilityMode = "runtime"
-	// ForShootOrVirtualGarden is a deployment mode for a gardener-resource-manager deployed in a self-hosted shoot,
-	// seed or garden runtime cluster, taking over responsibilities for a target cluster (e.g., GRM for the system
-	// components of a self-hosted shoot, GRM for the virtual garden cluster, or GRM for a hosted shoot cluster).
+	// ForShootOrVirtualGarden is a deployment mode for a gardener-resource-manager deployed in a self-hosted shoot's
+	// kube-system namespace, seed or garden runtime cluster, taking over responsibilities for a target cluster.
 	ForShootOrVirtualGarden ResponsibilityMode = "shoot-or-virtual-garden"
 )
 
@@ -1977,6 +1976,12 @@ func NewEndpointSliceHintsMutatingWebhook(
 	}
 }
 
+// buildWebhookNamespaceSelector constructs a label selector that can be used as namespaceSelector in webhook
+// configurations.
+// If gardener-resource-manager is responsible for runtime resources, all Gardener-managed namespaces
+// (`gardener.cloud/role`) label excluding `kube-system` and `kubernetes-dashboard` should be covered.
+// If gardener-resource-manager is responsible for shoot/virtual garden, only `kube-system` and `kubernetes-dashboard`
+// namespaces should be covered.
 func (r *resourceManager) buildWebhookNamespaceSelector() *metav1.LabelSelector {
 	includeSystemNamespaces := func(include bool) metav1.LabelSelectorRequirement {
 		operator := metav1.LabelSelectorOpIn
@@ -2107,7 +2112,8 @@ func (r *resourceManager) SetSecrets(s Secrets) { r.secrets = s }
 // GetValues returns the current configuration values of the deployer.
 func (r *resourceManager) GetValues() Values { return r.values }
 
-// SetBootstrapControlPlaneNode sets the BootstrapControlPlaneNode field in the Values.
+// SetBootstrapControlPlaneNode sets the BootstrapControlPlaneNode field in the Values. In addition, the replicas are
+// set to '1' and the high-availability-config webhook will be disabled.
 func (r *resourceManager) SetBootstrapControlPlaneNode(bootstrap bool) {
 	r.values.BootstrapControlPlaneNode = bootstrap
 	r.values.HighAvailabilityConfigWebhookEnabled = !bootstrap
@@ -2133,6 +2139,9 @@ func (r *resourceManager) skipStaticPods(webhooks []admissionregistrationv1.Muta
 
 	for i, webhook := range webhooks {
 		if !handlesPodCreations(webhook.Rules) {
+			// Starting from https://github.com/gardener/gardener/pull/13575, static pods might not only exist in the
+			// kube-system namespace but also in the garden namespace, so we just generally skip them via the
+			// objectSelector (independent of the namespace they're running in).
 			continue
 		}
 

@@ -606,10 +606,7 @@ func (r *Reconciler) MutateSpecForSelfHostedShootExtensions(obj runtime.Object) 
 			kubernetesutils.InjectKubernetesServiceHostEnv(podSpec.Containers, "localhost")
 		}
 
-		podSpec.Tolerations = append(podSpec.Tolerations,
-			corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule},
-			corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoExecute},
-		)
+		podSpec.Tolerations = append(podSpec.Tolerations, corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule})
 	})
 }
 

@@ -84,12 +84,17 @@ var _ = Describe("Gardenlet", func() {
 			Expect(SeedIsSelfHostedShoot(ctx, fakeClient)).To(BeTrue())
 		})
 
-		It("should return that the seed is not a self-hosted shoot because kube-system namespace is not labeled", func() {
+		It("should return that the seed is not a self-hosted shoot because kube-system namespace is not labeled correctly", func() {
+			Expect(fakeClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kube-system", Labels: map[string]string{"gardener.cloud/role": "kube-system"}}})).To(Succeed())
+			Expect(SeedIsSelfHostedShoot(ctx, fakeClient)).To(BeFalse())
+		})
+
+		It("should return that the seed is not a self-hosted shoot because kube-system namespace is not labeled at all", func() {
 			Expect(fakeClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kube-system"}})).To(Succeed())
 			Expect(SeedIsSelfHostedShoot(ctx, fakeClient)).To(BeFalse())
 		})
 
-		It("should return an error no kube-system namespace found", func() {
+		It("should return an error no kube-system namespace is found", func() {
 			result, err := SeedIsSelfHostedShoot(ctx, fakeClient)
 			Expect(err).To(BeNotFoundError())
 			Expect(result).To(BeFalse())
