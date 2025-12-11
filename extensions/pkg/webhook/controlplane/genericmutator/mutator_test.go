@@ -179,6 +179,13 @@ var _ = Describe("Mutator", func() {
 				},
 			),
 			Entry(
+				"EnsureKubeAPIServerDeployment with a virtual-garden-kube-apiserver deployment",
+				func() {
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-kube-apiserver"}}
+					ensurer.EXPECT().EnsureKubeAPIServerDeployment(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
+				},
+			),
+			Entry(
 				"EnsureKubeAPIServerDeployment with a kube-apiserver deployment and existing deployment",
 				func() {
 					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer}}
@@ -190,6 +197,13 @@ var _ = Describe("Mutator", func() {
 				"EnsureKubeControllerManagerDeployment with a kube-controller-manager deployment",
 				func() {
 					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeControllerManager}}
+					ensurer.EXPECT().EnsureKubeControllerManagerDeployment(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
+				},
+			),
+			Entry(
+				"EnsureKubeControllerManagerDeployment with a virtual-garden-kube-controller-manager deployment",
+				func() {
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-kube-controller-manager"}}
 					ensurer.EXPECT().EnsureKubeControllerManagerDeployment(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
@@ -297,6 +311,11 @@ var _ = Describe("Mutator", func() {
 				nil,
 			),
 			Entry(
+				"with a virtual-garden-etcd-main",
+				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-etcd-main", Namespace: namespace}},
+				nil,
+			),
+			Entry(
 				"with a etcd-main and existing druid",
 				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDMain, Namespace: namespace}},
 				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDMain, Namespace: namespace}},
@@ -304,6 +323,11 @@ var _ = Describe("Mutator", func() {
 			Entry(
 				"with a etcd-events",
 				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDEvents, Namespace: namespace}},
+				nil,
+			),
+			Entry(
+				"with a virtual-garden-etcd-events",
+				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-etcd-events", Namespace: namespace}},
 				nil,
 			),
 			Entry(
