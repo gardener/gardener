@@ -342,9 +342,9 @@ func ValidateFiles(files []extensionsv1alpha1.File, fldPath *field.Path) field.E
 			}
 		}
 
-		if file.NodeName != nil {
-			for _, msg := range apivalidation.NameIsDNSSubdomain(*file.NodeName, false) {
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("nodeName"), *file.NodeName, msg))
+		if file.HostName != nil {
+			for _, msg := range apivalidation.NameIsDNSSubdomain(*file.HostName, false) {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("hostName"), *file.HostName, msg))
 			}
 		}
 	}

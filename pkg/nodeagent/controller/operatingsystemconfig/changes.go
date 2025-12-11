@@ -61,7 +61,7 @@ func computeOperatingSystemConfigChanges(
 	newOSCChecksum string,
 	currentOSVersion *string,
 	skipPersist bool,
-	nodeName string,
+	hostName string,
 ) (*operatingSystemConfigChanges, error) {
 	changes := &operatingSystemConfigChanges{
 		fs:                            fs,
@@ -100,7 +100,7 @@ func computeOperatingSystemConfigChanges(
 
 	// osc.files and osc.unit.files should be changed the same way by OSC controller.
 	// The reason for assigning files to units is the detection of changes which require the restart of a unit.
-	newOSCFiles := CollectAllFiles(newOSC, nodeName)
+	newOSCFiles := CollectAllFiles(newOSC, hostName)
 
 	oldOSCRaw, err := fs.ReadFile(lastAppliedOperatingSystemConfigFilePath)
 	if err != nil {
@@ -153,7 +153,7 @@ func computeOperatingSystemConfigChanges(
 		return nil, fmt.Errorf("unable to decode the old OSC read from file path %s: %w", lastAppliedOperatingSystemConfigFilePath, err)
 	}
 
-	oldOSCFiles := CollectAllFiles(oldOSC, nodeName)
+	oldOSCFiles := CollectAllFiles(oldOSC, hostName)
 	// File changes have to be computed in one step for all files,
 	// because moving a file from osc.unit.files to osc.files or vice versa should not result in a change and a delete event.
 	changes.Files = computeFileDiffs(oldOSCFiles, newOSCFiles)
@@ -511,10 +511,10 @@ func mergeUnits(specUnits, statusUnits []extensionsv1alpha1.Unit) []extensionsv1
 }
 
 // CollectAllFiles returns the list of all files from spec and status of the given OSC, optionally filtered for the given node.
-func CollectAllFiles(osc *extensionsv1alpha1.OperatingSystemConfig, nodeName string) []extensionsv1alpha1.File {
+func CollectAllFiles(osc *extensionsv1alpha1.OperatingSystemConfig, hostName string) []extensionsv1alpha1.File {
 	clone := slices.Clone(append(osc.Spec.Files, osc.Status.ExtensionFiles...))
 	return slices.DeleteFunc(clone, func(file extensionsv1alpha1.File) bool {
-		return file.NodeName != nil && *file.NodeName != nodeName
+		return file.HostName != nil && *file.HostName != hostName
 	})
 }
 

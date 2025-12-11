@@ -225,7 +225,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				{
 					Path:     "path7",
 					Content:  osc.Spec.Files[0].Content,
-					NodeName: ptr.To("-&#39;invalid&#39;"),
+					HostName: ptr.To("-&#39;invalid&#39;"),
 				},
 			}
 
@@ -281,7 +281,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 					"Field": Equal("status.extensionFiles[4].path"),
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("status.extensionFiles[5].nodeName"),
+					"Field": Equal("status.extensionFiles[5].hostName"),
 				})),
 			))
 		})

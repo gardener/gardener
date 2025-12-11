@@ -1142,8 +1142,8 @@ func (in *File) DeepCopyInto(out *File) {
 		**out = **in
 	}
 	in.Content.DeepCopyInto(&out.Content)
-	if in.NodeName != nil {
-		in, out := &in.NodeName, &out.NodeName
+	if in.HostName != nil {
+		in, out := &in.HostName, &out.HostName
 		*out = new(string)
 		**out = **in
 	}

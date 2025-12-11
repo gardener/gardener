@@ -146,10 +146,10 @@ type File struct {
 	Permissions *uint32 `json:"permissions,omitempty"`
 	// Content describe the file's content.
 	Content FileContent `json:"content"`
-	// NodeName contains the name of the node for node-specific configurations.
-	// If NodeName is not empty the corresponding file will only be rolled out to the node with the specified name.
+	// HostName contains the name of the host for host-specific configurations.
+	// If HostName is not empty the corresponding file will only be rolled out to the host with the specified name.
 	// +optional
-	NodeName *string `json:"nodeName,omitempty"`
+	HostName *string `json:"hostName,omitempty"`
 }
 
 // FileContent can either reference a secret or contain inline configuration.

@@ -158,7 +158,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed getting OS version: %w", err)
 	}
 
-	oscChanges, err := computeOperatingSystemConfigChanges(log, r.FS, osc, oscChecksum, osVersion, r.SkipWritingStateFiles, r.getNodeOrHostName())
+	oscChanges, err := computeOperatingSystemConfigChanges(log, r.FS, osc, oscChecksum, osVersion, r.SkipWritingStateFiles, r.HostName)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed calculating the OSC changes: %w", err)
 	}
@@ -1086,11 +1086,4 @@ func (r *Reconciler) restartNodeAgent(oscChanges *operatingSystemConfigChanges, 
 	}
 	r.CancelContext()
 	return reconcile.Result{RequeueAfter: RequeueAfterRestart}, nil
-}
-
-func (r *Reconciler) getNodeOrHostName() string {
-	if len(r.NodeName) > 0 {
-		return r.NodeName
-	}
-	return r.HostName
 }

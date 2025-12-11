@@ -252,10 +252,10 @@ spec:
                             This for example can be used to manipulate the clear-text content before it reaches the node.
                           type: boolean
                       type: object
-                    nodeName:
+                    hostName:
                       description: |-
-                        NodeName contains the name of the node for node-specific configurations.
-                        If NodeName is not empty the corresponding file will only be rolled out to the node with the specified name.
+                        HostName contains the name of the host for host-specific configurations.
+                        If HostName is not empty the corresponding file will only be rolled out to the host with the specified name.
                       type: string
                     path:
                       description: Path is the path of the file system where the file
@@ -515,10 +515,10 @@ spec:
                             This for example can be used to manipulate the clear-text content before it reaches the node.
                           type: boolean
                       type: object
-                    nodeName:
+                    hostName:
                       description: |-
-                        NodeName contains the name of the node for node-specific configurations.
-                        If NodeName is not empty the corresponding file will only be rolled out to the node with the specified name.
+                        HostName contains the name of the host for host-specific configurations.
+                        If HostName is not empty the corresponding file will only be rolled out to the host with the specified name.
                       type: string
                     path:
                       description: Path is the path of the file system where the file

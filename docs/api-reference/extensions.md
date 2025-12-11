@@ -3256,15 +3256,15 @@ FileContent
 </tr>
 <tr>
 <td>
-<code>nodeName</code></br>
+<code>hostName</code></br>
 <em>
 string
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>NodeName contains the name of the node for node-specific configurations.
-If NodeName is not empty the corresponding file will only be rolled out to the node with the specified name.</p>
+<p>HostName contains the name of the host for host-specific configurations.
+If HostName is not empty the corresponding file will only be rolled out to the host with the specified name.</p>
 </td>
 </tr>
 </tbody>
