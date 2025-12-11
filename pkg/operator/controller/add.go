@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -149,7 +148,7 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 		if err := (&service.Reconciler{}).AddToManager(mgr, predicate.And(
 			virtualGardenIstioIngressPredicate,
 			predicate.NewPredicateFuncs(func(obj client.Object) bool {
-				return obj.GetNamespace() == operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DefaultSNIIngressNamespace
+				return obj.GetNamespace() == operatorv1alpha1.VirtualGardenDefaultSNIIngressNamespace
 			})),
 		); err != nil {
 			return fmt.Errorf("failed adding Service controller: %w", err)

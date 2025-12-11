@@ -960,7 +960,7 @@ func (r *Reconciler) newSNI(ctx context.Context, garden *operatorv1alpha1.Garden
 
 	return kubeapiserverexposure.NewSNI(
 		r.RuntimeClientSet.Client(),
-		operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameKubeAPIServer,
+		operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer,
 		r.GardenNamespace,
 		secretsManager,
 		func() *kubeapiserverexposure.SNIValues {
@@ -983,7 +983,7 @@ func (r *Reconciler) newGardenerAccess(garden *operatorv1alpha1.Garden, secretsM
 		r.GardenNamespace,
 		secretsManager,
 		gardeneraccess.Values{
-			ServerInCluster:       fmt.Sprintf("%s%s.%s.svc.cluster.local", operatorv1alpha1.VirtualGardenNamePrefix, v1beta1constants.DeploymentNameKubeAPIServer, r.GardenNamespace),
+			ServerInCluster:       fmt.Sprintf("%s.%s.svc.cluster.local", kubeapiserverconstants.ServiceName(operatorv1alpha1.VirtualGardenNamePrefix), r.GardenNamespace),
 			ServerOutOfCluster:    v1beta1helper.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name),
 			ManagedResourceLabels: map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)},
 			IsGardenCluster:       true,

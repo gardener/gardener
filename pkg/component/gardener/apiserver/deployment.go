@@ -90,7 +90,7 @@ func (g *gardenerAPIServer) deployment(
 						v1beta1constants.LabelNetworkPolicyToPrivateNetworks:                                          v1beta1constants.LabelNetworkPolicyAllowed,
 						"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicyWebhookTargets: v1beta1constants.LabelNetworkPolicyAllowed,
 						gardenerutils.NetworkPolicyLabel(operatorv1alpha1.VirtualGardenNamePrefix+etcdconstants.ServiceName(v1beta1constants.ETCDRoleMain), etcdconstants.PortEtcdClient): v1beta1constants.LabelNetworkPolicyAllowed,
-						gardenerutils.NetworkPolicyLabel(operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port):              v1beta1constants.LabelNetworkPolicyAllowed,
+						gardenerutils.NetworkPolicyLabel(operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer, kubeapiserverconstants.Port):                                          v1beta1constants.LabelNetworkPolicyAllowed,
 					}),
 				},
 				Spec: corev1.PodSpec{

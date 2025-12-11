@@ -135,8 +135,8 @@ func (h *health) checkVirtualComponents(ctx context.Context, condition gardencor
 	if exitCondition, err := h.healthChecker.CheckControlPlane(
 		ctx,
 		h.gardenNamespace,
-		sets.New(operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameGardenerResourceManager, operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameKubeAPIServer, operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameKubeControllerManager),
-		sets.New(operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.ETCDMain, operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.ETCDEvents),
+		sets.New(operatorv1alpha1.DeploymentNameVirtualGardenGardenerResourceManager, operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer, operatorv1alpha1.DeploymentNameVirtualGardenKubeControllerManager),
+		sets.New(operatorv1alpha1.VirtualGardenETCDMain, operatorv1alpha1.VirtualGardenETCDEvents),
 		condition,
 	); err != nil || exitCondition != nil {
 		return exitCondition, err

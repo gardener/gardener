@@ -48,7 +48,7 @@ func (g *gardenerControllerManager) deployment(secretGenericTokenKubeconfig, sec
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: utils.MergeStringMaps(GetLabels(), map[string]string{
 						v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed,
-						gardenerutils.NetworkPolicyLabel(operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
+						gardenerutils.NetworkPolicyLabel(operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
 					}),
 				},
 				Spec: corev1.PodSpec{

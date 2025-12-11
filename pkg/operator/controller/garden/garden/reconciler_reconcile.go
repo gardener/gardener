@@ -496,7 +496,7 @@ func (r *Reconciler) reconcile(
 		rewriteResourcesAddLabel = g.Add(flow.Task{
 			Name: "Labeling encrypted resources after modification of encryption config or to re-encrypt them with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClientSet, secretsManager, r.GardenNamespace, operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameKubeAPIServer, resourcesToEncrypt, encryptedResources, defaultEncryptedGVKs)
+				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClientSet, secretsManager, r.GardenNamespace, operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer, resourcesToEncrypt, encryptedResources, defaultEncryptedGVKs)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
 			SkipIf: helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing &&
 				sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...)),
@@ -505,7 +505,7 @@ func (r *Reconciler) reconcile(
 		snapshotETCD = g.Add(flow.Task{
 			Name: "Snapshotting ETCD after modification of encryption config or resources are re-encrypted with new ETCD encryption key",
 			Fn: func(ctx context.Context) error {
-				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, r.RuntimeClientSet.Client(), r.snapshotETCDFunc(secretsManager, c.etcdMain), r.GardenNamespace, operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameKubeAPIServer)
+				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, r.RuntimeClientSet.Client(), r.snapshotETCDFunc(secretsManager, c.etcdMain), r.GardenNamespace, operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer)
 			},
 			SkipIf: !backupConfigured ||
 				(helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing &&
@@ -515,7 +515,7 @@ func (r *Reconciler) reconcile(
 		_ = g.Add(flow.Task{
 			Name: "Removing label from re-encrypted resources after modification of encryption config or rotation of ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if err := secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClientSet, r.GardenNamespace, operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameKubeAPIServer, resourcesToEncrypt, encryptedResources, defaultEncryptedGVKs); err != nil {
+				if err := secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClientSet, r.GardenNamespace, operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer, resourcesToEncrypt, encryptedResources, defaultEncryptedGVKs); err != nil {
 					return err
 				}
 
@@ -816,7 +816,7 @@ func etcdMainBackupBucket(garden *operatorv1alpha1.Garden) *extensionsv1alpha1.B
 }
 
 func etcdMainBackupBucketNameAndPrefix(garden *operatorv1alpha1.Garden) (string, string) {
-	prefix := operatorv1alpha1.VirtualGardenNamePrefix + "etcd-main"
+	prefix := operatorv1alpha1.VirtualGardenETCDMain
 	if backup := helper.GetETCDMainBackup(garden); backup != nil && backup.BucketName != nil {
 		name := *backup.BucketName
 		if idx := strings.Index(name, "/"); idx != -1 {
@@ -987,7 +987,7 @@ func (r *Reconciler) deployVirtualGardenGardenerResourceManager(secretsManager s
 				return 2, nil
 			},
 			func() string {
-				return operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DeploymentNameKubeAPIServer
+				return operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer
 			},
 		)
 	}
@@ -1181,7 +1181,7 @@ func (r *Reconciler) reconcileDNSRecords(ctx context.Context, log logr.Logger, g
 		staleDNSRecordNames.Insert(dnsRecord.Name)
 	}
 
-	istioIngressGatewayLoadBalancerAddress, err := kubernetesutils.WaitUntilLoadBalancerIsReady(ctx, log, r.RuntimeClientSet.Client(), operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DefaultSNIIngressNamespace, v1beta1constants.DefaultSNIIngressServiceName, time.Minute)
+	istioIngressGatewayLoadBalancerAddress, err := kubernetesutils.WaitUntilLoadBalancerIsReady(ctx, log, r.RuntimeClientSet.Client(), operatorv1alpha1.VirtualGardenDefaultSNIIngressNamespace, v1beta1constants.DefaultSNIIngressServiceName, time.Minute)
 	if err != nil {
 		return fmt.Errorf("failed waiting until %s/%s is ready: %w", operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DefaultSNIIngressNamespace, v1beta1constants.DefaultSNIIngressServiceName, err)
 	}

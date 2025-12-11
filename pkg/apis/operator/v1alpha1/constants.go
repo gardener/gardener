@@ -4,6 +4,10 @@
 
 package v1alpha1
 
+import (
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+)
+
 const (
 	// SecretManagerIdentityOperator is the identity for the secret manager used inside gardener-operator.
 	SecretManagerIdentityOperator = "gardener-operator"
@@ -31,4 +35,19 @@ const (
 
 	// VirtualGardenNamePrefix is a constant to prefix various resource names for the virtual garden.
 	VirtualGardenNamePrefix = "virtual-garden-"
+
+	// DeploymentNameVirtualGardenKubeAPIServer is a constant for the name of a Kubernetes deployment object that contains the kube-apiserver pod of the virtual garden.
+	DeploymentNameVirtualGardenKubeAPIServer = VirtualGardenNamePrefix + v1beta1constants.DeploymentNameKubeAPIServer
+	// DeploymentNameVirtualGardenKubeControllerManager is a constant for the name of a Kubernetes deployment object that contains the kube-controller-manager pod of the virtual garden.
+	DeploymentNameVirtualGardenKubeControllerManager = VirtualGardenNamePrefix + v1beta1constants.DeploymentNameKubeControllerManager
+	// DeploymentNameVirtualGardenGardenerResourceManager is a constant for the name of a Kubernetes deployment object that contains the gardener-resource-manager pod of the virtual garden.
+	DeploymentNameVirtualGardenGardenerResourceManager = VirtualGardenNamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager
+
+	// VirtualGardenETCDMain is a constant for the name of etcd-main Etcd object of the virtual garden.
+	VirtualGardenETCDMain = VirtualGardenNamePrefix + v1beta1constants.ETCDMain
+	// VirtualGardenETCDEvents is a constant for the name of etcd-events Etcd object of the virtual garden.
+	VirtualGardenETCDEvents = VirtualGardenNamePrefix + v1beta1constants.ETCDEvents
+
+	// VirtualGardenDefaultSNIIngressNamespace is the default sni ingress namespace of the virtual garden.
+	VirtualGardenDefaultSNIIngressNamespace = VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace
 )

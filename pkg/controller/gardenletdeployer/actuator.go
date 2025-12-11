@@ -648,7 +648,7 @@ func PrepareGardenletChartValues(
 	if isGarden {
 		gardenletDeployment.PodLabels = utils.MergeStringMaps(
 			map[string]string{
-				gardenerutils.NetworkPolicyLabel(operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
+				gardenerutils.NetworkPolicyLabel(operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
 			},
 			gardenletDeployment.PodLabels,
 		)

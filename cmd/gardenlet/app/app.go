@@ -729,7 +729,7 @@ func (g *garden) updateProcessingShootStatusToAborted(ctx context.Context, garde
 	return flow.Parallel(taskFns...)(ctx)
 }
 
-const virtualGardenService = operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DeploymentNameKubeAPIServer
+const virtualGardenService = operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer
 
 // overwriteGardenHostWhenDeployedInRuntimeCluster overwrites the garden REST config host to the internal service host
 // if the gardenlet is deployed in the runtime cluster of the garden and L7 load balancing is not active.
