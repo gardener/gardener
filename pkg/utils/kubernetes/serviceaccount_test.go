@@ -12,17 +12,21 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
-var _ = Describe("serviceaccount", func() {
+var _ = Describe("ServiceAccount", func() {
 	Describe("#ExtractServiceAccountUID", func() {
 		It("should extract the ServiceAccount UID from a valid Kubernetes token", func() {
 			uid := "uid-abc-123"
 			token := test.SampleServiceAccountToken(uid)
-			Expect(kubernetes.ExtractServiceAccountUID(token)).To(Equal(uid))
+			extractedUID, err := kubernetes.ExtractServiceAccountUID(token)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(extractedUID).To(Equal(uid))
 		})
 
 		It("should return an empty uid result if the provided token was invalid", func() {
-			Expect(kubernetes.ExtractServiceAccountUID("")).To(Equal(""))
-			Expect(kubernetes.ExtractServiceAccountUID("invalid_token")).To(Equal(""))
+			_, err := kubernetes.ExtractServiceAccountUID("")
+			Expect(err).To(HaveOccurred())
+			_, err = kubernetes.ExtractServiceAccountUID("invalid_token")
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })

@@ -28,7 +28,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	. "github.com/gardener/gardener/pkg/controller/tokenrequestor"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -522,6 +524,66 @@ var _ = Describe("Reconciler", func() {
 				Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 				Expect(secret.Data).To(HaveKeyWithValue("token", []byte(token)))
 				Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
+			})
+		})
+
+		Context("service account UID validation", func() {
+			var (
+				serviceAccountUID types.UID
+			)
+
+			BeforeEach(func() {
+				serviceAccountUID = "test-sa-uid-123"
+			})
+
+			It("should issue a new token when the token belongs to a different service account UID", func() {
+				oldJwtToken := test.SampleServiceAccountToken("different-uid-456")
+				secret.Data = map[string][]byte{resourcesv1alpha1.DataKeyToken: []byte(oldJwtToken)}
+				metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(time.Hour).Format(time.RFC3339))
+
+				serviceAccount.UID = serviceAccountUID
+
+				Expect(sourceClient.Create(ctx, secret)).To(Succeed())
+				Expect(targetClient.Create(ctx, serviceAccount)).To(Succeed())
+
+				_, err := ctrl.Reconcile(ctx, request)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Verify that a new token was requested and stored
+				Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+				Expect(secret.Data).To(HaveKeyWithValue("token", []byte(token)))
+			})
+
+			It("should requeue when the token belongs to the current service account UID", func() {
+				jwtToken := test.SampleServiceAccountToken(string(serviceAccountUID))
+				secret.Data = map[string][]byte{resourcesv1alpha1.DataKeyToken: []byte(jwtToken)}
+				delay := time.Hour
+				metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(delay).Format(time.RFC3339))
+
+				serviceAccount.UID = serviceAccountUID
+
+				Expect(sourceClient.Create(ctx, secret)).To(Succeed())
+				Expect(targetClient.Create(ctx, serviceAccount)).To(Succeed())
+
+				// Should requeue with the scheduled delay because the service account UID matches and the token is still valid
+				result, err := ctrl.Reconcile(ctx, request)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{RequeueAfter: delay}))
+			})
+
+			It("should silently handle invalid JWT tokens", func() {
+				secret.Data = map[string][]byte{resourcesv1alpha1.DataKeyToken: []byte("invalid-jwt-token")}
+				delay := time.Hour
+				metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(delay).Format(time.RFC3339))
+
+				serviceAccount.UID = serviceAccountUID
+
+				Expect(sourceClient.Create(ctx, secret)).To(Succeed())
+				Expect(targetClient.Create(ctx, serviceAccount)).To(Succeed())
+
+				result, err := ctrl.Reconcile(ctx, request)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{RequeueAfter: delay}))
 			})
 		})
 	})

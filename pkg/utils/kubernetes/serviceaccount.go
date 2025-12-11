@@ -28,14 +28,14 @@ type ref struct {
 
 // ExtractServiceAccountUID extracts the UID of the service account from the given Kubernetes JWT token string.
 // It does not verify the token signature and should only be used in trusted environments.
-func ExtractServiceAccountUID(tokenStr string) string {
-	parsed, err := jwt.ParseSigned(tokenStr, []jose.SignatureAlgorithm{jose.HS256})
+func ExtractServiceAccountUID(tokenStr string) (string, error) {
+	parsed, err := jwt.ParseSigned(tokenStr, []jose.SignatureAlgorithm{jose.HS256, jose.ES256, jose.RS256, jose.ES384, jose.ES512})
 	if err != nil {
-		return ""
+		return "", err
 	}
 	var claims privateClaims
-	if err := parsed.UnsafeClaimsWithoutVerification(&claims); err != nil {
-		return ""
+	if err = parsed.UnsafeClaimsWithoutVerification(&claims); err != nil {
+		return "", err
 	}
-	return claims.Kubernetes.Svcacct.UID
+	return claims.Kubernetes.Svcacct.UID, nil
 }

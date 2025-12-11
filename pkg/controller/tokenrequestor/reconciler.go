@@ -204,6 +204,7 @@ func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, secret *co
 		secretContainingToken = secret // token is expected in source secret by default
 		renewTimestamp        = secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
 		checkBundle, _        = strconv.ParseBool(secret.Annotations[resourcesv1alpha1.ServiceAccountInjectCABundle])
+		log                   = logf.FromContext(ctx)
 	)
 
 	if len(renewTimestamp) == 0 {
@@ -239,10 +240,13 @@ func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, secret *co
 		}
 	}
 
-	// Check if the token belongs to the current ServiceAccount by verifying the UID.
+	// Check if the token belongs to the current ServiceAccount by verifying the UID (it could have been deleted and
+	// recreated with the same name which results in a change of the UID, i.e., the old token is now invalid).
 	// If there is a mismatch, a new token needs to be requested.
-	serviceAccountTokenUid := kubernetes.ExtractServiceAccountUID(string(secret.Data[resourcesv1alpha1.DataKeyToken]))
-	if serviceAccountTokenUid != "" && serviceAccountTokenUid != string(serviceAccount.UID) {
+	serviceAccountTokenUID, err := kubernetes.ExtractServiceAccountUID(string(secret.Data[resourcesv1alpha1.DataKeyToken]))
+	if err != nil {
+		log.V(1).Info("Secret token did not contain valid service account reference", "error", err)
+	} else if serviceAccountTokenUID != string(serviceAccount.UID) {
 		return 0, nil
 	}
 
