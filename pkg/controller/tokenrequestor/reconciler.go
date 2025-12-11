@@ -74,7 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, err
 	}
 
-	requeueAfter, err := r.computeRequeueAfterDuration(ctx, secret, serviceAccount)
+	requeueAfter, err := r.computeRequeueAfterDuration(ctx, log, secret, serviceAccount)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -199,12 +199,11 @@ func (r *Reconciler) createServiceAccountToken(ctx context.Context, sa *corev1.S
 	return tokenRequest, nil
 }
 
-func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, secret *corev1.Secret, serviceAccount *corev1.ServiceAccount) (time.Duration, error) {
+func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, log logr.Logger, secret *corev1.Secret, serviceAccount *corev1.ServiceAccount) (time.Duration, error) {
 	var (
 		secretContainingToken = secret // token is expected in source secret by default
 		renewTimestamp        = secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
 		checkBundle, _        = strconv.ParseBool(secret.Annotations[resourcesv1alpha1.ServiceAccountInjectCABundle])
-		log                   = logf.FromContext(ctx)
 	)
 
 	if len(renewTimestamp) == 0 {
@@ -245,8 +244,12 @@ func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, secret *co
 	// If there is a mismatch, a new token needs to be requested.
 	serviceAccountTokenUID, err := kubernetes.ExtractServiceAccountUID(string(secret.Data[resourcesv1alpha1.DataKeyToken]))
 	if err != nil {
-		log.V(1).Info("Secret token did not contain valid service account reference", "error", err)
+		// Log only, but do not return the error, so that a malformed token does not block the reconciliation.
+		// Instead, it will fall back to requesting a new token once the current one has expired.
+		log.Error(err, "Could not extract service account UID from token")
 	} else if serviceAccountTokenUID != string(serviceAccount.UID) {
+		log.V(1).Info("The service account uid referenced in the secret token does not match the service account referenced. Will request a new token.",
+			"secretTokenUID", serviceAccountTokenUID, "serviceAccountUID", string(serviceAccount.UID))
 		return 0, nil
 	}
 

@@ -244,11 +244,11 @@ var _ = Describe("TokenRequestor tests", func() {
 				g.Expect(initialSecret.Annotations).To(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"))
 			}).Should(Succeed())
 
-			By("Delete and recreate the Service account (with a new UID)")
+			By("Delete and recreate the service account (results in a new UID)")
 			Expect(testClient.Delete(ctx, serviceAccount)).To(Succeed())
 			Expect(testClient.Create(ctx, newServiceAccount)).To(Succeed())
 
-			By("Verify that the ServiceAccount UID has changed and that a new token has been requested")
+			By("Verify that the service account UID has changed and that a new token has been requested")
 			Expect(newServiceAccount.UID).NotTo(Equal(serviceAccount.UID))
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())

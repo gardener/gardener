@@ -528,9 +528,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		Context("service account UID validation", func() {
-			var (
-				serviceAccountUID types.UID
-			)
+			var serviceAccountUID types.UID
 
 			BeforeEach(func() {
 				serviceAccountUID = "test-sa-uid-123"
