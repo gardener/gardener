@@ -192,11 +192,6 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Ensuring advertised addresses for the Shoot",
-			Fn:           botanist.UpdateAdvertisedAddresses,
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
-		})
 		reconcileIstioInternalLoadbalancingConfigMap = g.Add(flow.Task{
 			Name:         "Reconcile Istio internal load balancing ConfigMap",
 			Fn:           flow.TaskFn(botanist.ReconcileIstioInternalLoadBalancingConfigMap).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -208,6 +203,11 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           flow.TaskFn(botanist.InitializeSecretsManagement).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       !nonTerminatingNamespace,
 			Dependencies: flow.NewTaskIDs(deployNamespace, reconcileIstioInternalLoadbalancingConfigMap),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Ensuring advertised addresses for the Shoot",
+			Fn:           botanist.UpdateAdvertisedAddresses,
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, waitUntilKubeAPIServerServiceIsReady),
 		})
 		deployReferencedResources = g.Add(flow.Task{
 			Name:         "Deploying referenced resources",
