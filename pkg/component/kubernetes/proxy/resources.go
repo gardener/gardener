@@ -22,6 +22,7 @@ import (
 	kubeproxyconfigv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	"k8s.io/utils/ptr"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -470,7 +471,7 @@ func (k *kubeProxy) getRawComponentConfig() (string, error) {
 		FeatureGates: k.values.FeatureGates,
 	}
 
-	if !k.values.IPVSEnabled && len(k.values.PodNetworkCIDRs) > 0 {
+	if k.values.ProxyMode != gardencore.ProxyModeIPVS && len(k.values.PodNetworkCIDRs) > 0 {
 		if err := netutils.CheckDualStackForKubeComponents(k.values.PodNetworkCIDRs, "pod"); err != nil {
 			return "", err
 		}
@@ -482,10 +483,16 @@ func (k *kubeProxy) getRawComponentConfig() (string, error) {
 }
 
 func (k *kubeProxy) getMode() kubeproxyconfigv1alpha1.ProxyMode {
-	if k.values.IPVSEnabled {
+	switch k.values.ProxyMode {
+	case gardencore.ProxyModeIPTables:
+		return "iptables"
+	case gardencore.ProxyModeIPVS:
 		return "ipvs"
+	case gardencore.ProxyModeNFTables:
+		return "nftables"
+	default:
+		return "iptables"
 	}
-	return "iptables"
 }
 
 func (k *kubeProxy) getInitContainers(image string, kubernetesVersion *semver.Version) []corev1.Container {

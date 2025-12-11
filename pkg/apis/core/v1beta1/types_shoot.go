@@ -1324,6 +1324,8 @@ type ProxyMode string
 const (
 	// ProxyModeIPTables uses iptables as proxy implementation.
 	ProxyModeIPTables ProxyMode = "IPTables"
+	// ProxyModeNFTables uses nftables as proxy implementation.
+	ProxyModeNFTables ProxyMode = "NFTables"
 	// ProxyModeIPVS uses ipvs as proxy implementation.
 	ProxyModeIPVS ProxyMode = "IPVS"
 )

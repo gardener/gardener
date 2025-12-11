@@ -162,15 +162,15 @@ var _ = Describe("shoot", func() {
 			)
 		})
 
-		Describe("#IPVSEnabled", func() {
+		Describe("#ProxyMode", func() {
 			It("should return false when KubeProxy is null", func() {
 				shoot.GetInfo().Spec.Kubernetes.KubeProxy = nil
-				Expect(shoot.IPVSEnabled()).To(BeFalse())
+				Expect(shoot.ProxyMode()).To(Equal(gardencorev1beta1.ProxyModeIPTables))
 			})
 
 			It("should return false when KubeProxy.Mode is null", func() {
 				shoot.GetInfo().Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{}
-				Expect(shoot.IPVSEnabled()).To(BeFalse())
+				Expect(shoot.ProxyMode()).To(Equal(gardencorev1beta1.ProxyModeIPTables))
 			})
 
 			It("should return false when KubeProxy.Mode is not IPVS", func() {
@@ -178,7 +178,7 @@ var _ = Describe("shoot", func() {
 				shoot.GetInfo().Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{
 					Mode: &mode,
 				}
-				Expect(shoot.IPVSEnabled()).To(BeFalse())
+				Expect(shoot.ProxyMode()).To(Equal(gardencorev1beta1.ProxyModeIPTables))
 			})
 
 			It("should return true when KubeProxy.Mode is IPVS", func() {
@@ -186,7 +186,7 @@ var _ = Describe("shoot", func() {
 				shoot.GetInfo().Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{
 					Mode: &mode,
 				}
-				Expect(shoot.IPVSEnabled()).To(BeTrue())
+				Expect(shoot.ProxyMode()).To(Equal(gardencorev1beta1.ProxyModeIPVS))
 			})
 		})
 

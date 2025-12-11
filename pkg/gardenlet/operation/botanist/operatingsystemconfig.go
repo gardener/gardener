@@ -148,7 +148,7 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 		clusterDNSAddresses = clusterDNSAddresses[:1]
 	}
 
-	if b.Shoot.NodeLocalDNSEnabled && b.Shoot.IPVSEnabled() {
+	if b.Shoot.NodeLocalDNSEnabled && b.Shoot.ProxyMode() == gardencorev1beta1.ProxyModeIPVS {
 		// If IPVS is enabled then instruct the kubelet to create pods resolving DNS to the `nodelocaldns` network
 		// interface link-local ip address. For more information checkout the usage documentation under
 		// https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/.
