@@ -149,7 +149,7 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 		if err := (&service.Reconciler{}).AddToManager(mgr, predicate.And(
 			virtualGardenIstioIngressPredicate,
 			predicate.NewPredicateFuncs(func(obj client.Object) bool {
-				return obj.GetNamespace() == "virtual-garden-"+v1beta1constants.DefaultSNIIngressNamespace
+				return obj.GetNamespace() == operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DefaultSNIIngressNamespace
 			})),
 		); err != nil {
 			return fmt.Errorf("failed adding Service controller: %w", err)

@@ -28,4 +28,7 @@ const (
 	// OperationRotateWorkloadIdentityKeyComplete is a constant for an annotation on a Shoot indicating that the
 	// rotation of the workload identity signing key shall be completed.
 	OperationRotateWorkloadIdentityKeyComplete = "rotate-workload-identity-key-complete"
+
+	// VirtualGardenNamePrefix is a constant to prefix various resource names for the virtual garden.
+	VirtualGardenNamePrefix = "virtual-garden-"
 )

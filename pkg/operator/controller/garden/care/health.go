@@ -26,8 +26,6 @@ import (
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 )
 
-const virtualGardenPrefix = "virtual-garden-"
-
 // health contains information needed to execute health checks for garden.
 type health struct {
 	garden              *operatorv1alpha1.Garden
@@ -137,8 +135,8 @@ func (h *health) checkVirtualComponents(ctx context.Context, condition gardencor
 	if exitCondition, err := h.healthChecker.CheckControlPlane(
 		ctx,
 		h.gardenNamespace,
-		sets.New(virtualGardenPrefix+v1beta1constants.DeploymentNameGardenerResourceManager, virtualGardenPrefix+v1beta1constants.DeploymentNameKubeAPIServer, virtualGardenPrefix+v1beta1constants.DeploymentNameKubeControllerManager),
-		sets.New(virtualGardenPrefix+v1beta1constants.ETCDMain, virtualGardenPrefix+v1beta1constants.ETCDEvents),
+		sets.New(operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameGardenerResourceManager, operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameKubeAPIServer, operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameKubeControllerManager),
+		sets.New(operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.ETCDMain, operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.ETCDEvents),
 		condition,
 	); err != nil || exitCondition != nil {
 		return exitCondition, err

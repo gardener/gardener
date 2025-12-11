@@ -383,8 +383,6 @@ func (r *Reconciler) enableAdmissionControllerAuthorizers(ctx context.Context, v
 	return true, nil
 }
 
-const namePrefix = "virtual-garden-"
-
 func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	var defaultNotReadyTolerationSeconds, defaultUnreachableTolerationSeconds *int64
 	if nodeToleration := r.Config.NodeToleration; nodeToleration != nil {
@@ -414,7 +412,7 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 				{
 					NamespaceSelector: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot},
 				}, {
-					KubeAPIServerNamePrefix: namePrefix,
+					KubeAPIServerNamePrefix: operatorv1alpha1.VirtualGardenNamePrefix,
 					NamespaceSelector:       map[string]string{"kubernetes.io/metadata.name": v1beta1constants.GardenNamespace},
 					ObjectSelector: &metav1.LabelSelector{
 						MatchExpressions: []metav1.LabelSelectorRequirement{
@@ -437,7 +435,7 @@ func (r *Reconciler) newVirtualGardenGardenerResourceManager(secretsManager secr
 		IsWorkerless:             true,
 		LogLevel:                 r.Config.LogLevel,
 		LogFormat:                r.Config.LogFormat,
-		NamePrefix:               namePrefix,
+		NamePrefix:               operatorv1alpha1.VirtualGardenNamePrefix,
 		PriorityClassName:        v1beta1constants.PriorityClassNameGardenSystem400,
 		RuntimeKubernetesVersion: r.RuntimeVersion,
 		SecretNameServerCA:       operatorv1alpha1.SecretNameCARuntime,
@@ -569,7 +567,7 @@ func (r *Reconciler) newEtcd(
 		r.GardenNamespace,
 		secretsManager,
 		etcd.Values{
-			NamePrefix:                  namePrefix,
+			NamePrefix:                  operatorv1alpha1.VirtualGardenNamePrefix,
 			Role:                        role,
 			Class:                       class,
 			Replicas:                    replicas,
@@ -613,7 +611,7 @@ func (r *Reconciler) newKubeAPIServerServiceWithSuffix(log logr.Logger, garden *
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		&kubeapiserverexposure.ServiceValues{
-			NamePrefix:                  namePrefix,
+			NamePrefix:                  operatorv1alpha1.VirtualGardenNamePrefix,
 			NameSuffix:                  suffix,
 			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings) && !features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
 			RuntimeKubernetesVersion:    r.RuntimeVersion,
@@ -734,7 +732,7 @@ func (r *Reconciler) newKubeAPIServer(
 		r.RuntimeVersion,
 		targetVersion,
 		secretsManager,
-		namePrefix,
+		operatorv1alpha1.VirtualGardenNamePrefix,
 		apiServerConfig,
 		kubeAPIServerAutoscalingConfig(garden),
 		kubeapiserver.VPNConfig{Enabled: false},
@@ -861,7 +859,7 @@ func (r *Reconciler) newKubeControllerManager(
 		r.RuntimeVersion,
 		targetVersion,
 		secretsManager,
-		namePrefix,
+		operatorv1alpha1.VirtualGardenNamePrefix,
 		config,
 		v1beta1constants.PriorityClassNameGardenSystem300,
 		true,
@@ -900,12 +898,12 @@ func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Gard
 		ctx,
 		r.RuntimeClientSet.Client(),
 		r.RuntimeClientSet.ChartRenderer(),
-		namePrefix,
+		operatorv1alpha1.VirtualGardenNamePrefix,
 		v1beta1constants.DefaultSNIIngressNamespace,
 		v1beta1constants.PriorityClassNameGardenSystemCritical,
 		true,
 		sharedcomponent.GetIstioZoneLabels(nil, nil),
-		gardenerutils.NetworkPolicyLabel(r.GardenNamespace+"-"+kubeapiserverconstants.ServiceName(namePrefix), kubeapiserverconstants.Port),
+		gardenerutils.NetworkPolicyLabel(r.GardenNamespace+"-"+kubeapiserverconstants.ServiceName(operatorv1alpha1.VirtualGardenNamePrefix), kubeapiserverconstants.Port),
 		annotations,
 		nil,
 		nil,
@@ -962,7 +960,7 @@ func (r *Reconciler) newSNI(ctx context.Context, garden *operatorv1alpha1.Garden
 
 	return kubeapiserverexposure.NewSNI(
 		r.RuntimeClientSet.Client(),
-		namePrefix+v1beta1constants.DeploymentNameKubeAPIServer,
+		operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameKubeAPIServer,
 		r.GardenNamespace,
 		secretsManager,
 		func() *kubeapiserverexposure.SNIValues {
@@ -985,7 +983,7 @@ func (r *Reconciler) newGardenerAccess(garden *operatorv1alpha1.Garden, secretsM
 		r.GardenNamespace,
 		secretsManager,
 		gardeneraccess.Values{
-			ServerInCluster:       fmt.Sprintf("%s%s.%s.svc.cluster.local", namePrefix, v1beta1constants.DeploymentNameKubeAPIServer, r.GardenNamespace),
+			ServerInCluster:       fmt.Sprintf("%s%s.%s.svc.cluster.local", operatorv1alpha1.VirtualGardenNamePrefix, v1beta1constants.DeploymentNameKubeAPIServer, r.GardenNamespace),
 			ServerOutOfCluster:    v1beta1helper.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name),
 			ManagedResourceLabels: map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)},
 			IsGardenCluster:       true,
