@@ -246,10 +246,13 @@ func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, log logr.L
 	if err != nil {
 		// Log only, but do not return the error, so that a malformed token does not block the reconciliation.
 		// Instead, it will fall back to requesting a new token once the current one has expired.
+		// Not returning the error is okay, as checking the UID is helpful, but not critical for correctness.
+		// The worst that can happen is that the token is used while it does not belong to the ServiceAccount anymore.
+		// Eventually, a new token will be requested once the current one has expired.
 		log.Error(err, "Could not extract service account UID from token")
 	} else if serviceAccountTokenUID != string(serviceAccount.UID) {
-		log.V(1).Info("The service account uid referenced in the secret token does not match the service account referenced. Will request a new token.",
-			"secretTokenUID", serviceAccountTokenUID, "serviceAccountUID", string(serviceAccount.UID))
+		log.Info("The service account uid referenced in the secret token does not match the service account referenced. Will request a new token",
+			"serviceAccountUIDInToken", serviceAccountTokenUID, "serviceAccountUID", string(serviceAccount.UID))
 		return 0, nil
 	}
 
