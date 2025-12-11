@@ -41,7 +41,7 @@ const (
 
 	volumeMountPathConfig      = "/etc/gardener-dashboard/config"
 	volumeMountPathLoginConfig = "/app/public/" + dataKeyLoginConfig
-	volumeMountPathAssets      = "/app/public/static/assets"
+	volumeMountPathAssets      = "/app/public/static/custom-assets"
 
 	volumeSubPathSession           = "sessionSecret"
 	volumeMountPathSession         = "/etc/gardener-dashboard/secrets/session/sessionSecret"

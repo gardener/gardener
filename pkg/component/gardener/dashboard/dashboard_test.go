@@ -567,7 +567,7 @@ frontend:
 				})
 				obj.Spec.Template.Spec.Containers[0].VolumeMounts = append(obj.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 					Name:      "gardener-dashboard-assets",
-					MountPath: "/app/public/static/assets",
+					MountPath: "/app/public/static/custom-assets",
 				})
 			}
 
