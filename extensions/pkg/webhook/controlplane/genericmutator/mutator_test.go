@@ -32,7 +32,6 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
 	extensionsmockgenericmutator "github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator/mock"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockkubelet "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet/mock"
 	mockutils "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils/mock"
@@ -174,7 +173,7 @@ var _ = Describe("Mutator", func() {
 			Entry(
 				"EnsureKubeAPIServerDeployment with a kube-apiserver deployment",
 				func() {
-					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer}}
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver"}}
 					ensurer.EXPECT().EnsureKubeAPIServerDeployment(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
@@ -188,7 +187,7 @@ var _ = Describe("Mutator", func() {
 			Entry(
 				"EnsureKubeAPIServerDeployment with a kube-apiserver deployment and existing deployment",
 				func() {
-					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer}}
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver"}}
 					oldObj = newObj.DeepCopyObject().(client.Object)
 					ensurer.EXPECT().EnsureKubeAPIServerDeployment(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
@@ -196,7 +195,7 @@ var _ = Describe("Mutator", func() {
 			Entry(
 				"EnsureKubeControllerManagerDeployment with a kube-controller-manager deployment",
 				func() {
-					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeControllerManager}}
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager"}}
 					ensurer.EXPECT().EnsureKubeControllerManagerDeployment(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
@@ -210,7 +209,7 @@ var _ = Describe("Mutator", func() {
 			Entry(
 				"EnsureKubeControllerManagerDeployment with a kube-controller-manager deployment and existing deployment",
 				func() {
-					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeControllerManager}}
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager"}}
 					oldObj = newObj.DeepCopyObject().(client.Object)
 					ensurer.EXPECT().EnsureKubeControllerManagerDeployment(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
@@ -218,14 +217,14 @@ var _ = Describe("Mutator", func() {
 			Entry(
 				"EnsureKubeSchedulerDeployment with a kube-scheduler deployment",
 				func() {
-					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeScheduler}}
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-scheduler"}}
 					ensurer.EXPECT().EnsureKubeSchedulerDeployment(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
 			Entry(
 				"EnsureKubeSchedulerDeployment with a kube-scheduler deployment and existing deployment",
 				func() {
-					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeScheduler}}
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-scheduler"}}
 					oldObj = newObj.DeepCopyObject().(client.Object)
 					ensurer.EXPECT().EnsureKubeSchedulerDeployment(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
@@ -233,14 +232,14 @@ var _ = Describe("Mutator", func() {
 			Entry(
 				"EnsureClusterAutoscalerDeployment with a cluster-autoscaler deployment",
 				func() {
-					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameClusterAutoscaler}}
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler"}}
 					ensurer.EXPECT().EnsureClusterAutoscalerDeployment(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
 			Entry(
 				"EnsureMachineControllerManagerDeployment with a machine-controller-manager deployment",
 				func() {
-					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameMachineControllerManager}}
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager"}}
 					ensurer.EXPECT().EnsureMachineControllerManagerDeployment(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
@@ -254,7 +253,7 @@ var _ = Describe("Mutator", func() {
 			Entry(
 				"EnsureClusterAutoscalerDeployment with a cluster-autoscaler deployment and existing deployment",
 				func() {
-					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameClusterAutoscaler}}
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler"}}
 					oldObj = newObj.DeepCopyObject().(client.Object)
 					ensurer.EXPECT().EnsureClusterAutoscalerDeployment(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
@@ -262,14 +261,14 @@ var _ = Describe("Mutator", func() {
 			Entry(
 				"EnsureVPNSeedServerDeployment with a vpn-seed-server deployment",
 				func() {
-					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPNSeedServer}}
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed-server"}}
 					ensurer.EXPECT().EnsureVPNSeedServerDeployment(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
 			Entry(
 				"EnsureVPNSeedServerDeployment with a vpn-seed-server deployment and existing deployment",
 				func() {
-					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPNSeedServer}}
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed-server"}}
 					oldObj = newObj.DeepCopyObject().(client.Object)
 					ensurer.EXPECT().EnsureVPNSeedServerDeployment(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
@@ -277,14 +276,14 @@ var _ = Describe("Mutator", func() {
 			Entry(
 				"EnsureVPNSeedServerStatefulSet with a vpn-seed-server statefulset",
 				func() {
-					newObj = &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.StatefulSetNameVPNSeedServer}}
+					newObj = &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed-server"}}
 					ensurer.EXPECT().EnsureVPNSeedServerStatefulSet(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
 			Entry(
 				"EnsureVPNSeedServerStatefulSet with a vpn-seed-server statefulset and existing statefulset",
 				func() {
-					newObj = &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.StatefulSetNameVPNSeedServer}}
+					newObj = &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed-server"}}
 					oldObj = newObj.DeepCopyObject().(client.Object)
 					ensurer.EXPECT().EnsureVPNSeedServerStatefulSet(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
@@ -307,7 +306,7 @@ var _ = Describe("Mutator", func() {
 		},
 			Entry(
 				"with a etcd-main",
-				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDMain, Namespace: namespace}},
+				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: "etcd-main", Namespace: namespace}},
 				nil,
 			),
 			Entry(
@@ -317,12 +316,12 @@ var _ = Describe("Mutator", func() {
 			),
 			Entry(
 				"with a etcd-main and existing druid",
-				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDMain, Namespace: namespace}},
-				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDMain, Namespace: namespace}},
+				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: "etcd-main", Namespace: namespace}},
+				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: "etcd-main", Namespace: namespace}},
 			),
 			Entry(
 				"with a etcd-events",
-				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDEvents, Namespace: namespace}},
+				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: "etcd-events", Namespace: namespace}},
 				nil,
 			),
 			Entry(
@@ -332,8 +331,8 @@ var _ = Describe("Mutator", func() {
 			),
 			Entry(
 				"with a etcd-events and existing druid",
-				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDEvents, Namespace: namespace}},
-				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDEvents, Namespace: namespace}},
+				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: "etcd-events", Namespace: namespace}},
+				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: "etcd-events", Namespace: namespace}},
 			),
 		)
 
@@ -350,7 +349,7 @@ var _ = Describe("Mutator", func() {
 					newOSC = &extensionsv1alpha1.OperatingSystemConfig{
 						ObjectMeta: metav1.ObjectMeta{Name: "test-provision", Namespace: "test"},
 						Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
-							Purpose: extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
+							Purpose: "provision",
 						},
 					}
 				})
@@ -393,7 +392,7 @@ var _ = Describe("Mutator", func() {
 					newOSC = &extensionsv1alpha1.OperatingSystemConfig{
 						ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "test"},
 						Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
-							Purpose: extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
+							Purpose: "reconcile",
 							CRIConfig: &extensionsv1alpha1.CRIConfig{
 								Name: "containerd",
 								Containerd: &extensionsv1alpha1.ContainerdConfig{
@@ -404,13 +403,13 @@ var _ = Describe("Mutator", func() {
 							},
 							Units: []extensionsv1alpha1.Unit{
 								{
-									Name:    v1beta1constants.OperatingSystemConfigUnitNameKubeletService,
+									Name:    "kubelet.service",
 									Content: ptr.To(newServiceContent),
 								},
 							},
 							Files: []extensionsv1alpha1.File{
 								{
-									Path: v1beta1constants.OperatingSystemConfigFilePathKubeletConfig,
+									Path: "/var/lib/kubelet/config/kubelet",
 									Content: extensionsv1alpha1.FileContent{
 										Inline: &extensionsv1alpha1.FileContentInline{
 											Data: newKubeletConfigData,
@@ -418,7 +417,7 @@ var _ = Describe("Mutator", func() {
 									},
 								},
 								{
-									Path: v1beta1constants.OperatingSystemConfigFilePathKernelSettings,
+									Path: "/etc/sysctl.d/99-k8s-general.conf",
 									Content: extensionsv1alpha1.FileContent{
 										Inline: &extensionsv1alpha1.FileContentInline{
 											Data: newKubernetesGeneralConfigData,
@@ -585,7 +584,7 @@ var _ = Describe("Mutator", func() {
 					err := mutator.Mutate(context.Background(), newOSC, oldOSC)
 					Expect(err).To(Not(HaveOccurred()))
 
-					general := extensionswebhook.FileWithPath(newOSC.Spec.Files, v1beta1constants.OperatingSystemConfigFilePathKernelSettings)
+					general := extensionswebhook.FileWithPath(newOSC.Spec.Files, "/etc/sysctl.d/99-k8s-general.conf")
 					Expect(general).To(Not(BeNil()))
 					Expect(general.Content.Inline).To(Equal(&extensionsv1alpha1.FileContentInline{Data: newKubernetesGeneralConfigData}))
 					cloudProvider := extensionswebhook.FileWithPath(newOSC.Spec.Files, genericmutator.CloudProviderConfigPath)
@@ -597,7 +596,7 @@ var _ = Describe("Mutator", func() {
 })
 
 func checkOperatingSystemConfig(osc *extensionsv1alpha1.OperatingSystemConfig) {
-	kubeletUnit := extensionswebhook.UnitWithName(osc.Spec.Units, v1beta1constants.OperatingSystemConfigUnitNameKubeletService)
+	kubeletUnit := extensionswebhook.UnitWithName(osc.Spec.Units, "kubelet.service")
 	ExpectWithOffset(1, kubeletUnit).To(Not(BeNil()))
 	ExpectWithOffset(1, kubeletUnit.Content).To(Equal(ptr.To(mutatedServiceContent)))
 
@@ -607,17 +606,17 @@ func checkOperatingSystemConfig(osc *extensionsv1alpha1.OperatingSystemConfig) {
 	customFile := extensionswebhook.FileWithPath(osc.Spec.Files, "/test/path")
 	ExpectWithOffset(1, customFile).To(Not(BeNil()))
 
-	kubeletFile := extensionswebhook.FileWithPath(osc.Spec.Files, v1beta1constants.OperatingSystemConfigFilePathKubeletConfig)
+	kubeletFile := extensionswebhook.FileWithPath(osc.Spec.Files, "/var/lib/kubelet/config/kubelet")
 	ExpectWithOffset(1, kubeletFile).To(Not(BeNil()))
 	ExpectWithOffset(1, kubeletFile.Content.Inline).To(Equal(&extensionsv1alpha1.FileContentInline{Data: mutatedKubeletConfigData}))
 
-	general := extensionswebhook.FileWithPath(osc.Spec.Files, v1beta1constants.OperatingSystemConfigFilePathKernelSettings)
+	general := extensionswebhook.FileWithPath(osc.Spec.Files, "/etc/sysctl.d/99-k8s-general.conf")
 	ExpectWithOffset(1, general).To(Not(BeNil()))
 	ExpectWithOffset(1, general.Content.Inline).To(Equal(&extensionsv1alpha1.FileContentInline{Data: mutatedKubernetesGeneralConfigData}))
 
-	cloudProvider := extensionswebhook.FileWithPath(osc.Spec.Files, genericmutator.CloudProviderConfigPath)
+	cloudProvider := extensionswebhook.FileWithPath(osc.Spec.Files, "/var/lib/kubelet/cloudprovider.conf")
 	ExpectWithOffset(1, cloudProvider).To(Not(BeNil()))
-	ExpectWithOffset(1, cloudProvider.Path).To(Equal(genericmutator.CloudProviderConfigPath))
+	ExpectWithOffset(1, cloudProvider.Path).To(Equal("/var/lib/kubelet/cloudprovider.conf"))
 	ExpectWithOffset(1, cloudProvider.Permissions).To(PointTo(Equal(uint32(0644))))
 	ExpectWithOffset(1, cloudProvider.Content.Inline).To(Equal(&extensionsv1alpha1.FileContentInline{Data: cloudproviderconfEncoded, Encoding: encoding}))
 }
