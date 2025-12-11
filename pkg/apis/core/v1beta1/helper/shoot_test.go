@@ -271,7 +271,7 @@ var _ = Describe("Helper", func() {
 		Entry("should return false when AutoRotation is nil", &gardencorev1beta1.Maintenance{}, false),
 		Entry("should return false when Credentials field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{}}, false),
 		Entry("should return false when Observability field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{}}}, false),
-		Entry("should return false when enabled is nil",
+		Entry("should return false when rotation period is nil",
 			&gardencorev1beta1.Maintenance{
 				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
 					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
@@ -279,22 +279,22 @@ var _ = Describe("Helper", func() {
 					},
 				},
 			}, false),
-		Entry("should return false when enabled is false",
+		Entry("should return false when rotation period is zero",
 			&gardencorev1beta1.Maintenance{
 				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
 					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
 						Observability: &gardencorev1beta1.MaintenanceRotationConfig{
-							Enabled: ptr.To(false),
+							RotationPeriod: &metav1.Duration{Duration: 0},
 						},
 					},
 				},
 			}, false),
-		Entry("should return true when enabled is true",
+		Entry("should return true when rotation period is not zero",
 			&gardencorev1beta1.Maintenance{
 				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
 					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
 						Observability: &gardencorev1beta1.MaintenanceRotationConfig{
-							Enabled: ptr.To(true),
+							RotationPeriod: &metav1.Duration{Duration: 1 * time.Hour},
 						},
 					},
 				},
@@ -315,7 +315,7 @@ var _ = Describe("Helper", func() {
 		Entry("should return false when AutoRotation is nil", &gardencorev1beta1.Maintenance{}, false),
 		Entry("should return false when Credentials field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{}}, false),
 		Entry("should return false when SSHKeypair field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{}}}, false),
-		Entry("should return false when enabled is nil",
+		Entry("should return false when rotation period is nil",
 			&gardencorev1beta1.Maintenance{
 				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
 					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
@@ -323,22 +323,22 @@ var _ = Describe("Helper", func() {
 					},
 				},
 			}, false),
-		Entry("should return false when enabled is false",
+		Entry("should return false when rotation period is zero",
 			&gardencorev1beta1.Maintenance{
 				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
 					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
 						SSHKeypair: &gardencorev1beta1.MaintenanceRotationConfig{
-							Enabled: ptr.To(false),
+							RotationPeriod: &metav1.Duration{Duration: 0},
 						},
 					},
 				},
 			}, false),
-		Entry("should return true when enabled is true",
+		Entry("should return true when rotation period is not zero",
 			&gardencorev1beta1.Maintenance{
 				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
 					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
 						SSHKeypair: &gardencorev1beta1.MaintenanceRotationConfig{
-							Enabled: ptr.To(true),
+							RotationPeriod: &metav1.Duration{Duration: 1 * time.Hour},
 						},
 					},
 				},
@@ -359,7 +359,7 @@ var _ = Describe("Helper", func() {
 		Entry("should return false when AutoRotation is nil", &gardencorev1beta1.Maintenance{}, false),
 		Entry("should return false when Credentials field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{}}, false),
 		Entry("should return false when ETCDEncryptionKey field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{}}}, false),
-		Entry("should return false when enabled is nil",
+		Entry("should return false when rotation period is nil",
 			&gardencorev1beta1.Maintenance{
 				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
 					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
@@ -367,22 +367,22 @@ var _ = Describe("Helper", func() {
 					},
 				},
 			}, false),
-		Entry("should return false when enabled is false",
+		Entry("should return false when rotation period is zero",
 			&gardencorev1beta1.Maintenance{
 				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
 					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
 						ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
-							Enabled: ptr.To(false),
+							RotationPeriod: &metav1.Duration{Duration: 0},
 						},
 					},
 				},
 			}, false),
-		Entry("should return true when enabled is true",
+		Entry("should return true when rotation period is not zero",
 			&gardencorev1beta1.Maintenance{
 				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
 					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
 						ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
-							Enabled: ptr.To(true),
+							RotationPeriod: &metav1.Duration{Duration: 1 * time.Hour},
 						},
 					},
 				},

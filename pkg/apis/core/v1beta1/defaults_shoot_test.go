@@ -618,7 +618,6 @@ var _ = Describe("Shoot defaulting", func() {
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair).To(Equal(&MaintenanceRotationConfig{
-				Enabled:        ptr.To(false),
 				RotationPeriod: &metav1.Duration{Duration: 7 * 24 * time.Hour},
 			}))
 			Expect(obj.Spec.Maintenance.AutoRotation.Credentials.Observability).To(BeNil())
@@ -629,24 +628,21 @@ var _ = Describe("Shoot defaulting", func() {
 			obj.Spec.Maintenance = &Maintenance{
 				AutoRotation: &MaintenanceAutoRotation{
 					Credentials: &MaintenanceCredentialsAutoRotation{
-						SSHKeypair:        &MaintenanceRotationConfig{Enabled: ptr.To(true), RotationPeriod: &metav1.Duration{Duration: 48 * time.Hour}},
-						Observability:     &MaintenanceRotationConfig{Enabled: ptr.To(true), RotationPeriod: &metav1.Duration{Duration: 1 * time.Hour}},
-						ETCDEncryptionKey: &MaintenanceRotationConfig{Enabled: ptr.To(true), RotationPeriod: &metav1.Duration{Duration: 168 * time.Hour}},
+						SSHKeypair:        &MaintenanceRotationConfig{RotationPeriod: &metav1.Duration{Duration: 48 * time.Hour}},
+						Observability:     &MaintenanceRotationConfig{RotationPeriod: &metav1.Duration{Duration: 1 * time.Hour}},
+						ETCDEncryptionKey: &MaintenanceRotationConfig{RotationPeriod: &metav1.Duration{Duration: 168 * time.Hour}},
 					},
 				},
 			}
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair).To(Equal(&MaintenanceRotationConfig{
-				Enabled:        ptr.To(true),
 				RotationPeriod: &metav1.Duration{Duration: 48 * time.Hour},
 			}))
 			Expect(obj.Spec.Maintenance.AutoRotation.Credentials.Observability).To(Equal(&MaintenanceRotationConfig{
-				Enabled:        ptr.To(true),
 				RotationPeriod: &metav1.Duration{Duration: 1 * time.Hour},
 			}))
 			Expect(obj.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey).To(Equal(&MaintenanceRotationConfig{
-				Enabled:        ptr.To(true),
 				RotationPeriod: &metav1.Duration{Duration: 168 * time.Hour},
 			}))
 		})

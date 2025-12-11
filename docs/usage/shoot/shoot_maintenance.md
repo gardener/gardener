@@ -92,18 +92,16 @@ spec:
   maintenance:
     autoRotation:
       credentials:
-        observability:
-          enabled: true # default: false
+        observability: # set this field to enable automatic rotation
           rotationPeriod: 168h # default: 7d(168h)
-        sshKeypair:
-          enabled: true # default: false
+        sshKeypair: # set this field to enable automatic rotation
           rotationPeriod: 168h # default: 7d(168h)
-        etcdEncryptionKey:
-          enabled: true # default: false
+        etcdEncryptionKey: # set this field to enable automatic rotation
           rotationPeriod: 168h # default: 7d(168h)
 ```
 
 During the daily maintenance, the `gardener-controller-manager` starts the rotation for specific credentials if the Shoot opted-in for automatic rotation for the given credential and the set period has passed since the last rotation completion.
+Automatic rotation can be disabled for specific credential by setting the `rotationPeriod` field to `0`.
 
 ## Cluster Reconciliation
 

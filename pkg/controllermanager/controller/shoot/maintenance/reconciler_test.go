@@ -1375,15 +1375,12 @@ var _ = Describe("Shoot Maintenance", func() {
 						AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
 							Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
 								SSHKeypair: &gardencorev1beta1.MaintenanceRotationConfig{
-									Enabled:        ptr.To(true),
 									RotationPeriod: &metav1.Duration{Duration: 24 * time.Hour},
 								},
 								Observability: &gardencorev1beta1.MaintenanceRotationConfig{
-									Enabled:        ptr.To(true),
 									RotationPeriod: &metav1.Duration{Duration: 24 * time.Hour},
 								},
 								ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
-									Enabled:        ptr.To(true),
 									RotationPeriod: &metav1.Duration{Duration: 24 * time.Hour},
 								},
 							},
@@ -1401,9 +1398,9 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should return empty results if no credentials rotation is required", func() {
-			shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.Enabled = ptr.To(false)
-			shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.Enabled = ptr.To(false)
-			shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.Enabled = ptr.To(false)
+			shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod.Duration = 0
+			shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.RotationPeriod.Duration = 0
+			shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod.Duration = 0
 
 			results := computeCredentialsToRotationResults(log, shoot, metav1.Time{Time: now})
 
@@ -1489,8 +1486,8 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should fail etcd encryption key rotation when etcd key rotation is in progress", func() {
-			shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.Enabled = ptr.To(false)
-			shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.Enabled = ptr.To(false)
+			shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod.Duration = 0
+			shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.RotationPeriod.Duration = 0
 			shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{
 				Rotation: &gardencorev1beta1.ShootCredentialsRotation{
 					ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{

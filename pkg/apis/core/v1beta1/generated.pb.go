@@ -13624,17 +13624,7 @@ func (m *MaintenanceRotationConfig) MarshalToSizedBuffer(dAtA []byte) (int, erro
 			i = encodeVarintGenerated(dAtA, i, uint64(size))
 		}
 		i--
-		dAtA[i] = 0x12
-	}
-	if m.Enabled != nil {
-		i--
-		if *m.Enabled {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x8
+		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
@@ -22024,9 +22014,6 @@ func (m *MaintenanceRotationConfig) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.Enabled != nil {
-		n += 2
-	}
 	if m.RotationPeriod != nil {
 		l = m.RotationPeriod.Size()
 		n += 1 + l + sovGenerated(uint64(l))
@@ -25889,7 +25876,6 @@ func (this *MaintenanceRotationConfig) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&MaintenanceRotationConfig{`,
-		`Enabled:` + valueToStringGenerated(this.Enabled) + `,`,
 		`RotationPeriod:` + strings.Replace(fmt.Sprintf("%v", this.RotationPeriod), "Duration", "v11.Duration", 1) + `,`,
 		`}`,
 	}, "")
@@ -46701,27 +46687,6 @@ func (m *MaintenanceRotationConfig) Unmarshal(dAtA []byte) error {
 		}
 		switch fieldNum {
 		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Enabled", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			b := bool(v != 0)
-			m.Enabled = &b
-		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field RotationPeriod", wireType)
 			}

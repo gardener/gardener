@@ -690,7 +690,8 @@ func IsSSHKeypairAutoRotationEnabled(shoot *gardencorev1beta1.Shoot) bool {
 		shoot.Spec.Maintenance.AutoRotation != nil &&
 		shoot.Spec.Maintenance.AutoRotation.Credentials != nil &&
 		shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair != nil &&
-		ptr.Deref(shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.Enabled, false)
+		shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod.Duration != 0
 }
 
 // IsObservabilityAutoRotationEnabled checks if automatic rotation of observability credentials is enabled in the maintenance window.
@@ -699,7 +700,8 @@ func IsObservabilityAutoRotationEnabled(shoot *gardencorev1beta1.Shoot) bool {
 		shoot.Spec.Maintenance.AutoRotation != nil &&
 		shoot.Spec.Maintenance.AutoRotation.Credentials != nil &&
 		shoot.Spec.Maintenance.AutoRotation.Credentials.Observability != nil &&
-		ptr.Deref(shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.Enabled, false)
+		shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.RotationPeriod != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.RotationPeriod.Duration != 0
 }
 
 // IsETCDEncryptionKeyAutoRotationEnabled checks if automatic rotation of etcd encryption key is enabled in the maintenance window.
@@ -708,7 +710,8 @@ func IsETCDEncryptionKeyAutoRotationEnabled(shoot *gardencorev1beta1.Shoot) bool
 		shoot.Spec.Maintenance.AutoRotation != nil &&
 		shoot.Spec.Maintenance.AutoRotation.Credentials != nil &&
 		shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey != nil &&
-		ptr.Deref(shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.Enabled, false)
+		shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod.Duration != 0
 }
 
 // IsUpdateStrategyInPlace returns true if the given machine update strategy is either AutoInPlaceUpdate or ManualInPlaceUpdate.

@@ -9193,18 +9193,6 @@ MaintenanceRotationConfig
 <tbody>
 <tr>
 <td>
-<code>enabled</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Enabled indicates whether automatic rotation should be performed (default: false).</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>rotationPeriod</code></br>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
@@ -9215,7 +9203,7 @@ Kubernetes meta/v1.Duration
 <td>
 <em>(Optional)</em>
 <p>RotationPeriod is the period between a completed rotation and the start of a new rotation (default: 7d).
-The allowed rotation period is between 30m and 90d.</p>
+The allowed rotation period is between 30m and 90d. When set to 0, rotation is disabled.</p>
 </td>
 </tr>
 </tbody>

@@ -1656,13 +1656,10 @@ type MaintenanceCredentialsAutoRotation struct {
 
 // MaintenanceRotationConfig contains configuration for automatic rotation.
 type MaintenanceRotationConfig struct {
-	// Enabled indicates whether automatic rotation should be performed (default: false).
-	// +optional
-	Enabled *bool `json:"enabled,omitempty" protobuf:"varint,1,opt,name=enabled"`
 	// RotationPeriod is the period between a completed rotation and the start of a new rotation (default: 7d).
-	// The allowed rotation period is between 30m and 90d.
+	// The allowed rotation period is between 30m and 90d. When set to 0, rotation is disabled.
 	// +optional
-	RotationPeriod *metav1.Duration `json:"rotationPeriod,omitempty" protobuf:"bytes,2,opt,name=rotationPeriod"`
+	RotationPeriod *metav1.Duration `json:"rotationPeriod,omitempty" protobuf:"bytes,1,opt,name=rotationPeriod"`
 }
 
 // MaintenanceTimeWindow contains information about the time window for maintenance operations.

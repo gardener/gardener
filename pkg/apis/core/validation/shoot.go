@@ -1946,7 +1946,7 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, wor
 		credentials := maintenance.AutoRotation.Credentials
 		credentialsPath := fldPath.Child("autoRotation", "credentials")
 
-		if credentials.Observability != nil && credentials.Observability.RotationPeriod != nil &&
+		if credentials.Observability != nil && credentials.Observability.RotationPeriod != nil && credentials.Observability.RotationPeriod.Duration != 0 &&
 			(credentials.Observability.RotationPeriod.Duration < 30*time.Minute || credentials.Observability.RotationPeriod.Duration > 90*24*time.Hour) {
 			allErrs = append(allErrs, field.Invalid(credentialsPath.Child("observability", "rotationPeriod"), credentials.Observability.RotationPeriod.Duration.String(), "value must be between 30m and 90d"))
 		}
@@ -1954,12 +1954,12 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, wor
 			sshKeypairPath := credentialsPath.Child("sshKeypair")
 			if workerless {
 				allErrs = append(allErrs, field.Forbidden(sshKeypairPath, workerlessErrorMsg))
-			} else if credentials.SSHKeypair.RotationPeriod != nil &&
+			} else if credentials.SSHKeypair.RotationPeriod != nil && credentials.SSHKeypair.RotationPeriod.Duration != 0 &&
 				(credentials.SSHKeypair.RotationPeriod.Duration < 30*time.Minute || credentials.SSHKeypair.RotationPeriod.Duration > 90*24*time.Hour) {
 				allErrs = append(allErrs, field.Invalid(sshKeypairPath.Child("rotationPeriod"), credentials.SSHKeypair.RotationPeriod.Duration.String(), "value must be between 30m and 90d"))
 			}
 		}
-		if credentials.ETCDEncryptionKey != nil && credentials.ETCDEncryptionKey.RotationPeriod != nil &&
+		if credentials.ETCDEncryptionKey != nil && credentials.ETCDEncryptionKey.RotationPeriod != nil && credentials.ETCDEncryptionKey.RotationPeriod.Duration != 0 &&
 			(credentials.ETCDEncryptionKey.RotationPeriod.Duration < 30*time.Minute || credentials.ETCDEncryptionKey.RotationPeriod.Duration > 90*24*time.Hour) {
 			allErrs = append(allErrs, field.Invalid(credentialsPath.Child("etcdEncryptionKey", "rotationPeriod"), credentials.ETCDEncryptionKey.RotationPeriod.Duration.String(), "value must be between 30m and 90d"))
 		}
