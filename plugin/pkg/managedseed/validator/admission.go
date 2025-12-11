@@ -194,25 +194,6 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 
 	gardenerutils.MaintainSeedNameLabels(managedSeed, shoot.Spec.SeedName)
 
-	switch a.GetOperation() {
-	case admission.Create:
-		errs, err := v.validateManagedSeedCreate(managedSeed, shoot)
-		if err != nil {
-			return err
-		}
-		allErrs = append(allErrs, errs...)
-	case admission.Update:
-		oldManagedSeed, ok := a.GetOldObject().(*seedmanagement.ManagedSeed)
-		if !ok {
-			return apierrors.NewInternalError(errors.New("could not convert old resource into ManagedSeed object"))
-		}
-		errs, err := v.validateManagedSeedUpdate(oldManagedSeed, managedSeed, shoot)
-		if err != nil {
-			return err
-		}
-		allErrs = append(allErrs, errs...)
-	}
-
 	if len(allErrs) > 0 {
 		return apierrors.NewInvalid(gk, managedSeed.Name, allErrs)
 	}
@@ -594,6 +575,31 @@ func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ ad
 	}
 	if ms != nil && ms.Name != managedSeed.Name {
 		return apierrors.NewInvalid(gk, managedSeed.Name, field.ErrorList{field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s already registered as seed by managed seed %s", client.ObjectKeyFromObject(shoot), client.ObjectKeyFromObject(ms)))})
+	}
+
+	var allErrs field.ErrorList
+
+	switch a.GetOperation() {
+	case admission.Create:
+		errs, err := v.validateManagedSeedCreate(managedSeed, shoot)
+		if err != nil {
+			return err
+		}
+		allErrs = append(allErrs, errs...)
+	case admission.Update:
+		oldManagedSeed, ok := a.GetOldObject().(*seedmanagement.ManagedSeed)
+		if !ok {
+			return apierrors.NewInternalError(errors.New("could not convert old resource into ManagedSeed object"))
+		}
+		errs, err := v.validateManagedSeedUpdate(oldManagedSeed, managedSeed, shoot)
+		if err != nil {
+			return err
+		}
+		allErrs = append(allErrs, errs...)
+	}
+
+	if len(allErrs) > 0 {
+		return apierrors.NewInvalid(gk, managedSeed.Name, allErrs)
 	}
 
 	return nil
