@@ -25,7 +25,7 @@ Please see [this](../../../example/35-namespacedcloudprofile.yaml) example manif
 
 In order to make changes to specific fields in the `NamespacedCloudProfile`, a user must be granted custom RBAC verbs.
 Modifications of these fields need to be performed with caution and might require additional validation steps or accompanying changes.
-Permissions for modifying these fields are configured by landscape operators. If you require access to modify any of these restricted fields, please create a support ticket.
+Permissions for modifying these fields are granted to the landscape operators. Please contact your landscape operator for support.
 
 Changing the following fields require the corresponding custom verbs:
 
