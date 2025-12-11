@@ -5100,7 +5100,6 @@ func Convert_core_MaintenanceCredentialsAutoRotation_To_v1beta1_MaintenanceCrede
 }
 
 func autoConvert_v1beta1_MaintenanceRotationConfig_To_core_MaintenanceRotationConfig(in *MaintenanceRotationConfig, out *core.MaintenanceRotationConfig, s conversion.Scope) error {
-	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.RotationPeriod = (*metav1.Duration)(unsafe.Pointer(in.RotationPeriod))
 	return nil
 }
@@ -5111,7 +5110,6 @@ func Convert_v1beta1_MaintenanceRotationConfig_To_core_MaintenanceRotationConfig
 }
 
 func autoConvert_core_MaintenanceRotationConfig_To_v1beta1_MaintenanceRotationConfig(in *core.MaintenanceRotationConfig, out *MaintenanceRotationConfig, s conversion.Scope) error {
-	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.RotationPeriod = (*metav1.Duration)(unsafe.Pointer(in.RotationPeriod))
 	return nil
 }

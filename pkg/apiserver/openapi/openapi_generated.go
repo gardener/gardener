@@ -6172,16 +6172,9 @@ func schema_pkg_apis_core_v1beta1_MaintenanceRotationConfig(ref common.Reference
 				Description: "MaintenanceRotationConfig contains configuration for automatic rotation.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"enabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Enabled indicates whether automatic rotation should be performed (default: false).",
-							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
 					"rotationPeriod": {
 						SchemaProps: spec.SchemaProps{
-							Description: "RotationPeriod is the period between a completed rotation and the start of a new rotation (default: 7d). The allowed rotation period is between 30m and 90d.",
+							Description: "RotationPeriod is the period between a completed rotation and the start of a new rotation (default: 7d). The allowed rotation period is between 30m and 90d. When set to 0, rotation is disabled.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},

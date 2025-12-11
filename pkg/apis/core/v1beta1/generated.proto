@@ -2092,14 +2092,10 @@ message MaintenanceCredentialsAutoRotation {
 
 // MaintenanceRotationConfig contains configuration for automatic rotation.
 message MaintenanceRotationConfig {
-  // Enabled indicates whether automatic rotation should be performed (default: false).
-  // +optional
-  optional bool enabled = 1;
-
   // RotationPeriod is the period between a completed rotation and the start of a new rotation (default: 7d).
-  // The allowed rotation period is between 30m and 90d.
+  // The allowed rotation period is between 30m and 90d. When set to 0, rotation is disabled.
   // +optional
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration rotationPeriod = 2;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration rotationPeriod = 1;
 }
 
 // MaintenanceTimeWindow contains information about the time window for maintenance operations.
