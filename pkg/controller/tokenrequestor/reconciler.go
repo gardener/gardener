@@ -28,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -222,7 +221,7 @@ func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, log logr.L
 		secretContainingToken = targetSecret // token is expected in target secret
 	}
 
-	tokenExists, err := tokenExistsInSecretData(secretContainingToken.Data)
+	token, tokenExists, err := tokenExistsInSecretData(secretContainingToken.Data)
 	if err != nil {
 		return 0, fmt.Errorf("could not check whether token exists in secret data: %w", err)
 	}
@@ -239,20 +238,23 @@ func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, log logr.L
 		}
 	}
 
-	// Check if the token belongs to the current ServiceAccount by verifying the UID (it could have been deleted and
-	// recreated with the same name which results in a change of the UID, i.e., the old token is now invalid).
-	// If there is a mismatch, a new token needs to be requested.
-	serviceAccountTokenUID, err := kubernetes.ExtractServiceAccountUID(string(secret.Data[resourcesv1alpha1.DataKeyToken]))
-	if err != nil {
-		// Log only, but do not return the error, so that a malformed token does not block the reconciliation.
-		// Instead, it will fall back to requesting a new token once the current one has expired.
-		// Not returning the error is okay, as checking the UID is helpful, but not critical for correctness.
-		// The worst that can happen is that the token is used while it does not belong to the ServiceAccount anymore.
-		// Eventually, a new token will be requested once the current one has expired.
-		log.Error(err, "Could not extract service account UID from token")
-	} else if serviceAccountTokenUID != string(serviceAccount.UID) {
-		log.Info("The service account uid referenced in the secret token does not match the service account referenced. Will request a new token",
-			"serviceAccountUIDInToken", serviceAccountTokenUID, "serviceAccountUID", string(serviceAccount.UID))
+	// Validate the token using TokenReview API against the target cluster.
+	tokenReview := &authenticationv1.TokenReview{
+		Spec: authenticationv1.TokenReviewSpec{
+			Token: token,
+		},
+	}
+	if err := r.TargetClient.Create(ctx, tokenReview); err != nil {
+		return 0, fmt.Errorf("token review failed: %w", err)
+	}
+	if !tokenReview.Status.Authenticated {
+		log.Info("Token is not valid according to TokenReview, will request a new one")
+		return 0, nil
+	}
+	// Check if the ServiceAccount UID in the token matches the current ServiceAccount UID
+	if string(serviceAccount.UID) != tokenReview.Status.User.UID {
+		log.Info("ServiceAccount UID in token does not match current ServiceAccount UID, will request a new token",
+			"tokenUID", tokenReview.Status.User.UID, "serviceAccountUID", serviceAccount.UID)
 		return 0, nil
 	}
 
@@ -389,22 +391,28 @@ func updateSecretData(log logr.Logger, data map[string][]byte, token string, caD
 	return nil
 }
 
-func tokenExistsInSecretData(data map[string][]byte) (bool, error) {
+func tokenExistsInSecretData(data map[string][]byte) (string, bool, error) {
 	if _, ok := data[resourcesv1alpha1.DataKeyKubeconfig]; !ok {
-		return data[resourcesv1alpha1.DataKeyToken] != nil, nil
+		token := data[resourcesv1alpha1.DataKeyToken]
+		return string(token), token != nil, nil
 	}
 
 	kubeconfig, err := decodeKubeconfig(data[resourcesv1alpha1.DataKeyKubeconfig])
 	if err != nil {
-		return false, err
+		return "", false, err
 	}
 
 	authInfo, err := getAuthInfo(kubeconfig)
 	if err != nil {
-		return false, err
+		return "", false, err
 	}
 
-	return authInfo != nil && authInfo.Token != "", nil
+	var token string
+	if authInfo != nil {
+		token = authInfo.Token
+	}
+
+	return token, authInfo != nil && authInfo.Token != "", nil
 }
 
 func decodeKubeconfig(data []byte) (*clientcmdv1.Config, error) {
