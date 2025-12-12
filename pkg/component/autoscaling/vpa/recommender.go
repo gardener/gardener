@@ -77,7 +77,7 @@ type ValuesRecommender struct {
 	PriorityClassName string
 	// Replicas is the number of pod replicas.
 	Replicas *int32
-	// UpdateWorkerCount is the number of workers used for updating VPAs and VPACheckpoints in parallel
+	// UpdateWorkerCount is the number of workers used for updating VPAs and VPACheckpoints in parallel.
 	UpdateWorkerCount *int64
 }
 
