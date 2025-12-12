@@ -2,8 +2,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-// add some tests here
-
 package reference_test
 
 import (

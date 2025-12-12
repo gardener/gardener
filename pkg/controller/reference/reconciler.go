@@ -30,8 +30,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
-// Reconciler checks the object in the given request for Secret or ConfigMap references to further objects in order to
-// protect them from deletions as long as they are still referenced.
+// Reconciler checks the object in the given request for Secret, ConfigMap, or WorkloadIdentity references
+// to further objects in order to protect them from deletions as long as they are still referenced.
 type Reconciler struct {
 	Client                             client.Client
 	ConcurrentSyncs                    *int
@@ -57,14 +57,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
+	var unreferencedResources []client.Object
+
 	unreferencedSecrets, err := r.getUnreferencedResources(ctx, obj, &corev1.SecretList{}, r.GetReferencedSecretNames)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	unreferencedResources = append(unreferencedResources, unreferencedSecrets...)
+
 	unreferencedConfigMaps, err := r.getUnreferencedResources(ctx, obj, &corev1.ConfigMapList{}, r.GetReferencedConfigMapNames)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	unreferencedResources = append(unreferencedResources, unreferencedConfigMaps...)
 
 	unreferencedWorkloadIdentities := []client.Object{}
 	if r.GetReferencedWorkloadIdentityNames != nil {
@@ -73,8 +78,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, err
 		}
 	}
+	unreferencedResources = append(unreferencedResources, unreferencedWorkloadIdentities...)
 
-	if err := r.releaseUnreferencedResources(ctx, log, append(unreferencedSecrets, append(unreferencedConfigMaps, unreferencedWorkloadIdentities...)...)...); err != nil {
+	if err := r.releaseUnreferencedResources(ctx, log, unreferencedResources...); err != nil {
 		return reconcile.Result{}, err
 	}
 

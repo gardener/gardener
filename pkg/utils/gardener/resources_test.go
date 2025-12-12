@@ -233,24 +233,35 @@ var _ = Describe("Resources", func() {
 			Expect(err).To(BeNotFoundError())
 		})
 
-		It("should destroy workload identity secrets correctly", func() {
-			workloadIdentitySecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "workload-identity-ref-foo",
-					Namespace: targetNamespace,
-					Labels:    map[string]string{"workloadidentity.security.gardener.cloud/referenced": "true"},
-				},
-			}
+		Describe("#DestroyWorkloadIdentityReferencedResources", func() {
+			It("should destroy workload identity secrets correctly", func() {
+				workloadIdentitySecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "workload-identity-ref-foo",
+						Namespace: targetNamespace,
+						Labels:    map[string]string{"workloadidentity.security.gardener.cloud/referenced": "true"},
+					},
+				}
+				unrelatedSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "unrelated-secret",
+						Namespace: targetNamespace,
+					},
+				}
 
-			Expect(fakeSeedClient.Create(ctx, workloadIdentitySecret)).To(Succeed())
-			Expect(DestroyWorkloadIdentityReferencedResources(ctx, fakeSeedClient, targetNamespace)).To(Succeed())
+				Expect(fakeSeedClient.Create(ctx, workloadIdentitySecret)).To(Succeed())
+				Expect(fakeSeedClient.Create(ctx, unrelatedSecret)).To(Succeed())
+				Expect(DestroyWorkloadIdentityReferencedResources(ctx, fakeSeedClient, targetNamespace)).To(Succeed())
 
-			secrets := &corev1.SecretList{}
-			Expect(fakeSeedClient.List(ctx, secrets,
-				client.InNamespace(targetNamespace),
-				client.MatchingLabels(map[string]string{"workloadidentity.security.gardener.cloud/referenced": "true"}),
-			)).To(Succeed())
-			Expect(secrets.Items).To(BeEmpty())
+				secrets := &corev1.SecretList{}
+				Expect(fakeSeedClient.List(ctx, secrets,
+					client.InNamespace(targetNamespace),
+					client.MatchingLabels(map[string]string{"workloadidentity.security.gardener.cloud/referenced": "true"}),
+				)).To(Succeed())
+				Expect(secrets.Items).To(BeEmpty())
+				By("ensuring that unrelated secret still exists")
+				Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(unrelatedSecret), unrelatedSecret)).To(Succeed())
+			})
 		})
 	})
 })

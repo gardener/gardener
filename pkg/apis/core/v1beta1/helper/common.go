@@ -102,7 +102,7 @@ func HasOperationAnnotation(annotations map[string]string) bool {
 		annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationMigrate
 }
 
-// ResourceReferencesEqual returns true when none of the Secret/ConfigMap/WorkloadIdentity resource reference has changed.
+// ResourceReferencesEqual returns true when none of the Secret/ConfigMap/WorkloadIdentity resource references have changed.
 func ResourceReferencesEqual(oldResources, newResources []gardencorev1beta1.NamedResourceReference) bool {
 	oldNames := namesForResourceReferences(oldResources)
 	newNames := namesForResourceReferences(newResources)
