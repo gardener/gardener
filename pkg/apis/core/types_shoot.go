@@ -681,8 +681,8 @@ type VerticalPodAutoscaler struct {
 	// The VerticalPodAutoscaler-level maximum allowed takes precedence over the global maximum allowed.
 	// For more information, see https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/examples.md#specifying-global-maximum-allowed-resources-to-prevent-pods-from-being-unschedulable.
 	MaxAllowed corev1.ResourceList
-	// UpdateWorkerCount is the number of workers used for updating VPAs and VPACheckpoints in parallel
-	UpdateWorkerCount *int64
+	// RecommenderUpdateWorkerCount is the number of workers used for updating VPAs and VPACheckpoints in parallel.
+	RecommenderUpdateWorkerCount *int64
 }
 
 // KubernetesConfig contains common configuration fields for the control plane components.

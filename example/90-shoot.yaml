@@ -367,7 +367,7 @@ spec:
   #   maxAllowed:
   #     cpu: 8
   #     memory: 32Gi
-  #   updateWorkerCount: 10
+  #   recommenderUpdateWorkerCount: 10
   dns:
     # When the shoot shall use a cluster domain no domain and no providers need to be provided - Gardener will
     # automatically compute a correct domain based on the default domains in the garden cluster.

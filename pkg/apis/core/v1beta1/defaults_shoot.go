@@ -286,8 +286,8 @@ func SetDefaults_VerticalPodAutoscaler(obj *VerticalPodAutoscaler) {
 	if obj.MemoryAggregationIntervalCount == nil {
 		obj.MemoryAggregationIntervalCount = ptr.To(DefaultMemoryAggregationIntervalCount)
 	}
-	if obj.UpdateWorkerCount == nil {
-		obj.UpdateWorkerCount = ptr.To(DefaultUpdateWorkerCount)
+	if obj.RecommenderUpdateWorkerCount == nil {
+		obj.RecommenderUpdateWorkerCount = ptr.To(DefaultRecommenderUpdateWorkerCount)
 	}
 }
 

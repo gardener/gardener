@@ -348,7 +348,7 @@ func (v *vpa) computeRecommenderArgs() []string {
 		"--leader-elect=true",
 		"--leader-elect-resource-name=" + recommender,
 		fmt.Sprintf("--leader-elect-resource-namespace=%s", v.namespaceForApplicationClassResource()),
-		fmt.Sprintf("--update-worker-count=%d", ptr.Deref(v.values.Recommender.UpdateWorkerCount, gardencorev1beta1.DefaultUpdateWorkerCount)),
+		fmt.Sprintf("--update-worker-count=%d", ptr.Deref(v.values.Recommender.UpdateWorkerCount, gardencorev1beta1.DefaultRecommenderUpdateWorkerCount)),
 	}
 
 	if v.values.ClusterType == component.ClusterTypeShoot {

@@ -864,10 +864,10 @@ type VerticalPodAutoscaler struct {
 	// Defaults to nil (no maximum).
 	// +optional
 	MaxAllowed corev1.ResourceList `json:"maxAllowed,omitempty" protobuf:"bytes,20,rep,name=maxAllowed,casttype=k8s.io/api/core/v1.ResourceList,castkey=k8s.io/api/core/v1.ResourceName"`
-	// UpdateWorkerCount is the number of workers used for updating VPAs and VPACheckpoints in parallel
+	// RecommenderUpdateWorkerCount is the number of workers used in the vpa-recommender for updating VPAs and VPACheckpoints in parallel
 	// (default: 10)
 	// +optional
-	UpdateWorkerCount *int64 `json:"updateWorkerCount,omitempty" protobuf:"varint,21,opt,name=updateWorkerCount"`
+	RecommenderUpdateWorkerCount *int64 `json:"recommenderUpdateWorkerCount,omitempty" protobuf:"varint,21,opt,name=recommenderUpdateWorkerCount"`
 }
 
 const (
@@ -908,8 +908,8 @@ var (
 	DefaultMemoryAggregationInterval = metav1.Duration{Duration: 24 * time.Hour}
 	// DefaultMemoryAggregationIntervalCount is the default value for the MemoryAggregationIntervalCount field in the VPA configuration.
 	DefaultMemoryAggregationIntervalCount = int64(8)
-	// DefaultUpdateWorkerCount is the default value for the UpdateWorkerCount field in the VPA configuration
-	DefaultUpdateWorkerCount = int64(10)
+	// DefaultRecommenderUpdateWorkerCount is the default value for the RecommenderUpdateWorkerCount field in the VPA configuration
+	DefaultRecommenderUpdateWorkerCount = int64(10)
 )
 
 // KubernetesConfig contains common configuration fields for the control plane components.
