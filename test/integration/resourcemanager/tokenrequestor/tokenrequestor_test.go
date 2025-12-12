@@ -231,28 +231,27 @@ var _ = Describe("TokenRequestor tests", func() {
 	})
 
 	Context("ServiceAccount Token", func() {
-		It("should request a new token if the service account UID has changed", func() {
+		It("should request a new token if the existing one is not valid anymore", func() {
 			newServiceAccount := serviceAccount.DeepCopy()
-			initialSecret := secret.DeepCopy()
 
 			By("Create a new service account and request a token")
 			Expect(testClient.Create(ctx, secret)).To(Succeed())
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).Should(Succeed())
 
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(initialSecret), initialSecret)).To(Succeed())
-				g.Expect(initialSecret.Annotations).To(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"))
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+				g.Expect(secret.Annotations).To(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"))
 			}).Should(Succeed())
 
-			By("Delete and recreate the service account (results in a new UID)")
-			Expect(testClient.Delete(ctx, serviceAccount)).To(Succeed())
-			Expect(testClient.Create(ctx, newServiceAccount)).To(Succeed())
+			By("Modify the token in the secret to trigger a new token request")
+			secret.Data["token"] = []byte("modified-invalid")
+			Expect(testClient.Update(ctx, secret)).To(Succeed())
 
-			By("Verify that the service account UID has changed and that a new token has been requested")
+			By("Verify that a new token has been requested")
 			Expect(newServiceAccount.UID).NotTo(Equal(serviceAccount.UID))
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-				g.Expect(secret.Data["token"]).ToNot(Equal(initialSecret.Data["token"]))
+				g.Expect(secret.Data["token"]).ToNot(Equal("modified-invalid"))
 			}).Should(Succeed())
 		})
 	})

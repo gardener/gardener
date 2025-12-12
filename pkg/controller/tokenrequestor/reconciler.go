@@ -68,12 +68,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, nil
 	}
 
-	serviceAccount, err := r.reconcileServiceAccount(ctx, secret)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	requeueAfter, err := r.computeRequeueAfterDuration(ctx, log, secret, serviceAccount)
+	requeueAfter, err := r.computeRequeueAfterDuration(ctx, log, secret)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -83,6 +78,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	log.Info("Requesting new token")
+
+	serviceAccount, err := r.reconcileServiceAccount(ctx, secret)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
 	expirationSeconds, err := tokenExpirationSeconds(secret)
 	if err != nil {
@@ -198,7 +198,7 @@ func (r *Reconciler) createServiceAccountToken(ctx context.Context, sa *corev1.S
 	return tokenRequest, nil
 }
 
-func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, log logr.Logger, secret *corev1.Secret, serviceAccount *corev1.ServiceAccount) (time.Duration, error) {
+func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, log logr.Logger, secret *corev1.Secret) (time.Duration, error) {
 	var (
 		secretContainingToken = secret // token is expected in source secret by default
 		renewTimestamp        = secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
@@ -221,11 +221,11 @@ func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, log logr.L
 		secretContainingToken = targetSecret // token is expected in target secret
 	}
 
-	token, tokenExists, err := tokenExistsInSecretData(secretContainingToken.Data)
+	token, err := getTokenFromSecretData(secretContainingToken.Data)
 	if err != nil {
 		return 0, fmt.Errorf("could not check whether token exists in secret data: %w", err)
 	}
-	if !tokenExists {
+	if token == "" {
 		return 0, nil
 	}
 	if checkBundle {
@@ -248,13 +248,7 @@ func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, log logr.L
 		return 0, fmt.Errorf("token review failed: %w", err)
 	}
 	if !tokenReview.Status.Authenticated {
-		log.Info("Token is not valid according to TokenReview, will request a new one")
-		return 0, nil
-	}
-	// Check if the ServiceAccount UID in the token matches the current ServiceAccount UID
-	if string(serviceAccount.UID) != tokenReview.Status.User.UID {
-		log.Info("ServiceAccount UID in token does not match current ServiceAccount UID, will request a new token",
-			"tokenUID", tokenReview.Status.User.UID, "serviceAccountUID", serviceAccount.UID)
+		log.Info("Token is not valid according to TokenReview, will request a new one", "error", tokenReview.Status.Error)
 		return 0, nil
 	}
 
@@ -391,20 +385,20 @@ func updateSecretData(log logr.Logger, data map[string][]byte, token string, caD
 	return nil
 }
 
-func tokenExistsInSecretData(data map[string][]byte) (string, bool, error) {
+func getTokenFromSecretData(data map[string][]byte) (string, error) {
 	if _, ok := data[resourcesv1alpha1.DataKeyKubeconfig]; !ok {
 		token := data[resourcesv1alpha1.DataKeyToken]
-		return string(token), token != nil, nil
+		return string(token), nil
 	}
 
 	kubeconfig, err := decodeKubeconfig(data[resourcesv1alpha1.DataKeyKubeconfig])
 	if err != nil {
-		return "", false, err
+		return "", err
 	}
 
 	authInfo, err := getAuthInfo(kubeconfig)
 	if err != nil {
-		return "", false, err
+		return "", err
 	}
 
 	var token string
@@ -412,7 +406,7 @@ func tokenExistsInSecretData(data map[string][]byte) (string, bool, error) {
 		token = authInfo.Token
 	}
 
-	return token, authInfo != nil && authInfo.Token != "", nil
+	return token, nil
 }
 
 func decodeKubeconfig(data []byte) (*clientcmdv1.Config, error) {
