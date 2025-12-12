@@ -15,6 +15,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -114,6 +115,7 @@ var _ = BeforeSuite(func() {
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_networks.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_operatingsystemconfigs.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_workers.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-monitoring.coreos.com_prometheuses.yaml"),
 				},
 				CRDs: []*apiextensionsv1.CustomResourceDefinition{etcdCRD},
 			},
@@ -138,6 +140,7 @@ var _ = BeforeSuite(func() {
 		extensionsv1alpha1.AddToScheme,
 		resourcesv1alpha1.AddToScheme,
 		druidcorev1alpha1.AddToScheme,
+		monitoringv1.AddToScheme,
 	)
 	testScheme := runtime.NewScheme()
 	Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())
