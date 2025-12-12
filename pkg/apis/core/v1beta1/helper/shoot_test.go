@@ -257,6 +257,138 @@ var _ = Describe("Helper", func() {
 		})
 	})
 
+	DescribeTable("#IsObservabilityAutoRotationEnabled",
+		func(maintenance *gardencorev1beta1.Maintenance, expectedResult bool) {
+			shoot := &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Maintenance: maintenance,
+				},
+			}
+			Expect(IsObservabilityAutoRotationEnabled(shoot)).To(Equal(expectedResult))
+		},
+
+		Entry("should return false when maintenance is nil", nil, false),
+		Entry("should return false when AutoRotation is nil", &gardencorev1beta1.Maintenance{}, false),
+		Entry("should return false when Credentials field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{}}, false),
+		Entry("should return false when Observability field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{}}}, false),
+		Entry("should return false when rotation period is nil",
+			&gardencorev1beta1.Maintenance{
+				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+						Observability: &gardencorev1beta1.MaintenanceRotationConfig{},
+					},
+				},
+			}, false),
+		Entry("should return false when rotation period is zero",
+			&gardencorev1beta1.Maintenance{
+				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+						Observability: &gardencorev1beta1.MaintenanceRotationConfig{
+							RotationPeriod: &metav1.Duration{Duration: 0},
+						},
+					},
+				},
+			}, false),
+		Entry("should return true when rotation period is not zero",
+			&gardencorev1beta1.Maintenance{
+				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+						Observability: &gardencorev1beta1.MaintenanceRotationConfig{
+							RotationPeriod: &metav1.Duration{Duration: 1 * time.Hour},
+						},
+					},
+				},
+			}, true),
+	)
+
+	DescribeTable("#IsSSHKeypairAutoRotationEnabled",
+		func(maintenance *gardencorev1beta1.Maintenance, expectedResult bool) {
+			shoot := &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Maintenance: maintenance,
+				},
+			}
+			Expect(IsSSHKeypairAutoRotationEnabled(shoot)).To(Equal(expectedResult))
+		},
+
+		Entry("should return false when maintenance is nil", nil, false),
+		Entry("should return false when AutoRotation is nil", &gardencorev1beta1.Maintenance{}, false),
+		Entry("should return false when Credentials field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{}}, false),
+		Entry("should return false when SSHKeypair field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{}}}, false),
+		Entry("should return false when rotation period is nil",
+			&gardencorev1beta1.Maintenance{
+				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+						SSHKeypair: &gardencorev1beta1.MaintenanceRotationConfig{},
+					},
+				},
+			}, false),
+		Entry("should return false when rotation period is zero",
+			&gardencorev1beta1.Maintenance{
+				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+						SSHKeypair: &gardencorev1beta1.MaintenanceRotationConfig{
+							RotationPeriod: &metav1.Duration{Duration: 0},
+						},
+					},
+				},
+			}, false),
+		Entry("should return true when rotation period is not zero",
+			&gardencorev1beta1.Maintenance{
+				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+						SSHKeypair: &gardencorev1beta1.MaintenanceRotationConfig{
+							RotationPeriod: &metav1.Duration{Duration: 1 * time.Hour},
+						},
+					},
+				},
+			}, true),
+	)
+
+	DescribeTable("#IsETCDEncryptionKeyAutoRotationEnabled",
+		func(maintenance *gardencorev1beta1.Maintenance, expectedResult bool) {
+			shoot := &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Maintenance: maintenance,
+				},
+			}
+			Expect(IsETCDEncryptionKeyAutoRotationEnabled(shoot)).To(Equal(expectedResult))
+		},
+
+		Entry("should return false when maintenance is nil", nil, false),
+		Entry("should return false when AutoRotation is nil", &gardencorev1beta1.Maintenance{}, false),
+		Entry("should return false when Credentials field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{}}, false),
+		Entry("should return false when ETCDEncryptionKey field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{}}}, false),
+		Entry("should return false when rotation period is nil",
+			&gardencorev1beta1.Maintenance{
+				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+						ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{},
+					},
+				},
+			}, false),
+		Entry("should return false when rotation period is zero",
+			&gardencorev1beta1.Maintenance{
+				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+						ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+							RotationPeriod: &metav1.Duration{Duration: 0},
+						},
+					},
+				},
+			}, false),
+		Entry("should return true when rotation period is not zero",
+			&gardencorev1beta1.Maintenance{
+				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+						ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+							RotationPeriod: &metav1.Duration{Duration: 1 * time.Hour},
+						},
+					},
+				},
+			}, true),
+	)
+
 	Describe("#IsMultiZonalShootControlPlane", func() {
 		var shoot *gardencorev1beta1.Shoot
 

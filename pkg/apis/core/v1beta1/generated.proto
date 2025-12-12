@@ -2052,6 +2052,17 @@ message Maintenance {
   // an immediate roll out which is changes to the Spec.Hibernation.Enabled field.
   // +optional
   optional bool confineSpecUpdateRollout = 3;
+
+  // AutoRotation contains information about which rotations should be automatically performed.
+  // +optional
+  optional MaintenanceAutoRotation autoRotation = 4;
+}
+
+// MaintenanceAutoRotation contains information about which rotations should be automatically performed.
+message MaintenanceAutoRotation {
+  // Credentials contains information about which credentials should be automatically rotated.
+  // +optional
+  optional MaintenanceCredentialsAutoRotation credentials = 1;
 }
 
 // MaintenanceAutoUpdate contains information about which constraints should be automatically updated.
@@ -2062,6 +2073,29 @@ message MaintenanceAutoUpdate {
   // MachineImageVersion indicates whether the machine image version may be automatically updated (default: true).
   // +optional
   optional bool machineImageVersion = 2;
+}
+
+// MaintenanceCredentialsAutoRotation contains information about which credentials should be automatically rotated.
+message MaintenanceCredentialsAutoRotation {
+  // Observability configures the automatic rotation for the observability credentials.
+  // +optional
+  optional MaintenanceRotationConfig observability = 1;
+
+  // SSHKeypair configures the automatic rotation for the ssh keypair for worker nodes.
+  // +optional
+  optional MaintenanceRotationConfig sshKeypair = 2;
+
+  // ETCDEncryptionKey configures the automatic rotation for the etcd encryption key.
+  // +optional
+  optional MaintenanceRotationConfig etcdEncryptionKey = 3;
+}
+
+// MaintenanceRotationConfig contains configuration for automatic rotation.
+message MaintenanceRotationConfig {
+  // RotationPeriod is the period between a completed rotation and the start of a new rotation (default: 7d).
+  // The allowed rotation period is between 30m and 90d. When set to 0, rotation is disabled.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration rotationPeriod = 1;
 }
 
 // MaintenanceTimeWindow contains information about the time window for maintenance operations.

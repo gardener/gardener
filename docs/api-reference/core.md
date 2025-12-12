@@ -9022,6 +9022,53 @@ Instead, they are rolled out during the shoot&rsquo;s maintenance time window. T
 an immediate roll out which is changes to the Spec.Hibernation.Enabled field.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>autoRotation</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MaintenanceAutoRotation">
+MaintenanceAutoRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AutoRotation contains information about which rotations should be automatically performed.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.MaintenanceAutoRotation">MaintenanceAutoRotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Maintenance">Maintenance</a>)
+</p>
+<p>
+<p>MaintenanceAutoRotation contains information about which rotations should be automatically performed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>credentials</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MaintenanceCredentialsAutoRotation">
+MaintenanceCredentialsAutoRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Credentials contains information about which credentials should be automatically rotated.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.MaintenanceAutoUpdate">MaintenanceAutoUpdate
@@ -9062,6 +9109,101 @@ bool
 <td>
 <em>(Optional)</em>
 <p>MachineImageVersion indicates whether the machine image version may be automatically updated (default: true).</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.MaintenanceCredentialsAutoRotation">MaintenanceCredentialsAutoRotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.MaintenanceAutoRotation">MaintenanceAutoRotation</a>)
+</p>
+<p>
+<p>MaintenanceCredentialsAutoRotation contains information about which credentials should be automatically rotated.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>observability</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MaintenanceRotationConfig">
+MaintenanceRotationConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Observability configures the automatic rotation for the observability credentials.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>sshKeypair</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MaintenanceRotationConfig">
+MaintenanceRotationConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SSHKeypair configures the automatic rotation for the ssh keypair for worker nodes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>etcdEncryptionKey</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MaintenanceRotationConfig">
+MaintenanceRotationConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ETCDEncryptionKey configures the automatic rotation for the etcd encryption key.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.MaintenanceRotationConfig">MaintenanceRotationConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.MaintenanceCredentialsAutoRotation">MaintenanceCredentialsAutoRotation</a>)
+</p>
+<p>
+<p>MaintenanceRotationConfig contains configuration for automatic rotation.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>rotationPeriod</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RotationPeriod is the period between a completed rotation and the start of a new rotation (default: 7d).
+The allowed rotation period is between 30m and 90d. When set to 0, rotation is disabled.</p>
 </td>
 </tr>
 </tbody>

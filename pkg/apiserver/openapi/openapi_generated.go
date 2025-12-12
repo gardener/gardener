@@ -141,7 +141,10 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType":                                 schema_pkg_apis_core_v1beta1_MachineType(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineTypeStorage":                          schema_pkg_apis_core_v1beta1_MachineTypeStorage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance":                                 schema_pkg_apis_core_v1beta1_Maintenance(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoRotation":                     schema_pkg_apis_core_v1beta1_MaintenanceAutoRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoUpdate":                       schema_pkg_apis_core_v1beta1_MaintenanceAutoUpdate(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceCredentialsAutoRotation":          schema_pkg_apis_core_v1beta1_MaintenanceCredentialsAutoRotation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceRotationConfig":                   schema_pkg_apis_core_v1beta1_MaintenanceRotationConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow":                       schema_pkg_apis_core_v1beta1_MaintenanceTimeWindow(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ManualWorkerPoolRollout":                     schema_pkg_apis_core_v1beta1_ManualWorkerPoolRollout(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MemorySwapConfiguration":                     schema_pkg_apis_core_v1beta1_MemorySwapConfiguration(ref),
@@ -6065,11 +6068,38 @@ func schema_pkg_apis_core_v1beta1_Maintenance(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"autoRotation": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AutoRotation contains information about which rotations should be automatically performed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoRotation"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoUpdate", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoUpdate", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_MaintenanceAutoRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MaintenanceAutoRotation contains information about which rotations should be automatically performed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"credentials": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Credentials contains information about which credentials should be automatically rotated.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceCredentialsAutoRotation"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceCredentialsAutoRotation"},
 	}
 }
 
@@ -6099,6 +6129,60 @@ func schema_pkg_apis_core_v1beta1_MaintenanceAutoUpdate(ref common.ReferenceCall
 				Required: []string{"kubernetesVersion"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_MaintenanceCredentialsAutoRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MaintenanceCredentialsAutoRotation contains information about which credentials should be automatically rotated.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"observability": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Observability configures the automatic rotation for the observability credentials.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceRotationConfig"),
+						},
+					},
+					"sshKeypair": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SSHKeypair configures the automatic rotation for the ssh keypair for worker nodes.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceRotationConfig"),
+						},
+					},
+					"etcdEncryptionKey": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ETCDEncryptionKey configures the automatic rotation for the etcd encryption key.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceRotationConfig"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceRotationConfig"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_MaintenanceRotationConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MaintenanceRotationConfig contains configuration for automatic rotation.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"rotationPeriod": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RotationPeriod is the period between a completed rotation and the start of a new rotation (default: 7d). The allowed rotation period is between 30m and 90d. When set to 0, rotation is disabled.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 

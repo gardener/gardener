@@ -684,6 +684,36 @@ func ControlPlaneNamespaceForShoot(shoot *gardencorev1beta1.Shoot) string {
 	return shoot.Status.TechnicalID
 }
 
+// IsSSHKeypairAutoRotationEnabled checks if automatic rotation of SSH keypair for worker nodes is enabled in the maintenance window.
+func IsSSHKeypairAutoRotationEnabled(shoot *gardencorev1beta1.Shoot) bool {
+	return shoot.Spec.Maintenance != nil &&
+		shoot.Spec.Maintenance.AutoRotation != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod.Duration != 0
+}
+
+// IsObservabilityAutoRotationEnabled checks if automatic rotation of observability credentials is enabled in the maintenance window.
+func IsObservabilityAutoRotationEnabled(shoot *gardencorev1beta1.Shoot) bool {
+	return shoot.Spec.Maintenance != nil &&
+		shoot.Spec.Maintenance.AutoRotation != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials.Observability != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.RotationPeriod != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.RotationPeriod.Duration != 0
+}
+
+// IsETCDEncryptionKeyAutoRotationEnabled checks if automatic rotation of etcd encryption key is enabled in the maintenance window.
+func IsETCDEncryptionKeyAutoRotationEnabled(shoot *gardencorev1beta1.Shoot) bool {
+	return shoot.Spec.Maintenance != nil &&
+		shoot.Spec.Maintenance.AutoRotation != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod.Duration != 0
+}
+
 // IsUpdateStrategyInPlace returns true if the given machine update strategy is either AutoInPlaceUpdate or ManualInPlaceUpdate.
 func IsUpdateStrategyInPlace(updateStrategy *gardencorev1beta1.MachineUpdateStrategy) bool {
 	if updateStrategy == nil {
