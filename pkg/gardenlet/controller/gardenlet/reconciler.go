@@ -178,10 +178,24 @@ func (r *Reconciler) prepareGardenletChartValues(
 
 	if imageVector := gardenlet.Spec.Deployment.ImageVectorOverwrite; imageVector != nil {
 		values["imageVectorOverwrite"] = *imageVector
+	} else {
+		// The values returned by gardenletdeployer.PrepareGardenletChartValues always include the
+		// `imageVectorOverwrite` key. It is populated from the parent gardenlet’s image vector overwrite (see
+		// https://github.com/gardener/gardener/blob/485c25124ea536e4610c627109017dd34d434921/pkg/controller/gardenletdeployer/valueshelper.go#L156-L164).
+		//
+		// In this controller there is no parent gardenlet. The helper code implicitly treats the existing gardenlet
+		// deployment as its own parent. Consequently, if we did not remove the `imageVectorOverwrite` key here, it
+		// would be impossible to clear this configuration once `.spec.deployment.imageVectorOverwrite` is unset on the
+		// Gardenlet resource.
+		delete(values, "imageVectorOverwrite")
 	}
 
 	if imageVector := gardenlet.Spec.Deployment.ComponentImageVectorOverwrite; imageVector != nil {
 		values["componentImageVectorOverwrites"] = *imageVector
+	} else {
+		// Similar to the <imageVectorOverwrite> (see above), we have to also get rid of the
+		// <componentImageVectorOverwrites> in case it is no longer specified in the `Gardenlet` resource.
+		delete(values, "componentImageVectorOverwrites")
 	}
 
 	return values, nil

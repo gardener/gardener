@@ -5,6 +5,8 @@
 package gardenlet_test
 
 import (
+	"os"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -151,4 +153,56 @@ var _ = Describe("Gardenlet controller test", func() {
 			return deployment.Spec.RevisionHistoryLimit
 		}).Should(PointTo(Equal(int32(1337))))
 	})
+
+	When("image vector overwrite configurations are provided", func() {
+		BeforeEach(func() {
+			gardenlet.Spec.Deployment.ImageVectorOverwrite = ptr.To("images: []")
+			gardenlet.Spec.Deployment.ComponentImageVectorOverwrite = ptr.To("components: []")
+		})
+
+		It("should remove image vector overwrite configurations when removed from `Gardenlet` resource", func() {
+			By("Verify that gardenlet is deployed as expected")
+			Eventually(func(g Gomega) []corev1.EnvVar {
+				deployment := &appsv1.Deployment{}
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardenlet", Namespace: gardenNamespaceSeed.Name}, deployment)).To(Succeed())
+				return deployment.Spec.Template.Spec.Containers[0].Env
+			}).Should(ContainElements(
+				WithTransform(envVarName, Equal("IMAGEVECTOR_OVERWRITE")),
+				WithTransform(envVarName, Equal("IMAGEVECTOR_OVERWRITE_COMPONENTS")),
+			))
+
+			By("Simulate env variable change")
+			// In reality, this controller code is ran inside the very same `gardenlet` that just got deployed. Hence,
+			// let's simulate that the env vars in question actually got set.
+			file, err := os.CreateTemp("", "dummy-*")
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = file.Write([]byte("x"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(file.Close()).To(Succeed())
+
+			DeferCleanup(os.Remove, file.Name())
+
+			Expect(os.Setenv("IMAGEVECTOR_OVERWRITE", file.Name())).To(Succeed())
+			Expect(os.Setenv("IMAGEVECTOR_OVERWRITE_COMPONENTS", file.Name())).To(Succeed())
+
+			By("Remove image vector overwrite configurations")
+			patch := client.MergeFrom(gardenlet.DeepCopy())
+			gardenlet.Spec.Deployment.ImageVectorOverwrite = nil
+			gardenlet.Spec.Deployment.ComponentImageVectorOverwrite = nil
+			Expect(testClient.Patch(ctx, gardenlet, patch)).To(Succeed())
+
+			By("Verify that change was rolled out")
+			Eventually(func(g Gomega) []corev1.EnvVar {
+				deployment := &appsv1.Deployment{}
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardenlet", Namespace: gardenNamespaceSeed.Name}, deployment)).To(Succeed())
+				return deployment.Spec.Template.Spec.Containers[0].Env
+			}).ShouldNot(ContainElements(
+				WithTransform(envVarName, Equal("IMAGEVECTOR_OVERWRITE")),
+				WithTransform(envVarName, Equal("IMAGEVECTOR_OVERWRITE_COMPONENTS")),
+			))
+		})
+	})
 })
+
+func envVarName(e corev1.EnvVar) string { return e.Name }
