@@ -3904,6 +3904,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 						field.Invalid(field.NewPath("maxAllowed.memory"), "-100Mi", "must be greater than or equal to 0"),
 					),
 				),
+				Entry("with invalid recommenderUpdateWorkerCount value",
+					core.VerticalPodAutoscaler{RecommenderUpdateWorkerCount: ptr.To[int64](0)},
+					ConsistOf(field.Invalid(field.NewPath("recommenderUpdateWorkerCount"), int64(0), "must be greater than 0")),
+				),
 				Entry("with valid fields",
 					core.VerticalPodAutoscaler{
 						EvictAfterOOMThreshold:                   &metav1.Duration{Duration: 5 * time.Minute},
@@ -3927,6 +3931,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							"cpu":    resource.MustParse("8"),
 							"memory": resource.MustParse("32Gi"),
 						},
+						RecommenderUpdateWorkerCount: ptr.To[int64](42),
 					},
 					BeEmpty(),
 				),

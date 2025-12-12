@@ -1066,6 +1066,7 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.MemoryHistogramDecayHalfLife).To(PointTo(Equal(metav1.Duration{Duration: 24 * time.Hour})))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.MemoryAggregationInterval).To(PointTo(Equal(metav1.Duration{Duration: 24 * time.Hour})))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.MemoryAggregationIntervalCount).To(PointTo(Equal(int64(8))))
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommenderUpdateWorkerCount).To(PointTo(Equal(int64(10))))
 		})
 
 		It("should not overwrite the already set values for VerticalPodAutoscaler field", func() {
