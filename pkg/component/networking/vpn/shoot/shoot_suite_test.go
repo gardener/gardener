@@ -10,12 +10,14 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/gardener/gardener/pkg/gardenlet/features"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 func TestShoot(t *testing.T) {
 	RegisterFailHandler(Fail)
+	features.RegisterFeatureGates()
 	RunSpecs(t, "Component Networking VPN Shoot Suite")
 }
 
