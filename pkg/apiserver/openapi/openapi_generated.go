@@ -10400,6 +10400,13 @@ func schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref common.ReferenceCall
 							},
 						},
 					},
+					"recommenderUpdateWorkerCount": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RecommenderUpdateWorkerCount is the number of workers used in the vpa-recommender for updating VPAs and VPACheckpoints in parallel. (default: 10)",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
 				},
 				Required: []string{"enabled"},
 			},

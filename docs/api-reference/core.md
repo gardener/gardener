@@ -14725,6 +14725,19 @@ For more information, see <a href="https://github.com/kubernetes/autoscaler/blob
 <p>Defaults to nil (no maximum).</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>recommenderUpdateWorkerCount</code></br>
+<em>
+int64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RecommenderUpdateWorkerCount is the number of workers used in the vpa-recommender for updating VPAs and VPACheckpoints in parallel.
+(default: 10)</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.Volume">Volume

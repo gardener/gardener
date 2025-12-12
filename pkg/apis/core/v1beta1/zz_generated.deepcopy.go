@@ -6205,6 +6205,11 @@ func (in *VerticalPodAutoscaler) DeepCopyInto(out *VerticalPodAutoscaler) {
 			(*out)[key] = val.DeepCopy()
 		}
 	}
+	if in.RecommenderUpdateWorkerCount != nil {
+		in, out := &in.RecommenderUpdateWorkerCount, &out.RecommenderUpdateWorkerCount
+		*out = new(int64)
+		**out = **in
+	}
 	return
 }
 

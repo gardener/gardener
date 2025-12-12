@@ -7293,6 +7293,7 @@ func autoConvert_v1beta1_VerticalPodAutoscaler_To_core_VerticalPodAutoscaler(in 
 	out.MemoryAggregationIntervalCount = (*int64)(unsafe.Pointer(in.MemoryAggregationIntervalCount))
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	out.MaxAllowed = *(*v1.ResourceList)(unsafe.Pointer(&in.MaxAllowed))
+	out.RecommenderUpdateWorkerCount = (*int64)(unsafe.Pointer(in.RecommenderUpdateWorkerCount))
 	return nil
 }
 
@@ -7322,6 +7323,7 @@ func autoConvert_core_VerticalPodAutoscaler_To_v1beta1_VerticalPodAutoscaler(in 
 	out.MemoryAggregationIntervalCount = (*int64)(unsafe.Pointer(in.MemoryAggregationIntervalCount))
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	out.MaxAllowed = *(*v1.ResourceList)(unsafe.Pointer(&in.MaxAllowed))
+	out.RecommenderUpdateWorkerCount = (*int64)(unsafe.Pointer(in.RecommenderUpdateWorkerCount))
 	return nil
 }
 

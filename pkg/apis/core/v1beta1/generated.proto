@@ -3694,6 +3694,11 @@ message VerticalPodAutoscaler {
   // Defaults to nil (no maximum).
   // +optional
   map<string, .k8s.io.apimachinery.pkg.api.resource.Quantity> maxAllowed = 20;
+
+  // RecommenderUpdateWorkerCount is the number of workers used in the vpa-recommender for updating VPAs and VPACheckpoints in parallel.
+  // (default: 10)
+  // +optional
+  optional int64 recommenderUpdateWorkerCount = 21;
 }
 
 // Volume contains information about the volume type, size, and encryption.
