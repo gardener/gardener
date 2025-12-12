@@ -12,6 +12,7 @@ import (
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -151,11 +152,18 @@ func (h *Health) Check(
 			newControlPlane, err := h.checkControlPlane(ctx, conditions.controlPlaneHealthy, extensionConditionsControlPlaneHealthy, managedResourceList.Items, healthCheckOutdatedThreshold)
 			conditions.controlPlaneHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.controlPlaneHealthy, newControlPlane, err)
 			return nil
-		}, func(ctx context.Context) error {
-			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy, extensionConditionsObservabilityComponentsHealthy, managedResourceList.Items, healthCheckOutdatedThreshold)
+		},
+	}
+
+	prometheusList := &monitoringv1.PrometheusList{}
+	if err := h.seedClient.Client().List(ctx, prometheusList, client.InNamespace(h.shoot.ControlPlaneNamespace)); err != nil {
+		conditions.observabilityComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.observabilityComponentsHealthy, nil, err)
+	} else {
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy, extensionConditionsObservabilityComponentsHealthy, managedResourceList.Items, prometheusList.Items, healthCheckOutdatedThreshold)
 			conditions.observabilityComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.observabilityComponentsHealthy, newObservabilityComponents, err)
 			return nil
-		},
+		})
 	}
 
 	// Health checks with dependencies to the Kube-Apiserver.
@@ -477,6 +485,7 @@ func (h *Health) checkObservabilityComponents(
 	condition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
 	managedResources []resourcesv1alpha1.ManagedResource,
+	prometheuses []monitoringv1.Prometheus,
 	healthCheckOutdatedThreshold *metav1.Duration,
 ) (
 	*gardencorev1beta1.Condition,
@@ -512,6 +521,14 @@ func (h *Health) checkObservabilityComponents(
 	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
 		return managedResource.Labels[v1beta1constants.LabelCareConditionType] == string(gardencorev1beta1.ShootObservabilityComponentsHealthy)
 	}, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
+		return exitCondition, nil
+	}
+
+	filterFunc := func(_ *monitoringv1.Prometheus) bool {
+		return true
+	}
+
+	if exitCondition := h.healthChecker.CheckPrometheuses(ctx, condition, prometheuses, filterFunc); exitCondition != nil {
 		return exitCondition, nil
 	}
 
