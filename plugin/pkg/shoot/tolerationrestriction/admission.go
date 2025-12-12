@@ -112,8 +112,8 @@ func (t *TolerationRestriction) ValidateInitialization() error {
 }
 
 var (
-	_ admission.ValidationInterface = (*TolerationRestriction)(nil)
 	_ admission.MutationInterface   = (*TolerationRestriction)(nil)
+	_ admission.ValidationInterface = (*TolerationRestriction)(nil)
 )
 
 // Admit defaults shoot tolerations with both global and project defaults.

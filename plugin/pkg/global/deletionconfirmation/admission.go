@@ -119,8 +119,8 @@ func (d *DeletionConfirmation) ValidateInitialization() error {
 }
 
 var (
-	_ admission.ValidationInterface = (*DeletionConfirmation)(nil)
 	_ admission.MutationInterface   = (*DeletionConfirmation)(nil)
+	_ admission.ValidationInterface = (*DeletionConfirmation)(nil)
 )
 
 // Admit maintains the deletion.gardener.cloud/confirmed-by annotation.
