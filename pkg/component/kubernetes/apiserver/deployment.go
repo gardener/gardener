@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/networking/vpn/envoy"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -885,6 +886,12 @@ func (k *kubeAPIServer) vpnSeedClientInitContainer() *corev1.Container {
 		},
 	}...)
 
+	if features.DefaultFeatureGate.Enabled(features.VPNBondingModeRoundRobin) {
+		container.Env = append(container.Env, corev1.EnvVar{
+			Name:  "BONDING_MODE",
+			Value: "balance-rr",
+		})
+	}
 	// may need to enable IPv6 in pod network (e.g. for GKE clusters)
 	container.SecurityContext.Privileged = ptr.To(true)
 

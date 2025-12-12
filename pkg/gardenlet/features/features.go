@@ -27,5 +27,6 @@ func GetFeatures() []featuregate.Feature {
 		features.UseUnifiedHTTPProxyPort,
 		features.VPAInPlaceUpdates,
 		features.CustomDNSServerInNodeLocalDNS,
+		features.VPNBondingModeRoundRobin,
 	}
 }
