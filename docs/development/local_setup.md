@@ -144,16 +144,14 @@ The Gardener repository and all the above-mentioned tools (git, golang, kubectl,
 
 # Get the Sources
 
-Clone the repository from GitHub into your `$GOPATH`.
+Clone the repository from GitHub.
 
 ```bash
-mkdir -p $(go env GOPATH)/src/github.com/gardener
-cd $(go env GOPATH)/src/github.com/gardener
+mkdir -p /path/to/src/github.com/gardener
+cd /path/to/src/github.com/gardener
 git clone git@github.com:gardener/gardener.git
 cd gardener
 ```
-
-> Note: Gardener is using Go modules and cloning the repository into `$GOPATH` is not a hard requirement. However it is still recommended to clone into `$GOPATH` because `k8s.io/code-generator` does not work yet outside of `$GOPATH` - [kubernetes/kubernetes#86753](https://github.com/kubernetes/kubernetes/issues/86753).
 
 # Start the Gardener
 

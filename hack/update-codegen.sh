@@ -34,9 +34,6 @@ AVAILABLE_CODEGEN_OPTIONS=(
   "nodeagent_groups"
 )
 
-# setup virtual GOPATH
-source $(dirname $0)/vgopath-setup.sh
-
 CODE_GEN_DIR=$(go list -m -f '{{.Dir}}' k8s.io/code-generator)
 source "${CODE_GEN_DIR}/kube_codegen.sh"
 
