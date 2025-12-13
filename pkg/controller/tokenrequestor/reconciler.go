@@ -68,7 +68,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, nil
 	}
 
-	requeueAfter, err := r.computeRequeueAfterDuration(ctx, secret)
+	requeueAfter, err := r.computeRequeueAfterDuration(ctx, log, secret)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -198,7 +198,7 @@ func (r *Reconciler) createServiceAccountToken(ctx context.Context, sa *corev1.S
 	return tokenRequest, nil
 }
 
-func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, secret *corev1.Secret) (time.Duration, error) {
+func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, log logr.Logger, secret *corev1.Secret) (time.Duration, error) {
 	var (
 		secretContainingToken = secret // token is expected in source secret by default
 		renewTimestamp        = secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
@@ -221,11 +221,11 @@ func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, secret *co
 		secretContainingToken = targetSecret // token is expected in target secret
 	}
 
-	tokenExists, err := tokenExistsInSecretData(secretContainingToken.Data)
+	token, err := getTokenFromSecretData(secretContainingToken.Data)
 	if err != nil {
 		return 0, fmt.Errorf("could not check whether token exists in secret data: %w", err)
 	}
-	if !tokenExists {
+	if token == "" {
 		return 0, nil
 	}
 	if checkBundle {
@@ -236,6 +236,20 @@ func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, secret *co
 		if !isBundleOk {
 			return 0, nil
 		}
+	}
+
+	// Validate the token using TokenReview API against the target cluster.
+	tokenReview := &authenticationv1.TokenReview{
+		Spec: authenticationv1.TokenReviewSpec{
+			Token: token,
+		},
+	}
+	if err := r.TargetClient.Create(ctx, tokenReview); err != nil {
+		return 0, fmt.Errorf("token review failed: %w", err)
+	}
+	if !tokenReview.Status.Authenticated {
+		log.Info("Token is not valid according to TokenReview, will request a new one", "error", tokenReview.Status.Error)
+		return 0, nil
 	}
 
 	renewTime, err := time.Parse(time.RFC3339, renewTimestamp)
@@ -371,22 +385,28 @@ func updateSecretData(log logr.Logger, data map[string][]byte, token string, caD
 	return nil
 }
 
-func tokenExistsInSecretData(data map[string][]byte) (bool, error) {
+func getTokenFromSecretData(data map[string][]byte) (string, error) {
 	if _, ok := data[resourcesv1alpha1.DataKeyKubeconfig]; !ok {
-		return data[resourcesv1alpha1.DataKeyToken] != nil, nil
+		token := data[resourcesv1alpha1.DataKeyToken]
+		return string(token), nil
 	}
 
 	kubeconfig, err := decodeKubeconfig(data[resourcesv1alpha1.DataKeyKubeconfig])
 	if err != nil {
-		return false, err
+		return "", err
 	}
 
 	authInfo, err := getAuthInfo(kubeconfig)
 	if err != nil {
-		return false, err
+		return "", err
 	}
 
-	return authInfo != nil && authInfo.Token != "", nil
+	var token string
+	if authInfo != nil {
+		token = authInfo.Token
+	}
+
+	return token, nil
 }
 
 func decodeKubeconfig(data []byte) (*clientcmdv1.Config, error) {
