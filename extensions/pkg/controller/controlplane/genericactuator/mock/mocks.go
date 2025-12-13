@@ -103,6 +103,22 @@ func (mr *MockValuesProviderMockRecorder) GetControlPlaneShootChartValues(ctx, c
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetControlPlaneShootChartValues", reflect.TypeOf((*MockValuesProvider)(nil).GetControlPlaneShootChartValues), ctx, cp, cluster, secretsReader, checksums)
 }
 
+// GetControllersStatus mocks base method.
+func (m *MockValuesProvider) GetControllersStatus(ctx context.Context, cp *v1alpha1.ControlPlane, cluster *controller.Cluster) ([]v1alpha1.ControllerConfig, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetControllersStatus", ctx, cp, cluster)
+	ret0, _ := ret[0].([]v1alpha1.ControllerConfig)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetControllersStatus indicates an expected call of GetControllersStatus.
+func (mr *MockValuesProviderMockRecorder) GetControllersStatus(ctx, cp, cluster any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetControllersStatus", reflect.TypeOf((*MockValuesProvider)(nil).GetControllersStatus), ctx, cp, cluster)
+}
+
 // GetStorageClassesChartValues mocks base method.
 func (m *MockValuesProvider) GetStorageClassesChartValues(ctx context.Context, cp *v1alpha1.ControlPlane, cluster *controller.Cluster) (map[string]any, error) {
 	m.ctrl.T.Helper()

@@ -41,3 +41,8 @@ func (vp NoopValuesProvider) GetControlPlaneShootCRDsChartValues(context.Context
 func (vp NoopValuesProvider) GetStorageClassesChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) (map[string]any, error) {
 	return nil, nil
 }
+
+// GetControllersStatus returns status of controllers and if a requeue is required.
+func (vp NoopValuesProvider) GetControllersStatus(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) ([]extensionsv1alpha1.ControllerConfig, bool, error) {
+	return nil, false, nil
+}
