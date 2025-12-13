@@ -23,6 +23,7 @@ build:
             - imagevector/containers.yaml
             - pkg/admissioncontroller/apis/config/v1alpha1
             - pkg/admissioncontroller/apis/config/v1alpha1/validation
+            - pkg/admissioncontroller/webhook/admission
             - pkg/api
             - pkg/api/extensions
             - pkg/api/indexer
@@ -275,6 +276,7 @@ build:
             - pkg/operator/webhook/defaulting/extension
             - pkg/operator/webhook/defaulting/garden
             - pkg/operator/webhook/validation
+            - pkg/operator/webhook/validation/auditpolicy
             - pkg/operator/webhook/validation/extension
             - pkg/operator/webhook/validation/garden
             - pkg/operator/webhook/validation/namespace
@@ -328,6 +330,7 @@ build:
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
             - pkg/utils/workloadidentity
+            - pkg/webhook/configvalidator
             - plugin/pkg
             - VERSION
         ldflags:
