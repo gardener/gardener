@@ -51,6 +51,8 @@ type Interface interface {
 	SetCentralScrapeConfigs([]*monitoringv1alpha1.ScrapeConfig)
 	// SetNamespaceUID sets the namespace UID.
 	SetNamespaceUID(name types.UID)
+	// SetAdditionalAlertRelabelConfigs sets the additional alert relabel configs.
+	SetAdditionalAlertRelabelConfigs([]monitoringv1.RelabelConfig)
 }
 
 // Values contains configuration values for the prometheus resources.
@@ -337,6 +339,10 @@ func (p *prometheus) SetNamespaceUID(uid types.UID) {
 
 func (p *prometheus) name() string {
 	return "prometheus-" + p.values.Name
+}
+
+func (p *prometheus) SetAdditionalAlertRelabelConfigs(configs []monitoringv1.RelabelConfig) {
+	p.values.AdditionalAlertRelabelConfigs = configs
 }
 
 func (p *prometheus) addCentralConfigsToRegistry(registry *managedresources.Registry) error {
