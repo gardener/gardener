@@ -1,4 +1,4 @@
-FROM kindest/node:v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a
+FROM kindest/node:v1.34.2@sha256:745f8ed46d8e99517774768227fd1a0af34a6bf395aef9c7ed98fbce0e263918
 
 RUN apt-get update -yq && \
     apt-get install -yq --no-install-recommends wget apparmor apparmor-utils jq openssh-server sudo logrotate
