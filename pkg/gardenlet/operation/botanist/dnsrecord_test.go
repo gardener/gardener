@@ -193,6 +193,10 @@ var _ = Describe("dnsrecord", func() {
 				Values:            []string{address},
 				AnnotateOperation: false,
 				IPStack:           "ipv4",
+				Labels: map[string]string{
+					"role":                "external",
+					"gardener.cloud/role": "controlplane",
+				},
 			}))
 		})
 
@@ -239,6 +243,10 @@ var _ = Describe("dnsrecord", func() {
 					Annotations: map[string]string{
 						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+					},
+					Labels: map[string]string{
+						"role":                "external",
+						"gardener.cloud/role": "controlplane",
 					},
 				},
 				Spec: extensionsv1alpha1.DNSRecordSpec{
@@ -296,6 +304,10 @@ var _ = Describe("dnsrecord", func() {
 				Values:            []string{address},
 				AnnotateOperation: false,
 				IPStack:           "ipv4",
+				Labels: map[string]string{
+					"role":                "internal",
+					"gardener.cloud/role": "controlplane",
+				},
 			}))
 		})
 
@@ -348,6 +360,10 @@ var _ = Describe("dnsrecord", func() {
 						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 					},
+					Labels: map[string]string{
+						"role":                "internal",
+						"gardener.cloud/role": "controlplane",
+					},
 				},
 				Spec: extensionsv1alpha1.DNSRecordSpec{
 					DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -397,7 +413,7 @@ var _ = Describe("dnsrecord", func() {
 		})
 
 		Context("restore", func() {
-			var shootState = &gardencorev1beta1.ShootState{}
+			shootState := &gardencorev1beta1.ShootState{}
 
 			JustBeforeEach(func() {
 				b.Shoot.SetShootState(shootState)
@@ -457,7 +473,7 @@ var _ = Describe("dnsrecord", func() {
 		})
 
 		Context("restore", func() {
-			var shootState = &gardencorev1beta1.ShootState{}
+			shootState := &gardencorev1beta1.ShootState{}
 
 			JustBeforeEach(func() {
 				b.Shoot.SetShootState(shootState)
