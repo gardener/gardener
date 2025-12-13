@@ -8,18 +8,19 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/cmd/internal/migration"
 	"github.com/gardener/gardener/pkg/features"
 )
 
-func (g *garden) runMigrations(ctx context.Context, log logr.Logger) error {
+func runMigrations(ctx context.Context, mgr manager.Manager, log logr.Logger) error {
 	if features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates) {
-		if err := migration.MigrateVPAEmptyPatch(ctx, g.mgr, log); err != nil {
+		if err := migration.MigrateVPAEmptyPatch(ctx, mgr, log); err != nil {
 			return err
 		}
 	} else {
-		if err := migration.MigrateVPAUpdateModeToRecreate(ctx, g.mgr, log); err != nil {
+		if err := migration.MigrateVPAUpdateModeToRecreate(ctx, mgr, log); err != nil {
 			return err
 		}
 	}

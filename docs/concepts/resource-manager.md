@@ -1149,6 +1149,13 @@ vpa-in-place-updates.resources.gardener.cloud/skip
 ```
 
 could be appended to the resource metadata. With the _label_ specified, the webhook will filter out the resources, leaving its current `updateMode` configuration.
+To indicate that a `vpa` resource has already been mutated by the _webhook_, an additional
+
+```
+vpa-in-place-updates.resources.gardener.cloud/mutated
+```
+
+_label_ gets added to the resource metadata.
 
 Available for deployment with both [gardenlet](https://github.com/gardener/gardener/blob/master/docs/concepts/gardenlet.md) and [gardener-operator](https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md), enabling the webhook happens by activating a dedicated _feature gate_ within the respective component manifest:
 
