@@ -26,6 +26,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
@@ -138,10 +139,10 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 		}
 
 		switch x.Name {
-		case v1beta1constants.DeploymentNameKubeAPIServer:
+		case v1beta1constants.DeploymentNameKubeAPIServer, operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer:
 			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
 			return m.ensurer.EnsureKubeAPIServerDeployment(ctx, gctx, x, oldDep)
-		case v1beta1constants.DeploymentNameKubeControllerManager:
+		case v1beta1constants.DeploymentNameKubeControllerManager, operatorv1alpha1.DeploymentNameVirtualGardenKubeControllerManager:
 			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
 			return m.ensurer.EnsureKubeControllerManagerDeployment(ctx, gctx, x, oldDep)
 		case v1beta1constants.DeploymentNameKubeScheduler:
@@ -189,7 +190,7 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 		}
 	case *druidcorev1alpha1.Etcd:
 		switch x.Name {
-		case v1beta1constants.ETCDMain, v1beta1constants.ETCDEvents:
+		case v1beta1constants.ETCDMain, operatorv1alpha1.VirtualGardenETCDMain, v1beta1constants.ETCDEvents, operatorv1alpha1.VirtualGardenETCDEvents:
 			var oldEtcd *druidcorev1alpha1.Etcd
 			if old != nil {
 				var ok bool

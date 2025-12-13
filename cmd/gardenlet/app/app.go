@@ -50,6 +50,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -728,7 +729,7 @@ func (g *garden) updateProcessingShootStatusToAborted(ctx context.Context, garde
 	return flow.Parallel(taskFns...)(ctx)
 }
 
-const virtualGardenService = "virtual-garden-" + v1beta1constants.DeploymentNameKubeAPIServer
+const virtualGardenService = operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer
 
 // overwriteGardenHostWhenDeployedInRuntimeCluster overwrites the garden REST config host to the internal service host
 // if the gardenlet is deployed in the runtime cluster of the garden and L7 load balancing is not active.
