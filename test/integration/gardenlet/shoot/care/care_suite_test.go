@@ -186,6 +186,19 @@ var _ = BeforeSuite(func() {
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, project))).To(Succeed())
 	})
 
+	By("Create Internal Domain Secret")
+	internalDomainSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "internal-domain-secret",
+			Namespace: testNamespace.Name,
+			Labels: map[string]string{
+				testID: testRunID,
+			},
+		},
+	}
+	Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
+	log.Info("Created Internal Domain Secret for test", "secret", client.ObjectKeyFromObject(internalDomainSecret))
+
 	seed = &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   seedName,
@@ -204,6 +217,16 @@ var _ = BeforeSuite(func() {
 				},
 			},
 			DNS: gardencorev1beta1.SeedDNS{
+				Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+					Type:   "provider",
+					Domain: "internal.example.com",
+					CredentialsRef: corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       "internal-domain-secret",
+						Namespace:  testNamespace.Name,
+					},
+				},
 				Provider: &gardencorev1beta1.SeedDNSProvider{
 					Type: "providerType",
 					SecretRef: corev1.SecretReference{
