@@ -804,6 +804,9 @@ const (
 	// ReferencedResourcesPrefix is the prefix used when copying referenced resources to the Shoot namespace in the Seed,
 	// to avoid naming collisions with resources managed by Gardener.
 	ReferencedResourcesPrefix = "ref-"
+	// ReferencedWorkloadIdentityPrefix is the prefix used when naming a Secret deployed in the Seed on behalf of referenced WorkloadIdentity.
+	// The prefix is unique in order to avoid naming collisions with other resources managed by Gardener or referenced Secrets.
+	ReferencedWorkloadIdentityPrefix = "workload-identity-ref-"
 
 	// ClusterIdentity is a constant equal to the name and data key (that stores the identity) of the cluster-identity ConfigMap
 	ClusterIdentity = "cluster-identity"

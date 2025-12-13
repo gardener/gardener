@@ -231,11 +231,6 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				authwebhook.WithAllowedVerbs("get", "update", "patch", "delete", "list", "watch"),
 				authwebhook.WithAlwaysAllowedVerbs("create"),
 			)
-		case workloadIdentityResource:
-			return requestAuthorizer.Check(graph.VertexTypeWorkloadIdentity, attrs,
-				authwebhook.WithAllowedVerbs("get", "list", "watch", "create"),
-				authwebhook.WithAllowedSubresources("token"),
-			)
 		default:
 			a.logger.Info(
 				"Unhandled resource request",

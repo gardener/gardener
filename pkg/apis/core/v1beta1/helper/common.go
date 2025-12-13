@@ -7,11 +7,13 @@ package helper
 import (
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 )
 
 // ComputeOperationType checks the <lastOperation> and determines whether it is Create, Delete, Reconcile, Migrate or Restore operation
@@ -100,24 +102,21 @@ func HasOperationAnnotation(annotations map[string]string) bool {
 		annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationMigrate
 }
 
-// ResourceReferencesEqual returns true when at least one of the Secret/ConfigMap resource references has changed.
+// ResourceReferencesEqual returns true when none of the Secret/ConfigMap/WorkloadIdentity resource references have changed.
 func ResourceReferencesEqual(oldResources, newResources []gardencorev1beta1.NamedResourceReference) bool {
-	var (
-		oldNames = sets.New[string]()
-		newNames = sets.New[string]()
-	)
-
-	for _, resource := range oldResources {
-		if resource.ResourceRef.APIVersion == "v1" && sets.New("Secret", "ConfigMap").Has(resource.ResourceRef.Kind) {
-			oldNames.Insert(resource.ResourceRef.Kind + "/" + resource.ResourceRef.Name)
-		}
-	}
-
-	for _, resource := range newResources {
-		if resource.ResourceRef.APIVersion == "v1" && sets.New("Secret", "ConfigMap").Has(resource.ResourceRef.Kind) {
-			newNames.Insert(resource.ResourceRef.Kind + "/" + resource.ResourceRef.Name)
-		}
-	}
+	oldNames := namesForResourceReferences(oldResources)
+	newNames := namesForResourceReferences(newResources)
 
 	return oldNames.Equal(newNames)
+}
+
+func namesForResourceReferences(resources []gardencorev1beta1.NamedResourceReference) sets.Set[string] {
+	names := sets.New[string]()
+	for _, resource := range resources {
+		if resource.ResourceRef.APIVersion == corev1.SchemeGroupVersion.String() && sets.New("Secret", "ConfigMap").Has(resource.ResourceRef.Kind) ||
+			resource.ResourceRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() && resource.ResourceRef.Kind == "WorkloadIdentity" {
+			names.Insert(resource.ResourceRef.Kind + "/" + resource.ResourceRef.Name)
+		}
+	}
+	return names
 }

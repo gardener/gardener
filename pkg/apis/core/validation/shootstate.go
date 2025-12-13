@@ -56,11 +56,12 @@ func ValidateShootStateSpec(shootStateSpec *core.ShootStateSpec, fldPath *field.
 		if extension.Purpose != nil && len(*extension.Purpose) == 0 {
 			allErrs = append(allErrs, field.Invalid(purposePath, extension.Purpose, "extension resource purpose cannot be empty"))
 		}
-		allErrs = append(allErrs, ValidateResources(extension.Resources, fldPath.Child("resources"))...)
+
+		allErrs = append(allErrs, ValidateResources(extension.Resources, fldPath.Child("resources"), false)...)
 	}
 
 	for i, resource := range shootStateSpec.Resources {
-		allErrs = append(allErrs, validateCrossVersionObjectReference(resource.CrossVersionObjectReference, fldPath.Child("resources").Index(i))...)
+		allErrs = append(allErrs, validateCrossVersionObjectReference(resource.CrossVersionObjectReference, fldPath.Child("resources").Index(i), false)...)
 	}
 
 	return allErrs
