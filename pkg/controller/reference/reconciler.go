@@ -71,14 +71,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 	unreferencedResources = append(unreferencedResources, unreferencedConfigMaps...)
 
-	unreferencedWorkloadIdentities := []client.Object{}
 	if r.GetReferencedWorkloadIdentityNames != nil {
-		unreferencedWorkloadIdentities, err = r.getUnreferencedResources(ctx, obj, &securityv1alpha1.WorkloadIdentityList{}, r.GetReferencedWorkloadIdentityNames)
+		unreferencedWorkloadIdentities, err := r.getUnreferencedResources(ctx, obj, &securityv1alpha1.WorkloadIdentityList{}, r.GetReferencedWorkloadIdentityNames)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+		unreferencedResources = append(unreferencedResources, unreferencedWorkloadIdentities...)
 	}
-	unreferencedResources = append(unreferencedResources, unreferencedWorkloadIdentities...)
 
 	if err := r.releaseUnreferencedResources(ctx, log, unreferencedResources...); err != nil {
 		return reconcile.Result{}, err
