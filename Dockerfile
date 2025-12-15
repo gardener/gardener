@@ -10,7 +10,7 @@ ARG TARGETARCH
 RUN make build EFFECTIVE_VERSION=$EFFECTIVE_VERSION GOOS=$TARGETOS GOARCH=$TARGETARCH BUILD_OUTPUT_FILE="/output/bin/"
 
 # distroless-static
-FROM gcr.io/distroless/static-debian12:nonroot AS distroless-static
+FROM gcr.io/distroless/static-debian13:nonroot AS distroless-static
 
 # apiserver
 FROM distroless-static AS apiserver
