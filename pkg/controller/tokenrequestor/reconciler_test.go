@@ -68,6 +68,16 @@ var _ = Describe("Reconciler", func() {
 			sourceClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 
 			targetClient = fakeclient.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
+				Create: func(ctx context.Context, c client.WithWatch, obj client.Object, _ ...client.CreateOption) error {
+					tokenReview, isTokenReview := obj.(*authenticationv1.TokenReview)
+					if isTokenReview {
+						tokenReview.Status = authenticationv1.TokenReviewStatus{
+							Authenticated: true,
+						}
+						return nil
+					}
+					return c.Create(ctx, obj)
+				},
 				SubResourceCreate: func(ctx context.Context, c client.Client, _ string, obj client.Object, subResource client.Object, _ ...client.SubResourceCreateOption) error {
 					tokenRequest, isTokenRequest := subResource.(*authenticationv1.TokenRequest)
 					if !isTokenRequest {
