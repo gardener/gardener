@@ -126,7 +126,7 @@ generate_group () {
     package_path="${package_path};${package_path}beta2;"
     generate="controller-gen crd"$crd_options" paths="$package_path" output:crd:dir="$output_dir_temp" output:stdout"
     $generate &> "$generator_output" ||:
-    grep -v -e 'map keys must be strings, not int' -e 'not all generators ran successfully' -e 'exit status 1' -e 'usage' "$generator_output" && { echo "Failed to generate CRD YAMLs."; exit 1; }
+    grep -v -e 'map keys must be strings, not int' -e 'not all generators ran successfully' -e 'usage' "$generator_output" && { echo "Failed to generate CRD YAMLs."; exit 1; }
   elif [[ "$group" == "perses.dev_v1alpha1" ]]; then
     generate="controller-gen crd:ignoreUnexportedFields=true"$crd_options" paths="$package_path" output:crd:dir="$output_dir_temp" output:stdout"
     $generate

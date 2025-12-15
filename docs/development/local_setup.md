@@ -147,8 +147,6 @@ The Gardener repository and all the above-mentioned tools (git, golang, kubectl,
 Clone the repository from GitHub.
 
 ```bash
-mkdir -p /path/to/src/github.com/gardener
-cd /path/to/src/github.com/gardener
 git clone git@github.com:gardener/gardener.git
 cd gardener
 ```
