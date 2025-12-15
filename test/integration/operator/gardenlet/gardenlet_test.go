@@ -58,7 +58,7 @@ var _ = Describe("Gardenlet controller test", func() {
 						},
 					},
 					Internal: &gardencorev1beta1.SeedDNSProviderConfig{
-						Type:   "test-provider",
+						Type:   "provider",
 						Domain: "internal.example.com",
 						CredentialsRef: corev1.ObjectReference{
 							APIVersion: "v1",
