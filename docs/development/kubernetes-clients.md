@@ -157,7 +157,13 @@ The client collection mainly exist for historical reasons (there used to be a lo
 However, Gardener is in the process of moving more towards controller-runtime and only using their clients, as they provide many benefits and are much easier to use.
 Also, [gardener/gardener#4251](https://github.com/gardener/gardener/issues/4251) aims at refactoring our controller and admission components to native controller-runtime components.
 
-> ⚠️ Please always prefer controller-runtime clients over other clients when writing new code or refactoring existing code.
+> [!WARNING]
+> Please always prefer controller-runtime clients over other clients when writing new code or refactoring existing code.
+
+> [!TIP]
+> The [`DiscoverVersion`](https://github.com/gardener/gardener/blob/v1.134.0/pkg/client/kubernetes/types.go#L190-L193) function, which is used to retrieve the API server version, validates if the discovered version is a supported Kubernetes version by Gardener.
+> See [Supported Kubernetes Versions](../usage/shoot-operations/supported_k8s_versions.md).
+> To disable this check, set the `EXPERIMENTAL_DISABLE_KUBERNETES_VERSION_CHECK=true` environment variable.
 
 ## Cache Types: Informers, Listers, Controller-Runtime Caches
 
