@@ -68,7 +68,7 @@ status:
 Extension controllers that do not use a saved state and therefore do not require state migration could leave the `status.state` field as `nil` at the end of a successful reconciliation, and just perform a normal reconciliation when the current operation is `restore`.
 
 In addition, extension controllers that use [referenced resources](referenced-resources.md) (usually secrets) must also make sure that these resources are added to the `status.resources` field of their extension resource at the end of a successful reconciliation, so they could be properly migrated by Gardener to the destination seed.
-Workload identity secrets, i.e. those labeled with `security.gardener.cloud/purpose=workload-identity-token-requestor`, do not need to be migrated, instead new workload identity secrets should be created in the destination seed and the `gardenlet` will request new token with updated context claims in it.
+Workload identity secrets, i.e. those labeled with `security.gardener.cloud/purpose=workload-identity-token-requestor`, do not need to be migrated. Instead, new workload identity secrets should be created in the destination seed and the `gardenlet` will request new token with updated context claims in it.
 
 ## Implementation Details
 
