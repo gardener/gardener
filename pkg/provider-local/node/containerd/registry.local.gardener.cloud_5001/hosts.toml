@@ -1,0 +1,6 @@
+# Enable containerd to reach registry at registry.local.gardener.cloud:5001 via HTTP.
+# Beware: Port `:5000` cannot be used, as it conflicts with the default port allocation for the `AirPlay Receiver` on MacOS.
+server = "http://registry.local.gardener.cloud:5001"
+
+[host."http://registry.local.gardener.cloud:5001"]
+  capabilities = ["pull", "resolve"]
