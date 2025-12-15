@@ -251,7 +251,7 @@ var _ = Describe("TokenRequestor tests", func() {
 			Expect(newServiceAccount.UID).NotTo(Equal(serviceAccount.UID))
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-				g.Expect(secret.Data["token"]).ToNot(Equal("modified-invalid"))
+				g.Expect(secret.Data["token"]).NotTo(BeEquivalentTo("modified-invalid"))
 			}).Should(Succeed())
 		})
 	})
