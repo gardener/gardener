@@ -4729,7 +4729,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":     Equal(field.ErrorTypeInvalid),
 							"Field":    Equal("spec.maintenance.autoRotation.credentials.observability.rotationPeriod"),
-							"Detail":   ContainSubstring("value must be between 30m and 90d"),
+							"Detail":   ContainSubstring("value must be either 0 to disable rotation or between 30m and 90d"),
 							"BadValue": Equal(rotationPeriod.Duration.String()),
 						}))))
 				}
@@ -4761,7 +4761,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":     Equal(field.ErrorTypeInvalid),
 							"Field":    Equal("spec.maintenance.autoRotation.credentials.sshKeypair.rotationPeriod"),
-							"Detail":   ContainSubstring("value must be between 30m and 90d"),
+							"Detail":   ContainSubstring("value must be either 0 to disable rotation or between 30m and 90d"),
 							"BadValue": Equal(rotationPeriod.Duration.String()),
 						}))))
 				}
@@ -4810,7 +4810,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":     Equal(field.ErrorTypeInvalid),
 							"Field":    Equal("spec.maintenance.autoRotation.credentials.etcdEncryptionKey.rotationPeriod"),
-							"Detail":   ContainSubstring("value must be between 30m and 90d"),
+							"Detail":   ContainSubstring("value must be either 0 to disable rotation or between 30m and 90d"),
 							"BadValue": Equal(rotationPeriod.Duration.String()),
 						}))))
 				}
