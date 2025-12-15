@@ -751,7 +751,7 @@ frontend:
 				},
 				{
 					APIGroups: []string{"core.gardener.cloud"},
-					Resources: []string{"quotas", "projects", "shoots", "controllerregistrations"},
+					Resources: []string{"quotas", "projects", "shoots", "controllerregistrations", "namespacedcloudprofiles"},
 					Verbs:     []string{"list", "watch"},
 				},
 				{
