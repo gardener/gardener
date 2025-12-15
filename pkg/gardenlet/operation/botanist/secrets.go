@@ -13,16 +13,13 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -524,31 +521,11 @@ func (b *Botanist) reconcileWildcardIngressCertificate(ctx context.Context) erro
 func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 	switch credentials := b.Shoot.Credentials.(type) {
 	case *securityv1alpha1.WorkloadIdentity:
-		shootInfo := b.Shoot.GetInfo()
-		gvk, err := apiutil.GVKForObject(shootInfo, kubernetes.GardenScheme)
-		if err != nil {
-			return err
-		}
-		shootMeta := securityv1alpha1.ContextObject{
-			APIVersion: gvk.GroupVersion().String(),
-			Kind:       gvk.Kind,
-			Namespace:  ptr.To(shootInfo.Namespace),
-			Name:       shootInfo.Name,
-			UID:        shootInfo.UID,
-		}
-
-		secret, err := workloadidentity.NewSecret(
-			v1beta1constants.SecretNameCloudProvider,
-			b.Shoot.ControlPlaneNamespace,
-			workloadidentity.For(credentials.Name, credentials.Namespace, credentials.Spec.TargetSystem.Type),
-			workloadidentity.WithProviderConfig(credentials.Spec.TargetSystem.ProviderConfig),
-			workloadidentity.WithContextObject(shootMeta),
-			workloadidentity.WithLabels(map[string]string{v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider}),
+		return workloadidentity.Deploy(
+			ctx, b.SeedClientSet.Client(), credentials, v1beta1constants.SecretNameCloudProvider, b.Shoot.ControlPlaneNamespace,
+			nil, map[string]string{v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider},
+			b.Shoot.GetInfo(),
 		)
-		if err != nil {
-			return err
-		}
-		return secret.Reconcile(ctx, b.SeedClientSet.Client())
 	case *corev1.Secret:
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{

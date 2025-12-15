@@ -18,6 +18,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
@@ -107,6 +108,7 @@ func (g *graph) HandleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 	g.deleteAllIncomingEdges(VertexTypeSecretBinding, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeCredentialsBinding, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeShootState, VertexTypeShoot, shoot.Namespace, shoot.Name)
+	g.deleteAllIncomingEdges(VertexTypeWorkloadIdentity, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	if g.forSelfHostedShoots {
 		g.deleteAllIncomingEdges(VertexTypeLease, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	} else {
@@ -191,8 +193,9 @@ func (g *graph) HandleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 	}
 
 	for _, resource := range shoot.Spec.Resources {
-		// only secrets and configMap are supported here
-		if resource.ResourceRef.APIVersion == "v1" {
+		// only v1.Secrets, v1.ConfigMaps, and security.gardener.cloud/v1alpha1.WorkloadIdentities are supported here
+		switch resource.ResourceRef.APIVersion {
+		case corev1.SchemeGroupVersion.String():
 			if resource.ResourceRef.Kind == "Secret" {
 				secretVertex := g.getOrCreateVertex(VertexTypeSecret, shoot.Namespace, resource.ResourceRef.Name)
 				g.addEdge(secretVertex, shootVertex)
@@ -200,6 +203,11 @@ func (g *graph) HandleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 			if resource.ResourceRef.Kind == "ConfigMap" {
 				configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, resource.ResourceRef.Name)
 				g.addEdge(configMapVertex, shootVertex)
+			}
+		case securityv1alpha1.SchemeGroupVersion.String():
+			if resource.ResourceRef.Kind == "WorkloadIdentity" {
+				workloadIdentityVertex := g.getOrCreateVertex(VertexTypeWorkloadIdentity, shoot.Namespace, resource.ResourceRef.Name)
+				g.addEdge(workloadIdentityVertex, shootVertex)
 			}
 		}
 	}

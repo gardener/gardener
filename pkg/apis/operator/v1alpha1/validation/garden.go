@@ -92,7 +92,7 @@ func validateResources(resources []gardencorev1beta1.NamedResourceReference, pat
 		coreResources = append(coreResources, *coreResource)
 	}
 
-	return gardencorevalidation.ValidateResources(coreResources, path)
+	return gardencorevalidation.ValidateResources(coreResources, path, false)
 }
 
 // ValidateGardenUpdate contains functionality for performing extended validation of a Garden object under update which

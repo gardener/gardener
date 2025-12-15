@@ -24,22 +24,24 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
-// Reconciler checks the object in the given request for Secret or ConfigMap references to further objects in order to
-// protect them from deletions as long as they are still referenced.
+// Reconciler checks the object in the given request for Secret, ConfigMap, or WorkloadIdentity references
+// to further objects in order to protect them from deletions as long as they are still referenced.
 type Reconciler struct {
-	Client                      client.Client
-	ConcurrentSyncs             *int
-	NewObjectFunc               func() client.Object
-	NewObjectListFunc           func() client.ObjectList
-	GetNamespace                func(client.Object) string
-	GetReferencedSecretNames    func(client.Object) []string
-	GetReferencedConfigMapNames func(client.Object) []string
-	ReferenceChangedPredicate   func(oldObj, newObj client.Object) bool
+	Client                             client.Client
+	ConcurrentSyncs                    *int
+	NewObjectFunc                      func() client.Object
+	NewObjectListFunc                  func() client.ObjectList
+	GetNamespace                       func(client.Object) string
+	GetReferencedSecretNames           func(client.Object) []string
+	GetReferencedConfigMapNames        func(client.Object) []string
+	GetReferencedWorkloadIdentityNames func(client.Object) []string
+	ReferenceChangedPredicate          func(oldObj, newObj client.Object) bool
 }
 
 // Reconcile performs the check.
@@ -55,16 +57,29 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
+	var unreferencedResources []client.Object
+
 	unreferencedSecrets, err := r.getUnreferencedResources(ctx, obj, &corev1.SecretList{}, r.GetReferencedSecretNames)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	unreferencedResources = append(unreferencedResources, unreferencedSecrets...)
+
 	unreferencedConfigMaps, err := r.getUnreferencedResources(ctx, obj, &corev1.ConfigMapList{}, r.GetReferencedConfigMapNames)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	unreferencedResources = append(unreferencedResources, unreferencedConfigMaps...)
 
-	if err := r.releaseUnreferencedResources(ctx, log, append(unreferencedSecrets, unreferencedConfigMaps...)...); err != nil {
+	if r.GetReferencedWorkloadIdentityNames != nil {
+		unreferencedWorkloadIdentities, err := r.getUnreferencedResources(ctx, obj, &securityv1alpha1.WorkloadIdentityList{}, r.GetReferencedWorkloadIdentityNames)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		unreferencedResources = append(unreferencedResources, unreferencedWorkloadIdentities...)
+	}
+
+	if err := r.releaseUnreferencedResources(ctx, log, unreferencedResources...); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -87,10 +102,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	addedFinalizerToWorkloadIdentity := false
+	if r.GetReferencedWorkloadIdentityNames != nil {
+		addedFinalizerToWorkloadIdentity, err = r.handleReferencedResources(ctx, log, "WorkloadIdentity", func() client.Object { return &securityv1alpha1.WorkloadIdentity{} }, r.GetNamespace(obj), r.GetReferencedWorkloadIdentityNames(obj)...)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+	}
 
 	var (
 		hasFinalizer   = controllerutil.ContainsFinalizer(obj, v1beta1constants.ReferenceProtectionFinalizerName)
-		needsFinalizer = addedFinalizerToSecret || addedFinalizerToConfigMap
+		needsFinalizer = addedFinalizerToSecret || addedFinalizerToConfigMap || addedFinalizerToWorkloadIdentity
 	)
 
 	if needsFinalizer && !hasFinalizer {

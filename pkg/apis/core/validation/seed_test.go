@@ -1760,10 +1760,14 @@ var _ = Describe("Seed Validation Tests", func() {
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.resources[0].resourceRef.apiVersion"),
 					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("spec.resources[0].resourceRef"),
+					})),
 				))
 			})
 
-			It("should forbid resources of kind other than Secret/ConfigMap", func() {
+			It("should forbid resources of kind other than Secret/ConfigMap/WorkloadIdentity", func() {
 				ref := core.NamedResourceReference{
 					Name: "test",
 					ResourceRef: autoscalingv1.CrossVersionObjectReference{
@@ -1777,8 +1781,8 @@ var _ = Describe("Seed Validation Tests", func() {
 				Expect(ValidateSeed(seed)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":     Equal(field.ErrorTypeNotSupported),
-						"Field":    Equal("spec.resources[0].resourceRef.kind"),
-						"BadValue": Equal("ServiceAccount"),
+						"Field":    Equal("spec.resources[0].resourceRef"),
+						"BadValue": Equal("/v1, Kind=ServiceAccount"),
 					})),
 				))
 			})
@@ -1821,7 +1825,16 @@ var _ = Describe("Seed Validation Tests", func() {
 					},
 				}
 
-				seed.Spec.Resources = append(seed.Spec.Resources, ref, ref2)
+				ref3 := core.NamedResourceReference{
+					Name: "test-wi",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						Kind:       "WorkloadIdentity",
+						Name:       "test-wi",
+						APIVersion: "security.gardener.cloud/v1alpha1",
+					},
+				}
+
+				seed.Spec.Resources = append(seed.Spec.Resources, ref, ref2, ref3)
 
 				Expect(ValidateSeed(seed)).To(BeEmpty())
 			})

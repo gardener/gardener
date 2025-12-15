@@ -134,7 +134,7 @@ var _ = Describe("validation", func() {
 			})
 
 			errorList := ValidateShootState(shootState)
-			Expect(errorList).To(HaveLen(4))
+			Expect(errorList).To(HaveLen(5))
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -151,6 +151,10 @@ var _ = Describe("validation", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.resources[0].resourceRef.apiVersion"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.resources[0].resourceRef"),
 				})),
 			))
 		})
