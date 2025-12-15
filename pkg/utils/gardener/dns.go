@@ -7,7 +7,6 @@ package gardener
 import (
 	"errors"
 	"fmt"
-	"slices"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
@@ -95,7 +94,7 @@ func getIPStackForFamilies(ipFamilies []gardencorev1beta1.IPFamily) string {
 	if gardencorev1beta1.IsIPv6SingleStack(ipFamilies) {
 		return AnnotationValueIPStackIPv6
 	}
-	if len(ipFamilies) == 2 && slices.Contains(ipFamilies, gardencorev1beta1.IPFamilyIPv4) && slices.Contains(ipFamilies, gardencorev1beta1.IPFamilyIPv6) {
+	if gardencorev1beta1.IsDualStack(ipFamilies) {
 		return AnnotationValueIPStackIPDualStack
 	}
 	// Fall-back to IPv4 per default
