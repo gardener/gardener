@@ -262,6 +262,11 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.shootTemplate.metadata.labels"),
 				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("spec.template.spec.gardenlet.config.seedConfig.spec.dns.internal"),
+					"Detail": Equal("internal DNS configuration is required"),
+				})),
 			))
 		})
 
@@ -290,6 +295,11 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.template.spec.gardenlet.config.seedConfig.metadata.name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("spec.template.spec.gardenlet.config.seedConfig.spec.dns.internal"),
+					"Detail": Equal("internal DNS configuration is required"),
 				})),
 			))
 		})

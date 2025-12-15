@@ -53,6 +53,16 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 							Namespace: "some-namespace",
 						},
 					},
+					Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+						Type:   "providerType",
+						Domain: "internal.example.com",
+						CredentialsRef: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "some-secret",
+							Namespace:  "some-namespace",
+						},
+					},
 				},
 				Settings: &gardencorev1beta1.SeedSettings{
 					Scheduling: &gardencorev1beta1.SeedSettingScheduling{Visible: true},

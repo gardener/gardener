@@ -186,6 +186,24 @@ var _ = BeforeSuite(func() {
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, project))).To(Succeed())
 	})
 
+	By("Create Internal Domain Secret")
+	internalDomainSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "internal-domain-secret",
+			Namespace: testNamespace.Name,
+			Labels: map[string]string{
+				testID: testRunID,
+			},
+		},
+	}
+	Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
+	log.Info("Created Internal Domain Secret for test", "secret", client.ObjectKeyFromObject(internalDomainSecret))
+
+	DeferCleanup(func() {
+		By("Delete Internal Domain Secret")
+		Expect(client.IgnoreNotFound(testClient.Delete(ctx, internalDomainSecret))).To(Or(Succeed(), BeNotFoundError()))
+	})
+
 	seed = &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   seedName,
@@ -209,6 +227,16 @@ var _ = BeforeSuite(func() {
 					SecretRef: corev1.SecretReference{
 						Name:      "some-secret",
 						Namespace: "some-namespace",
+					},
+				},
+				Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+					Type:   "providerType",
+					Domain: "internal.example.com",
+					CredentialsRef: corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       "internal-domain-secret",
+						Namespace:  testNamespace.Name,
 					},
 				},
 			},

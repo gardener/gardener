@@ -314,6 +314,16 @@ var _ = BeforeSuite(func() {
 						Namespace: "some-namespace",
 					},
 				},
+				Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+					Type:   "provider",
+					Domain: "local.example.com",
+					CredentialsRef: corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       "some-secret",
+						Namespace:  "some-namespace",
+					},
+				},
 			},
 			Settings: &gardencorev1beta1.SeedSettings{
 				Scheduling: &gardencorev1beta1.SeedSettingScheduling{Visible: true},

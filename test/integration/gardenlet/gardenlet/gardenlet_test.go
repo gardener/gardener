@@ -59,6 +59,18 @@ var _ = Describe("Gardenlet controller test", func() {
 								Namespace:  "garden",
 							},
 						},
+						DNS: gardencorev1beta1.SeedDNS{
+							Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+								Type:   "provider",
+								Domain: "internal.example.com",
+								CredentialsRef: corev1.ObjectReference{
+									APIVersion: "v1",
+									Kind:       "Secret",
+									Name:       "internal-domain-secret",
+									Namespace:  "garden",
+								},
+							},
+						},
 					},
 				},
 			},

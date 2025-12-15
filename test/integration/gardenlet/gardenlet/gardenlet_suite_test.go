@@ -135,6 +135,16 @@ var _ = BeforeSuite(func() {
 						Namespace: "some-namespace",
 					},
 				},
+				Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+					Type:   "provider",
+					Domain: "internal.example.com",
+					CredentialsRef: corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       "some-secret",
+						Namespace:  "some-namespace",
+					},
+				},
 			},
 			Networks: gardencorev1beta1.SeedNetworks{
 				Pods:     "10.0.0.0/16",
@@ -159,7 +169,6 @@ var _ = BeforeSuite(func() {
 		By("Delete garden namespace")
 		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
-
 	gardenNamespaceSeed = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{GenerateName: "garden-"}}
 	Expect(testClient.Create(ctx, gardenNamespaceSeed)).To(Succeed())
 	log.Info("Created Namespace for test", "namespaceName", gardenNamespaceSeed.Name)

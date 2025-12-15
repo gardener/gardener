@@ -238,6 +238,16 @@ var _ = Describe("Seed controller tests", func() {
 							Namespace: dnsProviderSecret.Namespace,
 						},
 					},
+					Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+						Type:   providerName,
+						Domain: "internal.example.com",
+						CredentialsRef: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "some-secret",
+							Namespace:  "some-namespace",
+						},
+					},
 				},
 				Extensions: []gardencorev1beta1.Extension{
 					{
