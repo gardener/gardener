@@ -16,6 +16,8 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	operatorv1alpha1helper "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -28,14 +30,25 @@ type SecretConfigWithOptions struct {
 	Options []secretsmanager.GenerateOption
 }
 
-// SecretsManagerForCluster initializes a new SecretsManager for the given Cluster.
+// SecretsManagerForCluster initializes a new SecretsManager based on the given Cluster.
 // It takes care about rotating CAs among the given secretConfigs in lockstep with all other shoot cluster CAs.
 // It basically makes sure your extension fulfills the requirements for shoot CA rotation when managing secrets with this
 // SecretsManager. I.e., it
 // - initiates rotation of CAs according to cluster.shoot.status.credentials.rotation.certificateAuthorities.lastInitiationTime
 // - keeps old CA secrets during CA rotation
 // - removes old CA secrets on Cleanup() if cluster.shoot.status.credentials.rotation.certificateAuthorities.phase == Completing
-func SecretsManagerForCluster(ctx context.Context, logger logr.Logger, clock clock.Clock, c client.Client, cluster *extensionscontroller.Cluster, identity string, secretConfigs []SecretConfigWithOptions) (secretsmanager.Interface, error) {
+func SecretsManagerForCluster(
+	ctx context.Context,
+	logger logr.Logger,
+	clock clock.Clock,
+	c client.Client,
+	cluster *extensionscontroller.Cluster,
+	identity string,
+	secretConfigs []SecretConfigWithOptions,
+) (
+	secretsmanager.Interface,
+	error,
+) {
 	sm, err := secretsmanager.New(ctx, logger, clock, c, identity, secretsmanager.Config{
 		CASecretAutoRotation: false,
 		SecretNamesToTimes:   lastSecretRotationStartTimesFromCluster(cluster, secretConfigs),
@@ -44,8 +57,40 @@ func SecretsManagerForCluster(ctx context.Context, logger logr.Logger, clock clo
 		return nil, err
 	}
 	return secretsManager{
-		Interface: sm,
-		cluster:   cluster,
+		Interface:     sm,
+		rotationPhase: v1beta1helper.GetShootCARotationPhase(cluster.Shoot.Status.Credentials),
+	}, nil
+}
+
+// SecretsManagerForGarden initializes a new SecretsManager based on the given Garden.
+// It takes care about rotating CAs among the given secretConfigs in lockstep with all other garden cluster CAs.
+// It basically makes sure your extension fulfills the requirements for garden CA rotation when managing secrets with this
+// SecretsManager. I.e., it
+// - initiates rotation of CAs according to garden.status.credentials.rotation.certificateAuthorities.lastInitiationTime
+// - keeps old CA secrets during CA rotation
+// - removes old CA secrets on Cleanup() if garden.status.credentials.rotation.certificateAuthorities.phase == Completing
+func SecretsManagerForGarden(
+	ctx context.Context,
+	logger logr.Logger,
+	clock clock.Clock,
+	c client.Client,
+	garden *operatorv1alpha1.Garden,
+	identity string,
+	secretConfigs []SecretConfigWithOptions,
+) (
+	secretsmanager.Interface,
+	error,
+) {
+	sm, err := secretsmanager.New(ctx, logger, clock, c, identity, secretsmanager.Config{
+		CASecretAutoRotation: false,
+		SecretNamesToTimes:   lastSecretRotationStartTimesFromGarden(garden, secretConfigs),
+	}, garden.Name)
+	if err != nil {
+		return nil, err
+	}
+	return secretsManager{
+		Interface:     sm,
+		rotationPhase: operatorv1alpha1helper.GetCARotationPhase(garden.Status.Credentials),
 	}, nil
 }
 
@@ -54,7 +99,7 @@ func SecretsManagerForCluster(ctx context.Context, logger logr.Logger, clock clo
 type secretsManager struct {
 	secretsmanager.Interface
 
-	cluster *extensionscontroller.Cluster
+	rotationPhase gardencorev1beta1.CredentialsRotationPhase
 }
 
 // Generate delegates to the contained SecretsManager but automatically injects the `IgnoreOldSecrets` option if the CA
@@ -63,7 +108,7 @@ func (a secretsManager) Generate(ctx context.Context, config secretsutils.Config
 	if certConfig, ok := config.(*secretsutils.CertificateSecretConfig); ok && certConfig.CertType == secretsutils.CACert {
 		// CAs are always rotated in phases (not in-place)
 		opts = append(opts, secretsmanager.Rotate(secretsmanager.KeepOld))
-		if v1beta1helper.GetShootCARotationPhase(a.cluster.Shoot.Status.Credentials) == gardencorev1beta1.RotationCompleting {
+		if a.rotationPhase == gardencorev1beta1.RotationCompleting {
 			// we are completing rotation, cleanup the old CA secret
 			opts = append(opts, secretsmanager.IgnoreOldSecrets())
 		}
@@ -73,17 +118,34 @@ func (a secretsManager) Generate(ctx context.Context, config secretsutils.Config
 
 // lastSecretRotationStartTimesFromCluster creates a map that maps names of secret configs to times.
 // If cluster.shoot.status.credentials.certificateAuthorities.lastInitiationTime is set, it adds the time for all given
-// CA configs. If it's not set or no CA configs are given the map will be empty.
+// CA configs. If it's not set or no CA configs are given, nil will be returned.
 func lastSecretRotationStartTimesFromCluster(cluster *extensionscontroller.Cluster, secretConfigs []SecretConfigWithOptions) map[string]time.Time {
+	if shootStatus := cluster.Shoot.Status; shootStatus.Credentials != nil && shootStatus.Credentials.Rotation != nil {
+		return lastSecretRotationStartTimesFromCARotation(shootStatus.Credentials.Rotation.CertificateAuthorities, secretConfigs)
+	}
+
+	return nil
+}
+
+// lastSecretRotationStartTimesFromGarden creates a map that maps names of secret configs to times.
+// If garden.status.credentials.certificateAuthorities.lastInitiationTime is set, it adds the time for all given
+// CA configs. If it's not set or no CA configs are given, nil will be returned.
+func lastSecretRotationStartTimesFromGarden(garden *operatorv1alpha1.Garden, secretConfigs []SecretConfigWithOptions) map[string]time.Time {
+	if shootStatus := garden.Status; shootStatus.Credentials != nil && shootStatus.Credentials.Rotation != nil {
+		return lastSecretRotationStartTimesFromCARotation(shootStatus.Credentials.Rotation.CertificateAuthorities, secretConfigs)
+	}
+
+	return nil
+}
+
+func lastSecretRotationStartTimesFromCARotation(caRotation *gardencorev1beta1.CARotation, secretConfigs []SecretConfigWithOptions) map[string]time.Time {
 	var (
 		secretNamesToTime    = make(map[string]time.Time)
 		caLastInitiationTime *time.Time
 	)
 
-	if shootStatus := cluster.Shoot.Status; shootStatus.Credentials != nil && shootStatus.Credentials.Rotation != nil &&
-		shootStatus.Credentials.Rotation.CertificateAuthorities != nil &&
-		shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
-		timeCopy := shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time
+	if caRotation != nil && caRotation.LastInitiationTime != nil {
+		timeCopy := caRotation.LastInitiationTime.Time
 		caLastInitiationTime = &timeCopy
 	}
 
