@@ -120,17 +120,6 @@ var _ = Describe("Shoot Care controller tests", func() {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(seedNamespace), seedNamespace)
 		}).Should(Succeed())
 
-		By("Wait until the manager cache observes the internal domain secret")
-		Eventually(func() error {
-			internalDomainSecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "internal-domain-secret",
-					Namespace: testNamespace.Name,
-				},
-			}
-			return mgrClient.Get(ctx, client.ObjectKeyFromObject(internalDomainSecret), internalDomainSecret)
-		}).Should(Succeed())
-
 		By("Create Shoot")
 		Expect(testClient.Create(ctx, shoot)).To(Succeed())
 		log.Info("Created Shoot for test", "shoot", shoot.Name)

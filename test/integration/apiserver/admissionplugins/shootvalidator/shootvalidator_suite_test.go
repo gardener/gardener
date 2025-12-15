@@ -315,7 +315,7 @@ var _ = BeforeSuite(func() {
 					},
 				},
 				Internal: &gardencorev1beta1.SeedDNSProviderConfig{
-					Type:   "local",
+					Type:   "provider",
 					Domain: "local.example.com",
 					CredentialsRef: corev1.ObjectReference{
 						APIVersion: "v1",
