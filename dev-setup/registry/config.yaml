@@ -10,9 +10,9 @@ storage:
   tag:
     concurrencylimit: 5
 http:
-  addr: ":5000"
+  addr: ":5001"
   debug:
-    addr: ":5001"
+    addr: ":5002"
 health:
   storagedriver:
     enabled: true
