@@ -101,19 +101,19 @@ This document provides a checklist for them that you can walk through.
    You should restrict both ingress and egress traffic to/from your component as much as possible to ensure that it only gets access to/from other components if really needed.
    Gardener provides a few default policies for typical usage scenarios. For more information, see [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](../operations/network_policies.md).
 
-5. **Do not run containers in privileged mode** ([example](https://github.com/gardener/gardener/blob/v1.130.1/pkg/component/networking/nodelocaldns/nodelocaldns.go#L493), [example 2](https://github.com/gardener/gardener/blob/v1.130.1/pkg/component/networking/istio/charts/istio/istio-ingress/templates/deployment.yaml#L54))
+5. **Do not run containers in privileged mode** ([example](https://github.com/gardener/gardener/blob/fba55840a735694cbf1fe6a57469454391299854/pkg/component/networking/nodelocaldns/nodelocaldns.go#L493), [example 2](https://github.com/gardener/gardener/blob/fba55840a735694cbf1fe6a57469454391299854/pkg/component/networking/istio/charts/istio/istio-ingress/templates/deployment.yaml#L54))
 
    [Avoid running containers with `privileged=true`.](https://kubernetes.io/docs/concepts/security/linux-kernel-security-constraints/#privileged-containers)
 
-6. **Drop unutilised capabilities** ([example](https://github.com/gardener/gardener/blob/v1.130.1/pkg/component/networking/coredns/coredns.go#L510-L513), [example 2](https://github.com/gardener/gardener/blob/v1.130.1/charts/gardener/provider-local/templates/coredns/deployment.yaml#L74-L78))
+6. **Drop unutilised capabilities** ([example](https://github.com/gardener/gardener/blob/fba55840a735694cbf1fe6a57469454391299854/pkg/component/networking/coredns/coredns.go#L510-L513), [example 2](https://github.com/gardener/gardener/blob/fba55840a735694cbf1fe6a57469454391299854/charts/gardener/provider-local/templates/coredns/deployment.yaml#L74-L78))
 
    Define the needed [Linux capabilities](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-capabilities-for-a-container). Configure `securityContext.capabilities` to `drop: ["ALL"]` and selectively add any capabilities if necessary (e.g. `add: ["NET_BIND_SERVICE"]`).
 
-7. **Do not allow privilege escalation for containers** ([example](https://github.com/gardener/gardener/blob/v1.130.1/pkg/component/networking/coredns/coredns.go#L509), [example 2](https://github.com/gardener/gardener/blob/v1.130.1/pkg/component/networking/istio/charts/istio/istio-ingress/templates/deployment.yaml#L53))
+7. **Do not allow privilege escalation for containers** ([example](https://github.com/gardener/gardener/blob/fba55840a735694cbf1fe6a57469454391299854/pkg/component/networking/coredns/coredns.go#L509), [example 2](https://github.com/gardener/gardener/blob/fba55840a735694cbf1fe6a57469454391299854/pkg/component/networking/istio/charts/istio/istio-ingress/templates/deployment.yaml#L53))
 
    Explicitly set `securityContext.allowPrivilegeEscalation=false`, in cases when possible. There is an [issue in Kubernetes](https://github.com/kubernetes/kubernetes/issues/118822) about this configuration being `true` by default.
 
-8. **Do not run containers as root** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/Dockerfile#L12), [example 2](https://github.com/gardener/gardener/blob/v1.130.1/pkg/component/networking/istio/charts/istio/istio-ingress/templates/deployment.yaml#L39-L43))
+8. **Do not run containers as root** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/Dockerfile#L12), [example 2](https://github.com/gardener/gardener/blob/fba55840a735694cbf1fe6a57469454391299854/pkg/component/networking/istio/charts/istio/istio-ingress/templates/deployment.yaml#L39-L43))
 
    Avoid running containers as root. Usually, components such as Kubernetes controllers and admission webhook servers don't need root user capabilities to do their jobs.
 
@@ -165,7 +165,7 @@ This document provides a checklist for them that you can walk through.
 
 8. **Do not set a `pod{Anti}Affinity` for spreading across nodes or zones**
 
-   Spread across nodes and zones is handled by the [HighAvailabilityConfig](../concepts/resource-manager.md#high-availability-config) webhook. Specifying another `pod{Anti}Affinity` makes it harder to run the component locally or in smaller setups with only a single node. 
+   Spread across nodes and zones is handled by the [HighAvailabilityConfig](../concepts/resource-manager.md#high-availability-config) webhook. Specifying another `pod{Anti}Affinity` makes it harder to run the component locally or in smaller setups with only a single node.
 
 ## Scalability
 
