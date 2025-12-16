@@ -4717,7 +4717,7 @@ func (in *SeedDNS) DeepCopyInto(out *SeedDNS) {
 	if in.Provider != nil {
 		in, out := &in.Provider, &out.Provider
 		*out = new(SeedDNSProvider)
-		(*in).DeepCopyInto(*out)
+		**out = **in
 	}
 	if in.Internal != nil {
 		in, out := &in.Internal, &out.Internal
@@ -4748,11 +4748,7 @@ func (in *SeedDNS) DeepCopy() *SeedDNS {
 func (in *SeedDNSProvider) DeepCopyInto(out *SeedDNSProvider) {
 	*out = *in
 	out.SecretRef = in.SecretRef
-	if in.CredentialsRef != nil {
-		in, out := &in.CredentialsRef, &out.CredentialsRef
-		*out = new(v1.ObjectReference)
-		**out = **in
-	}
+	out.CredentialsRef = in.CredentialsRef
 	return
 }
 
