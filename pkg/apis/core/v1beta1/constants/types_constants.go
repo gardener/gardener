@@ -301,8 +301,6 @@ const (
 	GardenRoleHelmPullSecret = "helm-pull-secret"
 	// GardenRoleObservability is the value of the GardenRole key indicating type 'observability'.
 	GardenRoleObservability = "observability"
-	// GardenRoleIngress is the value of the GardenRole key indicating type 'ingress'.
-	GardenRoleIngress = "ingress"
 
 	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`
@@ -617,6 +615,8 @@ const (
 	LabelDNSRecordExternal = "external"
 	// LabelDNSRecordInternal is a constant for a label value for internal DNSRecord
 	LabelDNSRecordInternal = "internal"
+	// LabelDNSRecordIngress is a constant for a label value for DNSRecord used for ingress
+	LabelDNSRecordIngress = "ingress"
 
 	// LabelShootNamespace is a constant for a label key that indicates a relationship to a shoot in the specified namespace.
 	LabelShootNamespace = "shoot.gardener.cloud/namespace"

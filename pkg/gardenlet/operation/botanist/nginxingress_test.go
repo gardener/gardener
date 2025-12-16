@@ -225,8 +225,8 @@ var _ = Describe("NginxIngress", func() {
 				AnnotateOperation: false,
 				IPStack:           "ipv4",
 				Labels: map[string]string{
-					"role":                "external",
-					"gardener.cloud/role": "ingress",
+					"role":                "ingress",
+					"gardener.cloud/role": "controlplane",
 				},
 			}))
 		})
@@ -276,8 +276,8 @@ var _ = Describe("NginxIngress", func() {
 				AnnotateOperation: false,
 				IPStack:           "ipv4",
 				Labels: map[string]string{
-					"role":                "external",
-					"gardener.cloud/role": "ingress",
+					"role":                "ingress",
+					"gardener.cloud/role": "controlplane",
 				},
 			}))
 		})

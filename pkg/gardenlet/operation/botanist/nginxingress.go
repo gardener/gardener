@@ -111,8 +111,8 @@ func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordIngress) || b.IsRestorePhase(),
 		IPStack:           gardenerutils.GetIPStackForShoot(b.Shoot.GetInfo()),
 		Labels: map[string]string{
-			v1beta1constants.LabelRole:  v1beta1constants.LabelDNSRecordExternal,
-			v1beta1constants.GardenRole: v1beta1constants.GardenRoleIngress,
+			v1beta1constants.LabelRole:  v1beta1constants.LabelDNSRecordIngress,
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		},
 	}
 
