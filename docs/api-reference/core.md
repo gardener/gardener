@@ -11171,7 +11171,6 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>CredentialsRef is a reference to a resource holding the credentials used for
 authentication with the DNS provider.
 As of now, only v1.Secret is supported.</p>

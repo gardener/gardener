@@ -142,7 +142,7 @@ type SeedDNSProvider struct {
 	// CredentialsRef is a reference to a resource holding the credentials used for
 	// authentication with the DNS provider.
 	// As of now, only v1.Secret is supported.
-	CredentialsRef *corev1.ObjectReference
+	CredentialsRef corev1.ObjectReference
 }
 
 // SeedDNSProviderConfig configures a DNS provider.
