@@ -741,16 +741,15 @@ func (r *Reconciler) updateShootStatusOperationStart(
 					return fmt.Errorf("no MachineDeployment found for worker pool %s in namespace %s", poolName, shoot.Status.TechnicalID)
 				}
 
-				if len(machineDeploymentList.Items) > 1 {
-					return fmt.Errorf("multiple MachineDeployments found for worker pool %s in namespace %s", poolName, shoot.Status.TechnicalID)
-				}
+				// Annotate all MachineDeployments for this worker pool (one per zone in multi-zone setup)
+				for i := range machineDeploymentList.Items {
+					machineDeployment := &machineDeploymentList.Items[i]
 
-				machineDeployment := &machineDeploymentList.Items[0]
-
-				patch := client.MergeFrom(machineDeployment.DeepCopy())
-				metav1.SetMetaDataAnnotation(&machineDeployment.Spec.Template.ObjectMeta, v1beta1constants.OperationRolloutWorkers, now.String())
-				if err := r.SeedClientSet.Client().Patch(ctx, machineDeployment, patch); err != nil {
-					return fmt.Errorf("failed to annotate MachineDeployment %s: %w", client.ObjectKeyFromObject(machineDeployment), err)
+					patch := client.MergeFrom(machineDeployment.DeepCopy())
+					metav1.SetMetaDataAnnotation(&machineDeployment.Spec.Template.ObjectMeta, v1beta1constants.OperationRolloutWorkers, now.String())
+					if err := r.SeedClientSet.Client().Patch(ctx, machineDeployment, patch); err != nil {
+						return fmt.Errorf("failed to annotate MachineDeployment %s: %w", client.ObjectKeyFromObject(machineDeployment), err)
+					}
 				}
 			}
 
