@@ -88,6 +88,7 @@ var _ = Describe("Shoot Reference controller tests", func() {
 					Providers: []gardencorev1beta1.DNSProvider{
 						{Type: ptr.To("type"), CredentialsRef: &autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: secret1.Name}},
 						{Type: ptr.To("type"), CredentialsRef: &autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: secret2.Name}},
+						// {Type: ptr.To("type"), CredentialsRef: &autoscalingv1.CrossVersionObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: workloadIdentity2.Name}}, # // TODO(vpnachev): Enable workload identity credentials when the known controllers support it.
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
