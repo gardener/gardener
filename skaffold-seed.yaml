@@ -8,7 +8,7 @@ build:
       context: pkg/provider-local/node
       docker: {}
   insecureRegistries:
-    - registry.local.gardener.cloud:5000
+    - registry.local.gardener.cloud:5001
 manifests:
   kustomize:
     paths:
@@ -664,7 +664,7 @@ build:
               - image
               - gardener-node-agent
   insecureRegistries:
-    - registry.local.gardener.cloud:5000
+    - registry.local.gardener.cloud:5001
   tagPolicy:
     customTemplate:
       template: '{{.version}}-{{.sha}}'
