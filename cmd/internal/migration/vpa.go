@@ -135,7 +135,7 @@ func MigrateVPAEmptyPatch(ctx context.Context, c client.Client, log logr.Logger)
 
 // MigrateVPAUpdateModeToRecreate applies a patch to VerticalPodAutoscaler resources that
 // sets their update modes to Recreate, in order to undo the change applied by a GRM mutation webhook.
-// TODO(vitanovs): Remove the migration once the VPAInPlaceUpdates feature gates promoted to GA.
+// TODO(vitanovs): Remove the migration once the VPAInPlaceUpdates feature gate is promoted to GA.
 func MigrateVPAUpdateModeToRecreate(ctx context.Context, c client.Client, log logr.Logger) error {
 	log.Info("Migrating VerticalPodAutoscalers to update mode Recreate")
 
