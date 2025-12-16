@@ -110,6 +110,10 @@ func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 		TTL:               b.dnsRecordTTLSeconds(),
 		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordIngress) || b.IsRestorePhase(),
 		IPStack:           gardenerutils.GetIPStackForShoot(b.Shoot.GetInfo()),
+		Labels: map[string]string{
+			v1beta1constants.LabelRole:  v1beta1constants.LabelDNSRecordIngress,
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+		},
 	}
 
 	// Set component values even if the nginx-ingress addons is not enabled.
