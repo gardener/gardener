@@ -128,7 +128,7 @@ function configure_node_mirror_new_local_registry() {
 }
 
 # TODO(LucaBernstein): remove this after v1.135 has been released.
-# To avoid issues in the upgrade test with the registry already listening to port 5001 instead of 5000, but the helmregistry only disabling tls for registry on port 5000.
+# To avoid issues in the upgrade test where the registry is already listening on port 5001 instead of 5000, but the helmregistry only disables tls for registry on port 5000.
 # see: https://prow.gardener.cloud/view/gs/gardener-prow/pr-logs/pull/gardener_gardener/13661/pull-gardener-e2e-kind-upgrade/2000837721429381120
 function patch_helmregistry_registry_url_port() {
   sed -i 's|registry.local.gardener.cloud:5000|registry.local.gardener.cloud:5001|g' "$PWD/pkg/utils/oci/helmregistry.go"
