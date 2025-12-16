@@ -95,7 +95,7 @@ func SecretsManagerForGarden(
 }
 
 // secretsManager wraps another SecretsManager in order to automatically fulfill the CA rotation requirements based on
-// the Shoot status from the given Cluster object.
+// the given rotation phase.
 type secretsManager struct {
 	secretsmanager.Interface
 
