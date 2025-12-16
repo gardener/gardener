@@ -501,10 +501,14 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 	}
 
 	// Initialize a reference to the primary DNS provider secret
-	var secretRef corev1.SecretReference
+	var credentialsRef corev1.ObjectReference
 	if primaryProvider.SecretName != nil {
-		secretRef.Name = *primaryProvider.SecretName
-		secretRef.Namespace = shoot.Namespace
+		credentialsRef = corev1.ObjectReference{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Secret",
+			Name:       *primaryProvider.SecretName,
+			Namespace:  shoot.Namespace,
+		}
 	} else if shoot.Spec.SecretBindingName != nil {
 		secretBinding, err := v.secretBindingLister.SecretBindings(shoot.Namespace).Get(*shoot.Spec.SecretBindingName)
 		if err != nil {
@@ -513,7 +517,12 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 			}
 			return nil, apierrors.NewInternalError(fmt.Errorf("could not get secret binding %s/%s: %v", shoot.Namespace, *shoot.Spec.SecretBindingName, err))
 		}
-		secretRef = secretBinding.SecretRef
+		credentialsRef = corev1.ObjectReference{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Secret",
+			Name:       secretBinding.SecretRef.Name,
+			Namespace:  secretBinding.SecretRef.Namespace,
+		}
 	} else if shoot.Spec.CredentialsBindingName != nil {
 		// TODO(dimityrmirchev): This code should eventually handle references to workload identity
 		credentialsBinding, err := v.credentialsBindingLister.CredentialsBindings(shoot.Namespace).Get(*shoot.Spec.CredentialsBindingName)
@@ -523,17 +532,14 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 			}
 			return nil, apierrors.NewInternalError(fmt.Errorf("could not get credentials binding %s/%s: %v", shoot.Namespace, *shoot.Spec.CredentialsBindingName, err))
 		}
-		secretRef = corev1.SecretReference{
-			Name:      credentialsBinding.CredentialsRef.Name,
-			Namespace: credentialsBinding.CredentialsRef.Namespace,
-		}
+		credentialsRef = credentialsBinding.CredentialsRef
 	} else {
 		return nil, fmt.Errorf("cannot initialize a reference to the primary DNS provider credentials of shoot %s", client.ObjectKeyFromObject(shoot))
 	}
 
 	return &gardencore.SeedDNSProvider{
-		Type:      *primaryProvider.Type,
-		SecretRef: secretRef,
+		Type:           *primaryProvider.Type,
+		CredentialsRef: credentialsRef,
 	}, nil
 }
 
@@ -550,11 +556,8 @@ func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencorev1beta
 				if strings.HasSuffix(*shoot.Spec.DNS.Domain, "."+seedDNSDefault.Domain) {
 					// TODO(dimityrmirchev): Handle reference of kind WorkloadIdentity
 					return &gardencore.SeedDNSProvider{
-						Type: seedDNSDefault.Type,
-						SecretRef: corev1.SecretReference{
-							Name:      seedDNSDefault.CredentialsRef.Name,
-							Namespace: seedDNSDefault.CredentialsRef.Namespace,
-						},
+						Type:           seedDNSDefault.Type,
+						CredentialsRef: seedDNSDefault.CredentialsRef,
 					}, nil
 				}
 			}
@@ -581,9 +584,11 @@ func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencorev1beta
 		if strings.HasSuffix(*shoot.Spec.DNS.Domain, domain) {
 			return &gardencore.SeedDNSProvider{
 				Type: provider,
-				SecretRef: corev1.SecretReference{
-					Name:      secret.Name,
-					Namespace: secret.Namespace,
+				CredentialsRef: corev1.ObjectReference{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Secret",
+					Name:       secret.Name,
+					Namespace:  secret.Namespace,
 				},
 			}, nil
 		}
