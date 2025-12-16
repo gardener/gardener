@@ -204,7 +204,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *o
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}
 
-	if err := runMigrations(ctx, mgr, log); err != nil {
+	if err := runMigrations(ctx, mgr.GetClient(), log); err != nil {
 		return err
 	}
 
