@@ -23,13 +23,13 @@ import (
 
 // crdDeployer is a DeployWaiter that can deploy CRDs and wait for them to be ready.
 type crdDeployer struct {
-	client          client.Client
-	crdNameToCRD    map[string]*apiextensionsv1.CustomResourceDefinition
-	confirmDeletion bool
+	client             client.Client
+	crdNameToCRD       map[string]*apiextensionsv1.CustomResourceDefinition
+	deletionProtection bool
 }
 
 // New returns a new instance of DeployWaiter for CRDs.
-func New(client client.Client, manifests []string, confirmDeletion bool) (component.DeployWaiter, error) {
+func New(client client.Client, manifests []string, deletionProtection bool) (component.DeployWaiter, error) {
 	// Split manifests into individual object manifests, in case multiple CRDs are provided in a single string.
 	var splitManifests []string
 	for _, manifest := range manifests {
@@ -42,9 +42,9 @@ func New(client client.Client, manifests []string, confirmDeletion bool) (compon
 	}
 
 	return &crdDeployer{
-		client:          client,
-		crdNameToCRD:    crdNameToCRD,
-		confirmDeletion: confirmDeletion,
+		client:             client,
+		crdNameToCRD:       crdNameToCRD,
+		deletionProtection: deletionProtection,
 	}, nil
 }
 
@@ -63,9 +63,13 @@ func (c *crdDeployer) Deploy(ctx context.Context) error {
 			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, crd,
 				func() error {
 					crd.Labels = desiredCRD.Labels
-					crd.Annotations = desiredCRD.Annotations
+					if c.deletionProtection {
+						metav1.SetMetaDataLabel(&crd.ObjectMeta, gardenerutils.DeletionProtected, "true")
+					}
 
+					crd.Annotations = desiredCRD.Annotations
 					crd.Spec = desiredCRD.Spec
+
 					return nil
 				},
 				// Not sending an empty patch goes against the recommendation in the Kubernetes Clients in Gardener guide.
@@ -97,7 +101,7 @@ func (c *crdDeployer) Destroy(ctx context.Context) error {
 				},
 			}
 
-			if c.confirmDeletion {
+			if c.deletionProtection {
 				if err := gardenerutils.ConfirmDeletion(ctx, c.client, crd); client.IgnoreNotFound(err) != nil {
 					return err
 				}

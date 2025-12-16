@@ -161,6 +161,23 @@ spec:
 		})
 	})
 
+	Describe("#Deploy for CRDs that have deletion protection", func() {
+		BeforeEach(func() {
+			var err error
+			crdDeployer, err = New(testClient, []string{crd1}, true)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(crdDeployer).ToNot(BeNil())
+		})
+
+		It("should add the deletion protection label to the CRD", func() {
+			actualCRD := &apiextensionsv1.CustomResourceDefinition{}
+
+			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
+			Expect(testClient.Get(ctx, client.ObjectKey{Name: crd1Name}, actualCRD)).To(Succeed())
+			Expect(actualCRD.Labels).To(HaveKeyWithValue("gardener.cloud/deletion-protected", "true"))
+		})
+	})
+
 	Describe("#Destroy", func() {
 		It("should destroy a CRD", func() {
 			actualCRD := &apiextensionsv1.CustomResourceDefinition{}
@@ -173,7 +190,7 @@ spec:
 		})
 	})
 
-	Describe("#Destroy for CRDs that need deletion confirmation", func() {
+	Describe("#Destroy for CRDs that have deletion protection", func() {
 		var (
 			ctrl       *gomock.Controller
 			mockClient *mockclient.MockClient
@@ -188,7 +205,7 @@ spec:
 			ctrl.Finish()
 		})
 
-		It("should destroy CRDs when CRDDeployer has confirmDeletion set to false", func() {
+		It("should destroy CRDs when CRDDeployer has deletionProtection set to false", func() {
 			crdDeployer, err := New(mockClient, []string{confirmationCRD}, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(crdDeployer).NotTo(BeNil())
@@ -198,7 +215,7 @@ spec:
 			Expect(crdDeployer.Destroy(ctx)).To(Succeed())
 		})
 
-		It("should destroy CRDs when CRDDeployer has confirmDeletion set to true", func() {
+		It("should destroy CRDs when CRDDeployer has deletionProtection set to true", func() {
 			crdDeployer, err := New(mockClient, []string{confirmationCRD}, true)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(crdDeployer).NotTo(BeNil())
