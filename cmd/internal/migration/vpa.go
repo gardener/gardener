@@ -34,9 +34,9 @@ type vpaMigrationConfig struct {
 	migrationName string
 	log           logr.Logger
 	client        client.Client
-	vpaListOpts   client.ListOptions
-	vpaValidator  func(vpa *vpaautoscalingv1.VerticalPodAutoscaler) bool
-	vpaMutator    func(vpa *vpaautoscalingv1.VerticalPodAutoscaler) *vpaautoscalingv1.VerticalPodAutoscaler
+	listOpts      client.ListOptions
+	filterFn      func(vpa *vpaautoscalingv1.VerticalPodAutoscaler) bool
+	mutateFn      func(vpa *vpaautoscalingv1.VerticalPodAutoscaler) *vpaautoscalingv1.VerticalPodAutoscaler
 }
 
 // migrateVPA performs VerticalPodAutoscalers migration based on the provided configuration.
@@ -45,7 +45,7 @@ func migrateVPA(ctx context.Context, cfg *vpaMigrationConfig) error {
 		vpaList = vpaautoscalingv1.VerticalPodAutoscalerList{}
 	)
 
-	if err := cfg.client.List(ctx, &vpaList, &cfg.vpaListOpts); err != nil {
+	if err := cfg.client.List(ctx, &vpaList, &cfg.listOpts); err != nil {
 		if meta.IsNoMatchError(err) {
 			cfg.log.Info("Resources kind not found, skipping migration",
 				"kind", "VerticalPodAutoscaler",
@@ -59,7 +59,7 @@ func migrateVPA(ctx context.Context, cfg *vpaMigrationConfig) error {
 	var tasks []flow.TaskFn
 	for _, vpa := range vpaList.Items {
 		task := func(ctx context.Context) error {
-			if isValid := cfg.vpaValidator(&vpa); !isValid {
+			if isValid := cfg.filterFn(&vpa); !isValid {
 				return nil
 			}
 
@@ -70,7 +70,7 @@ func migrateVPA(ctx context.Context, cfg *vpaMigrationConfig) error {
 			)
 
 			patch := client.MergeFrom(vpa.DeepCopy())
-			vpaNew := cfg.vpaMutator(&vpa)
+			vpaNew := cfg.mutateFn(&vpa)
 			if err := cfg.client.Patch(ctx, vpaNew, patch); err != nil {
 				if apierrors.IsNotFound(err) {
 					cfg.log.Info("Resource not found, skipping migration",
@@ -126,9 +126,9 @@ func MigrateVPAEmptyPatch(ctx context.Context, c client.Client, log logr.Logger)
 		migrationName: "MigrateVPAEmptyPatch",
 		log:           log,
 		client:        c,
-		vpaListOpts:   vpaListOpts,
-		vpaValidator:  vpaValidator,
-		vpaMutator:    vpaMutator,
+		listOpts:      vpaListOpts,
+		filterFn:      vpaValidator,
+		mutateFn:      vpaMutator,
 	}
 	return migrateVPA(ctx, &cfg)
 }
@@ -167,9 +167,9 @@ func MigrateVPAUpdateModeToRecreate(ctx context.Context, c client.Client, log lo
 		migrationName: "MigrateVPAUpdateModeToRecreate",
 		log:           log,
 		client:        c,
-		vpaListOpts:   vpaListOpts,
-		vpaValidator:  vpaValidator,
-		vpaMutator:    vpaMutator,
+		listOpts:      vpaListOpts,
+		filterFn:      vpaValidator,
+		mutateFn:      vpaMutator,
 	}
 	return migrateVPA(ctx, &cfg)
 }
