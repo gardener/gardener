@@ -331,6 +331,11 @@ var _ = Describe("ControllerInstallation controller tests", func() {
           domain: ` + seed.Spec.DNS.Internal.Domain + `
           type: ` + seed.Spec.DNS.Internal.Type + `
         provider:
+          credentialsRef:
+            apiVersion: v1
+            kind: Secret
+            name: ` + seed.Spec.DNS.Provider.CredentialsRef.Name + `
+            namespace: ` + seed.Spec.DNS.Provider.CredentialsRef.Namespace + `
           secretRef:
             name: ` + seed.Spec.DNS.Provider.SecretRef.Name + `
             namespace: ` + seed.Spec.DNS.Provider.SecretRef.Namespace + `

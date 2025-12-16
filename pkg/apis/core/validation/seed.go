@@ -221,17 +221,24 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 			allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider"),
 				"ingress controller requires dns.provider to be set"))
 		} else {
+			dnsProviderPath := fldPath.Child("dns", "provider")
 			if len(seedSpec.DNS.Provider.Type) == 0 {
-				allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider", "type"),
+				allErrs = append(allErrs, field.Required(dnsProviderPath.Child("type"),
 					"DNS provider type must be set"))
 			}
-			if len(seedSpec.DNS.Provider.SecretRef.Name) == 0 {
-				allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider", "secretRef", "name"),
-					"secret reference name must be set"))
-			}
-			if len(seedSpec.DNS.Provider.SecretRef.Namespace) == 0 {
-				allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider", "secretRef", "namespace"),
-					"secret reference namespace must be set"))
+			allErrs = append(allErrs, ValidateCredentialsRef(seedSpec.DNS.Provider.CredentialsRef, dnsProviderPath.Child("credentialsRef"))...)
+
+			if seedSpec.DNS.Provider.CredentialsRef.APIVersion == "v1" && seedSpec.DNS.Provider.CredentialsRef.Kind == "Secret" {
+				if seedSpec.DNS.Provider.CredentialsRef.Name != seedSpec.DNS.Provider.SecretRef.Name || seedSpec.DNS.Provider.CredentialsRef.Namespace != seedSpec.DNS.Provider.SecretRef.Namespace {
+					allErrs = append(allErrs, field.Invalid(dnsProviderPath.Child("secretRef"), seedSpec.DNS.Provider.SecretRef, "must refer to the same Secret as credentialsRef"))
+				}
+			} else if seedSpec.DNS.Provider.CredentialsRef.APIVersion == "security.gardener.cloud/v1alpha1" && seedSpec.DNS.Provider.CredentialsRef.Kind == "WorkloadIdentity" {
+				if seedSpec.DNS.Provider.SecretRef.Name != "" {
+					allErrs = append(allErrs, field.Invalid(dnsProviderPath.Child("secretRef", "name"), seedSpec.DNS.Provider.SecretRef.Name, "must be empty when credentialsRef refers to a WorkloadIdentity"))
+				}
+				if seedSpec.DNS.Provider.SecretRef.Namespace != "" {
+					allErrs = append(allErrs, field.Invalid(dnsProviderPath.Child("secretRef", "namespace"), seedSpec.DNS.Provider.SecretRef.Namespace, "must be empty when credentialsRef refers to a WorkloadIdentity"))
+				}
 			}
 		}
 	}

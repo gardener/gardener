@@ -48,6 +48,12 @@ var _ = Describe("Seed Validation Tests", func() {
 				DNS: core.SeedDNS{
 					Provider: &core.SeedDNSProvider{
 						Type: "foo",
+						CredentialsRef: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "some-secret",
+							Namespace:  "some-namespace",
+						},
 						SecretRef: corev1.SecretReference{
 							Name:      "some-secret",
 							Namespace: "some-namespace",
@@ -1608,6 +1614,12 @@ var _ = Describe("Seed Validation Tests", func() {
 				}
 				seed.Spec.DNS.Provider = &core.SeedDNSProvider{
 					Type: "some-type",
+					CredentialsRef: corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       "foo",
+						Namespace:  "bar",
+					},
 					SecretRef: corev1.SecretReference{
 						Name:      "foo",
 						Namespace: "bar",
@@ -1685,10 +1697,25 @@ var _ = Describe("Seed Validation Tests", func() {
 					"Field": Equal("spec.dns.provider.type"),
 				}, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.dns.provider.secretRef.name"),
+					"Field": Equal("spec.dns.provider.credentialsRef.apiVersion"),
 				}, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.dns.provider.secretRef.namespace"),
+					"Field": Equal("spec.dns.provider.credentialsRef.kind"),
+				}, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.dns.provider.credentialsRef.name"),
+				}, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns.provider.credentialsRef.name"),
+				}, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.dns.provider.credentialsRef.namespace"),
+				}, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns.provider.credentialsRef.namespace"),
+				}, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.dns.provider.credentialsRef"),
 				}))
 			})
 		})

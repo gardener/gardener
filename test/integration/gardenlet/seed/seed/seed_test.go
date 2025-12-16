@@ -233,9 +233,11 @@ var _ = Describe("Seed controller tests", func() {
 				DNS: gardencorev1beta1.SeedDNS{
 					Provider: &gardencorev1beta1.SeedDNSProvider{
 						Type: providerName,
-						SecretRef: corev1.SecretReference{
-							Name:      dnsProviderSecret.Name,
-							Namespace: dnsProviderSecret.Namespace,
+						CredentialsRef: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       dnsProviderSecret.Name,
+							Namespace:  dnsProviderSecret.Namespace,
 						},
 					},
 					Internal: &gardencorev1beta1.SeedDNSProviderConfig{

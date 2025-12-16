@@ -7,12 +7,15 @@ package seed
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -58,11 +61,16 @@ func (r *Reconciler) newIngressDNSRecord(ctx context.Context, log logr.Logger, s
 
 func getDNSProviderSecretData(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) (map[string][]byte, error) {
 	if dnsConfig := seed.Spec.DNS; dnsConfig.Provider != nil {
-		secret, err := kubernetesutils.GetSecretByReference(ctx, gardenClient, &dnsConfig.Provider.SecretRef)
+		credentials, err := kubernetesutils.GetCredentialsByObjectReference(ctx, gardenClient, dnsConfig.Provider.CredentialsRef)
 		if err != nil {
 			return nil, err
 		}
-		return secret.Data, nil
+		switch creds := credentials.(type) {
+		case *corev1.Secret:
+			return creds.Data, nil
+		case *securityv1alpha1.WorkloadIdentity:
+			return nil, fmt.Errorf("not supported yet") // TODO(vpnachev): Add support for WorkloadIdentity
+		}
 	}
 	return nil, nil
 }
