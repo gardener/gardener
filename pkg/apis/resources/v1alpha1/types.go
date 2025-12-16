@@ -197,7 +197,7 @@ const (
 	VPAInPlaceUpdatesSkip = "vpa-in-place-updates.resources.gardener.cloud/skip"
 	// VPAInPlaceUpdatesMutated is a constant for a label on a VerticalPodAutoscaler resource which indicates that
 	// it's updateMode field has already been mutated.
-	// TODO(vitanovs): Remove the VPAInPlaceUpdatesMutated label constant once the VPAInPlaceUpdates feature gates is deprecated.
+	// TODO(vitanovs): Remove the VPAInPlaceUpdatesMutated label constant once the VPAInPlaceUpdates feature gate is promoted to GA.
 	VPAInPlaceUpdatesMutated = "vpa-in-place-updates.resources.gardener.cloud/mutated"
 )
 
