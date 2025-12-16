@@ -131,8 +131,8 @@ func lastSecretRotationStartTimesFromCluster(cluster *extensionscontroller.Clust
 // If garden.status.credentials.certificateAuthorities.lastInitiationTime is set, it adds the time for all given
 // CA configs. If it's not set or no CA configs are given, nil will be returned.
 func lastSecretRotationStartTimesFromGarden(garden *operatorv1alpha1.Garden, secretConfigs []SecretConfigWithOptions) map[string]time.Time {
-	if shootStatus := garden.Status; shootStatus.Credentials != nil && shootStatus.Credentials.Rotation != nil {
-		return lastSecretRotationStartTimesFromCARotation(shootStatus.Credentials.Rotation.CertificateAuthorities, secretConfigs)
+	if gardenStatus := garden.Status; gardenStatus.Credentials != nil && gardenStatus.Credentials.Rotation != nil {
+		return lastSecretRotationStartTimesFromCARotation(gardenStatus.Credentials.Rotation.CertificateAuthorities, secretConfigs)
 	}
 
 	return nil
