@@ -38,6 +38,9 @@ function gardener_up() {
   # TODO(timebertt): remove sed and SKAFFOLD_DEFAULT_REPO override after v1.134 has been released
   # see https://prow.gardener.cloud/view/gs/gardener-prow/pr-logs/pull/gardener_gardener/13551/pull-gardener-e2e-kind-upgrade/1993794625793429504
   sed -i 's|garden.local.gardener.cloud:5001|registry.local.gardener.cloud:5001|g' skaffold*.yaml
+  # TODO(LucaBernstein,timebertt): remove sed override after v1.135 has been released
+  # due to reverting the port of the local registry from 5000 to 5001 again: https://prow.gardener.cloud/view/gs/gardener-prow/pr-logs/pull/gardener_gardener/13661/pull-gardener-e2e-kind-upgrade/2000609122042515456
+  sed -i 's|registry.local.gardener.cloud:5000|registry.local.gardener.cloud:5001|g' skaffold*.yaml
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
     make operator-seed-up SKAFFOLD_DEFAULT_REPO=registry.local.gardener.cloud:5001
