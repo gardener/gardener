@@ -16,11 +16,11 @@ import (
 
 func runMigrations(ctx context.Context, mgr manager.Manager, log logr.Logger) error {
 	if features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates) {
-		if err := migration.MigrateVPAEmptyPatch(ctx, mgr, log); err != nil {
+		if err := migration.MigrateVPAEmptyPatch(ctx, mgr.GetClient(), log); err != nil {
 			return err
 		}
 	} else {
-		if err := migration.MigrateVPAUpdateModeToRecreate(ctx, mgr, log); err != nil {
+		if err := migration.MigrateVPAUpdateModeToRecreate(ctx, mgr.GetClient(), log); err != nil {
 			return err
 		}
 	}

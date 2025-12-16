@@ -17,7 +17,6 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -34,7 +33,7 @@ const (
 type vpaMigrationConfig struct {
 	migrationName string
 	log           logr.Logger
-	mgr           manager.Manager
+	client        client.Client
 	vpaListOpts   client.ListOptions
 	vpaValidator  func(vpa *vpaautoscalingv1.VerticalPodAutoscaler) bool
 	vpaMutator    func(vpa *vpaautoscalingv1.VerticalPodAutoscaler) *vpaautoscalingv1.VerticalPodAutoscaler
@@ -46,7 +45,7 @@ func migrateVPA(ctx context.Context, cfg *vpaMigrationConfig) error {
 		vpaList = vpaautoscalingv1.VerticalPodAutoscalerList{}
 	)
 
-	if err := cfg.mgr.GetClient().List(ctx, &vpaList, &cfg.vpaListOpts); err != nil {
+	if err := cfg.client.List(ctx, &vpaList, &cfg.vpaListOpts); err != nil {
 		if meta.IsNoMatchError(err) {
 			cfg.log.Info("Resources kind not found, skipping migration",
 				"kind", "VerticalPodAutoscaler",
@@ -72,7 +71,7 @@ func migrateVPA(ctx context.Context, cfg *vpaMigrationConfig) error {
 
 			patch := client.MergeFrom(vpa.DeepCopy())
 			vpaNew := cfg.vpaMutator(&vpa)
-			if err := cfg.mgr.GetClient().Patch(ctx, vpaNew, patch); err != nil {
+			if err := cfg.client.Patch(ctx, vpaNew, patch); err != nil {
 				if apierrors.IsNotFound(err) {
 					cfg.log.Info("Resource not found, skipping migration",
 						"vpa", vpaKey,
@@ -93,7 +92,7 @@ func migrateVPA(ctx context.Context, cfg *vpaMigrationConfig) error {
 // that are elighible to adopt the InPlaceOrRecreate update mode, but are filtered out, because of
 // the Resource Manager's alwaysUpdate=false configuration.
 // TODO(vitanovs): Remove the migration once the VPAInPlaceUpdates feature gates promoted to GA.
-func MigrateVPAEmptyPatch(ctx context.Context, mgr manager.Manager, log logr.Logger) error {
+func MigrateVPAEmptyPatch(ctx context.Context, c client.Client, log logr.Logger) error {
 	log.Info("Migrating VerticalPodAutoscalers")
 	var (
 		vpaLabelSkipShouldNotExist    = utils.MustNewRequirement(resourcesv1alpha1.VPAInPlaceUpdatesSkip, selection.DoesNotExist)
@@ -126,7 +125,7 @@ func MigrateVPAEmptyPatch(ctx context.Context, mgr manager.Manager, log logr.Log
 	cfg := vpaMigrationConfig{
 		migrationName: "MigrateVPAEmptyPatch",
 		log:           log,
-		mgr:           mgr,
+		client:        c,
 		vpaListOpts:   vpaListOpts,
 		vpaValidator:  vpaValidator,
 		vpaMutator:    vpaMutator,
@@ -137,7 +136,7 @@ func MigrateVPAEmptyPatch(ctx context.Context, mgr manager.Manager, log logr.Log
 // MigrateVPAUpdateModeToRecreate applies a patch to VerticalPodAutoscaler resources that
 // sets their update modes to Recreate, in order to undo the change applied by a GRM mutation webhook.
 // TODO(vitanovs): Remove the migration once the VPAInPlaceUpdates feature gates promoted to GA.
-func MigrateVPAUpdateModeToRecreate(ctx context.Context, mgr manager.Manager, log logr.Logger) error {
+func MigrateVPAUpdateModeToRecreate(ctx context.Context, c client.Client, log logr.Logger) error {
 	log.Info("Migrating VerticalPodAutoscalers to update mode Recreate")
 
 	var (
@@ -167,7 +166,7 @@ func MigrateVPAUpdateModeToRecreate(ctx context.Context, mgr manager.Manager, lo
 	cfg := vpaMigrationConfig{
 		migrationName: "MigrateVPAUpdateModeToRecreate",
 		log:           log,
-		mgr:           mgr,
+		client:        c,
 		vpaListOpts:   vpaListOpts,
 		vpaValidator:  vpaValidator,
 		vpaMutator:    vpaMutator,
