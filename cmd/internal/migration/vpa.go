@@ -42,10 +42,10 @@ type vpaMigrationConfig struct {
 // migrateVPA performs VerticalPodAutoscalers migration based on the provided configuration.
 func migrateVPA(ctx context.Context, cfg *vpaMigrationConfig) error {
 	var (
-		vpaList = vpaautoscalingv1.VerticalPodAutoscalerList{}
+		list = vpaautoscalingv1.VerticalPodAutoscalerList{}
 	)
 
-	if err := cfg.client.List(ctx, &vpaList, &cfg.listOpts); err != nil {
+	if err := cfg.client.List(ctx, &list, &cfg.listOpts); err != nil {
 		if meta.IsNoMatchError(err) {
 			cfg.log.Info("Resources kind not found, skipping migration",
 				"kind", "VerticalPodAutoscaler",
@@ -57,15 +57,15 @@ func migrateVPA(ctx context.Context, cfg *vpaMigrationConfig) error {
 	}
 
 	var tasks []flow.TaskFn
-	for _, vpa := range vpaList.Items {
+	for _, vpa := range list.Items {
 		task := func(ctx context.Context) error {
 			if isValid := cfg.filterFn(&vpa); !isValid {
 				return nil
 			}
 
-			vpaKey := client.ObjectKeyFromObject(&vpa)
+			key := client.ObjectKeyFromObject(&vpa)
 			cfg.log.Info("Migrating VerticalPodAutoscaler resource",
-				"vpa", vpaKey,
+				"vpa", key,
 				"migration", cfg.migrationName,
 			)
 
@@ -74,11 +74,11 @@ func migrateVPA(ctx context.Context, cfg *vpaMigrationConfig) error {
 			if err := cfg.client.Patch(ctx, vpaNew, patch); err != nil {
 				if apierrors.IsNotFound(err) {
 					cfg.log.Info("Resource not found, skipping migration",
-						"vpa", vpaKey,
+						"vpa", key,
 						"migration", cfg.migrationName,
 					)
 				}
-				return fmt.Errorf("failed applying '%s' migration to VerticalPodAutoscaler '%s': %w", cfg.migrationName, vpaKey, err)
+				return fmt.Errorf("failed applying '%s' migration to VerticalPodAutoscaler '%s': %w", cfg.migrationName, key, err)
 			}
 			return nil
 		}
@@ -95,17 +95,17 @@ func migrateVPA(ctx context.Context, cfg *vpaMigrationConfig) error {
 func MigrateVPAEmptyPatch(ctx context.Context, c client.Client, log logr.Logger) error {
 	log.Info("Migrating VerticalPodAutoscalers")
 	var (
-		vpaLabelSkipShouldNotExist    = utils.MustNewRequirement(resourcesv1alpha1.VPAInPlaceUpdatesSkip, selection.DoesNotExist)
-		vpaLabelMutatedShouldNotExist = utils.MustNewRequirement(resourcesv1alpha1.VPAInPlaceUpdatesMutated, selection.DoesNotExist)
-		labelSelector                 = labels.NewSelector().Add(
-			vpaLabelMutatedShouldNotExist,
-			vpaLabelSkipShouldNotExist,
+		labelSkipShouldNotExist    = utils.MustNewRequirement(resourcesv1alpha1.VPAInPlaceUpdatesSkip, selection.DoesNotExist)
+		labelMutatedShouldNotExist = utils.MustNewRequirement(resourcesv1alpha1.VPAInPlaceUpdatesMutated, selection.DoesNotExist)
+		labelSelector              = labels.NewSelector().Add(
+			labelMutatedShouldNotExist,
+			labelSkipShouldNotExist,
 		)
-		vpaListOpts = client.ListOptions{
+		listOpts = client.ListOptions{
 			LabelSelector: labelSelector,
 		}
 
-		vpaValidator = func(vpa *vpaautoscalingv1.VerticalPodAutoscaler) bool {
+		filterFn = func(vpa *vpaautoscalingv1.VerticalPodAutoscaler) bool {
 			if vpa.Namespace == metav1.NamespaceSystem || vpa.Namespace == v1beta1constants.KubernetesDashboardNamespace {
 				return false
 			}
@@ -117,7 +117,7 @@ func MigrateVPAEmptyPatch(ctx context.Context, c client.Client, log logr.Logger)
 
 			return true
 		}
-		vpaMutator = func(vpa *vpaautoscalingv1.VerticalPodAutoscaler) *vpaautoscalingv1.VerticalPodAutoscaler {
+		mutateFunc = func(vpa *vpaautoscalingv1.VerticalPodAutoscaler) *vpaautoscalingv1.VerticalPodAutoscaler {
 			return vpa
 		}
 	)
@@ -126,9 +126,9 @@ func MigrateVPAEmptyPatch(ctx context.Context, c client.Client, log logr.Logger)
 		migrationName: "MigrateVPAEmptyPatch",
 		log:           log,
 		client:        c,
-		listOpts:      vpaListOpts,
-		filterFn:      vpaValidator,
-		mutateFn:      vpaMutator,
+		listOpts:      listOpts,
+		filterFn:      filterFn,
+		mutateFn:      mutateFunc,
 	}
 	return migrateVPA(ctx, &cfg)
 }
@@ -140,23 +140,23 @@ func MigrateVPAUpdateModeToRecreate(ctx context.Context, c client.Client, log lo
 	log.Info("Migrating VerticalPodAutoscalers to update mode Recreate")
 
 	var (
-		vpaLabelSkipShouldNotExist = utils.MustNewRequirement(resourcesv1alpha1.VPAInPlaceUpdatesSkip, selection.DoesNotExist)
-		vpaLabelMutatedShouldExist = utils.MustNewRequirement(resourcesv1alpha1.VPAInPlaceUpdatesMutated, selection.Exists)
-		labelSelector              = labels.NewSelector().Add(
-			vpaLabelMutatedShouldExist,
-			vpaLabelSkipShouldNotExist,
+		labelSkipShouldNotExist = utils.MustNewRequirement(resourcesv1alpha1.VPAInPlaceUpdatesSkip, selection.DoesNotExist)
+		labelMutatedShouldExist = utils.MustNewRequirement(resourcesv1alpha1.VPAInPlaceUpdatesMutated, selection.Exists)
+		labelSelector           = labels.NewSelector().Add(
+			labelMutatedShouldExist,
+			labelSkipShouldNotExist,
 		)
-		vpaListOpts = client.ListOptions{
+		listOpts = client.ListOptions{
 			LabelSelector: labelSelector,
 		}
 
-		vpaValidator = func(vpa *vpaautoscalingv1.VerticalPodAutoscaler) bool {
+		filterFn = func(vpa *vpaautoscalingv1.VerticalPodAutoscaler) bool {
 			if vpa.Namespace == metav1.NamespaceSystem || vpa.Namespace == v1beta1constants.KubernetesDashboardNamespace {
 				return false
 			}
 			return true
 		}
-		vpaMutator = func(vpa *vpaautoscalingv1.VerticalPodAutoscaler) *vpaautoscalingv1.VerticalPodAutoscaler {
+		mutateFn = func(vpa *vpaautoscalingv1.VerticalPodAutoscaler) *vpaautoscalingv1.VerticalPodAutoscaler {
 			vpa.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeRecreate)
 			delete(vpa.Labels, resourcesv1alpha1.VPAInPlaceUpdatesMutated)
 			return vpa
@@ -167,9 +167,9 @@ func MigrateVPAUpdateModeToRecreate(ctx context.Context, c client.Client, log lo
 		migrationName: "MigrateVPAUpdateModeToRecreate",
 		log:           log,
 		client:        c,
-		listOpts:      vpaListOpts,
-		filterFn:      vpaValidator,
-		mutateFn:      vpaMutator,
+		listOpts:      listOpts,
+		filterFn:      filterFn,
+		mutateFn:      mutateFn,
 	}
 	return migrateVPA(ctx, &cfg)
 }
