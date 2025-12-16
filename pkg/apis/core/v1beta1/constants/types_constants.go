@@ -611,11 +611,11 @@ const (
 	LabelProxy = "proxy"
 	// LabelExtensionProjectRole is a constant for a label value for extension project roles
 	LabelExtensionProjectRole = "extension-project-role"
-	// LabelDNSRecordExternal is a constant for a label value for external DNSRecord
+	// LabelDNSRecordExternal is a constant for a label value for external DNSRecord.
 	LabelDNSRecordExternal = "external"
-	// LabelDNSRecordInternal is a constant for a label value for internal DNSRecord
+	// LabelDNSRecordInternal is a constant for a label value for internal DNSRecord.
 	LabelDNSRecordInternal = "internal"
-	// LabelDNSRecordIngress is a constant for a label value for DNSRecord used for ingress
+	// LabelDNSRecordIngress is a constant for a label value for ingress DNSRecord.
 	LabelDNSRecordIngress = "ingress"
 
 	// LabelShootNamespace is a constant for a label key that indicates a relationship to a shoot in the specified namespace.

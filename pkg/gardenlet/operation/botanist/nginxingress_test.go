@@ -306,8 +306,8 @@ var _ = Describe("NginxIngress", func() {
 						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 					},
 					Labels: map[string]string{
-						"role":                "external",
-						"gardener.cloud/role": "ingress",
+						"role":                "ingress",
+						"gardener.cloud/role": "controlplane",
 					},
 				},
 				Spec: extensionsv1alpha1.DNSRecordSpec{
