@@ -91,7 +91,7 @@ func migrateVPA(ctx context.Context, cfg *vpaMigrationConfig) error {
 // MigrateVPAEmptyPatch performs an empty patch updates to VerticalPodAutoscaler resources,
 // that are elighible to adopt the InPlaceOrRecreate update mode, but are filtered out, because of
 // the Resource Manager's alwaysUpdate=false configuration.
-// TODO(vitanovs): Remove the migration once the VPAInPlaceUpdates feature gates promoted to GA.
+// TODO(vitanovs): Remove the migration once the VPAInPlaceUpdates feature gate is promoted to GA.
 func MigrateVPAEmptyPatch(ctx context.Context, c client.Client, log logr.Logger) error {
 	log.Info("Migrating VerticalPodAutoscalers")
 	var (
