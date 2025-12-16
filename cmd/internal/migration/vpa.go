@@ -78,7 +78,7 @@ func migrateVPA(ctx context.Context, cfg *vpaMigrationConfig) error {
 						"migration", cfg.migrationName,
 					)
 				}
-				return fmt.Errorf("failed applying '%s' migration to VerticalPodAutoscaler '%s': %w", cfg.migrationName, key, err)
+				return fmt.Errorf("failed to patch VerticalPodAutoscaler '%s': %w", key, err)
 			}
 			return nil
 		}

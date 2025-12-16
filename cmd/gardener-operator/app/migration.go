@@ -6,6 +6,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -17,11 +18,11 @@ import (
 func runMigrations(ctx context.Context, mgr manager.Manager, log logr.Logger) error {
 	if features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates) {
 		if err := migration.MigrateVPAEmptyPatch(ctx, mgr.GetClient(), log); err != nil {
-			return err
+			return fmt.Errorf("failed to migrate VerticalPodAutoscaler with 'MigrateVPAEmptyPatch' migration: %w", err)
 		}
 	} else {
 		if err := migration.MigrateVPAUpdateModeToRecreate(ctx, mgr.GetClient(), log); err != nil {
-			return err
+			return fmt.Errorf("failed to migrate VerticalPodAutoscaler with 'MigrateVPAUpdateModeToRecreate' migration: %w", err)
 		}
 	}
 	return nil
