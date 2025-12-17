@@ -179,7 +179,7 @@ type shootValidationOptions struct {
 	KubeAPIServerValidationOption
 }
 
-// KubeAPIServerValidationOption is validation options for the KubeAPIServer fields.
+// KubeAPIServerValidationOption are validation options for the KubeAPIServer fields.
 type KubeAPIServerValidationOption struct {
 	// AllowInvalidAcceptedIssuers specifies whether invalid accepted issuers are allowed.
 	AllowInvalidAcceptedIssuers bool
