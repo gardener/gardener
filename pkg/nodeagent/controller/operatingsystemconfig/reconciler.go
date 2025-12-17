@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/yaml"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -48,6 +49,7 @@ import (
 	kubeletcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	bootstrappers "github.com/gardener/gardener/pkg/nodeagent/bootstrappers"
 	healthcheckcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 	filespkg "github.com/gardener/gardener/pkg/nodeagent/files"
@@ -140,6 +142,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		log.Info("Node registered by kubelet. Restarting myself (gardener-node-agent unit) to start lease controller and watch my own node only. Canceling the context to initiate graceful shutdown")
 		r.CancelContext()
 		return reconcile.Result{}, nil
+	}
+
+	if node != nil {
+		// Emit any pending events from bootstrap checks
+		if err := r.emitPendingBootstrapEvents(ctx, node); err != nil {
+			log.Error(err, "Failed to emit bootstrap events")
+			// Don't fail reconciliation for this
+		}
 	}
 
 	osc, oscChecksum, err := extractOSCFromSecret(secret)
@@ -452,6 +462,63 @@ func (r *Reconciler) removeDeletedFiles(log logr.Logger, changes *operatingSyste
 		if err := changes.completedFileDeleted(file.Path); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (r *Reconciler) emitPendingBootstrapEvents(ctx context.Context, node *corev1.Node) error {
+	const eventsPath = "/var/lib/gardener-node-agent/osc-events.yaml"
+
+	log := logf.FromContext(ctx)
+	log.Info("Checking for bootstrap events", "path", eventsPath)
+
+	raw, err := r.FS.ReadFile(eventsPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Info("No bootstrap events found")
+			return nil
+		}
+		log.Error(err, "Failed to read bootstrap events file")
+		return fmt.Errorf("failed to read bootstrap events file: %w", err)
+	}
+
+	log.Info("BUNDLE: ", "bundle", raw)
+
+	var bundle bootstrappers.OSCEventBundle
+	if err := yaml.Unmarshal(raw, &bundle); err != nil {
+		log.Error(err, "Failed to parse bootstrap events YAML")
+		return fmt.Errorf("failed to parse bootstrap events YAML: %w", err)
+	}
+
+	if len(bundle.Items) == 0 {
+		log.Info("Bootstrap events file is empty")
+		return nil
+	}
+
+	log.Info("Emitting bootstrap events", "count", len(bundle.Items), "node", node.Name)
+
+	for _, ev := range bundle.Items {
+		eventType := ev.Type
+		if eventType == "" {
+			eventType = corev1.EventTypeWarning
+		}
+
+		log.Info(
+			"Emitting event",
+			"reason", ev.Reason,
+			"message", ev.Message,
+			"node", node.Name,
+		)
+
+		r.Recorder.Event(node, eventType, ev.Reason, ev.Message)
+	}
+
+	// Best-effort cleanup
+	if err := r.FS.Remove(eventsPath); err != nil {
+		log.Error(err, "Failed to remove bootstrap events file")
+	} else {
+		log.Info("Removed bootstrap events file")
 	}
 
 	return nil
