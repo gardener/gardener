@@ -26,7 +26,7 @@ import (
 
 const (
 	// vpaParallelWorkersCount defines the number of workers processing the VPAs resources in parallel.
-	vpaParallelWorkersCount = 5
+	vpaParallelWorkersCount = 50
 )
 
 // vpaMigrationConfig defines a VerticalPodAutoscaler migration configuration.
