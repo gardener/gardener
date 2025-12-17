@@ -8,9 +8,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
+	druidconfigv1alpha1 "github.com/gardener/etcd-druid/api/config/v1alpha1"
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -27,12 +27,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -59,6 +61,7 @@ const (
 	druidServiceAccountName                      = Druid
 	druidVPAName                                 = Druid + "-vpa"
 	druidConfigMapImageVectorOverwriteNamePrefix = Druid + "-imagevector-overwrite"
+	druidConfigMapOperatorConfigName             = Druid + "-operator-config"
 	druidServiceName                             = Druid
 	druidWebhookName                             = Druid
 	druidDeploymentName                          = Druid
@@ -76,6 +79,10 @@ const (
 	druidConfigMapImageVectorOverwriteDataKey          = "images_overwrite.yaml"
 	druidDeploymentVolumeMountPathImageVectorOverwrite = "/imagevector_overwrite"
 	druidDeploymentVolumeNameImageVectorOverwrite      = "imagevector-overwrite"
+
+	druidConfigMapOperatorConfigDataKey          = "config.yaml"
+	druidDeploymentVolumeMountPathOperatorConfig = "/operator_config"
+	druidDeploymentVolumeNameOperatorConfig      = "operator-config"
 )
 
 // NewBootstrapper creates a new instance of DeployWaiter for the etcd bootstrapper.
@@ -246,6 +253,14 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		configMapImageVectorOverwrite = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      druidConfigMapImageVectorOverwriteNamePrefix,
+				Namespace: b.namespace,
+				Labels:    labels(),
+			},
+		}
+
+		configMapOperatorConfig = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      druidConfigMapOperatorConfigName,
 				Namespace: b.namespace,
 				Labels:    labels(),
 			},
@@ -465,7 +480,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								Name:            Druid,
 								Image:           b.image,
 								ImagePullPolicy: corev1.PullIfNotPresent,
-								Args:            getDruidDeployArgs(b.etcdConfig, b.namespace, webhookServerTLSCertMountPath),
+								Args:            []string{fmt.Sprintf("--config=%s", druidDeploymentVolumeMountPathOperatorConfig+"/"+druidConfigMapOperatorConfigDataKey)},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("50m"),
@@ -587,6 +602,31 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		})
 	}
 
+	etcdOperatorConfig := getEtcdOperatorConfig(b.etcdConfig, b.namespace, webhookServerTLSCertMountPath)
+	etcdOperatorConfigYaml, err := yaml.Marshal(etcdOperatorConfig)
+	if err != nil {
+		return err
+	}
+	configMapOperatorConfig.Data = map[string]string{druidConfigMapOperatorConfigDataKey: string(etcdOperatorConfigYaml)}
+	utilruntime.Must(kubernetesutils.MakeUnique(configMapOperatorConfig))
+	resourcesToAdd = append(resourcesToAdd, configMapOperatorConfig)
+
+	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+		Name: druidDeploymentVolumeNameOperatorConfig,
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: configMapOperatorConfig.Name,
+				},
+			},
+		},
+	})
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+		Name:      druidDeploymentVolumeNameOperatorConfig,
+		MountPath: druidDeploymentVolumeMountPathOperatorConfig,
+		ReadOnly:  true,
+	})
+
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	resources, err := registry.AddAllAndSerialize(append(resourcesToAdd, deployment)...)
@@ -597,38 +637,60 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, resources)
 }
 
-func getDruidDeployArgs(etcdConfig *gardenletconfigv1alpha1.ETCDConfig, namespace string, webhookServerTLSMountPath string) []string {
-	args := []string{
-		"--enable-leader-election=true",
-		"--disable-etcd-serviceaccount-automount=true",
-		"--etcd-workers=" + strconv.FormatInt(*etcdConfig.ETCDController.Workers, 10),
-		"--enable-etcd-spec-auto-reconcile=false",
-		"--webhook-server-port=" + strconv.Itoa(webhookServerPort),
-		"--webhook-server-tls-server-cert-dir=" + webhookServerTLSMountPath,
-		"--enable-etcd-components-webhook=true",
-		"--etcd-components-webhook-exempt-service-accounts=system:serviceaccount:kube-system:generic-garbage-collector",
-		"--enable-backup-compaction=" + strconv.FormatBool(*etcdConfig.BackupCompactionController.EnableBackupCompaction),
-		"--compaction-workers=" + strconv.FormatInt(*etcdConfig.BackupCompactionController.Workers, 10),
-		"--etcd-events-threshold=" + strconv.FormatInt(*etcdConfig.BackupCompactionController.EventsThreshold, 10),
-		"--etcd-ops-task-workers=3",
-		"--etcd-ops-task-requeue-interval=15s",
-		fmt.Sprintf("--reconciler-service-account=%s%s:%s", serviceaccount.ServiceAccountUsernamePrefix, namespace, druidServiceAccountName),
+func getEtcdOperatorConfig(etcdConfig *gardenletconfigv1alpha1.ETCDConfig, namespace string, webhookServerTLSMountPath string) *druidconfigv1alpha1.OperatorConfiguration {
+	etcdOperatorConfig := &druidconfigv1alpha1.OperatorConfiguration{
+		LeaderElection: druidconfigv1alpha1.LeaderElectionConfiguration{
+			Enabled: true,
+		},
+		Server: druidconfigv1alpha1.ServerConfiguration{
+			Webhooks: &druidconfigv1alpha1.TLSServer{
+				Server: druidconfigv1alpha1.Server{
+					Port: webhookServerPort,
+				},
+				ServerCertDir: webhookServerTLSMountPath,
+			},
+		},
+		Controllers: druidconfigv1alpha1.ControllerConfiguration{
+			Etcd: druidconfigv1alpha1.EtcdControllerConfiguration{
+				ConcurrentSyncs:                    ptr.To(int(*etcdConfig.ETCDController.Workers)),
+				DisableEtcdServiceAccountAutomount: true,
+				EnableEtcdSpecAutoReconcile:        false,
+			},
+			Compaction: druidconfigv1alpha1.CompactionControllerConfiguration{
+				Enabled:         *etcdConfig.BackupCompactionController.EnableBackupCompaction,
+				ConcurrentSyncs: ptr.To(int(*etcdConfig.BackupCompactionController.Workers)),
+				EventsThreshold: *etcdConfig.BackupCompactionController.EventsThreshold,
+			},
+			EtcdOpsTask: druidconfigv1alpha1.EtcdOpsTaskControllerConfiguration{
+				ConcurrentSyncs: ptr.To(3),
+				RequeueInterval: &metav1.Duration{Duration: 15 * time.Second},
+			},
+		},
+		Webhooks: druidconfigv1alpha1.WebhookConfiguration{
+			EtcdComponentProtection: druidconfigv1alpha1.EtcdComponentProtectionWebhookConfiguration{
+				Enabled: true,
+				ExemptServiceAccounts: []string{
+					"system:serviceaccount:kube-system:generic-garbage-collector",
+				},
+				ReconcilerServiceAccountFQDN: ptr.To(fmt.Sprintf("%s%s:%s", serviceaccount.ServiceAccountUsernamePrefix, namespace, druidServiceAccountName)),
+			},
+		},
 	}
-
 	if etcdConfig.BackupCompactionController.MetricsScrapeWaitDuration != nil {
-		args = append(args, "--metrics-scrape-wait-duration="+etcdConfig.BackupCompactionController.MetricsScrapeWaitDuration.Duration.String())
+		etcdOperatorConfig.Controllers.Compaction.MetricsScrapeWaitDuration = metav1.Duration{Duration: etcdConfig.BackupCompactionController.MetricsScrapeWaitDuration.Duration}
 	}
-
 	if etcdConfig.BackupCompactionController.ActiveDeadlineDuration != nil {
-		args = append(args, "--active-deadline-duration="+etcdConfig.BackupCompactionController.ActiveDeadlineDuration.Duration.String())
+		etcdOperatorConfig.Controllers.Compaction.ActiveDeadlineDuration = metav1.Duration{Duration: etcdConfig.BackupCompactionController.ActiveDeadlineDuration.Duration}
 	}
-
-	// Add feature gates to the etcd druid args
 	if etcdConfig.FeatureGates != nil {
-		args = append(args, kubernetesutils.FeatureGatesToCommandLineParameter(etcdConfig.FeatureGates))
+		etcdOperatorConfig.FeatureGates = etcdConfig.FeatureGates
 	}
 
-	return args
+	scheme := runtime.NewScheme()
+	druidconfigv1alpha1.AddToScheme(scheme)
+	scheme.Default(etcdOperatorConfig)
+
+	return etcdOperatorConfig
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {
