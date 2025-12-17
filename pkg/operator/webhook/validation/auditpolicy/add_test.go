@@ -31,6 +31,12 @@ import (
 )
 
 var _ = Describe("handler", func() {
+	const (
+		statusCodeAllowed       int32 = http.StatusOK
+		statusCodeInvalid       int32 = http.StatusUnprocessableEntity
+		statusCodeInternalError int32 = http.StatusInternalServerError
+	)
+
 	var (
 		ctx = context.TODO()
 
@@ -42,19 +48,22 @@ var _ = Describe("handler", func() {
 		mockReader *mockclient.MockReader
 		fakeClient client.Client
 
-		statusCodeAllowed       int32 = http.StatusOK
-		statusCodeInvalid       int32 = http.StatusUnprocessableEntity
-		statusCodeInternalError int32 = http.StatusInternalServerError
-
 		testEncoder runtime.Encoder
 
-		cmName      = "fake-cm-name"
-		cmNameOther = "fake-cm-name-other"
-		gardenName  = "fake-garden"
-		gardenNs    = "garden"
+		cmName, cmNameOther, gardenName, gardenNs string
 
 		cm     *corev1.ConfigMap
 		garden *operatorv1alpha1.Garden
+
+		validAuditPolicy, anotherValidAuditPolicy, missingKeyAuditPolicy,
+		invalidAuditPolicy, validAuditPolicyV1alpha1 string
+	)
+
+	BeforeEach(func() {
+		cmName = "fake-cm-name"
+		cmNameOther = "fake-cm-name-other"
+		gardenName = "fake-garden"
+		gardenNs = "garden"
 
 		validAuditPolicy = `
 ---
@@ -123,9 +132,7 @@ rules:
     - group: ""
       resources: ["pods/log", "pods/status"]
 `
-	)
 
-	BeforeEach(func() {
 		testEncoder = &jsonserializer.Serializer{}
 
 		ctrl = gomock.NewController(GinkgoT())
@@ -201,7 +208,7 @@ rules:
 		}
 
 		response := handler.Handle(ctx, request)
-		ExpectWithOffset(1, response).To(Not(BeNil()))
+		ExpectWithOffset(1, response).ToNot(BeNil())
 		ExpectWithOffset(1, response.Allowed).To(Equal(expectedAllowed))
 		ExpectWithOffset(1, response.Result.Code).To(Equal(expectedStatusCode))
 		if expectedMsg != "" {
