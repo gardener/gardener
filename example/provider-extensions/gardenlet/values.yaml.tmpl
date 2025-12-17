@@ -16,6 +16,14 @@ config:
             namespace: garden
           # Automatically set when using a Gardener shoot
           type: ""
+        internal:
+          credentialsRef:
+            apiVersion: v1
+            kind: Secret
+            name: ""
+            namespace: garden
+          type: ""
+          domain: ""
       ingress:
         controller:
           kind: nginx
