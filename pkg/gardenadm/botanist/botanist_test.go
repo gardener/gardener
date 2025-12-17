@@ -184,6 +184,13 @@ metadata:
 			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "provider-account"}, &gardencorev1beta1.SecretBinding{})).To(Succeed())
 			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "provider-account"}, &securityv1alpha1.CredentialsBinding{})).To(Succeed())
 		})
+
+		It("should create the workload identity", func() {
+			b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "local"}, &securityv1alpha1.WorkloadIdentity{})).To(Succeed())
+		})
 	})
 })
 
@@ -345,5 +352,17 @@ credentialsRef:
   kind: Secret
   name: provider-account
 quotas: []
+`)}
+	fsys[dir+"/workloadidentity.yaml"] = &fstest.MapFile{Data: []byte(`---
+apiVersion: security.gardener.cloud/v1alpha1
+kind: WorkloadIdentity
+metadata:
+  name: local
+provider:
+  type: local
+credentialsRef:
+  apiVersion: v1
+  kind: Secret
+  name: provider-account
 `)}
 }

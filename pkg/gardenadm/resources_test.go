@@ -42,6 +42,8 @@ var _ = Describe("Resources", func() {
 			createSecret(fsys, "secret2")
 			createSecretBinding(fsys, "secretBinding")
 			createCredentialsBinding(fsys, "credentialsBinding")
+			createWorkloadIdentity(fsys, "workloadIdentity1")
+			createWorkloadIdentity(fsys, "workloadIdentity2")
 		})
 
 		It("should read the Kubernetes resources successfully", func() {
@@ -70,6 +72,8 @@ var _ = Describe("Resources", func() {
 			Expect(resources.Secrets[1].Name).To(Equal("secret2"))
 			Expect(resources.SecretBinding.Name).To(Equal("secretBinding"))
 			Expect(resources.CredentialsBinding.Name).To(Equal("credentialsBinding"))
+			Expect(resources.WorkloadIdentities[0].Name).To(Equal("workloadIdentity1"))
+			Expect(resources.WorkloadIdentities[1].Name).To(Equal("workloadIdentity2"))
 		})
 
 		It("should ignore hidden files", func() {
@@ -298,6 +302,14 @@ metadata:
 func createCredentialsBinding(fsys fstest.MapFS, name string) {
 	fsys["credentialsbinding-"+name+".yaml"] = &fstest.MapFile{Data: []byte(`apiVersion: security.gardener.cloud/v1alpha1
 kind: CredentialsBinding
+metadata:
+  name: ` + name + `
+`)}
+}
+
+func createWorkloadIdentity(fsys fstest.MapFS, name string) {
+	fsys["workloadidentity-"+name+".yaml"] = &fstest.MapFile{Data: []byte(`apiVersion: security.gardener.cloud/v1alpha1
+kind: WorkloadIdentity
 metadata:
   name: ` + name + `
 `)}
