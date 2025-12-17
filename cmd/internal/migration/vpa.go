@@ -41,9 +41,7 @@ type vpaMigrationConfig struct {
 
 // migrateVPA performs VerticalPodAutoscalers migration based on the provided configuration.
 func migrateVPA(ctx context.Context, cfg *vpaMigrationConfig) error {
-	var (
-		list = vpaautoscalingv1.VerticalPodAutoscalerList{}
-	)
+	list := vpaautoscalingv1.VerticalPodAutoscalerList{}
 
 	if err := cfg.client.List(ctx, &list, &cfg.listOpts); err != nil {
 		if meta.IsNoMatchError(err) {
