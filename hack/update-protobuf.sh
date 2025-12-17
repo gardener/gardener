@@ -8,13 +8,6 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-# setup virtual GOPATH
-source $(dirname $0)/vgopath-setup.sh
-
-# We need to explicitly pass GO111MODULE=off to k8s.io/code-generator as it is significantly slower otherwise,
-# see https://github.com/kubernetes/code-generator/issues/100.
-export GO111MODULE=off
-
 CURRENT_DIR="$(dirname $0)"
 PROJECT_ROOT="${CURRENT_DIR}"/..
 if [ "${PROJECT_ROOT#/}" == "${PROJECT_ROOT}" ]; then
@@ -44,14 +37,25 @@ APIMACHINERY_PKGS=(
   -k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
 )
 
+# For go-to-protobuf, a path ending with `github.com/gardener/gardener` is expected, similar to the former GOPATH structure.
+#
+# TODO(ialidzhikov): Check if it is possible to run go-to-probuf without GOPATH structure.
+# If it is upstream issue with the go-to-protobuf generator that it still requires GOPATH, report it to Kubernetes.
+TMP_DIR=$(mktemp -d)
+trap "rm -rf ${TMP_DIR}" EXIT
+mkdir -p "${TMP_DIR}/github.com/gardener/"
+ln -s "${PROJECT_ROOT}" "${TMP_DIR}/github.com/gardener/gardener"
+
 # requires the 'proto' tag to build (will remove when ready)
 # searches for the protoc-gen-gogo extension in the output directory
 # satisfies import of github.com/gogo/protobuf/gogoproto/gogo.proto and the
 # core Google protobuf types
 go-to-protobuf \
   --go-header-file=${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt \
-  --output-dir="${GOPATH}/src" \
-  --proto-import="${GOPATH}/src/k8s.io/kubernetes/staging/src" \
-  --proto-import="${GOPATH}/src/k8s.io/kubernetes/vendor" \
+  --output-dir="${TMP_DIR}" \
+  --proto-import="github.com/gogo/protobuf/gogoproto=$(go list -f '{{ .Dir }}' github.com/gogo/protobuf/gogoproto)" \
+  --proto-import="k8s.io/api=$(go list -f '{{ .Dir }}' k8s.io/api)" \
+  --proto-import="k8s.io/apimachinery=$(go list -f '{{ .Dir }}' k8s.io/apimachinery)" \
+  --proto-import="k8s.io/apiextensions-apiserver=$(go list -f '{{ .Dir }}' k8s.io/apiextensions-apiserver)" \
   --packages="$(IFS=, ; echo "${PACKAGES[*]}")" \
   --apimachinery-packages=$(IFS=, ; echo "${APIMACHINERY_PKGS[*]}")

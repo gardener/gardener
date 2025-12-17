@@ -32,11 +32,6 @@ add_keep_object_annotation=false
 crd_options=""
 declare -A custom_packages=()
 
-# setup virtual GOPATH
-source $(dirname $0)/vgopath-setup.sh
-
-export GO111MODULE=off
-
 get_group_package () {
   if [[ -v custom_packages["$1"] ]]; then
     echo "${custom_packages["$1"]}"
