@@ -27,7 +27,7 @@ Common use cases include:
 
 During Shoot reconciliation, the `gardenlet` performs the following steps:
 
-1. Scans the seed cluster's `garden` namespace for `Secret`s labeled with `shoot.gardener.cloud/static-manifests=true`.
+1. Scans the seed cluster's `garden` namespace for `Secret`s labeled with `gardener.cloud/purpose=shoot-static-manifest`.
 2. Copies all matching `Secret`s into each Shoot namespace.
 3. Creates a single `ManagedResource` that references these `Secret`s.
 4. The `ManagedResource` ensures the manifests are applied to the Shoot cluster.
@@ -66,7 +66,7 @@ rules:
 ### Step 2: Create a Secret in the Seed Cluster
 
 Create a `Secret` in the seed cluster's `garden` namespace containing your manifests.
-The `Secret` must be labeled with `shoot.gardener.cloud/static-manifests=true`.
+The `Secret` must be labeled with `gardener.cloud/purpose=shoot-static-manifest`.
 
 ```bash
 # Create the Secret with the required label
@@ -74,7 +74,7 @@ kubectl create secret generic my-static-manifests \
   --from-file=manifests.yaml=my-manifests.yaml \
   --namespace=garden \
   --dry-run=client -o yaml | \
-  kubectl label --local -f - shoot.gardener.cloud/static-manifests=true --dry-run=client -o yaml | \
+  kubectl label --local -f - gardener.cloud/purpose=shoot-static-manifest --dry-run=client -o yaml | \
   kubectl apply -f -
 ```
 
@@ -87,7 +87,7 @@ metadata:
   name: my-static-manifests
   namespace: garden
   labels:
-    shoot.gardener.cloud/static-manifests: "true"
+    gardener.cloud/purpose: shoot-static-manifest
 type: Opaque
 data:
   manifests.yaml: <base64-encoded-yaml-content>
@@ -105,7 +105,7 @@ metadata:
   name: production-manifests
   namespace: garden
   labels:
-    shoot.gardener.cloud/static-manifests: "true"
+    gardener.cloud/purpose: shoot-static-manifest
   annotations:
     static-manifests.shoot.gardener.cloud/selector: |
       {"matchLabels":{"environment":"production"}}
@@ -153,7 +153,7 @@ After the next Shoot reconciliation, verify that the manifests have been propaga
 
 1. **Check the Shoot namespace** in the seed cluster for the copied `Secret`:
    ```bash
-   kubectl get secret my-static-manifests -n shoot--<project>--<shoot>
+   kubectl get secret static-manifests-my-static-manifests -n shoot--<project>--<shoot>
    ```
 
 2. **Check the `ManagedResource`** referencing your `Secret`:
@@ -197,5 +197,6 @@ To stop propagating manifests to Shoot clusters:
 - **Resource Conflicts**: Avoid creating resources that might conflict with Gardener-managed resources or Shoot-specific configurations.
 - **Secret Naming**: Use descriptive names for `Secret`s to distinguish between different sets of manifests.
 - **Multiple Secrets**: You can create multiple labeled `Secret`s in the `garden` namespace; all will be propagated (subject to their selectors).
-- **Label Requirement**: The label `shoot.gardener.cloud/static-manifests=true` is mandatory. `Secret`s without this label will not be propagated.
+- **Label Requirement**: The label `gardener.cloud/purpose=shoot-static-manifest` is mandatory. `Secret`s without this label will not be propagated.
 - **Reconciliation Timing**: Changes may take time to propagate depending on the Shoot reconciliation schedule.
+- **Health Checks**: Failed resources in static manifests are propagated to the Shoot's `SystemComponentsHealthy` condition, allowing visibility into deployment issues.

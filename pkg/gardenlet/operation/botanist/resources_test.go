@@ -263,7 +263,7 @@ var _ = Describe("Resources", func() {
 			})
 		})
 
-		Context("when there are no secrets with static manifests label", func() {
+		When("there are no secrets with static manifests label", func() {
 			It("should delete the managed resource if it exists", func() {
 				managedResource := &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
@@ -280,10 +280,18 @@ var _ = Describe("Resources", func() {
 
 			It("should not fail if managed resource does not exist", func() {
 				Expect(botanist.PopulateStaticManifestsFromSeedToShoot(ctx)).To(Succeed())
+
+				managedResource := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      managedResourceName,
+						Namespace: controlPlaneNamespace,
+					},
+				}
+				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(managedResource), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 			})
 		})
 
-		Context("when there are secrets with static manifests label", func() {
+		When("there are secrets with static manifests label", func() {
 			var secret1, secret2, secret3 *corev1.Secret
 
 			BeforeEach(func() {
@@ -291,7 +299,7 @@ var _ = Describe("Resources", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "manifest-1",
 						Namespace: "garden",
-						Labels:    map[string]string{"shoot.gardener.cloud/static-manifests": "true"},
+						Labels:    map[string]string{"gardener.cloud/purpose": "shoot-static-manifest"},
 					},
 					Type: corev1.SecretTypeOpaque,
 					Data: map[string][]byte{"manifest": []byte("data1")},
@@ -301,7 +309,7 @@ var _ = Describe("Resources", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "manifest-2",
 						Namespace: "garden",
-						Labels:    map[string]string{"shoot.gardener.cloud/static-manifests": "true"},
+						Labels:    map[string]string{"gardener.cloud/purpose": "shoot-static-manifest"},
 					},
 					Type: corev1.SecretTypeTLS,
 					Data: map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")},
@@ -311,7 +319,7 @@ var _ = Describe("Resources", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "manifest-3",
 						Namespace: "garden",
-						Labels:    map[string]string{"shoot.gardener.cloud/static-manifests": "true"},
+						Labels:    map[string]string{"gardener.cloud/purpose": "shoot-static-manifest"},
 					},
 					Type: corev1.SecretTypeOpaque,
 					Data: map[string][]byte{"manifest": []byte("data3")},
@@ -329,7 +337,7 @@ var _ = Describe("Resources", func() {
 				Expect(copiedSecret1.Type).To(Equal(secret1.Type))
 				Expect(copiedSecret1.Data).To(Equal(secret1.Data))
 				Expect(copiedSecret1.Immutable).To(Equal(ptr.To(false)))
-				Expect(copiedSecret1.Labels).To(HaveKeyWithValue("shoot.gardener.cloud/static-manifests", "true"))
+				Expect(copiedSecret1.Labels).To(HaveKeyWithValue("gardener.cloud/purpose", "shoot-static-manifest"))
 
 				copiedSecret2 := &corev1.Secret{}
 				Expect(seedClient.Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: secretNamePrefix + secret2.Name}, copiedSecret2)).To(Succeed())

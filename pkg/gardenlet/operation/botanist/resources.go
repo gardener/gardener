@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -68,7 +69,7 @@ func (b *Botanist) DestroyReferencedResources(ctx context.Context) error {
 }
 
 // PopulateStaticManifestsFromSeedToShoot reads all Secrets in the seed's garden namespace labeled with
-// shoot.gardener.cloud/static-manifests=true and copies them into the Shoot namespace. A ManagedResource is created
+// gardener.cloud/purpose=shoot-static-manifest and copies them into the Shoot namespace. A ManagedResource is created
 // referencing all of them.
 func (b *Botanist) PopulateStaticManifestsFromSeedToShoot(ctx context.Context) error {
 	var (
@@ -78,7 +79,7 @@ func (b *Botanist) PopulateStaticManifestsFromSeedToShoot(ctx context.Context) e
 	)
 
 	secretListGardenNamespace := &corev1.SecretList{}
-	if err := b.SeedClientSet.Client().List(ctx, secretListGardenNamespace, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{v1beta1constants.LabelShootStaticManifests: "true"}); err != nil {
+	if err := b.SeedClientSet.Client().List(ctx, secretListGardenNamespace, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{v1beta1constants.GardenerPurpose: v1beta1constants.GardenPurposeShootStaticManifest}); err != nil {
 		return fmt.Errorf("failed listing secrets with static manifests in %s namespace: %w", v1beta1constants.GardenNamespace, err)
 	}
 
@@ -109,7 +110,7 @@ func (b *Botanist) PopulateStaticManifestsFromSeedToShoot(ctx context.Context) e
 	}
 
 	secretListShootControlPlaneNamespace := &corev1.SecretList{}
-	if err := b.SeedClientSet.Client().List(ctx, secretListShootControlPlaneNamespace, client.InNamespace(b.Shoot.ControlPlaneNamespace), client.MatchingLabels{v1beta1constants.LabelShootStaticManifests: "true"}); err != nil {
+	if err := b.SeedClientSet.Client().List(ctx, secretListShootControlPlaneNamespace, client.InNamespace(b.Shoot.ControlPlaneNamespace), client.MatchingLabels{v1beta1constants.GardenerPurpose: v1beta1constants.GardenPurposeShootStaticManifest}); err != nil {
 		return fmt.Errorf("failed listing secrets with static manifests in %s namespace: %w", b.Shoot.ControlPlaneNamespace, err)
 	}
 
@@ -142,7 +143,13 @@ func (b *Botanist) PopulateStaticManifestsFromSeedToShoot(ctx context.Context) e
 			return secret.Name == secretNamePrefix+s.Name
 		}) {
 			tasks = append(tasks, func(ctx context.Context) error {
-				return kubernetesutils.DeleteObject(ctx, b.SeedClientSet.Client(), &secret)
+				if err := kubernetesutils.DeleteObject(ctx, b.SeedClientSet.Client(), &secret); err != nil {
+					return fmt.Errorf("failed deleting secret %q: %w", client.ObjectKeyFromObject(&secret), err)
+				}
+
+				timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
+				defer cancel()
+				return kubernetesutils.WaitUntilResourceDeleted(timeoutCtx, b.SeedClientSet.Client(), &secret, time.Second)
 			})
 		}
 	}
