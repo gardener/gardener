@@ -16,6 +16,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/validation"
+	"github.com/gardener/gardener/pkg/apiserver/registry/seedmanagement/utils"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -37,12 +39,16 @@ func (gardenletStrategy) NamespaceScoped() bool { return true }
 func (gardenletStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	gardenlet := obj.(*seedmanagement.Gardenlet)
 
+	SyncSeedDNSProviderCredentials(gardenlet)
+
 	gardenlet.Generation = 1
 }
 
 func (gardenletStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newGardenlet := obj.(*seedmanagement.Gardenlet)
 	oldGardenlet := old.(*seedmanagement.Gardenlet)
+
+	SyncSeedDNSProviderCredentials(newGardenlet)
 
 	if mustIncreaseGeneration(oldGardenlet, newGardenlet) {
 		newGardenlet.Generation = oldGardenlet.Generation + 1
@@ -117,8 +123,33 @@ func (s statusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Obj
 	newGardenlet := obj.(*seedmanagement.Gardenlet)
 	oldGardenlet := old.(*seedmanagement.Gardenlet)
 	newGardenlet.Spec = oldGardenlet.Spec
+
+	// Ensure credentialsRef is synced even on /status subresource requests.
+	// Some clients are patching just the status which still results in update events
+	// for those watching the resource.
+	SyncSeedDNSProviderCredentials(newGardenlet)
 }
 
 func (statusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateGardenletStatusUpdate(obj.(*seedmanagement.Gardenlet), old.(*seedmanagement.Gardenlet))
+}
+
+// SyncSeedDNSProviderCredentials ensures spec.dns.provider.secretRef and spec.dns.provider.credentialsRef
+// are in sync when possible.
+//
+// TODO(vpnachev): Remove this function after v1.138.0 has been released.
+func SyncSeedDNSProviderCredentials(gardenlet *seedmanagement.Gardenlet) {
+	if gardenlet.Spec.Config == nil {
+		return
+	}
+	gardenletConfig, ok := gardenlet.Spec.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+	if !ok {
+		return
+	}
+
+	if gardenletConfig.SeedConfig == nil {
+		return
+	}
+
+	utils.SyncSeedDNSProviderCredentials(gardenletConfig.SeedConfig.Spec.DNS.Provider)
 }
