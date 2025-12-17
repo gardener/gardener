@@ -256,7 +256,7 @@ rules:
 					*cm = returnedCm
 					return nil
 				})
-				test(admissionv1.Create, nil, garden, true, statusCodeAllowed, "referenced configMap is valid", "")
+				test(admissionv1.Create, nil, garden, true, statusCodeAllowed, "all referenced configMaps are valid", "")
 			})
 
 			It("referenced auditPolicy name was not changed (UPDATE)", func() {
@@ -277,7 +277,7 @@ rules:
 					*cm = returnedCm
 					return nil
 				})
-				test(admissionv1.Update, garden, newGarden, true, statusCodeAllowed, "referenced configMap is valid", "")
+				test(admissionv1.Update, garden, newGarden, true, statusCodeAllowed, "all referenced configMaps are valid", "")
 			})
 
 			It("referenced auditPolicy name was changed (UPDATE)", func() {
@@ -290,7 +290,7 @@ rules:
 					*cm = returnedCm
 					return nil
 				})
-				test(admissionv1.Update, garden, newGarden, true, statusCodeAllowed, "referenced configMap is valid", "")
+				test(admissionv1.Update, garden, newGarden, true, statusCodeAllowed, "all referenced configMaps are valid", "")
 			})
 
 			It("referenced auditPolicy name was removed (UPDATE)", func() {

@@ -65,7 +65,7 @@ type Handler struct {
 	AdmitConfig                 func(configRaw string, shootsReferencingConfigMap []*gardencore.Shoot) (int32, error)
 
 	GetNamespace               func() string
-	GetConfigMapNameFromGarden func(garden *operatorv1alpha1.Garden) string
+	GetConfigMapNameFromGarden func(garden *operatorv1alpha1.Garden) map[string]string
 	AdmitGardenConfig          func(configRaw string) (int32, error)
 }
 
@@ -99,8 +99,8 @@ func (h *Handler) admitGarden(ctx context.Context, request admission.Request) ad
 		return admissionwebhook.Allowed("garden is already marked for deletion")
 	}
 
-	configMapName := h.GetConfigMapNameFromGarden(garden)
-	if configMapName == "" {
+	configMapNames := h.GetConfigMapNameFromGarden(garden)
+	if len(configMapNames) == 0 {
 		return admissionwebhook.Allowed("no audit policy config map reference found in garden spec")
 	}
 
@@ -116,29 +116,35 @@ func (h *Handler) admitGarden(ctx context.Context, request admission.Request) ad
 		}
 	}
 
-	if oldGarden != nil && h.GetConfigMapNameFromGarden(oldGarden) == configMapName &&
-		oldGarden.Spec.VirtualCluster.Kubernetes.Version == garden.Spec.VirtualCluster.Kubernetes.Version {
-		return admissionwebhook.Allowed("audit policy config map reference and kubernetes version were not changed")
-	}
-
-	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: h.GetNamespace(), Name: configMapName}}
-	if err := h.APIReader.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
-		if apierrors.IsNotFound(err) {
-			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("referenced ConfigMap %s does not exist: %w", client.ObjectKeyFromObject(configMap), err))
+	if oldGarden != nil {
+		oldConfigMapNames := h.GetConfigMapNameFromGarden(oldGarden)
+		if apiequality.Semantic.DeepEqual(oldConfigMapNames, configMapNames) &&
+			oldGarden.Spec.VirtualCluster.Kubernetes.Version == garden.Spec.VirtualCluster.Kubernetes.Version {
+			return admissionwebhook.Allowed("audit policy config map reference and kubernetes version were not changed")
 		}
-		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("could not retrieve ConfigMap %s: %w", client.ObjectKeyFromObject(configMap), err))
 	}
 
-	configRaw, err := h.rawConfigurationFromConfigMap(configMap.Data)
-	if err != nil {
-		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting ConfigMap %s: %w", client.ObjectKeyFromObject(configMap), err))
+	// Validate each referenced ConfigMap
+	for _, configMapName := range configMapNames {
+		configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: h.GetNamespace(), Name: configMapName}}
+		if err := h.APIReader.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
+			if apierrors.IsNotFound(err) {
+				return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("referenced ConfigMap %s does not exist: %w", client.ObjectKeyFromObject(configMap), err))
+			}
+			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("could not retrieve ConfigMap %s: %w", client.ObjectKeyFromObject(configMap), err))
+		}
+
+		configRaw, err := h.rawConfigurationFromConfigMap(configMap.Data)
+		if err != nil {
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting ConfigMap %s: %w", client.ObjectKeyFromObject(configMap), err))
+		}
+
+		if errCode, err := h.AdmitGardenConfig(configRaw); err != nil {
+			return admission.Errored(errCode, fmt.Errorf("validation failed for ConfigMap %s: %w", configMapName, err))
+		}
 	}
 
-	if errCode, err := h.AdmitGardenConfig(configRaw); err != nil {
-		return admission.Errored(errCode, err)
-	}
-
-	return admissionwebhook.Allowed("referenced configMap is valid")
+	return admissionwebhook.Allowed("all referenced configMaps are valid")
 }
 
 func (h *Handler) admitShoot(ctx context.Context, request admission.Request) admission.Response {
@@ -287,7 +293,20 @@ func (h *Handler) admitConfigMapForGardens(ctx context.Context, request admissio
 	// there can be atmost one garden resource
 	garden := gardenList.Items[0]
 
-	if h.GetConfigMapNameFromGarden(&garden) != request.Name || h.GetNamespace() != request.Namespace {
+	configMapNames := h.GetConfigMapNameFromGarden(&garden)
+	if len(configMapNames) == 0 || h.GetNamespace() != request.Namespace {
+		return admissionwebhook.Allowed("config map is not referenced by garden resource, nothing to validate")
+	}
+
+	isReferenced := false
+	for _, configMapName := range configMapNames {
+		if configMapName == request.Name {
+			isReferenced = true
+			break
+		}
+	}
+
+	if !isReferenced {
 		return admissionwebhook.Allowed("config map is not referenced by garden resource, nothing to validate")
 	}
 

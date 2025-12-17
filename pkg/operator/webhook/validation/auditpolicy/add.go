@@ -48,12 +48,18 @@ func NewHandler(apiReader, c client.Reader, decoderAdmission admission.Decoder, 
 		ConfigMapDataKey: "policy",
 
 		GetNamespace: func() string { return gardenNamespace },
-		GetConfigMapNameFromGarden: func(garden *operatorv1alpha1.Garden) string {
+		GetConfigMapNameFromGarden: func(garden *operatorv1alpha1.Garden) map[string]string {
+			configMapNames := map[string]string{}
 			if garden.Spec.VirtualCluster.Gardener.APIServer != nil && garden.Spec.VirtualCluster.Gardener.APIServer.AuditConfig != nil &&
 				garden.Spec.VirtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy != nil && garden.Spec.VirtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy.ConfigMapRef != nil {
-				return garden.Spec.VirtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name
+				configMapNames["gardener-apiserver-audit-policy"] = garden.Spec.VirtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name
 			}
-			return ""
+
+			if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditConfig != nil &&
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef != nil {
+				configMapNames["virtual-garden-kube-apiserver-audit-policy"] = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name
+			}
+			return configMapNames
 		},
 		AdmitGardenConfig: configvalidator.AdmitAudtPolicy,
 	}

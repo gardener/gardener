@@ -115,14 +115,18 @@ var _ = Describe("Handler", func() {
 			GetNamespace: func() string {
 				return configMap.Namespace
 			},
-			GetConfigMapNameFromGarden: func(g *operatorv1alpha1.Garden) string {
-				if g.Spec.VirtualCluster.Gardener.APIServer != nil &&
-					g.Spec.VirtualCluster.Gardener.APIServer.AuditConfig != nil &&
-					g.Spec.VirtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy != nil &&
-					g.Spec.VirtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy.ConfigMapRef != nil {
-					return g.Spec.VirtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name
+			GetConfigMapNameFromGarden: func(garden *operatorv1alpha1.Garden) map[string]string {
+				configMapNames := map[string]string{}
+				if garden.Spec.VirtualCluster.Gardener.APIServer != nil && garden.Spec.VirtualCluster.Gardener.APIServer.AuditConfig != nil &&
+					garden.Spec.VirtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy != nil && garden.Spec.VirtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy.ConfigMapRef != nil {
+					configMapNames["gardener-apiserver-audit-policy"] = garden.Spec.VirtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name
 				}
-				return ""
+
+				if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditConfig != nil &&
+					garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef != nil {
+					configMapNames["virtual-garden-kube-apiserver-audit-policy"] = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name
+				}
+				return configMapNames
 			},
 		}
 		request = admission.Request{}
@@ -519,7 +523,54 @@ var _ = Describe("Handler", func() {
 			response := handler.Handle(ctx, request)
 			Expect(response.Allowed).To(BeTrue())
 			Expect(response.Result.Code).To(Equal(int32(200)))
-			Expect(response.Result.Message).To(Equal("referenced configMap is valid"))
+			Expect(response.Result.Message).To(Equal("all referenced configMaps are valid"))
+		})
+
+		It("should validate multiple ConfigMaps when both gardener and kube-apiserver audit policies are configured", func() {
+			// Create second ConfigMap for kube-apiserver
+			kubeAPIServerConfigMap := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "kube-apiserver-audit-policy",
+					Namespace: configMap.Namespace,
+				},
+				Data: map[string]string{"config.yaml": "kube-apiserver-config"},
+			}
+			Expect(fakeClient.Create(ctx, kubeAPIServerConfigMap)).To(Succeed())
+
+			// Update garden to reference both ConfigMaps
+			garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{
+				KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+					AuditConfig: &gardencorev1beta1.AuditConfig{
+						AuditPolicy: &gardencorev1beta1.AuditPolicy{
+							ConfigMapRef: &corev1.ObjectReference{
+								Name: kubeAPIServerConfigMap.Name,
+							},
+						},
+					},
+				},
+			}
+
+			configMap.Data = map[string]string{"config.yaml": "gardener-apiserver-config"}
+			Expect(fakeClient.Update(ctx, configMap)).To(Succeed())
+
+			rawGarden, err := runtime.Encode(encoder, garden)
+			Expect(err).NotTo(HaveOccurred())
+			request.Object.Raw = rawGarden
+
+			validationCalls := 0
+			handler.AdmitGardenConfig = func(configRaw string) (int32, error) {
+				validationCalls++
+				if configRaw != "gardener-apiserver-config" && configRaw != "kube-apiserver-config" {
+					return 1337, fmt.Errorf("unexpected config content: %s", configRaw)
+				}
+				return 0, nil
+			}
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeTrue())
+			Expect(response.Result.Code).To(Equal(int32(200)))
+			Expect(response.Result.Message).To(Equal("all referenced configMaps are valid"))
+			Expect(validationCalls).To(Equal(2))
 		})
 	})
 
