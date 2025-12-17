@@ -168,7 +168,7 @@ images:
   - name: vpn-server
     sourceRepository: github.com/gardener/vpn2
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-server
-    tag: "0.44.0"
+    tag: "0.45.0"
   # OpenTelemetry
   - name: opentelemetry-operator
     sourceRepository: github.com/open-telemetry/opentelemetry-operator
@@ -443,7 +443,7 @@ images:
   - name: vpn-client
     sourceRepository: github.com/gardener/vpn2
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-client
-    tag: "0.44.0"
+    tag: "0.45.0"
   - name: coredns
     sourceRepository: github.com/coredns/coredns
     repository: registry.k8s.io/coredns/coredns
