@@ -38,6 +38,9 @@ APIMACHINERY_PKGS=(
 )
 
 # For go-to-protobuf, a path ending with `github.com/gardener/gardener` is expected, similar to the former GOPATH structure.
+#
+# TODO(ialidzhikov): Check if it is possible to run go-to-probuf without GOPATH structure.
+# If it is upstream issue with the go-to-protobuf generator that it still requires GOPATH, report it to Kubernetes.
 TMP_DIR=$(mktemp -d)
 trap "rm -rf ${TMP_DIR}" EXIT
 mkdir -p "${TMP_DIR}/github.com/gardener/"
