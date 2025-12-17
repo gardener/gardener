@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -143,13 +142,7 @@ func (b *Botanist) PopulateStaticManifestsFromSeedToShoot(ctx context.Context) e
 			return secret.Name == secretNamePrefix+s.Name
 		}) {
 			tasks = append(tasks, func(ctx context.Context) error {
-				if err := kubernetesutils.DeleteObject(ctx, b.SeedClientSet.Client(), &secret); err != nil {
-					return fmt.Errorf("failed deleting secret %q: %w", client.ObjectKeyFromObject(&secret), err)
-				}
-
-				timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
-				defer cancel()
-				return kubernetesutils.WaitUntilResourceDeleted(timeoutCtx, b.SeedClientSet.Client(), &secret, time.Second)
+				return kubernetesutils.DeleteObject(ctx, b.SeedClientSet.Client(), &secret)
 			})
 		}
 	}
