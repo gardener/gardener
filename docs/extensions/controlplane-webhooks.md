@@ -11,6 +11,10 @@ Gardener creates the Shoot controlplane in several steps of the Shoot flow. At d
 
 In order to apply any provider-specific changes to the configuration provided by Gardener for the standard controlplane components, cloud extension providers can install mutating admission webhooks for the resources created by Gardener in the Shoot namespace.
 
+The controlplane of a virtual garden managed by the [gardener-operator](../concepts/operator.md) contains similar _core components_ as a regular workerless shoot cluster.
+Extensions controllers deploying webhooks for the garden controlplane may follow the same principles.
+In this scope, the term _Shoot_ refers to the virtual garden, whereas the term _Seed_ refers to the physical/runtime cluster hosting the virtual garden.
+
 ## What needs to be implemented to support a new cloud provider?
 
 In order to support a new cloud provider, you should install "controlplane" mutating webhooks for any of the following resources:
@@ -38,7 +42,7 @@ This section specifies the contract that Gardener and webhooks should adhere to 
 
 ### kube-apiserver
 
-To deploy kube-apiserver, Gardener **shall** create a deployment and a service both named `kube-apiserver` in the Shoot namespace. They can be mutated by webhooks to apply any provider-specific changes to the standard configuration provided by Gardener.
+To deploy the kube-apiserver, Gardener **shall** create a deployment and a service both named `kube-apiserver` in the Shoot namespace (`virtual-garden-kube-apiserver` in the `garden` namespace for the virtual garden). They can be mutated by webhooks to apply any provider-specific changes to the standard configuration provided by Gardener.
 
 The pod template of the `kube-apiserver` deployment **shall** contain a container named `kube-apiserver`.
 
@@ -74,7 +78,7 @@ The `kube-apiserver` `Service` **will** be of type `ClusterIP`. In this case, Ga
 
 ### kube-controller-manager
 
-To deploy kube-controller-manager, Gardener **shall** create a deployment named `kube-controller-manager` in the Shoot namespace. It can be mutated by webhooks to apply any provider-specific changes to the standard configuration provided by Gardener.
+To deploy kube-controller-manager, Gardener **shall** create a deployment named `kube-controller-manager` in the Shoot namespace (`virtual-garden-kube-controller-manager` in the `garden` namespace for the virtual garden). It can be mutated by webhooks to apply any provider-specific changes to the standard configuration provided by Gardener.
 
 The pod template of the `kube-controller-manager` deployment **shall** contain a container named `kube-controller-manager`.
 
@@ -126,7 +130,7 @@ The kube-scheduler command line can't contain provider-specific flags, and it ma
 
 ### etcd-main and etcd-events
 
-To deploy etcd, Gardener **shall** create 2 [Etcd](https://github.com/gardener/etcd-druid/blob/1d427e9167adac1476d1847c0e265c2c09d6bc62/config/samples/druid_v1alpha1_etcd.yaml) named `etcd-main` and `etcd-events` in the Shoot namespace. They can be mutated by webhooks to apply any provider-specific changes to the standard configuration provided by Gardener.
+To deploy etcd, Gardener **shall** create 2 [Etcd](https://github.com/gardener/etcd-druid/blob/1d427e9167adac1476d1847c0e265c2c09d6bc62/config/samples/druid_v1alpha1_etcd.yaml) named `etcd-main` and `etcd-events` in the Shoot namespace (`virtual-garden-etcd-{main,events}` in the `garden` namespace for the virtual garden). They can be mutated by webhooks to apply any provider-specific changes to the standard configuration provided by Gardener.
 
 Gardener **shall** configure the `Etcd` resource completely to set up an etcd cluster which uses the default storage class of the seed cluster.
 

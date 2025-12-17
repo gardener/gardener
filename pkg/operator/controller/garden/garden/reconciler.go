@@ -422,7 +422,7 @@ func (r *Reconciler) updateStatusOperationError(ctx context.Context, garden *ope
 }
 
 func (r *Reconciler) generateGenericTokenKubeconfig(ctx context.Context, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) error {
-	kubeAPIServerAddress := namePrefix + v1beta1constants.DeploymentNameKubeAPIServer
+	kubeAPIServerAddress := operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer
 	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
 		kubeAPIServerAddress = v1beta1helper.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name)
 	}
