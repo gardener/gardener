@@ -29,7 +29,7 @@ var _ = Describe("GardenerTestEnvironment", func() {
 
 	It("should be able to manipulate resource from seedmanagement.gardener.cloud/v1alpha1", func() {
 		managedSeed := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: "garden"}}
-		Expect(testClient.Create(ctx, managedSeed)).To(MatchError(ContainSubstring("ManagedSeed.seedmanagement.gardener.cloud \"\" is invalid")))
+		Expect(testClient.Create(ctx, managedSeed)).To(MatchError(MatchRegexp("ManagedSeed.seedmanagement.gardener.cloud \"test-.+\" is invalid")))
 	})
 
 	It("should be able to manipulate resource from settings.gardener.cloud/v1alpha1", func() {

@@ -268,14 +268,7 @@ var _ = Describe("ManagedSeed", func() {
 			managedSeed.Spec.Shoot.Name = ""
 
 			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-			Expect(err).To(BeInvalidError())
-			Expect(getErrorList(err)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeRequired),
-					"Field":  Equal("spec.shoot.name"),
-					"Detail": ContainSubstring("shoot name is required"),
-				})),
-			))
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should forbid the ManagedSeed creation if the Shoot does not exist", func() {
@@ -1014,18 +1007,11 @@ var _ = Describe("ManagedSeed", func() {
 			))
 		})
 
-		It("should forbid the ManagedSeed creation if a Shoot name is not specified", func() {
+		It("should do nothing if a Shoot name is not specified", func() {
 			managedSeed.Spec.Shoot.Name = ""
 
 			err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
-			Expect(err).To(BeInvalidError())
-			Expect(getErrorList(err)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeRequired),
-					"Field":  Equal("spec.shoot.name"),
-					"Detail": ContainSubstring("shoot name is required"),
-				})),
-			))
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should forbid the ManagedSeed creation if the Shoot does not exist", func() {
