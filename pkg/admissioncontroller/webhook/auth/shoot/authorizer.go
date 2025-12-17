@@ -72,6 +72,7 @@ var (
 	secretBindingResource             = gardencorev1beta1.Resource("secretbindings")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
 	shootStateResource                = gardencorev1beta1.Resource("shootstates")
+	workloadIdentityResource          = securityv1alpha1.Resource("workloadidentities")
 )
 
 func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth.Decision, string, error) {
@@ -173,6 +174,12 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 			return requestAuthorizer.Check(graph.VertexTypeShootState, attrs,
 				authwebhook.WithAllowedVerbs("get", "list", "watch", "patch"),
 				authwebhook.WithAlwaysAllowedVerbs("create"),
+			)
+
+		case workloadIdentityResource:
+			return requestAuthorizer.Check(graph.VertexTypeWorkloadIdentity, attrs,
+				authwebhook.WithAllowedVerbs("get", "list", "watch", "create", "patch"),
+				authwebhook.WithAllowedSubresources("token"),
 			)
 
 		default:
