@@ -119,6 +119,7 @@ build:
             - pkg/apiserver/registry/seedmanagement/managedseedset
             - pkg/apiserver/registry/seedmanagement/managedseedset/storage
             - pkg/apiserver/registry/seedmanagement/rest
+            - pkg/apiserver/registry/seedmanagement/utils
             - pkg/apiserver/registry/settings/clusteropenidconnectpreset
             - pkg/apiserver/registry/settings/clusteropenidconnectpreset/storage
             - pkg/apiserver/registry/settings/openidconnectpreset
@@ -1048,6 +1049,7 @@ build:
             - pkg/apis/settings
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
+            - pkg/apiserver/registry/seedmanagement/utils
             - pkg/chartrenderer
             - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes

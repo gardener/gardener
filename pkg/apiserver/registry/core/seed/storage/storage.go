@@ -53,6 +53,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 		CreateStrategy: strategy,
 		UpdateStrategy: strategy,
 		DeleteStrategy: strategy,
+		Decorator:      defaultOnRead,
 
 		TableConvertor: newTableConvertor(),
 	}
@@ -104,4 +105,31 @@ var _ rest.ShortNamesProvider = &REST{}
 // ShortNames implements the ShortNamesProvider interface. Returns a list of short names for a resource.
 func (r *REST) ShortNames() []string {
 	return []string{}
+}
+
+// defaultOnRead ensures spec.dns.provider.credentialsRef is set on read requests.
+//
+// TODO(vpnachev): Remove this function after v1.138.0 has been released.
+func defaultOnRead(obj runtime.Object) {
+	switch s := obj.(type) {
+	case *core.Seed:
+		defaultOnReadSeed(s)
+	case *core.SeedList:
+		defaultOnReadSeeds(s)
+	default:
+	}
+}
+
+func defaultOnReadSeed(s *core.Seed) {
+	seed.SyncDNSProviderCredentials(s)
+}
+
+func defaultOnReadSeeds(seedList *core.SeedList) {
+	if seedList == nil {
+		return
+	}
+
+	for i := range seedList.Items {
+		defaultOnReadSeed(&seedList.Items[i])
+	}
 }
