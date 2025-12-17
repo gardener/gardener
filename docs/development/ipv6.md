@@ -31,7 +31,7 @@ Please also take a look at the guide on [Deploying Gardener Locally](../deployme
 > $ mkdir -p /etc/docker
 > $ cat <<EOF > /etc/docker/daemon.json
 > {
->   "insecure-registries" : [ "registry.local.gardener.cloud:5000" ]
+>   "insecure-registries" : [ "registry.local.gardener.cloud:5001" ]
 > }
 > EOF
 > $ kill -1 $(pgrep dockerd)

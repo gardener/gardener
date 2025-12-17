@@ -1,4 +1,4 @@
 server = "https://registry.k8s.io"
 
-[host."http://k8s.registry-cache.local.gardener.cloud:5000"]
+[host."http://k8s.registry-cache.local.gardener.cloud:5001"]
   capabilities = ["pull", "resolve"]

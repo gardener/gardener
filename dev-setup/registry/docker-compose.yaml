@@ -3,7 +3,7 @@ services:
     container_name: registry
     image: europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0
     ports:
-      - "5000:5000"
+      - "5001:5001"
     volumes:
       - ../../dev/local-registry/localhost:/var/lib/registry
       - ./config.yaml:/etc/distribution/config.yml

@@ -111,11 +111,11 @@ setup_containerd_registry_mirrors() {
     # For the local registry, we don't need a mirror config for switching the URL, but only for configuring containerd
     # to use HTTP instead of HTTPS. Probably, we could use the insecure registries config for this. However, configuring
     # mirrors is supported by gardener-node-agent via the OSC, so we use the same approach everywhere.
-    setup_containerd_registry_mirror "$NODE" "registry.local.gardener.cloud:5000" "http://registry.local.gardener.cloud:5000" "http://registry.local.gardener.cloud:5000"
-    setup_containerd_registry_mirror "$NODE" "gcr.io" "https://gcr.io" "http://gcr.registry-cache.local.gardener.cloud:5000"
-    setup_containerd_registry_mirror "$NODE" "registry.k8s.io" "https://registry.k8s.io" "http://k8s.registry-cache.local.gardener.cloud:5000"
-    setup_containerd_registry_mirror "$NODE" "quay.io" "https://quay.io" "http://quay.registry-cache.local.gardener.cloud:5000"
-    setup_containerd_registry_mirror "$NODE" "europe-docker.pkg.dev" "https://europe-docker.pkg.dev" "http://europe-docker-pkg-dev.registry-cache.local.gardener.cloud:5000"
+    setup_containerd_registry_mirror "$NODE" "registry.local.gardener.cloud:5001" "http://registry.local.gardener.cloud:5001" "http://registry.local.gardener.cloud:5001"
+    setup_containerd_registry_mirror "$NODE" "gcr.io" "https://gcr.io" "http://gcr.registry-cache.local.gardener.cloud:5001"
+    setup_containerd_registry_mirror "$NODE" "registry.k8s.io" "https://registry.k8s.io" "http://k8s.registry-cache.local.gardener.cloud:5001"
+    setup_containerd_registry_mirror "$NODE" "quay.io" "https://quay.io" "http://quay.registry-cache.local.gardener.cloud:5001"
+    setup_containerd_registry_mirror "$NODE" "europe-docker.pkg.dev" "https://europe-docker.pkg.dev" "http://europe-docker-pkg-dev.registry-cache.local.gardener.cloud:5001"
   done
 }
 
@@ -147,10 +147,10 @@ change_registry_upstream_urls_to_prow_caches() {
   REGISTRY_COMPOSE_FILE="$mutated_compose_file"
 
   declare -A prow_registry_cache_urls=(
-    [gcr]="http://registry-gcr-io.kube-system.svc.cluster.local:5000"
-    [k8s]="http://registry-registry-k8s-io.kube-system.svc.cluster.local:5000"
-    [quay]="http://registry-quay-io.kube-system.svc.cluster.local:5000"
-    [europe-docker-pkg-dev]="http://registry-europe-docker-pkg-dev.kube-system.svc.cluster.local:5000"
+    [gcr]="http://registry-gcr-io.kube-system.svc.cluster.local:5001"
+    [k8s]="http://registry-registry-k8s-io.kube-system.svc.cluster.local:5001"
+    [quay]="http://registry-quay-io.kube-system.svc.cluster.local:5001"
+    [europe-docker-pkg-dev]="http://registry-europe-docker-pkg-dev.kube-system.svc.cluster.local:5001"
   )
 
   echo "Running in CI. Checking availability of registry-cache instances in prow cluster"
@@ -158,9 +158,9 @@ change_registry_upstream_urls_to_prow_caches() {
   for key in "${!prow_registry_cache_urls[@]}"; do
     registry_cache_url="${prow_registry_cache_urls[$key]}"
 
-    # Extract DNS from URL (remove http:// and :5000)
+    # Extract DNS from URL (remove http:// and :5001)
     registry_cache_dns="${registry_cache_url#http://}"
-    registry_cache_dns="${registry_cache_dns%:5000}"
+    registry_cache_dns="${registry_cache_dns%:5001}"
 
     registry_cache_ip=$(getent hosts "$registry_cache_dns" | awk '{ print $1 }' || true)
     if [[ "$registry_cache_ip" == "" ]]; then

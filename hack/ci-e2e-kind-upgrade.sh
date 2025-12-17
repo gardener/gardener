@@ -37,16 +37,19 @@ function copy_kubeconfig_from_kubeconfig_env_var() {
 function gardener_up() {
   # TODO(timebertt): remove sed and SKAFFOLD_DEFAULT_REPO override after v1.134 has been released
   # see https://prow.gardener.cloud/view/gs/gardener-prow/pr-logs/pull/gardener_gardener/13551/pull-gardener-e2e-kind-upgrade/1993794625793429504
-  sed -i 's|garden.local.gardener.cloud:5001|registry.local.gardener.cloud:5000|g' skaffold*.yaml
+  sed -i 's|garden.local.gardener.cloud:5001|registry.local.gardener.cloud:5001|g' skaffold*.yaml
+  # TODO(LucaBernstein,timebertt): remove sed override after v1.135 has been released
+  # due to reverting the port of the local registry from 5000 to 5001 again: https://prow.gardener.cloud/view/gs/gardener-prow/pr-logs/pull/gardener_gardener/13661/pull-gardener-e2e-kind-upgrade/2000609122042515456
+  sed -i 's|registry.local.gardener.cloud:5000|registry.local.gardener.cloud:5001|g' skaffold*.yaml
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    make operator-seed-up SKAFFOLD_DEFAULT_REPO=registry.local.gardener.cloud:5000
+    make operator-seed-up SKAFFOLD_DEFAULT_REPO=registry.local.gardener.cloud:5001
     ;;
   zone)
-    make operator-seed-up SKAFFOLD_DEFAULT_REPO=registry.local.gardener.cloud:5000
+    make operator-seed-up SKAFFOLD_DEFAULT_REPO=registry.local.gardener.cloud:5001
     ;;
   *)
-    make gardener-up SKAFFOLD_DEFAULT_REPO=registry.local.gardener.cloud:5000
+    make gardener-up SKAFFOLD_DEFAULT_REPO=registry.local.gardener.cloud:5001
     ;;
   esac
 }
@@ -98,6 +101,7 @@ function install_previous_release() {
   copy_kubeconfig_from_kubeconfig_env_var
   migrate_kind_network_range
   configure_node_mirror_new_local_registry
+  patch_helmregistry_registry_url_port
   gardener_up
   popd >/dev/null
 }
@@ -120,7 +124,14 @@ function configure_node_mirror_new_local_registry() {
   # this is necessary because we already push the images to the new local registry (see the SKAFFOLD_DEFAULT_REPO hack above)
   # and need to configure containerd to use HTTP for pulling from the local registry
   cp "$next_version_dir/pkg/provider-local/node/Dockerfile" "$PWD/pkg/provider-local/node"
-  cp -r "$next_version_dir/pkg/provider-local/node/containerd/registry.local.gardener.cloud_5000" "$PWD/pkg/provider-local/node/containerd"
+  cp -r "$next_version_dir/pkg/provider-local/node/containerd/registry.local.gardener.cloud_5001" "$PWD/pkg/provider-local/node/containerd"
+}
+
+# TODO(LucaBernstein): remove this after v1.135 has been released.
+# To avoid issues in the upgrade test where the registry is already listening on port 5001 instead of 5000, but the helmregistry only disables tls for registry on port 5000.
+# see: https://prow.gardener.cloud/view/gs/gardener-prow/pr-logs/pull/gardener_gardener/13661/pull-gardener-e2e-kind-upgrade/2000837721429381120
+function patch_helmregistry_registry_url_port() {
+  sed -i 's|registry.local.gardener.cloud:5000|registry.local.gardener.cloud:5001|g' "$PWD/pkg/utils/oci/helmregistry.go"
 }
 
 function upgrade_to_next_release() {

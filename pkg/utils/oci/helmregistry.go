@@ -25,7 +25,7 @@ import (
 const (
 	mediaTypeHelm = "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
 
-	localRegistry = "registry.local.gardener.cloud:5000"
+	localRegistry = "registry.local.gardener.cloud:5001"
 )
 
 type pullSecretNamespace struct{}
