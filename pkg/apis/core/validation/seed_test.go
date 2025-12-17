@@ -1642,7 +1642,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				Expect(ValidateSeed(seed)).To(BeEmpty())
 			})
 
-			It("ingress is nil", func() {
+			It("should fail if ingress is nil", func() {
 				seed.Spec.Ingress = nil
 
 				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
@@ -1652,7 +1652,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				}))
 			})
 
-			It("requires to specify a DNS provider if ingress is specified", func() {
+			It("should fail when DNS provider is not configured", func() {
 				seed.Spec.DNS.Provider = nil
 
 				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
@@ -1689,7 +1689,99 @@ var _ = Describe("Seed Validation Tests", func() {
 				}))
 			})
 
-			It("should fail if DNS provider config is invalid", func() {
+		})
+
+		Context("DNSProvider config", func() {
+			BeforeEach(func() {
+				seed.Spec.DNS.Provider = &core.SeedDNSProvider{
+					Type: "some-type",
+					CredentialsRef: corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       "foo",
+						Namespace:  "bar",
+					},
+					SecretRef: corev1.SecretReference{
+						Name:      "foo",
+						Namespace: "bar",
+					},
+				}
+			})
+
+			It("should succeed if DNS provider config is correct", func() {
+				Expect(ValidateSeed(seed)).To(BeEmpty())
+			})
+
+			It("should fail if DNS provider type is not set", func() {
+				seed.Spec.DNS.Provider.Type = ""
+
+				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.dns.provider.type"),
+				}))
+			})
+
+			It("should fail if DNS provider credentialsRef has not set apiVersion", func() {
+				seed.Spec.DNS.Provider.CredentialsRef.APIVersion = ""
+
+				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.dns.provider.credentialsRef.apiVersion"),
+				}, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.dns.provider.credentialsRef"),
+				}))
+			})
+
+			It("should fail if DNS provider credentialsRef has not set kind", func() {
+				seed.Spec.DNS.Provider.CredentialsRef.Kind = ""
+
+				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.dns.provider.credentialsRef.kind"),
+				}, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.dns.provider.credentialsRef"),
+				}))
+			})
+
+			It("should fail if DNS provider credentialsRef has not set name", func() {
+				seed.Spec.DNS.Provider.CredentialsRef.Name = ""
+				seed.Spec.DNS.Provider.SecretRef.Name = ""
+
+				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.dns.provider.credentialsRef.name"),
+				}, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns.provider.credentialsRef.name"),
+				}))
+			})
+
+			It("should fail if DNS provider credentialsRef has not set namespace", func() {
+				seed.Spec.DNS.Provider.CredentialsRef.Namespace = ""
+				seed.Spec.DNS.Provider.SecretRef.Namespace = ""
+
+				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.dns.provider.credentialsRef.namespace"),
+				}, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns.provider.credentialsRef.namespace"),
+				}))
+			})
+
+			It("should not allow ConfigMap as DNS provider credentialsRef ", func() {
+				seed.Spec.DNS.Provider.CredentialsRef.APIVersion = "v1"
+				seed.Spec.DNS.Provider.CredentialsRef.Kind = "ConfigMap"
+
+				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.dns.provider.credentialsRef"),
+				}))
+			})
+
+			It("should fail if DNS provider config is empty", func() {
 				seed.Spec.DNS.Provider = &core.SeedDNSProvider{}
 
 				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
@@ -1717,6 +1809,39 @@ var _ = Describe("Seed Validation Tests", func() {
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("spec.dns.provider.credentialsRef"),
 				}))
+			})
+
+			It("should fail if DNS provider secretRef is not referring the same secret as credentialsRef by name", func() {
+				seed.Spec.DNS.Provider.SecretRef.Name = seed.Spec.DNS.Provider.CredentialsRef.Name + "-different"
+
+				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns.provider.secretRef"),
+				}))
+			})
+
+			It("should fail if DNS provider secretRef is not referring the same secret as credentialsRef by namespace", func() {
+				seed.Spec.DNS.Provider.SecretRef.Namespace = seed.Spec.DNS.Provider.CredentialsRef.Namespace + "-different"
+
+				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns.provider.secretRef"),
+				}))
+			})
+
+			It("should fail if DNS provider secretRef is set when credentialsRef refer to WorkloadIdentity", func() {
+				seed.Spec.DNS.Provider.CredentialsRef.APIVersion = "security.gardener.cloud/v1alpha1"
+				seed.Spec.DNS.Provider.CredentialsRef.Kind = "WorkloadIdentity"
+
+				Expect(ValidateSeed(seed)).To(ConsistOfFields(
+					Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.dns.provider.secretRef.name"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.dns.provider.secretRef.namespace"),
+					},
+				))
 			})
 		})
 
