@@ -279,6 +279,7 @@ var _ = Describe("KubeStateMetrics", func() {
 							"^kube_horizontalpodautoscaler_status_desired_replicas$," +
 							"^kube_horizontalpodautoscaler_status_condition$," +
 							"^kube_namespace_annotations$," +
+							"^kube_node_created$," +
 							"^kube_node_info$," +
 							"^kube_node_labels$," +
 							"^kube_node_spec_taint$," +
@@ -404,6 +405,7 @@ var _ = Describe("KubeStateMetrics", func() {
 						"^kube_deployment_status_replicas_available$," +
 						"^kube_deployment_status_replicas_unavailable$," +
 						"^kube_deployment_status_replicas_updated$," +
+						"^kube_node_created$," +
 						"^kube_node_info$," +
 						"^kube_node_labels$," +
 						"^kube_node_spec_taint$," +
