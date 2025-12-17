@@ -621,6 +621,8 @@ func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ ad
 		return apierrors.NewBadRequest("could not convert object to ManagedSeed")
 	}
 
+	var allErrs field.ErrorList
+
 	// Ensure namespace is garden
 	// Garden namespace validation can be disabled by disabling the ManagedSeed plugin for integration test.
 	if managedSeed.Namespace != v1beta1constants.GardenNamespace {
@@ -635,16 +637,16 @@ func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ ad
 	// Ensure shoot can be registered as seed
 	shootNamePath := field.NewPath("spec", "shoot", "name")
 	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil || *shoot.Spec.DNS.Domain == "" {
-		return apierrors.NewInvalid(gk, managedSeed.Name, field.ErrorList{field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s does not specify a domain", client.ObjectKeyFromObject(shoot)))})
+		allErrs = append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s does not specify a domain", client.ObjectKeyFromObject(shoot))))
 	}
 	if v1beta1helper.NginxIngressEnabled(shoot.Spec.Addons) {
-		return apierrors.NewInvalid(gk, managedSeed.Name, field.ErrorList{field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot ingress addon is not supported for managed seeds - use the managed seed ingress controller")})
+		allErrs = append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot ingress addon is not supported for managed seeds - use the managed seed ingress controller"))
 	}
 	if !v1beta1helper.ShootWantsVerticalPodAutoscaler(shoot) {
-		return apierrors.NewInvalid(gk, managedSeed.Name, field.ErrorList{field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot VPA has to be enabled for managed seeds")})
+		allErrs = append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot VPA has to be enabled for managed seeds"))
 	}
 	if v1beta1helper.IsWorkerless(shoot) {
-		return apierrors.NewInvalid(gk, managedSeed.Name, field.ErrorList{field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "workerless shoot cannot be used to create managed seed")})
+		allErrs = append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "workerless shoot cannot be used to create managed seed"))
 	}
 
 	// Ensure shoot is not already registered as seed
@@ -653,7 +655,11 @@ func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ ad
 		return apierrors.NewInternalError(fmt.Errorf("could not get managed seed for shoot %s/%s: %v", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err))
 	}
 	if ms != nil && ms.Name != managedSeed.Name {
-		return apierrors.NewInvalid(gk, managedSeed.Name, field.ErrorList{field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s already registered as seed by managed seed %s", client.ObjectKeyFromObject(shoot), client.ObjectKeyFromObject(ms)))})
+		allErrs = append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s already registered as seed by managed seed %s", client.ObjectKeyFromObject(shoot), client.ObjectKeyFromObject(ms))))
+	}
+
+	if len(allErrs) > 0 {
+		return apierrors.NewInvalid(gk, managedSeed.Name, allErrs)
 	}
 
 	return nil

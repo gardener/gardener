@@ -1134,6 +1134,13 @@ var _ = Describe("ManagedSeed", func() {
 				})),
 			))
 		})
+
+		Context("gardenlet", func() {
+			It("should allow the ManagedSeed creation if the Shoot exists and can be registered as Seed", func() {
+				err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
 	})
 
 	Describe("#Register", func() {
