@@ -1076,6 +1076,8 @@ const (
 
 	// GardenPurposeMachineClass is a constant for the 'machineclass' value in a label.
 	GardenPurposeMachineClass = "machineclass"
+	// GardenPurposeShootStaticManifest is a constant for the 'shoot-static-manifest' value in a label.
+	GardenPurposeShootStaticManifest = "shoot-static-manifest"
 
 	// LabelInjectGardenKubeconfig is a constant for a label on workload resources that indicates that a kubeconfig to
 	// the garden cluster should be injected.
@@ -1097,4 +1099,9 @@ const (
 	// LabelShootEndpointAdvertise is the name of the label which controls
 	// whether an endpoint is advertised for a shoot.
 	LabelShootEndpointAdvertise = LabelShootEndpointPrefix + "advertise"
+
+	// AnnotationStaticManifestsShootSelector is the name of an annotation on Secrets in the garden namespace of seeds
+	// that contains a label selector for shoots. The static manifests will only be propagated for shoots matching the
+	// selector.
+	AnnotationStaticManifestsShootSelector = "static-manifests.shoot.gardener.cloud/selector"
 )
