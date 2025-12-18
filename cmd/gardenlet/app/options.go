@@ -67,7 +67,9 @@ func (o *options) Complete() error {
 }
 
 func (o *options) Validate() error {
-	utils.SyncSeedDNSProviderCredentials(o.config.SeedConfig.Spec.DNS.Provider) // TODO(vpnachev): Remove this function after v1.138.0 has been released.
+	if o.config != nil && o.config.SeedConfig != nil {
+		utils.SyncSeedDNSProviderCredentials(o.config.SeedConfig.Spec.DNS.Provider) // TODO(vpnachev): Remove this function after v1.138.0 has been released.
+	}
 
 	if errs := gardenletvalidation.ValidateGardenletConfiguration(o.config, nil); len(errs) > 0 {
 		return errs.ToAggregate()
