@@ -629,19 +629,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
-			It("should forbid to change the exposure class", func() {
+			It("should allow to change the exposure class", func() {
 				shoot.Spec.ExposureClassName = ptr.To("exposure-class-1")
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.ExposureClassName = ptr.To("exposure-class-2")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.exposureClassName"),
-					})),
-				))
+				Expect(errorList).To(BeEmpty())
 			})
 		})
 
@@ -2232,7 +2227,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(matcher)
-
 				},
 					Entry("empty APIVersion",
 						autoscalingv1.CrossVersionObjectReference{APIVersion: "", Kind: "Secret", Name: dnsSecretName},
@@ -3129,7 +3123,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Detail": Equal("must not contain a fragment"),
 					}))))
 				})
-
 			})
 
 			Context("Autoscaling validation", func() {
@@ -3537,7 +3530,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field":  Equal("spec.kubernetes.kubeScheduler"),
 					"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
 				}))))
-
 			})
 
 			It("should succeed when using valid scheduling profile", func() {
@@ -8472,30 +8464,28 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Describe("#ValidateInPlaceUpdateStrategyOnCreation", func() {
-			var (
-				shoot = &core.Shoot{
-					Spec: core.ShootSpec{
-						Provider: core.Provider{
-							Workers: []core.Worker{
-								{
-									Name: "worker-1",
-									Machine: core.Machine{
-										Type: "xlarge",
-									},
-									UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+			shoot := &core.Shoot{
+				Spec: core.ShootSpec{
+					Provider: core.Provider{
+						Workers: []core.Worker{
+							{
+								Name: "worker-1",
+								Machine: core.Machine{
+									Type: "xlarge",
 								},
-								{
-									Name: "worker-2",
-									Machine: core.Machine{
-										Type: "xlarge",
-									},
-									UpdateStrategy: ptr.To(core.ManualInPlaceUpdate),
+								UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							},
+							{
+								Name: "worker-2",
+								Machine: core.Machine{
+									Type: "xlarge",
 								},
+								UpdateStrategy: ptr.To(core.ManualInPlaceUpdate),
 							},
 						},
 					},
-				}
-			)
+				},
+			}
 
 			It("should not allow to set update strategy to AutoInPlaceUpdate/ManualInPlaceUpdate if feature gate is disabled", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, false))
@@ -9683,7 +9673,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}),
 				)))
 			}
-
 		},
 			Entry("should succeed if issuer URL is valid", "https://issuer.com/auth", ""),
 			Entry("should fail if issuerURL URL scheme is not https", "http://issuer.com", "must have https scheme"),

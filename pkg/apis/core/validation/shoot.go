@@ -403,7 +403,6 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	if !migrationFromSecBindingToCredBinding {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.SecretBindingName, oldSpec.SecretBindingName, fldPath.Child("secretBindingName"))...)
 	}
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.ExposureClassName, oldSpec.ExposureClassName, fldPath.Child("exposureClassName"))...)
 
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, newSpec.SeedName != nil, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, false, fldPath.Child("kubernetes", "version"))...)
@@ -847,7 +846,7 @@ func validateNodeLocalDNSUpdate(newSpec, oldSpec *core.ShootSpec, fldPath *field
 		}
 
 		for i, worker := range oldSpec.Provider.Workers {
-			var idxPath = field.NewPath("spec", "provider", "workers").Index(i)
+			idxPath := field.NewPath("spec", "provider", "workers").Index(i)
 			workerK8sVersion, err := helper.CalculateEffectiveKubernetesVersion(defaultVersion, worker.Kubernetes)
 			if err != nil {
 				return field.ErrorList{field.Invalid(idxPath, "", fmt.Sprintf("failed to calculate effective Kubernetes version for worker %q: %v", worker.Name, err))}
@@ -3311,7 +3310,7 @@ func validateOperationRolloutWorkers(operation string, shoot *core.Shoot, fldPat
 func validatePendingWorkerUpdates(shoot *core.Shoot, fldPath *field.Path, operation string) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	var forbiddenPendingWorkerUpdatesMessageTemplate = "cannot start %s if status.inPlaceUpdates.pendingWorkerUpdates.%s is not empty"
+	forbiddenPendingWorkerUpdatesMessageTemplate := "cannot start %s if status.inPlaceUpdates.pendingWorkerUpdates.%s is not empty"
 	if shoot.Status.InPlaceUpdates != nil && shoot.Status.InPlaceUpdates.PendingWorkerUpdates != nil {
 		if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) > 0 {
 			allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf(forbiddenPendingWorkerUpdatesMessageTemplate, operation, "autoInPlaceUpdate")))
