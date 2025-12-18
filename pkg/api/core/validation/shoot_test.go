@@ -625,19 +625,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
-			It("should forbid to change the exposure class", func() {
+			It("should allow to change the exposure class", func() {
 				shoot.Spec.ExposureClassName = ptr.To("exposure-class-1")
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.ExposureClassName = ptr.To("exposure-class-2")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.exposureClassName"),
-					})),
-				))
+				Expect(errorList).To(BeEmpty())
 			})
 		})
 
