@@ -1016,6 +1016,11 @@ func ComputeExpectedGardenletDeploymentSpec(
 				},
 				Tolerations: []corev1.Toleration{
 					{
+						Key:      "node-role.kubernetes.io/control-plane",
+						Operator: "Exists",
+						Effect:   "NoSchedule",
+					},
+					{
 						Key:               "node.kubernetes.io/not-ready",
 						Operator:          "Exists",
 						TolerationSeconds: ptr.To[int64](60),
