@@ -50,6 +50,20 @@ var _ = Describe("VPAInPlaceUpdates tests", func() {
 
 	})
 
+	Context("when mutation completes", func() {
+		BeforeEach(func() {
+			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
+				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+			}
+		})
+
+		It("should add a mutation label to vertical pod autoscaler", func() {
+			Expect(testClient.Create(ctx, vpa)).To(Succeed())
+			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)))
+			Expect(vpa.ObjectMeta.Labels).To(HaveKeyWithValue("vpa-in-place-updates.resources.gardener.cloud/mutated", "true"))
+		})
+	})
+
 	Context("when update mode is Auto", func() {
 		BeforeEach(func() {
 			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
