@@ -153,32 +153,22 @@ func (v *ManagedSeed) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.MutationInterface = (*ManagedSeed)(nil)
+var (
+	_ admission.MutationInterface   = (*ManagedSeed)(nil)
+	_ admission.ValidationInterface = (*ManagedSeed)(nil)
+)
+
+var (
+	gk = schema.GroupKind{Group: seedmanagement.GroupName, Kind: "ManagedSeed"}
+)
 
 // Admit validates and if appropriate mutates the given managed seed against the shoot that it references.
 func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
-	// Wait until the caches have been synced
-	if v.readyFunc == nil {
-		v.AssignReadyFunc(func() bool {
-			for _, readyFunc := range readyFuncs {
-				if !readyFunc() {
-					return false
-				}
-			}
-			return true
-		})
-	}
-	if !v.WaitForReady() {
-		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
+	if err := v.waitUntilReady(a); err != nil {
+		return fmt.Errorf("err while waiting for ready: %w", err)
 	}
 
-	// Ignore all kinds other than ManagedSeed
-	if a.GetKind().GroupKind() != seedmanagement.Kind("ManagedSeed") {
-		return nil
-	}
-
-	// Ignore updates to status or other subresources
-	if a.GetSubresource() != "" {
+	if shouldIgnore(a) {
 		return nil
 	}
 
@@ -188,56 +178,19 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 		return apierrors.NewBadRequest("could not convert object to ManagedSeed")
 	}
 
+	if managedSeed.Spec.Shoot == nil || managedSeed.Spec.Shoot.Name == "" {
+		// Do not deny the request if the ManagedSeed Shoot is not specified.
+		// It might be mutated by a mutating webhook later in request lifecycle.
+		// Instead, early exit. The storage layer already validates the ManagedSeed Shoot is specified.
+		return nil
+	}
+
+	shoot, statusErr := v.fetchManagedSeedShoot(ctx, managedSeed)
+	if statusErr != nil {
+		return statusErr
+	}
+
 	var allErrs field.ErrorList
-	gk := schema.GroupKind{Group: seedmanagement.GroupName, Kind: "ManagedSeed"}
-
-	// Ensure namespace is garden
-	// Garden namespace validation can be disabled by disabling the ManagedSeed plugin for integration test.
-	if managedSeed.Namespace != v1beta1constants.GardenNamespace {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(field.NewPath("metadata", "namespace"), managedSeed.Namespace, "namespace must be garden")))
-	}
-
-	// Ensure shoot and shoot name are specified
-	shootPath := field.NewPath("spec", "shoot")
-	shootNamePath := shootPath.Child("name")
-
-	if managedSeed.Spec.Shoot == nil {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Required(shootPath, "shoot is required")))
-	}
-	if managedSeed.Spec.Shoot.Name == "" {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Required(shootNamePath, "shoot name is required")))
-	}
-
-	shoot, err := v.getShoot(ctx, managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s/%s not found", managedSeed.Namespace, managedSeed.Spec.Shoot.Name))))
-		}
-		return apierrors.NewInternalError(fmt.Errorf("could not get shoot %s/%s: %v", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err))
-	}
-
-	// Ensure shoot can be registered as seed
-	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil || *shoot.Spec.DNS.Domain == "" {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s does not specify a domain", client.ObjectKeyFromObject(shoot)))))
-	}
-	if v1beta1helper.NginxIngressEnabled(shoot.Spec.Addons) {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot ingress addon is not supported for managed seeds - use the managed seed ingress controller")))
-	}
-	if !v1beta1helper.ShootWantsVerticalPodAutoscaler(shoot) {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot VPA has to be enabled for managed seeds")))
-	}
-	if v1beta1helper.IsWorkerless(shoot) {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "workerless shoot cannot be used to create managed seed")))
-	}
-
-	// Ensure shoot is not already registered as seed
-	ms, err := admissionutils.GetManagedSeed(ctx, v.seedManagementClient, managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
-	if err != nil {
-		return apierrors.NewInternalError(fmt.Errorf("could not get managed seed for shoot %s/%s: %v", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err))
-	}
-	if ms != nil && ms.Name != managedSeed.Name {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s already registered as seed by managed seed %s", client.ObjectKeyFromObject(shoot), client.ObjectKeyFromObject(ms)))))
-	}
 
 	// Admit gardenlet against shoot
 	errs, err := v.admitGardenlet(&managedSeed.Spec.Gardenlet, shoot, field.NewPath("spec", "gardenlet"))
@@ -272,6 +225,52 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 	}
 
 	return nil
+}
+
+func (v *ManagedSeed) waitUntilReady(a admission.Attributes) error {
+	// Wait until the caches have been synced
+	if v.readyFunc == nil {
+		v.AssignReadyFunc(func() bool {
+			for _, readyFunc := range readyFuncs {
+				if !readyFunc() {
+					return false
+				}
+			}
+			return true
+		})
+	}
+	if !v.WaitForReady() {
+		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
+	}
+
+	return nil
+}
+
+func shouldIgnore(a admission.Attributes) bool {
+	// Ignore all kinds other than ManagedSeed
+	if a.GetKind().GroupKind() != seedmanagement.Kind("ManagedSeed") {
+		return true
+	}
+
+	// Ignore updates to status or other subresources
+	if a.GetSubresource() != "" {
+		return true
+	}
+
+	return false
+}
+
+func (v *ManagedSeed) fetchManagedSeedShoot(ctx context.Context, managedSeed *seedmanagement.ManagedSeed) (*gardencorev1beta1.Shoot, *apierrors.StatusError) {
+	shoot, err := v.getShoot(ctx, managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			shootNamePath := field.NewPath("spec", "shoot", "name")
+			return nil, apierrors.NewInvalid(gk, managedSeed.Name, field.ErrorList{field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s/%s not found", managedSeed.Namespace, managedSeed.Spec.Shoot.Name))})
+		}
+		return nil, apierrors.NewInternalError(fmt.Errorf("could not get shoot %s/%s: %v", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err))
+	}
+
+	return shoot, nil
 }
 
 func (v *ManagedSeed) validateManagedSeedCreate(managedSeed *seedmanagement.ManagedSeed, shoot *gardencorev1beta1.Shoot) (field.ErrorList, error) {
@@ -601,4 +600,70 @@ func (v *ManagedSeed) getShoot(ctx context.Context, namespace, name string) (*ga
 	}
 
 	return shoot, err
+}
+
+// Validate validates the given managed seed against the shoot that it references.
+func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
+	if err := v.waitUntilReady(a); err != nil {
+		return fmt.Errorf("err while waiting for ready: %w", err)
+	}
+
+	if shouldIgnore(a) {
+		return nil
+	}
+
+	// Convert object to ManagedSeed
+	managedSeed, ok := a.GetObject().(*seedmanagement.ManagedSeed)
+	if !ok {
+		return apierrors.NewBadRequest("could not convert object to ManagedSeed")
+	}
+
+	var allErrs field.ErrorList
+
+	// Ensure namespace is garden
+	// Garden namespace validation can be disabled by disabling the ManagedSeed plugin for integration test.
+	if managedSeed.Namespace != v1beta1constants.GardenNamespace {
+		return apierrors.NewInvalid(gk, managedSeed.Name, field.ErrorList{field.Invalid(field.NewPath("metadata", "namespace"), managedSeed.Namespace, "namespace must be garden")})
+	}
+
+	if managedSeed.Spec.Shoot == nil || managedSeed.Spec.Shoot.Name == "" {
+		// Do not deny the request if the ManagedSeed Shoot is not specified.
+		// Instead, early exit. The storage layer already validates the ManagedSeed Shoot is specified.
+		return nil
+	}
+
+	shoot, statusErr := v.fetchManagedSeedShoot(ctx, managedSeed)
+	if statusErr != nil {
+		return statusErr
+	}
+
+	// Ensure shoot can be registered as seed
+	shootNamePath := field.NewPath("spec", "shoot", "name")
+	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil || *shoot.Spec.DNS.Domain == "" {
+		allErrs = append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s does not specify a domain", client.ObjectKeyFromObject(shoot))))
+	}
+	if v1beta1helper.NginxIngressEnabled(shoot.Spec.Addons) {
+		allErrs = append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot ingress addon is not supported for managed seeds - use the managed seed ingress controller"))
+	}
+	if !v1beta1helper.ShootWantsVerticalPodAutoscaler(shoot) {
+		allErrs = append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot VPA has to be enabled for managed seeds"))
+	}
+	if v1beta1helper.IsWorkerless(shoot) {
+		allErrs = append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "workerless shoot cannot be used to create managed seed"))
+	}
+
+	// Ensure shoot is not already registered as seed
+	ms, err := admissionutils.GetManagedSeed(ctx, v.seedManagementClient, managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
+	if err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("could not get managed seed for shoot %s/%s: %v", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err))
+	}
+	if ms != nil && ms.Name != managedSeed.Name {
+		allErrs = append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s already registered as seed by managed seed %s", client.ObjectKeyFromObject(shoot), client.ObjectKeyFromObject(ms))))
+	}
+
+	if len(allErrs) > 0 {
+		return apierrors.NewInvalid(gk, managedSeed.Name, allErrs)
+	}
+
+	return nil
 }

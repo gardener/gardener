@@ -251,32 +251,24 @@ var _ = Describe("ManagedSeed", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should forbid the ManagedSeed creation with namespace different from garden", func() {
-			managedSeed.Namespace = "foo"
+		It("should forbid when object is not ManagedSeed", func() {
+			project := core.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-project",
+				},
+			}
+			attrs := admission.NewAttributesRecord(&project, nil, seedmanagementv1alpha1.Kind("ManagedSeed").WithVersion("v1alpha1"), managedSeed.Namespace, managedSeed.Name, seedmanagementv1alpha1.Resource("managedseeds").WithVersion("v1alpha1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-			Expect(err).To(BeInvalidError())
-			Expect(getErrorList(err)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("metadata.namespace"),
-					"Detail": ContainSubstring("namespace must be garden"),
-				})),
-			))
+			err := admissionHandler.Admit(context.TODO(), attrs, nil)
+			Expect(err).To(BeBadRequestError())
+			Expect(err).To(MatchError("could not convert object to ManagedSeed"))
 		})
 
-		It("should forbid the ManagedSeed creation if a Shoot name is not specified", func() {
+		It("should do nothing if a Shoot name is not specified", func() {
 			managedSeed.Spec.Shoot.Name = ""
 
 			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-			Expect(err).To(BeInvalidError())
-			Expect(getErrorList(err)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeRequired),
-					"Field":  Equal("spec.shoot.name"),
-					"Detail": ContainSubstring("shoot name is required"),
-				})),
-			))
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should forbid the ManagedSeed creation if the Shoot does not exist", func() {
@@ -292,96 +284,6 @@ var _ = Describe("ManagedSeed", func() {
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.shoot.name"),
 					"Detail": ContainSubstring("shoot garden/foo not found"),
-				})),
-			))
-		})
-
-		It("should forbid the ManagedSeed if the Shoot does not have any worker", func() {
-			shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{}
-
-			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-			Expect(err).To(BeInvalidError())
-			Expect(getErrorList(err)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.shoot.name"),
-					"Detail": ContainSubstring("workerless shoot cannot be used to create managed seed"),
-				})),
-			))
-		})
-
-		It("should forbid the ManagedSeed creation if the Shoot does not specify a domain", func() {
-			shoot.Spec.DNS = nil
-
-			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-			Expect(err).To(BeInvalidError())
-			Expect(getErrorList(err)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.shoot.name"),
-					"Detail": ContainSubstring("shoot garden/foo does not specify a domain"),
-				})),
-			))
-		})
-
-		It("should forbid the ManagedSeed creation if the Shoot enables the nginx-ingress addon", func() {
-			shoot.Spec.Addons = &gardencorev1beta1.Addons{
-				NginxIngress: &gardencorev1beta1.NginxIngress{
-					Addon: gardencorev1beta1.Addon{
-						Enabled: true,
-					},
-				},
-			}
-
-			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-			Expect(err).To(BeInvalidError())
-			Expect(getErrorList(err)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.shoot.name"),
-					"Detail": ContainSubstring("shoot ingress addon is not supported for managed seeds - use the managed seed ingress controller"),
-				})),
-			))
-		})
-
-		It("should forbid the ManagedSeed creation if the Shoot does not enable VPA", func() {
-			shoot.Spec.Kubernetes.VerticalPodAutoscaler.Enabled = false
-
-			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-			Expect(err).To(BeInvalidError())
-			Expect(getErrorList(err)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.shoot.name"),
-					"Detail": ContainSubstring("shoot VPA has to be enabled for managed seeds"),
-				})),
-			))
-		})
-
-		It("should forbid the ManagedSeed creation if the Shoot is already registered as Seed", func() {
-			anotherManagedSeed := &seedmanagementv1alpha1.ManagedSeed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: namespace,
-				},
-				Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-					Shoot: &seedmanagementv1alpha1.Shoot{
-						Name: name,
-					},
-				},
-			}
-
-			seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
-				return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*anotherManagedSeed}}, nil
-			})
-
-			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-			Expect(err).To(BeInvalidError())
-			Expect(getErrorList(err)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.shoot.name"),
-					"Detail": ContainSubstring("shoot garden/foo already registered as seed by managed seed garden/bar"),
 				})),
 			))
 		})
@@ -1001,6 +903,228 @@ var _ = Describe("ManagedSeed", func() {
 						})),
 					))
 				})
+			})
+		})
+	})
+
+	Describe("#Validate", func() {
+		var (
+			ctx                  context.Context
+			managedSeed          *seedmanagement.ManagedSeed
+			shoot                *gardencorev1beta1.Shoot
+			coreInformerFactory  gardencoreinformers.SharedInformerFactory
+			coreClient           *corefake.Clientset
+			seedManagementClient *fakeseedmanagement.Clientset
+			admissionHandler     *ManagedSeed
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			managedSeed = &seedmanagement.ManagedSeed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: seedmanagement.ManagedSeedSpec{
+					Shoot: &seedmanagement.Shoot{
+						Name: name,
+					},
+				},
+			}
+
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: gardencorev1beta1.ShootSpec{
+					DNS: &gardencorev1beta1.DNS{
+						Domain: ptr.To(domain),
+					},
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						Version: "1.33.3",
+						VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
+							Enabled: true,
+						},
+					},
+					Provider: gardencorev1beta1.Provider{
+						Type: provider,
+						Workers: []gardencorev1beta1.Worker{
+							{Zones: []string{zone1, zone2}},
+						},
+					},
+				},
+			}
+
+			var err error
+			admissionHandler, err = New()
+			Expect(err).ToNot(HaveOccurred())
+			admissionHandler.AssignReadyFunc(func() bool { return true })
+
+			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
+
+			coreClient = &corefake.Clientset{}
+			admissionHandler.SetCoreClientSet(coreClient)
+
+			seedManagementClient = &fakeseedmanagement.Clientset{}
+			admissionHandler.SetSeedManagementClientSet(seedManagementClient)
+
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+		})
+
+		It("should do nothing if the resource is not a ManagedSeed", func() {
+			attrs := admission.NewAttributesRecord(nil, nil, core.Kind(name).WithVersion("version"), managedSeed.Namespace, managedSeed.Name, core.Resource("foos").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+			err := admissionHandler.Validate(ctx, attrs, nil)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should forbid when object is not ManagedSeed", func() {
+			project := core.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-project",
+				},
+			}
+			attrs := admission.NewAttributesRecord(&project, nil, seedmanagementv1alpha1.Kind("ManagedSeed").WithVersion("v1alpha1"), managedSeed.Namespace, managedSeed.Name, seedmanagementv1alpha1.Resource("managedseeds").WithVersion("v1alpha1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+			err := admissionHandler.Validate(ctx, attrs, nil)
+			Expect(err).To(BeBadRequestError())
+			Expect(err).To(MatchError("could not convert object to ManagedSeed"))
+		})
+
+		It("should forbid the ManagedSeed creation with namespace different from garden", func() {
+			managedSeed.Namespace = "foo"
+
+			err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("metadata.namespace"),
+					"Detail": ContainSubstring("namespace must be garden"),
+				})),
+			))
+		})
+
+		It("should do nothing if a Shoot name is not specified", func() {
+			managedSeed.Spec.Shoot.Name = ""
+
+			err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should forbid the ManagedSeed creation if the Shoot does not exist", func() {
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Delete(shoot)).To(Succeed())
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+				return true, nil, apierrors.NewNotFound(gardencorev1beta1.Resource("shoot"), name)
+			})
+
+			err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("shoot garden/foo not found"),
+				})),
+			))
+		})
+
+		It("should forbid the ManagedSeed creation if the Shoot does not specify a domain", func() {
+			shoot.Spec.DNS = nil
+
+			err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("shoot garden/foo does not specify a domain"),
+				})),
+			))
+		})
+
+		It("should forbid the ManagedSeed creation if the Shoot enables the nginx-ingress addon", func() {
+			shoot.Spec.Addons = &gardencorev1beta1.Addons{
+				NginxIngress: &gardencorev1beta1.NginxIngress{
+					Addon: gardencorev1beta1.Addon{
+						Enabled: true,
+					},
+				},
+			}
+
+			err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("shoot ingress addon is not supported for managed seeds - use the managed seed ingress controller"),
+				})),
+			))
+		})
+
+		It("should forbid the ManagedSeed creation if the Shoot does not enable VPA", func() {
+			shoot.Spec.Kubernetes.VerticalPodAutoscaler.Enabled = false
+
+			err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("shoot VPA has to be enabled for managed seeds"),
+				})),
+			))
+		})
+
+		It("should forbid the ManagedSeed if the Shoot does not have any worker", func() {
+			shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{}
+
+			err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("workerless shoot cannot be used to create managed seed"),
+				})),
+			))
+		})
+
+		It("should forbid the ManagedSeed creation if the Shoot is already registered as Seed", func() {
+			anotherManagedSeed := &seedmanagementv1alpha1.ManagedSeed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: namespace,
+				},
+				Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+					Shoot: &seedmanagementv1alpha1.Shoot{
+						Name: name,
+					},
+				},
+			}
+
+			seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
+				return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*anotherManagedSeed}}, nil
+			})
+
+			err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("shoot garden/foo already registered as seed by managed seed garden/bar"),
+				})),
+			))
+		})
+
+		Context("gardenlet", func() {
+			It("should allow the ManagedSeed creation if the Shoot exists and can be registered as Seed", func() {
+				err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})
