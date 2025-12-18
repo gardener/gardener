@@ -255,6 +255,17 @@ func (v *ManagedSeed) fetchManagedSeedShoot(ctx context.Context, managedSeed *se
 	return shoot, nil
 }
 
+func (v *ManagedSeed) getShoot(ctx context.Context, namespace, name string) (*gardencorev1beta1.Shoot, error) {
+	shoot, err := v.shootLister.Shoots(namespace).Get(name)
+	if err != nil && apierrors.IsNotFound(err) {
+		// Read from the client to ensure that if the managed seed has been created shortly after the shoot
+		// and the shoot is not yet present in the lister cache, it could still be found
+		shoot, err = v.coreClient.CoreV1beta1().Shoots(namespace).Get(ctx, name, kubernetesclient.DefaultGetOptions())
+	}
+
+	return shoot, err
+}
+
 func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.GardenletConfig, shoot *gardencorev1beta1.Shoot, fldPath *field.Path) (field.ErrorList, error) {
 	var allErrs field.ErrorList
 
@@ -489,17 +500,6 @@ func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencorev1beta
 	}
 
 	return nil, nil
-}
-
-func (v *ManagedSeed) getShoot(ctx context.Context, namespace, name string) (*gardencorev1beta1.Shoot, error) {
-	shoot, err := v.shootLister.Shoots(namespace).Get(name)
-	if err != nil && apierrors.IsNotFound(err) {
-		// Read from the client to ensure that if the managed seed has been created shortly after the shoot
-		// and the shoot is not yet present in the lister cache, it could still be found
-		shoot, err = v.coreClient.CoreV1beta1().Shoots(namespace).Get(ctx, name, kubernetesclient.DefaultGetOptions())
-	}
-
-	return shoot, err
 }
 
 // Validate validates the given managed seed against the shoot that it references.
