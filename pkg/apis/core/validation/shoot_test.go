@@ -4723,6 +4723,119 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": ContainSubstring("this field should not be set for workerless Shoot cluster"),
 				}))))
 			})
+
+			DescribeTable("observability credentials auto-rotation period", func(rotationPeriod *metav1.Duration, isAllowed bool) {
+				shoot.Spec.Maintenance.AutoRotation = &core.MaintenanceAutoRotation{
+					Credentials: &core.MaintenanceCredentialsAutoRotation{
+						Observability: &core.MaintenanceRotationConfig{
+							RotationPeriod: rotationPeriod,
+						},
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				if isAllowed {
+					Expect(errorList).To(BeEmpty())
+				} else {
+					Expect(errorList).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.maintenance.autoRotation.credentials.observability.rotationPeriod"),
+							"Detail":   ContainSubstring("value must be either 0 to disable rotation or between 30m and 90d"),
+							"BadValue": Equal(rotationPeriod.Duration.String()),
+						}))))
+				}
+			},
+				Entry("should pass when autoRotation is nil", nil, true),
+				Entry("should pass when rotationPeriod is nil", nil, true),
+				Entry("should pass when autoRotation is between 30m and 90d", &metav1.Duration{Duration: 64 * 24 * time.Hour}, true),
+				Entry("should pass when autoRotation is 0", &metav1.Duration{Duration: 0}, true),
+				Entry("should fail when autoRotation is below 30m", &metav1.Duration{Duration: 16 * time.Minute}, false),
+				Entry("should fail when autoRotation is above 90d", &metav1.Duration{Duration: 128 * 24 * time.Hour}, false),
+				Entry("should fail when autoRotation is a negative duration", &metav1.Duration{Duration: -64 * 24 * time.Hour}, false),
+			)
+
+			DescribeTable("sshKeypair auto-rotation period", func(rotationPeriod *metav1.Duration, isAllowed bool) {
+				shoot.Spec.Maintenance.AutoRotation = &core.MaintenanceAutoRotation{
+					Credentials: &core.MaintenanceCredentialsAutoRotation{
+						SSHKeypair: &core.MaintenanceRotationConfig{
+							RotationPeriod: rotationPeriod,
+						},
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				if isAllowed {
+					Expect(errorList).To(BeEmpty())
+				} else {
+					Expect(errorList).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.maintenance.autoRotation.credentials.sshKeypair.rotationPeriod"),
+							"Detail":   ContainSubstring("value must be either 0 to disable rotation or between 30m and 90d"),
+							"BadValue": Equal(rotationPeriod.Duration.String()),
+						}))))
+				}
+			},
+				Entry("should pass when autoRotation is nil", nil, true),
+				Entry("should pass when rotationPeriod is nil", nil, true),
+				Entry("should pass when autoRotation is between 30m and 90d", &metav1.Duration{Duration: 64 * 24 * time.Hour}, true),
+				Entry("should pass when autoRotation is 0", &metav1.Duration{Duration: 0}, true),
+				Entry("should fail when autoRotation is below 30m", &metav1.Duration{Duration: 16 * time.Minute}, false),
+				Entry("should fail when autoRotation is above 90d", &metav1.Duration{Duration: 128 * 24 * time.Hour}, false),
+				Entry("should fail when autoRotation is a negative duration", &metav1.Duration{Duration: -64 * 24 * time.Hour}, false),
+			)
+
+			It("should not allow setting sshKeypair for autoRotation if it's a workerless Shoot", func() {
+				shoot.Spec.Provider.Workers = nil
+				shoot.Spec.Maintenance.AutoRotation = &core.MaintenanceAutoRotation{
+					Credentials: &core.MaintenanceCredentialsAutoRotation{
+						SSHKeypair: &core.MaintenanceRotationConfig{},
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.maintenance.autoRotation.credentials.sshKeypair"),
+					"Detail": ContainSubstring("this field should not be set for workerless Shoot cluster"),
+				}))))
+			})
+
+			DescribeTable("etcdEncryptionKey auto-rotation period", func(rotationPeriod *metav1.Duration, isAllowed bool) {
+				shoot.Spec.Maintenance.AutoRotation = &core.MaintenanceAutoRotation{
+					Credentials: &core.MaintenanceCredentialsAutoRotation{
+						ETCDEncryptionKey: &core.MaintenanceRotationConfig{
+							RotationPeriod: rotationPeriod,
+						},
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				if isAllowed {
+					Expect(errorList).To(BeEmpty())
+				} else {
+					Expect(errorList).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.maintenance.autoRotation.credentials.etcdEncryptionKey.rotationPeriod"),
+							"Detail":   ContainSubstring("value must be either 0 to disable rotation or between 30m and 90d"),
+							"BadValue": Equal(rotationPeriod.Duration.String()),
+						}))))
+				}
+			},
+				Entry("should pass when autoRotation is nil", nil, true),
+				Entry("should pass when rotationPeriod is nil", nil, true),
+				Entry("should pass when autoRotation is between 30m and 90d", &metav1.Duration{Duration: 64 * 24 * time.Hour}, true),
+				Entry("should pass when autoRotation is 0", &metav1.Duration{Duration: 0}, true),
+				Entry("should fail when autoRotation is below 30m", &metav1.Duration{Duration: 16 * time.Minute}, false),
+				Entry("should fail when autoRotation is above 90d", &metav1.Duration{Duration: 128 * 24 * time.Hour}, false),
+				Entry("should fail when autoRotation is a negative duration", &metav1.Duration{Duration: -64 * 24 * time.Hour}, false),
+			)
 		})
 
 		It("should forbid updating the spec for shoots with deletion timestamp", func() {

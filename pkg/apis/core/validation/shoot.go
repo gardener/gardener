@@ -1942,6 +1942,26 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, wor
 		}
 	}
 
+	if maintenance.AutoRotation != nil && maintenance.AutoRotation.Credentials != nil {
+		credentials := maintenance.AutoRotation.Credentials
+		credentialsPath := fldPath.Child("autoRotation", "credentials")
+
+		if credentials.Observability != nil {
+			allErrs = append(allErrs, validateCredentialAutoRotationPeriod(credentials.Observability.RotationPeriod, credentialsPath.Child("observability"))...)
+		}
+		if credentials.SSHKeypair != nil {
+			sshKeypairPath := credentialsPath.Child("sshKeypair")
+			if workerless {
+				allErrs = append(allErrs, field.Forbidden(sshKeypairPath, workerlessErrorMsg))
+			} else {
+				allErrs = append(allErrs, validateCredentialAutoRotationPeriod(credentials.SSHKeypair.RotationPeriod, sshKeypairPath)...)
+			}
+		}
+		if credentials.ETCDEncryptionKey != nil {
+			allErrs = append(allErrs, validateCredentialAutoRotationPeriod(credentials.ETCDEncryptionKey.RotationPeriod, credentialsPath.Child("etcdEncryptionKey"))...)
+		}
+	}
+
 	if maintenance.TimeWindow != nil {
 		maintenanceTimeWindow, err := timewindow.ParseMaintenanceTimeWindow(maintenance.TimeWindow.Begin, maintenance.TimeWindow.End)
 		if err != nil {
@@ -3470,6 +3490,16 @@ func ValidateSysctls(sysctls map[string]string, fldPath *field.Path) field.Error
 		if len(sysctlValue) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child(sysctlKey), "sysctl requires a non-empty value"))
 		}
+	}
+
+	return allErrs
+}
+
+func validateCredentialAutoRotationPeriod(rotationPeriod *metav1.Duration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if rotationPeriod != nil && rotationPeriod.Duration != 0 && (rotationPeriod.Duration < 30*time.Minute || rotationPeriod.Duration > 90*24*time.Hour) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("rotationPeriod"), rotationPeriod.Duration.String(), "value must be either 0 to disable rotation or between 30m and 90d"))
 	}
 
 	return allErrs

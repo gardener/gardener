@@ -161,6 +161,19 @@ func SetObjectDefaults_Shoot(in *Shoot) {
 	}
 	if in.Spec.Maintenance != nil {
 		SetDefaults_Maintenance(in.Spec.Maintenance)
+		if in.Spec.Maintenance.AutoRotation != nil {
+			if in.Spec.Maintenance.AutoRotation.Credentials != nil {
+				if in.Spec.Maintenance.AutoRotation.Credentials.Observability != nil {
+					SetDefaults_MaintenanceRotationConfig(in.Spec.Maintenance.AutoRotation.Credentials.Observability)
+				}
+				if in.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair != nil {
+					SetDefaults_MaintenanceRotationConfig(in.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair)
+				}
+				if in.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey != nil {
+					SetDefaults_MaintenanceRotationConfig(in.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey)
+				}
+			}
+		}
 	}
 	for i := range in.Spec.Provider.Workers {
 		a := &in.Spec.Provider.Workers[i]

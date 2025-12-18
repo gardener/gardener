@@ -134,6 +134,8 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		log.Error(err, "Failed to maintain Shoot kubernetes version")
 	}
 
+	credentialsToRotationUpdate := computeCredentialsToRotationResults(log, maintainedShoot, metav1.Time{Time: r.Clock.Now()})
+
 	oldShootKubernetesVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
 	if err != nil {
 		return err
@@ -295,12 +297,12 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 	}
 
-	operation := maintainOperation(maintainedShoot)
+	operation := maintainOperation(maintainedShoot, credentialsToRotationUpdate)
 	if operation != "" {
 		operations = append(operations, fmt.Sprintf("Added %q operation annotation", operation))
 	}
 
-	requirePatch := len(operations) > 0 || kubernetesControlPlaneUpdate != nil || len(workerToKubernetesUpdate) > 0 || len(workerToMachineImageUpdate) > 0
+	requirePatch := len(operations) > 0 || kubernetesControlPlaneUpdate != nil || len(workerToKubernetesUpdate) > 0 || len(workerToMachineImageUpdate) > 0 || len(credentialsToRotationUpdate) > 0
 	if requirePatch {
 		patch := client.MergeFrom(shoot.DeepCopy())
 
@@ -309,6 +311,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			kubernetesControlPlaneUpdate,
 			workerToKubernetesUpdate,
 			workerToMachineImageUpdate,
+			credentialsToRotationUpdate,
 		)
 
 		// append also other maintenance operation
@@ -360,7 +363,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 
 	// update shoot spec changes in maintenance call
 	shoot.Spec = *maintainedShoot.Spec.DeepCopy()
-	_ = maintainOperation(shoot)
+	_ = maintainOperation(shoot, credentialsToRotationUpdate)
 	maintainTasks(shoot, r.Config)
 
 	// try to maintain shoot, but don't retry on conflict, because a conflict means that we potentially operated on stale
@@ -411,7 +414,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 
 // buildMaintenanceMessages builds a combined message containing the performed maintenance operations over all worker pools. If the maintenance operation failed, the description
 // contains an indication for the failure and the reason the update was triggered. Details for failed maintenance operations are returned in the second return string.
-func buildMaintenanceMessages(kubernetesControlPlaneUpdate *updateResult, workerToKubernetesUpdate map[string]updateResult, workerToMachineImageUpdate map[string]updateResult) (string, string) {
+func buildMaintenanceMessages(kubernetesControlPlaneUpdate *updateResult, workerToKubernetesUpdate, workerToMachineImageUpdate, credentialsToRotationUpdate map[string]updateResult) (string, string) {
 	countSuccessfulOperations := 0
 	countFailedOperations := 0
 	description := ""
@@ -452,6 +455,18 @@ func buildMaintenanceMessages(kubernetesControlPlaneUpdate *updateResult, worker
 		failureReason = fmt.Sprintf("%s, Worker pool %q: %s", failureReason, worker, result.description)
 	}
 
+	for credentials, result := range credentialsToRotationUpdate {
+		if result.isSuccessful {
+			countSuccessfulOperations++
+			description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Credentials %q: %s. Reason: %s", credentials, result.description, result.reason))
+			continue
+		}
+
+		countFailedOperations++
+		description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Credentials %q: Automatic rotation failed. Reason for update: %s", credentials, result.reason))
+		failureReason = fmt.Sprintf("%s, Credentials %q: Automatic rotation failure due to: %s", failureReason, credentials, result.description)
+	}
+
 	description = strings.TrimPrefix(description, ", ")
 	failureReason = strings.TrimPrefix(failureReason, ", ")
 
@@ -476,7 +491,7 @@ func (r *Reconciler) recordMaintenanceEventsForPool(workerToUpdateResult map[str
 	}
 }
 
-func maintainOperation(shoot *gardencorev1beta1.Shoot) string {
+func maintainOperation(shoot *gardencorev1beta1.Shoot, credentialsToRotationUpdate map[string]updateResult) string {
 	var operation string
 	if hasMaintainNowAnnotation(shoot) {
 		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
@@ -493,7 +508,7 @@ func maintainOperation(shoot *gardencorev1beta1.Shoot) string {
 			delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
 		}
 	default:
-		operation = getOperation(shoot)
+		operation = getOperation(shoot, credentialsToRotationUpdate)
 		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 		delete(shoot.Annotations, v1beta1constants.GardenerMaintenanceOperation)
 	}
@@ -628,6 +643,106 @@ func maintainKubernetesVersion(log logr.Logger, kubernetesVersion string, autoUp
 	}, nil
 }
 
+// computeCredentialsToRotationResults starts the credentials rotation if necessary and returns the reason why an update was done
+func computeCredentialsToRotationResults(log logr.Logger, shoot *gardencorev1beta1.Shoot, now metav1.Time) map[string]updateResult {
+	var (
+		maintenanceResults                    = make(map[string]updateResult)
+		sshKeypairRotationEnabled             = v1beta1helper.IsSSHKeypairAutoRotationEnabled(shoot)
+		observabilityPasswordsRotationEnabled = v1beta1helper.IsObservabilityAutoRotationEnabled(shoot)
+		etcdEncryptionKeyRotationEnabled      = v1beta1helper.IsETCDEncryptionKeyAutoRotationEnabled(shoot)
+		etcdEncryptionKeyRotationPhase        = v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials)
+	)
+
+	if sshKeypairRotationEnabled && v1beta1helper.ShootEnablesSSHAccess(shoot) &&
+		sshKeypairRotationPassedRotationPeriod(shoot, now.Time, *shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod) {
+		reason := "Automatic rotation of SSH keypair configured"
+		log.Info("SSH keypair for workers will be rotated", "reason", reason)
+		maintenanceResults[v1beta1constants.ShootOperationRotateSSHKeypair] = updateResult{
+			description:  "SSH keypair rotation started",
+			reason:       reason,
+			isSuccessful: true,
+		}
+	}
+
+	if observabilityPasswordsRotationEnabled &&
+		observabilityPasswordsRotationPassedRotationPeriod(shoot, now.Time, *shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.RotationPeriod) {
+		reason := "Automatic rotation of observability passwords configured"
+		log.Info("Observability passwords will be rotated", "reason", reason)
+		maintenanceResults[v1beta1constants.OperationRotateObservabilityCredentials] = updateResult{
+			description:  "Observability passwords rotation started",
+			reason:       reason,
+			isSuccessful: true,
+		}
+	}
+
+	if etcdEncryptionKeyRotationEnabled &&
+		etcdEncryptionKeyRotationPassedRotationPeriod(shoot, now.Time, *shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod) {
+		if len(etcdEncryptionKeyRotationPhase) == 0 || etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationCompleted {
+			reason := "Automatic rotation of etcd encryption key configured"
+			log.Info("ETCD Encryption key will be rotated", "reason", reason)
+			maintenanceResults[v1beta1constants.OperationRotateETCDEncryptionKey] = updateResult{
+				description:  "ETCD Encryption key rotation started",
+				reason:       reason,
+				isSuccessful: true,
+			}
+		} else {
+			reason := "ETCD encryption key rotation is already in progress"
+			maintenanceResults[v1beta1constants.OperationRotateETCDEncryptionKey] = updateResult{
+				description:  "Could not start ETCD encryption key rotation",
+				reason:       reason,
+				isSuccessful: false,
+			}
+		}
+	}
+
+	return maintenanceResults
+}
+
+// sshKeypairRotationPassedRotationPeriod checks if the rotation period for ssh keypair has passed.
+func sshKeypairRotationPassedRotationPeriod(shoot *gardencorev1beta1.Shoot, now time.Time, period metav1.Duration) bool {
+	// If the shoot has just been created or the credentials have never been rotated, use the shoot's creation timestamp to determine whether the rotation period has passed.
+	latestRotationCompletionTime := shoot.CreationTimestamp.Time
+
+	if shoot.Status.Credentials != nil &&
+		shoot.Status.Credentials.Rotation != nil &&
+		shoot.Status.Credentials.Rotation.SSHKeypair != nil &&
+		shoot.Status.Credentials.Rotation.SSHKeypair.LastCompletionTime != nil {
+		latestRotationCompletionTime = shoot.Status.Credentials.Rotation.SSHKeypair.LastCompletionTime.Time
+	}
+
+	return latestRotationCompletionTime.Before(now.Add(-period.Duration))
+}
+
+// observabilityPasswordsRotationPassedRotationPeriod checks if the rotation period for observability passwords has passed.
+func observabilityPasswordsRotationPassedRotationPeriod(shoot *gardencorev1beta1.Shoot, now time.Time, period metav1.Duration) bool {
+	// If the shoot has just been created or the credentials have never been rotated, use the shoot's creation timestamp to determine whether the rotation period has passed.
+	latestRotationCompletionTime := shoot.CreationTimestamp.Time
+
+	if shoot.Status.Credentials != nil &&
+		shoot.Status.Credentials.Rotation != nil &&
+		shoot.Status.Credentials.Rotation.Observability != nil &&
+		shoot.Status.Credentials.Rotation.Observability.LastCompletionTime != nil {
+		latestRotationCompletionTime = shoot.Status.Credentials.Rotation.Observability.LastCompletionTime.Time
+	}
+
+	return latestRotationCompletionTime.Before(now.Add(-period.Duration))
+}
+
+// etcdEncryptionKeyRotationPassedRotationPeriod checks if the rotation period for the etcd encryption key has passed.
+func etcdEncryptionKeyRotationPassedRotationPeriod(shoot *gardencorev1beta1.Shoot, now time.Time, period metav1.Duration) bool {
+	// If the shoot has just been created or the credentials have never been rotated, use the shoot's creation timestamp to determine whether the rotation period has passed.
+	latestRotationCompletionTime := shoot.CreationTimestamp.Time
+
+	if shoot.Status.Credentials != nil &&
+		shoot.Status.Credentials.Rotation != nil &&
+		shoot.Status.Credentials.Rotation.ETCDEncryptionKey != nil &&
+		shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastCompletionTime != nil {
+		latestRotationCompletionTime = shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastCompletionTime.Time
+	}
+
+	return latestRotationCompletionTime.Before(now.Add(-period.Duration))
+}
+
 func determineKubernetesVersion(kubernetesVersion string, profile *gardencorev1beta1.CloudProfile, isExpired bool) (string, error) {
 	getHigherVersionAutoUpdate := v1beta1helper.GetLatestVersionForPatchAutoUpdate
 	getHigherVersionForceUpdate := v1beta1helper.GetVersionForForcefulUpdateToConsecutiveMinor
@@ -683,17 +798,28 @@ func needsRetry(shoot *gardencorev1beta1.Shoot) bool {
 	return needsRetryOperation
 }
 
-func getOperation(shoot *gardencorev1beta1.Shoot) string {
-	var (
-		operation            = v1beta1constants.GardenerOperationReconcile
-		maintenanceOperation = shoot.Annotations[v1beta1constants.GardenerMaintenanceOperation]
-	)
+func getOperation(shoot *gardencorev1beta1.Shoot, credentialsToRotationUpdate map[string]updateResult) string {
+	maintenanceOperations := v1beta1helper.GetShootMaintenanceOperations(shoot.Annotations)
 
-	if maintenanceOperation != "" {
-		operation = maintenanceOperation
+	// Always reconcile the Shoot in maintenance cycle.
+	if !slices.Contains(maintenanceOperations, v1beta1constants.GardenerOperationReconcile) {
+		maintenanceOperations = append(maintenanceOperations, v1beta1constants.GardenerOperationReconcile)
 	}
 
-	return operation
+	// Add pending automatic credentials rotations in the current maintenance cycle.
+	for credentials, updateResult := range credentialsToRotationUpdate {
+		switch {
+		case credentials == v1beta1constants.ShootOperationRotateSSHKeypair && updateResult.isSuccessful:
+			maintenanceOperations = append(maintenanceOperations, v1beta1constants.ShootOperationRotateSSHKeypair)
+		case credentials == v1beta1constants.OperationRotateObservabilityCredentials && updateResult.isSuccessful:
+			maintenanceOperations = append(maintenanceOperations, v1beta1constants.OperationRotateObservabilityCredentials)
+		case credentials == v1beta1constants.OperationRotateETCDEncryptionKey && updateResult.isSuccessful &&
+			!slices.Contains(maintenanceOperations, v1beta1constants.OperationRotateETCDEncryptionKeyStart):
+			maintenanceOperations = append(maintenanceOperations, v1beta1constants.OperationRotateETCDEncryptionKey)
+		}
+	}
+
+	return strings.Join(maintenanceOperations, v1beta1constants.GardenerOperationsSeparator)
 }
 
 func shouldMachineImageVersionBeUpdated(shootMachineImage *gardencorev1beta1.ShootMachineImage, machineImage *gardencorev1beta1.MachineImage, autoUpdate bool) (shouldBeUpdated bool, reason string, isExpired bool) {

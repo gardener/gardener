@@ -1237,6 +1237,8 @@ type Maintenance struct {
 	// Instead, they are rolled out during the shoot's maintenance time window. There is one exception that will trigger
 	// an immediate roll out which is changes to the Spec.Hibernation.Enabled field.
 	ConfineSpecUpdateRollout *bool
+	// AutoRotation contains information about which rotations should be automatically performed.
+	AutoRotation *MaintenanceAutoRotation
 }
 
 // MaintenanceAutoUpdate contains information about which constraints should be automatically updated.
@@ -1245,6 +1247,29 @@ type MaintenanceAutoUpdate struct {
 	KubernetesVersion bool
 	// MachineImageVersion indicates whether the machine image version may be automatically updated (default: true).
 	MachineImageVersion *bool
+}
+
+// MaintenanceAutoRotation contains information about which rotations should be automatically performed.
+type MaintenanceAutoRotation struct {
+	// Credentials contains information about which credentials should be automatically rotated.
+	Credentials *MaintenanceCredentialsAutoRotation
+}
+
+// MaintenanceCredentialsAutoRotation contains information about which credentials should be automatically rotated.
+type MaintenanceCredentialsAutoRotation struct {
+	// Observability configures the automatic rotation for the observability credentials.
+	Observability *MaintenanceRotationConfig
+	// SSHKeypair configures the automatic rotation for the ssh keypair for worker nodes.
+	SSHKeypair *MaintenanceRotationConfig
+	// ETCDEncryptionKey configures the automatic rotation for the etcd encryption key.
+	ETCDEncryptionKey *MaintenanceRotationConfig
+}
+
+// MaintenanceRotationConfig contains configuration for automatic rotation.
+type MaintenanceRotationConfig struct {
+	// RotationPeriod is the period between a completed rotation and the start of a new rotation (default: 7d).
+	// The allowed rotation period is between 30m and 90d. When set to 0, rotation is disabled.
+	RotationPeriod *metav1.Duration
 }
 
 // MaintenanceTimeWindow contains information about the time window for maintenance operations.

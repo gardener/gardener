@@ -1620,6 +1620,9 @@ type Maintenance struct {
 	// an immediate roll out which is changes to the Spec.Hibernation.Enabled field.
 	// +optional
 	ConfineSpecUpdateRollout *bool `json:"confineSpecUpdateRollout,omitempty" protobuf:"varint,3,opt,name=confineSpecUpdateRollout"`
+	// AutoRotation contains information about which rotations should be automatically performed.
+	// +optional
+	AutoRotation *MaintenanceAutoRotation `json:"autoRotation,omitempty" protobuf:"bytes,4,opt,name=autoRotation"`
 }
 
 // MaintenanceAutoUpdate contains information about which constraints should be automatically updated.
@@ -1629,6 +1632,34 @@ type MaintenanceAutoUpdate struct {
 	// MachineImageVersion indicates whether the machine image version may be automatically updated (default: true).
 	// +optional
 	MachineImageVersion *bool `json:"machineImageVersion,omitempty" protobuf:"varint,2,opt,name=machineImageVersion"`
+}
+
+// MaintenanceAutoRotation contains information about which rotations should be automatically performed.
+type MaintenanceAutoRotation struct {
+	// Credentials contains information about which credentials should be automatically rotated.
+	// +optional
+	Credentials *MaintenanceCredentialsAutoRotation `json:"credentials,omitempty" protobuf:"bytes,1,opt,name=credentials"`
+}
+
+// MaintenanceCredentialsAutoRotation contains information about which credentials should be automatically rotated.
+type MaintenanceCredentialsAutoRotation struct {
+	// Observability configures the automatic rotation for the observability credentials.
+	// +optional
+	Observability *MaintenanceRotationConfig `json:"observability,omitempty" protobuf:"bytes,1,opt,name=observability"`
+	// SSHKeypair configures the automatic rotation for the ssh keypair for worker nodes.
+	// +optional
+	SSHKeypair *MaintenanceRotationConfig `json:"sshKeypair,omitempty" protobuf:"bytes,2,opt,name=sshKeypair"`
+	// ETCDEncryptionKey configures the automatic rotation for the etcd encryption key.
+	// +optional
+	ETCDEncryptionKey *MaintenanceRotationConfig `json:"etcdEncryptionKey,omitempty" protobuf:"bytes,3,opt,name=etcdEncryptionKey"`
+}
+
+// MaintenanceRotationConfig contains configuration for automatic rotation.
+type MaintenanceRotationConfig struct {
+	// RotationPeriod is the period between a completed rotation and the start of a new rotation (default: 7d).
+	// The allowed rotation period is between 30m and 90d. When set to 0, rotation is disabled.
+	// +optional
+	RotationPeriod *metav1.Duration `json:"rotationPeriod,omitempty" protobuf:"bytes,1,opt,name=rotationPeriod"`
 }
 
 // MaintenanceTimeWindow contains information about the time window for maintenance operations.
