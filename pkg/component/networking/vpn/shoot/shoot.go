@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -967,6 +968,12 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 				Value: strconv.Itoa(v.values.HighAvailabilityNumberOfShootClients),
 			},
 		}...)
+		if features.DefaultFeatureGate.Enabled(features.VPNBondingModeRoundRobin) {
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  "BONDING_MODE",
+				Value: "balance-rr",
+			})
+		}
 	}
 
 	return []corev1.Container{container}

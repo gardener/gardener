@@ -49,6 +49,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/networking/vpn/envoy"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	componenttest "github.com/gardener/gardener/pkg/component/test"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -3166,7 +3167,7 @@ kind: AuthorizationConfiguration
 				return container
 			}
 
-			haVPNInitClientContainer := func() corev1.Container {
+			haVPNInitClientContainer := func(rrEnabled bool) corev1.Container {
 				initContainer := haVPNClientContainerFor(0)
 				initContainer.Name = "vpn-client-init"
 				initContainer.LivenessProbe = nil
@@ -3189,6 +3190,12 @@ kind: AuthorizationConfiguration
 						},
 					},
 				}...)
+				if rrEnabled {
+					initContainer.Env = append(initContainer.Env, corev1.EnvVar{
+						Name:  "BONDING_MODE",
+						Value: "balance-rr",
+					})
+				}
 				initContainer.VolumeMounts = append(initContainer.VolumeMounts, corev1.VolumeMount{
 					Name:      "kube-api-access-gardener",
 					MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
@@ -3198,7 +3205,7 @@ kind: AuthorizationConfiguration
 				return initContainer
 			}
 
-			testHAVPN := func(overlap bool) {
+			testHAVPN := func(overlap, rrEnabled bool) {
 				values = Values{
 					Values: apiserver.Values{
 						RuntimeVersion: runtimeVersion,
@@ -3223,7 +3230,7 @@ kind: AuthorizationConfiguration
 				kapi = New(kubernetesInterface, namespace, sm, values)
 				deployAndRead()
 
-				initContainer := haVPNInitClientContainer()
+				initContainer := haVPNInitClientContainer(rrEnabled)
 				Expect(deployment.Spec.Template.Spec.InitContainers).To(DeepEqual([]corev1.Container{initContainer}))
 				if overlap {
 					Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(values.VPN.HighAvailabilityNumberOfSeedServers + 3))
@@ -3366,11 +3373,23 @@ kind: AuthorizationConfiguration
 			}
 
 			It("should have one init container, one kube-apiserver, one envoy proxy, two vpn-seed-clients and one path controller (total: 5) when VPN high availability and overlapping CIDRs are enabled", func() {
-				testHAVPN(true)
+				testHAVPN(true, false)
+			})
+
+			It("should configure the round-robin bonding mode feature when VPN high availability and overlapping CIDRs are enabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VPNBondingModeRoundRobin, true))
+
+				testHAVPN(true, true)
 			})
 
 			It("should have one init container, one kube-apiserver, two vpn-seed-clients and one path controller (total: 4) when VPN high availability and non-overlapping CIDRs are enabled", func() {
-				testHAVPN(false)
+				testHAVPN(false, false)
+			})
+
+			It("should configure the round-robin bonding mode feature when VPN high availability and non-overlapping CIDRs are enabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VPNBondingModeRoundRobin, true))
+
+				testHAVPN(false, true)
 			})
 
 			Context("kube-apiserver container", func() {

@@ -80,6 +80,11 @@ const (
 	// owner: @docktofuture
 	// beta: v1.133.0
 	CustomDNSServerInNodeLocalDNS featuregate.Feature = "CustomDNSServerInNodeLocalDNS"
+
+	// VPNBondingModeRoundRobin enables the usage of the "balance-rr" bonding mode for the HA VPN setup.
+	// owner: @domdom82
+	// alpha: v1.135.0
+	VPNBondingModeRoundRobin featuregate.Feature = "VPNBondingModeRoundRobin"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -117,6 +122,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	UseUnifiedHTTPProxyPort:       {Default: false, PreRelease: featuregate.Alpha},
 	VPAInPlaceUpdates:             {Default: false, PreRelease: featuregate.Alpha},
 	CustomDNSServerInNodeLocalDNS: {Default: true, PreRelease: featuregate.Beta},
+	VPNBondingModeRoundRobin:      {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
