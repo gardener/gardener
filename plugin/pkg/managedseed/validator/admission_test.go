@@ -264,7 +264,7 @@ var _ = Describe("ManagedSeed", func() {
 			Expect(err).To(MatchError("could not convert object to ManagedSeed"))
 		})
 
-		It("should forbid the ManagedSeed creation if a Shoot name is not specified", func() {
+		It("should do nothing if a Shoot name is not specified", func() {
 			managedSeed.Spec.Shoot.Name = ""
 
 			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
