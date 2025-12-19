@@ -128,7 +128,12 @@ func MigrateVPAEmptyPatch(ctx context.Context, c client.Client, log logr.Logger)
 		filterFn:      filterFn,
 		mutateFn:      mutateFunc,
 	}
-	return migrateVPA(ctx, &cfg)
+	if err := migrateVPA(ctx, &cfg); err != nil {
+		return err
+	}
+
+	log.Info("Successfully migrated VerticalPodAutoscalers")
+	return nil
 }
 
 // MigrateVPAUpdateModeToRecreate applies a patch to VerticalPodAutoscaler resources that
@@ -169,5 +174,10 @@ func MigrateVPAUpdateModeToRecreate(ctx context.Context, c client.Client, log lo
 		filterFn:      filterFn,
 		mutateFn:      mutateFn,
 	}
-	return migrateVPA(ctx, &cfg)
+	if err := migrateVPA(ctx, &cfg); err != nil {
+		return err
+	}
+
+	log.Info("Successfully migrated VerticalPodAutoscalers to update mode Recreate")
+	return nil
 }
