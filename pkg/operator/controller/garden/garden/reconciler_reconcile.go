@@ -597,7 +597,8 @@ func (r *Reconciler) reconcile(
 				if err != nil {
 					return err
 				}
-				return r.deployGardenPrometheus(ctx, log, secretsManager, c.prometheusGarden, virtualClusterClient, aggregatePrometheusIngressHost)
+				primaryIngressDomain := garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
+				return r.deployGardenPrometheus(ctx, log, secretsManager, c.prometheusGarden, virtualClusterClient, aggregatePrometheusIngressHost, primaryIngressDomain)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady, initializeVirtualClusterClient),
 		})
@@ -1008,7 +1009,7 @@ func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden
 	}
 }
 
-func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger, secretsManager secretsmanager.Interface, prometheus prometheus.Interface, virtualGardenClient client.Client, aggregatePrometheusIngressHost string) error {
+func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger, secretsManager secretsmanager.Interface, prometheus prometheus.Interface, virtualGardenClient client.Client, aggregatePrometheusIngressHost string, primaryIngressDomain string) error {
 	if err := gardenerutils.NewShootAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Reconcile(ctx, r.RuntimeClientSet.Client()); err != nil {
 		return fmt.Errorf("failed reconciling access secret for garden prometheus: %w", err)
 	}
@@ -1061,6 +1062,41 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 			}
 		}
 	}
+
+	managedSeedList := &seedmanagementv1alpha1.ManagedSeedList{}
+	if err := virtualGardenClient.List(ctx, managedSeedList); err != nil {
+		return fmt.Errorf("failed listing managed seeds in virtual garden: %w", err)
+	}
+
+	var managedSeedNames []string
+	for _, managedSeed := range managedSeedList.Items {
+		managedSeedNames = append(managedSeedNames, managedSeed.Name)
+	}
+
+	additionalAlertRelabelConfigs := []monitoringv1.RelabelConfig{
+		{
+			SourceLabels: []monitoringv1.LabelName{"project", "name"},
+			Regex:        "(.+);(.+)",
+			Action:       "replace",
+			Replacement:  ptr.To("https://dashboard." + primaryIngressDomain + "/namespace/garden-$1/shoots/$2"),
+			TargetLabel:  "dashboard_url",
+		},
+		{
+			SourceLabels: []monitoringv1.LabelName{"project", "name"},
+			Regex:        "garden;(.+)",
+			Action:       "replace",
+			Replacement:  ptr.To("https://dashboard." + primaryIngressDomain + "/namespace/garden/shoots/$1"),
+			TargetLabel:  "dashboard_url",
+		},
+		{
+			SourceLabels: []monitoringv1.LabelName{"project", "name"},
+			Regex:        ";(" + strings.Join(managedSeedNames, "|") + ")",
+			Action:       "replace",
+			Replacement:  ptr.To("https://dashboard." + primaryIngressDomain + "/namespace/garden/shoots/$1"),
+			TargetLabel:  "dashboard_url",
+		},
+	}
+	prometheus.SetAdditionalAlertRelabelConfigs(additionalAlertRelabelConfigs)
 
 	prometheus.SetCentralScrapeConfigs(gardenprometheus.CentralScrapeConfigs(prometheusAggregateTargets, prometheusAggregateIngressTargets, globalMonitoringSecretRuntime))
 	return prometheus.Deploy(ctx)
