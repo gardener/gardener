@@ -32,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -674,7 +673,10 @@ func getEtcdOperatorConfig(etcdConfig *gardenletconfigv1alpha1.ETCDConfig, names
 				ExemptServiceAccounts: []string{
 					"system:serviceaccount:kube-system:generic-garbage-collector",
 				},
-				ReconcilerServiceAccountFQDN: ptr.To(fmt.Sprintf("%s%s:%s", serviceaccount.ServiceAccountUsernamePrefix, namespace, druidServiceAccountName)),
+				ServiceAccountInfo: &druidconfigv1alpha1.ServiceAccountInfo{
+					Name:      druidServiceAccountName,
+					Namespace: namespace,
+				},
 			},
 		},
 	}

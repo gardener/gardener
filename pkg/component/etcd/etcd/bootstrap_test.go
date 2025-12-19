@@ -123,8 +123,9 @@ webhooks:
     enabled: true
     exemptServiceAccounts:
     - system:serviceaccount:kube-system:generic-garbage-collector
-    reconcilerServiceAccountFQDN: system:serviceaccount:` + namespace + `:etcd-druid
-    serviceAccountInfo: null
+    serviceAccountInfo:
+      name: etcd-druid
+      namespace: ` + namespace + `
 `)
 	)
 
