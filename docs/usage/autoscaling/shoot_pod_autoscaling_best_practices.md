@@ -170,13 +170,14 @@ spec:
         memory: 16G
 ```
 
-In this example, VPA is configured to scale `foo-deployment` requests (`RequestsOnly`) from 50m cores (`minAllowed`) up to 4 cores (`maxAllowed`) and 200M memory (`minAllowed`) up to 16G memory (`maxAllowed`) automatically (`updateMode`). VPA doesn't support in-place updates, so in `updateMode` `Recreate` it will evict pods under certain conditions and then mutate the requests (and possibly limits if you omit `controlledValues` or set it to `RequestsAndLimits`, which is the default) of upcoming new pods.
+In this example, VPA is configured to scale `foo-deployment` requests (`RequestsOnly`) from 50m cores (`minAllowed`) up to 4 cores (`maxAllowed`) and 200M memory (`minAllowed`) up to 16G memory (`maxAllowed`) automatically (`updateMode`). So in `updateMode` `Recreate` it will evict pods under certain conditions and then mutate the requests (and possibly limits if you omit `controlledValues` or set it to `RequestsAndLimits`, which is the default) of upcoming new pods. Note that VPA previously did not support in-place updates. However, starting with VPA v1.4.0, in-place updates are supported through the `InPlaceOrRecreate` mode. Since Gardener v1.5.1, in-place updates can be configured in Gardener.
 
 [Multiple update modes exist](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/README.md#quick-start). They influence eviction and mutation. The most important ones are:
 - `Off`: In this mode, recommendations are computed, but never applied. This mode is useful, if you want to learn more about your workload or if you have a custom controller that depends on VPA's recommendations but shall act instead of VPA.
 - `Initial`: In this mode, recommendations are computed and applied, but pods are never proactively evicted to enforce new recommendations over time. This mode is useful, if you want to control pod evictions yourself (similar to the [`StatefulSet` `updateStrategy` `OnDelete`](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies)) or your workload is sensitive to evictions, e.g. some brownfield singleton application or a daemon set pod that is critical for the node.
 - `Auto` (__deprecated__): VPA assigns resource requests on pod creation as well as updates them on existing pods using the preferred update mechanism. Currently, this is equivalent to `Recreate`.
 - `Recreate` (default): In this mode, recommendations are computed, applied, and pods are even proactively evicted to enforce new recommendations over time. This applies recommendations continuously without you having to worry too much.
+- `InPlaceOrRecreate`: In this mode, the VPA tries to update the Pod resources without restarting the Pod. If an in-place update is not possible, the VPA will behave as if the mode has been set to `Recreate`.
 
 As mentioned, `controlledValues` influences whether only requests or requests and limits are scaled:
 - `RequestsOnly`: Updates only requests and doesn't change limits. Useful if you have defined absolute limits (unrelated to the requests).
