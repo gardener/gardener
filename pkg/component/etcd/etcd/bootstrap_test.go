@@ -69,7 +69,8 @@ var _ = Describe("Etcd", func() {
 
 		managedResourceName       = "etcd-druid"
 		managedResourceSecretName = "managedresource-" + managedResourceName
-		etcdOperatorConfigYAML    = ptr.To(`clientConnection:
+		etcdOperatorConfigYAML    = ptr.To(`apiVersion: config.druid.gardener.cloud/v1alpha1
+clientConnection:
   acceptContentTypes: ""
   burst: 150
   contentType: ""
@@ -98,6 +99,7 @@ controllers:
     requeueInterval: 15s
   secret:
     concurrentSyncs: 10
+kind: OperatorConfiguration
 leaderElection:
   enabled: true
   leaseDuration: 15s
@@ -172,7 +174,7 @@ webhooks:
 			expectedResources []client.Object
 
 			imageVectorConfigMapName    = "etcd-druid-imagevector-overwrite-4475dd36"
-			operatorConfigConfigMapName = "etcd-druid-operator-config-7b7155bb"
+			operatorConfigConfigMapName = "etcd-druid-operator-config-3b019ffb"
 
 			serviceAccount = &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
