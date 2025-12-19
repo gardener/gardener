@@ -180,6 +180,10 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *o
 	if err := mgr.Add(reconcileWebhookConfigurations(ctx, mgr, validatingWebhookConfiguration, mutatingWebhookConfiguration)); err != nil {
 		return fmt.Errorf("failed adding webhook config reconciliation func: %w", err)
 	}
+	log.Info("Adding migrations runnable func to manager")
+	if err := mgr.Add(runMigrations(ctx, mgr.GetClient(), log)); err != nil {
+		return fmt.Errorf("failed adding migrations runnable func to manager: %w", err)
+	}
 
 	log.Info("Adding webhook handlers to manager")
 	if err := webhook.AddToManager(mgr); err != nil {
@@ -202,10 +206,6 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *o
 	log.Info("Adding controllers to manager")
 	if err := controller.AddToManager(cancel, mgr, cfg, gardenClientMap); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
-	}
-
-	if err := runMigrations(ctx, mgr.GetClient(), log); err != nil {
-		return err
 	}
 
 	log.Info("Starting manager")
