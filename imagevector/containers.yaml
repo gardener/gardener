@@ -616,7 +616,7 @@ images:
   - name: vali
     sourceRepository: github.com/credativ/vali
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/credativ/vali
-    tag: "v2.2.29"
+    tag: "v2.2.30"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
