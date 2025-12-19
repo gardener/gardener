@@ -93,7 +93,8 @@ controllers:
       unknownThreshold: 1m0s
     etcdStatusSyncPeriod: 15s
   etcdCopyBackupsTask:
-    enabled: false
+    concurrentSyncs: 3
+    enabled: true
   etcdOpsTask:
     concurrentSyncs: 3
     requeueInterval: 15s
@@ -175,7 +176,7 @@ webhooks:
 			expectedResources []client.Object
 
 			imageVectorConfigMapName    = "etcd-druid-imagevector-overwrite-4475dd36"
-			operatorConfigConfigMapName = "etcd-druid-operator-config-3b019ffb"
+			operatorConfigConfigMapName = "etcd-druid-operator-config-735336e3"
 
 			serviceAccount = &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{

@@ -662,6 +662,10 @@ func getEtcdOperatorConfig(etcdConfig *gardenletconfigv1alpha1.ETCDConfig, names
 				ConcurrentSyncs: ptr.To(int(*etcdConfig.BackupCompactionController.Workers)),
 				EventsThreshold: *etcdConfig.BackupCompactionController.EventsThreshold,
 			},
+			EtcdCopyBackupsTask: druidconfigv1alpha1.EtcdCopyBackupsTaskControllerConfiguration{
+				// Preserve backwards-compatibility with CLI flags, where it is enabled by default.
+				Enabled: true,
+			},
 			EtcdOpsTask: druidconfigv1alpha1.EtcdOpsTaskControllerConfiguration{
 				ConcurrentSyncs: ptr.To(3),
 				RequeueInterval: &metav1.Duration{Duration: 15 * time.Second},
