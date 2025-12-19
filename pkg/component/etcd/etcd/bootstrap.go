@@ -28,13 +28,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -603,11 +604,12 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	}
 
 	etcdOperatorConfig := getEtcdOperatorConfig(b.etcdConfig, b.namespace, webhookServerTLSCertMountPath)
-	etcdOperatorConfigYaml, err := yaml.Marshal(etcdOperatorConfig)
+	etcdOperatorConfigYAML, err := encodeETCDOperatorConfig(etcdOperatorConfig)
 	if err != nil {
 		return err
 	}
-	configMapOperatorConfig.Data = map[string]string{druidConfigMapOperatorConfigDataKey: string(etcdOperatorConfigYaml)}
+
+	configMapOperatorConfig.Data = map[string]string{druidConfigMapOperatorConfigDataKey: etcdOperatorConfigYAML}
 	utilruntime.Must(kubernetesutils.MakeUnique(configMapOperatorConfig))
 	resourcesToAdd = append(resourcesToAdd, configMapOperatorConfig)
 
@@ -686,11 +688,27 @@ func getEtcdOperatorConfig(etcdConfig *gardenletconfigv1alpha1.ETCDConfig, names
 		etcdOperatorConfig.FeatureGates = etcdConfig.FeatureGates
 	}
 
-	scheme := runtime.NewScheme()
-	druidconfigv1alpha1.AddToScheme(scheme)
-	scheme.Default(etcdOperatorConfig)
+	druidconfigv1alpha1.SetObjectDefaults_OperatorConfiguration(etcdOperatorConfig)
 
 	return etcdOperatorConfig
+}
+
+func encodeETCDOperatorConfig(etcdOperatorConfig *druidconfigv1alpha1.OperatorConfiguration) (string, error) {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(druidconfigv1alpha1.AddToScheme(scheme))
+	yamlSerializer := json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{
+		Yaml:   true,
+		Pretty: false,
+		Strict: false,
+	})
+	codec := serializer.NewCodecFactory(scheme).
+		EncoderForVersion(yamlSerializer, druidconfigv1alpha1.SchemeGroupVersion)
+
+	data, err := runtime.Encode(codec, etcdOperatorConfig)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {
