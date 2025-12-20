@@ -58,7 +58,7 @@ func (r *Reconciler) newIngressDNSRecord(ctx context.Context, log logr.Logger, s
 	), nil
 }
 
-func getDNSProviderCredentialsDeployer(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) (dnsrecord.CredentialsDeployFunc, error) {
+func getDNSProviderCredentialsDeployer(ctx context.Context, gardenClient client.Reader, seed *gardencorev1beta1.Seed) (dnsrecord.CredentialsDeployFunc, error) {
 	if dnsConfig := seed.Spec.DNS; dnsConfig.Provider != nil {
 		credentials, err := kubernetesutils.GetCredentialsByObjectReference(ctx, gardenClient, *dnsConfig.Provider.CredentialsRef)
 		if err != nil {
