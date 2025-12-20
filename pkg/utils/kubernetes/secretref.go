@@ -82,7 +82,7 @@ func DeleteSecretByObjectReference(ctx context.Context, c client.Client, ref *co
 }
 
 // GetCredentialsByObjectReference returns the credentials, being Secret or WorkloadIdentity, referenced by the given object reference.
-func GetCredentialsByObjectReference(ctx context.Context, c client.Client, ref corev1.ObjectReference) (client.Object, error) {
+func GetCredentialsByObjectReference(ctx context.Context, c client.Reader, ref corev1.ObjectReference) (client.Object, error) {
 	var obj client.Object
 	switch ref.GroupVersionKind() {
 	case corev1.SchemeGroupVersion.WithKind("Secret"):
