@@ -501,12 +501,6 @@ func validateSeedDNSProviderConfig(dnsConfig core.SeedDNSProviderConfig, fldPath
 		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "cannot be empty"))
 	}
 
-	// TODO(dimityrmirchev): Add support for workload identity
-	// remove this check once the support is added as ValidateCredentialsRef already does the necessary validation
-	if dnsConfig.CredentialsRef.Kind != "Secret" || dnsConfig.CredentialsRef.APIVersion != corev1.SchemeGroupVersion.String() {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("credentialsRef"), dnsConfig.CredentialsRef, "credentialsRef must reference a Secret"))
-	}
-
 	allErrs = append(allErrs, ValidateCredentialsRef(dnsConfig.CredentialsRef, fldPath.Child("credentialsRef"))...)
 
 	return allErrs
