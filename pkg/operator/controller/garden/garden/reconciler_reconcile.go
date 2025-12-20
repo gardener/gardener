@@ -1256,6 +1256,7 @@ func (r *Reconciler) reconcileDNSRecords(ctx context.Context, log logr.Logger, g
 				dnsrecord.DefaultInterval,
 				dnsrecord.DefaultSevereThreshold,
 				dnsrecord.DefaultTimeout,
+				nil, // with values.UseExisitingSecret=true credentialsDeployer is not needed
 			)).Deploy(ctx)
 		})
 	}
@@ -1273,6 +1274,7 @@ func (r *Reconciler) reconcileDNSRecords(ctx context.Context, log logr.Logger, g
 				dnsrecord.DefaultInterval,
 				dnsrecord.DefaultSevereThreshold,
 				dnsrecord.DefaultTimeout,
+				nil, // when values.SecretName is not set credentialsDeployer is not needed
 			)).Destroy(ctx)
 		})
 	}
