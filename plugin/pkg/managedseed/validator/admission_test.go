@@ -629,7 +629,7 @@ var _ = Describe("ManagedSeed", func() {
 
 				seedx.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{
 					Type:      "type",
-					SecretRef: corev1.SecretReference{Name: "bar", Namespace: "garden"}, // This one
+					SecretRef: corev1.SecretReference{Name: "bar", Namespace: "garden"},
 				}
 				Expect(managedSeed.Spec.Gardenlet).To(Equal(seedmanagement.GardenletConfig{
 					Config: &gardenletconfigv1alpha1.GardenletConfiguration{

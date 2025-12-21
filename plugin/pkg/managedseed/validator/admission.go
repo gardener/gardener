@@ -514,7 +514,7 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 			// TODO(vpnachev): This code should handle dns provider credentials of type WorkloadIdentity
 			return nil, fmt.Errorf("dns provider credentials of type WorkloadIdentity are not yet supported")
 		default:
-			return nil, fmt.Errorf("primery DNS provider set to use unsupported credentials type of apiVersion=%q kind=%q", apiVersion, kind)
+			return nil, fmt.Errorf("primary DNS provider set to use unsupported credentials type of apiVersion=%q kind=%q", apiVersion, kind)
 		}
 	} else if shoot.Spec.SecretBindingName != nil {
 		secretBinding, err := v.secretBindingLister.SecretBindings(shoot.Namespace).Get(*shoot.Spec.SecretBindingName)
