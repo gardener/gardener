@@ -169,6 +169,45 @@ The user is responsible for the validity of the configured `JWTAuthenticator`s.
 Be aware that changing the configuration in the `ConfigMap` will be applied in the next `Shoot` reconciliation, but this is not automatically triggered.
 If you want the changes to roll out immediately, [trigger a reconciliation explicitly](../shoot-operations/shoot_operations.md#immediate-reconciliation).
 
+### Configuring Anonymous Authentication
+
+Gardener disables anonymous authentication by default for all Kubernetes versions.
+For clusters with Kubernetes version `>= 1.35`, the `.spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication` field is no longer available.
+If you need to enable anonymous authentication for your shoot cluster, you can configure it using [Structured Authentication Configuration](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#using-authentication-configuration) with an [anonymous authenticator](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration).
+
+Here is an example of a `ConfigMap` that enables anonymous authentication for the `/livez` endpoint:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: authentication-config-with-anonymous
+  namespace: garden-my-project
+data:
+  config.yaml: |
+    apiVersion: apiserver.config.k8s.io/v1beta1
+    kind: AuthenticationConfiguration
+    anonymous:
+      enabled: true
+      conditions:
+      - path: /livez
+```
+
+Reference this `ConfigMap` in your `Shoot` spec:
+
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+spec:
+  kubernetes:
+    kubeAPIServer:
+      structuredAuthentication:
+        configMapName: authentication-config-with-anonymous
+```
+
+> [!WARNING]
+> Enabling anonymous authentication allows unauthenticated requests to reach your API server. Use with caution and ensure appropriate authorization policies are in place.
+
 ### Migrating from OIDC to Structured Authentication Config
 
 If you would like to migrate from OIDC to Structured Authentication Config and your `Shoot` spec has the `spec.kubernetes.kubeAPIServer.oidcConfig` field set, for example:

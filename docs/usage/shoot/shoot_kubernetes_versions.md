@@ -9,6 +9,10 @@ Breaking changes may be introduced with new Kubernetes versions.
 This documentation describes the Gardener specific differences and requirements for upgrading to a supported Kubernetes version.
 For Kubernetes specific upgrade notes the upstream Kubernetes release notes, [changelogs](https://github.com/kubernetes/kubernetes/tree/master/CHANGELOG) and release blogs should be considered before upgrade.
 
+## Upgrading to Kubernetes `v1.35`
+
+- The `Shoot`'s `.spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication` field is forbidden. Gardener continues to disable anonymous authentication by default. If you need to configure anonymous authentication, use [Structured Authentication Configuration](shoot_access.md#configuring-anonymous-authentication) with the [anonymous authenticator](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration) instead.
+
 ## Upgrading to Kubernetes `v1.34`
 
 - The `Shoot`'s `.spec.cloudProfileName` field is forbidden. `Shoot` owners must migrate their `CloudProfile` reference to the new `spec.cloudProfile.name` field.
