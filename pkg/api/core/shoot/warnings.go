@@ -51,7 +51,7 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 	}
 
 	if helper.IsLegacyAnonymousAuthenticationSet(shoot.Spec.Kubernetes.KubeAPIServer) {
-		warnings = append(warnings, "you are setting the spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication field. The field is deprecated. Using Kubernetes v1.32 and above, please use anonymous authentication configuration. See: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration")
+		warnings = append(warnings, "you are setting the spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication field. The field is deprecated and will be forbidden starting with Kubernetes v1.35. Use Structured Authentication Configuration instead. See: https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_access.md#configuring-anonymous-authentication")
 	}
 
 	kubernetesVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)

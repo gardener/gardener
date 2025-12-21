@@ -272,7 +272,7 @@ var _ = Describe("Warnings", func() {
 
 		It("should return a warning when enableAnonymousAuthentication is set", func() {
 			shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)}
-			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication field. The field is deprecated. Using Kubernetes v1.32 and above, please use anonymous authentication configuration. See: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration")))
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication field. The field is deprecated and will be forbidden starting with Kubernetes v1.35. Use Structured Authentication Configuration instead. See: https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_access.md#configuring-anonymous-authentication")))
 		})
 
 		DescribeTable("shoot.spec.secretBindingName",
