@@ -203,6 +203,21 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 	}
 
+	// Set the .spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication field to nil, when Shoot cluster is being forcefully updated to K8s >= 1.35.
+	// Gardener forbids setting the field for Shoots with K8s 1.35+.
+	{
+		oldK8sLess135, _ := versionutils.CheckVersionMeetsConstraint(oldShootKubernetesVersion.String(), "< 1.35")
+		newK8sGreaterEqual135, _ := versionutils.CheckVersionMeetsConstraint(shootKubernetesVersion.String(), ">= 1.35")
+		if oldK8sLess135 && newK8sGreaterEqual135 {
+			if maintainedShoot.Spec.Kubernetes.KubeAPIServer != nil && maintainedShoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication != nil {
+				maintainedShoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = nil
+
+				reason := ".spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication is set to nil. Reason: The field is no longer supported for Shoot clusters using Kubernetes version 1.35+"
+				operations = append(operations, reason)
+			}
+		}
+	}
+
 	// Migrate from secretBindingName to credentialsBindingName when Shoot cluster is being forcefully updated to K8s >= 1.34.
 	// Gardener forbids setting secretBindingName for Shoots with K8s 1.34+.
 	{
