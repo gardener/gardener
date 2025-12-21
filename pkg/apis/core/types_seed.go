@@ -141,7 +141,8 @@ type SeedDNSProvider struct {
 
 	// CredentialsRef is a reference to a resource holding the credentials used for
 	// authentication with the DNS provider.
-	// As of now, only v1.Secret is supported.
+	// Supported referenced resources are v1.Secrets and
+	// security.gardener.cloud/v1alpha1.WorkloadIdentity
 	CredentialsRef *corev1.ObjectReference
 }
 
@@ -155,7 +156,8 @@ type SeedDNSProviderConfig struct {
 	Zone *string
 	// CredentialsRef is a reference to a resource holding the credentials used for
 	// authentication with the DNS provider.
-	// As of now, only v1.Secrets are supported.
+	// Supported referenced resources are v1.Secrets and
+	// security.gardener.cloud/v1alpha1.WorkloadIdentity
 	CredentialsRef corev1.ObjectReference
 }
 
