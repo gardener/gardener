@@ -11173,7 +11173,8 @@ Kubernetes core/v1.ObjectReference
 <td>
 <p>CredentialsRef is a reference to a resource holding the credentials used for
 authentication with the DNS provider.
-As of now, only v1.Secret is supported.</p>
+Supported referenced resources are v1.Secrets and
+security.gardener.cloud/v1alpha1.WorkloadIdentity</p>
 </td>
 </tr>
 </tbody>
@@ -11241,7 +11242,8 @@ Kubernetes core/v1.ObjectReference
 <td>
 <p>CredentialsRef is a reference to a resource holding the credentials used for
 authentication with the DNS provider.
-As of now, only v1.Secrets are supported.</p>
+Supported referenced resources are v1.Secrets and
+security.gardener.cloud/v1alpha1.WorkloadIdentity</p>
 </td>
 </tr>
 </tbody>
