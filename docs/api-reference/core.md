@@ -6706,10 +6706,9 @@ bool
 <p>EnableAnonymousAuthentication defines whether anonymous requests to the secure port
 of the API server should be allowed (flag <code>--anonymous-auth</code>).
 See: <a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/">https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/</a></p>
-<p>Deprecated: This field is deprecated and will be removed in a future release.
-Please use anonymous authentication configuration instead.
-For more information see: <a href="https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration">https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration</a>
-TODO(marc1404): Forbid this field when the feature gate AnonymousAuthConfigurableEndpoints has graduated.</p>
+<p>Deprecated: This field is deprecated and will be removed after support for Kubernetes v1.34 is dropped.
+This field is forbidden for clusters with Kubernetes version &gt;= 1.35.
+Please use anonymous authentication configuration instead.</p>
 </td>
 </tr>
 <tr>
