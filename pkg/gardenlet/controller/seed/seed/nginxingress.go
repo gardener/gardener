@@ -69,7 +69,7 @@ func getDNSProviderSecretData(ctx context.Context, gardenClient client.Client, s
 		case *corev1.Secret:
 			return creds.Data, nil
 		case *securityv1alpha1.WorkloadIdentity:
-			return nil, fmt.Errorf("not supported yet") // TODO(vpnachev): Add support for WorkloadIdentity
+			return nil, fmt.Errorf("WorkloadIdentity is not supported as DNS provider credentials") // TODO(vpnachev): Add support for WorkloadIdentity
 		}
 	}
 	return nil, nil
