@@ -709,7 +709,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 				Expect(ValidateNamespacedCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(BeEmpty())
 			})
 
-			It("should forbid decreasing maxNodesTotal", func() {
+			It("should allow decreasing maxNodesTotal", func() {
 				cloudProfileOld.Spec.Limits = &core.Limits{
 					MaxNodesTotal: ptr.To[int32](100),
 				}
@@ -717,10 +717,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 					MaxNodesTotal: ptr.To[int32](10),
 				}
 
-				Expect(ValidateNamespacedCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.limits.maxNodesTotal"),
-				}))))
+				Expect(ValidateNamespacedCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(BeEmpty())
 			})
 		})
 	})
