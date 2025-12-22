@@ -42,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
+	victoriaoperator "github.com/gardener/gardener/pkg/component/observability/logging/victoria/operator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/persesoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
 	opentelemetryoperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
@@ -574,6 +575,11 @@ var _ = Describe("Seed controller tests", func() {
 						"perses.perses.dev",
 						"persesdashboards.perses.dev",
 						"persesdatasources.perses.dev",
+						// victoria-operator
+						"vlagents.operator.victoriametrics.com",
+						"vlclusters.operator.victoriametrics.com",
+						"vlogs.operator.victoriametrics.com",
+						"vlsingles.operator.victoriametrics.com",
 						// opentelemetry-operator
 						"opentelemetrycollectors.opentelemetry.io",
 						"instrumentations.opentelemetry.io",
@@ -641,6 +647,8 @@ var _ = Describe("Seed controller tests", func() {
 					Expect(err).NotTo(HaveOccurred())
 					persesCRD, err := persesoperator.NewCRDs(testClient)
 					Expect(err).NotTo(HaveOccurred())
+					victoriaCRD, err := victoriaoperator.NewCRDs(testClient)
+					Expect(err).NotTo(HaveOccurred())
 					// General CRDs are not deployed when seedIsGarden is true, as they are managed by the gardener-operator.
 					extensionCRD, err := extensionscrds.NewCRD(testClient, true, false)
 					Expect(err).NotTo(HaveOccurred())
@@ -654,6 +662,7 @@ var _ = Describe("Seed controller tests", func() {
 					Expect(component.OpWait(fluentCRD).Deploy(ctx)).To(Succeed())
 					Expect(component.OpWait(prometheusCRD).Deploy(ctx)).To(Succeed())
 					Expect(component.OpWait(persesCRD).Deploy(ctx)).To(Succeed())
+					Expect(component.OpWait(victoriaCRD).Deploy(ctx)).To(Succeed())
 					Expect(component.OpWait(extensionCRD).Deploy(ctx)).To(Succeed())
 					Expect(component.OpWait(openTelemetryCRD).Deploy(ctx)).To(Succeed())
 
@@ -668,6 +677,7 @@ var _ = Describe("Seed controller tests", func() {
 						Expect(fluentCRD.Destroy(ctx)).To(Succeed())
 						Expect(prometheusCRD.Destroy(ctx)).To(Succeed())
 						Expect(persesCRD.Destroy(ctx)).To(Succeed())
+						Expect(victoriaCRD.Destroy(ctx)).To(Succeed())
 						Expect(extensionCRD.Destroy(ctx)).To(Succeed())
 						Expect(openTelemetryCRD.Destroy(ctx)).To(Succeed())
 					})
@@ -716,6 +726,7 @@ var _ = Describe("Seed controller tests", func() {
 						"fluent-operator-custom-resources",
 						"prometheus-operator",
 						"perses-operator",
+						"victoria-operator",
 						"opentelemetry-operator",
 						"opentelemetry-collector",
 					)
