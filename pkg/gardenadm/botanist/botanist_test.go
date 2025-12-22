@@ -358,11 +358,11 @@ apiVersion: security.gardener.cloud/v1alpha1
 kind: WorkloadIdentity
 metadata:
   name: local
-provider:
-  type: local
-credentialsRef:
-  apiVersion: v1
-  kind: Secret
-  name: provider-account
+spec:
+  audiences:
+    - audience1
+  targetSystem:
+    providerConfig: config
+    type: local
 `)}
 }
