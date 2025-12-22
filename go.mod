@@ -81,7 +81,7 @@ require (
 	k8s.io/kubelet v0.34.3
 	k8s.io/metrics v0.34.3
 	k8s.io/pod-security-admission v0.34.3
-	k8s.io/utils v0.0.0-20251220205832-9d40a56c1308
+	k8s.io/utils v0.0.0-20251222233032-718f0e51e6d2
 	sigs.k8s.io/controller-runtime v0.22.4
 	sigs.k8s.io/controller-tools v0.19.0
 	sigs.k8s.io/yaml v1.6.0

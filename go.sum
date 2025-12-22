@@ -1143,8 +1143,8 @@ k8s.io/pod-security-admission v0.34.3/go.mod h1:ureLqfSF+1BrkFIbIImze8LfRMVj48Kg
 k8s.io/sample-controller v0.30.3 h1:oZTxERF8U3gANT2H5VxpkW32asgmW0IYGyUv9Opspvs=
 k8s.io/sample-controller v0.30.3/go.mod h1:yhy/cWCzevQLa2+7Gvj0J9+xzmNExypunffSNANBy7o=
 k8s.io/utils v0.0.0-20200729134348-d5654de09c73/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
-k8s.io/utils v0.0.0-20251220205832-9d40a56c1308 h1:rk+D2uTO79bbNsICltOdVoA6mcJb0NpvBcts+ACymBQ=
-k8s.io/utils v0.0.0-20251220205832-9d40a56c1308/go.mod h1:xDxuJ0whA3d0I4mf/C4ppKHxXynQ+fxnkmQH0vTHnuk=
+k8s.io/utils v0.0.0-20251222233032-718f0e51e6d2 h1:OfgiEo21hGiwx1oJUU5MpEaeOEg6coWndBkZF/lkFuE=
+k8s.io/utils v0.0.0-20251222233032-718f0e51e6d2/go.mod h1:xDxuJ0whA3d0I4mf/C4ppKHxXynQ+fxnkmQH0vTHnuk=
 oras.land/oras-go/v2 v2.6.0 h1:X4ELRsiGkrbeox69+9tzTu492FMUu7zJQW6eJU+I2oc=
 oras.land/oras-go/v2 v2.6.0/go.mod h1:magiQDfG6H1O9APp+rOsvCPcW1GD2MM7vgnKY0Y+u1o=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
