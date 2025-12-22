@@ -11,9 +11,12 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -46,6 +49,11 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 	ItShouldCreateManagedSeed(s)
 	ItShouldWaitForManagedSeedToBeReady(s)
 	ItShouldWaitForSeedToBeReady(s.SeedContext)
+
+	// validate Prometheus health checks are in place for Prometheuses in the seed.
+	itShouldVerifyPrometheusHealthCheck(s, "aggregate")
+	itShouldVerifyPrometheusHealthCheck(s, "cache")
+	itShouldVerifyPrometheusHealthCheck(s, "seed")
 
 	verifier := &rotation.GardenletKubeconfigRotationVerifier{
 		GardenReader:                       s.GardenClient,
@@ -261,4 +269,55 @@ func patchGardenletKubeconfigValiditySettingsAndTriggerRotation(
 	managedSeed.Spec.Gardenlet.Config = *gardenletConfigRaw
 	metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRenewKubeconfig)
 	return gardenClient.Patch(ctx, managedSeed, patch)
+}
+
+func itShouldVerifyPrometheusHealthCheck(s *ManagedSeedContext, prometheusName string) {
+	rule := &monitoringv1.PrometheusRule{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      prometheusName + "-test-job-down",
+			Namespace: "garden",
+			Labels:    map[string]string{"prometheus": prometheusName},
+		},
+		Spec: monitoringv1.PrometheusRuleSpec{
+			Groups: []monitoringv1.RuleGroup{
+				{
+					Name: prometheusName + "-test-job-down",
+					Rules: []monitoringv1.Rule{
+						{
+							Record: "up",
+							Expr:   intstr.FromString("vector(0)"),
+							Labels: map[string]string{"job": "test"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	ItShouldCreatePrometheusRuleForShoot(s.ShootContext, rule)
+
+	It("Wait until SeedSystemComponentsHealthy is false", func(ctx SpecContext) {
+		Eventually(ctx, s.GardenKomega.Object(s.SeedContext.Seed)).Should(
+			HaveField("Status.Conditions", ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(gardencorev1beta1.SeedSystemComponentsHealthy),
+				"Status": Equal(gardencorev1beta1.ConditionFalse),
+				"Reason": Equal("PrometheusHealthCheckDown"),
+				"Message": Equal(`There are health issues in Prometheus pod "garden/prometheus-` + prometheusName + `-0". ` +
+					`Access Prometheus UI and query for "healthcheck" for more details.`),
+			}))),
+		)
+	}, SpecTimeout(10*time.Minute))
+
+	ItShouldDeletePrometheusRuleForShoot(s.ShootContext, rule)
+
+	It("Wait until SeedSystemComponentsHealthy is true", func(ctx SpecContext) {
+		Eventually(ctx, s.GardenKomega.Object(s.SeedContext.Seed)).Should(
+			HaveField("Status.Conditions", ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":    Equal(gardencorev1beta1.SeedSystemComponentsHealthy),
+				"Status":  Equal(gardencorev1beta1.ConditionTrue),
+				"Reason":  Equal("SystemComponentsRunning"),
+				"Message": Equal("All system components are healthy."),
+			}))),
+		)
+	}, SpecTimeout(10*time.Minute))
 }
