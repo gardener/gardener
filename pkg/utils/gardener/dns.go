@@ -74,20 +74,6 @@ func GetDomainInfoFromAnnotations(annotations map[string]string) (provider strin
 	return
 }
 
-// GenerateDNSProviderName creates a name for the dns provider out of the passed `secretName` and `providerType`.
-func GenerateDNSProviderName(secretName, providerType string) string {
-	switch {
-	case secretName != "" && providerType != "":
-		return fmt.Sprintf("%s-%s", providerType, secretName)
-	case secretName != "":
-		return secretName
-	case providerType != "":
-		return providerType
-	default:
-		return ""
-	}
-}
-
 func getIPStackForFamilies(ipFamilies []gardencorev1beta1.IPFamily) string {
 	if gardencorev1beta1.IsIPv4SingleStack(ipFamilies) {
 		return AnnotationValueIPStackIPv4
