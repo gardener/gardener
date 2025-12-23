@@ -12,10 +12,18 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
-// Actuator acts upon BackupBucket resources.
+// Actuator acts upon [extensionsv1alpha1.BackupBucket] resources.
 type Actuator interface {
-	// Reconcile reconciles the BackupBucket.
+	// Reconcile reconciles the [extensionsv1alpha1.BackupBucket] resource.
+	//
+	// Implementations should ensure that the backup bucket is created or
+	// updated to reach the desired state.
 	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.BackupBucket) error
-	// Delete deletes the BackupBucket.
+
+	// Delete is invoked when the [extensionsv1alpha1.BackupBucket]
+	// resource is deleted.
+	//
+	// Implementations must wait until the backup bucket is gracefully
+	// deleted.
 	Delete(context.Context, logr.Logger, *extensionsv1alpha1.BackupBucket) error
 }
