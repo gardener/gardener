@@ -81,7 +81,7 @@ spec:
         {{- if .Values.gardener.runtimeCluster.enabled }}
         - --disable-webhooks=controlplane,dnsconfig,networkpolicy,prometheus,shoot
         - --controllers=backupbucket,dnsrecord,local-ext-shoot
-        - --extension-class=garden
+        - --extension-classes=garden
         {{- else }}
         {{- range .Values.webhooks.prometheus.remoteWriteURLs }}
         - --prometheus-remote-write-url={{ . }}

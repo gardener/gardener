@@ -33,8 +33,8 @@ type AddOptions struct {
 	Controller controller.Options
 	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
 	IgnoreOperationAnnotation bool
-	// ExtensionClass defines the extension class this extension is responsible for.
-	ExtensionClass extensionsv1alpha1.ExtensionClass
+	// ExtensionClasses defines the extension class this extension is responsible for.
+	ExtensionClasses []extensionsv1alpha1.ExtensionClass
 }
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
@@ -43,7 +43,7 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 	return extension.Add(mgr, extension.AddArgs{
 		Actuator:          NewActuator(mgr),
 		ControllerOptions: opts.Controller,
-		ExtensionClasses:  []extensionsv1alpha1.ExtensionClass{opts.ExtensionClass},
+		ExtensionClasses:  opts.ExtensionClasses,
 		Name:              ApplicationName,
 		FinalizerSuffix:   Type,
 		Resync:            60 * time.Minute,

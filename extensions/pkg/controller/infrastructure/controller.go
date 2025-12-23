@@ -51,7 +51,7 @@ type AddArgs struct {
 	// with a present operation annotation typically set during a reconcile (e.g. in the maintenance time) by the Gardenlet
 	IgnoreOperationAnnotation bool
 	// ExtensionClass defines the extension class this extension is responsible for.
-	ExtensionClass extensionsv1alpha1.ExtensionClass
+	ExtensionClasses []extensionsv1alpha1.ExtensionClass
 	// KnownCodes is a map of known error codes and their respective error check functions.
 	KnownCodes map[gardencorev1beta1.ErrorCode]func(string) bool
 }
@@ -69,7 +69,7 @@ func Add(mgr manager.Manager, args AddArgs) error {
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, args AddArgs) error {
-	predicates := predicateutils.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClass, args.Type)
+	predicates := predicateutils.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClasses, args.Type)
 
 	c, err := builder.
 		ControllerManagedBy(mgr).
