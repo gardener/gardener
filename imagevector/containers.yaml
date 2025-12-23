@@ -499,7 +499,7 @@ images:
   - name: node-problem-detector
     sourceRepository: github.com/kubernetes/node-problem-detector
     repository: registry.k8s.io/node-problem-detector/node-problem-detector
-    tag: "v1.34.0"
+    tag: "v1.34.2"
     targetVersion: ">= 1.34"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
