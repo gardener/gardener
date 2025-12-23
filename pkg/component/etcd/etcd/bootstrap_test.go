@@ -176,7 +176,7 @@ webhooks:
 			expectedResources []client.Object
 
 			imageVectorConfigMapName    = "etcd-druid-imagevector-overwrite-4475dd36"
-			operatorConfigConfigMapName = "etcd-druid-operator-config-735336e3"
+			operatorConfigConfigMapName = "etcd-druid-operator-config"
 
 			serviceAccount = &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
@@ -342,13 +342,11 @@ webhooks:
 					Namespace: namespace,
 					Labels: map[string]string{
 						"gardener.cloud/role": "etcd-druid",
-						"resources.gardener.cloud/garbage-collectable-reference": "true",
 					},
 				},
 				Data: map[string]string{
 					"config.yaml": *etcdOperatorConfigYAML,
 				},
-				Immutable: ptr.To(true),
 			}
 
 			deploymentWithoutImageVectorOverwriteFor = &appsv1.Deployment{

@@ -609,7 +609,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	}
 
 	configMapOperatorConfig.Data = map[string]string{druidConfigMapOperatorConfigDataKey: etcdOperatorConfigYAML}
-	utilruntime.Must(kubernetesutils.MakeUnique(configMapOperatorConfig))
 	resourcesToAdd = append(resourcesToAdd, configMapOperatorConfig)
 
 	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
