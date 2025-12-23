@@ -417,6 +417,43 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				})),
 			))
 		})
+
+		It("should allow invalid accepted issuer URLs in shootTemplate on update if they are unchanged", func() {
+			shootCopy := shoot.DeepCopy()
+			shootCopy.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+				ServiceAccountConfig: &core.ServiceAccountConfig{
+					AcceptedIssuers: []string{"https://issuer.com"},
+				},
+			}
+			managedSeedSet.Spec.ShootTemplate.Spec = shootCopy.Spec
+			newManagedSeedSet.Spec.ShootTemplate.Spec = shootCopy.Spec
+
+			errorList := ValidateManagedSeedSetUpdate(newManagedSeedSet, managedSeedSet)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should not allow invalid accepted issuer URLs in shootTemplate on update if they are changed", func() {
+			shootCopy := shoot.DeepCopy()
+			shootCopy.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+				ServiceAccountConfig: &core.ServiceAccountConfig{
+					AcceptedIssuers: []string{"https://issuer.com"},
+				},
+			}
+			managedSeedSet.Spec.ShootTemplate.Spec = shootCopy.Spec
+
+			newShoot := shootCopy.DeepCopy()
+			newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+				AcceptedIssuers: []string{"https://issuer.com#fragment"},
+			}
+			newManagedSeedSet.Spec.ShootTemplate.Spec = newShoot.Spec
+
+			errorList := ValidateManagedSeedSetUpdate(newManagedSeedSet, managedSeedSet)
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.shootTemplate.spec.kubernetes.kubeAPIServer.serviceAccountConfig.acceptedIssuers[0]"),
+				"Detail": Equal("must not contain a fragment"),
+			}))))
+		})
 	})
 
 	Describe("#ValidateManagedSeedSetStatusUpdate", func() {

@@ -3148,6 +3148,33 @@ var _ = Describe("Validation Tests", func() {
 						Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(BeEmpty())
 					})
 				})
+
+				It("should allow invalid accepted issuer URLs on update if they are unchanged", func() {
+					oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.ServiceAccountConfig = &gardencorev1beta1.ServiceAccountConfig{
+						AcceptedIssuers: []string{"http://issuer.com"},
+					}
+
+					newGarden := oldGarden.DeepCopy()
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(BeEmpty())
+				})
+
+				It("should not allow invalid accepted issuer URLs on update if they are changed", func() {
+					oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.ServiceAccountConfig = &gardencorev1beta1.ServiceAccountConfig{
+						AcceptedIssuers: []string{"http://issuer.com"},
+					}
+
+					newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.ServiceAccountConfig = &gardencorev1beta1.ServiceAccountConfig{
+						AcceptedIssuers: []string{"https://issuer.com#fragment"},
+					}
+
+					errorList := ValidateGardenUpdate(oldGarden, newGarden, extensions)
+					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.serviceAccountConfig.acceptedIssuers[0]"),
+						"Detail": Equal("must not contain a fragment"),
+					}))))
+				})
 			})
 		})
 	})

@@ -2958,6 +2958,39 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Entry("contains userinfo", "https://user:pass@issuer.com"),
 					Entry("contains query", "https://issuer.com?x=1"),
 				)
+
+				It("should allow invalid accepted issuer URLs on shoot update if they are unchanged", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+						AcceptedIssuers: []string{"http://issuer.com"},
+					}
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+						AcceptedIssuers: []string{"http://issuer.com"},
+					}
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+
+				It("should not allow invalid accepted issuer URLs on shoot update if they are changed", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+						AcceptedIssuers: []string{"http://issuer.com"},
+					}
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+						AcceptedIssuers: []string{"https://issuer.com#fragment"},
+					}
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+
+					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.acceptedIssuers[0]"),
+						"Detail": Equal("must not contain a fragment"),
+					}))))
+				})
+
 			})
 
 			Context("Autoscaling validation", func() {

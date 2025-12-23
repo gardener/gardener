@@ -175,14 +175,35 @@ var (
 	workerlessErrorMsg = "this field should not be set for workerless Shoot clusters"
 )
 
+type shootValidationOptions struct {
+	KubeAPIServerValidationOptions
+}
+
+// KubeAPIServerValidationOptions are validation options for the KubeAPIServer fields.
+type KubeAPIServerValidationOptions struct {
+	// AllowInvalidAcceptedIssuers specifies whether invalid accepted issuers are allowed.
+	AllowInvalidAcceptedIssuers bool
+}
+
 // ValidateShoot validates a Shoot object.
 func ValidateShoot(shoot *core.Shoot) field.ErrorList {
+	opts := shootValidationOptions{
+		KubeAPIServerValidationOptions: KubeAPIServerValidationOptions{
+			AllowInvalidAcceptedIssuers: false,
+		},
+	}
+
+	return ValidateShootWithOpts(shoot, opts)
+}
+
+// ValidateShootWithOpts validates a Shoot object with the given options.
+func ValidateShootWithOpts(shoot *core.Shoot, opts shootValidationOptions) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&shoot.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateNameConsecutiveHyphens(shoot.Name, field.NewPath("metadata", "name"))...)
 	allErrs = append(allErrs, validateShootOperation(v1beta1helper.GetShootGardenerOperations(shoot.Annotations), v1beta1helper.GetShootMaintenanceOperations(shoot.Annotations), shoot, field.NewPath("metadata", "annotations"))...)
-	allErrs = append(allErrs, ValidateShootSpec(shoot.ObjectMeta, &shoot.Spec, field.NewPath("spec"), false)...)
+	allErrs = append(allErrs, ValidateShootSpec(shoot.ObjectMeta, &shoot.Spec, opts, field.NewPath("spec"), false)...)
 	allErrs = append(allErrs, ValidateShootHAConfig(shoot)...)
 
 	return allErrs
@@ -191,6 +212,13 @@ func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 // ValidateShootUpdate validates a Shoot object before an update.
 func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
+	opts := shootValidationOptions{
+		KubeAPIServerValidationOptions: KubeAPIServerValidationOptions{
+			AllowInvalidAcceptedIssuers: oldShoot.Spec.Kubernetes.KubeAPIServer != nil && newShoot.Spec.Kubernetes.KubeAPIServer != nil &&
+				oldShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil && newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil &&
+				apiequality.Semantic.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers, newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers),
+		},
+	}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newShoot.ObjectMeta, &oldShoot.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateShootObjectMetaUpdate(newShoot.ObjectMeta, oldShoot.ObjectMeta, field.NewPath("metadata"))...)
@@ -223,7 +251,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	}
 
 	allErrs = append(allErrs, ValidateEncryptionConfigUpdate(newEncryptionConfig, oldEncryptionConfig, encryptedResources, etcdEncryptionKeyRotation, hibernationEnabled, field.NewPath("spec", "kubernetes", "kubeAPIServer", "encryptionConfig"))...)
-	allErrs = append(allErrs, ValidateShoot(newShoot)...)
+	allErrs = append(allErrs, ValidateShootWithOpts(newShoot, opts)...)
 	allErrs = append(allErrs, ValidateShootHAConfigUpdate(newShoot, oldShoot)...)
 	allErrs = append(allErrs, validateHibernationUpdate(newShoot, oldShoot)...)
 	allErrs = append(allErrs, ValidateForceDeletion(newShoot, oldShoot)...)
@@ -234,12 +262,16 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 }
 
 // ValidateShootTemplate validates a ShootTemplate.
-func ValidateShootTemplate(shootTemplate *core.ShootTemplate, fldPath *field.Path) field.ErrorList {
+func ValidateShootTemplate(shootTemplate *core.ShootTemplate, opts KubeAPIServerValidationOptions, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	shootValidationOptions := shootValidationOptions{
+		KubeAPIServerValidationOptions: opts,
+	}
 
 	allErrs = append(allErrs, metav1validation.ValidateLabels(shootTemplate.Labels, fldPath.Child("metadata", "labels"))...)
 	allErrs = append(allErrs, apivalidation.ValidateAnnotations(shootTemplate.Annotations, fldPath.Child("metadata", "annotations"))...)
-	allErrs = append(allErrs, ValidateShootSpec(shootTemplate.ObjectMeta, &shootTemplate.Spec, fldPath.Child("spec"), true)...)
+	allErrs = append(allErrs, ValidateShootSpec(shootTemplate.ObjectMeta, &shootTemplate.Spec, shootValidationOptions, fldPath.Child("spec"), true)...)
 
 	return allErrs
 }
@@ -264,7 +296,7 @@ func ValidateShootObjectMetaUpdate(_, _ metav1.ObjectMeta, _ *field.Path) field.
 }
 
 // ValidateShootSpec validates the specification of a Shoot object.
-func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootValidationOptions, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	var (
 		allErrs       = field.ErrorList{}
 		workerless    = len(spec.Provider.Workers) == 0
@@ -277,7 +309,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, ValidateResources(spec.Resources, fldPath.Child("resources"), true)...)
-	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, workerless, fldPath.Child("kubernetes"))...)
+	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, opts, workerless, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateNetworking(spec.Networking, workerless, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"), workerless)...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
@@ -974,7 +1006,7 @@ func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
 	return allErrs
 }
 
-func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking, workerless bool, fldPath *field.Path) field.ErrorList {
+func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking, opts shootValidationOptions, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(kubernetes.Version) == 0 {
@@ -983,7 +1015,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 	}
 
 	allErrs = append(allErrs, validateETCD(kubernetes.ETCD, fldPath.Child("etcd"))...)
-	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, workerless, gardenerutils.DefaultGroupResourcesForEncryption(), fldPath.Child("kubeAPIServer"))...)
+	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, opts.KubeAPIServerValidationOptions, workerless, gardenerutils.DefaultGroupResourcesForEncryption(), fldPath.Child("kubeAPIServer"))...)
 	allErrs = append(allErrs, ValidateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)
 
 	if workerless {
@@ -1565,7 +1597,7 @@ func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
 }
 
 // ValidateKubeAPIServer validates KubeAPIServerConfig.
-func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version string, workerless bool, defaultEncryptedResources []schema.GroupResource, fldPath *field.Path) field.ErrorList {
+func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version string, opts KubeAPIServerValidationOptions, workerless bool, defaultEncryptedResources []schema.GroupResource, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kubeAPIServer == nil {
@@ -1691,7 +1723,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 		if kubeAPIServer.ServiceAccountConfig.Issuer != nil {
 			allErrs = append(allErrs, ValidateOIDCIssuerURL(*kubeAPIServer.ServiceAccountConfig.Issuer, fldPath.Child("serviceAccountConfig", "issuer"))...)
 		}
-		if len(kubeAPIServer.ServiceAccountConfig.AcceptedIssuers) > 0 {
+		if len(kubeAPIServer.ServiceAccountConfig.AcceptedIssuers) > 0 && !opts.AllowInvalidAcceptedIssuers {
 			issuers := sets.New[string]()
 			if kubeAPIServer.ServiceAccountConfig.Issuer != nil {
 				issuers.Insert(*kubeAPIServer.ServiceAccountConfig.Issuer)
