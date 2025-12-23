@@ -328,7 +328,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 			// This means, these tests might fail if the core logic is changed. This is good, because technically both packages
 			// belong together, and we want to make sure that extensions using the wrapped SecretsManager do exactly the right
 			// thing during CA rotation, otherwise things will be messed up.
-			sm, err = SecretsManagerForGarden(ctx, logr.Discard(), fakeClock, fakeClient, garden, testIdentity, secretConfigs)
+			sm, err = SecretsManagerForGarden(ctx, logr.Discard(), fakeClock, fakeClient, garden, testIdentity, secretConfigs, garden.Name)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
