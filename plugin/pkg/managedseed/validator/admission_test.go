@@ -541,7 +541,6 @@ var _ = Describe("ManagedSeed", func() {
 					Provider: gardencorev1beta1.SeedProvider{
 						Type:   "bar-provider",
 						Region: "bar-region",
-						Zones:  []string{"foo", "bar"},
 					},
 					Settings: &gardencorev1beta1.SeedSettings{
 						VerticalPodAutoscaler: &gardencorev1beta1.SeedSettingVerticalPodAutoscaler{
@@ -601,11 +600,6 @@ var _ = Describe("ManagedSeed", func() {
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.gardenlet.config.seedConfig.spec.settings.verticalPodAutoscaler.enabled"),
 						"Detail": ContainSubstring("seed VPA is not supported for managed seeds - use the shoot VPA"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.gardenlet.config.seedConfig.spec.provider.zones"),
-						"Detail": ContainSubstring("[\"foo\",\"bar\"]: cannot use zone in seed provider that is not available in referenced shoot"),
 					})),
 				))
 			})
@@ -712,198 +706,6 @@ var _ = Describe("ManagedSeed", func() {
 					Expect(err).NotTo(HaveOccurred())
 				})
 			})
-
-			Context("ManagedSeed Update", func() {
-				var (
-					ctx            = context.Background()
-					newManagedSeed *seedmanagement.ManagedSeed
-				)
-
-				BeforeEach(func() {
-					gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
-							Kind:       "GardenletConfiguration",
-						},
-						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
-							SeedTemplate: gardencorev1beta1.SeedTemplate{
-								Spec: gardencorev1beta1.SeedSpec{
-									Ingress: seedx.Spec.Ingress,
-									Provider: gardencorev1beta1.SeedProvider{
-										Zones: []string{zone1, zone2},
-									},
-								},
-							},
-						},
-					}
-					managedSeed.Spec.Gardenlet = seedmanagement.GardenletConfig{Config: gardenletConfig}
-					newManagedSeed = managedSeed.DeepCopy()
-
-					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
-				})
-
-				It("should allow zone removal when there are no shoots running on seed", func() {
-					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
-					shoot.Spec.Provider.Workers[0].Zones = []string{zone2}
-					newGardenletConfig.SeedConfig.Spec.Provider.Zones = shoot.Spec.Provider.Workers[0].Zones
-
-					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
-						return true, shoot, nil
-					})
-					Expect(admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)).To(Succeed())
-				})
-
-				It("should forbid zone removal when at least one shoot is scheduled to seed", func() {
-					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
-					shoot.Spec.Provider.Workers[0].Zones = []string{zone2}
-					newGardenletConfig.SeedConfig.Spec.Provider.Zones = shoot.Spec.Provider.Workers[0].Zones
-
-					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
-						return true, shoot, nil
-					})
-
-					shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &newManagedSeed.Name}}
-					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
-
-					err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
-					Expect(err).To(BeInvalidError())
-					Expect(getErrorList(err)).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeForbidden),
-							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.provider.zones"),
-							"Detail": ContainSubstring("zones must not be removed while shoots are still scheduled onto seed"),
-						})),
-					))
-				})
-
-				It("should forbid adding a new zone that is not part of shoot workers", func() {
-					// add a new zone to shoot workers
-					shoot.Spec.Provider.Workers[0].Zones = append(shoot.Spec.Provider.Workers[0].Zones, "zone-bar")
-
-					// add a different zone name to ManagedSeed config
-					gardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
-					gardenletConfig.SeedConfig.Spec.Provider.Zones = append(gardenletConfig.SeedConfig.Spec.Provider.Zones, "zone-foo")
-
-					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
-						return true, shoot, nil
-					})
-
-					shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &newManagedSeed.Name}}
-					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
-
-					err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
-					Expect(err).To(BeInvalidError())
-					Expect(getErrorList(err)).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.provider.zones"),
-							"Detail": ContainSubstring("added zones must match zone names configured for workers in the referenced shoot cluster"),
-						})),
-					))
-				})
-
-				It("should only forbid the newly added zone because of a naming mismatch", func() {
-					// add a third zone so that we don't get a mismatch w.r.t. number of zones
-					shoot.Spec.Provider.Workers[0].Zones = append(shoot.Spec.Provider.Workers[0].Zones, "zone-3")
-
-					// create an artificial mismatch in zone names between the seed config and the shoot
-					gardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
-					gardenletConfig.SeedConfig.Spec.Provider.Zones = []string{"zone-foo", "zone-bar"}
-
-					// zones should still be configured in new ManagedSeed, plus an additional non-existing one
-					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
-					newGardenletConfig.SeedConfig.Spec.Provider.Zones = []string{"zone-foo", "zone-bar", "zone-foobar"}
-
-					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
-						return true, shoot, nil
-					})
-
-					err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
-					Expect(err).To(BeInvalidError())
-					Expect(getErrorList(err)).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.provider.zones"),
-							"Detail": ContainSubstring("[\"zone-foobar\"]: added zones must match zone names configured for workers in the referenced shoot cluster"),
-						})),
-					))
-				})
-
-				It("should forbid internal domain change when at least one shoot is scheduled to seed", func() {
-					oldGardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
-					oldGardenletConfig.SeedConfig.Spec.DNS.Internal = &gardencorev1beta1.SeedDNSProviderConfig{
-						Domain: "old.internal",
-					}
-
-					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
-					newGardenletConfig.SeedConfig.Spec.DNS.Internal = &gardencorev1beta1.SeedDNSProviderConfig{
-						Domain: "new.internal",
-					}
-
-					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
-						return true, shoot, nil
-					})
-
-					shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &newManagedSeed.Name}}
-					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
-
-					err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
-					Expect(err).To(BeInvalidError())
-					Expect(getErrorList(err)).To(ContainElement(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeForbidden),
-							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.dns.internal.domain"),
-							"Detail": ContainSubstring("internal domain must not be changed while shoots are still scheduled onto seed"),
-						})),
-					))
-				})
-
-				It("should forbid default domain change when at least one shoot is scheduled to seed", func() {
-					oldGardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
-					oldGardenletConfig.SeedConfig.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
-						{
-							Type:   "aws-route53",
-							Domain: "old-default.com",
-						},
-						{
-							Type:   "gcp-clouddns",
-							Domain: "another-default.com",
-						},
-					}
-
-					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
-					newGardenletConfig.SeedConfig.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
-						{
-							Type:   "aws-route53",
-							Domain: "old-default.com",
-						},
-					}
-
-					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
-						return true, shoot, nil
-					})
-
-					shoot := &gardencorev1beta1.Shoot{
-						Spec: gardencorev1beta1.ShootSpec{
-							SeedName: &newManagedSeed.Name,
-							DNS: &gardencorev1beta1.DNS{
-								Domain: ptr.To("my-shoot.another-default.com"),
-							},
-						},
-					}
-					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
-
-					err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
-					Expect(err).To(BeInvalidError())
-					Expect(getErrorList(err)).To(ContainElement(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeForbidden),
-							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.dns.defaults"),
-							"Detail": ContainSubstring("default domains must not be removed while shoots are still using them"),
-						})),
-					))
-				})
-			})
 		})
 	})
 
@@ -928,6 +730,23 @@ var _ = Describe("ManagedSeed", func() {
 				Spec: seedmanagement.ManagedSeedSpec{
 					Shoot: &seedmanagement.Shoot{
 						Name: name,
+					},
+					Gardenlet: seedmanagement.GardenletConfig{
+						Config: &gardenletconfigv1alpha1.GardenletConfiguration{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
+								Kind:       "GardenletConfiguration",
+							},
+							SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+								SeedTemplate: gardencorev1beta1.SeedTemplate{
+									Spec: gardencorev1beta1.SeedSpec{
+										Provider: gardencorev1beta1.SeedProvider{
+											Zones: []string{zone1, zone2},
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			}
@@ -1084,7 +903,7 @@ var _ = Describe("ManagedSeed", func() {
 
 			err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
 			Expect(err).To(BeInvalidError())
-			Expect(getErrorList(err)).To(ConsistOf(
+			Expect(getErrorList(err)).To(ContainElement(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.shoot.name"),
@@ -1125,6 +944,225 @@ var _ = Describe("ManagedSeed", func() {
 			It("should allow the ManagedSeed creation if the Shoot exists and can be registered as Seed", func() {
 				err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
 				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should forbid the ManagedSeed creation if the seed spec contains invalid values", func() {
+				seedSpec := gardencorev1beta1.SeedSpec{
+					Provider: gardencorev1beta1.SeedProvider{
+						Zones: []string{"foo", "bar"},
+					},
+				}
+
+				managedSeed.Spec.Gardenlet.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
+						Kind:       "GardenletConfiguration",
+					},
+					SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+						SeedTemplate: gardencorev1beta1.SeedTemplate{
+							Spec: seedSpec,
+						},
+					},
+				}
+
+				err := admissionHandler.Validate(ctx, getManagedSeedAttributes(managedSeed), nil)
+				Expect(err).To(BeInvalidError())
+				Expect(getErrorList(err)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.gardenlet.config.seedConfig.spec.provider.zones"),
+						"Detail": ContainSubstring("[\"foo\",\"bar\"]: cannot use zone in seed provider that is not available in referenced shoot"),
+					})),
+				))
+			})
+
+			Context("ManagedSeed Update", func() {
+				var (
+					ctx            = context.Background()
+					newManagedSeed *seedmanagement.ManagedSeed
+				)
+
+				BeforeEach(func() {
+					gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{
+								Spec: gardencorev1beta1.SeedSpec{
+									Provider: gardencorev1beta1.SeedProvider{
+										Zones: []string{zone1, zone2},
+									},
+								},
+							},
+						},
+					}
+					managedSeed.Spec.Gardenlet = seedmanagement.GardenletConfig{Config: gardenletConfig}
+					newManagedSeed = managedSeed.DeepCopy()
+				})
+
+				It("should allow zone removal when there are no shoots running on seed", func() {
+					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					shoot.Spec.Provider.Workers[0].Zones = []string{zone2}
+					newGardenletConfig.SeedConfig.Spec.Provider.Zones = shoot.Spec.Provider.Workers[0].Zones
+
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, shoot, nil
+					})
+					Expect(admissionHandler.Validate(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)).To(Succeed())
+				})
+
+				It("should forbid zone removal when at least one shoot is scheduled to seed", func() {
+					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					shoot.Spec.Provider.Workers[0].Zones = []string{zone2}
+					newGardenletConfig.SeedConfig.Spec.Provider.Zones = shoot.Spec.Provider.Workers[0].Zones
+
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, shoot, nil
+					})
+
+					shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &newManagedSeed.Name}}
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+
+					err := admissionHandler.Validate(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
+					Expect(err).To(BeInvalidError())
+					Expect(getErrorList(err)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.provider.zones"),
+							"Detail": ContainSubstring("zones must not be removed while shoots are still scheduled onto seed"),
+						})),
+					))
+				})
+
+				It("should forbid adding a new zone that is not part of shoot workers", func() {
+					// add a new zone to shoot workers
+					shoot.Spec.Provider.Workers[0].Zones = append(shoot.Spec.Provider.Workers[0].Zones, "zone-bar")
+
+					// add a different zone name to ManagedSeed config
+					gardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					gardenletConfig.SeedConfig.Spec.Provider.Zones = append(gardenletConfig.SeedConfig.Spec.Provider.Zones, "zone-foo")
+
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, shoot, nil
+					})
+
+					shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &newManagedSeed.Name}}
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+
+					err := admissionHandler.Validate(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
+					Expect(err).To(BeInvalidError())
+					Expect(getErrorList(err)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.provider.zones"),
+							"Detail": ContainSubstring("added zones must match zone names configured for workers in the referenced shoot cluster"),
+						})),
+					))
+				})
+
+				It("should only forbid the newly added zone because of a naming mismatch", func() {
+					// add a third zone so that we don't get a mismatch w.r.t. number of zones
+					shoot.Spec.Provider.Workers[0].Zones = append(shoot.Spec.Provider.Workers[0].Zones, "zone-3")
+
+					// create an artificial mismatch in zone names between the seed config and the shoot
+					gardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					gardenletConfig.SeedConfig.Spec.Provider.Zones = []string{"zone-foo", "zone-bar"}
+
+					// zones should still be configured in new ManagedSeed, plus an additional non-existing one
+					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					newGardenletConfig.SeedConfig.Spec.Provider.Zones = []string{"zone-foo", "zone-bar", "zone-foobar"}
+
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, shoot, nil
+					})
+
+					err := admissionHandler.Validate(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
+					Expect(err).To(BeInvalidError())
+					Expect(getErrorList(err)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.provider.zones"),
+							"Detail": ContainSubstring("[\"zone-foobar\"]: added zones must match zone names configured for workers in the referenced shoot cluster"),
+						})),
+					))
+				})
+
+				It("should forbid internal domain change when at least one shoot is scheduled to seed", func() {
+					oldGardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					oldGardenletConfig.SeedConfig.Spec.DNS.Internal = &gardencorev1beta1.SeedDNSProviderConfig{
+						Domain: "old.internal",
+					}
+
+					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					newGardenletConfig.SeedConfig.Spec.DNS.Internal = &gardencorev1beta1.SeedDNSProviderConfig{
+						Domain: "new.internal",
+					}
+
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, shoot, nil
+					})
+
+					shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &newManagedSeed.Name}}
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+
+					err := admissionHandler.Validate(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
+					Expect(err).To(BeInvalidError())
+					Expect(getErrorList(err)).To(ContainElement(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.dns.internal.domain"),
+							"Detail": ContainSubstring("internal domain must not be changed while shoots are still scheduled onto seed"),
+						})),
+					))
+				})
+
+				It("should forbid default domain change when at least one shoot is scheduled to seed", func() {
+					oldGardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					oldGardenletConfig.SeedConfig.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
+						{
+							Type:   "aws-route53",
+							Domain: "old-default.com",
+						},
+						{
+							Type:   "gcp-clouddns",
+							Domain: "another-default.com",
+						},
+					}
+
+					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					newGardenletConfig.SeedConfig.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
+						{
+							Type:   "aws-route53",
+							Domain: "old-default.com",
+						},
+					}
+
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, shoot, nil
+					})
+
+					shoot := &gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							SeedName: &newManagedSeed.Name,
+							DNS: &gardencorev1beta1.DNS{
+								Domain: ptr.To("my-shoot.another-default.com"),
+							},
+						},
+					}
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+
+					err := admissionHandler.Validate(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
+					Expect(err).To(BeInvalidError())
+					Expect(getErrorList(err)).To(ContainElement(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.dns.defaults"),
+							"Detail": ContainSubstring("default domains must not be removed while shoots are still using them"),
+						})),
+					))
+				})
 			})
 		})
 	})
