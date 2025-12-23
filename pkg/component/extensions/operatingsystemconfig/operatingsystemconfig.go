@@ -597,18 +597,20 @@ func (o *operatingSystemConfig) getWantedOSCNames(ctx context.Context) (sets.Set
 		}
 	}
 
-	mdList := &v1alpha1.MachineDeploymentList{}
+	mdList := &v1alpha1.MachineList{}
 	if err := o.client.List(ctx, mdList, client.InNamespace(o.values.Namespace), client.HasLabels{}); err != nil {
-		return nil, fmt.Errorf("failed to list MachineDeployments: %w", err)
+		return nil, fmt.Errorf("failed to list Machines: %w", err)
 	}
 
-	for _, md := range mdList.Items {
-		_, ok := md.Labels[gardencorev1beta1constants.LabelWorkerPool]
-		if !ok {
-			continue // Skip MDs that don't have the worker pool label
-		}
+	for _, machine := range mdList.Items {
+		o.log.Info("machine name", "name", machine.Name)
+		//_, ok := machine.Labels[gardencorev1beta1constants.LabelWorkerPool]
+		//if !ok {
+		//	continue // Skip MDs that don't have the worker pool label
+		//}
 
-		if val, ok := md.Spec.Template.Spec.NodeTemplateSpec.ObjectMeta.Labels[gardencorev1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]; ok {
+		if val, ok := machine.Spec.NodeTemplateSpec.ObjectMeta.Labels[gardencorev1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]; ok {
+			o.log.Info("found wanted OSC name from existing machine", "oscName", val, "machineName", machine.Name)
 			wantedOSCNames.Insert(val)
 			continue
 		}
