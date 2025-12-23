@@ -712,6 +712,31 @@ var _ = Describe("Strategy", func() {
 			})
 		})
 
+		Context("enableAnonymousAuthentication", func() {
+			It("should set spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication to nil when it is false", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(false)}
+				strategy.Canonicalize(shoot)
+				Expect(shoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(BeNil())
+			})
+
+			It("should not set spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication to nil when it is true", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)}
+				strategy.Canonicalize(shoot)
+				Expect(shoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(Equal(ptr.To(true)))
+			})
+
+			It("should not panic when spec.kubernetes.kubeAPIServer is nil", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer = nil
+				Expect(func() { strategy.Canonicalize(shoot) }).NotTo(Panic())
+			})
+
+			It("should not panic when spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication is nil", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{EnableAnonymousAuthentication: nil}
+				Expect(func() { strategy.Canonicalize(shoot) }).NotTo(Panic())
+				Expect(shoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(BeNil())
+			})
+		})
+
 		Context("self-hosted shoots", func() {
 			It("should correctly add the self-hosted label", func() {
 				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, core.Worker{ControlPlane: &core.WorkerControlPlane{}})

@@ -975,10 +975,9 @@ type KubeAPIServerConfig struct {
 	// of the API server should be allowed (flag `--anonymous-auth`).
 	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
 	//
-	// Deprecated: This field is deprecated and will be removed in a future release.
+	// Deprecated: This field is deprecated and will be removed after support for Kubernetes v1.34 is dropped.
+	// This field is forbidden for clusters with Kubernetes version >= 1.35.
 	// Please use anonymous authentication configuration instead.
-	// For more information see: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration
-	// TODO(marc1404): Forbid this field when the feature gate AnonymousAuthConfigurableEndpoints has graduated.
 	// +optional
 	EnableAnonymousAuthentication *bool `json:"enableAnonymousAuthentication,omitempty" protobuf:"varint,11,opt,name=enableAnonymousAuthentication"`
 	// EventTTL controls the amount of time to retain events.

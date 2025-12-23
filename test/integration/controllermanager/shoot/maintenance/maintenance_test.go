@@ -133,6 +133,9 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 						{
 							Version: "1.34.0",
 						},
+						{
+							Version: "1.35.0",
+						},
 						testKubernetesVersionLowPatchLowMinor,
 						testKubernetesVersionHighestPatchLowMinor,
 						testKubernetesVersionLowPatchConsecutiveMinor,
@@ -1135,6 +1138,43 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 					g.Expect(shoot131.Spec.Kubernetes.KubeAPIServer.OIDCConfig).To(BeNil())
 					return shoot131.Spec.Kubernetes.Version
 				}).Should(Equal("1.32.0"))
+			})
+
+			It("Kubernetes version should be updated: force update minor version(>= v1.35) and set spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication to nil", func() {
+				shoot134 := shoot133.DeepCopy()
+				shoot134.Spec.Kubernetes.Version = "1.34.0"
+				shoot134.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+					EnableAnonymousAuthentication: ptr.To(true),
+				}
+				shoot134.Spec.SecretBindingName = nil
+				shoot134.Spec.CredentialsBindingName = ptr.To("credentials-binding")
+
+				By("Create k8s v1.34 Shoot")
+				Expect(testClient.Create(ctx, shoot134)).To(Succeed())
+				log.Info("Created shoot with k8s v1.34 for test", "shoot", client.ObjectKeyFromObject(shoot134))
+
+				DeferCleanup(func() {
+					By("Delete Shoot with k8s v1.34")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot134))).To(Succeed())
+				})
+
+				By("Expire Shoot's kubernetes version in the CloudProfile")
+				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, shoot134.Spec.CloudProfile.Name, "1.34.0", &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+
+				By("Wait until manager has observed the CloudProfile update")
+				waitKubernetesVersionToBeExpiredInCloudProfile(shoot134.Spec.CloudProfile.Name, "1.34.0", &expirationDateInThePast)
+
+				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot134, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+
+				Eventually(func(g Gomega) string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot134), shoot134)).To(Succeed())
+					g.Expect(shoot134.Status.LastMaintenance).NotTo(BeNil())
+					g.Expect(shoot134.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.34.0\" to \"1.35.0\". Reason: Kubernetes version expired - force update required, .spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication is set to nil. Reason: The field is no longer supported for Shoot clusters using Kubernetes version 1.35+"))
+					g.Expect(shoot134.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot134.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
+					g.Expect(shoot134.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(BeNil())
+					return shoot134.Spec.Kubernetes.Version
+				}).Should(Equal("1.35.0"))
 			})
 
 			It("Kubernetes version should be updated: force update minor version", func() {

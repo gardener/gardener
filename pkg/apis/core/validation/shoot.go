@@ -1622,6 +1622,11 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 		}
 	}
 
+	k8sGreaterEqual135, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.35")
+	if kubeAPIServer.EnableAnonymousAuthentication != nil && k8sGreaterEqual135 {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("enableAnonymousAuthentication"), "for Kubernetes versions >= 1.35, enableAnonymousAuthentication field is no longer supported"))
+	}
+
 	allErrs = append(allErrs, admissionpluginsvalidation.ValidateAdmissionPlugins(kubeAPIServer.AdmissionPlugins, version, fldPath.Child("admissionPlugins"))...)
 	allErrs = append(allErrs, apigroupsvalidation.ValidateAPIGroupVersions(kubeAPIServer.RuntimeConfig, version, workerless, fldPath.Child("runtimeConfig"))...)
 
