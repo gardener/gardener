@@ -38,6 +38,11 @@ func (p *prometheus) ingress(ctx context.Context) (*networkingv1.Ingress, error)
 		tlsSecretName = ingressTLSSecret.Name
 	}
 
+	backendPort := servicePorts.Web.Port
+	if p.values.Cortex != nil {
+		backendPort = servicePorts.Cortex.Port
+	}
+
 	obj := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.name(),
@@ -63,7 +68,7 @@ func (p *prometheus) ingress(ctx context.Context) (*networkingv1.Ingress, error)
 							Backend: networkingv1.IngressBackend{
 								Service: &networkingv1.IngressServiceBackend{
 									Name: p.name(),
-									Port: networkingv1.ServiceBackendPort{Number: servicePort},
+									Port: networkingv1.ServiceBackendPort{Number: backendPort},
 								},
 							},
 							Path:     "/",

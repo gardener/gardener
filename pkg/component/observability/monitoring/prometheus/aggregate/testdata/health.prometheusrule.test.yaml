@@ -1,0 +1,302 @@
+rule_files:
+  - health.prometheusrule.yaml
+
+# A query such as
+#
+#   actual != expectation or actual unless expectation or expectation unless actual
+#
+# makes sure actual and expectation are identical.
+
+tests:
+  # New jobs should report a health issue as soon as they are down.
+  - input_series:
+      - series: up{job="foo"}
+        values: 0
+
+      - series: metering:cpu_requests:sum_by_namespace{job="prometheus", namespace="garden"}
+        values: 100
+    promql_expr_test:
+      - expr: healthcheck:alert
+        eval_time: 0m
+        exp_samples:
+          - labels: healthcheck:alert
+            value: 1
+
+  # Existing jobs should wait 5m before reporting a health issue.
+  - input_series:
+      - series: up{job="foo"}
+        values: 1     0     0     0     0     0
+      - series: expectation
+        values: stale stale stale stale stale 1
+
+      - series: metering:cpu_requests:sum_by_namespace{job="prometheus", namespace="garden"}
+        values: 100x5
+    promql_expr_test:
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 0m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 1m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 2m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 3m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 4m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 5m
+
+  # New scrape pools should report a health issue if they have no targets.
+  - input_series:
+      - series: prometheus_target_scrape_pool_targets{job="foo"}
+        values: 0
+
+      - series: metering:cpu_requests:sum_by_namespace{job="prometheus", namespace="garden"}
+        values: 100
+    promql_expr_test:
+      - expr: healthcheck:alert
+        eval_time: 0m
+        exp_samples:
+          - labels: healthcheck:alert
+            value: 1
+
+  # Existing scrape pools should wait 5m before reporting a health issue if they have no targets.
+  - input_series:
+      - series: prometheus_target_scrape_pool_targets{job="foo"}
+        values: 1     0     0     0     0     0
+      - series: expectation
+        values: stale stale stale stale stale 1
+
+      - series: metering:cpu_requests:sum_by_namespace{job="prometheus", namespace="garden"}
+        values: 100x5
+    promql_expr_test:
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 0m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 1m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 2m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 3m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 4m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 5m
+
+  # Jobs should report a health issue if they flap.
+  - input_series:
+      - series: indentation
+        values: stale stale stale stale stale stale stale stale stale stale stale stale
+      - series: eval_time
+        values: 0     1     2     3     4     5     6     7     8     9     10    11
+
+      - series: up{job="foo"}
+        values: 1     0     1     0     1     0     1     1     1     1     1     1
+      - series: expectation
+        values: stale stale stale stale stale 1     1     1     1     1     1     stale
+
+      - series: metering:cpu_requests:sum_by_namespace{job="prometheus", namespace="garden"}
+        values: 100x11
+    promql_expr_test:
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 0m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 1m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 2m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 3m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 4m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 5m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 6m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 7m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 8m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 9m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 10m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 11m
+
+  # No health issues if everything is fine.
+  - input_series:
+      - series: up{job="foo"}
+        values: 1
+      - series: scrape_samples_scraped{job="foo"}
+        values: 100
+      - series: metering:cpu_requests:sum_by_namespace{job="prometheus", namespace="garden"}
+        values: 100
+    promql_expr_test:
+      - expr: healthcheck:alert
+        eval_time: 0m
+
+  # Issues on missing data should trigger if there are no jobs deployed.
+  - promql_expr_test:
+      - expr: healthcheck:alert
+        eval_time: 0m
+        exp_samples:
+          - labels: healthcheck:alert
+            value: 1
+
+  # Health issues for failing jobs should be dropped as soon as the jobs are removed.
+  - input_series:
+      - series: up{job="foo"}
+        values: 1     0     0     0     0     0 stale
+      - series: up{job="bar"}
+        values: 1     0     1     0     1     0 stale
+      - series: expectation
+        values: stale stale stale stale stale 2 stale
+
+      - series: metering:cpu_requests:sum_by_namespace{job="prometheus", namespace="garden"}
+        values: 100x6
+    promql_expr_test:
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 0m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 1m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 2m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 3m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 4m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 5m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 6m
+
+  # Jobs are up but scrapes are missing.
+  - input_series:
+      - series: up{job="foo"}
+        values: 1
+      - series: scrape_samples_scraped{job="foo"}
+        values: 0
+
+      - series: metering:cpu_requests:sum_by_namespace{job="prometheus", namespace="garden"}
+        values: 100
+    promql_expr_test:
+      - expr: healthcheck:alert
+        eval_time: 0m
+        exp_samples:
+          - labels: healthcheck:alert
+            value: 1
+
+  # The shoot-prometheus job should be ignored.
+  - input_series:
+      - series: up{job="foo"}
+        values: 1     0     0     0     0     0
+      - series: up{job="shoot-prometheus"}
+        values: 1     0     0     0     0     0
+      - series: expectation
+        values: stale stale stale stale stale 1
+
+      - series: metering:cpu_requests:sum_by_namespace{job="prometheus", namespace="garden"}
+        values: 100x5
+    promql_expr_test:
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 0m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 1m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 2m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 3m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 4m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 5m
+
+  - input_series:
+      - series: up{job="foo"}
+        values: 1     0     1     0     1     0
+      - series: up{job="shoot-prometheus"}
+        values: 1     0     1     0     1     0
+      - series: expectation
+        values: stale stale stale stale stale 1
+
+      - series: metering:cpu_requests:sum_by_namespace{job="prometheus", namespace="garden"}
+        values: 100x5
+    promql_expr_test:
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 0m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 1m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 2m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 3m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 4m
+      - expr: healthcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 5m
+
+  - input_series:
+      - series: up{job="foo"}
+        values: 1
+      - series: scrape_samples_scraped{job="foo"}
+        values: 100
+      - series: up{job="shoot-prometheus"}
+        values: 1
+      - series: scrape_samples_scraped{job="shoot-prometheus"}
+        values: 0
+
+      - series: metering:cpu_requests:sum_by_namespace{job="prometheus", namespace="garden"}
+        values: 100
+    promql_expr_test:
+      - expr: healthcheck:alert
+        eval_time: 0m
+
+  # Flapping
+  # - The first value counts as a change.
+  - input_series:
+      - series: indentation
+        values: stale stale stale stale stale stale stale stale stale stale stale stale stale stale stale stale
+      - series: eval_time
+        values: 0     1     2     3     4     5     6     7     8     9     10    11    12    13    14    15
+
+      - series: scrape_samples_scraped{job="foo"}
+        values: 0     0     100   0     0     100   0     0     100   0     0     100   100   100   100   100
+      - series: expectation
+        values: 1     1     stale 1     1     stale 1     1     stale 1     1     stale stale stale stale stale
+      - series: expectation{flapping="true"}
+        values: stale stale stale stale stale stale 5     5     6     7     6     7     6     5     5     stale
+
+      - series: metering:cpu_requests:sum_by_namespace{job="prometheus", namespace="garden"}
+        values: 100x15
+    promql_expr_test:
+      - expr: healtcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 0m
+      - expr: healtcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 1m
+      - expr: healtcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 2m
+      - expr: healtcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 3m
+      - expr: healtcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 4m
+      - expr: healtcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 5m
+      - expr: healtcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 6m
+      - expr: healtcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 7m
+      - expr: healtcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 8m
+      - expr: healtcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 9m
+      - expr: healtcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 10m
+      - expr: healtcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 11m
+      - expr: healtcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 12m
+      - expr: healtcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 13m
+      - expr: healtcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 14m
+      - expr: healtcheck:alert != expectation or healthcheck:alert unless expectation or expectation unless healthcheck:alert
+        eval_time: 15m

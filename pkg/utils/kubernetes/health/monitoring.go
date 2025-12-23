@@ -5,12 +5,56 @@
 package health
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	prom "github.com/prometheus/client_golang/api"
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/common/model"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 )
+
+// PrometheusHealthChecker is a function type that checks for health issues in a Prometheus instance.
+type PrometheusHealthChecker func(ctx context.Context, endpoint string, port int) (bool, error)
+
+// IsPrometheusHealthy checks for health issues in a Prometheus instance.
+func IsPrometheusHealthy(ctx context.Context, endpoint string, port int) (bool, error) {
+	client, err := prom.NewClient(prom.Config{Address: fmt.Sprintf("http://%s:%d", endpoint, port)})
+	if err != nil {
+		return false, fmt.Errorf("failed to create Prometheus client: %w", err)
+	}
+
+	v1api := promv1.NewAPI(client)
+
+	// set a maximum timeout for the query, but callers can set a shorter timeout via the context
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	query := "count(healthcheck:alert) or vector(0)"
+	result, warnings, err := v1api.Query(ctx, query, time.Now())
+	if err != nil {
+		return false, fmt.Errorf("query failed: %w", err)
+	}
+
+	if len(warnings) > 0 {
+		return false, fmt.Errorf("query returned warnings")
+	}
+
+	if result.Type() != model.ValVector {
+		return false, fmt.Errorf("query returned an unexpected result type")
+	}
+
+	vector := result.(model.Vector)
+	if len(vector) == 0 {
+		return false, fmt.Errorf("query returned empty vector")
+	}
+
+	count := vector[0].Value
+	return count == 0, nil
+}
 
 // CheckPrometheus checks whether the given Prometheus is healthy.
 func CheckPrometheus(prometheus *monitoringv1.Prometheus) error {

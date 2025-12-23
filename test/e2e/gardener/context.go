@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -67,6 +68,7 @@ func NewTestContext() *TestContext {
 	utilruntime.Must(operatorv1alpha1.AddToScheme(gardenScheme))
 	utilruntime.Must(resourcesv1alpha1.AddToScheme(gardenScheme))
 	utilruntime.Must(apiextensionsscheme.AddToScheme(gardenScheme))
+	utilruntime.Must(monitoringv1.AddToScheme(gardenScheme))
 
 	gardenClientSet, err := kubernetes.NewClientFromFile("", os.Getenv("KUBECONFIG"),
 		kubernetes.WithClientOptions(client.Options{Scheme: gardenScheme}),
