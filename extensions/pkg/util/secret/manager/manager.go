@@ -77,6 +77,7 @@ func SecretsManagerForGarden(
 	garden *operatorv1alpha1.Garden,
 	identity string,
 	secretConfigs []SecretConfigWithOptions,
+	namespaces ...string,
 ) (
 	secretsmanager.Interface,
 	error,
@@ -84,7 +85,7 @@ func SecretsManagerForGarden(
 	sm, err := secretsmanager.New(ctx, logger, clock, c, identity, secretsmanager.Config{
 		CASecretAutoRotation: false,
 		SecretNamesToTimes:   lastSecretRotationStartTimesFromGarden(garden, secretConfigs),
-	}, garden.Name)
+	}, namespaces...)
 	if err != nil {
 		return nil, err
 	}
