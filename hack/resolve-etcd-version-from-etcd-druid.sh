@@ -10,22 +10,22 @@ set -o errexit
 
 # Temp dirs
 WORKDIR=$(mktemp -d)
-ETCD_DRUID_REPO="https://github.com/gardener/etcd-druid"
-ETCD_WRAPPER_REPO="https://github.com/gardener/etcd-wrapper"
+ETCD_DRUID_IMAGES_URL="https://raw.githubusercontent.com/gardener/etcd-druid/master/internal/images/images.yaml"
 ETCD_REPO="https://github.com/etcd-io/etcd.git"
 
-echo "Cloning etcd-druid..."
-git clone -q --depth 1 "$ETCD_DRUID_REPO" "$WORKDIR/etcd-druid"
+echo "Fetching etcd-druid images.yaml..."
+curl -fsSL "$ETCD_DRUID_IMAGES_URL" -o "$WORKDIR/images.yaml"
 
 # Extract etcd-wrapper tag from images.yaml
-WRAPPER_TAG=$(yq '.images[] | select(.name == "etcd-wrapper") | .tag' "$WORKDIR/etcd-druid/internal/images/images.yaml")
+WRAPPER_TAG=$(yq '.images[] | select(.name == "etcd-wrapper") | .tag' "$WORKDIR/images.yaml")
 echo "Found etcd-wrapper tag: $WRAPPER_TAG"
 
-echo "Cloning etcd-wrapper at tag $WRAPPER_TAG..."
-git clone -q --depth 1 --branch "$WRAPPER_TAG" "$ETCD_WRAPPER_REPO" "$WORKDIR/etcd-wrapper" 2>/dev/null
+echo "Fetching go.mod from etcd-wrapper at tag $WRAPPER_TAG..."
+ETCD_WRAPPER_GOMOD_URL="https://raw.githubusercontent.com/gardener/etcd-wrapper/$WRAPPER_TAG/go.mod"
+curl -fsSL "$ETCD_WRAPPER_GOMOD_URL" -o "$WORKDIR/go.mod"
 
 # Extract etcd version from go.mod
-ETCD_LINE=$(grep 'go.etcd.io/etcd' "$WORKDIR/etcd-wrapper/go.mod" | head -n1)
+ETCD_LINE=$(grep 'go.etcd.io/etcd' "$WORKDIR/go.mod" | head -n1)
 ETCD_VERSION=$(echo "$ETCD_LINE" | awk '{print $2}')
 echo "Found etcd version string: $ETCD_VERSION"
 
@@ -45,8 +45,8 @@ else
 
   echo "Extracted commit hash: $COMMIT_HASH"
 
-  echo "Cloning etcd repo to resolve tag..."
-  git clone -q "$ETCD_REPO" "$WORKDIR/etcd"
+  echo "Fetching etcd tags and commit info..."
+  git clone -q --filter=blob:none --no-checkout "$ETCD_REPO" "$WORKDIR/etcd"
   pushd "$WORKDIR/etcd" > /dev/null
 
   # Find tag that contains the commit
