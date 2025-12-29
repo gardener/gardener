@@ -676,6 +676,9 @@ func getEtcdOperatorConfig(etcdConfig *gardenletconfigv1alpha1.ETCDConfig, names
 				ExemptServiceAccounts: []string{
 					"system:serviceaccount:kube-system:generic-garbage-collector",
 				},
+				// `AutomountServiceAccountToken` is set to false for the etcd-druid controller deployment,
+				// but GRM has a mutating webhook to mount the service account token as a projected volume.
+				// So, it is safe to provide this service account configuration to the etcd-druid controller.
 				ServiceAccountInfo: &druidconfigv1alpha1.ServiceAccountInfo{
 					Name:      druidServiceAccountName,
 					Namespace: namespace,
