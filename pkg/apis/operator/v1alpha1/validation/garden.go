@@ -12,6 +12,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
@@ -70,14 +71,23 @@ func init() {
 // ValidateGarden contains functionality for performing extended validation of a Garden object which is not possible
 // with standard CRD validation, see https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation-rules.
 func ValidateGarden(garden *operatorv1alpha1.Garden, extensions []operatorv1alpha1.Extension) field.ErrorList {
+	opts := gardencorevalidation.KubeAPIServerValidationOptions{
+		AllowInvalidAcceptedIssuers: false,
+	}
+
+	return ValidateGardenWithOps(garden, extensions, opts)
+}
+
+// ValidateGardenWithOps validates a Garden object with the given options.
+func ValidateGardenWithOps(garden *operatorv1alpha1.Garden, extensions []operatorv1alpha1.Extension, opts gardencorevalidation.KubeAPIServerValidationOptions) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateOperation(helper.GetGardenerOperations(garden.Annotations), garden, field.NewPath("metadata", "annotations"))...)
 	allErrs = append(allErrs, validateDNS(garden.Spec.DNS, field.NewPath("spec", "dns"))...)
 	allErrs = append(allErrs, validateExtensions(garden.Spec.Extensions, extensions, field.NewPath("spec", "extensions"))...)
 	allErrs = append(allErrs, validateRuntimeCluster(garden.Spec.DNS, garden.Spec.RuntimeCluster, helper.HighAvailabilityEnabled(garden), field.NewPath("spec", "runtimeCluster"))...)
-	allErrs = append(allErrs, validateVirtualCluster(garden.Spec.DNS, garden.Spec.VirtualCluster, garden.Spec.RuntimeCluster, field.NewPath("spec", "virtualCluster"))...)
 	allErrs = append(allErrs, validateResources(garden.Spec.Resources, field.NewPath("spec", "resources"))...)
+	allErrs = append(allErrs, validateVirtualCluster(garden.Spec.DNS, garden.Spec.VirtualCluster, garden.Spec.RuntimeCluster, opts, field.NewPath("spec", "virtualCluster"))...)
 
 	return allErrs
 }
@@ -99,10 +109,15 @@ func validateResources(resources []gardencorev1beta1.NamedResourceReference, pat
 // is not possible with standard CRD validation, see https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation-rules.
 func ValidateGardenUpdate(oldGarden, newGarden *operatorv1alpha1.Garden, extensions []operatorv1alpha1.Extension) field.ErrorList {
 	allErrs := field.ErrorList{}
+	opts := gardencorevalidation.KubeAPIServerValidationOptions{
+		AllowInvalidAcceptedIssuers: oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil &&
+			oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil && newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil &&
+			apiequality.Semantic.DeepEqual(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers),
+	}
 
 	allErrs = append(allErrs, validateRuntimeClusterUpdate(oldGarden, newGarden)...)
 	allErrs = append(allErrs, validateVirtualClusterUpdate(oldGarden, newGarden)...)
-	allErrs = append(allErrs, ValidateGarden(newGarden, extensions)...)
+	allErrs = append(allErrs, ValidateGardenWithOps(newGarden, extensions, opts)...)
 
 	return allErrs
 }
@@ -313,7 +328,7 @@ func validateRuntimeClusterSettings(runtimeCluster operatorv1alpha1.RuntimeClust
 	return allErrs
 }
 
-func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster operatorv1alpha1.VirtualCluster, runtimeCluster operatorv1alpha1.RuntimeCluster, fldPath *field.Path) field.ErrorList {
+func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster operatorv1alpha1.VirtualCluster, runtimeCluster operatorv1alpha1.RuntimeCluster, opts gardencorevalidation.KubeAPIServerValidationOptions, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateDomains(dns, virtualCluster.DNS.Domains, fldPath.Child("dns", "domains"))...)
@@ -340,7 +355,7 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 				return allErrs
 			}
 
-			allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, true, gardenerutils.DefaultGroupResourcesForEncryption(), path)...)
+			allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, opts, true, gardenerutils.DefaultGroupResourcesForEncryption(), path)...)
 		}
 
 		// The API server domain of the virtual cluster which is derived from the primary (immutable) DNS name does not
