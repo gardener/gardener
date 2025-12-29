@@ -198,6 +198,10 @@ rules:
   - targetallocators.opentelemetry.io
   - opampbridges.opentelemetry.io
   - instrumentations.opentelemetry.io
+  - vlagents.operator.victoriametrics.com
+  - vlclusters.operator.victoriametrics.com
+  - vlogs.operator.victoriametrics.com
+  - vlsingles.operator.victoriametrics.com
   verbs:
   - delete
 - apiGroups:
