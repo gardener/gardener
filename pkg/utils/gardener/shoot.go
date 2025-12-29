@@ -34,6 +34,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -634,15 +635,23 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 		externalDomain.Zone = defaultDomain.Zone
 
 	case primaryProvider != nil:
-		if primaryProvider.SecretName != nil {
-			secret := &corev1.Secret{} // TODO(vpnachev): https://github.com/gardener/gardener/pull/13552 is adding CredentialsRef support and Workload Identity, make use of it
-			if err := c.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: *primaryProvider.SecretName}, secret); err != nil {
-				return nil, fmt.Errorf("could not get dns provider secret %q: %+v", *primaryProvider.SecretName, err)
+		if primaryProvider.CredentialsRef != nil {
+			credentials, err := kubernetesutils.GetCredentialsByCrossVersionObjectReference(ctx, c, *primaryProvider.CredentialsRef, shoot.Namespace)
+			if err != nil {
+				return nil, fmt.Errorf("could not get dns provider credentials %q: %+v", primaryProvider.CredentialsRef.String(), err)
 			}
-			externalDomain.Credentials = secret
+			externalDomain.Credentials = credentials
 		} else {
 			if shootCredentials == nil {
 				return nil, fmt.Errorf("default domain is not present, secret for primary dns provider is required")
+			}
+			switch creds := shootCredentials.(type) {
+			case *corev1.Secret:
+				externalDomain.Credentials = creds
+			case *securityv1alpha1.WorkloadIdentity:
+				externalDomain.Credentials = creds
+			default:
+				return nil, fmt.Errorf("unexpected shoot credentials type %T", creds)
 			}
 			externalDomain.Credentials = shootCredentials
 		}

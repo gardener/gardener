@@ -2188,17 +2188,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should forbid WorkloadIdentity credentials", func() {
-				// TODO(vpnachev): Adapt this test when WorkloadIdentity for DNS providers is supported.
+			It("should allow WorkloadIdentity credentials", func() {
 				shoot.Spec.DNS.Providers[0].CredentialsRef = &dnsWorkloadIdentityRef
 
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.dns.providers[0].credentialsRef"),
-					"Detail": Equal("workload identity is not yet supported for DNS providers"),
-				}))))
+				Expect(ValidateShoot(shoot)).To(BeEmpty())
 			})
 
 			Context("#validateDNSCredentialsRef", func() {

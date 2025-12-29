@@ -363,8 +363,8 @@ func (d *dnsRecord) isTimestampInvalidOrAfterLastUpdateTime() bool {
 func DeploySecretCredentials(secretData map[string][]byte) CredentialsDeployFunc {
 	return func(ctx context.Context, c client.Client, secret *corev1.Secret) error {
 		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, secret, func() error {
-			secret.ObjectMeta.Annotations = nil
-			secret.ObjectMeta.Labels = nil
+			secret.Annotations = nil
+			secret.Labels = nil
 			secret.Type = corev1.SecretTypeOpaque
 			secret.Data = secretData
 			return nil
@@ -380,13 +380,13 @@ func DeployWorkloadIdentityCredentials(workloadIdentity *securityv1alpha1.Worklo
 	}
 }
 
-// CredentialsDeployerFromDomain returns a CredentialsDeployFunc based on the type of credentials in the given [gardenerutils.Domain].
-func CredentialsDeployerFromDomain(d *gardenerutils.Domain, referringObj client.Object) CredentialsDeployFunc {
-	switch credentials := d.Credentials.(type) {
+// CredentialsDeployerFromCredentials returns a CredentialsDeployFunc based on the type of the provided credentials.
+func CredentialsDeployerFromCredentials(credentials client.Object, referringObj client.Object) CredentialsDeployFunc {
+	switch creds := credentials.(type) {
 	case *corev1.Secret:
-		return DeploySecretCredentials(credentials.Data)
+		return DeploySecretCredentials(creds.Data)
 	case *securityv1alpha1.WorkloadIdentity:
-		return DeployWorkloadIdentityCredentials(credentials, referringObj)
+		return DeployWorkloadIdentityCredentials(creds, referringObj)
 	default:
 		return nil
 	}

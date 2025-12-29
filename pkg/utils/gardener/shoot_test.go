@@ -1000,9 +1000,11 @@ var _ = Describe("Shoot", func() {
 		defaultDomainProvider   = "default-domain-provider"
 		defaultDomainSecretData = map[string][]byte{"default": []byte("domain")}
 		defaultDomain           = &Domain{
-			Domain:     "bar.com",
-			Provider:   defaultDomainProvider,
-			SecretData: defaultDomainSecretData,
+			Domain:   "bar.com",
+			Provider: defaultDomainProvider,
+			Credentials: &corev1.Secret{
+				Data: defaultDomainSecretData,
+			},
 		}
 	)
 
@@ -1059,19 +1061,19 @@ var _ = Describe("Shoot", func() {
 					},
 				}
 			)
-
-			Expect(fakeClient.Create(ctx, &corev1.Secret{
+			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: dnsSecretName, Namespace: namespace},
 				Data:       dnsSecretData,
-			})).To(Succeed())
+			}
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
 			externalDomain, err := ConstructExternalDomain(ctx, fakeClient, shoot, nil, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(externalDomain).To(Equal(&Domain{
-				Domain:     domain,
-				Provider:   provider,
-				SecretData: dnsSecretData,
+				Domain:      domain,
+				Provider:    provider,
+				Credentials: secret,
 			}))
 		})
 
@@ -1118,9 +1120,11 @@ var _ = Describe("Shoot", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(externalDomain).To(Equal(&Domain{
-				Domain:     domain,
-				Provider:   defaultDomainProvider,
-				SecretData: defaultDomainSecretData,
+				Domain:   domain,
+				Provider: defaultDomainProvider,
+				Credentials: &corev1.Secret{
+					Data: defaultDomainSecretData,
+				},
 			}))
 		})
 
@@ -1147,13 +1151,15 @@ var _ = Describe("Shoot", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(externalDomain).To(Equal(&Domain{
-				Domain:     domain,
-				Provider:   provider,
-				SecretData: shootSecretData,
+				Domain:   domain,
+				Provider: provider,
+				Credentials: &corev1.Secret{
+					Data: shootSecretData,
+				},
 			}))
 		})
 
-		It("should fail because dns credentials of type WorkloadIdentity are not supported yet", func() {
+		It("should allow dns credentials of type WorkloadIdentity", func() {
 			var (
 				workloadIdentityName = "workload-identity-1"
 				shoot                = &gardencorev1beta1.Shoot{
@@ -1185,8 +1191,13 @@ var _ = Describe("Shoot", func() {
 
 			Expect(fakeClient.Create(ctx, workloadIdentity)).To(Succeed())
 
-			_, err := ConstructExternalDomain(ctx, fakeClient, shoot, nil, nil)
-			Expect(err).To(MatchError(Equal("dns provider credentials of type WorkloadIdentity are not yet supported")))
+			externalDomain, err := ConstructExternalDomain(ctx, fakeClient, shoot, nil, nil)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(externalDomain).To(Equal(&Domain{
+				Domain:      domain,
+				Provider:    provider,
+				Credentials: workloadIdentity,
+			}))
 		})
 
 		It("should fail because dns credentials of type other than WorkloadIdentity and Secret are not supported", func() {
@@ -1223,12 +1234,12 @@ var _ = Describe("Shoot", func() {
 
 			_, err := ConstructExternalDomain(ctx, fakeClient, shoot, nil, nil)
 			Expect(err).To(And(
-				MatchError(ContainSubstring(`could not get dns provider credentials from reference "&CrossVersionObjectReference{Kind:ConfigMap,Name:config-map-1,APIVersion:v1,}"`)),
+				MatchError(ContainSubstring(`could not get dns provider credentials "&CrossVersionObjectReference{Kind:ConfigMap,Name:config-map-1,APIVersion:v1,}"`)),
 				MatchError(ContainSubstring("unsupported credentials reference: default/config-map-1, /v1, Kind=ConfigMap")),
 			))
 		})
 
-		It("returns error because shoot credentials of type WorkloadIdentity is not supported", func() {
+		It("should allow shoot credentials of type WorkloadIdentity", func() {
 			var (
 				workloadIdentity = &securityv1alpha1.WorkloadIdentity{}
 				shoot            = &gardencorev1beta1.Shoot{
@@ -1246,8 +1257,13 @@ var _ = Describe("Shoot", func() {
 				}
 			)
 
-			_, err := ConstructExternalDomain(ctx, fakeClient, shoot, workloadIdentity, nil)
-			Expect(err).To(MatchError(Equal("shoot credentials of type WorkloadIdentity cannot be used as domain secret")))
+			externalDomain, err := ConstructExternalDomain(ctx, fakeClient, shoot, workloadIdentity, nil)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(externalDomain).To(Equal(&Domain{
+				Domain:      domain,
+				Provider:    provider,
+				Credentials: workloadIdentity,
+			}))
 		})
 
 		It("returns error because shoot credential type is not supported", func() {
@@ -1269,7 +1285,7 @@ var _ = Describe("Shoot", func() {
 			)
 
 			_, err := ConstructExternalDomain(ctx, fakeClient, shoot, pod, nil)
-			Expect(err).To(MatchError(Equal("unexpected shoot credentials type")))
+			Expect(err).To(MatchError(Equal("unexpected shoot credentials type *v1.Pod")))
 		})
 	})
 

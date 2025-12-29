@@ -502,11 +502,11 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 
 	// Initialize a reference to the primary DNS provider secret
 	var credentialsRef corev1.ObjectReference
-	if primaryProvider.SecretName != nil {
+	if creds := primaryProvider.CredentialsRef; creds != nil {
 		credentialsRef = corev1.ObjectReference{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Secret",
-			Name:       *primaryProvider.SecretName,
+			APIVersion: creds.APIVersion,
+			Kind:       creds.Kind,
+			Name:       creds.Name,
 			Namespace:  shoot.Namespace,
 		}
 	} else if shoot.Spec.SecretBindingName != nil {
@@ -524,7 +524,6 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 			Namespace:  secretBinding.SecretRef.Namespace,
 		}
 	} else if shoot.Spec.CredentialsBindingName != nil {
-		// TODO(dimityrmirchev): This code should eventually handle references to workload identity
 		credentialsBinding, err := v.credentialsBindingLister.CredentialsBindings(shoot.Namespace).Get(*shoot.Spec.CredentialsBindingName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
@@ -554,7 +553,6 @@ func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencorev1beta
 		if len(seed.Spec.DNS.Defaults) > 0 {
 			for _, seedDNSDefault := range seed.Spec.DNS.Defaults {
 				if strings.HasSuffix(*shoot.Spec.DNS.Domain, "."+seedDNSDefault.Domain) {
-					// TODO(dimityrmirchev): Handle reference of kind WorkloadIdentity
 					return &gardencore.SeedDNSProvider{
 						Type:           seedDNSDefault.Type,
 						CredentialsRef: seedDNSDefault.CredentialsRef,

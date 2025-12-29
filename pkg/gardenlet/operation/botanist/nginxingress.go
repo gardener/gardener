@@ -15,7 +15,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -117,7 +116,7 @@ func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 		},
 	}
 
-	var credentialsDeployer dnsrecord.CredentialsDeployFunc
+	var credentialsDeployer extensionsdnsrecord.CredentialsDeployFunc
 
 	// Set component values even if the nginx-ingress addons is not enabled.
 	if b.NeedsExternalDNS() {
@@ -125,7 +124,7 @@ func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 		if b.Shoot.ExternalDomain.Zone != "" {
 			values.Zone = &b.Shoot.ExternalDomain.Zone
 		}
-		credentialsDeployer = dnsrecord.CredentialsDeployerFromDomain(b.Shoot.ExternalDomain, b.Shoot.GetInfo())
+		credentialsDeployer = extensionsdnsrecord.CredentialsDeployerFromCredentials(b.Shoot.ExternalDomain.Credentials, b.Shoot.GetInfo())
 		values.DNSName = b.Shoot.GetIngressFQDN("*")
 	}
 
