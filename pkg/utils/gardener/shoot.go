@@ -34,6 +34,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -647,6 +648,14 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 		} else {
 			if shootCredentials == nil {
 				return nil, fmt.Errorf("default domain is not present, secret for primary dns provider is required")
+			}
+			switch creds := shootCredentials.(type) {
+			case *corev1.Secret:
+				externalDomain.Credentials = creds
+			case *securityv1alpha1.WorkloadIdentity:
+				externalDomain.Credentials = creds
+			default:
+				return nil, fmt.Errorf("unexpected shoot credentials type %T", creds)
 			}
 			externalDomain.Credentials = shootCredentials
 		}

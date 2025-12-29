@@ -135,8 +135,10 @@ var _ = Describe("NginxIngress", func() {
 						Domain:   externalDomain,
 						Provider: externalProvider,
 						Zone:     externalZone,
-						SecretData: map[string][]byte{
-							"external-foo": []byte("external-bar"),
+						Credentials: &corev1.Secret{
+							Data: map[string][]byte{
+								"external-foo": []byte("external-bar"),
+							},
 						},
 					},
 					Components: &shootpkg.Components{
@@ -210,15 +212,12 @@ var _ = Describe("NginxIngress", func() {
 
 			actual := c.GetValues()
 			Expect(actual).To(DeepEqual(&dnsrecord.Values{
-				Name:       b.Shoot.GetInfo().Name + "-ingress",
-				SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
-				Namespace:  controlPlaneNamespace,
-				TTL:        ptr.To(ttl),
-				Type:       externalProvider,
-				Zone:       ptr.To(externalZone),
-				SecretData: map[string][]byte{
-					"external-foo": []byte("external-bar"),
-				},
+				Name:              b.Shoot.GetInfo().Name + "-ingress",
+				SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
+				Namespace:         controlPlaneNamespace,
+				TTL:               ptr.To(ttl),
+				Type:              externalProvider,
+				Zone:              ptr.To(externalZone),
 				DNSName:           "*.ingress." + externalDomain,
 				RecordType:        extensionsv1alpha1.DNSRecordTypeA,
 				Values:            []string{address},
@@ -261,15 +260,12 @@ var _ = Describe("NginxIngress", func() {
 
 			actual := c.GetValues()
 			Expect(actual).To(DeepEqual(&dnsrecord.Values{
-				Name:       b.Shoot.GetInfo().Name + "-ingress",
-				SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
-				Namespace:  controlPlaneNamespace,
-				TTL:        ptr.To(ttl),
-				Type:       externalProvider,
-				Zone:       ptr.To(externalZone),
-				SecretData: map[string][]byte{
-					"external-foo": []byte("external-bar"),
-				},
+				Name:              b.Shoot.GetInfo().Name + "-ingress",
+				SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
+				Namespace:         controlPlaneNamespace,
+				TTL:               ptr.To(ttl),
+				Type:              externalProvider,
+				Zone:              ptr.To(externalZone),
 				DNSName:           "*.ingress." + externalDomain,
 				RecordType:        extensionsv1alpha1.DNSRecordTypeA,
 				Values:            []string{address},

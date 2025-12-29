@@ -424,19 +424,11 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 	// Initialize a reference to the primary DNS provider secret
 	var credentialsRef *corev1.ObjectReference
 	if creds := primaryProvider.CredentialsRef; creds != nil {
-		switch apiVersion, kind := creds.APIVersion, creds.Kind; {
-		case apiVersion == corev1.SchemeGroupVersion.String() && kind == "Secret":
-			credentialsRef = &corev1.ObjectReference{
-				APIVersion: apiVersion,
-				Kind:       kind,
-				Name:       creds.Name,
-				Namespace:  shoot.Namespace,
-			}
-		case apiVersion == securityv1alpha1.SchemeGroupVersion.String() && kind == "WorkloadIdentity":
-			// TODO(vpnachev): This code should handle dns provider credentials of type WorkloadIdentity
-			return nil, fmt.Errorf("dns provider credentials of type WorkloadIdentity are not yet supported")
-		default:
-			return nil, fmt.Errorf("primary DNS provider set to use unsupported credentials type of apiVersion=%q kind=%q", apiVersion, kind)
+		credentialsRef = &corev1.ObjectReference{
+			APIVersion: creds.APIVersion,
+			Kind:       creds.Kind,
+			Name:       creds.Name,
+			Namespace:  shoot.Namespace,
 		}
 	} else if shoot.Spec.SecretBindingName != nil {
 		secretBinding, err := v.secretBindingLister.SecretBindings(shoot.Namespace).Get(*shoot.Spec.SecretBindingName)
@@ -453,7 +445,6 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 			Namespace:  secretBinding.SecretRef.Namespace,
 		}
 	} else if shoot.Spec.CredentialsBindingName != nil {
-		// TODO(dimityrmirchev): This code should eventually handle references to workload identity
 		credentialsBinding, err := v.credentialsBindingLister.CredentialsBindings(shoot.Namespace).Get(*shoot.Spec.CredentialsBindingName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {

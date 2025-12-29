@@ -9,12 +9,10 @@ import (
 	"encoding/json"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
-	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -64,12 +62,7 @@ func getDNSProviderCredentialsDeployer(ctx context.Context, gardenClient client.
 		if err != nil {
 			return nil, err
 		}
-		switch creds := credentials.(type) {
-		case *corev1.Secret:
-			return dnsrecord.DeploySecretCredentials(creds.Data), nil
-		case *securityv1alpha1.WorkloadIdentity:
-			return dnsrecord.DeployWorkloadIdentityCredentials(creds, seed), nil
-		}
+		return dnsrecord.CredentialsDeployerFromCredentials(credentials, seed), nil
 	}
 	return nil, nil
 }

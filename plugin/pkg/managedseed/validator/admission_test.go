@@ -423,7 +423,7 @@ var _ = Describe("ManagedSeed", func() {
 				}))
 			})
 
-			It("should forbid the ManagedSeed and reuse the primary DNS provider with WorkloadIdentity credentials from Shoot", func() {
+			It("should allow the ManagedSeed to reuse the primary DNS provider with WorkloadIdentity credentials from Shoot", func() {
 				seedx.Spec.DNS.Provider = nil
 				shoot.Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{
 					{
@@ -451,9 +451,7 @@ var _ = Describe("ManagedSeed", func() {
 					},
 				}
 
-				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError(ContainSubstring("dns provider credentials of type WorkloadIdentity are not yet supported")))
+				Expect(admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)).To(Succeed())
 			})
 
 			It("should create the ManagedSeed and reuse the DNS secret referenced by the SecretBindingName of Shoot", func() {
@@ -553,7 +551,7 @@ var _ = Describe("ManagedSeed", func() {
 				}))
 			})
 
-			It("should create the ManagedSeed and use secret referenced by the CredentialsBinding of the Shoot as DNS credentials", func() {
+			It("should create the ManagedSeed and use Workload Identity referenced by the CredentialsBinding of the Shoot as DNS credentials", func() {
 				workloadIdentity := &securityv1alpha1.WorkloadIdentity{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "workload-identity",
@@ -598,9 +596,7 @@ var _ = Describe("ManagedSeed", func() {
 					},
 				}
 
-				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError(ContainSubstring("shoot credentials of type WorkloadIdentity cannot be used as domain secret")))
+				Expect(admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)).To(Succeed())
 			})
 
 			It("should fail if config could not be converted to GardenletConfiguration", func() {

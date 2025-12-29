@@ -39,7 +39,7 @@ func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 		if b.Shoot.ExternalDomain.Zone != "" {
 			values.Zone = &b.Shoot.ExternalDomain.Zone
 		}
-		credentialsDeployer = extensionsdnsrecord.CredentialsDeployerFromDomain(b.Shoot.ExternalDomain, b.Shoot.GetInfo())
+		credentialsDeployer = extensionsdnsrecord.CredentialsDeployerFromCredentials(b.Shoot.ExternalDomain.Credentials, b.Shoot.GetInfo())
 		values.DNSName = v1beta1helper.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain)
 	}
 
@@ -79,7 +79,7 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 		if b.Garden.InternalDomain.Zone != "" {
 			values.Zone = &b.Garden.InternalDomain.Zone
 		}
-		credentialsDeployer = extensionsdnsrecord.CredentialsDeployerFromDomain(b.Garden.InternalDomain, b.Shoot.GetInfo())
+		credentialsDeployer = extensionsdnsrecord.CredentialsDeployerFromCredentials(b.Garden.InternalDomain.Credentials, b.Shoot.GetInfo())
 		values.DNSName = v1beta1helper.GetAPIServerDomain(*b.Shoot.InternalClusterDomain)
 	}
 
