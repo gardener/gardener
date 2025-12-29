@@ -209,7 +209,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "bytes"
+                "value": "decbytes"
               },
               {
                 "id": "color",
@@ -228,7 +228,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "binBps"
+                "value": "Bps"
               },
               {
                 "id": "color",
@@ -247,7 +247,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "bytes"
+                "value": "decbytes"
               },
               {
                 "id": "color",
@@ -411,7 +411,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "bytes"
+                "value": "decbytes"
               },
               {
                 "id": "color",
@@ -430,7 +430,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "binBps"
+                "value": "Bps"
               },
               {
                 "id": "color",
@@ -449,7 +449,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "bytes"
+                "value": "decbytes"
               },
               {
                 "id": "color",
@@ -899,7 +899,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:43",
-          "format": "bytes",
+          "format": "decbytes",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1008,7 +1008,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:43",
-          "format": "bytes",
+          "format": "decbytes",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1117,7 +1117,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:43",
-          "format": "bytes",
+          "format": "decbytes",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1240,7 +1240,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:43",
-          "format": "binBps",
+          "format": "Bps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1350,7 +1350,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:43",
-          "format": "binBps",
+          "format": "Bps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1473,7 +1473,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:43",
-          "format": "bytes",
+          "format": "decbytes",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1583,7 +1583,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:43",
-          "format": "bytes",
+          "format": "decbytes",
           "label": null,
           "logBase": 1,
           "max": null,

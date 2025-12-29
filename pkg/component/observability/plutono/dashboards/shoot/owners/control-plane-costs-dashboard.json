@@ -1,0 +1,677 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Plutono --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 2,
+  "links": [],
+  "panels": [
+    {
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 15,
+      "options": {
+        "content": "<br/>Disclaimer: The following cost calculation is a mere estimation and it is in no way meant to be binding.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "7.5.44",
+      "timeFrom": null,
+      "timeShift": null,
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 2
+      },
+      "id": 11,
+      "panels": [],
+      "repeat": "month",
+      "scopedVars": {
+        "month": {
+          "selected": true,
+          "text": "12",
+          "value": "12"
+        }
+      },
+      "title": "Billing Period $year-$month",
+      "type": "row"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed"
+          },
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "currencyEUR"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 3
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "vertical",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.5.44",
+      "scopedVars": {
+        "month": {
+          "selected": true,
+          "text": "12",
+          "value": "12"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum by (year, month) ((metering:memory_usage_seconds{year=\"$year\", month=\"$month\"} * $base_fee + metering:cpu_requests:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 * $cpu_price + metering:memory_requests:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 / 1e9 * $memory_price + metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 / 1e9 * $disk_price) / (30 * 24 * 60 * 60) + (metering:network_transmit:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"}) * 60 / 1e12 * $network_price)",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{ year }}-{{ month }}",
+          "refId": "A"
+        }
+      ],
+      "title": "Accumulated Cost Estimation",
+      "type": "stat"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "currencyEUR"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 3
+      },
+      "id": 7,
+      "maxPerRow": 2,
+      "options": {
+        "displayLabels": [],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {}
+      },
+      "pluginVersion": "7.5.44",
+      "repeat": null,
+      "repeatDirection": "h",
+      "scopedVars": {
+        "month": {
+          "selected": true,
+          "text": "12",
+          "value": "12"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum by(year, month) (metering:memory_usage_seconds{year=\"$year\", month=\"$month\"} * $base_fee / (30 * 24 * 60 * 60))",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "Base Fee",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum by (year, month) (metering:cpu_requests:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 * $cpu_price / (30 * 24 * 60 * 60))",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "CPU",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum by (year, month) (metering:memory_requests:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 / 1e9 * $memory_price / (30 * 24 * 60 * 60))",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "Memory",
+          "refId": "C"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum by (year, month) (metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 / 1e9 * $disk_price / (30 * 24 * 60 * 60))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Disk",
+          "refId": "D"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum by (year, month) ((metering:network_transmit:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"}) * 60 / 1e12 * $network_price)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Network",
+          "refId": "E"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Accumulated Cost Estimation By Component",
+      "type": "piechart"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "decimals": 2,
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyEUR"
+        },
+        "overrides": []
+      },
+      "fill": 6,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 11
+      },
+      "hiddenSeries": false,
+      "id": 4,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "hideEmpty": false,
+        "hideZero": false,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 0,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.44",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "scopedVars": {
+        "month": {
+          "selected": true,
+          "text": "12",
+          "value": "12"
+        }
+      },
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum((metering:memory_usage_seconds{year=\"$year\", month=\"$month\"} * $base_fee + metering:cpu_requests:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 * $cpu_price + metering:memory_requests:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 / 1e9 * $memory_price + metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 / 1e9 * $disk_price) / (30 * 24 * 60 * 60) + (metering:network_transmit:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"}) * 60 / 1e12 * $network_price)",
+          "interval": "",
+          "legendFormat": "Total",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Accumulated Cost Estimation Over Time",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:133",
+          "format": "currencyEUR",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "$$hashKey": "object:134",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "decimals": 2,
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyEUR"
+        },
+        "overrides": []
+      },
+      "fill": 6,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 11
+      },
+      "hiddenSeries": false,
+      "id": 13,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 0,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.44",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "scopedVars": {
+        "month": {
+          "selected": true,
+          "text": "12",
+          "value": "12"
+        }
+      },
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(metering:memory_usage_seconds{year=\"$year\", month=\"$month\"} * $base_fee) / (30 * 24 * 60 * 60)",
+          "interval": "",
+          "legendFormat": "Base Fee",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum(metering:cpu_requests:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 * $cpu_price / (30 * 24 * 60 * 60))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "CPU",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum(metering:memory_requests:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 / 1e9 * $memory_price / (30 * 24 * 60 * 60))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Memory",
+          "refId": "C"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum(metering:persistent_volume_claims:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} * 60 / 1e9 * $disk_price) / (30 * 24 * 60 * 60)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Disk",
+          "refId": "D"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum((metering:network_transmit:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"} + metering:network_receive:sum_by_namespace:sum_over_time{year=\"$year\", month=\"$month\"}) * 60 / 1e12 * $network_price)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Network",
+          "refId": "E"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Accumulated Cost Estimation By Component Over Time",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:236",
+          "format": "currencyEUR",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "$$hashKey": "object:237",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    }
+  ],
+  "schemaVersion": 27,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "selected": false,
+          "text": "2025",
+          "value": "2025"
+        },
+        "datasource": null,
+        "definition": "label_values(metering:memory_usage_seconds, year)",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": "Billing Year",
+        "multi": false,
+        "name": "year",
+        "options": [],
+        "query": {
+          "query": "label_values(metering:memory_usage_seconds, year)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 4,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": false,
+          "text": "12",
+          "value": "12"
+        },
+        "datasource": null,
+        "definition": "label_values(metering:memory_usage_seconds{year=\"$year\"}, month)",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": "Billing Month",
+        "multi": true,
+        "name": "month",
+        "options": [],
+        "query": {
+          "query": "label_values(metering:memory_usage_seconds{year=\"$year\"}, month)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 4,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "0",
+          "value": "0"
+        },
+        "description": "Price for one cluster running for 30 days (monthly base fee)",
+        "error": null,
+        "hide": 0,
+        "label": "1 Cluster Base Fee for 30 days",
+        "name": "base_fee",
+        "options": [
+          {
+            "selected": false,
+            "text": "0",
+            "value": "0"
+          }
+        ],
+        "query": "0",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "0",
+          "value": "0"
+        },
+        "description": "Price for 1 CPU core running for 30 days",
+        "error": null,
+        "hide": 0,
+        "label": "1 CPU for 30 days",
+        "name": "cpu_price",
+        "options": [
+          {
+            "selected": false,
+            "text": "0",
+            "value": "0"
+          }
+        ],
+        "query": "0",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "0",
+          "value": "0"
+        },
+        "description": "Price for 1 GB of memory running for 30 days",
+        "error": null,
+        "hide": 0,
+        "label": "1 GB Main Memory for 30 days",
+        "name": "memory_price",
+        "options": [
+          {
+            "selected": false,
+            "text": "0",
+            "value": "0"
+          }
+        ],
+        "query": "0",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "0",
+          "value": "0"
+        },
+        "description": "Price for 1 GB of persistent disk volume for 30 days",
+        "error": null,
+        "hide": 0,
+        "label": "1 GB Disk Volume for 30 days",
+        "name": "disk_price",
+        "options": [
+          {
+            "selected": false,
+            "text": "0",
+            "value": "0"
+          }
+        ],
+        "query": "0",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "0",
+          "value": "0"
+        },
+        "description": "Price per 1 TB of cumulative network traffic (transmit + receive). Network is volume-charged, not time-based.",
+        "error": null,
+        "hide": 0,
+        "label": "1 TB Network Traffic",
+        "name": "network_price",
+        "options": [
+          {
+            "selected": false,
+            "text": "0",
+            "value": "0"
+          }
+        ],
+        "query": "0",
+        "skipUrlSync": false,
+        "type": "textbox"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Shoot Control Plane Cost Estimation",
+  "uid": "control-plane-cost-estimation"
+}
