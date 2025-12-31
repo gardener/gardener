@@ -130,13 +130,28 @@ The health check library will automatically transition the status to `False` if 
 
 ## Additional Considerations
 
-It is up to the extension to decide how to conduct health checks, though it is recommended to make use of the build-in health check functionality of `managedresources` for trivial checks.
-By [deploying the depending resources via managed resources](../../extensions/pkg/controller/worker/genericactuator/machine_controller_manager.go), the [gardener resource manager](https://github.com/gardener/gardener-resource-manager) conducts basic checks for different API objects out-of-the-box (e.g `Deployments`, `DaemonSets`, ...) - and writes health conditions.
+It is up to the extension to decide how to conduct health checks, though it is recommended to make use of the build-in health check functionality of `ManagedResource`s for trivial checks.
+The [Gardener Resource Manager](../concepts/resource-manager.md) conducts basic checks for different API objects out-of-the-box (e.g `Deployments`, `DaemonSets`, ...) for objects deployed via `ManagedResource`s (see [example 1](https://github.com/gardener/gardener/blob/e5bd1127959f5756bfcaf0884bf00a0b2e8bd344/pkg/component/observability/opentelemetry/collector/collector.go#L157-L159), [example 2](https://github.com/gardener/gardener/blob/a7029002ef6e68b9b37df11fea934bcc80ce6f2c/pkg/component/observability/logging/fluentoperator/fluentoperator.go#L300)).
 
-By default, Gardener performs health checks for all the `ManagedResource`s created in the shoot namespaces.
+We differentiate between two main scenarios.
+
+### Shoot Managed Resources
+
+By default, Gardener performs health checks for all `ManagedResource`s created in the shoot namespaces.
 Their status will be aggregated to the `Shoot` conditions according to the following rules:
 
 - Health checks of `ManagedResource` with `.spec.class=nil` are aggregated to the `SystemComponentsHealthy` condition
 - Health checks of `ManagedResource` with `.spec.class!=nil` are aggregated to the `ControlPlaneHealthy` condition unless the `ManagedResource` is labeled with `care.gardener.cloud/condition-type=<other-condition-type>`. In such case, it is aggregated to the `<other-condition-type>`.
+
+These checks are performed by the Gardenlet and maintained in the [Shoot Care Reconciler](../concepts/gardenlet.md#care-reconciler-2).
+
+### Garden Managed Resources
+
+For the `Garden` object managed by the Gardener Operator, health checks for `ManagedResource`s are performed by the [Garden Care Reconciler](../concepts/operator.md#care-reconciler).
+The operator retrieves all `ManagedResource`s from both the garden namespace and the `istio-system` namespace, then aggregates their status into the `Garden` conditions according to the following rules:
+
+- Health checks of `ManagedResource` with `.spec.class!=nil` and optionally labeled with `care.gardener.cloud/condition-type=RuntimeComponentsHealthy` are aggregated to the `RuntimeComponentsHealthy` condition
+- Health checks of `ManagedResource` with `.spec.class=nil` or labeled with `care.gardener.cloud/condition-type=VirtualComponentsHealthy` are aggregated to the `VirtualComponentsHealthy` condition
+- Health checks of `ManagedResource` labeled with `care.gardener.cloud/condition-type=ObservabilityComponentsHealthy` are aggregated to the `ObservabilityComponentsHealthy` condition
 
 More sophisticated health checks should be implemented by the extension controller itself (implementing the `HealthCheck` interface).
