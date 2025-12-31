@@ -620,9 +620,9 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 			removedKubernetesVersions := getRemovedKubernetesVersions(namespacedCloudProfile, oldNamespacedCloudProfile)
 			removedMachineImageVersions := getRemovedMachineImageVersions(namespacedCloudProfile, oldNamespacedCloudProfile)
 
-			wasLimitAdded := !apiequality.Semantic.DeepEqual(namespacedCloudProfile.Spec.Limits, oldNamespacedCloudProfile.Spec.Limits)
+			wasLimitModified := !apiequality.Semantic.DeepEqual(namespacedCloudProfile.Spec.Limits, oldNamespacedCloudProfile.Spec.Limits)
 
-			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 || wasLimitAdded {
+			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 || wasLimitModified {
 				shootList, err1 := r.shootLister.Shoots(namespacedCloudProfile.Namespace).List(labels.Everything())
 				if err1 != nil {
 					return apierrors.NewInternalError(fmt.Errorf("could not list Shoots to validate NamespacedCloudProfile changes: %v", err1))
@@ -659,7 +659,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 						defer wg.Done()
 						validateShootForRemovedKubernetesVersions(channel, shoot, removedKubernetesVersions, parentCloudProfileKubernetesVersions, namespacedCloudProfile)
 						validateShootWorkersForRemovedMachineImageVersions(channel, shoot, removedMachineImageVersions, parentCloudProfileMachineImageVersions, namespacedCloudProfile)
-						if wasLimitAdded {
+						if wasLimitModified {
 							validateShootWorkerLimits(channel, shoot, namespacedCloudProfile.Spec.Limits)
 						}
 					}(s)
