@@ -1,0 +1,3310 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: vmscrapeconfigs.operator.victoriametrics.com
+spec:
+  group: operator.victoriametrics.com
+  names:
+    kind: VMScrapeConfig
+    listKind: VMScrapeConfigList
+    plural: vmscrapeconfigs
+    singular: vmscrapeconfig
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - jsonPath: .status.updateStatus
+      name: Status
+      type: string
+    - jsonPath: .status.reason
+      name: Sync Error
+      type: string
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: VMScrapeConfig specifies a set of targets and parameters describing
+          how to scrape them.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VMScrapeConfigSpec defines the desired state of VMScrapeConfig
+            properties:
+              authorization:
+                description: Authorization with http header Authorization
+                properties:
+                  credentials:
+                    description: Reference to the secret with value for authorization
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  credentialsFile:
+                    description: File with value for authorization
+                    type: string
+                  type:
+                    description: Type of authorization, default to bearer
+                    type: string
+                type: object
+              azureSDConfigs:
+                description: AzureSDConfigs defines a list of Azure service discovery
+                  configurations.
+                items:
+                  description: |-
+                    AzureSDConfig allow retrieving scrape targets from Azure VMs.
+                    See [here](https://docs.victoriametrics.com/victoriametrics/sd_configs/#azure_sd_configs)
+                  properties:
+                    authenticationMethod:
+                      description: |-
+                        # The authentication method, either OAuth or ManagedIdentity.
+                        See https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview
+                      enum:
+                      - OAuth
+                      - ManagedIdentity
+                      type: string
+                    clientID:
+                      description: Optional client ID. Only required with the OAuth
+                        authentication method.
+                      type: string
+                    clientSecret:
+                      description: Optional client secret. Only required with the
+                        OAuth authentication method.
+                      properties:
+                        key:
+                          description: The key of the secret to select from.  Must
+                            be a valid secret key.
+                          type: string
+                        name:
+                          default: ""
+                          description: |-
+                            Name of the referent.
+                            This field is effectively required, but due to backwards compatibility is
+                            allowed to be empty. Instances of this type with an empty value here are
+                            almost certainly wrong.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          type: string
+                        optional:
+                          description: Specify whether the Secret or its key must
+                            be defined
+                          type: boolean
+                      required:
+                      - key
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    environment:
+                      description: The Azure environment.
+                      type: string
+                    port:
+                      description: |-
+                        The port to scrape metrics from. If using the public IP address, this must
+                        instead be specified in the relabeling rule.
+                      type: integer
+                    resourceGroup:
+                      description: Optional resource group name. Limits discovery
+                        to this resource group.
+                      type: string
+                    subscriptionID:
+                      description: The subscription ID. Always required.
+                      minLength: 1
+                      type: string
+                    tenantID:
+                      description: Optional tenant ID. Only required with the OAuth
+                        authentication method.
+                      type: string
+                  required:
+                  - subscriptionID
+                  type: object
+                type: array
+              basicAuth:
+                description: BasicAuth allow an endpoint to authenticate over basic
+                  authentication
+                properties:
+                  password:
+                    description: |-
+                      Password defines reference for secret with password value
+                      The secret needs to be in the same namespace as scrape object
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  password_file:
+                    description: |-
+                      PasswordFile defines path to password file at disk
+                      must be pre-mounted
+                    type: string
+                  username:
+                    description: |-
+                      Username defines reference for secret with username value
+                      The secret needs to be in the same namespace as scrape object
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                    x-kubernetes-map-type: atomic
+                type: object
+              bearerTokenFile:
+                description: File to read bearer token for scraping targets.
+                type: string
+              bearerTokenSecret:
+                description: |-
+                  Secret to mount to read bearer token for scraping targets. The secret
+                  needs to be in the same namespace as the scrape object and accessible by
+                  the victoria-metrics operator.
+                nullable: true
+                properties:
+                  key:
+                    description: The key of the secret to select from.  Must be a
+                      valid secret key.
+                    type: string
+                  name:
+                    default: ""
+                    description: |-
+                      Name of the referent.
+                      This field is effectively required, but due to backwards compatibility is
+                      allowed to be empty. Instances of this type with an empty value here are
+                      almost certainly wrong.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                  optional:
+                    description: Specify whether the Secret or its key must be defined
+                    type: boolean
+                required:
+                - key
+                type: object
+                x-kubernetes-map-type: atomic
+              consulSDConfigs:
+                description: ConsulSDConfigs defines a list of Consul service discovery
+                  configurations.
+                items:
+                  description: |-
+                    ConsulSDConfig defines a Consul service discovery configuration.
+                    See [here](https://docs.victoriametrics.com/victoriametrics/sd_configs/#consul_sd_configs)
+                  properties:
+                    allowStale:
+                      description: |-
+                        Allow stale Consul results (see https://developer.hashicorp.com/consul/api-docs/features/consistency ). Will reduce load on Consul.
+                        If unset, use its default value.
+                      type: boolean
+                    authorization:
+                      description: Authorization header to use on every scrape request.
+                      properties:
+                        credentials:
+                          description: Reference to the secret with value for authorization
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        credentialsFile:
+                          description: File with value for authorization
+                          type: string
+                        type:
+                          description: Type of authorization, default to bearer
+                          type: string
+                      type: object
+                    basicAuth:
+                      description: BasicAuth information to use on every scrape request.
+                      properties:
+                        password:
+                          description: |-
+                            Password defines reference for secret with password value
+                            The secret needs to be in the same namespace as scrape object
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        password_file:
+                          description: |-
+                            PasswordFile defines path to password file at disk
+                            must be pre-mounted
+                          type: string
+                        username:
+                          description: |-
+                            Username defines reference for secret with username value
+                            The secret needs to be in the same namespace as scrape object
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      type: object
+                    datacenter:
+                      description: Consul Datacenter name, if not provided it will
+                        use the local Consul Agent Datacenter.
+                      type: string
+                    filter:
+                      description: |-
+                        Filter defines filter for /v1/catalog/services requests
+                        See https://developer.hashicorp.com/consul/api-docs/features/filtering
+                      type: string
+                    followRedirects:
+                      description: |-
+                        Configure whether HTTP requests follow HTTP 3xx redirects.
+                        If unset, use its default value.
+                      type: boolean
+                    namespace:
+                      description: Namespaces are only supported in Consul Enterprise.
+                      type: string
+                    nodeMeta:
+                      additionalProperties:
+                        type: string
+                      description: Node metadata key/value pairs to filter nodes for
+                        a given service.
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    oauth2:
+                      description: OAuth2 defines auth configuration
+                      properties:
+                        client_id:
+                          description: The secret or configmap containing the OAuth2
+                            client id
+                          properties:
+                            configMap:
+                              description: ConfigMap containing data to use for the
+                                targets.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secret:
+                              description: Secret containing data to use for the targets.
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        client_secret:
+                          description: The secret containing the OAuth2 client secret
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        client_secret_file:
+                          description: ClientSecretFile defines path for client secret
+                            file.
+                          type: string
+                        endpoint_params:
+                          additionalProperties:
+                            type: string
+                          description: Parameters to append to the token URL
+                          type: object
+                        proxy_url:
+                          description: |-
+                            The proxy URL for token_url connection
+                            ( available from v0.55.0).
+                            Is only supported by Scrape objects family
+                          type: string
+                        scopes:
+                          description: OAuth2 scopes used for the token request
+                          items:
+                            type: string
+                          type: array
+                        tls_config:
+                          description: |-
+                            TLSConfig for token_url connection
+                            ( available from v0.55.0).
+                            Is only supported by Scrape objects family
+                          x-kubernetes-preserve-unknown-fields: true
+                        token_url:
+                          description: The URL to fetch the token from
+                          minLength: 1
+                          type: string
+                      required:
+                      - client_id
+                      - token_url
+                      type: object
+                    partition:
+                      description: Admin Partitions are only supported in Consul Enterprise.
+                      type: string
+                    proxy_client_config:
+                      description: |-
+                        ProxyClientConfig configures proxy auth settings for scraping
+                        See [feature description](https://docs.victoriametrics.com/victoriametrics/vmagent/#scraping-targets-via-a-proxy)
+                      properties:
+                        basic_auth:
+                          description: BasicAuth allow an endpoint to authenticate
+                            over basic authentication
+                          properties:
+                            password:
+                              description: |-
+                                Password defines reference for secret with password value
+                                The secret needs to be in the same namespace as scrape object
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            password_file:
+                              description: |-
+                                PasswordFile defines path to password file at disk
+                                must be pre-mounted
+                              type: string
+                            username:
+                              description: |-
+                                Username defines reference for secret with username value
+                                The secret needs to be in the same namespace as scrape object
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        bearer_token:
+                          description: SecretKeySelector selects a key of a Secret.
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        bearer_token_file:
+                          type: string
+                        tls_config:
+                          x-kubernetes-preserve-unknown-fields: true
+                      type: object
+                    proxyURL:
+                      description: ProxyURL eg http://proxyserver:2195 Directs scrapes
+                        to proxy through this endpoint.
+                      type: string
+                    scheme:
+                      description: HTTP Scheme default "http"
+                      enum:
+                      - HTTP
+                      - HTTPS
+                      type: string
+                    server:
+                      description: A valid string consisting of a hostname or IP followed
+                        by an optional port number.
+                      minLength: 1
+                      type: string
+                    services:
+                      description: A list of services for which targets are retrieved.
+                        If omitted, all services are scraped.
+                      items:
+                        type: string
+                      type: array
+                      x-kubernetes-list-type: atomic
+                    tagSeparator:
+                      description: |-
+                        The string by which Consul tags are joined into the tag label.
+                        If unset, use its default value.
+                      type: string
+                    tags:
+                      description: An optional list of tags used to filter nodes for
+                        a given service. Services must contain all tags in the list.
+                      items:
+                        type: string
+                      type: array
+                      x-kubernetes-list-type: atomic
+                    tlsConfig:
+                      description: TLS configuration to use on every scrape request
+                      properties:
+                        ca:
+                          description: Struct containing the CA cert to use for the
+                            targets.
+                          properties:
+                            configMap:
+                              description: ConfigMap containing data to use for the
+                                targets.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secret:
+                              description: Secret containing data to use for the targets.
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        caFile:
+                          description: Path to the CA cert in the container to use
+                            for the targets.
+                          type: string
+                        cert:
+                          description: Struct containing the client cert file for
+                            the targets.
+                          properties:
+                            configMap:
+                              description: ConfigMap containing data to use for the
+                                targets.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secret:
+                              description: Secret containing data to use for the targets.
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        certFile:
+                          description: Path to the client cert file in the container
+                            for the targets.
+                          type: string
+                        insecureSkipVerify:
+                          description: Disable target certificate validation.
+                          type: boolean
+                        keyFile:
+                          description: Path to the client key file in the container
+                            for the targets.
+                          type: string
+                        keySecret:
+                          description: Secret containing the client key file for the
+                            targets.
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        serverName:
+                          description: Used to verify the hostname for the targets.
+                          type: string
+                      type: object
+                    tokenRef:
+                      description: Consul ACL TokenRef, if not provided it will use
+                        the ACL from the local Consul Agent.
+                      properties:
+                        key:
+                          description: The key of the secret to select from.  Must
+                            be a valid secret key.
+                          type: string
+                        name:
+                          default: ""
+                          description: |-
+                            Name of the referent.
+                            This field is effectively required, but due to backwards compatibility is
+                            allowed to be empty. Instances of this type with an empty value here are
+                            almost certainly wrong.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          type: string
+                        optional:
+                          description: Specify whether the Secret or its key must
+                            be defined
+                          type: boolean
+                      required:
+                      - key
+                      type: object
+                      x-kubernetes-map-type: atomic
+                  required:
+                  - server
+                  type: object
+                type: array
+              digitalOceanSDConfigs:
+                description: DigitalOceanSDConfigs defines a list of DigitalOcean
+                  service discovery configurations.
+                items:
+                  description: |-
+                    DigitalOceanSDConfig allow retrieving scrape targets from DigitalOcean's Droplets API.
+                    This service discovery uses the public IPv4 address by default, by that can be changed with relabeling.
+                    See [here](https://docs.victoriametrics.com/victoriametrics/sd_configs/#digitalocean_sd_configs)
+                  properties:
+                    authorization:
+                      description: Authorization header to use on every scrape request.
+                      properties:
+                        credentials:
+                          description: Reference to the secret with value for authorization
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        credentialsFile:
+                          description: File with value for authorization
+                          type: string
+                        type:
+                          description: Type of authorization, default to bearer
+                          type: string
+                      type: object
+                    followRedirects:
+                      description: Configure whether HTTP requests follow HTTP 3xx
+                        redirects.
+                      type: boolean
+                    oauth2:
+                      description: OAuth2 defines auth configuration
+                      properties:
+                        client_id:
+                          description: The secret or configmap containing the OAuth2
+                            client id
+                          properties:
+                            configMap:
+                              description: ConfigMap containing data to use for the
+                                targets.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secret:
+                              description: Secret containing data to use for the targets.
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        client_secret:
+                          description: The secret containing the OAuth2 client secret
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        client_secret_file:
+                          description: ClientSecretFile defines path for client secret
+                            file.
+                          type: string
+                        endpoint_params:
+                          additionalProperties:
+                            type: string
+                          description: Parameters to append to the token URL
+                          type: object
+                        proxy_url:
+                          description: |-
+                            The proxy URL for token_url connection
+                            ( available from v0.55.0).
+                            Is only supported by Scrape objects family
+                          type: string
+                        scopes:
+                          description: OAuth2 scopes used for the token request
+                          items:
+                            type: string
+                          type: array
+                        tls_config:
+                          description: |-
+                            TLSConfig for token_url connection
+                            ( available from v0.55.0).
+                            Is only supported by Scrape objects family
+                          x-kubernetes-preserve-unknown-fields: true
+                        token_url:
+                          description: The URL to fetch the token from
+                          minLength: 1
+                          type: string
+                      required:
+                      - client_id
+                      - token_url
+                      type: object
+                    port:
+                      description: The port to scrape metrics from.
+                      type: integer
+                    proxy_client_config:
+                      description: |-
+                        ProxyClientConfig configures proxy auth settings for scraping
+                        See [feature description](https://docs.victoriametrics.com/victoriametrics/vmagent/#scraping-targets-via-a-proxy)
+                      properties:
+                        basic_auth:
+                          description: BasicAuth allow an endpoint to authenticate
+                            over basic authentication
+                          properties:
+                            password:
+                              description: |-
+                                Password defines reference for secret with password value
+                                The secret needs to be in the same namespace as scrape object
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            password_file:
+                              description: |-
+                                PasswordFile defines path to password file at disk
+                                must be pre-mounted
+                              type: string
+                            username:
+                              description: |-
+                                Username defines reference for secret with username value
+                                The secret needs to be in the same namespace as scrape object
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        bearer_token:
+                          description: SecretKeySelector selects a key of a Secret.
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        bearer_token_file:
+                          type: string
+                        tls_config:
+                          x-kubernetes-preserve-unknown-fields: true
+                      type: object
+                    proxyURL:
+                      description: ProxyURL eg http://proxyserver:2195 Directs scrapes
+                        to proxy through this endpoint.
+                      type: string
+                    tlsConfig:
+                      description: TLS configuration to use on every scrape request
+                      properties:
+                        ca:
+                          description: Struct containing the CA cert to use for the
+                            targets.
+                          properties:
+                            configMap:
+                              description: ConfigMap containing data to use for the
+                                targets.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secret:
+                              description: Secret containing data to use for the targets.
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        caFile:
+                          description: Path to the CA cert in the container to use
+                            for the targets.
+                          type: string
+                        cert:
+                          description: Struct containing the client cert file for
+                            the targets.
+                          properties:
+                            configMap:
+                              description: ConfigMap containing data to use for the
+                                targets.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secret:
+                              description: Secret containing data to use for the targets.
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        certFile:
+                          description: Path to the client cert file in the container
+                            for the targets.
+                          type: string
+                        insecureSkipVerify:
+                          description: Disable target certificate validation.
+                          type: boolean
+                        keyFile:
+                          description: Path to the client key file in the container
+                            for the targets.
+                          type: string
+                        keySecret:
+                          description: Secret containing the client key file for the
+                            targets.
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        serverName:
+                          description: Used to verify the hostname for the targets.
+                          type: string
+                      type: object
+                  type: object
+                type: array
+              dnsSDConfigs:
+                description: DNSSDConfigs defines a list of DNS service discovery
+                  configurations.
+                items:
+                  description: |-
+                    DNSSDConfig allows specifying a set of DNS domain names which are periodically queried to discover a list of targets.
+                    The DNS servers to be contacted are read from /etc/resolv.conf.
+                    See [here](https://docs.victoriametrics.com/victoriametrics/sd_configs/#dns_sd_configs)
+                  properties:
+                    names:
+                      description: A list of DNS domain names to be queried.
+                      items:
+                        type: string
+                      minItems: 1
+                      type: array
+                    port:
+                      description: |-
+                        The port number used if the query type is not SRV
+                        Ignored for SRV records
+                      type: integer
+                    type:
+                      enum:
+                      - SRV
+                      - A
+                      - AAAA
+                      - MX
+                      type: string
+                  required:
+                  - names
+                  type: object
+                type: array
+              ec2SDConfigs:
+                description: EC2SDConfigs defines a list of EC2 service discovery
+                  configurations.
+                items:
+                  description: |-
+                    EC2SDConfig allow retrieving scrape targets from AWS EC2 instances.
+                    The private IP address is used by default, but may be changed to the public IP address with relabeling.
+                    The IAM credentials used must have the ec2:DescribeInstances permission to discover scrape targets.
+                    See [here](https://docs.victoriametrics.com/victoriametrics/sd_configs/#ec2_sd_configs)
+                  properties:
+                    accessKey:
+                      description: AccessKey is the AWS API key.
+                      properties:
+                        key:
+                          description: The key of the secret to select from.  Must
+                            be a valid secret key.
+                          type: string
+                        name:
+                          default: ""
+                          description: |-
+                            Name of the referent.
+                            This field is effectively required, but due to backwards compatibility is
+                            allowed to be empty. Instances of this type with an empty value here are
+                            almost certainly wrong.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          type: string
+                        optional:
+                          description: Specify whether the Secret or its key must
+                            be defined
+                          type: boolean
+                      required:
+                      - key
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    filters:
+                      description: |-
+                        Filters can be used optionally to filter the instance list by other criteria.
+                        Available filter criteria can be found here:
+                        https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeInstances.html
+                        Filter API documentation: https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_Filter.html
+                      items:
+                        description: EC2Filter is the configuration for filtering
+                          EC2 instances.
+                        properties:
+                          name:
+                            type: string
+                          values:
+                            items:
+                              type: string
+                            type: array
+                        required:
+                        - name
+                        - values
+                        type: object
+                      type: array
+                    port:
+                      description: |-
+                        The port to scrape metrics from. If using the public IP address, this must
+                        instead be specified in the relabeling rule.
+                      type: integer
+                    region:
+                      description: The AWS region
+                      type: string
+                    roleARN:
+                      description: AWS Role ARN, an alternative to using AWS API keys.
+                      type: string
+                    secretKey:
+                      description: SecretKey is the AWS API secret.
+                      properties:
+                        key:
+                          description: The key of the secret to select from.  Must
+                            be a valid secret key.
+                          type: string
+                        name:
+                          default: ""
+                          description: |-
+                            Name of the referent.
+                            This field is effectively required, but due to backwards compatibility is
+                            allowed to be empty. Instances of this type with an empty value here are
+                            almost certainly wrong.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          type: string
+                        optional:
+                          description: Specify whether the Secret or its key must
+                            be defined
+                          type: boolean
+                      required:
+                      - key
+                      type: object
+                      x-kubernetes-map-type: atomic
+                  type: object
+                type: array
+              fileSDConfigs:
+                description: FileSDConfigs defines a list of file service discovery
+                  configurations.
+                items:
+                  description: |-
+                    FileSDConfig defines a file service discovery configuration.
+                    See [here](https://docs.victoriametrics.com/victoriametrics/sd_configs/#file_sd_configs)
+                  properties:
+                    files:
+                      description: List of files to be used for file discovery.
+                      items:
+                        type: string
+                      minItems: 1
+                      type: array
+                  required:
+                  - files
+                  type: object
+                type: array
+              follow_redirects:
+                description: FollowRedirects controls redirects for scraping.
+                type: boolean
+              gceSDConfigs:
+                description: GCESDConfigs defines a list of GCE service discovery
+                  configurations.
+                items:
+                  description: |-
+                    GCESDConfig configures scrape targets from GCP GCE instances.
+                    The private IP address is used by default, but may be changed to
+                    the public IP address with relabeling.
+                    See [here](https://docs.victoriametrics.com/victoriametrics/sd_configs/#gce_sd_configs)
+
+                    The GCE service discovery will load the Google Cloud credentials
+                    from the file specified by the GOOGLE_APPLICATION_CREDENTIALS environment variable.
+                    See https://cloud.google.com/kubernetes-engine/docs/tutorials/authenticating-to-cloud-platform
+                  properties:
+                    filter:
+                      description: |-
+                        Filter can be used optionally to filter the instance list by other criteria
+                        Syntax of this filter is described in the filter query parameter section:
+                        https://cloud.google.com/compute/docs/reference/latest/instances/list
+                      type: string
+                    port:
+                      description: |-
+                        The port to scrape metrics from. If using the public IP address, this must
+                        instead be specified in the relabeling rule.
+                      type: integer
+                    project:
+                      description: The Google Cloud Project ID
+                      minLength: 1
+                      type: string
+                    tagSeparator:
+                      description: The tag separator is used to separate the tags
+                        on concatenation
+                      type: string
+                    zone:
+                      description: The zone of the scrape targets. If you need multiple
+                        zones use multiple GCESDConfigs.
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                  - project
+                  - zone
+                  type: object
+                type: array
+              honorLabels:
+                description: HonorLabels chooses the metric's labels on collisions
+                  with target labels.
+                type: boolean
+              honorTimestamps:
+                description: HonorTimestamps controls whether vmagent respects the
+                  timestamps present in scraped data.
+                type: boolean
+              httpSDConfigs:
+                description: HTTPSDConfigs defines a list of HTTP service discovery
+                  configurations.
+                items:
+                  description: |-
+                    HTTPSDConfig defines a HTTP service discovery configuration.
+                    See [here](https://docs.victoriametrics.com/victoriametrics/sd_configs/#http_sd_configs)
+                  properties:
+                    authorization:
+                      description: Authorization header to use on every scrape request.
+                      properties:
+                        credentials:
+                          description: Reference to the secret with value for authorization
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        credentialsFile:
+                          description: File with value for authorization
+                          type: string
+                        type:
+                          description: Type of authorization, default to bearer
+                          type: string
+                      type: object
+                    basicAuth:
+                      description: BasicAuth information to use on every scrape request.
+                      properties:
+                        password:
+                          description: |-
+                            Password defines reference for secret with password value
+                            The secret needs to be in the same namespace as scrape object
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        password_file:
+                          description: |-
+                            PasswordFile defines path to password file at disk
+                            must be pre-mounted
+                          type: string
+                        username:
+                          description: |-
+                            Username defines reference for secret with username value
+                            The secret needs to be in the same namespace as scrape object
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      type: object
+                    proxy_client_config:
+                      description: |-
+                        ProxyClientConfig configures proxy auth settings for scraping
+                        See [feature description](https://docs.victoriametrics.com/victoriametrics/vmagent/#scraping-targets-via-a-proxy)
+                      properties:
+                        basic_auth:
+                          description: BasicAuth allow an endpoint to authenticate
+                            over basic authentication
+                          properties:
+                            password:
+                              description: |-
+                                Password defines reference for secret with password value
+                                The secret needs to be in the same namespace as scrape object
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            password_file:
+                              description: |-
+                                PasswordFile defines path to password file at disk
+                                must be pre-mounted
+                              type: string
+                            username:
+                              description: |-
+                                Username defines reference for secret with username value
+                                The secret needs to be in the same namespace as scrape object
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        bearer_token:
+                          description: SecretKeySelector selects a key of a Secret.
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        bearer_token_file:
+                          type: string
+                        tls_config:
+                          x-kubernetes-preserve-unknown-fields: true
+                      type: object
+                    proxyURL:
+                      description: ProxyURL eg http://proxyserver:2195 Directs scrapes
+                        to proxy through this endpoint.
+                      type: string
+                    tlsConfig:
+                      description: TLS configuration to use on every scrape request
+                      properties:
+                        ca:
+                          description: Struct containing the CA cert to use for the
+                            targets.
+                          properties:
+                            configMap:
+                              description: ConfigMap containing data to use for the
+                                targets.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secret:
+                              description: Secret containing data to use for the targets.
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        caFile:
+                          description: Path to the CA cert in the container to use
+                            for the targets.
+                          type: string
+                        cert:
+                          description: Struct containing the client cert file for
+                            the targets.
+                          properties:
+                            configMap:
+                              description: ConfigMap containing data to use for the
+                                targets.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secret:
+                              description: Secret containing data to use for the targets.
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        certFile:
+                          description: Path to the client cert file in the container
+                            for the targets.
+                          type: string
+                        insecureSkipVerify:
+                          description: Disable target certificate validation.
+                          type: boolean
+                        keyFile:
+                          description: Path to the client key file in the container
+                            for the targets.
+                          type: string
+                        keySecret:
+                          description: Secret containing the client key file for the
+                            targets.
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        serverName:
+                          description: Used to verify the hostname for the targets.
+                          type: string
+                      type: object
+                    url:
+                      description: URL from which the targets are fetched.
+                      minLength: 1
+                      pattern: ^http(s)?://.+$
+                      type: string
+                  required:
+                  - url
+                  type: object
+                type: array
+              interval:
+                description: Interval at which metrics should be scraped
+                type: string
+              kubernetesSDConfigs:
+                description: KubernetesSDConfigs defines a list of Kubernetes service
+                  discovery configurations.
+                items:
+                  description: |-
+                    KubernetesSDConfig allows retrieving scrape targets from Kubernetes' REST API.
+                    See [here](https://docs.victoriametrics.com/victoriametrics/sd_configs/#kubernetes_sd_configs)
+                  properties:
+                    apiServer:
+                      description: |-
+                        The API server address consisting of a hostname or IP address followed
+                        by an optional port number.
+                        If left empty, assuming process is running inside
+                        of the cluster. It will discover API servers automatically and use the pod's
+                        CA certificate and bearer token file at /var/run/secrets/kubernetes.io/serviceaccount/.
+                      type: string
+                    attach_metadata:
+                      description: AttachMetadata configures metadata attaching from
+                        service discovery
+                      properties:
+                        node:
+                          description: |-
+                            Node instructs vmagent to add node specific metadata from service discovery
+                            Valid for roles: pod, endpoints, endpointslice.
+                          type: boolean
+                      type: object
+                    authorization:
+                      description: Authorization header to use on every scrape request.
+                      properties:
+                        credentials:
+                          description: Reference to the secret with value for authorization
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        credentialsFile:
+                          description: File with value for authorization
+                          type: string
+                        type:
+                          description: Type of authorization, default to bearer
+                          type: string
+                      type: object
+                    basicAuth:
+                      description: BasicAuth information to use on every scrape request.
+                      properties:
+                        password:
+                          description: |-
+                            Password defines reference for secret with password value
+                            The secret needs to be in the same namespace as scrape object
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        password_file:
+                          description: |-
+                            PasswordFile defines path to password file at disk
+                            must be pre-mounted
+                          type: string
+                        username:
+                          description: |-
+                            Username defines reference for secret with username value
+                            The secret needs to be in the same namespace as scrape object
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      type: object
+                    followRedirects:
+                      description: Configure whether HTTP requests follow HTTP 3xx
+                        redirects.
+                      type: boolean
+                    namespaces:
+                      description: Optional namespace discovery. If omitted, discover
+                        targets across all namespaces.
+                      properties:
+                        names:
+                          description: |-
+                            List of namespaces where to watch for resources.
+                            If empty and `ownNamespace` isn't true, watch for resources in all namespaces.
+                          items:
+                            type: string
+                          type: array
+                        ownNamespace:
+                          description: Includes the namespace in which the pod exists
+                            to the list of watched namespaces.
+                          type: boolean
+                      type: object
+                    oauth2:
+                      description: OAuth2 defines auth configuration
+                      properties:
+                        client_id:
+                          description: The secret or configmap containing the OAuth2
+                            client id
+                          properties:
+                            configMap:
+                              description: ConfigMap containing data to use for the
+                                targets.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secret:
+                              description: Secret containing data to use for the targets.
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        client_secret:
+                          description: The secret containing the OAuth2 client secret
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        client_secret_file:
+                          description: ClientSecretFile defines path for client secret
+                            file.
+                          type: string
+                        endpoint_params:
+                          additionalProperties:
+                            type: string
+                          description: Parameters to append to the token URL
+                          type: object
+                        proxy_url:
+                          description: |-
+                            The proxy URL for token_url connection
+                            ( available from v0.55.0).
+                            Is only supported by Scrape objects family
+                          type: string
+                        scopes:
+                          description: OAuth2 scopes used for the token request
+                          items:
+                            type: string
+                          type: array
+                        tls_config:
+                          description: |-
+                            TLSConfig for token_url connection
+                            ( available from v0.55.0).
+                            Is only supported by Scrape objects family
+                          x-kubernetes-preserve-unknown-fields: true
+                        token_url:
+                          description: The URL to fetch the token from
+                          minLength: 1
+                          type: string
+                      required:
+                      - client_id
+                      - token_url
+                      type: object
+                    proxy_client_config:
+                      description: |-
+                        ProxyClientConfig configures proxy auth settings for scraping
+                        See [feature description](https://docs.victoriametrics.com/victoriametrics/vmagent/#scraping-targets-via-a-proxy)
+                      properties:
+                        basic_auth:
+                          description: BasicAuth allow an endpoint to authenticate
+                            over basic authentication
+                          properties:
+                            password:
+                              description: |-
+                                Password defines reference for secret with password value
+                                The secret needs to be in the same namespace as scrape object
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            password_file:
+                              description: |-
+                                PasswordFile defines path to password file at disk
+                                must be pre-mounted
+                              type: string
+                            username:
+                              description: |-
+                                Username defines reference for secret with username value
+                                The secret needs to be in the same namespace as scrape object
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        bearer_token:
+                          description: SecretKeySelector selects a key of a Secret.
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        bearer_token_file:
+                          type: string
+                        tls_config:
+                          x-kubernetes-preserve-unknown-fields: true
+                      type: object
+                    proxyURL:
+                      description: ProxyURL eg http://proxyserver:2195 Directs scrapes
+                        to proxy through this endpoint.
+                      type: string
+                    role:
+                      description: Role of the Kubernetes entities that should be
+                        discovered.
+                      type: string
+                    selectors:
+                      description: Selector to select objects.
+                      items:
+                        description: K8SSelectorConfig is Kubernetes Selector Config
+                        properties:
+                          field:
+                            type: string
+                          label:
+                            type: string
+                          role:
+                            type: string
+                        required:
+                        - role
+                        type: object
+                      type: array
+                      x-kubernetes-list-map-keys:
+                      - role
+                      x-kubernetes-list-type: map
+                    tlsConfig:
+                      description: TLS configuration to use on every scrape request
+                      properties:
+                        ca:
+                          description: Struct containing the CA cert to use for the
+                            targets.
+                          properties:
+                            configMap:
+                              description: ConfigMap containing data to use for the
+                                targets.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secret:
+                              description: Secret containing data to use for the targets.
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        caFile:
+                          description: Path to the CA cert in the container to use
+                            for the targets.
+                          type: string
+                        cert:
+                          description: Struct containing the client cert file for
+                            the targets.
+                          properties:
+                            configMap:
+                              description: ConfigMap containing data to use for the
+                                targets.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secret:
+                              description: Secret containing data to use for the targets.
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        certFile:
+                          description: Path to the client cert file in the container
+                            for the targets.
+                          type: string
+                        insecureSkipVerify:
+                          description: Disable target certificate validation.
+                          type: boolean
+                        keyFile:
+                          description: Path to the client key file in the container
+                            for the targets.
+                          type: string
+                        keySecret:
+                          description: Secret containing the client key file for the
+                            targets.
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        serverName:
+                          description: Used to verify the hostname for the targets.
+                          type: string
+                      type: object
+                  required:
+                  - role
+                  type: object
+                type: array
+              max_scrape_size:
+                description: MaxScrapeSize defines a maximum size of scraped data
+                  for a job
+                type: string
+              metricRelabelConfigs:
+                description: MetricRelabelConfigs to apply to samples after scrapping.
+                items:
+                  description: |-
+                    RelabelConfig allows dynamic rewriting of the label set
+                    More info: https://docs.victoriametrics.com/victoriametrics/#relabeling
+                  properties:
+                    action:
+                      description: Action to perform based on regex matching. Default
+                        is 'replace'
+                      type: string
+                    if:
+                      description: 'If represents metricsQL match expression (or list
+                        of expressions): ''{__name__=~"foo_.*"}'''
+                      x-kubernetes-preserve-unknown-fields: true
+                    labels:
+                      additionalProperties:
+                        type: string
+                      description: 'Labels is used together with Match for `action:
+                        graphite`'
+                      type: object
+                    match:
+                      description: 'Match is used together with Labels for `action:
+                        graphite`'
+                      type: string
+                    modulus:
+                      description: Modulus to take of the hash of the source label
+                        values.
+                      format: int64
+                      type: integer
+                    regex:
+                      description: |-
+                        Regular expression against which the extracted value is matched. Default is '(.*)'
+                        victoriaMetrics supports multiline regex joined with |
+                        https://docs.victoriametrics.com/victoriametrics/vmagent/#relabeling-enhancements
+                      x-kubernetes-preserve-unknown-fields: true
+                    replacement:
+                      description: |-
+                        Replacement value against which a regex replace is performed if the
+                        regular expression matches. Regex capture groups are available. Default is '$1'
+                      type: string
+                    separator:
+                      description: Separator placed between concatenated source label
+                        values. default is ';'.
+                      type: string
+                    source_labels:
+                      description: |-
+                        UnderScoreSourceLabels - additional form of source labels source_labels
+                        for compatibility with original relabel config.
+                        if set  both sourceLabels and source_labels, sourceLabels has priority.
+                        for details https://github.com/VictoriaMetrics/operator/issues/131
+                      items:
+                        type: string
+                      type: array
+                    sourceLabels:
+                      description: |-
+                        The source labels select values from existing labels. Their content is concatenated
+                        using the configured separator and matched against the configured regular expression
+                        for the replace, keep, and drop actions.
+                      items:
+                        type: string
+                      type: array
+                    target_label:
+                      description: |-
+                        UnderScoreTargetLabel - additional form of target label - target_label
+                        for compatibility with original relabel config.
+                        if set  both targetLabel and target_label, targetLabel has priority.
+                        for details https://github.com/VictoriaMetrics/operator/issues/131
+                      type: string
+                    targetLabel:
+                      description: |-
+                        Label to which the resulting value is written in a replace action.
+                        It is mandatory for replace actions. Regex capture groups are available.
+                      type: string
+                  type: object
+                type: array
+              oauth2:
+                description: OAuth2 defines auth configuration
+                properties:
+                  client_id:
+                    description: The secret or configmap containing the OAuth2 client
+                      id
+                    properties:
+                      configMap:
+                        description: ConfigMap containing data to use for the targets.
+                        properties:
+                          key:
+                            description: The key to select.
+                            type: string
+                          name:
+                            default: ""
+                            description: |-
+                              Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          optional:
+                            description: Specify whether the ConfigMap or its key
+                              must be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      secret:
+                        description: Secret containing data to use for the targets.
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must
+                              be a valid secret key.
+                            type: string
+                          name:
+                            default: ""
+                            description: |-
+                              Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          optional:
+                            description: Specify whether the Secret or its key must
+                              be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                        x-kubernetes-map-type: atomic
+                    type: object
+                  client_secret:
+                    description: The secret containing the OAuth2 client secret
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  client_secret_file:
+                    description: ClientSecretFile defines path for client secret file.
+                    type: string
+                  endpoint_params:
+                    additionalProperties:
+                      type: string
+                    description: Parameters to append to the token URL
+                    type: object
+                  proxy_url:
+                    description: |-
+                      The proxy URL for token_url connection
+                      ( available from v0.55.0).
+                      Is only supported by Scrape objects family
+                    type: string
+                  scopes:
+                    description: OAuth2 scopes used for the token request
+                    items:
+                      type: string
+                    type: array
+                  tls_config:
+                    description: |-
+                      TLSConfig for token_url connection
+                      ( available from v0.55.0).
+                      Is only supported by Scrape objects family
+                    x-kubernetes-preserve-unknown-fields: true
+                  token_url:
+                    description: The URL to fetch the token from
+                    minLength: 1
+                    type: string
+                required:
+                - client_id
+                - token_url
+                type: object
+              openstackSDConfigs:
+                description: OpenStackSDConfigs defines a list of OpenStack service
+                  discovery configurations.
+                items:
+                  description: |-
+                    OpenStackSDConfig allow retrieving scrape targets from OpenStack Nova instances.
+                    See [here](https://docs.victoriametrics.com/victoriametrics/sd_configs/#openstack_sd_configs)
+                  properties:
+                    allTenants:
+                      description: |-
+                        Whether the service discovery should list all instances for all projects.
+                        It is only relevant for the 'instance' role and usually requires admin permissions.
+                      type: boolean
+                    applicationCredentialId:
+                      description: ApplicationCredentialID
+                      type: string
+                    applicationCredentialName:
+                      description: |-
+                        The ApplicationCredentialID or ApplicationCredentialName fields are
+                        required if using an application credential to authenticate. Some providers
+                        allow you to create an application credential to authenticate rather than a
+                        password.
+                      type: string
+                    applicationCredentialSecret:
+                      description: |-
+                        The applicationCredentialSecret field is required if using an application
+                        credential to authenticate.
+                      properties:
+                        key:
+                          description: The key of the secret to select from.  Must
+                            be a valid secret key.
+                          type: string
+                        name:
+                          default: ""
+                          description: |-
+                            Name of the referent.
+                            This field is effectively required, but due to backwards compatibility is
+                            allowed to be empty. Instances of this type with an empty value here are
+                            almost certainly wrong.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          type: string
+                        optional:
+                          description: Specify whether the Secret or its key must
+                            be defined
+                          type: boolean
+                      required:
+                      - key
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    availability:
+                      description: Availability of the endpoint to connect to.
+                      enum:
+                      - Public
+                      - public
+                      - Admin
+                      - admin
+                      - Internal
+                      - internal
+                      type: string
+                    domainID:
+                      description: DomainID
+                      type: string
+                    domainName:
+                      description: |-
+                        At most one of domainId and domainName must be provided if using username
+                        with Identity V3. Otherwise, either are optional.
+                      type: string
+                    identityEndpoint:
+                      description: |-
+                        IdentityEndpoint specifies the HTTP endpoint that is required to work with
+                        the Identity API of the appropriate version.
+                      type: string
+                    password:
+                      description: |-
+                        Password for the Identity V2 and V3 APIs. Consult with your provider's
+                        control panel to discover your account's preferred method of authentication.
+                      properties:
+                        key:
+                          description: The key of the secret to select from.  Must
+                            be a valid secret key.
+                          type: string
+                        name:
+                          default: ""
+                          description: |-
+                            Name of the referent.
+                            This field is effectively required, but due to backwards compatibility is
+                            allowed to be empty. Instances of this type with an empty value here are
+                            almost certainly wrong.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          type: string
+                        optional:
+                          description: Specify whether the Secret or its key must
+                            be defined
+                          type: boolean
+                      required:
+                      - key
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    port:
+                      description: |-
+                        The port to scrape metrics from. If using the public IP address, this must
+                        instead be specified in the relabeling rule.
+                      type: integer
+                    projectID:
+                      description: ' ProjectID'
+                      type: string
+                    projectName:
+                      description: |-
+                        The ProjectId and ProjectName fields are optional for the Identity V2 API.
+                        Some providers allow you to specify a ProjectName instead of the ProjectId.
+                        Some require both. Your provider's authentication policies will determine
+                        how these fields influence authentication.
+                      type: string
+                    region:
+                      description: The OpenStack Region.
+                      minLength: 1
+                      type: string
+                    role:
+                      description: The OpenStack role of entities that should be discovered.
+                      enum:
+                      - Instance
+                      - instance
+                      - Hypervisor
+                      - hypervisor
+                      type: string
+                    tlsConfig:
+                      description: TLS configuration to use on every scrape request
+                      properties:
+                        ca:
+                          description: Struct containing the CA cert to use for the
+                            targets.
+                          properties:
+                            configMap:
+                              description: ConfigMap containing data to use for the
+                                targets.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secret:
+                              description: Secret containing data to use for the targets.
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        caFile:
+                          description: Path to the CA cert in the container to use
+                            for the targets.
+                          type: string
+                        cert:
+                          description: Struct containing the client cert file for
+                            the targets.
+                          properties:
+                            configMap:
+                              description: ConfigMap containing data to use for the
+                                targets.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            secret:
+                              description: Secret containing data to use for the targets.
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        certFile:
+                          description: Path to the client cert file in the container
+                            for the targets.
+                          type: string
+                        insecureSkipVerify:
+                          description: Disable target certificate validation.
+                          type: boolean
+                        keyFile:
+                          description: Path to the client key file in the container
+                            for the targets.
+                          type: string
+                        keySecret:
+                          description: Secret containing the client key file for the
+                            targets.
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        serverName:
+                          description: Used to verify the hostname for the targets.
+                          type: string
+                      type: object
+                    userid:
+                      description: UserID
+                      type: string
+                    username:
+                      description: |-
+                        Username is required if using Identity V2 API. Consult with your provider's
+                        control panel to discover your account's username.
+                        In Identity V3, either userid or a combination of username
+                        and domainId or domainName are needed
+                      type: string
+                  required:
+                  - region
+                  - role
+                  type: object
+                type: array
+              params:
+                additionalProperties:
+                  items:
+                    type: string
+                  type: array
+                description: Optional HTTP URL parameters
+                type: object
+              path:
+                description: HTTP path to scrape for metrics.
+                type: string
+              proxyURL:
+                description: ProxyURL eg http://proxyserver:2195 Directs scrapes to
+                  proxy through this endpoint.
+                type: string
+              relabelConfigs:
+                description: RelabelConfigs to apply to samples during service discovery.
+                items:
+                  description: |-
+                    RelabelConfig allows dynamic rewriting of the label set
+                    More info: https://docs.victoriametrics.com/victoriametrics/#relabeling
+                  properties:
+                    action:
+                      description: Action to perform based on regex matching. Default
+                        is 'replace'
+                      type: string
+                    if:
+                      description: 'If represents metricsQL match expression (or list
+                        of expressions): ''{__name__=~"foo_.*"}'''
+                      x-kubernetes-preserve-unknown-fields: true
+                    labels:
+                      additionalProperties:
+                        type: string
+                      description: 'Labels is used together with Match for `action:
+                        graphite`'
+                      type: object
+                    match:
+                      description: 'Match is used together with Labels for `action:
+                        graphite`'
+                      type: string
+                    modulus:
+                      description: Modulus to take of the hash of the source label
+                        values.
+                      format: int64
+                      type: integer
+                    regex:
+                      description: |-
+                        Regular expression against which the extracted value is matched. Default is '(.*)'
+                        victoriaMetrics supports multiline regex joined with |
+                        https://docs.victoriametrics.com/victoriametrics/vmagent/#relabeling-enhancements
+                      x-kubernetes-preserve-unknown-fields: true
+                    replacement:
+                      description: |-
+                        Replacement value against which a regex replace is performed if the
+                        regular expression matches. Regex capture groups are available. Default is '$1'
+                      type: string
+                    separator:
+                      description: Separator placed between concatenated source label
+                        values. default is ';'.
+                      type: string
+                    source_labels:
+                      description: |-
+                        UnderScoreSourceLabels - additional form of source labels source_labels
+                        for compatibility with original relabel config.
+                        if set  both sourceLabels and source_labels, sourceLabels has priority.
+                        for details https://github.com/VictoriaMetrics/operator/issues/131
+                      items:
+                        type: string
+                      type: array
+                    sourceLabels:
+                      description: |-
+                        The source labels select values from existing labels. Their content is concatenated
+                        using the configured separator and matched against the configured regular expression
+                        for the replace, keep, and drop actions.
+                      items:
+                        type: string
+                      type: array
+                    target_label:
+                      description: |-
+                        UnderScoreTargetLabel - additional form of target label - target_label
+                        for compatibility with original relabel config.
+                        if set  both targetLabel and target_label, targetLabel has priority.
+                        for details https://github.com/VictoriaMetrics/operator/issues/131
+                      type: string
+                    targetLabel:
+                      description: |-
+                        Label to which the resulting value is written in a replace action.
+                        It is mandatory for replace actions. Regex capture groups are available.
+                      type: string
+                  type: object
+                type: array
+              sampleLimit:
+                description: SampleLimit defines per-scrape limit on number of scraped
+                  samples that will be accepted.
+                type: integer
+              scheme:
+                description: HTTP scheme to use for scraping.
+                enum:
+                - http
+                - https
+                - HTTPS
+                - HTTP
+                type: string
+              scrape_interval:
+                description: |-
+                  ScrapeInterval is the same as Interval and has priority over it.
+                  one of scrape_interval or interval can be used
+                type: string
+              scrapeClass:
+                description: ScrapeClass defined scrape class to apply
+                type: string
+              scrapeTimeout:
+                description: Timeout after which the scrape is ended
+                type: string
+              seriesLimit:
+                description: |-
+                  SeriesLimit defines per-scrape limit on number of unique time series
+                  a single target can expose during all the scrapes on the time window of 24h.
+                type: integer
+              staticConfigs:
+                description: StaticConfigs defines a list of static targets with a
+                  common label set.
+                items:
+                  description: |-
+                    StaticConfig defines a static configuration.
+                    See [here](https://docs.victoriametrics.com/victoriametrics/sd_configs/#static_configs)
+                  properties:
+                    labels:
+                      additionalProperties:
+                        type: string
+                      description: Labels assigned to all metrics scraped from the
+                        targets.
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    targets:
+                      description: List of targets for this static configuration.
+                      items:
+                        type: string
+                      type: array
+                  type: object
+                type: array
+              tlsConfig:
+                description: TLSConfig configuration to use when scraping the endpoint
+                properties:
+                  ca:
+                    description: Struct containing the CA cert to use for the targets.
+                    properties:
+                      configMap:
+                        description: ConfigMap containing data to use for the targets.
+                        properties:
+                          key:
+                            description: The key to select.
+                            type: string
+                          name:
+                            default: ""
+                            description: |-
+                              Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          optional:
+                            description: Specify whether the ConfigMap or its key
+                              must be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      secret:
+                        description: Secret containing data to use for the targets.
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must
+                              be a valid secret key.
+                            type: string
+                          name:
+                            default: ""
+                            description: |-
+                              Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          optional:
+                            description: Specify whether the Secret or its key must
+                              be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                        x-kubernetes-map-type: atomic
+                    type: object
+                  caFile:
+                    description: Path to the CA cert in the container to use for the
+                      targets.
+                    type: string
+                  cert:
+                    description: Struct containing the client cert file for the targets.
+                    properties:
+                      configMap:
+                        description: ConfigMap containing data to use for the targets.
+                        properties:
+                          key:
+                            description: The key to select.
+                            type: string
+                          name:
+                            default: ""
+                            description: |-
+                              Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          optional:
+                            description: Specify whether the ConfigMap or its key
+                              must be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      secret:
+                        description: Secret containing data to use for the targets.
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must
+                              be a valid secret key.
+                            type: string
+                          name:
+                            default: ""
+                            description: |-
+                              Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          optional:
+                            description: Specify whether the Secret or its key must
+                              be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                        x-kubernetes-map-type: atomic
+                    type: object
+                  certFile:
+                    description: Path to the client cert file in the container for
+                      the targets.
+                    type: string
+                  insecureSkipVerify:
+                    description: Disable target certificate validation.
+                    type: boolean
+                  keyFile:
+                    description: Path to the client key file in the container for
+                      the targets.
+                    type: string
+                  keySecret:
+                    description: Secret containing the client key file for the targets.
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  serverName:
+                    description: Used to verify the hostname for the targets.
+                    type: string
+                type: object
+              vm_scrape_params:
+                description: VMScrapeParams defines VictoriaMetrics specific scrape
+                  parameters
+                properties:
+                  disable_compression:
+                    description: DisableCompression
+                    type: boolean
+                  disable_keep_alive:
+                    description: |-
+                      disable_keepalive allows disabling HTTP keep-alive when scraping targets.
+                      By default, HTTP keep-alive is enabled, so TCP connections to scrape targets
+                      could be reused.
+                      See https://docs.victoriametrics.com/victoriametrics/vmagent/#scrape_config-enhancements
+                    type: boolean
+                  headers:
+                    description: |-
+                      Headers allows sending custom headers to scrape targets
+                      must be in of semicolon separated header with it's value
+                      eg:
+                      headerName: headerValue
+                      vmagent supports since 1.79.0 version
+                    items:
+                      type: string
+                    type: array
+                  no_stale_markers:
+                    type: boolean
+                  proxy_client_config:
+                    description: |-
+                      ProxyClientConfig configures proxy auth settings for scraping
+                      See feature description https://docs.victoriametrics.com/victoriametrics/vmagent/#scraping-targets-via-a-proxy
+                    properties:
+                      basic_auth:
+                        description: BasicAuth allow an endpoint to authenticate over
+                          basic authentication
+                        properties:
+                          password:
+                            description: |-
+                              Password defines reference for secret with password value
+                              The secret needs to be in the same namespace as scrape object
+                            properties:
+                              key:
+                                description: The key of the secret to select from.  Must
+                                  be a valid secret key.
+                                type: string
+                              name:
+                                default: ""
+                                description: |-
+                                  Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                type: string
+                              optional:
+                                description: Specify whether the Secret or its key
+                                  must be defined
+                                type: boolean
+                            required:
+                            - key
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          password_file:
+                            description: |-
+                              PasswordFile defines path to password file at disk
+                              must be pre-mounted
+                            type: string
+                          username:
+                            description: |-
+                              Username defines reference for secret with username value
+                              The secret needs to be in the same namespace as scrape object
+                            properties:
+                              key:
+                                description: The key of the secret to select from.  Must
+                                  be a valid secret key.
+                                type: string
+                              name:
+                                default: ""
+                                description: |-
+                                  Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                type: string
+                              optional:
+                                description: Specify whether the Secret or its key
+                                  must be defined
+                                type: boolean
+                            required:
+                            - key
+                            type: object
+                            x-kubernetes-map-type: atomic
+                        type: object
+                      bearer_token:
+                        description: SecretKeySelector selects a key of a Secret.
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must
+                              be a valid secret key.
+                            type: string
+                          name:
+                            default: ""
+                            description: |-
+                              Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          optional:
+                            description: Specify whether the Secret or its key must
+                              be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      bearer_token_file:
+                        type: string
+                      tls_config:
+                        x-kubernetes-preserve-unknown-fields: true
+                    type: object
+                  scrape_align_interval:
+                    type: string
+                  scrape_offset:
+                    type: string
+                  stream_parse:
+                    type: boolean
+                type: object
+            type: object
+          status:
+            description: ScrapeObjectStatus defines the observed state of ScrapeObjects
+            properties:
+              conditions:
+                description: 'Known .status.conditions.type are: "Available", "Progressing",
+                  and "Degraded"'
+                items:
+                  description: Condition defines status condition of the resource
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another.
+                      format: date-time
+                      type: string
+                    lastUpdateTime:
+                      description: |-
+                        LastUpdateTime is the last time of given type update.
+                        This value is used for status TTL update and removal
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: Type of condition in CamelCase or in name.namespace.resource.victoriametrics.com/CamelCase.
+                      maxLength: 316
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - lastUpdateTime
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              observedGeneration:
+                description: |-
+                  ObservedGeneration defines current generation picked by operator for the
+                  reconcile
+                format: int64
+                type: integer
+              reason:
+                description: Reason defines human readable error reason
+                type: string
+              updateStatus:
+                description: UpdateStatus defines a status for update rollout
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

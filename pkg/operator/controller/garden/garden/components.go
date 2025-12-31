@@ -65,6 +65,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
+	victoriaoperator "github.com/gardener/gardener/pkg/component/observability/logging/victoria/operator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
 	gardenblackboxexporter "github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter/garden"
@@ -98,6 +99,7 @@ type components struct {
 	extensionCRD     component.DeployWaiter
 	prometheusCRD    component.DeployWaiter
 	persesCRD        component.DeployWaiter
+	victoriaCRD      component.DeployWaiter
 	openTelemetryCRD component.DeployWaiter
 
 	gardenerResourceManager component.DeployWaiter
@@ -143,6 +145,7 @@ type components struct {
 	prometheusLongTerm            prometheus.Interface
 	blackboxExporter              component.DeployWaiter
 	persesOperator                component.DeployWaiter
+	victoriaOperator              component.DeployWaiter
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -193,6 +196,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.persesCRD, err = persesoperator.NewCRDs(r.RuntimeClientSet.Client())
+	if err != nil {
+		return
+	}
+	c.victoriaCRD, err = victoriaoperator.NewCRDs(r.RuntimeClientSet.Client())
 	if err != nil {
 		return
 	}
@@ -344,6 +351,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.persesOperator, err = r.newPersesOperator()
+	if err != nil {
+		return
+	}
+	c.victoriaOperator, err = r.newVictoriaOperator()
 	if err != nil {
 		return
 	}
@@ -1512,6 +1523,14 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 
 func (r *Reconciler) newPersesOperator() (component.DeployWaiter, error) {
 	return sharedcomponent.NewPersesOperator(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		v1beta1constants.PriorityClassNameGardenSystem100,
+	)
+}
+
+func (r *Reconciler) newVictoriaOperator() (component.DeployWaiter, error) {
+	return sharedcomponent.NewVictoriaOperator(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		v1beta1constants.PriorityClassNameGardenSystem100,
