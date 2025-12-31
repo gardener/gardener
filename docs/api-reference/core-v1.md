@@ -231,5 +231,5 @@ For usage in the gardenlet, the secret must have the label <code>gardener.cloud/
 </table>
 <hr/>
 <p><em>
-Generated with <a href="https://github.com/ahmetb/gen-crd-api-reference-docs">gen-crd-api-reference-docs</a>
+Generated with <a href="https://github.com/kubernetes-sigs/reference-docs">reference-docs</a>
 </em></p>

@@ -7,7 +7,7 @@
 // +k8s:openapi-gen=true
 // +k8s:defaulter-gen=TypeMeta
 
-//go:generate gen-crd-api-reference-docs -api-dir . -config ../../../../../hack/api-reference/provider-local-config.json -template-dir ../../../../../hack/api-reference/template -out-file ../../../../../docs/api-reference/provider-local.md
+//go:generate reference-docs -api-dir . -config ../../../../../hack/api-reference/provider-local-config.json -template-dir ../../../../../hack/api-reference/template -out-file ../../../../../docs/api-reference/provider-local.md
 
 // Package v1alpha1 contains the local provider API resources.
 // +groupName=local.provider.extensions.gardener.cloud
