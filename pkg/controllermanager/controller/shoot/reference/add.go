@@ -59,7 +59,7 @@ func getReferencedSecretNames(obj client.Object) []string {
 	}
 
 	var out []string
-	out = append(out, secretNamesForDNSProviders(shoot)...)
+	out = append(out, namesForDNSProviderCredentials(shoot, corev1.SchemeGroupVersion.String(), "Secret")...)
 	out = append(out, secretNamesForAdmissionPlugins(shoot)...)
 	out = append(out, secretNamesForStructuredAuthorization(shoot)...)
 	out = append(out, namesForReferencedResources(shoot, corev1.SchemeGroupVersion.String(), "Secret")...)
@@ -94,20 +94,24 @@ func getReferencedWorkloadIdentityNames(obj client.Object) []string {
 
 	var out []string
 	out = append(out, namesForReferencedResources(shoot, securityv1alpha1.SchemeGroupVersion.String(), "WorkloadIdentity")...)
+	out = append(out, namesForDNSProviderCredentials(shoot, securityv1alpha1.SchemeGroupVersion.String(), "WorkloadIdentity")...)
 	return out
 }
 
-func secretNamesForDNSProviders(shoot *gardencorev1beta1.Shoot) []string {
+func namesForDNSProviderCredentials(shoot *gardencorev1beta1.Shoot, apiVersion, kind string) []string {
 	if shoot.Spec.DNS == nil {
 		return nil
 	}
 
 	var names = make([]string, 0, len(shoot.Spec.DNS.Providers))
 	for _, provider := range shoot.Spec.DNS.Providers {
-		if provider.SecretName == nil {
+		if provider.CredentialsRef == nil {
 			continue
 		}
-		names = append(names, *provider.SecretName)
+		if provider.CredentialsRef.APIVersion != apiVersion || provider.CredentialsRef.Kind != kind {
+			continue
+		}
+		names = append(names, provider.CredentialsRef.Name)
 	}
 
 	return names

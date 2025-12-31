@@ -22,6 +22,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -34,9 +35,11 @@ var _ = Describe("Garden", func() {
 		defaultDomainProvider   = "default-domain-provider"
 		defaultDomainSecretData = map[string][]byte{"default": []byte("domain")}
 		defaultDomain           = &Domain{
-			Domain:     "bar.com",
-			Provider:   defaultDomainProvider,
-			SecretData: defaultDomainSecretData,
+			Domain:   "bar.com",
+			Provider: defaultDomainProvider,
+			Credentials: &corev1.Secret{
+				Data: defaultDomainSecretData,
+			},
 		}
 	)
 
@@ -372,10 +375,10 @@ var _ = Describe("Garden", func() {
 			result, err := ReadGardenInternalDomain(ctx, fakeClient, namespace, true, seedDNSProvider)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(&Domain{
-				Domain:     domain,
-				Provider:   providerType,
-				Zone:       zone,
-				SecretData: map[string][]byte{"foo": []byte("bar")},
+				Domain:      domain,
+				Provider:    providerType,
+				Zone:        zone,
+				Credentials: secret,
 			}))
 		})
 
@@ -394,10 +397,10 @@ var _ = Describe("Garden", func() {
 			result, err := ReadGardenInternalDomain(ctx, fakeClient, namespace, true, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(&Domain{
-				Domain:     domain,
-				Provider:   providerType,
-				Zone:       zone,
-				SecretData: map[string][]byte{"foo": []byte("bar")},
+				Domain:      domain,
+				Provider:    providerType,
+				Zone:        zone,
+				Credentials: secret,
 			}))
 		})
 
@@ -448,6 +451,43 @@ var _ = Describe("Garden", func() {
 			result, err := ReadGardenInternalDomain(ctx, fakeClient, namespace, true, nil)
 			Expect(result).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("error constructing internal domain from secret")))
+		})
+
+		It("should allow WorkloadIdentity credentials", func() {
+			workloadIdentity := &securityv1alpha1.WorkloadIdentity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "internal-domain",
+					Namespace: namespace,
+				},
+				Spec: securityv1alpha1.WorkloadIdentitySpec{
+					Audiences: []string{"test"},
+					TargetSystem: securityv1alpha1.TargetSystem{
+						Type: "test",
+					},
+				},
+			}
+			seedDNSProvider = &gardencorev1beta1.SeedDNSProviderConfig{
+				Type:   providerType,
+				Domain: domain,
+				Zone:   ptr.To(zone),
+				CredentialsRef: corev1.ObjectReference{
+					APIVersion: "security.gardener.cloud/v1alpha1",
+					Kind:       "WorkloadIdentity",
+					Name:       "internal-domain",
+					Namespace:  namespace,
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, workloadIdentity)).To(Succeed())
+			internalDomain, err := ReadGardenInternalDomain(ctx, fakeClient, namespace, false, seedDNSProvider)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(internalDomain).To(Equal(&Domain{
+				Domain:      domain,
+				Provider:    providerType,
+				Zone:        zone,
+				Credentials: workloadIdentity,
+			}))
 		})
 	})
 
@@ -529,6 +569,9 @@ var _ = Describe("Garden", func() {
 			providerType2 = "cloudflare"
 			domain2       = "default2.example.com"
 			zone2         = "zone-2"
+			providerType3 = "test-dns"
+			domain3       = "default3.example.com"
+			zone3         = "zone-3"
 		)
 
 		BeforeEach(func() {
@@ -550,9 +593,22 @@ var _ = Describe("Garden", func() {
 				},
 				Data: map[string][]byte{"baz": []byte("qux")},
 			}
+			workloadIdentity := &securityv1alpha1.WorkloadIdentity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "default-domain-3",
+					Namespace: namespace,
+				},
+				Spec: securityv1alpha1.WorkloadIdentitySpec{
+					Audiences: []string{"test"},
+					TargetSystem: securityv1alpha1.TargetSystem{
+						Type: "test",
+					},
+				},
+			}
 
 			Expect(fakeClient.Create(ctx, secret1)).To(Succeed())
 			Expect(fakeClient.Create(ctx, secret2)).To(Succeed())
+			Expect(fakeClient.Create(ctx, workloadIdentity)).To(Succeed())
 
 			seedDNSDefaults := []gardencorev1beta1.SeedDNSProviderConfig{
 				{
@@ -577,22 +633,39 @@ var _ = Describe("Garden", func() {
 						Namespace:  namespace,
 					},
 				},
+				{
+					Type:   providerType3,
+					Domain: domain3,
+					Zone:   ptr.To(zone3),
+					CredentialsRef: corev1.ObjectReference{
+						APIVersion: "security.gardener.cloud/v1alpha1",
+						Kind:       "WorkloadIdentity",
+						Name:       "default-domain-3",
+						Namespace:  namespace,
+					},
+				},
 			}
 
 			result, err := ReadGardenDefaultDomains(ctx, fakeClient, namespace, seedDNSDefaults)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal([]*Domain{
 				{
-					Domain:     domain1,
-					Provider:   providerType1,
-					Zone:       zone1,
-					SecretData: map[string][]byte{"foo": []byte("bar")},
+					Domain:      domain1,
+					Provider:    providerType1,
+					Zone:        zone1,
+					Credentials: secret1,
 				},
 				{
-					Domain:     domain2,
-					Provider:   providerType2,
-					Zone:       zone2,
-					SecretData: map[string][]byte{"baz": []byte("qux")},
+					Domain:      domain2,
+					Provider:    providerType2,
+					Zone:        zone2,
+					Credentials: secret2,
+				},
+				{
+					Domain:      domain3,
+					Provider:    providerType3,
+					Zone:        zone3,
+					Credentials: workloadIdentity,
 				},
 			}))
 		})
@@ -637,16 +710,16 @@ var _ = Describe("Garden", func() {
 
 			Expect(result).To(ConsistOf(
 				&Domain{
-					Domain:     domain1,
-					Provider:   providerType1,
-					Zone:       zone1,
-					SecretData: map[string][]byte{"foo": []byte("bar")},
+					Domain:      domain1,
+					Provider:    providerType1,
+					Zone:        zone1,
+					Credentials: secret1,
 				},
 				&Domain{
-					Domain:     domain2,
-					Provider:   providerType2,
-					Zone:       zone2,
-					SecretData: map[string][]byte{"baz": []byte("qux")},
+					Domain:      domain2,
+					Provider:    providerType2,
+					Zone:        zone2,
+					Credentials: secret2,
 				},
 			))
 		})
@@ -680,7 +753,7 @@ var _ = Describe("Garden", func() {
 
 			result, err := ReadGardenDefaultDomains(ctx, fakeClient, namespace, seedDNSDefaults)
 			Expect(result).To(BeNil())
-			Expect(err).To(MatchError(ContainSubstring("cannot fetch default domain secret")))
+			Expect(err).To(MatchError(ContainSubstring("cannot fetch default domain credentials")))
 		})
 
 		It("should error if default domain secret is malformed", func() {
@@ -765,22 +838,22 @@ var _ = Describe("Garden", func() {
 
 			Expect(result).To(Equal([]*Domain{
 				{
-					Domain:     "high.example.com",
-					Provider:   providerType1,
-					Zone:       zone1,
-					SecretData: map[string][]byte{"high": []byte("priority")},
+					Domain:      "high.example.com",
+					Provider:    providerType1,
+					Zone:        zone1,
+					Credentials: secretHighPriority,
 				},
 				{
-					Domain:     "medium.example.com",
-					Provider:   providerType2,
-					Zone:       zone2,
-					SecretData: map[string][]byte{"medium": []byte("priority")},
+					Domain:      "medium.example.com",
+					Provider:    providerType2,
+					Zone:        zone2,
+					Credentials: secretMediumPriority,
 				},
 				{
-					Domain:     "low.example.com",
-					Provider:   "dns-provider",
-					Zone:       "zone-3",
-					SecretData: map[string][]byte{"low": []byte("priority")},
+					Domain:      "low.example.com",
+					Provider:    "dns-provider",
+					Zone:        "zone-3",
+					Credentials: secretLowPriority,
 				},
 			}))
 		})

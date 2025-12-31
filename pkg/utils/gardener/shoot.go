@@ -630,30 +630,30 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 		externalDomain.Provider = core.DNSUnmanaged
 
 	case defaultDomain != nil:
-		externalDomain.SecretData = defaultDomain.SecretData
+		externalDomain.Credentials = defaultDomain.Credentials
 		externalDomain.Provider = defaultDomain.Provider
 		externalDomain.Zone = defaultDomain.Zone
 
 	case primaryProvider != nil:
-		if primaryProvider.SecretName != nil {
-			secret := &corev1.Secret{}
-			if err := c.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: *primaryProvider.SecretName}, secret); err != nil {
-				return nil, fmt.Errorf("could not get dns provider secret %q: %+v", *primaryProvider.SecretName, err)
+		if primaryProvider.CredentialsRef != nil {
+			credentials, err := kubernetesutils.GetCredentialsByCrossVersionObjectReference(ctx, c, *primaryProvider.CredentialsRef, shoot.Namespace)
+			if err != nil {
+				return nil, fmt.Errorf("could not get dns provider credentials %q: %+v", primaryProvider.CredentialsRef.String(), err)
 			}
-			externalDomain.SecretData = secret.Data
+			externalDomain.Credentials = credentials
 		} else {
 			if shootCredentials == nil {
 				return nil, fmt.Errorf("default domain is not present, secret for primary dns provider is required")
 			}
 			switch creds := shootCredentials.(type) {
 			case *corev1.Secret:
-				externalDomain.SecretData = creds.Data
+				externalDomain.Credentials = creds
 			case *securityv1alpha1.WorkloadIdentity:
-				// TODO(dimityrmirchev): This code should eventually handle shoot credentials being of type WorkloadIdentity
-				return nil, fmt.Errorf("shoot credentials of type WorkloadIdentity cannot be used as domain secret")
+				externalDomain.Credentials = creds
 			default:
-				return nil, fmt.Errorf("unexpected shoot credentials type")
+				return nil, fmt.Errorf("unexpected shoot credentials type %T", creds)
 			}
+			externalDomain.Credentials = shootCredentials
 		}
 		if primaryProvider.Type != nil {
 			externalDomain.Provider = *primaryProvider.Type

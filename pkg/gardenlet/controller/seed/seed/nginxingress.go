@@ -22,7 +22,7 @@ import (
 )
 
 func (r *Reconciler) newIngressDNSRecord(ctx context.Context, log logr.Logger, seed *seedpkg.Seed, loadBalancerAddress string) (component.DeployMigrateWaiter, error) {
-	secretData, err := getDNSProviderSecretData(ctx, r.GardenClient, seed.GetInfo())
+	credentialsDeployer, err := getDNSProviderCredentialsDeployer(ctx, r.GardenClient, seed.GetInfo())
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +31,6 @@ func (r *Reconciler) newIngressDNSRecord(ctx context.Context, log logr.Logger, s
 		Name:                         "seed-ingress",
 		SecretName:                   "seed-ingress",
 		Namespace:                    r.GardenNamespace,
-		SecretData:                   secretData,
 		DNSName:                      seed.GetIngressFQDN("*"),
 		RecordType:                   extensionsv1alpha1helper.GetDNSRecordType(loadBalancerAddress),
 		ReconcileOnlyOnChangeOrError: true,
@@ -53,16 +52,17 @@ func (r *Reconciler) newIngressDNSRecord(ctx context.Context, log logr.Logger, s
 		dnsrecord.DefaultInterval,
 		dnsrecord.DefaultSevereThreshold,
 		dnsrecord.DefaultTimeout,
+		credentialsDeployer,
 	), nil
 }
 
-func getDNSProviderSecretData(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) (map[string][]byte, error) {
+func getDNSProviderCredentialsDeployer(ctx context.Context, gardenClient client.Reader, seed *gardencorev1beta1.Seed) (dnsrecord.CredentialsDeployFunc, error) {
 	if dnsConfig := seed.Spec.DNS; dnsConfig.Provider != nil {
-		secret, err := kubernetesutils.GetSecretByReference(ctx, gardenClient, &dnsConfig.Provider.SecretRef)
+		credentials, err := kubernetesutils.GetCredentialsByObjectReference(ctx, gardenClient, dnsConfig.Provider.CredentialsRef)
 		if err != nil {
 			return nil, err
 		}
-		return secret.Data, nil
+		return dnsrecord.CredentialsDeployerFromCredentials(credentials, seed), nil
 	}
 	return nil, nil
 }
