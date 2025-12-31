@@ -201,25 +201,6 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 
 	gardenerutils.MaintainSeedNameLabels(managedSeed, shoot.Spec.SeedName)
 
-	switch a.GetOperation() {
-	case admission.Create:
-		errs, err := v.validateManagedSeedCreate(managedSeed, shoot)
-		if err != nil {
-			return err
-		}
-		allErrs = append(allErrs, errs...)
-	case admission.Update:
-		oldManagedSeed, ok := a.GetOldObject().(*seedmanagement.ManagedSeed)
-		if !ok {
-			return apierrors.NewInternalError(errors.New("could not convert old resource into ManagedSeed object"))
-		}
-		errs, err := v.validateManagedSeedUpdate(oldManagedSeed, managedSeed, shoot)
-		if err != nil {
-			return err
-		}
-		allErrs = append(allErrs, errs...)
-	}
-
 	if len(allErrs) > 0 {
 		return apierrors.NewInvalid(gk, managedSeed.Name, allErrs)
 	}
@@ -271,66 +252,6 @@ func (v *ManagedSeed) fetchManagedSeedShoot(ctx context.Context, managedSeed *se
 	}
 
 	return shoot, nil
-}
-
-func (v *ManagedSeed) validateManagedSeedCreate(managedSeed *seedmanagement.ManagedSeed, shoot *gardencorev1beta1.Shoot) (field.ErrorList, error) {
-	allErrs := field.ErrorList{}
-
-	seedSpec, err := seedmanagementhelper.ExtractSeedSpec(managedSeed)
-	if err != nil {
-		return nil, err
-	}
-
-	shootZones := v1beta1helper.GetAllZonesFromShoot(shoot)
-
-	if !shootZones.HasAll(seedSpec.Provider.Zones...) {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec", "provider", "zones"), seedSpec.Provider.Zones, "cannot use zone in seed provider that is not available in referenced shoot"))
-	}
-
-	return allErrs, nil
-}
-
-func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *seedmanagement.ManagedSeed, shoot *gardencorev1beta1.Shoot) (field.ErrorList, error) {
-	var (
-		allErrs                 = field.ErrorList{}
-		seedConfigSpecBasePath  = field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec")
-		zonesFieldPath          = seedConfigSpecBasePath.Child("provider", "zones")
-		internalDomainFieldPath = seedConfigSpecBasePath.Child("dns", "internal", "domain")
-		defaultDomainsFieldPath = seedConfigSpecBasePath.Child("dns", "defaults")
-	)
-
-	oldSeedSpec, err := seedmanagementhelper.ExtractSeedSpec(oldManagedSeed)
-	if err != nil {
-		return nil, err
-	}
-	newSeedSpec, err := seedmanagementhelper.ExtractSeedSpec(newManagedSeed)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := admissionutils.ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, "ManagedSeed"); err != nil {
-		allErrs = append(allErrs, field.Forbidden(zonesFieldPath, "zones must not be removed while shoots are still scheduled onto seed"))
-	}
-
-	if err := admissionutils.ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, "ManagedSeed"); err != nil {
-		allErrs = append(allErrs, field.Forbidden(internalDomainFieldPath, "internal domain must not be changed while shoots are still scheduled onto seed"))
-	}
-
-	if err := admissionutils.ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, v.secretLister, "ManagedSeed"); err != nil {
-		allErrs = append(allErrs, field.Forbidden(defaultDomainsFieldPath, "default domains must not be removed while shoots are still using them"))
-	}
-
-	shootZones := v1beta1helper.GetAllZonesFromShoot(shoot)
-	newZones := sets.New(newSeedSpec.Provider.Zones...).Difference(sets.New(oldSeedSpec.Provider.Zones...))
-
-	// Newly added zones should match the ones found in the shoot cluster.
-	// Zone names were allowed to deviate from the zones configured for shoot clusters, see https://github.com/gardener/gardener/commit/8d28452e7f718d0041fbe82eb83543e3a87ea8ad.
-	// Thus, we can only check added zones here.
-	if !shootZones.HasAll(newZones.UnsortedList()...) {
-		allErrs = append(allErrs, field.Invalid(zonesFieldPath, newZones.UnsortedList(), "added zones must match zone names configured for workers in the referenced shoot cluster"))
-	}
-
-	return allErrs, nil
 }
 
 func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.GardenletConfig, shoot *gardencorev1beta1.Shoot, fldPath *field.Path) (field.ErrorList, error) {
@@ -661,9 +582,88 @@ func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ ad
 		allErrs = append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s already registered as seed by managed seed %s", client.ObjectKeyFromObject(shoot), client.ObjectKeyFromObject(ms))))
 	}
 
+	switch a.GetOperation() {
+	case admission.Create:
+		errs, err := v.validateManagedSeedCreate(managedSeed, shoot)
+		if err != nil {
+			return err
+		}
+		allErrs = append(allErrs, errs...)
+	case admission.Update:
+		oldManagedSeed, ok := a.GetOldObject().(*seedmanagement.ManagedSeed)
+		if !ok {
+			return apierrors.NewInternalError(errors.New("could not convert old resource into ManagedSeed object"))
+		}
+		errs, err := v.validateManagedSeedUpdate(oldManagedSeed, managedSeed, shoot)
+		if err != nil {
+			return err
+		}
+		allErrs = append(allErrs, errs...)
+	}
+
 	if len(allErrs) > 0 {
 		return apierrors.NewInvalid(gk, managedSeed.Name, allErrs)
 	}
 
 	return nil
+}
+
+func (v *ManagedSeed) validateManagedSeedCreate(managedSeed *seedmanagement.ManagedSeed, shoot *gardencorev1beta1.Shoot) (field.ErrorList, error) {
+	allErrs := field.ErrorList{}
+
+	seedSpec, err := seedmanagementhelper.ExtractSeedSpec(managedSeed)
+	if err != nil {
+		return nil, err
+	}
+
+	shootZones := v1beta1helper.GetAllZonesFromShoot(shoot)
+
+	if !shootZones.HasAll(seedSpec.Provider.Zones...) {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec", "provider", "zones"), seedSpec.Provider.Zones, "cannot use zone in seed provider that is not available in referenced shoot"))
+	}
+
+	return allErrs, nil
+}
+
+func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *seedmanagement.ManagedSeed, shoot *gardencorev1beta1.Shoot) (field.ErrorList, error) {
+	var (
+		allErrs                 = field.ErrorList{}
+		seedConfigSpecBasePath  = field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec")
+		zonesFieldPath          = seedConfigSpecBasePath.Child("provider", "zones")
+		internalDomainFieldPath = seedConfigSpecBasePath.Child("dns", "internal", "domain")
+		defaultDomainsFieldPath = seedConfigSpecBasePath.Child("dns", "defaults")
+	)
+
+	oldSeedSpec, err := seedmanagementhelper.ExtractSeedSpec(oldManagedSeed)
+	if err != nil {
+		return nil, err
+	}
+	newSeedSpec, err := seedmanagementhelper.ExtractSeedSpec(newManagedSeed)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := admissionutils.ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, "ManagedSeed"); err != nil {
+		allErrs = append(allErrs, field.Forbidden(zonesFieldPath, "zones must not be removed while shoots are still scheduled onto seed"))
+	}
+
+	if err := admissionutils.ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, "ManagedSeed"); err != nil {
+		allErrs = append(allErrs, field.Forbidden(internalDomainFieldPath, "internal domain must not be changed while shoots are still scheduled onto seed"))
+	}
+
+	if err := admissionutils.ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, v.secretLister, "ManagedSeed"); err != nil {
+		allErrs = append(allErrs, field.Forbidden(defaultDomainsFieldPath, "default domains must not be removed while shoots are still using them"))
+	}
+
+	shootZones := v1beta1helper.GetAllZonesFromShoot(shoot)
+	newZones := sets.New(newSeedSpec.Provider.Zones...).Difference(sets.New(oldSeedSpec.Provider.Zones...))
+
+	// Newly added zones should match the ones found in the shoot cluster.
+	// Zone names were allowed to deviate from the zones configured for shoot clusters, see https://github.com/gardener/gardener/commit/8d28452e7f718d0041fbe82eb83543e3a87ea8ad.
+	// Thus, we can only check added zones here.
+	if !shootZones.HasAll(newZones.UnsortedList()...) {
+		allErrs = append(allErrs, field.Invalid(zonesFieldPath, newZones.UnsortedList(), "added zones must match zone names configured for workers in the referenced shoot cluster"))
+	}
+
+	return allErrs, nil
 }
