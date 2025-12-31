@@ -44,6 +44,24 @@ var _ = Describe("API Types", func() {
 		})
 	})
 
+	Describe("#IsDualStack", func() {
+		It("should return false for empty IP families", func() {
+			Expect(IsDualStack(nil)).To(BeFalse())
+		})
+		It("should return false for IPv4 single-stack", func() {
+			Expect(IsDualStack([]IPFamily{IPFamilyIPv4})).To(BeFalse())
+		})
+		It("should return false for IPv6 single-stack", func() {
+			Expect(IsDualStack([]IPFamily{IPFamilyIPv6})).To(BeFalse())
+		})
+		It("should return true for dual-stack in IPv4, IPv6 order", func() {
+			Expect(IsDualStack([]IPFamily{IPFamilyIPv4, IPFamilyIPv6})).To(BeTrue())
+		})
+		It("should return true for dual-stack in IPv6, IPv4 order", func() {
+			Expect(IsDualStack([]IPFamily{IPFamilyIPv6, IPFamilyIPv4})).To(BeTrue())
+		})
+	})
+
 	DescribeTable("#VersionClassification.IsActive", func(v VersionClassification, want bool) {
 		Expect(v.IsActive()).To(Equal(want))
 	},
