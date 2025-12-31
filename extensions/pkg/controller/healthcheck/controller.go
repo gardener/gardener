@@ -43,8 +43,8 @@ type AddArgs struct {
 	Predicates []predicate.Predicate
 	// Type is the type of the resource considered for reconciliation.
 	Type string
-	// ExtensionClass defines the extension class this extension is responsible for.
-	ExtensionClass extensionsv1alpha1.ExtensionClass
+	// ExtensionClasses defines the extension class this extension is responsible for.
+	ExtensionClasses []extensionsv1alpha1.ExtensionClass
 	// SyncPeriod is the duration how often the registered extension is being reconciled
 	SyncPeriod metav1.Duration
 	// registeredExtension is the registered extensions that the HealthCheck Controller watches and writes HealthConditions for.
@@ -61,8 +61,8 @@ type DefaultAddArgs struct {
 	Controller controller.Options
 	// HealthCheckConfig contains additional config for the health check controller
 	HealthCheckConfig extensionsconfigv1alpha1.HealthCheckConfig
-	// ExtensionClass defines the extension class this extension is responsible for.
-	ExtensionClass extensionsv1alpha1.ExtensionClass
+	// ExtensionClasses defines the extension class this extension is responsible for.
+	ExtensionClasses []extensionsv1alpha1.ExtensionClass
 }
 
 // RegisteredExtension is a registered extensions that the HealthCheck Controller watches.
@@ -107,7 +107,7 @@ func DefaultRegistration(
 		ControllerOptions:       opts.Controller,
 		Predicates:              predicates,
 		Type:                    extensionType,
-		ExtensionClass:          opts.ExtensionClass,
+		ExtensionClasses:        opts.ExtensionClasses,
 		SyncPeriod:              opts.HealthCheckConfig.SyncPeriod,
 		GetExtensionObjListFunc: getExtensionObjListFunc,
 	}
@@ -182,7 +182,7 @@ func add(mgr manager.Manager, args AddArgs, actuator HealthCheckActuator) error 
 	controllerName := fmt.Sprintf("%s-%s-%s-%s-%s", ControllerName, args.registeredExtension.groupVersionKind.Kind, args.registeredExtension.groupVersionKind.Group, args.registeredExtension.groupVersionKind.Version, str)
 
 	// add type predicate to only watch registered resource (e.g. ControlPlane) with a certain type (e.g. aws)
-	predicates := predicateutils.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClass, args.Type)
+	predicates := predicateutils.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClasses, args.Type)
 
 	log.Log.Info("Registering health check controller", "kind", args.registeredExtension.groupVersionKind.Kind, "type", args.Type, "conditionTypes", args.registeredExtension.healthConditionTypes, "syncPeriod", args.SyncPeriod.Duration.String())
 

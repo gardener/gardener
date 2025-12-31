@@ -44,8 +44,8 @@ type AddArgs struct {
 	// If the annotation is not ignored, the extension controller will only reconcile
 	// with a present operation annotation typically set during a reconcile (e.g. in the maintenance time) by the Gardenlet
 	IgnoreOperationAnnotation bool
-	// ExtensionClass defines the extension class this extension is responsible for.
-	ExtensionClass extensionsv1alpha1.ExtensionClass
+	// ExtensionClasses defines the extension class this extension is responsible for.
+	ExtensionClasses []extensionsv1alpha1.ExtensionClass
 }
 
 // DefaultPredicates returns the default predicates for a Network reconciler.
@@ -61,7 +61,7 @@ func Add(mgr manager.Manager, args AddArgs) error {
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, args AddArgs) error {
-	predicates := predicateutils.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClass, args.Type)
+	predicates := predicateutils.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClasses, args.Type)
 
 	c, err := builder.
 		ControllerManagedBy(mgr).
