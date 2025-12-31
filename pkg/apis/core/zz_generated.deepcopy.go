@@ -4742,6 +4742,7 @@ func (in *SeedDNS) DeepCopy() *SeedDNS {
 func (in *SeedDNSProvider) DeepCopyInto(out *SeedDNSProvider) {
 	*out = *in
 	out.SecretRef = in.SecretRef
+	out.CredentialsRef = in.CredentialsRef
 	return
 }
 
