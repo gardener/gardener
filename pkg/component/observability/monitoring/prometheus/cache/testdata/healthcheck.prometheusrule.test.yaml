@@ -1,0 +1,206 @@
+rule_files:
+  - healthcheck.prometheusrule.yaml
+
+# The Prometheus documentation https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
+# describes how to write unit tests for Prometheus recording rules in general.
+#
+# This file follows some conventions in addition:
+#
+# - a blank line is used to separate the different categories of the input series from each other:
+#
+#   - indentation guide for better readability
+#   - the time series that are relevant for the test together with the expected result
+#   - other time series that are needed for the test to pass
+#
+# - the expectation is also defined in the `input_series` section:
+#   this way the expected values can be aligned with the input values
+#
+# - the assertion in the `promql_expr_test` section checks that the actual result matches the expected result
+#   in a generic way that can be reused for all the intervals and all the tests. The expression:
+#
+#     actual != expected or actual unless expected or expected unless actual
+#
+#   is the difference between the actual and expected time series,
+#   and the assertion passes if this difference is empty,
+#   i.e. if the actual and expected results are identical.
+#
+# - YAML anchors and aliases are used to reduce duplication
+#
+# - all the tests are executed for 11 intervals (0m to 10m)
+#
+tests:
+  # The focus of this test is the `prometheus_rule_group_iterations_total` time series.
+  # This time series is exposed by Prometheus about itself, and it is ingested into the TSDB when Prometheus scrapes itself.
+  # It is a counter metric that is incremented each time a rule group is evaluated, and is reset when Prometheus is restarted.
+  # It is not present when the rules are not properly defined or Prometheus is not scraping itself.
+  # This test shows that the healthcheck fails:
+  # - for the very first iteration of the rule evaluation, and
+  # - if this metric is missing.
+  - input_series:
+      - series: indentation
+        values: stale stale stale stale stale stale stale stale stale stale stale
+      - series: eval_time
+        values: 0     1     2     3     4     5     6     7     8     9     10
+
+      - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
+        values: 0     1     _     _     _     _     _     _     0     1     0
+      - series: expected_healthcheck:up
+        values: 0     1     1     1     1     1     0     0     0     1     1
+
+      - series: up{job="foo"}
+        values: 1x10
+      - series: container_cpu_usage_seconds_total{job="cadvisor", pod="gardenlet-abc"}
+        values: 100x10
+      - series: kube_pod_container_resource_requests{job="kube-state-metrics", pod="gardenlet-abc"}
+        values: 100x10
+    promql_expr_test: &promql_expr_test
+      - expr: &expr healthcheck:up          !=     expected_healthcheck:up
+          or
+          healthcheck:up          unless expected_healthcheck:up
+          or
+          expected_healthcheck:up unless healthcheck:up
+        eval_time: 0m
+      - expr: *expr
+        eval_time: 1m
+      - expr: *expr
+        eval_time: 2m
+      - expr: *expr
+        eval_time: 3m
+      - expr: *expr
+        eval_time: 4m
+      - expr: *expr
+        eval_time: 5m
+      - expr: *expr
+        eval_time: 6m
+      - expr: *expr
+        eval_time: 7m
+      - expr: *expr
+        eval_time: 8m
+      - expr: *expr
+        eval_time: 9m
+      - expr: *expr
+        eval_time: 10m
+
+  # The focus of this test is the `up` time series.
+  # If Prometheus fails to scrape a target, the respective `up` time series will have the value 0.
+  # An up time series with value 0 will lead to a failing healthcheck right away.
+  # If the scrape is successful again later, the up time series will report healthy immediately.
+  # If the target itself is missing, there will be no `up` time series at all,
+  # and that aspect is covered by the scrape pool healthcheck below.
+  - input_series:
+      - series: indentation
+        values: stale stale stale stale stale stale stale stale stale stale stale
+      - series: eval_time
+        values: 0     1     2     3     4     5     6     7     8     9     10
+
+      - series: up{job="foo"}
+        values: 1     1     0     1     _     _     _     _     _     _     0
+      - series: expected_healthcheck:up
+        values: 0     1     0     1     1     1     1     1     1     1     0
+
+      - series: container_cpu_usage_seconds_total{job="cadvisor", pod="gardenlet-abc"}
+        values: 100x10
+      - series: kube_pod_container_resource_requests{job="kube-state-metrics", pod="gardenlet-abc"}
+        values: 100x10
+      - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
+        values: 0+1x10
+    promql_expr_test: *promql_expr_test
+
+  # The focus of this test is the `prometheus_target_scrape_pool_targets` time series.
+  # This time series shows how many targets are present in each scrape pool.
+  # If a scrape pool has no targets, the respective time series will have the value 0,
+  # and that will lead to a failing healthcheck right away.
+  # It is important to check for empty scrape pools, because
+  # there is no failing `up` time series if all the targets are missing from a scrape pool,
+  # and hence that scenario would not be detected only by checking the `up` time series.
+  - input_series:
+      - series: indentation
+        values: stale stale stale stale stale stale stale stale stale stale stale
+      - series: eval_time
+        values: 0     1     2     3     4     5     6     7     8     9     10
+
+      - series: up{job="foo"}
+        values: 1     0     stale 1     1     stale _     _     _     _     0
+      - series: prometheus_target_scrape_pool_targets{job="foo"}
+        values: 1     1     0     2     2     stale _     _     _     _     _
+      - series: expected_healthcheck:up
+        values: 0     0     0     1     1     1     1     1     1     1     0
+
+      - series: container_cpu_usage_seconds_total{job="cadvisor", pod="gardenlet-abc"}
+        values: 100x10
+      - series: kube_pod_container_resource_requests{job="kube-state-metrics", pod="gardenlet-abc"}
+        values: 100x10
+      - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
+        values: 0+1x10
+    promql_expr_test: *promql_expr_test
+
+  # The focus of this test is to show that empty scrapes will lead to a health issue.
+  # This is to check the situation when a scrape job by itself succeeds, but no samples are exposed by the target.
+  # In that case, the `up` time series will have the value 1,
+  # but the `scrape_samples_scraped` time series will have the value 0.
+  - input_series:
+      - series: indentation
+        values: stale stale stale stale stale stale stale stale stale stale stale
+      - series: eval_time
+        values: 0     1     2     3     4     5     6     7     8     9     10
+
+      - series: up{job="foo"}
+        values: 1     1     1     1     1     1     1     1     1     1     1
+      - series: scrape_samples_scraped{job="foo"}
+        values: 100   100   0     100   100   0     0     0     0     0     100
+      - series: expected_healthcheck:up
+        values: 0     1     0     1     1     0     0     0     0     0     1
+
+      - series: container_cpu_usage_seconds_total{job="cadvisor", pod="gardenlet-abc"}
+        values: 100x10
+      - series: kube_pod_container_resource_requests{job="kube-state-metrics", pod="gardenlet-abc"}
+        values: 100x10
+      - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
+        values: 0+1x10
+    promql_expr_test: *promql_expr_test
+
+  # The focus of this test is to show that a flapping issue will be reported as a constantly failing health issue.
+  # Without flapping detection, the status condition would be reset to healthy state once in a while,
+  # and depending on the condition threshold configuration: the duration of the Progressing state before it transitions
+  # from healthy to unhealthy, it might never reach a failing state, and hence the notification might not be sent.
+  # As a consequence of flapping detection, recovery after a flapping issue might take longer.
+  - input_series:
+      - series: indentation
+        values: stale stale stale stale stale stale stale stale stale stale stale
+      - series: eval_time
+        values: 0     1     2     3     4     5     6     7     8     9     10
+
+      - series: up{job="foo"}
+        values: 1     1     0     1     0     1     1     1     1     1     1
+      - series: expected_healthcheck:up
+        values: 0     1     0     1     0     0     0     0     0     0     1
+
+      - series: container_cpu_usage_seconds_total{job="cadvisor", pod="gardenlet-abc"}
+        values: 100x10
+      - series: kube_pod_container_resource_requests{job="kube-state-metrics", pod="gardenlet-abc"}
+        values: 100x10
+      - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
+        values: 0+1x10
+    promql_expr_test: *promql_expr_test
+
+  # The focus of this test is to show that if the cAdvisor or kube-state-metrics metrics are missing,
+  # the healthcheck will report a failing state. Furthermore, it also demonstrates that
+  # that flapping detection works across multiple healthcheck tasks.
+  - input_series:
+      - series: indentation
+        values: stale stale stale stale stale stale stale stale stale stale stale
+      - series: eval_time
+        values: 0     1     2     3     4     5     6     7     8     9     10
+
+      - series: container_cpu_usage_seconds_total{job="cadvisor", pod="gardenlet-abc"}
+        values: 1     1     stale 1     1     1     1     1     1     1     1
+      - series: kube_pod_container_resource_requests{job="kube-state-metrics", pod="gardenlet-abc"}
+        values: 1     1     1     1     stale 1     1     1     1     1     1
+      - series: expected_healthcheck:up
+        values: 0     1     0     1     0     0     0     0     0     0     1
+
+      - series: up{job="foo"}
+        values: 1     1     1     1     1     1     1     1     1     1     1
+      - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
+        values: 0+1x10
+    promql_expr_test: *promql_expr_test

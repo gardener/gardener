@@ -19,14 +19,14 @@ import (
 func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 	return []*monitoringv1alpha1.ScrapeConfig{
 		{
-			ObjectMeta: metav1.ObjectMeta{Name: "prometheus"},
+			ObjectMeta: metav1.ObjectMeta{Name: "prometheus-" + Label},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
 				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 					Targets: []monitoringv1alpha1.Target{"localhost:9090"},
 				}},
 				RelabelConfigs: []monitoringv1.RelabelConfig{{
 					Action:      "replace",
-					Replacement: ptr.To("prometheus"),
+					Replacement: ptr.To("prometheus-" + Label),
 					TargetLabel: "job",
 				}},
 			},
@@ -47,7 +47,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 		{
 			ObjectMeta: metav1.ObjectMeta{Name: "prometheus-" + garden.Label},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				HonorLabels:     ptr.To(true),
+				HonorLabels:     ptr.To(false),
 				HonorTimestamps: ptr.To(true),
 				MetricsPath:     ptr.To("/federate"),
 				Params: map[string][]string{
@@ -75,7 +75,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 							"__meta_kubernetes_service_name",
 							"__meta_kubernetes_service_port_name",
 						},
-						Regex:  "prometheus-garden;" + prometheus.ServicePortName,
+						Regex:  "prometheus-garden;" + prometheus.ServicePorts().Web.Name,
 						Action: "keep",
 					},
 					{

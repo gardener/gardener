@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -257,7 +258,7 @@ func (c resultingConditionFunc) Check(_ context.Context, conditions SeedConditio
 }
 
 func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
-	return func(*gardencorev1beta1.Seed, client.Client, clock.Clock, *string, map[gardencorev1beta1.ConditionType]time.Duration) HealthCheck {
+	return func(*gardencorev1beta1.Seed, client.Client, clock.Clock, *string, *checker.HealthChecker) HealthCheck {
 		return fn
 	}
 }
