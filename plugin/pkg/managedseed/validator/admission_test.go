@@ -551,7 +551,7 @@ var _ = Describe("ManagedSeed", func() {
 				}))
 			})
 
-			It("should create the ManagedSeed and use Workload Identity referenced by the CredentialsBinding of the Shoot as DNS credentials", func() {
+			It("should create the ManagedSeed and use WorkloadIdentity referenced by the CredentialsBinding of the Shoot as DNS credentials", func() {
 				workloadIdentity := &securityv1alpha1.WorkloadIdentity{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "workload-identity",
