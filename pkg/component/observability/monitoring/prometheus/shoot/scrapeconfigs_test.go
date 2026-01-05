@@ -355,7 +355,13 @@ var _ = Describe("ScrapeConfigs", func() {
 		})
 
 		When("cluster is workerless", func() {
-			It("should return the expected objects", func() {
+			It("should return the expected objects with OTel feature disabled", func() {
+				Expect(shoot.CentralScrapeConfigs(namespace, clusterCASecretName, true)).To(HaveExactElements(workerlessScrapeConfigs))
+
+			})
+
+			It("should return the expected objects with OTel feature enabled", func() {
+				DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, true))
 				Expect(shoot.CentralScrapeConfigs(namespace, clusterCASecretName, true)).To(HaveExactElements(workerlessScrapeConfigs))
 			})
 		})
