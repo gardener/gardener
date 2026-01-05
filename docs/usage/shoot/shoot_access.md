@@ -173,7 +173,7 @@ If you want the changes to roll out immediately, [trigger a reconciliation expli
 
 Gardener disables anonymous authentication by default for all Kubernetes versions.
 For clusters with Kubernetes version `>= 1.35`, the `.spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication` field is no longer available.
-If you need to enable anonymous authentication for your shoot cluster, you can configure it using [Structured Authentication Configuration](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#using-authentication-configuration) with an [anonymous authenticator](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration).
+If you need to enable anonymous authentication for your shoot cluster, you can configure it using [Structured Authentication Configuration](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#using-authentication-configuration) with the [anonymous authenticator](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration).
 
 Here is an example of a `ConfigMap` that enables anonymous authentication for the `/livez` endpoint:
 
