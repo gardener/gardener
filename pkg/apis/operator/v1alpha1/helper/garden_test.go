@@ -289,9 +289,9 @@ var _ = Describe("helper", func() {
 	Describe("#EncryptionProvider", func() {
 		const EncryptionProviderType gardencorev1beta1.EncryptionProviderType = "foo"
 
-		DescribeTable("#GetEncyptionProviderType",
+		DescribeTable("#GetEncryptionProviderType",
 			func(kubeAPIServerConfig *operatorv1alpha1.KubeAPIServerConfig, expectedProvider string) {
-				Expect(string(GetEncyptionProviderType(kubeAPIServerConfig))).To(Equal(expectedProvider))
+				Expect(string(GetEncryptionProviderType(kubeAPIServerConfig))).To(Equal(expectedProvider))
 			},
 
 			Entry("kubeAPIServerConfig is nil", nil, ""),

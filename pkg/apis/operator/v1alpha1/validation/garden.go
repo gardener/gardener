@@ -502,8 +502,8 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 		}
 
 		var (
-			gardenEncryptionProviderType     = helper.GetGardenEncyptionProviderType(config)
-			kubernetesEncryptionProviderType = helper.GetEncyptionProviderType(kubeAPIServerConfig)
+			gardenEncryptionProviderType     = helper.GetGardenEncryptionProviderType(config)
+			kubernetesEncryptionProviderType = helper.GetEncryptionProviderType(kubeAPIServerConfig)
 		)
 
 		if gardenEncryptionProviderType != kubernetesEncryptionProviderType {
