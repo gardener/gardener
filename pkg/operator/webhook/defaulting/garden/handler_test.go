@@ -32,7 +32,11 @@ var _ = Describe("Handler", func() {
 	})
 
 	Describe("#Default", func() {
-		var defaultKubeAPIServerConfig *operatorv1alpha1.KubeAPIServerConfig
+		var (
+			defaultKubeAPIServerConfig   *operatorv1alpha1.KubeAPIServerConfig
+			defaultGardenAPIServerConfig *operatorv1alpha1.GardenerAPIServerConfig
+			defaultStatus                operatorv1alpha1.GardenStatus
+		)
 
 		BeforeEach(func() {
 			defaultKubeAPIServerConfig = &operatorv1alpha1.KubeAPIServerConfig{
@@ -44,6 +48,25 @@ var _ = Describe("Handler", func() {
 					EventTTL: &metav1.Duration{Duration: time.Hour},
 					Logging: &gardencorev1beta1.APIServerLogging{
 						Verbosity: ptr.To[int32](2),
+					},
+					EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+						Provider: gardencorev1beta1.EncryptionProvider{
+							Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeAESCBC),
+						},
+					},
+				},
+			}
+			defaultGardenAPIServerConfig = &operatorv1alpha1.GardenerAPIServerConfig{
+				EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+					Provider: gardencorev1beta1.EncryptionProvider{
+						Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeAESCBC),
+					},
+				},
+			}
+			defaultStatus = operatorv1alpha1.GardenStatus{
+				Credentials: &operatorv1alpha1.Credentials{
+					EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
+						ProviderType: gardencorev1beta1.EncryptionProviderTypeAESCBC,
 					},
 				},
 			}
@@ -65,8 +88,12 @@ var _ = Describe("Handler", func() {
 								KubeControllerManagerConfig: &gardencorev1beta1.KubeControllerManagerConfig{},
 							},
 						},
+						Gardener: operatorv1alpha1.Gardener{
+							APIServer: defaultGardenAPIServerConfig,
+						},
 					},
 				},
+				Status: defaultStatus,
 			}))
 		})
 
@@ -79,6 +106,11 @@ var _ = Describe("Handler", func() {
 			garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{
 				KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
 					Requests: customRequests,
+					EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+						Provider: gardencorev1beta1.EncryptionProvider{
+							Type: ptr.To(gardencorev1beta1.EncryptionProviderType("")),
+						},
+					},
 				},
 			}
 			Expect(handler.Default(ctx, garden)).To(Succeed())
@@ -88,6 +120,11 @@ var _ = Describe("Handler", func() {
 					EventTTL: &metav1.Duration{Duration: time.Hour},
 					Logging: &gardencorev1beta1.APIServerLogging{
 						Verbosity: ptr.To[int32](2),
+					},
+					EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+						Provider: gardencorev1beta1.EncryptionProvider{
+							Type: ptr.To(gardencorev1beta1.EncryptionProviderType("")),
+						},
 					},
 				},
 			}))
@@ -106,6 +143,26 @@ var _ = Describe("Handler", func() {
 			Expect(garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager).To(Equal(customKubeControllerManagerConfig))
 		})
 
+		It("should not overwrite configured set fields in Garden API server config", func() {
+			garden.Spec.VirtualCluster.Gardener.APIServer = &operatorv1alpha1.GardenerAPIServerConfig{
+				EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+					Provider: gardencorev1beta1.EncryptionProvider{
+						Type: ptr.To(gardencorev1beta1.EncryptionProviderType("")),
+					},
+				},
+			}
+
+			Expect(handler.Default(ctx, garden)).To(Succeed())
+
+			Expect(garden.Spec.VirtualCluster.Gardener.APIServer).To(Equal(&operatorv1alpha1.GardenerAPIServerConfig{
+				EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+					Provider: gardencorev1beta1.EncryptionProvider{
+						Type: ptr.To(gardencorev1beta1.EncryptionProviderType("")),
+					},
+				},
+			}))
+		})
+
 		It("should not overwrite configured fields in IPFamilies", func() {
 			garden.Spec.RuntimeCluster.Networking.IPFamilies = []gardencorev1beta1.IPFamily{"foo"}
 			Expect(handler.Default(ctx, garden)).To(Succeed())
@@ -120,7 +177,15 @@ var _ = Describe("Handler", func() {
 
 				Expect(garden.Status).To(Equal(expected))
 			},
-			Entry("no encrypted resources", operatorv1alpha1.GardenStatus{}, operatorv1alpha1.GardenStatus{}),
+			Entry("no encrypted resources", operatorv1alpha1.GardenStatus{},
+				operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
+							ProviderType: gardencorev1beta1.EncryptionProviderTypeAESCBC,
+						},
+					},
+				},
+			),
 			Entry("with encrypted resources",
 				operatorv1alpha1.GardenStatus{
 					EncryptedResources: []string{"configmaps", "shoots.core.gardener.cloud"},
@@ -128,7 +193,8 @@ var _ = Describe("Handler", func() {
 				operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
-							Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
+							Resources:    []string{"configmaps", "shoots.core.gardener.cloud"},
+							ProviderType: gardencorev1beta1.EncryptionProviderTypeAESCBC,
 						},
 					},
 					EncryptedResources: []string{"configmaps", "shoots.core.gardener.cloud"},
@@ -146,7 +212,8 @@ var _ = Describe("Handler", func() {
 				operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
-							Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
+							Resources:    []string{"configmaps", "shoots.core.gardener.cloud"},
+							ProviderType: gardencorev1beta1.EncryptionProviderTypeAESCBC,
 						},
 					},
 					EncryptedResources: []string{"configmaps"},
