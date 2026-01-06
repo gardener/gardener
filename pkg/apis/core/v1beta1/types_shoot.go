@@ -322,6 +322,8 @@ type EncryptionAtRest struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
 	// +optional
 	Resources []string `json:"resources,omitempty" protobuf:"bytes,1,rep,name=resources"`
+	// ProviderType is the used encryption provider type for resources in the Shoot.
+	ProviderType EncryptionProviderType `json:"providerType" protobuf:"bytes,2,opt,name=providerType"`
 }
 
 // CARotation contains information about the certificate authority credential rotation.
@@ -1059,7 +1061,18 @@ type EncryptionConfig struct {
 	// Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
 	// Wildcards are not supported for now.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
-	Resources []string `json:"resources" protobuf:"bytes,1,rep,name=resources"`
+	// +optional
+	Resources []string `json:"resources,omitempty" protobuf:"bytes,1,rep,name=resources"`
+	// Provider contains information about the encryption provider.
+	Provider EncryptionProvider `json:"provider" protobuf:"bytes,2,opt,name=provider"`
+}
+
+// EncryptionProvider contains information about the encryption provider.
+type EncryptionProvider struct {
+	// Type contains the type of the encryption provider.
+	// Defaults to aescbc.
+	// +optional
+	Type *EncryptionProviderType `json:"type,omitempty" protobuf:"bytes,1,opt,name=type"`
 }
 
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.
