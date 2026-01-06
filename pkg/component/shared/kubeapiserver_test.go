@@ -1199,12 +1199,15 @@ authorizers:
 			wantScaleDown = false
 		})
 
-		var apiServerResources = corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("1"),
-				corev1.ResourceMemory: resource.MustParse("2"),
-			},
-		}
+		var (
+			apiServerResources = corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1"),
+					corev1.ResourceMemory: resource.MustParse("2"),
+				},
+			}
+			etcdEncryptionType = gardencorev1beta1.EncryptionProviderTypeAESCBC
+		)
 
 		DescribeTable("should correctly set the autoscaling apiserver resources",
 			func(prepTest func(), autoscalingConfig kubeapiserver.AutoscalingConfig, expectedResources *corev1.ResourceRequirements) {
@@ -1231,7 +1234,7 @@ authorizers:
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, nil, nil, etcdEncryptionType, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
 			},
 
 			Entry("nothing is set when deployment is not found",
@@ -1306,7 +1309,7 @@ authorizers:
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, nil, nil, etcdEncryptionType, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
 			},
 
 			Entry("no change due to already set",
@@ -1382,7 +1385,7 @@ authorizers:
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, nil, nil, etcdEncryptionType, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
 
 				if finalizeTest != nil {
 					finalizeTest()
@@ -1392,7 +1395,12 @@ authorizers:
 			Entry("no rotation",
 				gardencorev1beta1.CredentialsRotationPhase(""),
 				nil,
-				apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: true, ResourcesToEncrypt: []string{"secrets"}, EncryptedResources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{
+					EncryptWithCurrentKey: true,
+					ResourcesToEncrypt:    []string{"secrets"},
+					EncryptedResources:    []string{"secrets"},
+					EncryptionProvider:    etcdEncryptionType,
+				},
 				nil,
 			),
 			Entry("preparing phase, new key already populated",
@@ -1407,7 +1415,13 @@ authorizers:
 						},
 					})).To(Succeed())
 				},
-				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: true, ResourcesToEncrypt: []string{"secrets"}, EncryptedResources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{
+					RotationPhase:         gardencorev1beta1.RotationPreparing,
+					EncryptWithCurrentKey: true,
+					ResourcesToEncrypt:    []string{"secrets"},
+					EncryptedResources:    []string{"secrets"},
+					EncryptionProvider:    etcdEncryptionType,
+				},
 				nil,
 			),
 			Entry("preparing phase, new key not yet populated",
@@ -1428,10 +1442,17 @@ authorizers:
 						EncryptWithCurrentKey: true,
 						ResourcesToEncrypt:    []string{"secrets"},
 						EncryptedResources:    []string{"secrets"},
+						EncryptionProvider:    etcdEncryptionType,
 					})
 					kubeAPIServer.EXPECT().Deploy(ctx)
 				},
-				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: false, ResourcesToEncrypt: []string{"secrets"}, EncryptedResources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{
+					RotationPhase:         gardencorev1beta1.RotationPreparing,
+					EncryptWithCurrentKey: false,
+					ResourcesToEncrypt:    []string{"secrets"},
+					EncryptedResources:    []string{"secrets"},
+					EncryptionProvider:    etcdEncryptionType,
+				},
 				func() {
 					deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: namespace}}
 					Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
@@ -1441,7 +1462,13 @@ authorizers:
 			Entry("prepared phase",
 				gardencorev1beta1.RotationPrepared,
 				nil,
-				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPrepared, EncryptWithCurrentKey: true, ResourcesToEncrypt: []string{"secrets"}, EncryptedResources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{
+					RotationPhase:         gardencorev1beta1.RotationPrepared,
+					EncryptWithCurrentKey: true,
+					ResourcesToEncrypt:    []string{"secrets"},
+					EncryptedResources:    []string{"secrets"},
+					EncryptionProvider:    etcdEncryptionType,
+				},
 				nil,
 			),
 			Entry("completing phase",
@@ -1456,7 +1483,13 @@ authorizers:
 						},
 					})).To(Succeed())
 				},
-				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleting, EncryptWithCurrentKey: true, ResourcesToEncrypt: []string{"secrets"}, EncryptedResources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{
+					RotationPhase:         gardencorev1beta1.RotationCompleting,
+					EncryptWithCurrentKey: true,
+					ResourcesToEncrypt:    []string{"secrets"},
+					EncryptedResources:    []string{"secrets"},
+					EncryptionProvider:    etcdEncryptionType,
+				},
 				func() {
 					deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: namespace}}
 					Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
@@ -1466,7 +1499,13 @@ authorizers:
 			Entry("completed phase",
 				gardencorev1beta1.RotationCompleted,
 				nil,
-				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleted, EncryptWithCurrentKey: true, ResourcesToEncrypt: []string{"secrets"}, EncryptedResources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{
+					RotationPhase:         gardencorev1beta1.RotationCompleted,
+					EncryptWithCurrentKey: true,
+					ResourcesToEncrypt:    []string{"secrets"},
+					EncryptedResources:    []string{"secrets"},
+					EncryptionProvider:    etcdEncryptionType,
+				},
 				nil,
 			),
 		)
@@ -1481,6 +1520,7 @@ authorizers:
 					EncryptedResources: []string{
 						"secrets",
 					},
+					EncryptionProvider: etcdEncryptionType,
 				}
 
 				kubeAPIServer.EXPECT().GetValues()
@@ -1496,7 +1536,7 @@ authorizers:
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, nil, nil, etcdEncryptionType, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
 			})
 
 			It("It should deploy KubeAPIServer with the default resources appended to the passed resources", func() {
@@ -1511,6 +1551,7 @@ authorizers:
 						"deployments.apps",
 						"secrets",
 					},
+					EncryptionProvider: etcdEncryptionType,
 				}
 
 				kubeAPIServer.EXPECT().GetValues()
@@ -1535,7 +1576,7 @@ authorizers:
 					"deployments.apps",
 				}
 
-				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, resourcesToEncrypt, encryptedResources, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, resourcesToEncrypt, encryptedResources, etcdEncryptionType, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
 			})
 		})
 
@@ -1554,7 +1595,7 @@ authorizers:
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, nil, nil, etcdEncryptionType, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
 			})
 		})
 
@@ -1573,7 +1614,7 @@ authorizers:
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, nil, nil, etcdEncryptionType, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
 			})
 		})
 
@@ -1592,7 +1633,7 @@ authorizers:
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(serviceAccountConfig)
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, nil, nil, etcdEncryptionType, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
 			})
 		})
 
@@ -1611,7 +1652,7 @@ authorizers:
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, nil, nil, etcdEncryptionType, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
 			})
 		})
 
@@ -1630,7 +1671,7 @@ authorizers:
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, nodeNetworkCIDRs, serviceNetworkCIDRs, podNetworkCIDRs, seedPodNetwork, nil, nil, etcdEncryptionType, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
 			})
 		})
 	})
