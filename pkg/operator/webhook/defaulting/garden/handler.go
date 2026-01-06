@@ -52,7 +52,7 @@ func (h *Handler) Default(_ context.Context, obj runtime.Object) error {
 		garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{}
 	}
 	if garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig.Provider.Type == nil {
-		garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig.Provider.Type = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig.EncryptionConfig.Provider.Type
+		garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig.Provider.Type = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type
 	}
 
 	if garden.Status.Credentials == nil {

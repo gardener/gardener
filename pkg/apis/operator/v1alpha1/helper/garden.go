@@ -259,7 +259,7 @@ func GetGardenerOperations(annotations map[string]string) []string {
 	return utils.SplitAndTrimString(annotations[v1beta1constants.GardenerOperation], v1beta1constants.GardenerOperationsSeparator)
 }
 
-// GetEncyptionProviderType returns the Garden's encryption provider type from the garden apiserver config.
+// GetGardenEncyptionProviderType returns the Garden's encryption provider type from the garden apiserver config.
 func GetGardenEncyptionProviderType(apiServerConfig *operatorv1alpha1.GardenerAPIServerConfig) gardencorev1beta1.EncryptionProviderType {
 	if apiServerConfig != nil &&
 		apiServerConfig.EncryptionConfig != nil &&
