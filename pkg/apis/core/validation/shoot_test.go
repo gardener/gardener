@@ -2333,47 +2333,36 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 			})
 
-			Context("EnableAnonymousAuthentication validation", func() {
-				It("should allow setting enableAnonymousAuthentication for Kubernetes version < 1.35", func() {
-					shoot.Spec.Kubernetes.Version = "1.33.0"
+			DescribeTable("EnableAnonymousAuthentication validation",
+				func(k8sVersion string, enableAnonymousAuth *bool, expectError bool) {
+					shoot.Spec.Kubernetes.Version = k8sVersion
 					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
-					shoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = ptr.To(true)
+					shoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = enableAnonymousAuth
+					shoot.Spec.CloudProfileName = nil
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "CloudProfile",
+						Name: "test-profile",
+					}
+					shoot.Spec.SecretBindingName = nil
+					shoot.Spec.CredentialsBindingName = ptr.To("my-secret")
 
 					errorList := ValidateShoot(shoot)
 
-					Expect(errorList).To(BeEmpty())
-				})
-
-				DescribeTable("enableAnonymousAuthentication validation for Kubernetes version >= 1.35",
-					func(enableAnonymousAuth *bool, expectError bool) {
-						shoot.Spec.Kubernetes.Version = "1.35.0"
-						shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
-						shoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = enableAnonymousAuth
-						shoot.Spec.CloudProfileName = nil
-						shoot.Spec.CloudProfile = &core.CloudProfileReference{
-							Kind: "CloudProfile",
-							Name: "test-profile",
-						}
-						shoot.Spec.SecretBindingName = nil
-						shoot.Spec.CredentialsBindingName = ptr.To("my-secret")
-
-						errorList := ValidateShoot(shoot)
-
-						if expectError {
-							Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal(field.ErrorTypeForbidden),
-								"Field":  Equal("spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication"),
-								"Detail": Equal("for Kubernetes versions >= 1.35, enableAnonymousAuthentication field is no longer supported"),
-							}))))
-						} else {
-							Expect(errorList).To(BeEmpty())
-						}
-					},
-					Entry("should forbid setting enableAnonymousAuthentication to true", ptr.To(true), true),
-					Entry("should forbid setting enableAnonymousAuthentication to false", ptr.To(false), true),
-					Entry("should allow not setting enableAnonymousAuthentication", nil, false),
-				)
-			})
+					if expectError {
+						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication"),
+							"Detail": Equal("for Kubernetes versions >= 1.35, enableAnonymousAuthentication field is no longer supported"),
+						}))))
+					} else {
+						Expect(errorList).To(BeEmpty())
+					}
+				},
+				Entry("should allow setting enableAnonymousAuthentication for Kubernetes version < 1.35", "1.34.0", ptr.To(true), false),
+				Entry("should forbid setting enableAnonymousAuthentication to true for Kubernetes version >= 1.35", "1.35.0", ptr.To(true), true),
+				Entry("should forbid setting enableAnonymousAuthentication to false for Kubernetes version >= 1.35", "1.35.0", ptr.To(false), true),
+				Entry("should allow not setting enableAnonymousAuthentication for Kubernetes version >= 1.35", "1.35.0", nil, false),
+			)
 
 			Context("AdmissionPlugins validation", func() {
 				It("should allow not specifying admission plugins", func() {
