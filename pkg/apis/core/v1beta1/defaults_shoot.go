@@ -220,6 +220,12 @@ func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 	if obj.Logging.Verbosity == nil {
 		obj.Logging.Verbosity = ptr.To[int32](2)
 	}
+	if obj.EncryptionConfig == nil {
+		obj.EncryptionConfig = &EncryptionConfig{}
+	}
+	if obj.EncryptionConfig.Provider.Type == nil {
+		obj.EncryptionConfig.Provider.Type = ptr.To(EncryptionProviderTypeAESCBC)
+	}
 }
 
 // SetDefaults_Networking sets default values for Networking objects.
