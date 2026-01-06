@@ -1829,6 +1829,43 @@ var _ = Describe("Helper", func() {
 		Entry("with resources", gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{EncryptionAtRest: &gardencorev1beta1.EncryptionAtRest{Resources: []string{"configmaps", "shoots.core.gardener.cloud"}}}}, []string{"configmaps", "shoots.core.gardener.cloud"}),
 	)
 
+	Describe("#EncryptionProvider", func() {
+		const EncryptionProviderType gardencorev1beta1.EncryptionProviderType = "foo"
+
+		DescribeTable("#GetEncyptionProviderType",
+			func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, expectedProvider string) {
+				Expect(string(GetEncyptionProviderType(kubeAPIServerConfig))).To(Equal(expectedProvider))
+			},
+
+			Entry("kubeAPIServerConfig is nil", nil, ""),
+			Entry("encryptionConfig is nil", &gardencorev1beta1.KubeAPIServerConfig{}, ""),
+			Entry("Provider is empty", &gardencorev1beta1.KubeAPIServerConfig{EncryptionConfig: &gardencorev1beta1.EncryptionConfig{}}, ""),
+			Entry("Type is nil", &gardencorev1beta1.KubeAPIServerConfig{
+				EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+					Provider: gardencorev1beta1.EncryptionProvider{
+						Type: nil,
+					},
+				},
+			}, ""),
+			Entry("Type is set", &gardencorev1beta1.KubeAPIServerConfig{
+				EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+					Provider: gardencorev1beta1.EncryptionProvider{
+						Type: ptr.To(EncryptionProviderType),
+					},
+				},
+			}, "foo"),
+		)
+
+		DescribeTable("#GetEncryptionProviderInStatus",
+			func(status gardencorev1beta1.ShootStatus, expected string) {
+				Expect(string(GetEncryptionProviderInStatus(status))).To(Equal(expected))
+			},
+			Entry("no credentials field", gardencorev1beta1.ShootStatus{}, ""),
+			Entry("without provider", gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}, ""),
+			Entry("with provider", gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{EncryptionAtRest: &gardencorev1beta1.EncryptionAtRest{ProviderType: EncryptionProviderType}}}, "foo"),
+		)
+	})
+
 	DescribeTable("#GetShootGardenerOperations",
 		func(annotations map[string]string, expectedResult []string) {
 			Expect(GetShootGardenerOperations(annotations)).To(Equal(expectedResult))
