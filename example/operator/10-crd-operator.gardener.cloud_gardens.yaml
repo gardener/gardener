@@ -677,6 +677,16 @@ spec:
                             description: EncryptionConfig contains customizable encryption
                               configuration of the Gardener API server.
                             properties:
+                              provider:
+                                description: Provider contains information about the
+                                  encryption provider.
+                                properties:
+                                  type:
+                                    description: |-
+                                      Type contains the type of the encryption provider.
+                                      Defaults to aescbc.
+                                    type: string
+                                type: object
                               resources:
                                 description: |-
                                   Resources contains the list of resources that shall be encrypted in addition to secrets.
@@ -687,7 +697,7 @@ spec:
                                   type: string
                                 type: array
                             required:
-                            - resources
+                            - provider
                             type: object
                           featureGates:
                             additionalProperties:
@@ -1561,6 +1571,16 @@ spec:
                             description: EncryptionConfig contains customizable encryption
                               configuration of the Kube API server.
                             properties:
+                              provider:
+                                description: Provider contains information about the
+                                  encryption provider.
+                                properties:
+                                  type:
+                                    description: |-
+                                      Type contains the type of the encryption provider.
+                                      Defaults to aescbc.
+                                    type: string
+                                type: object
                               resources:
                                 description: |-
                                   Resources contains the list of resources that shall be encrypted in addition to secrets.
@@ -1571,7 +1591,7 @@ spec:
                                   type: string
                                 type: array
                             required:
-                            - resources
+                            - provider
                             type: object
                           eventTTL:
                             description: |-
@@ -2063,6 +2083,10 @@ spec:
                     description: EncryptionAtRest contains information about garden
                       data encryption at rest.
                     properties:
+                      providerType:
+                        description: ProviderType is the used encryption provider
+                          type for resources in the Garden.
+                        type: string
                       resources:
                         description: |-
                           Resources is the list of resources which are currently encrypted in the virtual garden by the virtual kube-apiserver.
@@ -2071,6 +2095,8 @@ spec:
                         items:
                           type: string
                         type: array
+                    required:
+                    - providerType
                     type: object
                   rotation:
                     description: Rotation contains information about the credential

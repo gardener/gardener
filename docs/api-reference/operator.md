@@ -1197,6 +1197,17 @@ Resources which are encrypted by default will not appear here.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config">https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config</a> for more details.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>providerType</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionProviderType
+</em>
+</td>
+<td>
+<p>ProviderType is the used encryption provider type for resources in the Garden.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.Extension">Extension
