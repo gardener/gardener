@@ -1892,6 +1892,34 @@ func (m *EncryptionConfig) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_EncryptionConfig proto.InternalMessageInfo
 
+func (m *EncryptionProvider) Reset()      { *m = EncryptionProvider{} }
+func (*EncryptionProvider) ProtoMessage() {}
+func (*EncryptionProvider) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ca37af0df9a5bbd2, []int{65}
+}
+func (m *EncryptionProvider) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *EncryptionProvider) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *EncryptionProvider) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EncryptionProvider.Merge(m, src)
+}
+func (m *EncryptionProvider) XXX_Size() int {
+	return m.Size()
+}
+func (m *EncryptionProvider) XXX_DiscardUnknown() {
+	xxx_messageInfo_EncryptionProvider.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EncryptionProvider proto.InternalMessageInfo
+
 func (m *ExpirableVersion) Reset()      { *m = ExpirableVersion{} }
 func (*ExpirableVersion) ProtoMessage() {}
 func (*ExpirableVersion) Descriptor() ([]byte, []int) {
@@ -5997,6 +6025,7 @@ func init() {
 	proto.RegisterType((*ETCDEncryptionKeyRotation)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ETCDEncryptionKeyRotation")
 	proto.RegisterType((*EncryptionAtRest)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.EncryptionAtRest")
 	proto.RegisterType((*EncryptionConfig)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.EncryptionConfig")
+	proto.RegisterType((*EncryptionProvider)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.EncryptionProvider")
 	proto.RegisterType((*ExpirableVersion)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ExpirableVersion")
 	proto.RegisterType((*Exposure)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.Exposure")
 	proto.RegisterType((*ExposureClass)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ExposureClass")
@@ -10509,6 +10538,11 @@ func (m *EncryptionAtRest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	i -= len(m.ProviderType)
+	copy(dAtA[i:], m.ProviderType)
+	i = encodeVarintGenerated(dAtA, i, uint64(len(m.ProviderType)))
+	i--
+	dAtA[i] = 0x12
 	if len(m.Resources) > 0 {
 		for iNdEx := len(m.Resources) - 1; iNdEx >= 0; iNdEx-- {
 			i -= len(m.Resources[iNdEx])
@@ -10541,6 +10575,16 @@ func (m *EncryptionConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	{
+		size, err := m.Provider.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintGenerated(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0x12
 	if len(m.Resources) > 0 {
 		for iNdEx := len(m.Resources) - 1; iNdEx >= 0; iNdEx-- {
 			i -= len(m.Resources[iNdEx])
@@ -10549,6 +10593,36 @@ func (m *EncryptionConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			i--
 			dAtA[i] = 0xa
 		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *EncryptionProvider) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *EncryptionProvider) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *EncryptionProvider) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Type != nil {
+		i -= len(*m.Type)
+		copy(dAtA[i:], *m.Type)
+		i = encodeVarintGenerated(dAtA, i, uint64(len(*m.Type)))
+		i--
+		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
@@ -21088,6 +21162,8 @@ func (m *EncryptionAtRest) Size() (n int) {
 			n += 1 + l + sovGenerated(uint64(l))
 		}
 	}
+	l = len(m.ProviderType)
+	n += 1 + l + sovGenerated(uint64(l))
 	return n
 }
 
@@ -21102,6 +21178,21 @@ func (m *EncryptionConfig) Size() (n int) {
 			l = len(s)
 			n += 1 + l + sovGenerated(uint64(l))
 		}
+	}
+	l = m.Provider.Size()
+	n += 1 + l + sovGenerated(uint64(l))
+	return n
+}
+
+func (m *EncryptionProvider) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Type != nil {
+		l = len(*m.Type)
+		n += 1 + l + sovGenerated(uint64(l))
 	}
 	return n
 }
@@ -25420,6 +25511,7 @@ func (this *EncryptionAtRest) String() string {
 	}
 	s := strings.Join([]string{`&EncryptionAtRest{`,
 		`Resources:` + fmt.Sprintf("%v", this.Resources) + `,`,
+		`ProviderType:` + fmt.Sprintf("%v", this.ProviderType) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -25430,6 +25522,17 @@ func (this *EncryptionConfig) String() string {
 	}
 	s := strings.Join([]string{`&EncryptionConfig{`,
 		`Resources:` + fmt.Sprintf("%v", this.Resources) + `,`,
+		`Provider:` + strings.Replace(strings.Replace(this.Provider.String(), "EncryptionProvider", "EncryptionProvider", 1), `&`, ``, 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *EncryptionProvider) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&EncryptionProvider{`,
+		`Type:` + valueToStringGenerated(this.Type) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -37507,6 +37610,38 @@ func (m *EncryptionAtRest) Unmarshal(dAtA []byte) error {
 			}
 			m.Resources = append(m.Resources, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ProviderType", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ProviderType = EncryptionProviderType(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])
@@ -37588,6 +37723,122 @@ func (m *EncryptionConfig) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Resources = append(m.Resources, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Provider", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Provider.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *EncryptionProvider) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: EncryptionProvider: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: EncryptionProvider: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Type", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			s := EncryptionProviderType(dAtA[iNdEx:postIndex])
+			m.Type = &s
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
