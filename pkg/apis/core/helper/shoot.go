@@ -329,8 +329,8 @@ func ControlPlaneWorkerPoolForShoot(workers []core.Worker) *core.Worker {
 	return &workers[idx]
 }
 
-// GetEncyptionProviderType returns the shoot's encryption provider.
-func GetEncyptionProviderType(apiServerConfig *core.KubeAPIServerConfig) core.EncryptionProviderType {
+// GetEncryptionProviderType returns the shoot's encryption provider.
+func GetEncryptionProviderType(apiServerConfig *core.KubeAPIServerConfig) core.EncryptionProviderType {
 	if apiServerConfig != nil &&
 		apiServerConfig.EncryptionConfig != nil &&
 		apiServerConfig.EncryptionConfig.Provider.Type != nil {
