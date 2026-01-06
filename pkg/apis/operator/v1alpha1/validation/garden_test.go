@@ -1933,6 +1933,27 @@ var _ = Describe("Validation Tests", func() {
 								})),
 							))
 						})
+
+						It("should deny specifying different encryption provider types for k8s and gardener api server", func() {
+							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+								Provider: gardencorev1beta1.EncryptionProvider{
+									Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeAESCBC),
+								},
+							}
+							garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+								Provider: gardencorev1beta1.EncryptionProvider{
+									Type: ptr.To(gardencorev1beta1.EncryptionProviderType("foo")),
+								},
+							}
+
+							Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeInvalid),
+									"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.provider.type"),
+									"Detail": Equal("field must be equal to spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.provider.type"),
+								})),
+							))
+						})
 					})
 
 					Context("Watch cache sizes", func() {
