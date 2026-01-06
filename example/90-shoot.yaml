@@ -252,6 +252,8 @@ spec:
   #     resources: # secrets are always encrypted
   #     - configmaps
   #     - customresource.fancyoperator.io
+  #     provider:
+  #       type: "aescbc"
   #   autoscaling:
   #     minAllowed:
   #       cpu: "1"
