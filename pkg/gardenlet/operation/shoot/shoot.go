@@ -293,7 +293,13 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		shoot.ResourcesToEncrypt = sharedcomponent.StringifyGroupResources(sharedcomponent.GetResourcesForEncryptionFromConfig(shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.EncryptionConfig))
 	}
 
-	shoot.EncryptedResources = v1beta1helper.GetShootEncryptedResourcesInStatus(shoot.GetInfo().Status)
+	shootStatus := shoot.GetInfo().Status
+	shoot.EncryptedResources = v1beta1helper.GetShootEncryptedResourcesInStatus(shootStatus)
+
+	shoot.EncryptionProviderToUse = v1beta1helper.GetEncyptionProviderType(shoot.GetInfo().Spec.Kubernetes.KubeAPIServer)
+	if shootStatus.Credentials != nil {
+		shoot.UsedEncryptionProvider = shootStatus.Credentials.EncryptionAtRest.ProviderType
+	}
 
 	if b.seed != nil {
 		shoot.TopologyAwareRoutingEnabled = v1beta1helper.IsTopologyAwareRoutingForShootControlPlaneEnabled(b.seed, shootObject)

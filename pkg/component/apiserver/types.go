@@ -89,4 +89,6 @@ type ETCDEncryptionConfig struct {
 	ResourcesToEncrypt []string
 	// EncryptedResources are the resources which are currently encrypted.
 	EncryptedResources []string
+	// EncryptionProvider is the encryption provider to be used.
+	EncryptionProvider gardencorev1beta1.EncryptionProviderType
 }
