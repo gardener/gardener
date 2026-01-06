@@ -430,7 +430,7 @@ func cleanUpOperation(operation string) string {
 	return strings.Join(sets.New(operations...).UnsortedList(), v1beta1constants.GardenerOperationsSeparator)
 }
 
-// SyncEncryptedResourcesStatus ensures the status fields shoot.spec.kubernetes.kubeAPIServer.encryptionConfig.provider.type
+// SyncEncryptedProviderStatus ensures the status fields shoot.spec.kubernetes.kubeAPIServer.encryptionConfig.provider.type
 // and shoot.status.credentials.encryptionAtRest.providerType are in sync, when status provider type in not set.
 // TODO(AleksandarSavchev): Remove this function after v1.136 has been released.
 func SyncEncryptedProviderStatus(shoot *core.Shoot) {
