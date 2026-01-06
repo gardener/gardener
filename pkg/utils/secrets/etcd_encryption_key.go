@@ -9,6 +9,8 @@ import (
 )
 
 const (
+	// DataKeyEncryptionProvider is the key in a secret data holding the encryption provider.
+	DataKeyEncryptionProvider = "provider"
 	// DataKeyEncryptionKeyName is the key in a secret data holding the key.
 	DataKeyEncryptionKeyName = "key"
 	// DataKeyEncryptionSecret is the key in a secret data holding the secret.
@@ -27,14 +29,16 @@ const (
 
 // ETCDEncryptionKeySecretConfig contains the specification for a to-be-generated random key.
 type ETCDEncryptionKeySecretConfig struct {
+	Provider     string
 	Name         string
 	SecretLength int
 }
 
 // ETCDEncryptionKey contains the generated key.
 type ETCDEncryptionKey struct {
-	KeyName string
-	Secret  []byte
+	Provider string
+	KeyName  string
+	Secret   []byte
 }
 
 // GetName returns the name of the secret.
@@ -51,14 +55,16 @@ func (s *ETCDEncryptionKeySecretConfig) Generate() (DataInterface, error) {
 	}
 
 	return &ETCDEncryptionKey{
-		KeyName: fmt.Sprintf("key%d", Clock.Now().Unix()),
-		Secret:  key,
+		Provider: s.Provider,
+		KeyName:  fmt.Sprintf("key%d", Clock.Now().Unix()),
+		Secret:   key,
 	}, nil
 }
 
 // SecretData computes the data map which can be used in a Kubernetes secret.
 func (b *ETCDEncryptionKey) SecretData() map[string][]byte {
 	return map[string][]byte{
+		DataKeyEncryptionProvider:       []byte(b.Provider),
 		DataKeyEncryptionKeyName:        []byte(b.KeyName),
 		DataKeyEncryptionSecret:         b.Secret,
 		DataKeyEncryptionSecretEncoding: []byte("none"),
