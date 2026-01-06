@@ -78,3 +78,11 @@ type NamedResourceReference struct {
 	// ResourceRef is a reference to a resource.
 	ResourceRef autoscalingv1.CrossVersionObjectReference `json:"resourceRef" protobuf:"bytes,2,opt,name=resourceRef"`
 }
+
+// EncryptionProviderType is a type alias for the encryption provider type string.
+type EncryptionProviderType string
+
+const (
+	// EncryptionProviderTypeAESCBC is the aescbc encryption provider type.
+	EncryptionProviderTypeAESCBC EncryptionProviderType = "aescbc"
+)
