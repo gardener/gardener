@@ -63,7 +63,7 @@ func (h *Handler) Default(_ context.Context, obj runtime.Object) error {
 	}
 
 	if len(garden.Status.Credentials.EncryptionAtRest.ProviderType) == 0 {
-		garden.Status.Credentials.EncryptionAtRest.ProviderType = operatorv1alpha1helper.GetEncyptionProviderType(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer)
+		garden.Status.Credentials.EncryptionAtRest.ProviderType = operatorv1alpha1helper.GetEncryptionProviderType(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer)
 	}
 
 	// Defaulting used for migration from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.

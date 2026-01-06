@@ -496,7 +496,7 @@ func SyncDNSProviderCredentials(shoot *core.Shoot) {
 // and shoot.status.credentials.encryptionAtRest.providerType are in sync, when status provider type in not set.
 // TODO(AleksandarSavchev): Remove this function after v1.136 has been released.
 func SyncEncryptedProviderStatus(shoot *core.Shoot) {
-	encryptionProviderType := gardencorehelper.GetEncyptionProviderType(shoot.Spec.Kubernetes.KubeAPIServer)
+	encryptionProviderType := gardencorehelper.GetEncryptionProviderType(shoot.Spec.Kubernetes.KubeAPIServer)
 	if len(encryptionProviderType) == 0 {
 		return
 	}

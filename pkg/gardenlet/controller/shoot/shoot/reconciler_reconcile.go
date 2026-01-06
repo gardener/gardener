@@ -492,7 +492,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 						var encryptionType gardencorev1beta1.EncryptionProviderType
 						if o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer != nil {
 							encryptedResources = shared.StringifyGroupResources(shared.GetResourcesForEncryptionFromConfig(o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.EncryptionConfig))
-							encryptionType = v1beta1helper.GetEncyptionProviderType(o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer)
+							encryptionType = v1beta1helper.GetEncryptionProviderType(o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer)
 						}
 
 						// TODO(AleksandarSavchev): Stop setting the shoot.Status.EncryptedResources after v1.135 has been released.

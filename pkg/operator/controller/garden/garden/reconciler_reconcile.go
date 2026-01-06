@@ -174,7 +174,7 @@ func (r *Reconciler) reconcile(
 		defaultEncryptedGVKs    = append(gardenerutils.DefaultGardenerGVKsForEncryption(), gardenerutils.DefaultGVKsForEncryption()...)
 		resourcesToEncrypt      = append(shared.StringifyGroupResources(getKubernetesResourcesForEncryption(garden)), shared.StringifyGroupResources(getGardenerResourcesForEncryption(garden))...)
 		encryptedResources      = shared.NormalizeResources(helper.GetEncryptedResourcesInStatus(garden.Status))
-		encryptionProviderToUse = v1beta1helper.GetEncyptionProviderType(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig)
+		encryptionProviderToUse = v1beta1helper.GetEncryptionProviderType(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig)
 		encryptionProvider      = helper.GetEncryptionProviderInStatus(garden.Status)
 
 		g                              = flow.NewGraph("Garden reconciliation")
@@ -974,7 +974,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 			nil,
 			shared.StringifyGroupResources(getKubernetesResourcesForEncryption(garden)),
 			utils.FilterEntriesByFilterFn(shared.NormalizeResources(helper.GetEncryptedResourcesInStatus(garden.Status)), operator.IsServedByKubeAPIServer),
-			v1beta1helper.GetEncyptionProviderType(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig),
+			v1beta1helper.GetEncryptionProviderType(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
 			false,
 		)

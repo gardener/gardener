@@ -259,8 +259,8 @@ func GetGardenerOperations(annotations map[string]string) []string {
 	return utils.SplitAndTrimString(annotations[v1beta1constants.GardenerOperation], v1beta1constants.GardenerOperationsSeparator)
 }
 
-// GetGardenEncyptionProviderType returns the Garden's encryption provider type from the garden apiserver config.
-func GetGardenEncyptionProviderType(apiServerConfig *operatorv1alpha1.GardenerAPIServerConfig) gardencorev1beta1.EncryptionProviderType {
+// GetGardenEncryptionProviderType returns the Garden's encryption provider type from the garden apiserver config.
+func GetGardenEncryptionProviderType(apiServerConfig *operatorv1alpha1.GardenerAPIServerConfig) gardencorev1beta1.EncryptionProviderType {
 	if apiServerConfig != nil &&
 		apiServerConfig.EncryptionConfig != nil &&
 		apiServerConfig.EncryptionConfig.Provider.Type != nil {
@@ -270,8 +270,8 @@ func GetGardenEncyptionProviderType(apiServerConfig *operatorv1alpha1.GardenerAP
 	return ""
 }
 
-// GetEncyptionProviderType returns the Garden's encryption provider type.
-func GetEncyptionProviderType(apiServerConfig *operatorv1alpha1.KubeAPIServerConfig) gardencorev1beta1.EncryptionProviderType {
+// GetEncryptionProviderType returns the Garden's encryption provider type.
+func GetEncryptionProviderType(apiServerConfig *operatorv1alpha1.KubeAPIServerConfig) gardencorev1beta1.EncryptionProviderType {
 	if apiServerConfig != nil &&
 		apiServerConfig.KubeAPIServerConfig != nil &&
 		apiServerConfig.EncryptionConfig != nil &&
