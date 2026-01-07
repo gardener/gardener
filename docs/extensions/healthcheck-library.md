@@ -133,7 +133,7 @@ The health check library will automatically transition the status to `False` if 
 It is up to the extension to decide how to conduct health checks, though it is recommended to make use of the build-in health check functionality of `ManagedResource`s for trivial checks.
 The [Gardener Resource Manager](../concepts/resource-manager.md) conducts basic checks for different API objects out-of-the-box (e.g `Deployments`, `DaemonSets`, ...) for objects deployed via `ManagedResource`s (see [example 1](https://github.com/gardener/gardener/blob/e5bd1127959f5756bfcaf0884bf00a0b2e8bd344/pkg/component/observability/opentelemetry/collector/collector.go#L157-L159), [example 2](https://github.com/gardener/gardener/blob/a7029002ef6e68b9b37df11fea934bcc80ce6f2c/pkg/component/observability/logging/fluentoperator/fluentoperator.go#L300)).
 
-We differentiate between two main scenarios.
+We differentiate between three main scenarios.
 
 ### Shoot Managed Resources
 
@@ -147,7 +147,7 @@ These checks are performed by the Gardenlet and maintained in the [Shoot Care Re
 
 ### Seed Managed Resources
 
-For the `Seed` object, health checks for `ManagedResource`s are performed by the [Seed Care Reconciler](../concepts/gardenlet.md#-care--reconciler).
+For the `Seed` object, health checks for `ManagedResource`s are performed by the [Seed Care Reconciler](../concepts/gardenlet.md#care-reconciler-1).
 The Gardenlet retrieves all `ManagedResource`s from both the `garden` namespace and the `istio-system` namespace of the seed cluster, then aggregates their status into the `Seed` conditions according to the following rule:
 
 - Health checks of `ManagedResource` with `.spec.class!=nil` are aggregated to the `SeedSystemComponentsHealthy` condition
