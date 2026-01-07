@@ -50,7 +50,7 @@ type AddArgs struct {
 	// If the annotation is not ignored, the extension controller will only reconcile
 	// with a present operation annotation typically set during a reconcile (e.g. in the maintenance time) by the Gardenlet
 	IgnoreOperationAnnotation bool
-	// ExtensionClass defines the extension class this extension is responsible for.
+	// ExtensionClasses defines the extension classes this controller is responsible for.
 	ExtensionClasses []extensionsv1alpha1.ExtensionClass
 	// KnownCodes is a map of known error codes and their respective error check functions.
 	KnownCodes map[gardencorev1beta1.ErrorCode]func(string) bool

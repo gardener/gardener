@@ -22,7 +22,7 @@ const (
 type ReconcilerOptions struct {
 	// IgnoreOperationAnnotation defines whether to ignore the operation annotation or not.
 	IgnoreOperationAnnotation bool
-	// ExtensionClasses defines the extension class this extension is responsible for.
+	// ExtensionClasses defines the extension classes this controller is responsible for.
 	ExtensionClasses []string
 
 	config *ReconcilerConfig
@@ -56,7 +56,7 @@ func (c *ReconcilerOptions) Completed() *ReconcilerConfig {
 type ReconcilerConfig struct {
 	// IgnoreOperationAnnotation defines whether to ignore the operation annotation or not.
 	IgnoreOperationAnnotation bool
-	// ExtensionClass defines the extension class this extension is responsible for.
+	// ExtensionClasses defines the extension classes this controller is responsible for.
 	ExtensionClasses []extensionsv1alpha1.ExtensionClass
 }
 

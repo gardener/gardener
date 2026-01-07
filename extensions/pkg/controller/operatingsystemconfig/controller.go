@@ -40,7 +40,7 @@ type AddArgs struct {
 	// Types are the similar types which can be combined with a logic or,
 	// of the resource considered for reconciliation.
 	Types []string
-	// ExtensionClasses defines the extension class this extension is responsible for.
+	// ExtensionClasses defines the extension classes this controller is responsible for.
 	ExtensionClasses []extensionsv1alpha1.ExtensionClass
 }
 

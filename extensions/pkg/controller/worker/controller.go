@@ -51,7 +51,7 @@ type AddArgs struct {
 	// If the annotation is not ignored, the extension controller will only reconcile
 	// with a present operation annotation typically set during a reconcile (e.g. in the maintenance time) by the Gardenlet
 	IgnoreOperationAnnotation bool
-	// ExtensionClasses defines the extension class this extension is responsible for.
+	// ExtensionClasses defines the extension classes this controller is responsible for.
 	ExtensionClasses []extensionsv1alpha1.ExtensionClass
 	// SelfHostedShootCluster indicates whether the extension runs in a self-hosted shoot cluster.
 	SelfHostedShootCluster bool

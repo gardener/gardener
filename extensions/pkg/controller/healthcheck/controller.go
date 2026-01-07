@@ -43,7 +43,7 @@ type AddArgs struct {
 	Predicates []predicate.Predicate
 	// Type is the type of the resource considered for reconciliation.
 	Type string
-	// ExtensionClasses defines the extension class this extension is responsible for.
+	// ExtensionClasses defines the extension classes this controller is responsible for.
 	ExtensionClasses []extensionsv1alpha1.ExtensionClass
 	// SyncPeriod is the duration how often the registered extension is being reconciled
 	SyncPeriod metav1.Duration
@@ -61,7 +61,7 @@ type DefaultAddArgs struct {
 	Controller controller.Options
 	// HealthCheckConfig contains additional config for the health check controller
 	HealthCheckConfig extensionsconfigv1alpha1.HealthCheckConfig
-	// ExtensionClasses defines the extension class this extension is responsible for.
+	// ExtensionClasses defines the extension classes this controller is responsible for.
 	ExtensionClasses []extensionsv1alpha1.ExtensionClass
 }
 

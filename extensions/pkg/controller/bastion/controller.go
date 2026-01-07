@@ -38,7 +38,7 @@ type AddArgs struct {
 	Predicates []predicate.Predicate
 	// Type is the type of the resource considered for reconciliation.
 	Type string
-	// ExtensionClasses defines the extension class this extension is responsible for.
+	// ExtensionClasses defines the extension classes this controller is responsible for.
 	ExtensionClasses []extensionsv1alpha1.ExtensionClass
 }
 
