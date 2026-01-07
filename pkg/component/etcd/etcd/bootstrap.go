@@ -61,7 +61,7 @@ const (
 	druidServiceAccountName                      = Druid
 	druidVPAName                                 = Druid + "-vpa"
 	druidConfigMapImageVectorOverwriteNamePrefix = Druid + "-imagevector-overwrite"
-	druidConfigMapOperatorConfigName             = Druid + "-operator-config"
+	druidConfigMapOperatorConfigNamePrefix       = Druid + "-operator-config"
 	druidServiceName                             = Druid
 	druidWebhookName                             = Druid
 	druidDeploymentName                          = Druid
@@ -84,6 +84,19 @@ const (
 	druidDeploymentVolumeMountPathOperatorConfig = "/operator_config"
 	druidDeploymentVolumeNameOperatorConfig      = "operator-config"
 )
+
+var druidConfigEncoder runtime.Encoder
+
+func init() {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(druidconfigv1alpha1.AddToScheme(scheme))
+	yamlSerializer := json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{
+		Yaml:   true,
+		Pretty: false,
+		Strict: false,
+	})
+	druidConfigEncoder = serializer.NewCodecFactory(scheme).EncoderForVersion(yamlSerializer, druidconfigv1alpha1.SchemeGroupVersion)
+}
 
 // NewBootstrapper creates a new instance of DeployWaiter for the etcd bootstrapper.
 func NewBootstrapper(
@@ -260,7 +273,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 
 		configMapOperatorConfig = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      druidConfigMapOperatorConfigName,
+				Name:      druidConfigMapOperatorConfigNamePrefix,
 				Namespace: b.namespace,
 				Labels:    labels(),
 			},
@@ -499,6 +512,11 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 										MountPath: webhookServerTLSCertMountPath,
 										ReadOnly:  true,
 									},
+									{
+										Name:      druidDeploymentVolumeNameOperatorConfig,
+										MountPath: druidDeploymentVolumeMountPathOperatorConfig,
+										ReadOnly:  true,
+									},
 								},
 							},
 						},
@@ -603,12 +621,13 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	}
 
 	etcdOperatorConfig := getEtcdOperatorConfig(b.etcdConfig, b.namespace, webhookServerTLSCertMountPath)
-	etcdOperatorConfigYAML, err := encodeETCDOperatorConfig(etcdOperatorConfig)
+	etcdOperatorConfigYAML, err := runtime.Encode(druidConfigEncoder, etcdOperatorConfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not encode etcd-druid operator configuration: %w", err)
 	}
 
-	configMapOperatorConfig.Data = map[string]string{druidConfigMapOperatorConfigDataKey: etcdOperatorConfigYAML}
+	configMapOperatorConfig.Data = map[string]string{druidConfigMapOperatorConfigDataKey: string(etcdOperatorConfigYAML)}
+	utilruntime.Must(kubernetesutils.MakeUnique(configMapOperatorConfig))
 	resourcesToAdd = append(resourcesToAdd, configMapOperatorConfig)
 
 	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
@@ -620,11 +639,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				},
 			},
 		},
-	})
-	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-		Name:      druidDeploymentVolumeNameOperatorConfig,
-		MountPath: druidDeploymentVolumeMountPathOperatorConfig,
-		ReadOnly:  true,
 	})
 
 	utilruntime.Must(references.InjectAnnotations(deployment))
@@ -699,24 +713,6 @@ func getEtcdOperatorConfig(etcdConfig *gardenletconfigv1alpha1.ETCDConfig, names
 	druidconfigv1alpha1.SetObjectDefaults_OperatorConfiguration(etcdOperatorConfig)
 
 	return etcdOperatorConfig
-}
-
-func encodeETCDOperatorConfig(etcdOperatorConfig *druidconfigv1alpha1.OperatorConfiguration) (string, error) {
-	scheme := runtime.NewScheme()
-	utilruntime.Must(druidconfigv1alpha1.AddToScheme(scheme))
-	yamlSerializer := json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{
-		Yaml:   true,
-		Pretty: false,
-		Strict: false,
-	})
-	codec := serializer.NewCodecFactory(scheme).
-		EncoderForVersion(yamlSerializer, druidconfigv1alpha1.SchemeGroupVersion)
-
-	data, err := runtime.Encode(codec, etcdOperatorConfig)
-	if err != nil {
-		return "", err
-	}
-	return string(data), nil
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {
