@@ -488,11 +488,13 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				if !sets.New(o.Shoot.ResourcesToEncrypt...).Equal(sets.New(o.Shoot.EncryptedResources...)) ||
 					o.Shoot.EncryptionProviderToUse != o.Shoot.UsedEncryptionProvider {
 					if err := o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, true, false, func(shoot *gardencorev1beta1.Shoot) error {
-						var encryptedResources []string
-						var encryptionType gardencorev1beta1.EncryptionProviderType
+						var (
+							encryptedResources     []string
+							encryptionProviderType gardencorev1beta1.EncryptionProviderType
+						)
 						if o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer != nil {
 							encryptedResources = shared.StringifyGroupResources(shared.GetResourcesForEncryptionFromConfig(o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.EncryptionConfig))
-							encryptionType = v1beta1helper.GetEncryptionProviderType(o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer)
+							encryptionProviderType = v1beta1helper.GetEncryptionProviderType(o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer)
 						}
 
 						// TODO(AleksandarSavchev): Stop setting the shoot.Status.EncryptedResources after v1.135 has been released.
@@ -505,7 +507,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 							shoot.Status.Credentials.EncryptionAtRest = &gardencorev1beta1.EncryptionAtRest{}
 						}
 
-						shoot.Status.Credentials.EncryptionAtRest.ProviderType = encryptionType
+						shoot.Status.Credentials.EncryptionAtRest.ProviderType = encryptionProviderType
 
 						if len(encryptedResources) > 0 {
 							shoot.Status.Credentials.EncryptionAtRest.Resources = encryptedResources

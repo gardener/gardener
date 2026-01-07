@@ -684,6 +684,9 @@ spec:
                                   type:
                                     description: |-
                                       Type contains the type of the encryption provider.
+
+                                      Supported types:
+                                        - "aescbc"
                                       Defaults to aescbc.
                                     type: string
                                 type: object
@@ -1566,6 +1569,9 @@ spec:
                                   type:
                                     description: |-
                                       Type contains the type of the encryption provider.
+
+                                      Supported types:
+                                        - "aescbc"
                                       Defaults to aescbc.
                                     type: string
                                 type: object
@@ -2073,7 +2079,7 @@ spec:
                     properties:
                       providerType:
                         description: ProviderType is the used encryption provider
-                          type for resources in the Garden.
+                          type.
                         type: string
                       resources:
                         description: |-
