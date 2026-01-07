@@ -145,10 +145,17 @@ Their status will be aggregated to the `Shoot` conditions according to the follo
 
 These checks are performed by the Gardenlet and maintained in the [Shoot Care Reconciler](../concepts/gardenlet.md#care-reconciler-2).
 
+### Seed Managed Resources
+
+For the `Seed` object, health checks for `ManagedResource`s are performed by the [Seed Care Reconciler](../concepts/gardenlet.md#-care--reconciler).
+The Gardenlet retrieves all `ManagedResource`s from both the `garden` namespace and the `istio-system` namespace of the seed cluster, then aggregates their status into the `Seed` conditions according to the following rule:
+
+- Health checks of `ManagedResource` with `.spec.class!=nil` are aggregated to the `SeedSystemComponentsHealthy` condition
+
 ### Garden Managed Resources
 
 For the `Garden` object managed by the Gardener Operator, health checks for `ManagedResource`s are performed by the [Garden Care Reconciler](../concepts/operator.md#care-reconciler).
-The operator retrieves all `ManagedResource`s from both the garden namespace and the `istio-system` namespace, then aggregates their status into the `Garden` conditions according to the following rules:
+The operator retrieves all `ManagedResource`s from both the `garden` namespace and the `istio-system` namespace, then aggregates their status into the `Garden` conditions according to the following rules:
 
 - Health checks of `ManagedResource` with `.spec.class!=nil` and optionally labeled with `care.gardener.cloud/condition-type=RuntimeComponentsHealthy` are aggregated to the `RuntimeComponentsHealthy` condition
 - Health checks of `ManagedResource` with `.spec.class=nil` or labeled with `care.gardener.cloud/condition-type=VirtualComponentsHealthy` are aggregated to the `VirtualComponentsHealthy` condition
