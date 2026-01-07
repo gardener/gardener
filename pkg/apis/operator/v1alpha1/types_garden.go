@@ -820,7 +820,7 @@ type EncryptionAtRest struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config for more details.
 	// +optional
 	Resources []string `json:"resources,omitempty"`
-	// ProviderType is the used encryption provider type for resources in the Garden.
+	// ProviderType is the used encryption provider type.
 	ProviderType gardencorev1beta1.EncryptionProviderType `json:"providerType"`
 }
 
