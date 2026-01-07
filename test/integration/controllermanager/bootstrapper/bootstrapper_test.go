@@ -36,12 +36,12 @@ var _ = Describe("Bootstrapper Controller", func() {
 
 		bootstrappers.PerShootQuotaDescriptors = []bootstrappers.ResourceQuotaUsages{
 			{
-				Annotation:       bootstrappers.ConfigMapsPerShootAnnotation,
+				Annotation:       "gardener.cloud/configmaps-per-shoot",
 				QuotaKey:         "count/configmaps",
 				ExpectedPerShoot: 2,
 			},
 			{
-				Annotation:       bootstrappers.SecretsPerShootAnnotation,
+				Annotation:       "gardener.cloud/secrets-per-shoot",
 				QuotaKey:         "count/secrets",
 				ExpectedPerShoot: 4,
 			},
@@ -92,7 +92,7 @@ var _ = Describe("Bootstrapper Controller", func() {
 					Namespace: namespace.Name,
 				}, currentResourceQuota)).To(Succeed())
 
-				_, hasAnnotation := currentResourceQuota.Annotations[bootstrappers.ConfigMapsPerShootAnnotation]
+				_, hasAnnotation := currentResourceQuota.Annotations["gardener.cloud/configmaps-per-shoot"]
 				return hasAnnotation
 			}).Should(BeFalse())
 		})
@@ -231,8 +231,8 @@ var _ = Describe("Bootstrapper Controller", func() {
 
 					// Updating the annotations to bigger values than the real ones,
 					// a new run of the bootstrapper would simulate that the desired values were changed to smaller ones.
-					resourceQuota.Annotations[bootstrappers.ConfigMapsPerShootAnnotation] = "3"
-					resourceQuota.Annotations[bootstrappers.SecretsPerShootAnnotation] = "5"
+					resourceQuota.Annotations["gardener.cloud/configmaps-per-shoot"] = "3"
+					resourceQuota.Annotations["gardener.cloud/secrets-per-shoot"] = "5"
 					Expect(testClient.Update(ctx, resourceQuota)).To(Succeed())
 
 					Expect(bootstrapper.Start(testCtx)).To(Succeed())
@@ -256,8 +256,8 @@ var _ = Describe("Bootstrapper Controller", func() {
 
 					// Updating the annotations to smaller values than the real ones,
 					// a new run of the bootstrapper would simulate that the desired values were changed to bigger ones.
-					resourceQuota.Annotations[bootstrappers.ConfigMapsPerShootAnnotation] = "1"
-					resourceQuota.Annotations[bootstrappers.SecretsPerShootAnnotation] = "3"
+					resourceQuota.Annotations["gardener.cloud/configmaps-per-shoot"] = "1"
+					resourceQuota.Annotations["gardener.cloud/secrets-per-shoot"] = "3"
 					Expect(testClient.Update(ctx, resourceQuota)).To(Succeed())
 
 					Expect(bootstrapper.Start(testCtx)).To(Succeed())
@@ -276,7 +276,8 @@ var _ = Describe("Bootstrapper Controller", func() {
 })
 
 func consistentlyExpectUsageAnnotations(ctx context.Context, resourceQuota *corev1.ResourceQuota, configMapsPerShoot, secretsPerShoot string) {
-	ConsistentlyWithOffset(1, func(g Gomega) {
+	GinkgoHelper()
+	Consistently(func(g Gomega) {
 		currentResourceQuota := &corev1.ResourceQuota{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      resourceQuota.Name,
@@ -293,7 +294,8 @@ func consistentlyExpectUsageAnnotations(ctx context.Context, resourceQuota *core
 }
 
 func eventuallyExpectUsageAnnotations(ctx context.Context, resourceQuota *corev1.ResourceQuota, configMapsPerShoot, secretsPerShoot string) {
-	EventuallyWithOffset(1, func(g Gomega) {
+	GinkgoHelper()
+	Eventually(func(g Gomega) {
 		currentResourceQuota := &corev1.ResourceQuota{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      resourceQuota.Name,
@@ -310,17 +312,19 @@ func eventuallyExpectUsageAnnotations(ctx context.Context, resourceQuota *corev1
 }
 
 func expectUsageAnnotations(g Gomega, resourceQuota *corev1.ResourceQuota, configMapsPerShoot, secretsPerShoot string) {
-	configMapAnnotationValue, hasConfigMapAnnotation := resourceQuota.Annotations[bootstrappers.ConfigMapsPerShootAnnotation]
-	secretAnnotationValue, hasSecretAnnotation := resourceQuota.Annotations[bootstrappers.SecretsPerShootAnnotation]
+	GinkgoHelper()
+	configMapAnnotationValue, hasConfigMapAnnotation := resourceQuota.Annotations["gardener.cloud/configmaps-per-shoot"]
+	secretAnnotationValue, hasSecretAnnotation := resourceQuota.Annotations["gardener.cloud/secrets-per-shoot"]
 
-	g.ExpectWithOffset(1, hasConfigMapAnnotation).To(BeTrue(), "expected ConfigMap annotation to be present")
-	g.ExpectWithOffset(1, configMapAnnotationValue).To(Equal(configMapsPerShoot), "expected ConfigMap annotation to have correct value")
-	g.ExpectWithOffset(1, hasSecretAnnotation).To(BeTrue(), "expected secret annotation to be present")
-	g.ExpectWithOffset(1, secretAnnotationValue).To(Equal(secretsPerShoot), "expected secret annotation to have correct value")
+	g.Expect(hasConfigMapAnnotation).To(BeTrue(), "expected ConfigMap annotation to be present")
+	g.Expect(configMapAnnotationValue).To(Equal(configMapsPerShoot), "expected ConfigMap annotation to have correct value")
+	g.Expect(hasSecretAnnotation).To(BeTrue(), "expected secret annotation to be present")
+	g.Expect(secretAnnotationValue).To(Equal(secretsPerShoot), "expected secret annotation to have correct value")
 }
 
 func eventuallyExpectQuotaSpec(ctx context.Context, resourceQuota *corev1.ResourceQuota, configMapCount, secretCount int64) {
-	EventuallyWithOffset(1, func(g Gomega) {
+	GinkgoHelper()
+	Eventually(func(g Gomega) {
 		currentResourceQuota := &corev1.ResourceQuota{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      resourceQuota.Name,
@@ -337,7 +341,8 @@ func eventuallyExpectQuotaSpec(ctx context.Context, resourceQuota *corev1.Resour
 }
 
 func consistentlyExpectQuotaSpec(ctx context.Context, resourceQuota *corev1.ResourceQuota, configMapCount, secretCount int64) {
-	ConsistentlyWithOffset(1, func(g Gomega) {
+	GinkgoHelper()
+	Consistently(func(g Gomega) {
 		currentResourceQuota := &corev1.ResourceQuota{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      resourceQuota.Name,
@@ -354,6 +359,7 @@ func consistentlyExpectQuotaSpec(ctx context.Context, resourceQuota *corev1.Reso
 }
 
 func expectQuotaSpec(g Gomega, resourceQuota *corev1.ResourceQuota, configMapCount, secretCount int64) {
-	g.ExpectWithOffset(1, resourceQuota.Spec.Hard["count/configmaps"]).To(Equal(resource.MustParse(strconv.FormatInt(configMapCount, 10))))
-	g.ExpectWithOffset(1, resourceQuota.Spec.Hard["count/secrets"]).To(Equal(resource.MustParse(strconv.FormatInt(secretCount, 10))))
+	GinkgoHelper()
+	g.Expect(resourceQuota.Spec.Hard["count/configmaps"]).To(Equal(resource.MustParse(strconv.FormatInt(configMapCount, 10))))
+	g.Expect(resourceQuota.Spec.Hard["count/secrets"]).To(Equal(resource.MustParse(strconv.FormatInt(secretCount, 10))))
 }
