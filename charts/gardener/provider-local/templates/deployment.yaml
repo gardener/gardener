@@ -83,6 +83,7 @@ spec:
         - --controllers=backupbucket,dnsrecord,local-ext-shoot
         - --extension-classes=garden
         {{- else }}
+        - --extension-classes=seed,shoot
         {{- range .Values.webhooks.prometheus.remoteWriteURLs }}
         - --prometheus-remote-write-url={{ . }}
         {{- end }}

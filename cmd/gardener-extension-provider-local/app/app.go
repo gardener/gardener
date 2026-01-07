@@ -48,6 +48,7 @@ import (
 	localbastion "github.com/gardener/gardener/pkg/provider-local/controller/bastion"
 	localcontrolplane "github.com/gardener/gardener/pkg/provider-local/controller/controlplane"
 	localdnsrecord "github.com/gardener/gardener/pkg/provider-local/controller/dnsrecord"
+	localextensionseedcontroller "github.com/gardener/gardener/pkg/provider-local/controller/extension/seed"
 	localextensionshootcontroller "github.com/gardener/gardener/pkg/provider-local/controller/extension/shoot"
 	localhealthcheck "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
 	localinfrastructure "github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
@@ -109,6 +110,11 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 		// options for the dnsrecord controller
 		dnsRecordCtrlOpts = &localdnsrecord.ControllerOptions{
 			MaxConcurrentReconciles: 1,
+		}
+
+		// options for the extension controllers
+		extensionCtrlOpts = &extensionscmdcontroller.ControllerOptions{
+			MaxConcurrentReconciles: 5,
 		}
 
 		// options for the ingress controller
@@ -175,6 +181,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			extensionscmdcontroller.PrefixOption("bastion-", bastionCtrlOpts),
 			extensionscmdcontroller.PrefixOption("controlplane-", controlPlaneCtrlOpts),
 			extensionscmdcontroller.PrefixOption("dnsrecord-", dnsRecordCtrlOpts),
+			extensionscmdcontroller.PrefixOption("extension-", extensionCtrlOpts),
 			extensionscmdcontroller.PrefixOption("infrastructure-", infraCtrlOpts),
 			extensionscmdcontroller.PrefixOption("worker-", workerCtrlOpts),
 			extensionscmdcontroller.PrefixOption("ingress-", ingressCtrlOpts),
@@ -273,6 +280,8 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			bastionCtrlOpts.Completed().Apply(&localbastion.DefaultAddOptions.Controller)
 			controlPlaneCtrlOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.Controller)
 			dnsRecordCtrlOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions)
+			extensionCtrlOpts.Completed().Apply(&localextensionseedcontroller.DefaultAddOptions.Controller)
+			extensionCtrlOpts.Completed().Apply(&localextensionshootcontroller.DefaultAddOptions.Controller)
 			healthCheckCtrlOpts.Completed().Apply(&localhealthcheck.DefaultAddOptions.Controller)
 			infraCtrlOpts.Completed().Apply(&localinfrastructure.DefaultAddOptions.Controller)
 			operatingSystemConfigCtrlOpts.Completed().Apply(&localoperatingsystemconfig.DefaultAddOptions.Controller)
@@ -289,12 +298,13 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			reconcileOpts.Completed().Apply(&localbackupbucket.DefaultAddOptions.IgnoreOperationAnnotation, &localbackupbucket.DefaultAddOptions.ExtensionClasses)
 			reconcileOpts.Completed().Apply(&localbastion.DefaultAddOptions.IgnoreOperationAnnotation, &localbastion.DefaultAddOptions.ExtensionClasses)
 			reconcileOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation, &localcontrolplane.DefaultAddOptions.ExtensionClasses)
+			reconcileOpts.Completed().Apply(&localextensionseedcontroller.DefaultAddOptions.IgnoreOperationAnnotation, &localextensionseedcontroller.DefaultAddOptions.ExtensionClasses)
+			reconcileOpts.Completed().Apply(&localextensionshootcontroller.DefaultAddOptions.IgnoreOperationAnnotation, &localextensionshootcontroller.DefaultAddOptions.ExtensionClasses)
 			reconcileOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation, &localdnsrecord.DefaultAddOptions.ExtensionClasses)
 			reconcileOpts.Completed().Apply(&localinfrastructure.DefaultAddOptions.IgnoreOperationAnnotation, &localinfrastructure.DefaultAddOptions.ExtensionClasses)
 			reconcileOpts.Completed().Apply(&localoperatingsystemconfig.DefaultAddOptions.IgnoreOperationAnnotation, &localoperatingsystemconfig.DefaultAddOptions.ExtensionClasses)
 			reconcileOpts.Completed().Apply(&localworker.DefaultAddOptions.IgnoreOperationAnnotation, &localworker.DefaultAddOptions.ExtensionClasses)
 			reconcileOpts.Completed().Apply(nil, &localhealthcheck.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&localextensionshootcontroller.DefaultAddOptions.IgnoreOperationAnnotation, &localextensionshootcontroller.DefaultAddOptions.ExtensionClasses)
 
 			if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
 				return fmt.Errorf("could not add healthcheck: %w", err)
