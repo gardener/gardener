@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestNamespace(t *testing.T) {
+func TestAuditPolicy(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Operator Webhook Validation AuditPolicy Suite")
 }

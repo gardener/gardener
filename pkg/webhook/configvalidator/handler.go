@@ -52,7 +52,7 @@ func init() {
 		runtime.DisabledGroupVersioner, runtime.InternalGroupVersioner, operatorScheme.Name())
 }
 
-// Handler validates configuration part of ConfigMaps which are referenced in Shoot resources.
+// Handler validates configuration part of ConfigMaps which are referenced in Shoot or Garden resources.
 type Handler struct {
 	APIReader client.Reader
 	Client    client.Reader
@@ -69,7 +69,7 @@ type Handler struct {
 	AdmitGardenConfig          func(configRaw string) (int32, error)
 }
 
-// Handle validates configuration part of ConfigMaps which are referenced in Shoot resources.
+// Handle validates configuration part of ConfigMaps which are referenced in Shoot or Garden resources.
 func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.Response {
 	requestGK := schema.GroupKind{Group: req.Kind.Group, Kind: req.Kind.Kind}
 

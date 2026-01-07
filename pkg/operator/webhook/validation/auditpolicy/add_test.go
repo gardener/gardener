@@ -168,6 +168,17 @@ rules:
 					},
 					Kubernetes: operatorv1alpha1.Kubernetes{
 						Version: "1.31.1",
+						KubeAPIServer: &operatorv1alpha1.KubeAPIServerConfig{
+							KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+								AuditConfig: &gardencorev1beta1.AuditConfig{
+									AuditPolicy: &gardencorev1beta1.AuditPolicy{
+										ConfigMapRef: &corev1.ObjectReference{
+											Name: cmName,
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -226,32 +237,86 @@ rules:
 		})
 
 		Context("Allow", func() {
-			It("has no APIServer config", func() {
+			It("has no APIServer config for both Gardener and Kubernetes", func() {
 				garden.Spec.VirtualCluster.Gardener.APIServer = nil
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 				test(admissionv1.Create, nil, garden, true, statusCodeAllowed, "no audit policy config map reference found in garden spec", "")
 			})
 
-			It("has no AuditConfig", func() {
+			It("has no AuditConfig for Gardener APIServer", func() {
 				garden.Spec.VirtualCluster.Gardener.APIServer.AuditConfig = nil
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 				test(admissionv1.Create, nil, garden, true, statusCodeAllowed, "no audit policy config map reference found in garden spec", "")
 			})
 
-			It("has no audit policy", func() {
+			It("has no audit policy for Gardener APIServer", func() {
 				garden.Spec.VirtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy = nil
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 				test(admissionv1.Create, nil, garden, true, statusCodeAllowed, "no audit policy config map reference found in garden spec", "")
 			})
 
-			It("has no audit policy cm Ref", func() {
+			It("has no audit policy cm Ref for Gardener APIServer", func() {
 				garden.Spec.VirtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy.ConfigMapRef = nil
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 				test(admissionv1.Create, nil, garden, true, statusCodeAllowed, "no audit policy config map reference found in garden spec", "")
 			})
 
-			It("references a valid auditPolicy (CREATE)", func() {
+			It("has no AuditConfig for KubeAPIServer", func() {
+				garden.Spec.VirtualCluster.Gardener.APIServer = nil
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig.AuditConfig = nil
+				test(admissionv1.Create, nil, garden, true, statusCodeAllowed, "no audit policy config map reference found in garden spec", "")
+			})
+
+			It("has no audit policy for KubeAPIServer", func() {
+				garden.Spec.VirtualCluster.Gardener.APIServer = nil
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig.AuditConfig.AuditPolicy = nil
+				test(admissionv1.Create, nil, garden, true, statusCodeAllowed, "no audit policy config map reference found in garden spec", "")
+			})
+
+			It("has no audit policy cm Ref for KubeAPIServer", func() {
+				garden.Spec.VirtualCluster.Gardener.APIServer = nil
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig.AuditConfig.AuditPolicy.ConfigMapRef = nil
+				test(admissionv1.Create, nil, garden, true, statusCodeAllowed, "no audit policy config map reference found in garden spec", "")
+			})
+
+			It("references a valid auditPolicy for Gardener APIServer (CREATE)", func() {
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 				returnedCm := corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "1"},
 					Data:       map[string]string{"policy": validAuditPolicy},
 				}
+				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: gardenNs, Name: cmName}, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardenNs, Name: cmName}}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
+					*cm = returnedCm
+					return nil
+				})
+				test(admissionv1.Create, nil, garden, true, statusCodeAllowed, "all referenced configMaps are valid", "")
+			})
+
+			It("references a valid auditPolicy for KubeAPIServer (CREATE)", func() {
+				garden.Spec.VirtualCluster.Gardener.APIServer = nil
+				returnedCm := corev1.ConfigMap{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "1"},
+					Data:       map[string]string{"policy": validAuditPolicy},
+				}
+				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: gardenNs, Name: cmName}, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardenNs, Name: cmName}}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
+					*cm = returnedCm
+					return nil
+				})
+				test(admissionv1.Create, nil, garden, true, statusCodeAllowed, "all referenced configMaps are valid", "")
+			})
+
+			It("references a valid auditPolicy for both Gardener APIServer and KubeAPIServer (CREATE)", func() {
+				returnedCm := corev1.ConfigMap{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "1"},
+					Data:       map[string]string{"policy": validAuditPolicy},
+				}
+				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: gardenNs, Name: cmName}, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardenNs, Name: cmName}}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
+					*cm = returnedCm
+					return nil
+				})
 				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: gardenNs, Name: cmName}, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardenNs, Name: cmName}}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
 					*cm = returnedCm
 					return nil
@@ -265,12 +330,13 @@ rules:
 				test(admissionv1.Update, garden, newGarden, true, statusCodeAllowed, "garden spec was not changed", "")
 			})
 
-			It("auditPolicy name was added (UPDATE)", func() {
+			It("auditPolicy name was added for Gardener APIServer (UPDATE)", func() {
 				returnedCm := corev1.ConfigMap{
 					Data: map[string]string{"policy": validAuditPolicy},
 				}
 				apiServerConfig := garden.Spec.VirtualCluster.Gardener.APIServer.DeepCopy()
 				garden.Spec.VirtualCluster.Gardener.APIServer = nil
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 				newGarden := garden.DeepCopy()
 				newGarden.Spec.VirtualCluster.Gardener.APIServer = apiServerConfig
 				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: gardenNs, Name: cmName}, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardenNs, Name: cmName}}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
@@ -280,7 +346,24 @@ rules:
 				test(admissionv1.Update, garden, newGarden, true, statusCodeAllowed, "all referenced configMaps are valid", "")
 			})
 
-			It("referenced auditPolicy name was changed (UPDATE)", func() {
+			It("auditPolicy name was added for KubeAPIServer (UPDATE)", func() {
+				returnedCm := corev1.ConfigMap{
+					Data: map[string]string{"policy": validAuditPolicy},
+				}
+				kubeAPIServerConfig := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.DeepCopy()
+				garden.Spec.VirtualCluster.Gardener.APIServer = nil
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
+				newGarden := garden.DeepCopy()
+				newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = kubeAPIServerConfig
+				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: gardenNs, Name: cmName}, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardenNs, Name: cmName}}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
+					*cm = returnedCm
+					return nil
+				})
+				test(admissionv1.Update, garden, newGarden, true, statusCodeAllowed, "all referenced configMaps are valid", "")
+			})
+
+			It("referenced auditPolicy name was changed for Gardener APIServer (UPDATE)", func() {
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 				returnedCm := corev1.ConfigMap{
 					Data: map[string]string{"policy": validAuditPolicy},
 				}
@@ -293,9 +376,38 @@ rules:
 				test(admissionv1.Update, garden, newGarden, true, statusCodeAllowed, "all referenced configMaps are valid", "")
 			})
 
-			It("referenced auditPolicy name was removed (UPDATE)", func() {
+			It("referenced auditPolicy name was changed for KubeAPIServer (UPDATE)", func() {
+				garden.Spec.VirtualCluster.Gardener.APIServer = nil
+				returnedCm := corev1.ConfigMap{
+					Data: map[string]string{"policy": validAuditPolicy},
+				}
+				newGarden := garden.DeepCopy()
+				newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name = cmNameOther
+				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: gardenNs, Name: cmNameOther}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
+					*cm = returnedCm
+					return nil
+				})
+				test(admissionv1.Update, garden, newGarden, true, statusCodeAllowed, "all referenced configMaps are valid", "")
+			})
+
+			It("referenced auditPolicy name was removed for Gardener APIServer (UPDATE)", func() {
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 				newGarden := garden.DeepCopy()
 				newGarden.Spec.VirtualCluster.Gardener.APIServer = nil
+				test(admissionv1.Update, garden, newGarden, true, statusCodeAllowed, "no audit policy config map reference found in garden spec", "")
+			})
+
+			It("referenced auditPolicy name was removed for KubeAPIServer (UPDATE)", func() {
+				garden.Spec.VirtualCluster.Gardener.APIServer = nil
+				newGarden := garden.DeepCopy()
+				newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
+				test(admissionv1.Update, garden, newGarden, true, statusCodeAllowed, "no audit policy config map reference found in garden spec", "")
+			})
+
+			It("referenced auditPolicy name was removed for both APIServers (UPDATE)", func() {
+				newGarden := garden.DeepCopy()
+				newGarden.Spec.VirtualCluster.Gardener.APIServer = nil
+				newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 				test(admissionv1.Update, garden, newGarden, true, statusCodeAllowed, "no audit policy config map reference found in garden spec", "")
 			})
 
@@ -311,21 +423,40 @@ rules:
 		})
 
 		Context("Deny", func() {
-			It("references a configmap that does not exist", func() {
+			It("references a configmap that does not exist for Gardener APIServer", func() {
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: gardenNs, Name: cmName}, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardenNs, Name: cmName}}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ *corev1.ConfigMap, _ ...client.GetOption) error {
 					return apierrors.NewNotFound(schema.GroupResource{Resource: "configmaps"}, cmName)
 				})
 				test(admissionv1.Create, nil, garden, false, statusCodeInvalid, `referenced ConfigMap garden/fake-cm-name does not exist: configmaps "fake-cm-name" not found`, "")
 			})
 
-			It("fails getting cm", func() {
+			It("references a configmap that does not exist for KubeAPIServer", func() {
+				garden.Spec.VirtualCluster.Gardener.APIServer = nil
+				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: gardenNs, Name: cmName}, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardenNs, Name: cmName}}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ *corev1.ConfigMap, _ ...client.GetOption) error {
+					return apierrors.NewNotFound(schema.GroupResource{Resource: "configmaps"}, cmName)
+				})
+				test(admissionv1.Create, nil, garden, false, statusCodeInvalid, `referenced ConfigMap garden/fake-cm-name does not exist: configmaps "fake-cm-name" not found`, "")
+			})
+
+			It("fails getting cm for Gardener APIServer", func() {
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: gardenNs, Name: cmName}, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardenNs, Name: cmName}}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ *corev1.ConfigMap, _ ...client.GetOption) error {
 					return errors.New("fake")
 				})
 				test(admissionv1.Create, nil, garden, false, statusCodeInternalError, "could not retrieve ConfigMap garden/fake-cm-name: fake", "")
 			})
 
-			It("references configmap without a policy key", func() {
+			It("fails getting cm for KubeAPIServer", func() {
+				garden.Spec.VirtualCluster.Gardener.APIServer = nil
+				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: gardenNs, Name: cmName}, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardenNs, Name: cmName}}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ *corev1.ConfigMap, _ ...client.GetOption) error {
+					return errors.New("fake")
+				})
+				test(admissionv1.Create, nil, garden, false, statusCodeInternalError, "could not retrieve ConfigMap garden/fake-cm-name: fake", "")
+			})
+
+			It("references configmap without a policy key for Gardener APIServer", func() {
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: gardenNs, Name: cmName}, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardenNs, Name: cmName}}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
 					*cm = corev1.ConfigMap{
 						Data: nil,
@@ -335,7 +466,19 @@ rules:
 				test(admissionv1.Create, nil, garden, false, statusCodeInvalid, "error getting ConfigMap /: missing audit policy key in policy ConfigMap data", "")
 			})
 
-			It("references audit policy which breaks validation rules", func() {
+			It("references configmap without a policy key for KubeAPIServer", func() {
+				garden.Spec.VirtualCluster.Gardener.APIServer = nil
+				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: gardenNs, Name: cmName}, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardenNs, Name: cmName}}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
+					*cm = corev1.ConfigMap{
+						Data: nil,
+					}
+					return nil
+				})
+				test(admissionv1.Create, nil, garden, false, statusCodeInvalid, "error getting ConfigMap /: missing audit policy key in policy ConfigMap data", "")
+			})
+
+			It("references audit policy which breaks validation rules for Gardener APIServer", func() {
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 				returnedCm := corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
@@ -348,7 +491,22 @@ rules:
 				test(admissionv1.Create, nil, garden, false, statusCodeInvalid, "Unsupported value: \"FakeLevel\"", "")
 			})
 
-			It("references audit policy with invalid structure", func() {
+			It("references audit policy which breaks validation rules for KubeAPIServer", func() {
+				garden.Spec.VirtualCluster.Gardener.APIServer = nil
+				returnedCm := corev1.ConfigMap{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
+					Data:       map[string]string{"policy": invalidAuditPolicy},
+				}
+				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: gardenNs, Name: cmName}, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardenNs, Name: cmName}}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
+					*cm = returnedCm
+					return nil
+				})
+				test(admissionv1.Create, nil, garden, false, statusCodeInvalid, "Unsupported value: \"FakeLevel\"", "")
+			})
+
+			It("references audit policy with invalid structure for Gardener APIServer", func() {
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 				returnedCm := corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
@@ -361,7 +519,36 @@ rules:
 				test(admissionv1.Create, nil, garden, false, statusCodeInvalid, "did not find expected key", "")
 			})
 
-			It("references a deprecated auditPolicy/v1alpha1", func() {
+			It("references audit policy with invalid structure for KubeAPIServer", func() {
+				garden.Spec.VirtualCluster.Gardener.APIServer = nil
+				returnedCm := corev1.ConfigMap{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
+					Data:       map[string]string{"policy": missingKeyAuditPolicy},
+				}
+				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: gardenNs, Name: cmName}, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardenNs, Name: cmName}}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
+					*cm = returnedCm
+					return nil
+				})
+				test(admissionv1.Create, nil, garden, false, statusCodeInvalid, "did not find expected key", "")
+			})
+
+			It("references a deprecated auditPolicy/v1alpha1 for Gardener APIServer", func() {
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
+				returnedCm := corev1.ConfigMap{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
+					Data:       map[string]string{"policy": validAuditPolicyV1alpha1},
+				}
+				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: gardenNs, Name: cmName}, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardenNs, Name: cmName}}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
+					*cm = returnedCm
+					return nil
+				})
+				test(admissionv1.Create, nil, garden, false, statusCodeInvalid, "no kind \"Policy\" is registered for version \"audit.k8s.io/v1alpha1\"", "")
+			})
+
+			It("references a deprecated auditPolicy/v1alpha1 for KubeAPIServer", func() {
+				garden.Spec.VirtualCluster.Gardener.APIServer = nil
 				returnedCm := corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
@@ -388,6 +575,7 @@ rules:
 				It("is not referenced by any garden", func() {
 					gardenNotReferencing := garden.DeepCopy()
 					gardenNotReferencing.Spec.VirtualCluster.Gardener.APIServer = nil
+					gardenNotReferencing.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 					Expect(fakeClient.Create(ctx, gardenNotReferencing)).To(Succeed())
 
 					test(admissionv1.Update, cm, cm, true, statusCodeAllowed, "config map is not referenced by garden resource, nothing to validate", "")
