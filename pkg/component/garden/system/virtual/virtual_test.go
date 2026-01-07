@@ -494,6 +494,11 @@ var _ = Describe("Virtual", func() {
 					Verbs: []string{"create"},
 				},
 				{
+					APIGroups: []string{gardencorev1beta1.GroupName},
+					Resources: []string{"shoots/finalizers"},
+					Verbs:     []string{"update"},
+				},
+				{
 					APIGroups: []string{"core.gardener.cloud"},
 					Resources: []string{"namespacedcloudprofiles"},
 					Verbs:     []string{"get", "list", "watch", "create", "patch", "update", "delete"},
