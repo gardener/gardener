@@ -248,7 +248,7 @@ type EncryptionAtRest struct {
 	// Secrets are encrypted by default and are not part of the list.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
 	Resources []string
-	// ProviderType is the used encryption provider type for resources in the Shoot.
+	// ProviderType is the used encryption provider type.
 	ProviderType EncryptionProviderType
 }
 
@@ -811,6 +811,9 @@ type EncryptionConfig struct {
 // EncryptionProvider contains information about the encryption provider.
 type EncryptionProvider struct {
 	// Type contains the type of the encryption provider.
+	//
+	// Supported types:
+	//   - "aescbc"
 	// Defaults to aescbc.
 	// +optional
 	Type *EncryptionProviderType

@@ -77,7 +77,9 @@ func ReconcileSecretETCDEncryptionConfiguration(
 	}
 
 	currentEncryptionProvider := config.EncryptionProvider
-	// For backward compatibility, treat "aescbc" as no change in provider
+	// The "aescbc" provider type has been the only available provider type.
+	// Since [secretsutils.ETCDEncryptionKeySecretConfig] had no provider field before (implicitly "aescbc"),
+	// we need to treat "aescbc" as empty string to avoid unnecessary key rotations.
 	if currentEncryptionProvider == gardencorev1beta1.EncryptionProviderTypeAESCBC {
 		currentEncryptionProvider = gardencorev1beta1.EncryptionProviderType("")
 	}

@@ -174,6 +174,8 @@ func (r *Reconciler) reconcile(
 		defaultEncryptedGVKs    = append(gardenerutils.DefaultGardenerGVKsForEncryption(), gardenerutils.DefaultGVKsForEncryption()...)
 		resourcesToEncrypt      = append(shared.StringifyGroupResources(getKubernetesResourcesForEncryption(garden)), shared.StringifyGroupResources(getGardenerResourcesForEncryption(garden))...)
 		encryptedResources      = shared.NormalizeResources(helper.GetEncryptedResourcesInStatus(garden.Status))
+		// Both kube-apiserver and garden-apiserver must use the same encryption provider type.
+		// This is validated by a webhook, so we can read from either apiserver config.
 		encryptionProviderToUse = v1beta1helper.GetEncryptionProviderType(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig)
 		encryptionProvider      = helper.GetEncryptionProviderInStatus(garden.Status)
 
@@ -1014,7 +1016,7 @@ func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden
 			gardenerAPIServer,
 			shared.StringifyGroupResources(getGardenerResourcesForEncryption(garden)),
 			utils.FilterEntriesByFilterFn(helper.GetEncryptedResourcesInStatus(garden.Status), operator.IsServedByGardenerAPIServer),
-			getGardenerEncryptionType(garden.Spec.VirtualCluster.Gardener.APIServer),
+			helper.GetGardenEncryptionProviderType(garden.Spec.VirtualCluster.Gardener.APIServer),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
 			helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials),
 		)
@@ -1319,16 +1321,6 @@ func getKubernetesResourcesForEncryption(garden *operatorv1alpha1.Garden) []sche
 	}
 
 	return shared.GetResourcesForEncryptionFromConfig(encryptionConfig)
-}
-
-func getGardenerEncryptionType(apiServer *operatorv1alpha1.GardenerAPIServerConfig) gardencorev1beta1.EncryptionProviderType {
-	if apiServer != nil &&
-		apiServer.EncryptionConfig != nil &&
-		apiServer.EncryptionConfig.Provider.Type != nil {
-		return *apiServer.EncryptionConfig.Provider.Type
-	}
-
-	return ""
 }
 
 func getGardenerResourcesForEncryption(garden *operatorv1alpha1.Garden) []schema.GroupResource {

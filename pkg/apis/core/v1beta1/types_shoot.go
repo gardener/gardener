@@ -322,7 +322,7 @@ type EncryptionAtRest struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
 	// +optional
 	Resources []string `json:"resources,omitempty" protobuf:"bytes,1,rep,name=resources"`
-	// ProviderType is the used encryption provider type for resources in the Shoot.
+	// ProviderType is the used encryption provider type.
 	ProviderType EncryptionProviderType `json:"providerType" protobuf:"bytes,2,opt,name=providerType"`
 }
 
@@ -1070,6 +1070,9 @@ type EncryptionConfig struct {
 // EncryptionProvider contains information about the encryption provider.
 type EncryptionProvider struct {
 	// Type contains the type of the encryption provider.
+	//
+	// Supported types:
+	//   - "aescbc"
 	// Defaults to aescbc.
 	// +optional
 	Type *EncryptionProviderType `json:"type,omitempty" protobuf:"bytes,1,opt,name=type"`

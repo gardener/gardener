@@ -29,8 +29,11 @@ const (
 
 // ETCDEncryptionKeySecretConfig contains the specification for a to-be-generated random key.
 type ETCDEncryptionKeySecretConfig struct {
-	Provider     string
-	Name         string
+	// Provider is the encryption provider type (e.g., "aescbc").
+	Provider string
+	// Name is the name of the secret.
+	Name string
+	// SecretLength is the length of the generated encryption key in bytes.
 	SecretLength int
 }
 

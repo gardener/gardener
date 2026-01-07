@@ -471,12 +471,14 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 	}
 
 	if config.EncryptionConfig != nil {
-		seenResources := sets.New[schema.GroupResource]()
-		encrConfigPath := fldPath.Child("encryptionConfig")
+		var (
+			seenResources        = sets.New[schema.GroupResource]()
+			encryptionConfigPath = fldPath.Child("encryptionConfig")
+		)
 
 		for i, resource := range config.EncryptionConfig.Resources {
 			var (
-				idxPath = encrConfigPath.Child("resources").Index(i)
+				idxPath = encryptionConfigPath.Child("resources").Index(i)
 				gr      = schema.ParseGroupResource(resource)
 			)
 
@@ -501,13 +503,8 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 			seenResources.Insert(gr)
 		}
 
-		var (
-			gardenEncryptionProviderType     = helper.GetGardenEncryptionProviderType(config)
-			kubernetesEncryptionProviderType = helper.GetEncryptionProviderType(kubeAPIServerConfig)
-		)
-
-		if gardenEncryptionProviderType != kubernetesEncryptionProviderType {
-			allErrs = append(allErrs, field.Invalid(encrConfigPath.Child("provider", "type"), *config.EncryptionConfig.Provider.Type, "field must be equal to spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.provider.type"))
+		if helper.GetGardenEncryptionProviderType(config) != helper.GetEncryptionProviderType(kubeAPIServerConfig) {
+			allErrs = append(allErrs, field.Invalid(encryptionConfigPath.Child("provider", "type"), config.EncryptionConfig.Provider.Type, "field must be equal to spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.provider.type"))
 		}
 	}
 

@@ -1205,7 +1205,7 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionProviderType
 </em>
 </td>
 <td>
-<p>ProviderType is the used encryption provider type for resources in the Garden.</p>
+<p>ProviderType is the used encryption provider type.</p>
 </td>
 </tr>
 </tbody>

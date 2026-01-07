@@ -706,7 +706,7 @@ func IsETCDEncryptionKeyAutoRotationEnabled(shoot *gardencorev1beta1.Shoot) bool
 		shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod.Duration != 0
 }
 
-// GetEncryptionProviderType returns the Shoot's encryption provider type.
+// GetEncryptionProviderType returns the encryption provider type.
 func GetEncryptionProviderType(apiServerConfig *gardencorev1beta1.KubeAPIServerConfig) gardencorev1beta1.EncryptionProviderType {
 	if apiServerConfig != nil &&
 		apiServerConfig.EncryptionConfig != nil &&
@@ -717,7 +717,7 @@ func GetEncryptionProviderType(apiServerConfig *gardencorev1beta1.KubeAPIServerC
 	return ""
 }
 
-// GetEncryptionProviderInStatus returns the encryption provider from the Shoot status.
+// GetEncryptionProviderInStatus returns the encryption provider from the shoot status.
 func GetEncryptionProviderInStatus(gardenStatus gardencorev1beta1.ShootStatus) gardencorev1beta1.EncryptionProviderType {
 	if gardenStatus.Credentials != nil && gardenStatus.Credentials.EncryptionAtRest != nil {
 		return gardenStatus.Credentials.EncryptionAtRest.ProviderType

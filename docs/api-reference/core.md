@@ -5664,7 +5664,7 @@ EncryptionProviderType
 </em>
 </td>
 <td>
-<p>ProviderType is the used encryption provider type for resources in the Shoot.</p>
+<p>ProviderType is the used encryption provider type.</p>
 </td>
 </tr>
 </tbody>
@@ -5744,7 +5744,9 @@ EncryptionProviderType
 </td>
 <td>
 <em>(Optional)</em>
-<p>Type contains the type of the encryption provider.
+<p>Type contains the type of the encryption provider.</p>
+<p>Supported types:
+- &ldquo;aescbc&rdquo;
 Defaults to aescbc.</p>
 </td>
 </tr>

@@ -3778,7 +3778,7 @@ func schema_pkg_apis_core_v1beta1_EncryptionAtRest(ref common.ReferenceCallback)
 					},
 					"providerType": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ProviderType is the used encryption provider type for resources in the Shoot.",
+							Description: "ProviderType is the used encryption provider type.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -3838,7 +3838,7 @@ func schema_pkg_apis_core_v1beta1_EncryptionProvider(ref common.ReferenceCallbac
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type contains the type of the encryption provider. Defaults to aescbc.",
+							Description: "Type contains the type of the encryption provider.\n\nSupported types:\n  - \"aescbc\"\nDefaults to aescbc.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
