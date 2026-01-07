@@ -551,21 +551,21 @@ webhooks:
 									},
 								},
 								{
-									Name: "imagevector-overwrite",
-									VolumeSource: corev1.VolumeSource{
-										ConfigMap: &corev1.ConfigMapVolumeSource{
-											LocalObjectReference: corev1.LocalObjectReference{
-												Name: imageVectorConfigMapName,
-											},
-										},
-									},
-								},
-								{
 									Name: "operator-config",
 									VolumeSource: corev1.VolumeSource{
 										ConfigMap: &corev1.ConfigMapVolumeSource{
 											LocalObjectReference: corev1.LocalObjectReference{
 												Name: operatorConfigConfigMapName,
+											},
+										},
+									},
+								},
+								{
+									Name: "imagevector-overwrite",
+									VolumeSource: corev1.VolumeSource{
+										ConfigMap: &corev1.ConfigMapVolumeSource{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: imageVectorConfigMapName,
 											},
 										},
 									},

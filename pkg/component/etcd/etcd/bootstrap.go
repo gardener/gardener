@@ -157,9 +157,26 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	labels := func() map[string]string { return map[string]string{v1beta1constants.GardenRole: Druid} }
+
+	etcdOperatorConfig := getEtcdOperatorConfig(b.etcdConfig, b.namespace, webhookServerTLSCertMountPath)
+	etcdOperatorConfigYAML, err := runtime.Encode(druidConfigEncoder, etcdOperatorConfig)
+	if err != nil {
+		return fmt.Errorf("could not encode etcd-druid operator configuration: %w", err)
+	}
+
+	configMapOperatorConfig := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      druidConfigMapOperatorConfigNamePrefix,
+			Namespace: b.namespace,
+			Labels:    labels(),
+		},
+		Data: map[string]string{druidConfigMapOperatorConfigDataKey: string(etcdOperatorConfigYAML)},
+	}
+	utilruntime.Must(kubernetesutils.MakeUnique(configMapOperatorConfig))
+
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-		labels   = func() map[string]string { return map[string]string{v1beta1constants.GardenRole: Druid} }
 
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
@@ -266,14 +283,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		configMapImageVectorOverwrite = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      druidConfigMapImageVectorOverwriteNamePrefix,
-				Namespace: b.namespace,
-				Labels:    labels(),
-			},
-		}
-
-		configMapOperatorConfig = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      druidConfigMapOperatorConfigNamePrefix,
 				Namespace: b.namespace,
 				Labels:    labels(),
 			},
@@ -530,6 +539,16 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 									},
 								},
 							},
+							{
+								Name: druidDeploymentVolumeNameOperatorConfig,
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: configMapOperatorConfig.Name,
+										},
+									},
+								},
+							},
 						},
 					},
 				},
@@ -569,6 +588,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		}
 
 		resourcesToAdd = []client.Object{
+			configMapOperatorConfig,
 			serviceAccount,
 			clusterRole,
 			clusterRoleBinding,
@@ -619,27 +639,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			Value: druidDeploymentVolumeMountPathImageVectorOverwrite + "/" + druidConfigMapImageVectorOverwriteDataKey,
 		})
 	}
-
-	etcdOperatorConfig := getEtcdOperatorConfig(b.etcdConfig, b.namespace, webhookServerTLSCertMountPath)
-	etcdOperatorConfigYAML, err := runtime.Encode(druidConfigEncoder, etcdOperatorConfig)
-	if err != nil {
-		return fmt.Errorf("could not encode etcd-druid operator configuration: %w", err)
-	}
-
-	configMapOperatorConfig.Data = map[string]string{druidConfigMapOperatorConfigDataKey: string(etcdOperatorConfigYAML)}
-	utilruntime.Must(kubernetesutils.MakeUnique(configMapOperatorConfig))
-	resourcesToAdd = append(resourcesToAdd, configMapOperatorConfig)
-
-	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-		Name: druidDeploymentVolumeNameOperatorConfig,
-		VolumeSource: corev1.VolumeSource{
-			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: configMapOperatorConfig.Name,
-				},
-			},
-		},
-	})
 
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
