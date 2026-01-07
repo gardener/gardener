@@ -6,9 +6,11 @@ package worker
 
 import (
 	"context"
+	"slices"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -21,6 +23,9 @@ import (
 var (
 	// DefaultAddOptions are the default AddOptions for AddToManager.
 	DefaultAddOptions = AddOptions{}
+
+	// supportedExtensionClasses are the extension classes supported by the worker controller.
+	supportedExtensionClasses = sets.New(extensionsv1alpha1.ExtensionClassShoot)
 )
 
 // AddOptions are options to apply when adding the local worker controller to the manager.
@@ -31,7 +36,7 @@ type AddOptions struct {
 	Controller controller.Options
 	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
 	IgnoreOperationAnnotation bool
-	// ExtensionClasses defines the extension class this extension is responsible for.
+	// ExtensionClasses are the configured extension classes for this extension deployment.
 	ExtensionClasses []extensionsv1alpha1.ExtensionClass
 	// SelfHostedShootCluster indicates whether the extension runs in a self-hosted shoot cluster.
 	SelfHostedShootCluster bool
@@ -48,12 +53,16 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 		return err
 	}
 
+	classes := slices.DeleteFunc(opts.ExtensionClasses, func(class extensionsv1alpha1.ExtensionClass) bool {
+		return !supportedExtensionClasses.Has(class)
+	})
+
 	return worker.Add(ctx, mgr, worker.AddArgs{
 		Actuator:               NewActuator(mgr, opts.GardenCluster),
 		ControllerOptions:      opts.Controller,
 		Predicates:             worker.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
 		Type:                   local.Type,
-		ExtensionClasses:       opts.ExtensionClasses,
+		ExtensionClasses:       classes,
 		SelfHostedShootCluster: opts.SelfHostedShootCluster,
 	})
 }

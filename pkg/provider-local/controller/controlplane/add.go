@@ -6,8 +6,10 @@ package controlplane
 
 import (
 	"context"
+	"slices"
 	"sync/atomic"
 
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -20,8 +22,13 @@ import (
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
 
-// DefaultAddOptions are the default AddOptions for AddToManager.
-var DefaultAddOptions = AddOptions{}
+var (
+	// DefaultAddOptions are the default AddOptions for AddToManager.
+	DefaultAddOptions = AddOptions{}
+
+	// supportedExtensionClasses are the extension classes supported by the controlplane controller.
+	supportedExtensionClasses = sets.New(extensionsv1alpha1.ExtensionClassShoot)
+)
 
 // AddOptions are options to apply when adding the local controlplane controller to the manager.
 type AddOptions struct {
@@ -29,7 +36,7 @@ type AddOptions struct {
 	Controller controller.Options
 	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
 	IgnoreOperationAnnotation bool
-	// ExtensionClasses defines the extension class this extension is responsible for.
+	// ExtensionClasses define the configured extension classes for this extension deployment.
 	ExtensionClasses []extensionsv1alpha1.ExtensionClass
 	// ShootWebhookConfig specifies the desired Shoot MutatingWebhooksConfiguration.
 	ShootWebhookConfig *atomic.Value
@@ -48,12 +55,16 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 		return err
 	}
 
+	classes := slices.DeleteFunc(opts.ExtensionClasses, func(class extensionsv1alpha1.ExtensionClass) bool {
+		return !supportedExtensionClasses.Has(class)
+	})
+
 	return controlplane.Add(mgr, controlplane.AddArgs{
 		Actuator:          genericActuator,
 		ControllerOptions: opts.Controller,
 		Predicates:        controlplane.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
 		Type:              local.Type,
-		ExtensionClasses:  opts.ExtensionClasses,
+		ExtensionClasses:  classes,
 	})
 }
 

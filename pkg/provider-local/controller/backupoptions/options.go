@@ -40,7 +40,7 @@ type AddOptions struct {
 	Controller controller.Options
 	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
 	IgnoreOperationAnnotation bool
-	// ExtensionClasses defines the extension classes this extension is responsible for.
+	// ExtensionClasses are the configured extension classes for this extension deployment.
 	ExtensionClasses []extensionsv1alpha1.ExtensionClass
 }
 
