@@ -553,7 +553,7 @@ images:
   - name: alpine-conntrack
     sourceRepository: github.com/gardener/alpine-conntrack
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/alpine-conntrack
-    tag: "3.21.3"
+    tag: "3.23.2"
   - name: alpine-iptables
     sourceRepository: github.com/gardener/alpine-iptables
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/alpine-iptables
