@@ -165,7 +165,7 @@ spec:
   #   sshAccess:
   #     enabled: false
   kubernetes:
-  # version: 1.33.3
+  # version: 1.35.0
   # etcd:
   #   main:
   #     autoscaling:
