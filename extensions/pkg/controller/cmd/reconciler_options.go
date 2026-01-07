@@ -31,7 +31,7 @@ type ReconcilerOptions struct {
 // AddFlags implements Flagger.AddFlags.
 func (c *ReconcilerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&c.IgnoreOperationAnnotation, IgnoreOperationAnnotationFlag, c.IgnoreOperationAnnotation, "Ignore the operation annotation or not.")
-	fs.StringArrayVar(&c.ExtensionClasses, ExtensionClassesFlag, c.ExtensionClasses, "Extension classes this extension is responsible for.")
+	fs.StringSliceVar(&c.ExtensionClasses, ExtensionClassesFlag, c.ExtensionClasses, "Extension classes this extension is responsible for.")
 }
 
 // Complete implements Completer.Complete.
