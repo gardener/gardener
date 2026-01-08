@@ -11282,7 +11282,7 @@ func schema_pkg_apis_security_v1alpha1_CredentialsBinding(ref common.ReferenceCa
 					},
 					"credentialsRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CredentialsRef is a reference to a resource holding the credentials. Accepted resources are core/v1.Secret and security.gardener.cloud/v1alpha1.WorkloadIdentity This field is immutable.",
+							Description: "CredentialsRef is a reference to a resource holding the credentials. Accepted resources are core/v1.Secret, core.gardener.cloud/v1beta1.InternalSecret, and security.gardener.cloud/v1alpha1.WorkloadIdentity. This field is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},

@@ -133,7 +133,7 @@ You can read more about the purpose of this reconciler in [this document](../ext
 
 ### [`CredentialsBinding` Controller](../../pkg/controllermanager/controller/credentialsbinding)
 
-`CredentialsBinding`s reference `Secret`s, `WorkloadIdentity`s and `Quota`s and are themselves referenced by `Shoot`s.
+`CredentialsBinding`s reference `Secret`s, `InternalSecret`s, `WorkloadIdentity`s and `Quota`s and are themselves referenced by `Shoot`s.
 
 The controller adds finalizers to the referenced objects to ensure they don't get deleted while still being referenced.
 Similarly, to ensure that `CredentialsBinding`s in-use are always present in the system until the last referring `Shoot` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` referencing the `CredentialsBinding` anymore.

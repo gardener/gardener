@@ -339,12 +339,15 @@ var _ = Describe("Utils tests", func() {
 
 	DescribeTable("#ValidateCredentialsRef",
 		func(ref corev1.ObjectReference, matcher gomegatypes.GomegaMatcher) {
-			fldPath := field.NewPath("credentialsRef")
-			errList := ValidateCredentialsRef(ref, fldPath)
-			Expect(errList).To(matcher)
+			Expect(ValidateCredentialsRef(ref, field.NewPath("credentialsRef"))).To(matcher)
 		},
+
 		Entry("should allow v1.Secret",
 			corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"},
+			BeEmpty(),
+		),
+		Entry("should allow core.gardener.cloud/v1beta1.InternalSecret",
+			corev1.ObjectReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "InternalSecret", Name: "foo", Namespace: "bar"},
 			BeEmpty(),
 		),
 		Entry("should allow security.gardener.cloud/v1alpha1.WorkloadIdentity",
@@ -353,6 +356,16 @@ var _ = Describe("Utils tests", func() {
 		),
 		Entry("should forbid v1.Secret with non DNS1123 name",
 			corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "Foo", Namespace: "bar"},
+			ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("credentialsRef.name"),
+					"BadValue": Equal("Foo"),
+				})),
+			),
+		),
+		Entry("should forbid core.gardener.cloud/v1beta1.InternalSecret with non DNS1123 name",
+			corev1.ObjectReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "InternalSecret", Name: "Foo", Namespace: "bar"},
 			ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
@@ -394,6 +407,15 @@ var _ = Describe("Utils tests", func() {
 		),
 		Entry("should forbid v1.ConfigMap",
 			corev1.ObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "foo", Namespace: "bar"},
+			ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("credentialsRef"),
+				})),
+			),
+		),
+		Entry("should forbid core.gardener.cloud/v1beta1.Quota",
+			corev1.ObjectReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "Quota", Name: "foo", Namespace: "bar"},
 			ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
