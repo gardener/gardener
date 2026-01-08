@@ -37,9 +37,6 @@ var _ = Describe("CRD", func() {
 	Describe("#Deploy", func() {
 		It("should deploy the CRD", func() {
 			Expect(deployWaiter.Deploy(ctx)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKey{Name: "vlagents.operator.victoriametrics.com"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKey{Name: "vlclusters.operator.victoriametrics.com"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKey{Name: "vlogs.operator.victoriametrics.com"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "vlsingles.operator.victoriametrics.com"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 		})
 	})
@@ -47,9 +44,6 @@ var _ = Describe("CRD", func() {
 	Describe("#Destroy", func() {
 		It("should delete the CRD", func() {
 			Expect(deployWaiter.Destroy(ctx)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKey{Name: "vlagents.operator.victoriametrics.com"}, &apiextensionsv1.CustomResourceDefinition{})).To(matchers.BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKey{Name: "vlclusters.operator.victoriametrics.com"}, &apiextensionsv1.CustomResourceDefinition{})).To(matchers.BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKey{Name: "vlogs.operator.victoriametrics.com"}, &apiextensionsv1.CustomResourceDefinition{})).To(matchers.BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "vlsingles.operator.victoriametrics.com"}, &apiextensionsv1.CustomResourceDefinition{})).To(matchers.BeNotFoundError())
 		})
 	})

@@ -14,12 +14,6 @@ import (
 )
 
 var (
-	//go:embed templates/crd-operator.victoriametrics.com_vlagents.yaml
-	crdVLAgents string
-	//go:embed templates/crd-operator.victoriametrics.com_vlclusters.yaml
-	crdVLClusters string
-	//go:embed templates/crd-operator.victoriametrics.com_vlogs.yaml
-	crdVLogs string
 	//go:embed templates/crd-operator.victoriametrics.com_vlsingles.yaml
 	crdVLSingles string
 )
@@ -27,9 +21,6 @@ var (
 // NewCRDs can be used to deploy victoria-operator CRDs.
 func NewCRDs(client client.Client) (component.DeployWaiter, error) {
 	resources := []string{
-		crdVLAgents,
-		crdVLClusters,
-		crdVLogs,
 		crdVLSingles,
 	}
 	return crddeployer.New(client, resources, false)
