@@ -191,7 +191,8 @@ func AddToManager(
 	}
 
 	if err := (&workloadidentity.Reconciler{
-		ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestorWorkloadIdentity.ConcurrentSyncs, 0),
+		ConcurrentSyncs:         ptr.Deref(cfg.Controllers.TokenRequestorWorkloadIdentity.ConcurrentSyncs, 0),
+		TokenExpirationDuration: ptr.Deref(cfg.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration, gardenletconfigv1alpha1.DefaultWorkloadIdentityTokenExpirationDuration),
 	}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
 		return fmt.Errorf("failed adding TokenRequestorWorkloadIdentity controller: %w", err)
 	}

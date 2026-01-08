@@ -95,11 +95,12 @@ var _ = Describe("Reconciler", func() {
 			securityClient = &securityfake.Clientset{Fake: testing.Fake{}}
 
 			ctrl = &workloadidentity.Reconciler{
-				SeedClient:           seedClient,
-				GardenClient:         gardenClient,
-				GardenSecurityClient: securityClient,
-				Clock:                fakeClock,
-				JitterFunc:           fakeJitter,
+				SeedClient:              seedClient,
+				GardenClient:            gardenClient,
+				GardenSecurityClient:    securityClient,
+				Clock:                   fakeClock,
+				JitterFunc:              fakeJitter,
+				TokenExpirationDuration: 6 * time.Hour,
 			}
 
 			secretName = "cloudsecret"

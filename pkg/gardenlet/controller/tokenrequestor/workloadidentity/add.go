@@ -21,6 +21,7 @@ import (
 	securityv1alpha1constants "github.com/gardener/gardener/pkg/apis/security/v1alpha1/constants"
 	securityclientset "github.com/gardener/gardener/pkg/client/security/clientset/versioned"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 // ControllerName is the name of the controller.
@@ -48,6 +49,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		if err != nil {
 			return fmt.Errorf("could not create securityV1Alpha1Client: %w", err)
 		}
+	}
+
+	if r.TokenExpirationDuration <= 0 {
+		r.TokenExpirationDuration = gardenletconfigv1alpha1.DefaultWorkloadIdentityTokenExpirationDuration
 	}
 
 	return builder.

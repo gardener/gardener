@@ -27,7 +27,6 @@ import (
 
 const (
 	maxExpirationDuration = 24 * time.Hour
-	expirationDuration    = 6 * time.Hour // short enough to be secure and long enough to be resilient to disruptions
 )
 
 // Reconciler requests and refreshes tokens via the TokenRequest API.
@@ -38,6 +37,8 @@ type Reconciler struct {
 	ConcurrentSyncs      int
 	Clock                clock.Clock
 	JitterFunc           func(time.Duration, float64) time.Duration
+
+	TokenExpirationDuration time.Duration
 }
 
 // Reconcile requests and populates tokens.
@@ -82,7 +83,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	tokenRequest, err := r.GardenSecurityClient.SecurityV1alpha1().WorkloadIdentities(workloadIdentityNamespace).CreateToken(ctx, workloadIdentityName, &securityv1alpha1.TokenRequest{
 		Spec: securityv1alpha1.TokenRequestSpec{
 			ContextObject:     contextObject,
-			ExpirationSeconds: ptr.To((int64(expirationDuration / time.Second))),
+			ExpirationSeconds: ptr.To((int64(r.TokenExpirationDuration / time.Second))),
 		},
 	}, metav1.CreateOptions{})
 	if err != nil {
@@ -136,7 +137,10 @@ func (r *Reconciler) computeRequeueAfterDuration(secret *corev1.Secret) (time.Du
 }
 
 func (r *Reconciler) renewDuration(expirationTimestamp time.Time) time.Duration {
-	expirationDuration := min(expirationTimestamp.UTC().Sub(r.Clock.Now().UTC()), maxExpirationDuration)
+	expirationDuration := min(
+		expirationTimestamp.UTC().Sub(r.Clock.Now().UTC()),
+		maxExpirationDuration,
+	)
 
 	return r.JitterFunc(expirationDuration*80/100, 0.05)
 }
