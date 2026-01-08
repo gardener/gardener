@@ -515,6 +515,41 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 		})
 
+		Context("token requestor workload identity controller", func() {
+			BeforeEach(func() {
+				cfg.Controllers.TokenRequestorWorkloadIdentity = &gardenletconfigv1alpha1.TokenRequestorWorkloadIdentityControllerConfiguration{}
+			})
+
+			It("should allow valid configuration", func() {
+				cfg.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration = ptr.To(6 * time.Hour)
+
+				errorList := ValidateGardenletConfiguration(cfg, nil)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should allow configuration with nil tokenExpirationDuration", func() {
+				cfg.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration = nil
+
+				errorList := ValidateGardenletConfiguration(cfg, nil)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should forbid negative tokenExpirationDuration", func() {
+				cfg.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration = ptr.To(-1 * time.Hour)
+
+				errorList := ValidateGardenletConfiguration(cfg, nil)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.tokenRequestorWorkloadIdentity.tokenExpirationDuration"),
+					})),
+				))
+			})
+		})
+
 		Context("seed config", func() {
 			It("should not require a seedConfig", func() {
 				cfg.SeedConfig = nil

@@ -15,6 +15,13 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
+const (
+	// DefaultWorkloadIdentityTokenExpirationDuration is the default duration for workload identity token expiration.
+	// It is set to 6 hours to be short enough to be secure and long enough to be resilient to disruptions.
+	// Tokens are requested with this duration, but actual expiration also depends on Gardener API Server's configuration.
+	DefaultWorkloadIdentityTokenExpirationDuration = 6 * time.Hour
+)
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // GardenletConfiguration defines the configuration for the Gardenlet.
@@ -456,6 +463,11 @@ type TokenRequestorWorkloadIdentityControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// TokenExpirationDuration is the duration for which the controller will request tokens.
+	// The Gardener API Server may still issue tokens with a shorter duration based on its configuration.
+	// Defaults to 6h.
+	// +optional
+	TokenExpirationDuration *time.Duration `json:"tokenExpirationDuration,omitempty"`
 }
 
 // VPAEvictionRequirementsControllerConfiguration defines the configuration of the VPAEvictionRequirements controller.

@@ -430,6 +430,10 @@ func SetDefaults_TokenRequestorWorkloadIdentityControllerConfiguration(obj *Toke
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = ptr.To(5)
 	}
+
+	if obj.TokenExpirationDuration == nil {
+		obj.TokenExpirationDuration = ptr.To(DefaultWorkloadIdentityTokenExpirationDuration)
+	}
 }
 
 // SetDefaults_VPAEvictionRequirementsControllerConfiguration sets defaults for the VPAEvictionRequirements controller.
