@@ -562,6 +562,13 @@ var _ = Describe("VPA", func() {
 			case clusterType == component.ClusterTypeShoot:
 				obj.Labels = map[string]string{"prometheus": "shoot"}
 				obj.Name = "shoot-vpa-updater"
+				obj.Spec.Endpoints[0].MetricRelabelConfigs = []monitoringv1.RelabelConfig{
+					{
+						SourceLabels: []monitoringv1.LabelName{"vpa_namespace"},
+						Regex:        "(kube-system|)",
+						Action:       "keep",
+					},
+				}
 			}
 
 			return obj
