@@ -442,7 +442,7 @@ images:
   - name: victoria-operator
     sourceRepository: github.com/VictoriaMetrics/operator
     repository: docker.io/victoriametrics/operator
-    tag: "v0.64.0"
+    tag: "v0.65.0"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:

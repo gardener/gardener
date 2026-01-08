@@ -494,9 +494,6 @@ spec:
 			"opentelemetrycollectors.opentelemetry.io",
 			"targetallocators.opentelemetry.io",
 			// victoria-operator
-			"vlagents.operator.victoriametrics.com",
-			"vlclusters.operator.victoriametrics.com",
-			"vlogs.operator.victoriametrics.com",
 			"vlsingles.operator.victoriametrics.com",
 		}
 
