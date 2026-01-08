@@ -178,8 +178,16 @@ func (v *victoriaOperator) deployment() *appsv1.Deployment {
 									Value: "false",
 								},
 								{
+									Name:  "VM_ENABLEDPROMETHEUSCONVERTER_ALERTMANAGERCONFIG",
+									Value: "false",
+								},
+								{
 									Name:  "VM_ENABLEDPROMETHEUSCONVERTER_SCRAPECONFIG",
 									Value: "false",
+								},
+								{
+									Name:  "VM_DISABLESELFSERVICESCRAPECREATION",
+									Value: "true",
 								},
 							},
 							Resources: corev1.ResourceRequirements{
@@ -316,11 +324,6 @@ func (v *victoriaOperator) clusterRole() *rbacv1.ClusterRole {
 				APIGroups: []string{"policy"},
 				Resources: []string{"poddisruptionbudgets", "poddisruptionbudgets/finalizers"},
 				Verbs:     []string{"*"},
-			},
-			{
-				APIGroups: []string{"route.openshift.io", "image.openshift.io"},
-				Resources: []string{"routers/metrics", "registry/metrics"},
-				Verbs:     []string{"get"},
 			},
 			{
 				APIGroups: []string{"autoscaling"},
