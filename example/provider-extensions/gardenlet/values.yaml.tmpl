@@ -10,20 +10,40 @@ config:
       backup: null
       dns:
         provider:
-          secretRef:
-            # Automatically set when using a Gardener shoot
+          credentialsRef:
+            # Enter DNS Credentialas reference, v1.Secret and security.gardener.cloud/v1alpha1.WorkloadIdentity are supported
+            apiVersion: ""
+            kind: ""
             name: ""
             namespace: garden
-          # Automatically set when using a Gardener shoot
+          # Enter the DNS provider type
           type: ""
         internal:
           credentialsRef:
-            apiVersion: v1
-            kind: Secret
+            # Enter DNS Credentialas reference for internal domain, v1.Secret and security.gardener.cloud/v1alpha1.WorkloadIdentity are supported
+            apiVersion: ""
+            kind: ""
             name: ""
             namespace: garden
+          # Enter the DNS provider type
           type: ""
+          # Enter the internal domain of your seed
           domain: ""
+          # Enter the zone of the internal domain of your seed
+          zone: ""
+        defaults:
+        - credentialsRef:
+            # Enter DNS Credentialas reference for default domain, v1.Secret and security.gardener.cloud/v1alpha1.WorkloadIdentity are supported
+            apiVersion: ""
+            kind: ""
+            name: ""
+            namespace: garden
+          # Enter the DNS provider type
+          type: ""
+          # Enter default domain of your seed
+          domain: ""
+          # Enter the zone of the default domain of your seed
+          zone: ""
       ingress:
         controller:
           kind: nginx
