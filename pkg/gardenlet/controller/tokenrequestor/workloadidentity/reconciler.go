@@ -142,5 +142,5 @@ func (r *Reconciler) renewDuration(expirationTimestamp time.Time) time.Duration 
 		maxExpirationDuration,
 	)
 
-	return r.JitterFunc(expirationDuration*80/100, 0.05)
+	return r.JitterFunc(expirationDuration*50/100, 0.05)
 }
