@@ -1,0 +1,30 @@
+---
+apiVersion: security.gardener.cloud/v1alpha1
+kind: WorkloadIdentity
+metadata:
+  name: default-domain-external-provider-extensions-gardener-cloud
+  namespace: garden
+spec:
+  audiences:
+    - ""
+      # The audiences of the WorkloadIdentity token
+  targetSystem:
+    type: ""
+      # type of the WorkloadIdentity provider, e.g. <aws|az|gcp|...>
+    providerConfig: {}
+      # Actual provider config of the WorkloadIdentity
+---
+apiVersion: security.gardener.cloud/v1alpha1
+kind: WorkloadIdentity
+metadata:
+  name: internal-domain-internal-provider-extensions-gardener-cloud
+  namespace: garden
+spec:
+  audiences:
+    - ""
+      # The audiences of the WorkloadIdentity token
+  targetSystem:
+    type: ""
+      # type of the WorkloadIdentity provider, e.g. <aws|az|gcp|...>
+    providerConfig: {}
+      # Actual provider config of the WorkloadIdentity
