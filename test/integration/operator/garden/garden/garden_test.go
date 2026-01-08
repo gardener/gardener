@@ -489,9 +489,6 @@ spec:
 			"persesdashboards.perses.dev",
 			"persesdatasources.perses.dev",
 			// victoria-operator
-			"vlagents.operator.victoriametrics.com",
-			"vlclusters.operator.victoriametrics.com",
-			"vlogs.operator.victoriametrics.com",
 			"vlsingles.operator.victoriametrics.com",
 		}
 
