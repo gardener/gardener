@@ -51,7 +51,7 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 			Replicas:          ptr.To(b.Shoot.GetReplicas(1)),
 		}
 		featureGates  map[string]bool
-		isManagedSeed = b.Operation.ManagedSeed != nil
+		isManagedSeed = b.ManagedSeed != nil
 	)
 
 	if vpaConfig := b.Shoot.GetInfo().Spec.Kubernetes.VerticalPodAutoscaler; vpaConfig != nil {
