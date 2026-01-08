@@ -106,7 +106,7 @@ var _ = Describe("Reconciler", func() {
 			secretName = "cloudsecret"
 			workloadIdentityName = "foo-cloud"
 			workloadIdentityNamespace = "garden-foo"
-			expectedRenewDuration = 6 * time.Hour * 80 / 100
+			expectedRenewDuration = 6 * time.Hour * 50 / 100
 			token = "foo"
 
 			secret = &corev1.Secret{
@@ -216,7 +216,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should always renew the token after 24h", func() {
-			expectedRenewDuration = 24 * time.Hour * 80 / 100
+			expectedRenewDuration = 24 * time.Hour * 50 / 100
 			fakeCreateWorkloadIdentityToken(ptr.To[int64](3600 * 100))
 
 			Expect(seedClient.Create(ctx, secret)).To(Succeed())
