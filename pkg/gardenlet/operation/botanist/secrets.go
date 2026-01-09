@@ -519,6 +519,8 @@ func (b *Botanist) reconcileWildcardIngressCertificate(ctx context.Context) erro
 // DeployCloudProviderSecret creates or updates the cloud provider secret in the Shoot namespace
 // in the Seed cluster.
 func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
+	var data map[string][]byte
+
 	switch credentials := b.Shoot.Credentials.(type) {
 	case *securityv1alpha1.WorkloadIdentity:
 		return workloadidentity.Deploy(
@@ -526,24 +528,26 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 			nil, map[string]string{v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider},
 			b.Shoot.GetInfo(),
 		)
+	case *gardencorev1beta1.InternalSecret:
+		data = credentials.Data
 	case *corev1.Secret:
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      v1beta1constants.SecretNameCloudProvider,
-				Namespace: b.Shoot.ControlPlaneNamespace,
-			},
-		}
-		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.SeedClientSet.Client(), secret, func() error {
-			secret.Annotations = map[string]string{}
-			secret.Labels = map[string]string{
-				v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider,
-			}
-			secret.Type = corev1.SecretTypeOpaque
-			secret.Data = credentials.Data
-			return nil
-		})
-		return err
+		data = credentials.Data
 	default:
-		return fmt.Errorf("unexpected type %T, should be either Secret or WorkloadIdentity", credentials)
+		return fmt.Errorf("unexpected type %T, should be either Secret, InternalSecret, or WorkloadIdentity", credentials)
 	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v1beta1constants.SecretNameCloudProvider,
+			Namespace: b.Shoot.ControlPlaneNamespace,
+		},
+	}
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.SeedClientSet.Client(), secret, func() error {
+		secret.Annotations = map[string]string{}
+		secret.Labels = map[string]string{v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider}
+		secret.Type = corev1.SecretTypeOpaque
+		secret.Data = data
+		return nil
+	})
+	return err
 }

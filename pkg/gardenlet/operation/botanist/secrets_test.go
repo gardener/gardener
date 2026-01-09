@@ -139,6 +139,28 @@ var _ = Describe("Secrets", func() {
 			}))
 		})
 
+		It("should create cloud provider secret containing internal secret data", func() {
+			botanist.Shoot.Credentials = &gardencorev1beta1.InternalSecret{
+				Data: map[string][]byte{"bar": []byte("foo")},
+			}
+			Expect(botanist.DeployCloudProviderSecret(ctx)).To(Succeed())
+
+			retrieved := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: controlPlaneNamespace, Name: "cloudprovider"}}
+			Expect(botanist.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(retrieved), retrieved)).To(Succeed())
+			Expect(retrieved).To(Equal(&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:       controlPlaneNamespace,
+					Name:            "cloudprovider",
+					ResourceVersion: "1",
+					Labels: map[string]string{
+						"gardener.cloud/purpose": "cloudprovider",
+					},
+				},
+				Data: map[string][]byte{"bar": []byte("foo")},
+				Type: corev1.SecretTypeOpaque,
+			}))
+		})
+
 		It("should create cloud provider secret containing WorkloadIdentity data", func() {
 			botanist.Shoot.Credentials = &securityv1alpha1.WorkloadIdentity{
 				ObjectMeta: metav1.ObjectMeta{
@@ -228,7 +250,7 @@ var _ = Describe("Secrets", func() {
 
 		It("should return error when shoot credentials are of unknown type", func() {
 			botanist.Shoot.Credentials = &corev1.Pod{}
-			Expect(botanist.DeployCloudProviderSecret(ctx)).To(MatchError(Equal("unexpected type *v1.Pod, should be either Secret or WorkloadIdentity")))
+			Expect(botanist.DeployCloudProviderSecret(ctx)).To(MatchError(Equal("unexpected type *v1.Pod, should be either Secret, InternalSecret, or WorkloadIdentity")))
 		})
 	})
 
