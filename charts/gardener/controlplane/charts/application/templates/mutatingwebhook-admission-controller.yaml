@@ -17,6 +17,15 @@ webhooks:
     - UPDATE
     resources:
     - secrets
+  - apiGroups:
+    - core.gardener.cloud
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - internalsecrets
   failurePolicy: Fail
   namespaceSelector:
     matchExpressions:

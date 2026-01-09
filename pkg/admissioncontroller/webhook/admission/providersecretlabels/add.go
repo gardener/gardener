@@ -6,8 +6,11 @@ package providersecretlabels
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 const (
@@ -19,9 +22,17 @@ const (
 
 // AddToManager adds Handler to the given manager.
 func (h *Handler) AddToManager(mgr manager.Manager) error {
-	webhook := admission.
-		WithCustomDefaulter(mgr.GetScheme(), &corev1.Secret{}, h).
+	h.secretHandler = admission.
+		WithCustomDefaulter(h.Client.Scheme(), &corev1.Secret{}, &SecretHandler{Handler: h}).
 		WithRecoverPanic(true)
+	h.internalSecretHandler = admission.
+		WithCustomDefaulter(h.Client.Scheme(), &gardencorev1beta1.InternalSecret{}, &InternalSecretHandler{Handler: h}).
+		WithRecoverPanic(true)
+
+	webhook := &admission.Webhook{
+		Handler:      h,
+		RecoverPanic: ptr.To(true),
+	}
 
 	mgr.GetWebhookServer().Register(WebhookPath, webhook)
 	return nil
