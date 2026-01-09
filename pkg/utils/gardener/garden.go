@@ -36,10 +36,10 @@ import (
 
 // Domain contains information about a domain configured in the garden cluster.
 type Domain struct {
-	Domain     string
-	Provider   string
-	Zone       string
-	SecretData map[string][]byte
+	Domain      string
+	Provider    string
+	Zone        string
+	Credentials client.Object
 }
 
 func constructDomainFromSecret(secret *corev1.Secret) (*Domain, error) {
@@ -49,10 +49,10 @@ func constructDomainFromSecret(secret *corev1.Secret) (*Domain, error) {
 	}
 
 	return &Domain{
-		Domain:     domain,
-		Provider:   provider,
-		Zone:       zone,
-		SecretData: secret.Data,
+		Domain:      domain,
+		Provider:    provider,
+		Zone:        zone,
+		Credentials: secret,
 	}, nil
 }
 
@@ -80,20 +80,16 @@ func ReadGardenInternalDomain(
 	error,
 ) {
 	if seedDNSProvider != nil {
-		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-			Name:      seedDNSProvider.CredentialsRef.Name,
-			Namespace: seedDNSProvider.CredentialsRef.Namespace,
-		}}
-
-		if err := c.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
-			return nil, fmt.Errorf("cannot fetch internal domain secret: %w", err)
+		credentials, err := kubernetesutils.GetCredentialsByObjectReference(ctx, c, seedDNSProvider.CredentialsRef)
+		if err != nil {
+			return nil, fmt.Errorf("cannot fetch internal domain credentials from reference %q: %w", seedDNSProvider.CredentialsRef.String(), err)
 		}
 
 		return &Domain{
-			Domain:     seedDNSProvider.Domain,
-			Provider:   seedDNSProvider.Type,
-			Zone:       ptr.Deref(seedDNSProvider.Zone, ""),
-			SecretData: secret.Data,
+			Domain:      seedDNSProvider.Domain,
+			Provider:    seedDNSProvider.Type,
+			Zone:        ptr.Deref(seedDNSProvider.Zone, ""),
+			Credentials: credentials,
 		}, nil
 	}
 
@@ -124,20 +120,16 @@ func ReadGardenDefaultDomains(
 
 	if len(seedDNSDefaults) > 0 {
 		for _, seedDNSDefault := range seedDNSDefaults {
-			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-				Name:      seedDNSDefault.CredentialsRef.Name,
-				Namespace: seedDNSDefault.CredentialsRef.Namespace,
-			}}
-
-			if err := c.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
-				return nil, fmt.Errorf("cannot fetch default domain secret %s: %w", client.ObjectKeyFromObject(secret), err)
+			credentials, err := kubernetesutils.GetCredentialsByObjectReference(ctx, c, seedDNSDefault.CredentialsRef)
+			if err != nil {
+				return nil, fmt.Errorf("cannot fetch default domain credentials from reference %q: %w", seedDNSDefault.CredentialsRef.String(), err)
 			}
 
 			domain := &Domain{
-				Domain:     seedDNSDefault.Domain,
-				Provider:   seedDNSDefault.Type,
-				Zone:       ptr.Deref(seedDNSDefault.Zone, ""),
-				SecretData: secret.Data,
+				Domain:      seedDNSDefault.Domain,
+				Provider:    seedDNSDefault.Type,
+				Zone:        ptr.Deref(seedDNSDefault.Zone, ""),
+				Credentials: credentials,
 			}
 			domains = append(domains, domain)
 		}

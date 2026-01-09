@@ -119,6 +119,7 @@ build:
             - pkg/apiserver/registry/seedmanagement/managedseedset
             - pkg/apiserver/registry/seedmanagement/managedseedset/storage
             - pkg/apiserver/registry/seedmanagement/rest
+            - pkg/apiserver/registry/seedmanagement/utils
             - pkg/apiserver/registry/settings/clusteropenidconnectpreset
             - pkg/apiserver/registry/settings/clusteropenidconnectpreset/storage
             - pkg/apiserver/registry/settings/openidconnectpreset
@@ -621,13 +622,8 @@ profiles:
       - op: add
         path: /deploy/helm/releases/0/valuesFiles/-
         value: example/provider-extensions/garden/controlplane/workload-identity-issuer.yaml
-      - op: replace
-        path: /deploy/helm/hooks/after/0/host/command
-        value:
-          - kubectl
-          - apply
-          - -f
-          - example/provider-extensions/garden/controlplane/domain-secrets.yaml
+      - op: remove
+        path: /deploy/helm/hooks/after/0
   - name: debug
     activation:
       - command: debug
@@ -976,6 +972,7 @@ profiles:
     manifests:
       rawYaml:
         - example/gardener-local/gardenlet/secret-bootstrap-token-extensions.yaml
+        - example/provider-extensions/garden/controlplane/domain-workload-identities.yaml
       kustomize:
         paths:
           - example/provider-extensions/garden/project/with-workload-identity
@@ -985,6 +982,7 @@ profiles:
     manifests:
       rawYaml:
         - example/gardener-local/gardenlet/secret-bootstrap-token-extensions.yaml
+        - example/provider-extensions/garden/controlplane/domain-secrets.yaml
       kustomize:
         paths:
           - example/provider-extensions/garden/project/without-workload-identity
@@ -1048,6 +1046,7 @@ build:
             - pkg/apis/settings
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
+            - pkg/apiserver/registry/seedmanagement/utils
             - pkg/chartrenderer
             - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes

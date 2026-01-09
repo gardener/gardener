@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,6 +34,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
@@ -998,14 +1000,17 @@ var _ = Describe("Shoot", func() {
 		defaultDomainProvider   = "default-domain-provider"
 		defaultDomainSecretData = map[string][]byte{"default": []byte("domain")}
 		defaultDomain           = &Domain{
-			Domain:     "bar.com",
-			Provider:   defaultDomainProvider,
-			SecretData: defaultDomainSecretData,
+			Domain:   "bar.com",
+			Provider: defaultDomainProvider,
+			Credentials: &corev1.Secret{
+				Data: defaultDomainSecretData,
+			},
 		}
 	)
 
 	Describe("#ConstructExternalDomain", func() {
 		var (
+			ctx       context.Context
 			namespace = "default"
 			provider  = "my-dns-provider"
 			domain    = "foo.bar.com"
@@ -1014,25 +1019,23 @@ var _ = Describe("Shoot", func() {
 		)
 
 		BeforeEach(func() {
-			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+			ctx = context.Background()
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		})
 
 		It("returns nil because no external domain is used", func() {
 			var (
-				ctx   = context.TODO()
 				shoot = &gardencorev1beta1.Shoot{}
 			)
 
 			externalDomain, err := ConstructExternalDomain(ctx, fakeClient, shoot, nil, nil)
 
-			Expect(externalDomain).To(BeNil())
 			Expect(err).NotTo(HaveOccurred())
+			Expect(externalDomain).To(BeNil())
 		})
 
 		It("returns the referenced secret", func() {
 			var (
-				ctx = context.TODO()
-
 				dnsSecretName = "my-secret"
 				dnsSecretData = map[string][]byte{"foo": []byte("bar")}
 
@@ -1045,29 +1048,33 @@ var _ = Describe("Shoot", func() {
 							Domain: &domain,
 							Providers: []gardencorev1beta1.DNSProvider{
 								{
-									Type:       &provider,
-									SecretName: &dnsSecretName,
-									Primary:    ptr.To(true),
+									Type: &provider,
+									CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+										APIVersion: "v1",
+										Kind:       "Secret",
+										Name:       dnsSecretName,
+									},
+									Primary: ptr.To(true),
 								},
 							},
 						},
 					},
 				}
 			)
-
-			Expect(fakeClient.Create(ctx, &corev1.Secret{
+			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: dnsSecretName, Namespace: namespace},
 				Data:       dnsSecretData,
-			})).To(Succeed())
+			}
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
 			externalDomain, err := ConstructExternalDomain(ctx, fakeClient, shoot, nil, nil)
 
-			Expect(externalDomain).To(Equal(&Domain{
-				Domain:     domain,
-				Provider:   provider,
-				SecretData: dnsSecretData,
-			}))
 			Expect(err).NotTo(HaveOccurred())
+			Expect(externalDomain).To(Equal(&Domain{
+				Domain:      domain,
+				Provider:    provider,
+				Credentials: secret,
+			}))
 		})
 
 		It("returns the unmanaged external domain for self-hosted shoots", func(ctx SpecContext) {
@@ -1095,8 +1102,6 @@ var _ = Describe("Shoot", func() {
 
 		It("returns the default domain secret", func() {
 			var (
-				ctx = context.TODO()
-
 				shoot = &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
 						DNS: &gardencorev1beta1.DNS{
@@ -1113,18 +1118,18 @@ var _ = Describe("Shoot", func() {
 
 			externalDomain, err := ConstructExternalDomain(ctx, fakeClient, shoot, nil, []*Domain{defaultDomain})
 
-			Expect(externalDomain).To(Equal(&Domain{
-				Domain:     domain,
-				Provider:   defaultDomainProvider,
-				SecretData: defaultDomainSecretData,
-			}))
 			Expect(err).NotTo(HaveOccurred())
+			Expect(externalDomain).To(Equal(&Domain{
+				Domain:   domain,
+				Provider: defaultDomainProvider,
+				Credentials: &corev1.Secret{
+					Data: defaultDomainSecretData,
+				},
+			}))
 		})
 
 		It("returns the shoot secret", func() {
 			var (
-				ctx = context.TODO()
-
 				shootSecretData = map[string][]byte{"foo": []byte("bar")}
 				shootSecret     = &corev1.Secret{Data: shootSecretData}
 				shoot           = &gardencorev1beta1.Shoot{
@@ -1144,18 +1149,98 @@ var _ = Describe("Shoot", func() {
 
 			externalDomain, err := ConstructExternalDomain(ctx, fakeClient, shoot, shootSecret, nil)
 
-			Expect(externalDomain).To(Equal(&Domain{
-				Domain:     domain,
-				Provider:   provider,
-				SecretData: shootSecretData,
-			}))
 			Expect(err).NotTo(HaveOccurred())
+			Expect(externalDomain).To(Equal(&Domain{
+				Domain:   domain,
+				Provider: provider,
+				Credentials: &corev1.Secret{
+					Data: shootSecretData,
+				},
+			}))
 		})
 
-		It("returns error because WorkloadIdentity credential is not supported", func() {
+		It("should allow dns credentials of type WorkloadIdentity", func() {
 			var (
-				ctx = context.TODO()
+				workloadIdentityName = "workload-identity-1"
+				shoot                = &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: namespace,
+					},
+					Spec: gardencorev1beta1.ShootSpec{
+						DNS: &gardencorev1beta1.DNS{
+							Domain: &domain,
+							Providers: []gardencorev1beta1.DNSProvider{{
+								Type:    &provider,
+								Primary: ptr.To(true),
+								CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+									APIVersion: "security.gardener.cloud/v1alpha1",
+									Kind:       "WorkloadIdentity",
+									Name:       workloadIdentityName,
+								},
+							}},
+						},
+					},
+				}
+				workloadIdentity = &securityv1alpha1.WorkloadIdentity{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: namespace,
+						Name:      workloadIdentityName,
+					},
+				}
+			)
 
+			Expect(fakeClient.Create(ctx, workloadIdentity)).To(Succeed())
+
+			externalDomain, err := ConstructExternalDomain(ctx, fakeClient, shoot, nil, nil)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(externalDomain).To(Equal(&Domain{
+				Domain:      domain,
+				Provider:    provider,
+				Credentials: workloadIdentity,
+			}))
+		})
+
+		It("should fail because dns credentials of type other than WorkloadIdentity and Secret are not supported", func() {
+			var (
+				configMapName = "config-map-1"
+				shoot         = &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: namespace,
+					},
+					Spec: gardencorev1beta1.ShootSpec{
+						DNS: &gardencorev1beta1.DNS{
+							Domain: &domain,
+							Providers: []gardencorev1beta1.DNSProvider{{
+								Type:    &provider,
+								Primary: ptr.To(true),
+								CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+									APIVersion: "v1",
+									Kind:       "ConfigMap",
+									Name:       configMapName,
+								},
+							}},
+						},
+					},
+				}
+				configMap = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: namespace,
+						Name:      configMapName,
+					},
+				}
+			)
+
+			Expect(fakeClient.Create(ctx, configMap)).To(Succeed())
+
+			_, err := ConstructExternalDomain(ctx, fakeClient, shoot, nil, nil)
+			Expect(err).To(And(
+				MatchError(ContainSubstring(`could not get dns provider credentials "&CrossVersionObjectReference{Kind:ConfigMap,Name:config-map-1,APIVersion:v1,}"`)),
+				MatchError(ContainSubstring("unsupported credentials reference: default/config-map-1, /v1, Kind=ConfigMap")),
+			))
+		})
+
+		It("should allow shoot credentials of type WorkloadIdentity", func() {
+			var (
 				workloadIdentity = &securityv1alpha1.WorkloadIdentity{}
 				shoot            = &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
@@ -1172,14 +1257,17 @@ var _ = Describe("Shoot", func() {
 				}
 			)
 
-			_, err := ConstructExternalDomain(ctx, fakeClient, shoot, workloadIdentity, nil)
-			Expect(err).To(MatchError(Equal("shoot credentials of type WorkloadIdentity cannot be used as domain secret")))
+			externalDomain, err := ConstructExternalDomain(ctx, fakeClient, shoot, workloadIdentity, nil)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(externalDomain).To(Equal(&Domain{
+				Domain:      domain,
+				Provider:    provider,
+				Credentials: workloadIdentity,
+			}))
 		})
 
 		It("returns error because shoot credential type is not supported", func() {
 			var (
-				ctx = context.TODO()
-
 				pod   = &corev1.Pod{}
 				shoot = &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
@@ -1197,7 +1285,7 @@ var _ = Describe("Shoot", func() {
 			)
 
 			_, err := ConstructExternalDomain(ctx, fakeClient, shoot, pod, nil)
-			Expect(err).To(MatchError(Equal("unexpected shoot credentials type")))
+			Expect(err).To(MatchError(Equal("unexpected shoot credentials type *v1.Pod")))
 		})
 	})
 

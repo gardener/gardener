@@ -48,7 +48,7 @@ func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) err
 				!v1beta1helper.DNSProviderCredentialsRefEqual(oldSeed.Spec.DNS.Internal, newSeed.Spec.DNS.Internal) ||
 				!v1beta1helper.DNSProvidersCredentialsRefEqual(oldSeed.Spec.DNS.Defaults, newSeed.Spec.DNS.Defaults) ||
 				!v1beta1helper.ResourceReferencesEqual(oldSeed.Spec.Resources, newSeed.Spec.Resources) ||
-				!seedDNSProviderSecretRefEqual(oldSeed.Spec.DNS.Provider, newSeed.Spec.DNS.Provider) {
+				!seedDNSProviderCredentialsRefEqual(oldSeed.Spec.DNS.Provider, newSeed.Spec.DNS.Provider) {
 				g.handleSeedCreateOrUpdate(newSeed)
 			}
 
@@ -104,42 +104,70 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 
 	if seed.Spec.Backup != nil {
 		var (
-			namespace = seed.Spec.Backup.CredentialsRef.Namespace
-			name      = seed.Spec.Backup.CredentialsRef.Name
-			vertex    *Vertex
+			credentialsRef = seed.Spec.Backup.CredentialsRef
+			namespace      = credentialsRef.Namespace
+			name           = credentialsRef.Name
+			vertex         *Vertex
 		)
-
-		if seed.Spec.Backup.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
-			seed.Spec.Backup.CredentialsRef.Kind == "WorkloadIdentity" {
+		if credentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
+			credentialsRef.Kind == "WorkloadIdentity" {
 			vertex = g.getOrCreateVertex(VertexTypeWorkloadIdentity, namespace, name)
-		} else if seed.Spec.Backup.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
-			seed.Spec.Backup.CredentialsRef.Kind == "Secret" {
+		} else if credentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
+			credentialsRef.Kind == "Secret" {
 			vertex = g.getOrCreateVertex(VertexTypeSecret, namespace, name)
 		}
 		g.addEdge(vertex, seedVertex)
 	}
 
 	if seed.Spec.DNS.Provider != nil {
-		secretVertex := g.getOrCreateVertex(VertexTypeSecret, seed.Spec.DNS.Provider.SecretRef.Namespace, seed.Spec.DNS.Provider.SecretRef.Name)
-		g.addEdge(secretVertex, seedVertex)
+		var (
+			credentialsRef = seed.Spec.DNS.Provider.CredentialsRef
+			name           = credentialsRef.Name
+			namespace      = credentialsRef.Namespace
+			vertex         *Vertex
+		)
+		if credentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
+			credentialsRef.Kind == "WorkloadIdentity" {
+			vertex = g.getOrCreateVertex(VertexTypeWorkloadIdentity, namespace, name)
+		} else if credentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
+			credentialsRef.Kind == "Secret" {
+			vertex = g.getOrCreateVertex(VertexTypeSecret, namespace, name)
+		}
+		g.addEdge(vertex, seedVertex)
 	}
 
 	if seed.Spec.DNS.Internal != nil {
-		// TODO(dimityrmirchev): handle/add support for workload identities
-		if seed.Spec.DNS.Internal.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
-			seed.Spec.DNS.Internal.CredentialsRef.Kind == "Secret" {
-			secretVertex := g.getOrCreateVertex(VertexTypeSecret, seed.Spec.DNS.Internal.CredentialsRef.Namespace, seed.Spec.DNS.Internal.CredentialsRef.Name)
-			g.addEdge(secretVertex, seedVertex)
+		var (
+			credentialsRef = seed.Spec.DNS.Internal.CredentialsRef
+			name           = credentialsRef.Name
+			namespace      = credentialsRef.Namespace
+			vertex         *Vertex
+		)
+		if credentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
+			credentialsRef.Kind == "WorkloadIdentity" {
+			vertex = g.getOrCreateVertex(VertexTypeWorkloadIdentity, namespace, name)
+		} else if credentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
+			credentialsRef.Kind == "Secret" {
+			vertex = g.getOrCreateVertex(VertexTypeSecret, namespace, name)
 		}
+		g.addEdge(vertex, seedVertex)
 	}
 
 	for _, defaultDNS := range seed.Spec.DNS.Defaults {
-		// TODO(dimityrmirchev): handle/add support for workload identities
-		if defaultDNS.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
-			defaultDNS.CredentialsRef.Kind == "Secret" {
-			secretVertex := g.getOrCreateVertex(VertexTypeSecret, defaultDNS.CredentialsRef.Namespace, defaultDNS.CredentialsRef.Name)
-			g.addEdge(secretVertex, seedVertex)
+		var (
+			credentialsRef = defaultDNS.CredentialsRef
+			name           = credentialsRef.Name
+			namespace      = credentialsRef.Namespace
+			vertex         *Vertex
+		)
+		if credentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
+			credentialsRef.Kind == "WorkloadIdentity" {
+			vertex = g.getOrCreateVertex(VertexTypeWorkloadIdentity, namespace, name)
+		} else if credentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
+			credentialsRef.Kind == "Secret" {
+			vertex = g.getOrCreateVertex(VertexTypeSecret, namespace, name)
 		}
+		g.addEdge(vertex, seedVertex)
 	}
 
 	addSeedResources(seed.Spec, g, seedVertex)
@@ -163,13 +191,13 @@ func (g *graph) handleManagedSeedIfSeedBelongsToIt(ctx context.Context, seedName
 	}
 }
 
-func seedDNSProviderSecretRefEqual(oldDNS, newDNS *gardencorev1beta1.SeedDNSProvider) bool {
+func seedDNSProviderCredentialsRefEqual(oldDNS, newDNS *gardencorev1beta1.SeedDNSProvider) bool {
 	if oldDNS == nil && newDNS == nil {
 		return true
 	}
 
 	if oldDNS != nil && newDNS != nil {
-		return apiequality.Semantic.DeepEqual(oldDNS.SecretRef, newDNS.SecretRef)
+		return apiequality.Semantic.DeepEqual(oldDNS.CredentialsRef, newDNS.CredentialsRef)
 	}
 
 	return false

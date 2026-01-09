@@ -107,12 +107,6 @@ ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/b
 
 echo "Check if essential config options are initialized"
 check-not-initial "$seed_kubeconfig" ""
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 0) | .data'
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 1) | .data'
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 0) | .metadata.annotations.["dns.gardener.cloud/domain"]'
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 1) | .metadata.annotations.["dns.gardener.cloud/domain"]'
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 0) | .metadata.annotations.["dns.gardener.cloud/provider"]'
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 1) | .metadata.annotations.["dns.gardener.cloud/provider"]'
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/base/project.yaml 'select(document_index == 1) | .metadata.name'
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/base/project.yaml 'select(document_index == 1) | .metadata.labels["project.gardener.cloud/name"]'
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/base/project.yaml 'select(document_index == 2) | .metadata.name'
@@ -121,31 +115,37 @@ check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/"$
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/"$CREDENTIALSBINDINGS_FOLDER"/credentials/credentialsbindings.yaml '.provider.type'
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/"$CREDENTIALSBINDINGS_FOLDER"/credentials/credentialsbindings.yaml '.credentialsRef.namespace'
 if [[ "$workload_identity_support" == "true" ]]; then
+  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-workload-identities.yaml 'select(document_index == 0) | .metadata.namespace'
+  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-workload-identities.yaml 'select(document_index == 0) | .spec.audiences'
+  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-workload-identities.yaml 'select(document_index == 0) | .spec.targetSystem.type'
   check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/with-workload-identity/credentials/infrastructure-workloadidentities.yaml '.metadata.namespace'
   check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/with-workload-identity/credentials/infrastructure-workloadidentities.yaml '.spec.audiences'
   check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/with-workload-identity/credentials/infrastructure-workloadidentities.yaml '.spec.targetSystem.type'
 else
   check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/without-workload-identity/credentials/infrastructure-secrets.yaml '.metadata.namespace'
   check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/without-workload-identity/credentials/infrastructure-secrets.yaml '.data'
-fi
+  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 0) | .data'
+  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 1) | .data'
+  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 0) | .metadata.annotations.["dns.gardener.cloud/domain"]'
+  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 1) | .metadata.annotations.["dns.gardener.cloud/domain"]'
+  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 0) | .metadata.annotations.["dns.gardener.cloud/provider"]'
+  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 1) | .metadata.annotations.["dns.gardener.cloud/provider"]'
 
-role1=$(yq 'select(document_index == 0) | .metadata.labels.["gardener.cloud/role"]' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
-role2=$(yq 'select(document_index == 1) | .metadata.labels.["gardener.cloud/role"]' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
+  role1=$(yq 'select(document_index == 0) | .metadata.labels.["gardener.cloud/role"]' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
+  role2=$(yq 'select(document_index == 1) | .metadata.labels.["gardener.cloud/role"]' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
 
-if [[ $role1 != "default-domain" ]]; then
-  echo "first secret in $REPO_ROOT_DIR/example/provider-extensions/garden/controlplane/domain-secrets.yaml must be labeled as gardener.cloud/role=default-domain"
-  exit 1
-fi
-if [[ $role2 != "internal-domain" ]]; then
-  echo "second secret in $REPO_ROOT_DIR/example/provider-extensions/garden/controlplane/domain-secrets.yaml must be labeled as gardener.cloud/role=internal-domain"
-  exit 1
+  if [[ $role1 != "default-domain" ]]; then
+    echo "first secret in $REPO_ROOT_DIR/example/provider-extensions/garden/controlplane/domain-secrets.yaml must be labeled as gardener.cloud/role=default-domain"
+    exit 1
+  fi
+  if [[ $role2 != "internal-domain" ]]; then
+    echo "second secret in $REPO_ROOT_DIR/example/provider-extensions/garden/controlplane/domain-secrets.yaml must be labeled as gardener.cloud/role=internal-domain"
+    exit 1
+  fi
 fi
 
 registry_domain=
 relay_domain=
-
-internal_dns_secret=$(yq -e 'select(document_index == 1) | .metadata.name' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
-dns_provider_type=$(yq -e 'select(document_index == 1) | .metadata.annotations.["dns.gardener.cloud/provider"]' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
 
 if kubectl get configmaps -n kube-system shoot-info --kubeconfig "$seed_kubeconfig" -o yaml > "$temp_shoot_info"; then
   use_shoot_info="true"
@@ -163,8 +163,6 @@ if kubectl get configmaps -n kube-system shoot-info --kubeconfig "$seed_kubeconf
     .config.seedConfig.spec.networks.pods = \"$pods_cidr\" |
     .config.seedConfig.spec.networks.nodes = \"$nodes_cidr\" |
     .config.seedConfig.spec.networks.services = \"$services_cidr\" |
-    .config.seedConfig.spec.dns.provider.secretRef.name = \"$internal_dns_secret\" |
-    .config.seedConfig.spec.dns.provider.type = \"$dns_provider_type\" |
     .config.seedConfig.spec.provider.region = \"$region\" |
     .config.seedConfig.spec.provider.type = \"$type\"
   " "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values"
@@ -185,8 +183,6 @@ else
 
   yq -e -i "
     .config.seedConfig.metadata.name = \"$seed_name\" |
-    .config.seedConfig.spec.dns.provider.secretRef.name = \"$internal_dns_secret\" |
-    .config.seedConfig.spec.dns.provider.type = \"$dns_provider_type\"
   " "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values"
 fi
 
@@ -202,8 +198,25 @@ check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_value
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.networks.pods"
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.networks.nodes"
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.networks.services"
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.provider.secretRef.name"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.provider.credentialsRef.apiVersion"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.provider.credentialsRef.kind"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.provider.credentialsRef.name"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.provider.credentialsRef.namespace"
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.provider.type"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.internal.credentialsRef.apiVersion"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.internal.credentialsRef.kind"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.internal.credentialsRef.name"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.internal.credentialsRef.namespace"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.internal.type"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.internal.domain"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.internal.zone"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.defaults[0].credentialsRef.apiVersion"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.defaults[0].credentialsRef.kind"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.defaults[0].credentialsRef.name"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.defaults[0].credentialsRef.namespace"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.defaults[0].type"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.defaults[0].domain"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.defaults[0].zone"
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.provider.region"
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.provider.type"
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.provider.zones"
