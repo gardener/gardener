@@ -441,7 +441,7 @@ images:
             teamname: 'gardener/monitoring-maintainers'
   - name: victoria-operator
     sourceRepository: github.com/VictoriaMetrics/operator
-    repository: docker.io/victoriametrics/operator
+    repository: europe-docker.pkg.dev/gardener-project/releases/3rd/victoriametrics/operator
     tag: "v0.65.0"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
