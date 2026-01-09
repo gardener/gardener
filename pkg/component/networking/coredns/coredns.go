@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/sets"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -860,8 +859,7 @@ func getSearchPathRewrites(clusterDomain string, commonSuffixes []string) string
 
 // GetIPFamilyPolicy returns the IPFamilyPolicy for the CoreDNS service based on the provided IP families and cluster IPs.
 func GetIPFamilyPolicy(ipFamilies []gardencorev1beta1.IPFamily, clusterIPs []net.IP) corev1.IPFamilyPolicy {
-	ipFamiliesSet := sets.New(ipFamilies...)
-	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) && ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) && hasIPv4andIPv6Address(clusterIPs) {
+	if gardencorev1beta1.IsDualStack(ipFamilies) && hasIPv4andIPv6Address(clusterIPs) {
 		return corev1.IPFamilyPolicyPreferDualStack
 	}
 	return corev1.IPFamilyPolicySingleStack
