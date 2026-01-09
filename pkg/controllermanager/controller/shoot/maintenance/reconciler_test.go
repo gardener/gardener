@@ -338,6 +338,61 @@ var _ = Describe("Shoot Maintenance", func() {
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", overallLatestVersion)
 			})
+
+			It("should update major short image versions.", func() {
+				cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions,
+					gardencorev1beta1.MachineImageVersion{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: "1",
+						},
+						CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+						Architectures: []string{"amd64"},
+					},
+					gardencorev1beta1.MachineImageVersion{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: "2",
+						},
+						CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+						Architectures: []string{"amd64"},
+					},
+				)
+				shoot.Spec.Provider.Workers[0].Machine.Image.Version = ptr.To("1")
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
+
+				Expect(err).NotTo(HaveOccurred())
+				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "2")
+			})
+
+			It("should update major short image to highest available patch version.", func() {
+				cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions,
+					gardencorev1beta1.MachineImageVersion{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: "1",
+						},
+						CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+						Architectures: []string{"amd64"},
+					},
+					gardencorev1beta1.MachineImageVersion{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: "2",
+						},
+						CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+						Architectures: []string{"amd64"},
+					},
+					gardencorev1beta1.MachineImageVersion{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: "2.0.1",
+						},
+						CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+						Architectures: []string{"amd64"},
+					},
+				)
+				shoot.Spec.Provider.Workers[0].Machine.Image.Version = ptr.To("1")
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
+
+				Expect(err).NotTo(HaveOccurred())
+				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "2.0.1")
+			})
 		})
 
 		Describe("UpdateStrategy: patch", func() {
@@ -601,6 +656,54 @@ var _ = Describe("Shoot Maintenance", func() {
 
 				Expect(results[shoot.Spec.Provider.Workers[0].Name].isSuccessful).To(BeFalse())
 				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should not update minor when using short image versions.", func() {
+				cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions,
+					gardencorev1beta1.MachineImageVersion{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: "1.7",
+						},
+						CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+						Architectures: []string{"amd64"},
+					},
+					gardencorev1beta1.MachineImageVersion{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: "1.8",
+						},
+						CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+						Architectures: []string{"amd64"},
+					},
+				)
+				shoot.Spec.Provider.Workers[0].Machine.Image.Version = ptr.To("1.7")
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
+
+				Expect(err).NotTo(HaveOccurred())
+				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.7")
+			})
+
+			It("should patch update but not to minor short image versions.", func() {
+				cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions,
+					gardencorev1beta1.MachineImageVersion{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: "1.7.3",
+						},
+						CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+						Architectures: []string{"amd64"},
+					},
+					gardencorev1beta1.MachineImageVersion{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: "1.8",
+						},
+						CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+						Architectures: []string{"amd64"},
+					},
+				)
+				shoot.Spec.Provider.Workers[0].Machine.Image.Version = ptr.To("1.7.2")
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
+
+				Expect(err).NotTo(HaveOccurred())
+				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.7.3")
 			})
 		})
 
@@ -990,6 +1093,54 @@ var _ = Describe("Shoot Maintenance", func() {
 				_, err := maintainMachineImages(log, shoot, cloudProfile)
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", shootCurrentImageVersion)
+			})
+
+			It("should update from explicit minor to higher short image version.", func() {
+				cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions,
+					gardencorev1beta1.MachineImageVersion{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: "1.7.3",
+						},
+						CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+						Architectures: []string{"amd64"},
+					},
+					gardencorev1beta1.MachineImageVersion{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: "1.8",
+						},
+						CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+						Architectures: []string{"amd64"},
+					},
+				)
+				shoot.Spec.Provider.Workers[0].Machine.Image.Version = ptr.To("1.7.3")
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
+
+				Expect(err).NotTo(HaveOccurred())
+				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.8")
+			})
+
+			It("should update minor short image versionw.", func() {
+				cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions,
+					gardencorev1beta1.MachineImageVersion{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: "1.7",
+						},
+						CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+						Architectures: []string{"amd64"},
+					},
+					gardencorev1beta1.MachineImageVersion{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: "1.8",
+						},
+						CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+						Architectures: []string{"amd64"},
+					},
+				)
+				shoot.Spec.Provider.Workers[0].Machine.Image.Version = ptr.To("1.7")
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
+
+				Expect(err).NotTo(HaveOccurred())
+				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.8")
 			})
 		})
 
