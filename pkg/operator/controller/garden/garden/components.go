@@ -439,7 +439,12 @@ func (r *Reconciler) newVirtualGardenGardenerResourceManager(secretsManager secr
 		PriorityClassName:        v1beta1constants.PriorityClassNameGardenSystem400,
 		RuntimeKubernetesVersion: r.RuntimeVersion,
 		SecretNameServerCA:       operatorv1alpha1.SecretNameCARuntime,
-		TargetNamespaces:         []string{v1beta1constants.GardenNamespace, metav1.NamespaceSystem, gardencorev1beta1.GardenerShootIssuerNamespace, gardencorev1beta1.GardenerSystemPublicNamespace},
+		TargetNamespaces: append([]string{
+			v1beta1constants.GardenNamespace,
+			metav1.NamespaceSystem,
+			gardencorev1beta1.GardenerShootIssuerNamespace,
+			gardencorev1beta1.GardenerSystemPublicNamespace,
+		}, r.Config.Controllers.Garden.VirtualGardenerResourceManagerAdditionalNamespaces...),
 	})
 }
 
