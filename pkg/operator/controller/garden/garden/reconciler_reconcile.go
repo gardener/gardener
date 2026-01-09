@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -936,11 +937,8 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 				return err
 			}
 
-			for _, domain := range domains {
-				if domain == issuerURL.Hostname() {
-					externalHostname = issuerURL.Host
-					break
-				}
+			if slices.Contains(domains, issuerURL.Hostname()) {
+				externalHostname = issuerURL.Host
 			}
 		}
 

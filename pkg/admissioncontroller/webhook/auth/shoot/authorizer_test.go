@@ -973,7 +973,7 @@ var _ = Describe("Shoot", func() {
 					})
 
 					It("should allow if shoot meta matches", func() {
-						bootstrapTokenSecret.Data = map[string][]byte{"description": []byte(fmt.Sprintf("Used for connecting the self-hosted Shoot %s/%s to the Garden cluster", shootNamespace, shootName))}
+						bootstrapTokenSecret.Data = map[string][]byte{"description": fmt.Appendf(nil, "Used for connecting the self-hosted Shoot %s/%s to the Garden cluster", shootNamespace, shootName)}
 						Expect(fakeClient.Create(ctx, bootstrapTokenSecret)).To(Succeed())
 
 						decision, reason, err := authorizer.Authorize(ctx, attrs)

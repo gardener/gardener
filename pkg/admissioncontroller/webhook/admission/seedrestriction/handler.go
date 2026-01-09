@@ -531,8 +531,8 @@ func (h *Handler) admitServiceAccount(ctx context.Context, seedName string, user
 
 	// Allow gardenlet to create service accounts which can be used to bootstrap other gardenlets deployed as part of
 	// the ManagedSeed reconciliation.
-	if strings.HasPrefix(request.Name, gardenletbootstraputil.ServiceAccountNamePrefix) {
-		return h.allowIfManagedSeedIsNotYetBootstrapped(ctx, seedName, request.Namespace, strings.TrimPrefix(request.Name, gardenletbootstraputil.ServiceAccountNamePrefix))
+	if after, ok := strings.CutPrefix(request.Name, gardenletbootstraputil.ServiceAccountNamePrefix); ok {
+		return h.allowIfManagedSeedIsNotYetBootstrapped(ctx, seedName, request.Namespace, after)
 	}
 
 	// Allow all verbs for service accounts in gardenlets' seed-<name> namespaces.

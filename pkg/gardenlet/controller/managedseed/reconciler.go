@@ -118,10 +118,10 @@ func (r *Reconciler) newActuator(ctx context.Context, shoot *gardencorev1beta1.S
 			}
 			return ptr.Deref(shoot.Spec.DNS.Domain, "")
 		},
-		ApplyGardenletChart: func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error {
+		ApplyGardenletChart: func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]any) error {
 			return targetChartApplier.ApplyFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, r.GardenNamespaceShoot, "gardenlet", kubernetes.Values(values))
 		},
-		DeleteGardenletChart: func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error {
+		DeleteGardenletChart: func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]any) error {
 			return targetChartApplier.DeleteFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, r.GardenNamespaceShoot, "gardenlet", kubernetes.Values(values))
 		},
 		Clock:                    r.Clock,

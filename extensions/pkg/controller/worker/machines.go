@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -165,12 +166,12 @@ func WorkerPoolHashV1(pool extensionsv1alpha1.WorkerPool, cluster *extensionscon
 		data = append(data, "node-local-dns")
 	}
 
-	var result string
+	var result strings.Builder
 	for _, v := range data {
-		result += utils.ComputeSHA256Hex([]byte(v))
+		result.WriteString(utils.ComputeSHA256Hex([]byte(v)))
 	}
 
-	return utils.ComputeSHA256Hex([]byte(result))[:5], nil
+	return utils.ComputeSHA256Hex([]byte(result.String()))[:5], nil
 }
 
 // WorkerPoolHashV2 returns a hash value for a given nodeAgentSecretName and additional data.
@@ -179,12 +180,12 @@ func WorkerPoolHashV2(nodeAgentSecretName string, additionalData ...string) (str
 
 	data = append(data, additionalData...)
 
-	var result string
+	var result strings.Builder
 	for _, v := range data {
-		result += utils.ComputeSHA256Hex([]byte(v))
+		result.WriteString(utils.ComputeSHA256Hex([]byte(v)))
 	}
 
-	return utils.ComputeSHA256Hex([]byte(result))[:5], nil
+	return utils.ComputeSHA256Hex([]byte(result.String()))[:5], nil
 }
 
 // WorkerPoolHashInPlace returns the hash value for a worker pool with an in-place update strategy.
@@ -211,12 +212,12 @@ func WorkerPoolHashInPlace(pool extensionsv1alpha1.WorkerPool, cluster *extensio
 	data = append(data, workerPoolHash)
 	data = append(data, additionalData...)
 
-	var result string
+	var result strings.Builder
 	for _, v := range data {
-		result += utils.ComputeSHA256Hex([]byte(v))
+		result.WriteString(utils.ComputeSHA256Hex([]byte(v)))
 	}
 
-	return utils.ComputeSHA256Hex([]byte(result))[:5], nil
+	return utils.ComputeSHA256Hex([]byte(result.String()))[:5], nil
 }
 
 // DistributeOverZones is a function which is used to determine how many nodes should be used
@@ -287,11 +288,11 @@ func DiskSize(size string) (int, error) {
 
 // ErrorMachineImageNotFound returns an appropriate error message for an unknown name/version image pair.
 func ErrorMachineImageNotFound(name, version string, opt ...string) error {
-	ext := ""
+	var ext strings.Builder
 	for _, o := range opt {
-		ext += "/" + o
+		ext.WriteString("/" + o)
 	}
-	return fmt.Errorf("could not find machine image for %s/%s%s neither in cloud profile nor in worker status", name, version, ext)
+	return fmt.Errorf("could not find machine image for %s/%s%s neither in cloud profile nor in worker status", name, version, ext.String())
 }
 
 // FetchUserData fetches the user data for a worker pool.

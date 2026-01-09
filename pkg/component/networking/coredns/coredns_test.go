@@ -8,6 +8,7 @@ import (
 	"context"
 	"net"
 	"regexp"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -113,7 +114,8 @@ subjects:
   namespace: kube-system
 `
 		configMapYAML = func(commonSuffixes []string) string {
-			out := `apiVersion: v1
+			var out strings.Builder
+			out.WriteString(`apiVersion: v1
 data:
   Corefile: |
     .:8053 {
@@ -125,16 +127,16 @@ data:
         name regex (^(?:[^\.]+\.)+)svc\.foo\.bar\.svc\.foo\.bar {1}svc.foo.bar
         answer name (^(?:[^\.]+\.)+)svc\.foo\.bar {1}svc.foo.bar.svc.foo.bar
         answer value (^(?:[^\.]+\.)+)svc\.foo\.bar {1}svc.foo.bar.svc.foo.bar
-      }`
+      }`)
 			for _, suffix := range commonSuffixes {
-				out += `
+				out.WriteString(`
       rewrite stop {
         name regex (.*)\.` + regexp.QuoteMeta(suffix) + `\.svc\.foo\.bar {1}.` + suffix + `
         answer name (.*)\.` + regexp.QuoteMeta(suffix) + ` {1}.` + suffix + `.svc.foo.bar
         answer value (.*)\.` + regexp.QuoteMeta(suffix) + ` {1}.` + suffix + `.svc.foo.bar
-      }`
+      }`)
 			}
-			out += `
+			out.WriteString(`
       kubernetes ` + clusterDomain + ` in-addr.arpa ip6.arpa {
           pods insecure
           fallthrough in-addr.arpa ip6.arpa
@@ -157,8 +159,8 @@ kind: ConfigMap
 metadata:
   name: coredns
   namespace: kube-system
-`
-			return out
+`)
+			return out.String()
 		}
 		configMapCustomYAML = `apiVersion: v1
 data:
@@ -252,29 +254,30 @@ spec:
   - Egress
 `
 		deploymentYAMLFor = func(apiserverHost string, podAnnotations map[string]string, keepReplicas bool, useHALabel bool) string {
-			out := `apiVersion: apps/v1
+			var out strings.Builder
+			out.WriteString(`apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
     gardener.cloud/role: system-component
-`
+`)
 			if useHALabel {
-				out += `    high-availability-config.resources.gardener.cloud/type: server
-`
+				out.WriteString(`    high-availability-config.resources.gardener.cloud/type: server
+`)
 			}
 
-			out += `    k8s-app: kube-dns
+			out.WriteString(`    k8s-app: kube-dns
     origin: gardener
   name: coredns
   namespace: kube-system
 spec:
-`
+`)
 			if keepReplicas {
-				out += `  replicas: 2
-`
+				out.WriteString(`  replicas: 2
+`)
 			}
 
-			out += `  revisionHistoryLimit: 2
+			out.WriteString(`  revisionHistoryLimit: 2
   selector:
     matchLabels:
       k8s-app: kube-dns
@@ -285,18 +288,18 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-`
+`)
 			if len(podAnnotations) > 0 {
-				out += `      annotations:
-`
+				out.WriteString(`      annotations:
+`)
 			}
 
 			for k, v := range podAnnotations {
-				out += `        ` + k + `: ` + v + `
-`
+				out.WriteString(`        ` + k + `: ` + v + `
+`)
 			}
 
-			out += `      labels:
+			out.WriteString(`      labels:
         gardener.cloud/role: system-component
         k8s-app: kube-dns
         origin: gardener
@@ -305,15 +308,15 @@ spec:
       - args:
         - -conf
         - /etc/coredns/Corefile
-`
+`)
 
 			if apiserverHost != "" {
-				out += `        env:
+				out.WriteString(`        env:
         - name: KUBERNETES_SERVICE_HOST
           value: ` + apiserverHost + `
-`
+`)
 			}
-			out += `        image: ` + image + `
+			out.WriteString(`        image: ` + image + `
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 5
@@ -390,8 +393,8 @@ spec:
           optional: true
         name: custom-config-volume
 status: {}
-`
-			return out
+`)
+			return out.String()
 		}
 
 		pdbYAML = `apiVersion: policy/v1

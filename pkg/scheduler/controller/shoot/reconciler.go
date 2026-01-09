@@ -194,8 +194,8 @@ func (r *Reconciler) getRegionConfigMap(ctx context.Context, log logr.Logger, cl
 
 	var regionConfig *corev1.ConfigMap
 	for _, regionConf := range regionConfigList.Items {
-		profileNames := strings.Split(regionConf.Annotations[v1beta1constants.AnnotationSchedulingCloudProfiles], ",")
-		for _, name := range profileNames {
+		profileNames := strings.SplitSeq(regionConf.Annotations[v1beta1constants.AnnotationSchedulingCloudProfiles], ",")
+		for name := range profileNames {
 			if name != cloudProfile.Name {
 				continue
 			}

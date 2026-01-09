@@ -98,7 +98,7 @@ func (r *Reconciler) newActuator(gardenlet *seedmanagementv1alpha1.Gardenlet) ga
 		GetTargetDomain: func() string {
 			return ""
 		},
-		ApplyGardenletChart: func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error {
+		ApplyGardenletChart: func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]any) error {
 			archive, err := r.HelmRegistry.Pull(ctx, &gardenlet.Spec.Deployment.Helm.OCIRepository)
 			if err != nil {
 				return fmt.Errorf("failed pulling Helm chart from OCI repository: %w", err)

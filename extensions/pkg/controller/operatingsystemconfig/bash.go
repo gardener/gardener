@@ -21,7 +21,7 @@ import (
 
 // FilesToDiskScript is a utility function which generates a bash script for writing the provided files to the disk.
 func FilesToDiskScript(ctx context.Context, reader client.Reader, namespace string, files []extensionsv1alpha1.File) (string, error) {
-	var out string
+	var out strings.Builder
 
 	for _, file := range files {
 		data, err := dataForFileContent(ctx, reader, namespace, &file.Content)
@@ -29,45 +29,45 @@ func FilesToDiskScript(ctx context.Context, reader client.Reader, namespace stri
 			return "", err
 		}
 
-		out += `
+		out.WriteString(`
 mkdir -p "` + path.Dir(file.Path) + `"
-` + catDataIntoFile(file.Path, data, ptr.Deref(file.Content.TransmitUnencoded, false))
+` + catDataIntoFile(file.Path, data, ptr.Deref(file.Content.TransmitUnencoded, false)))
 
 		if file.Permissions != nil {
-			out += `
-` + fmt.Sprintf(`chmod "%04o" "%s"`, *file.Permissions, file.Path)
+			out.WriteString(`
+` + fmt.Sprintf(`chmod "%04o" "%s"`, *file.Permissions, file.Path))
 		}
 	}
 
-	return out, nil
+	return out.String(), nil
 }
 
 // UnitsToDiskScript is a utility function which generates a bash script for writing the provided units and their
 // drop-ins to the disk.
 func UnitsToDiskScript(units []extensionsv1alpha1.Unit) string {
-	var out string
+	var out strings.Builder
 
 	for _, unit := range units {
 		unitFilePath := path.Join("/", "etc", "systemd", "system", unit.Name)
 
 		if unit.Content != nil {
-			out += `
-` + catDataIntoFile(unitFilePath, []byte(*unit.Content), false)
+			out.WriteString(`
+` + catDataIntoFile(unitFilePath, []byte(*unit.Content), false))
 		}
 
 		if len(unit.DropIns) > 0 {
 			unitDropInsDirectoryPath := unitFilePath + ".d"
-			out += `
-mkdir -p "` + unitDropInsDirectoryPath + `"`
+			out.WriteString(`
+mkdir -p "` + unitDropInsDirectoryPath + `"`)
 
 			for _, dropIn := range unit.DropIns {
-				out += `
-` + catDataIntoFile(path.Join(unitDropInsDirectoryPath, dropIn.Name), []byte(dropIn.Content), false)
+				out.WriteString(`
+` + catDataIntoFile(path.Join(unitDropInsDirectoryPath, dropIn.Name), []byte(dropIn.Content), false))
 			}
 		}
 	}
 
-	return out
+	return out.String()
 }
 
 // WrapProvisionOSCIntoOneshotScript wraps the given script into an oneshot script which exits early when it is called again after finishing successfully.

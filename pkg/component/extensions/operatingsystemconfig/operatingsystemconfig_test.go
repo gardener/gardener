@@ -7,6 +7,7 @@ package operatingsystemconfig_test
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 	"time"
@@ -193,9 +194,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}
 
 				imagesCopy := make(map[string]*imagevector.Image, len(images))
-				for imageName, image := range images {
-					imagesCopy[imageName] = image
-				}
+				maps.Copy(imagesCopy, images)
 				imagesCopy["hyperkube"] = &imagevector.Image{Repository: ptr.To("europe-docker.pkg.dev/gardener-project/releases/hyperkube"), Tag: ptr.To("v" + k8sVersion.String())}
 
 				initUnits, initFiles, _ := initConfigFn(
@@ -953,7 +952,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
 				}
 
-				clientGet := func(result client.Object) interface{} {
+				clientGet := func(result client.Object) any {
 					return func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 						switch obj.(type) {
 						case *corev1.Secret:

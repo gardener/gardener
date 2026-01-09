@@ -317,7 +317,7 @@ func (f *fluentBit) getFluentBit() *fluentbitv1alpha2.FluentBit {
 
 	return &fluentbitv1alpha2.FluentBit{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%v-%v", v1beta1constants.DaemonSetNameFluentBit, utils.ComputeSHA256Hex([]byte(fmt.Sprintf("%v%v", getLabels(), annotations)))[:5]),
+			Name:      fmt.Sprintf("%v-%v", v1beta1constants.DaemonSetNameFluentBit, utils.ComputeSHA256Hex(fmt.Appendf(nil, "%v%v", getLabels(), annotations))[:5]),
 			Namespace: f.namespace,
 			Labels:    getLabels(),
 		},

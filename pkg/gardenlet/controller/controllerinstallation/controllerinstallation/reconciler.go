@@ -164,7 +164,7 @@ func (r *Reconciler) reconcile(
 		}
 	}
 
-	var helmValues map[string]interface{}
+	var helmValues map[string]any
 	if controllerDeployment.Helm != nil && controllerDeployment.Helm.Values != nil {
 		if err := json.Unmarshal(controllerDeployment.Helm.Values.Raw, &helmValues); err != nil {
 			conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionFalse, "ChartInformationInvalid", fmt.Sprintf("chart values cannot be unmarshalled: %+v", err))
@@ -617,7 +617,7 @@ func (r *Reconciler) MutateSpecForSelfHostedShootExtensions(obj runtime.Object) 
 // CalculateUsablePorts returns the next usable port range for the next controller installation.
 func (r *Reconciler) CalculateUsablePorts() ([]int, error) {
 	var ports []int
-	for i := 0; i < usablePortsRangeSize; i++ {
+	for range usablePortsRangeSize {
 		p, _, err := netutils.SuggestPort("")
 		if err != nil {
 			return nil, fmt.Errorf("failed to find a usable port: %w", err)

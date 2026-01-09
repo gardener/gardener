@@ -145,9 +145,9 @@ var _ = Describe("Resources", func() {
 				switch unstructuredObj.GetKind() {
 				case "Secret":
 					Expect(unstructuredObj.GetName()).To(Equal("ref-" + secret.Name))
-					Expect(unstructuredObj.Object["data"]).To(WithTransform(func(data interface{}) (map[string][]byte, error) {
+					Expect(unstructuredObj.Object["data"]).To(WithTransform(func(data any) (map[string][]byte, error) {
 						byteMap := make(map[string][]byte)
-						for k, v := range data.(map[string]interface{}) {
+						for k, v := range data.(map[string]any) {
 							byteMap[k], err = base64.StdEncoding.DecodeString(v.(string))
 							if err != nil {
 								return nil, err
@@ -157,9 +157,9 @@ var _ = Describe("Resources", func() {
 					}, Equal(secret.Data)))
 				case "ConfigMap":
 					Expect(unstructuredObj.GetName()).To(Equal("ref-" + configMap.Name))
-					Expect(unstructuredObj.Object["data"]).To(WithTransform(func(data interface{}) map[string]string {
+					Expect(unstructuredObj.Object["data"]).To(WithTransform(func(data any) map[string]string {
 						strMap := make(map[string]string)
-						for k, v := range data.(map[string]interface{}) {
+						for k, v := range data.(map[string]any) {
 							strMap[k] = v.(string)
 						}
 						return strMap

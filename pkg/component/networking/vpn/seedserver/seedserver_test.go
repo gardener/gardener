@@ -731,7 +731,7 @@ var _ = Describe("VpnSeedServer", func() {
 				statefulSet.ResourceVersion = ""
 				Expect(c.Create(ctx, statefulSet)).To(Succeed())
 
-				for i := 0; i < 2; i++ {
+				for i := range 2 {
 					destinationRule := indexedDestinationRule(i)
 					destinationRule.ResourceVersion = ""
 					Expect(c.Create(ctx, destinationRule)).To(Succeed())
@@ -784,7 +784,7 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPodDisruptionBudget.Namespace, Name: expectedPodDisruptionBudget.Name}, actualPodDisruptionBudget)).To(BeNotFoundError())
 
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpn-seed-server"}, &appsv1.StatefulSet{})).To(BeNotFoundError())
-				for i := 0; i < 2; i++ {
+				for i := range 2 {
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(indexedDestinationRule(i)), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(indexedService(i)), &corev1.Service{})).To(BeNotFoundError())
 				}
@@ -878,7 +878,7 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(actualSecretTLSAuth.Immutable).To(PointTo(BeTrue()))
 				Expect(actualSecretTLSAuth.Data).NotTo(BeEmpty())
 
-				for i := 0; i < 2; i++ {
+				for i := range 2 {
 					actualDestinationRule := &istionetworkingv1beta1.DestinationRule{}
 					expectedDestinationRule := indexedDestinationRule(i)
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedDestinationRule.Namespace, Name: expectedDestinationRule.Name}, actualDestinationRule)).To(Succeed())
@@ -930,7 +930,7 @@ var _ = Describe("VpnSeedServer", func() {
 			statefulSet.ResourceVersion = ""
 			Expect(c.Create(ctx, statefulSet)).To(Succeed())
 
-			for i := 0; i < 2; i++ {
+			for i := range 2 {
 				destinationRule := indexedDestinationRule(i)
 				destinationRule.ResourceVersion = ""
 				Expect(c.Create(ctx, destinationRule)).To(Succeed())
@@ -971,7 +971,7 @@ var _ = Describe("VpnSeedServer", func() {
 
 		JustAfterEach(func() {
 			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpn-seed-server"}, &appsv1.StatefulSet{})).To(BeNotFoundError())
-			for i := 0; i < 2; i++ {
+			for i := range 2 {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(indexedDestinationRule(i)), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(indexedService(i)), &corev1.Service{})).To(BeNotFoundError())
 			}

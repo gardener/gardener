@@ -225,8 +225,8 @@ func GetAPIServerSNIDomains(domains []string, sni operatorv1alpha1.SNI) []string
 		if strings.HasPrefix(domainPattern, "*.") {
 			patternWithoutWildcard := domainPattern[1:]
 			for _, domain := range domains {
-				if strings.HasSuffix(domain, patternWithoutWildcard) {
-					subDomain := strings.TrimSuffix(domain, patternWithoutWildcard)
+				if before, ok := strings.CutSuffix(domain, patternWithoutWildcard); ok {
+					subDomain := before
 					// The wildcard is for one subdomain level only, so the subdomain should not contain any dots.
 					if len(subDomain) > 0 && !strings.Contains(subDomain, ".") {
 						sniDomains = append(sniDomains, domain)

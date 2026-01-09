@@ -197,7 +197,8 @@ var _ = Describe("GardenerDashboard", func() {
 				Data: make(map[string]string),
 			}
 
-			configRaw := `port: 8080
+			var configRaw strings.Builder
+			configRaw.WriteString(`port: 8080
 logFormat: text
 logLevel: ` + logLevel + `
 apiServerUrl: https://` + apiServerURL + `
@@ -207,26 +208,26 @@ readinessProbe:
 unreachableSeeds:
   matchLabels:
     seed.gardener.cloud/network: private
-websocketAllowedOrigins:`
+websocketAllowedOrigins:`)
 
 			for _, domain := range ingressDomains {
-				configRaw += `
-  - https://dashboard.` + domain
+				configRaw.WriteString(`
+  - https://dashboard.` + domain)
 			}
-			configRaw += "\n"
+			configRaw.WriteString("\n")
 
 			if terminal != nil {
-				configRaw += `contentSecurityPolicy:
+				configRaw.WriteString(`contentSecurityPolicy:
   connectSrc:
-    - '''self'''`
+    - '''self'''`)
 
 				for _, host := range terminal.AllowedHosts {
-					configRaw += `
+					configRaw.WriteString(`
     - wss://` + host + `
-    - https://` + host
+    - https://` + host)
 				}
 
-				configRaw += `
+				configRaw.WriteString(`
 terminal:
   container:
     image: ` + terminal.Container.Image + `
@@ -243,48 +244,48 @@ terminal:
 frontend:
   features:
     terminalEnabled: true
-`
+`)
 			}
 
 			if oidc != nil {
-				configRaw += `oidc:
+				configRaw.WriteString(`oidc:
   issuer: ` + oidc.IssuerURL + `
   sessionLifetime: 43200
-  redirect_uris:`
+  redirect_uris:`)
 
 				for _, domain := range ingressDomains {
-					configRaw += `
-    - https://dashboard.` + domain + `/auth/callback`
+					configRaw.WriteString(`
+    - https://dashboard.` + domain + `/auth/callback`)
 				}
 
-				configRaw += `
+				configRaw.WriteString(`
   scope: ` + strings.Join(append([]string{"openid", "email"}, oidc.AdditionalScopes...), " ") + `
   rejectUnauthorized: true
   public:
     clientId: ` + oidc.ClientIDPublic + `
     usePKCE: true
-`
+`)
 			}
 
 			if gitHub != nil {
-				configRaw += `gitHub:
+				configRaw.WriteString(`gitHub:
   apiUrl: ` + gitHub.APIURL + `
   org: ` + gitHub.Organisation + `
-  repository: ` + gitHub.Repository
+  repository: ` + gitHub.Repository)
 
 				if gitHub.PollInterval != nil {
-					configRaw += `
-  pollIntervalSeconds: ` + fmt.Sprintf("%d", int64(gitHub.PollInterval.Seconds()))
+					configRaw.WriteString(`
+  pollIntervalSeconds: ` + fmt.Sprintf("%d", int64(gitHub.PollInterval.Seconds())))
 				}
 
-				configRaw += `
+				configRaw.WriteString(`
   syncThrottleSeconds: 20
   syncConcurrency: 10
-`
+`)
 			}
 
 			if frontendConfigMapName != nil {
-				configRaw += `frontend:
+				configRaw.WriteString(`frontend:
   branding:
     some: branding
   foo:
@@ -292,7 +293,7 @@ frontend:
   landingPageUrl: landing-page-url
   themes:
     some: themes
-`
+`)
 			}
 
 			loginTypes := "null"
@@ -311,7 +312,7 @@ frontend:
 
 			loginConfigRaw := `{"loginTypes":` + loginTypes + frontend + `}`
 
-			obj.Data["config.yaml"] = configRaw
+			obj.Data["config.yaml"] = configRaw.String()
 			obj.Data["login-config.json"] = loginConfigRaw
 			utilruntime.Must(kubernetesutils.MakeUnique(obj))
 			return obj

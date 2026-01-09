@@ -128,8 +128,8 @@ func computeRelevantAdmissionPluginRawConfig(plugin AdmissionPluginConfig) ([]by
 				plugin.Config = &runtime.RawExtension{}
 			}
 			if len(plugin.Config.Raw) == 0 {
-				plugin.Config.Raw = []byte(fmt.Sprintf(`apiVersion: %s
-kind: WebhookAdmissionConfiguration`, webhookadmissionv1.SchemeGroupVersion.String()))
+				plugin.Config.Raw = fmt.Appendf(nil, `apiVersion: %s
+kind: WebhookAdmissionConfiguration`, webhookadmissionv1.SchemeGroupVersion.String())
 			}
 		}
 

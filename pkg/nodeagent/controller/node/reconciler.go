@@ -51,7 +51,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	var restartGardenerNodeAgent bool
 
-	for _, serviceName := range strings.Split(services, ",") {
+	for serviceName := range strings.SplitSeq(services, ",") {
 		if !strings.HasSuffix(serviceName, ".service") {
 			serviceName = serviceName + ".service"
 		}

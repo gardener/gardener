@@ -144,7 +144,7 @@ func newHelmRegistryWithPullSecret(cache cacher, registryAddress string) *HelmRe
 				Name:      "pull-secret",
 			},
 			Data: map[string][]byte{
-				corev1.DockerConfigJsonKey: []byte(fmt.Sprintf("{\"auths\":{\"%s\":{\"username\":\"foo\",\"password\":\"bar\"}}}", registryAddress)),
+				corev1.DockerConfigJsonKey: fmt.Appendf(nil, "{\"auths\":{\"%s\":{\"username\":\"foo\",\"password\":\"bar\"}}}", registryAddress),
 			},
 		})}
 }

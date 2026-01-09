@@ -6,6 +6,7 @@ package predicate
 
 import (
 	"reflect"
+	"slices"
 
 	"k8s.io/utils/set"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,12 +53,7 @@ const (
 // ForEventTypes is a predicate which returns true only for the provided event types.
 func ForEventTypes(events ...EventType) predicate.Predicate {
 	has := func(event EventType) bool {
-		for _, e := range events {
-			if e == event {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(events, event)
 	}
 
 	return predicate.Funcs{

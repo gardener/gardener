@@ -54,7 +54,7 @@ var _ = BeforeSuite(func() {
 
 func startTestRegistry(ctx context.Context) (string, error) {
 	config := &configuration.Configuration{}
-	config.Storage = map[string]configuration.Parameters{"inmemory": map[string]interface{}{}}
+	config.Storage = map[string]configuration.Parameters{"inmemory": map[string]any{}}
 
 	port, host, err := netutils.SuggestPort("")
 	if err != nil {
@@ -71,7 +71,7 @@ func startTestRegistry(ctx context.Context) (string, error) {
 	// register a test auth provider
 	authProvider = &testAuthProvider{}
 	config.Auth = configuration.Auth{"oci-suite-test": map[string]any{}}
-	if err := auth.Register("oci-suite-test", func(_ map[string]interface{}) (auth.AccessController, error) {
+	if err := auth.Register("oci-suite-test", func(_ map[string]any) (auth.AccessController, error) {
 		return authProvider, nil
 	}); err != nil {
 		return "", err

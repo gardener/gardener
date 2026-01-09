@@ -70,9 +70,9 @@ var _ = Describe("Component", func() {
 			}
 		}
 		slices.Sort(lines)
-		modifiedData := ""
+		var modifiedData strings.Builder
 		for _, line := range lines {
-			modifiedData += line + "\n"
+			modifiedData.WriteString(line + "\n")
 		}
 
 		Expect(err).NotTo(HaveOccurred())
@@ -89,7 +89,7 @@ var _ = Describe("Component", func() {
 			Permissions: ptr.To[uint32](0644),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
-					Data: modifiedData,
+					Data: modifiedData.String(),
 				},
 			},
 		}

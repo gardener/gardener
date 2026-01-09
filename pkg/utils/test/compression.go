@@ -74,7 +74,7 @@ func ExtractManifestsFromManagedResourceData(data map[string][]byte) ([]string, 
 	}
 
 	var manifests []string
-	for _, manifest := range strings.Split(string(uncompressedData), "---\n") {
+	for manifest := range strings.SplitSeq(string(uncompressedData), "---\n") {
 		if manifest != "" {
 			manifests = append(manifests, manifest)
 		}

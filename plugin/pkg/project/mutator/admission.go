@@ -79,10 +79,8 @@ func ensureProjectOwner(project *gardencore.Project, userName string) {
 	if project.Spec.Owner == nil {
 		project.Spec.Owner = func() *rbacv1.Subject {
 			for _, member := range project.Spec.Members {
-				for _, role := range member.Roles {
-					if role == gardencore.ProjectMemberOwner {
-						return member.Subject.DeepCopy()
-					}
+				if slices.Contains(member.Roles, gardencore.ProjectMemberOwner) {
+					return member.Subject.DeepCopy()
 				}
 			}
 			return project.Spec.CreatedBy

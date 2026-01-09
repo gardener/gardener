@@ -1328,10 +1328,8 @@ func isUnavailableInAtleastOneZone(regions []gardencorev1beta1.Region, region st
 					continue
 				}
 
-				for _, unavailableType := range unavailableTypes(z) {
-					if t == unavailableType {
-						return true
-					}
+				if slices.Contains(unavailableTypes(z), t) {
+					return true
 				}
 			}
 		}

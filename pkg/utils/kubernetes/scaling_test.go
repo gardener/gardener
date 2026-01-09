@@ -129,5 +129,5 @@ var _ = Describe("scale", func() {
 })
 
 func getPatch(replicas int) client.Patch {
-	return client.RawPatch(types.MergePatchType, []byte(fmt.Sprintf(`{"spec":{"replicas":%d}}`, replicas)))
+	return client.RawPatch(types.MergePatchType, fmt.Appendf(nil, `{"spec":{"replicas":%d}}`, replicas))
 }

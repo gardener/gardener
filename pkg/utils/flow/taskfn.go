@@ -107,7 +107,6 @@ func ParallelN(n int, fns ...TaskFn) TaskFn {
 
 			go func() {
 				for fn := range fnsCh {
-					fn := fn
 					errCh <- fn(ctx)
 				}
 

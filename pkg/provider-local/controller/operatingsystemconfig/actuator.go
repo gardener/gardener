@@ -7,6 +7,7 @@ package operatingsystemconfig
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -65,17 +66,18 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alph
 	}
 	writeUnitsToDiskScript := operatingsystemconfig.UnitsToDiskScript(osc.Spec.Units)
 
-	script := `#!/bin/bash
+	var script strings.Builder
+	script.WriteString(`#!/bin/bash
 ` + writeFilesToDiskScript + `
 ` + writeUnitsToDiskScript + `
 systemctl daemon-reload
-`
+`)
 	for _, unit := range osc.Spec.Units {
-		script += fmt.Sprintf(`systemctl enable '%s' && systemctl restart --no-block '%s'
-`, unit.Name, unit.Name)
+		script.WriteString(fmt.Sprintf(`systemctl enable '%s' && systemctl restart --no-block '%s'
+`, unit.Name, unit.Name))
 	}
 
-	return operatingsystemconfig.WrapProvisionOSCIntoOneshotScript(script), nil
+	return operatingsystemconfig.WrapProvisionOSCIntoOneshotScript(script.String()), nil
 }
 
 func (a *actuator) handleReconcileOSC(osc *extensionsv1alpha1.OperatingSystemConfig) ([]extensionsv1alpha1.Unit, *extensionsv1alpha1.InPlaceUpdatesStatus) {

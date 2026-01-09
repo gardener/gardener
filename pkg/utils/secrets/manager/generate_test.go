@@ -949,7 +949,7 @@ var _ = Describe("Generate", func() {
 
 			It("should return an error if multiple existing secrets indicate keeping the old data", func() {
 				By("Create existing secret with old key")
-				for i := 0; i < 2; i++ {
+				for i := range 2 {
 					existingSecret := &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("some-existing-secret-%d", i),

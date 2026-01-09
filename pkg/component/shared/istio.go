@@ -367,7 +367,7 @@ func commonIstioIngressNetworkPolicyLabels(vpnEnabled bool) map[string]string {
 	if vpnEnabled {
 		labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.DeploymentNameVPNSeedServer, vpnseedserver.OpenVPNPort)] = v1beta1constants.LabelNetworkPolicyAllowed
 
-		for i := 0; i < vpnseedserver.HighAvailabilityReplicaCount; i++ {
+		for i := range vpnseedserver.HighAvailabilityReplicaCount {
 			labels[gardenerutils.NetworkPolicyLabel(fmt.Sprintf("%s-%s-%d", v1beta1constants.LabelNetworkPolicyShootNamespaceAlias, v1beta1constants.DeploymentNameVPNSeedServer, i), vpnseedserver.OpenVPNPort)] = v1beta1constants.LabelNetworkPolicyAllowed
 		}
 	}

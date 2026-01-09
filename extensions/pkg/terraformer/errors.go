@@ -43,7 +43,7 @@ func findTerraformErrors(output string) string {
 
 		// Get all errors
 		var currentError string
-		for _, line := range strings.Split(errorMessage, "\n") {
+		for line := range strings.SplitSeq(errorMessage, "\n") {
 			if strings.HasPrefix(line, "Error: ") {
 				if len(currentError) > 0 {
 					valid = append(valid, currentError)

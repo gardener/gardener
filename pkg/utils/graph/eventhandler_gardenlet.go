@@ -28,21 +28,21 @@ import (
 
 func (g *graph) setupGardenletWatch(ctx context.Context, informer cache.Informer) error {
 	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			if gardenlet, ok := obj.(*seedmanagementv1alpha1.Gardenlet); ok {
 				g.handleGardenletCreateOrUpdate(ctx, gardenlet)
 				return
 			}
 		},
 
-		UpdateFunc: func(_, newObj interface{}) {
+		UpdateFunc: func(_, newObj any) {
 			if gardenlet, ok := newObj.(*seedmanagementv1alpha1.Gardenlet); ok {
 				g.handleGardenletCreateOrUpdate(ctx, gardenlet)
 				return
 			}
 		},
 
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			if tombstone, ok := obj.(toolscache.DeletedFinalStateUnknown); ok {
 				obj = tombstone.Obj
 			}

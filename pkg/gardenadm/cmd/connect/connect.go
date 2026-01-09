@@ -299,7 +299,7 @@ func newGardenletDeployer(b *botanist.GardenadmBotanist, gardenClientSet kuberne
 		GetTargetDomain: func() string {
 			return ""
 		},
-		ApplyGardenletChart: func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error {
+		ApplyGardenletChart: func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]any) error {
 			gardenletChartImage, err := imagevector.Charts().FindImage(imagevector.ChartImageNameGardenlet)
 			if err != nil {
 				return err

@@ -66,8 +66,8 @@ type Actuator struct {
 	GetTargetClientFunc      func(ctx context.Context) (kubernetes.Interface, error)
 	CheckIfVPAAlreadyExists  func(ctx context.Context) (bool, error)
 	GetTargetDomain          func() string
-	ApplyGardenletChart      func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
-	DeleteGardenletChart     func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
+	ApplyGardenletChart      func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]any) error
+	DeleteGardenletChart     func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]any) error
 	Clock                    clock.Clock
 	ValuesHelper             ValuesHelper
 	Recorder                 record.EventRecorder

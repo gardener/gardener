@@ -45,12 +45,12 @@ func ExtensionForManagedResourceName(managedResourceName string) (string, bool) 
 		return strings.TrimSuffix(strings.TrimPrefix(managedResourceName, extensionRuntimePrefix), extensionRuntimeSuffix), true
 	}
 
-	if strings.HasPrefix(managedResourceName, extensionAdmissionRuntimePrefix) {
-		return strings.TrimPrefix(managedResourceName, extensionAdmissionRuntimePrefix), true
+	if after, ok := strings.CutPrefix(managedResourceName, extensionAdmissionRuntimePrefix); ok {
+		return after, true
 	}
 
-	if strings.HasPrefix(managedResourceName, extensionAdmissionVirtualPrefix) {
-		return strings.TrimPrefix(managedResourceName, extensionAdmissionVirtualPrefix), true
+	if after, ok := strings.CutPrefix(managedResourceName, extensionAdmissionVirtualPrefix); ok {
+		return after, true
 	}
 
 	return "", false
