@@ -25,6 +25,7 @@ var (
 	defaultSyncPeriod = time.Second * 30
 	// DefaultAddOptions are the default DefaultAddArgs for AddToManager.
 	DefaultAddOptions = healthcheck.DefaultAddArgs{
+		ExtensionClasses: []extensionsv1alpha1.ExtensionClass{extensionsv1alpha1.ExtensionClassShoot},
 		HealthCheckConfig: extensionsconfigv1alpha1.HealthCheckConfig{
 			SyncPeriod: metav1.Duration{Duration: defaultSyncPeriod},
 			// Increase default QPS and Burst by factor 10 as a configuration example of custom REST options for shoot clients

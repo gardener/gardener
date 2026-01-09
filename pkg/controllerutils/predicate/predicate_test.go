@@ -727,7 +727,7 @@ var _ = Describe("Predicate", func() {
 		})
 
 		It("should add the HasType predicate of the passed extension to the given list of predicates", func() {
-			predicates := AddTypeAndClassPredicates([]predicate.Predicate{truePredicate}, extensionsv1alpha1.ExtensionClassShoot, extensionType)
+			predicates := AddTypeAndClassPredicates([]predicate.Predicate{truePredicate}, []extensionsv1alpha1.ExtensionClass{extensionsv1alpha1.ExtensionClassShoot, extensionsv1alpha1.ExtensionClassSeed}, extensionType)
 
 			Expect(predicates).To(HaveLen(3))
 			Expect(reflect.ValueOf(predicates[2])).To(Equal(reflect.ValueOf(truePredicate)), "predicate list should contain the passed predicate at last element")
@@ -738,7 +738,7 @@ var _ = Describe("Predicate", func() {
 			Expect(pred.Delete(deleteEvent)).To(BeTrue())
 			Expect(pred.Generic(genericEvent)).To(BeTrue())
 
-			predicates = AddTypeAndClassPredicates([]predicate.Predicate{truePredicate}, extensionsv1alpha1.ExtensionClassShoot, extensionTypeFoo)
+			predicates = AddTypeAndClassPredicates([]predicate.Predicate{truePredicate}, []extensionsv1alpha1.ExtensionClass{extensionsv1alpha1.ExtensionClassShoot, extensionsv1alpha1.ExtensionClassSeed}, extensionTypeFoo)
 
 			Expect(predicates).To(HaveLen(3))
 			pred = predicate.And(predicates...)
@@ -750,7 +750,7 @@ var _ = Describe("Predicate", func() {
 		})
 
 		It("should add OR of all the HasType predicates for the passed extensions to the given list of predicates", func() {
-			predicates := AddTypeAndClassPredicates([]predicate.Predicate{truePredicate}, extensionsv1alpha1.ExtensionClassShoot, extensionType, extensionTypeFoo)
+			predicates := AddTypeAndClassPredicates([]predicate.Predicate{truePredicate}, []extensionsv1alpha1.ExtensionClass{extensionsv1alpha1.ExtensionClassShoot}, extensionType, extensionTypeFoo)
 
 			Expect(predicates).To(HaveLen(3))
 			pred := predicate.And(predicates...)
