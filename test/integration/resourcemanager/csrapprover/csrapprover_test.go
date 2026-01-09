@@ -508,7 +508,7 @@ func patchNodeAddresses(node *corev1.Node, addresses ...corev1.NodeAddress) {
 }
 
 func runDenyNodeAgentCSRTest(c client.Client, csr *certificatesv1.CertificateSigningRequest, expectedReason string, argPtrs ...*string) {
-	var args []interface{}
+	var args []any
 	for _, arg := range argPtrs {
 		args = append(args, *arg)
 	}

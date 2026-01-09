@@ -953,7 +953,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
 				}
 
-				clientGet := func(result client.Object) interface{} {
+				clientGet := func(result client.Object) any {
 					return func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 						switch obj.(type) {
 						case *corev1.Secret:

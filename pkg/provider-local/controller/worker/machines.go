@@ -107,7 +107,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			Data: map[string][]byte{"userData": userData},
 		})
 
-		providerConfig := map[string]interface{}{
+		providerConfig := map[string]any{
 			"image":     image.Image,
 			"namespace": w.cluster.Shoot.Status.TechnicalID,
 		}

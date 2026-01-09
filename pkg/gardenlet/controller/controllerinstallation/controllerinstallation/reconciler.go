@@ -164,7 +164,7 @@ func (r *Reconciler) reconcile(
 		}
 	}
 
-	var helmValues map[string]interface{}
+	var helmValues map[string]any
 	if controllerDeployment.Helm != nil && controllerDeployment.Helm.Values != nil {
 		if err := json.Unmarshal(controllerDeployment.Helm.Values.Raw, &helmValues); err != nil {
 			conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionFalse, "ChartInformationInvalid", fmt.Sprintf("chart values cannot be unmarshalled: %+v", err))

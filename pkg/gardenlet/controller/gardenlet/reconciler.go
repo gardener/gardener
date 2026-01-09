@@ -153,7 +153,7 @@ func (r *Reconciler) prepareGardenletChartValues(
 	seed *gardencorev1beta1.Seed,
 	gardenletConfig *gardenletconfigv1alpha1.GardenletConfiguration,
 ) (
-	map[string]interface{},
+	map[string]any,
 	error,
 ) {
 	values, err := gardenletdeployer.PrepareGardenletChartValues(
