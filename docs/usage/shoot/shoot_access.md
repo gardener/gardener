@@ -30,18 +30,25 @@ kubectl create \
 You also can use controller-runtime `client` (>= v0.14.3) to create such a kubeconfig from your go code like so:
 
 ```go
-expiration := 10 * time.Minute
-expirationSeconds := int64(expiration.Seconds())
-adminKubeconfigRequest := &authenticationv1alpha1.AdminKubeconfigRequest{
-  Spec: authenticationv1alpha1.AdminKubeconfigRequestSpec{
-    ExpirationSeconds: &expirationSeconds,
-  },
-}
-err := client.SubResource("adminkubeconfig").Create(ctx, shoot, adminKubeconfigRequest)
-if err != nil {
-  return err
-}
-config = adminKubeconfigRequest.Status.Kubeconfig
+import (
+  ...
+  authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
+)
+
+...
+    expiration := 10 * time.Minute
+    expirationSeconds := int64(expiration.Seconds())
+    adminKubeconfigRequest := &authenticationv1alpha1.AdminKubeconfigRequest{
+      Spec: authenticationv1alpha1.AdminKubeconfigRequestSpec{
+        ExpirationSeconds: &expirationSeconds,
+      },
+    }
+    err := client.SubResource("adminkubeconfig").Create(ctx, shoot, adminKubeconfigRequest)
+    if err != nil {
+      return err
+    }
+    config = adminKubeconfigRequest.Status.Kubeconfig
+...
 ```
 
 In Python, you can use the native [`kubernetes` client](https://github.com/kubernetes-client/python) to create such a kubeconfig like this:
