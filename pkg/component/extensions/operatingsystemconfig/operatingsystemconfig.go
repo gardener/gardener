@@ -24,6 +24,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -44,6 +45,7 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
+	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 )
 
 const (
@@ -535,7 +537,7 @@ func (o *operatingSystemConfig) WaitCleanup(ctx context.Context) error {
 
 // DeleteStaleResources deletes unused OperatingSystemConfig resources from the shoot namespace in the seed.
 func (o *operatingSystemConfig) DeleteStaleResources(ctx context.Context) error {
-	wantedOSCs, err := o.getWantedOSCNames()
+	wantedOSCs, err := o.getWantedOSCNames(ctx)
 	if err != nil {
 		return err
 	}
@@ -544,7 +546,7 @@ func (o *operatingSystemConfig) DeleteStaleResources(ctx context.Context) error 
 
 // WaitCleanupStaleResources waits until all unused OperatingSystemConfig resources are cleaned up.
 func (o *operatingSystemConfig) WaitCleanupStaleResources(ctx context.Context) error {
-	wantedOSCs, err := o.getWantedOSCNames()
+	wantedOSCs, err := o.getWantedOSCNames(ctx)
 	if err != nil {
 		return err
 	}
@@ -569,8 +571,10 @@ func (o *operatingSystemConfig) waitCleanup(ctx context.Context, wantedOSCNames 
 
 // getWantedOSCNames returns the names of all OSC resources, that are currently needed based
 // on the configured worker pools.
-func (o *operatingSystemConfig) getWantedOSCNames() (sets.Set[string], error) {
+func (o *operatingSystemConfig) getWantedOSCNames(ctx context.Context) (sets.Set[string], error) {
 	wantedOSCNames := sets.New[string]()
+
+	o.log.Info("number of workers", "number", len(o.values.Workers))
 
 	for _, worker := range o.values.Workers {
 		version, err := o.hashVersion(worker)
@@ -586,7 +590,27 @@ func (o *operatingSystemConfig) getWantedOSCNames() (sets.Set[string], error) {
 			if err != nil {
 				return nil, err
 			}
+			o.log.Info("inserted osc data from worker", "data", oscKey+keySuffix(version, worker.Machine.Image, purpose))
 			wantedOSCNames.Insert(oscKey + keySuffix(version, worker.Machine.Image, purpose))
+		}
+	}
+
+	mdList := &v1alpha1.MachineList{}
+	if err := o.client.List(ctx, mdList, client.InNamespace(o.values.Namespace), client.HasLabels{}); err != nil {
+		return nil, fmt.Errorf("failed to list Machines: %w", err)
+	}
+
+	for _, machine := range mdList.Items {
+		o.log.Info("machine name", "name", machine.Name)
+		//_, ok := machine.Labels[gardencorev1beta1constants.LabelWorkerPool]
+		//if !ok {
+		//	continue // Skip MDs that don't have the worker pool label
+		//}
+
+		if val, ok := machine.Spec.NodeTemplateSpec.ObjectMeta.Labels[gardencorev1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]; ok {
+			o.log.Info("found wanted OSC name from existing machine", "oscName", val, "machineName", machine.Name)
+			wantedOSCNames.Insert(val)
+			continue
 		}
 	}
 
