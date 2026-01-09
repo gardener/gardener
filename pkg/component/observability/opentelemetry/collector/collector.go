@@ -62,6 +62,10 @@ type Values struct {
 	ShootNodeLoggingEnabled bool
 	// IngressHost is the name for the ingress to access the OpenTelemetry Collector.
 	IngressHost string
+	// SecretNameServerCA is the name of the server CA secret.
+	SecretNameServerCA string
+	// PriorityClassName is the priority class name for the OpenTelemetry Collector pods.
+	PriorityClassName string
 	// ValiHost is the name for the ingress to access the Vali instance.
 	ValiHost string
 }
@@ -126,7 +130,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 			CertType:                    secrets.ServerCert,
 			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
+		}, secretsmanager.SignedByCA(o.values.SecretNameServerCA))
 		if err != nil {
 			return err
 		}
@@ -327,7 +331,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 			OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
 				Image:             o.values.Image,
 				Replicas:          ptr.To(o.values.Replicas),
-				PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane100,
+				PriorityClassName: o.values.PriorityClassName,
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("10m"),

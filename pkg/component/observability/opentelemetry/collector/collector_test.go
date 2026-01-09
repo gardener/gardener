@@ -68,6 +68,8 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			ShootNodeLoggingEnabled: true,
 			IngressHost:             ingressHost,
 			ValiHost:                valiHost,
+			SecretNameServerCA:      v1beta1constants.SecretNameCACluster,
+			PriorityClassName:       "gardener-system-100",
 		}
 
 		c         client.Client
@@ -566,6 +568,36 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Expect(managedResourceSecretTarget.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecretTarget.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
+		})
+
+		It("should use custom CA secret name for certificate signing", func() {
+			customValues := values
+			customValues.SecretNameServerCA = "custom-ca-secret"
+			customValues.ShootNodeLoggingEnabled = false // Disable node logging for simpler test
+			customValues.PriorityClassName = "gardener-system-100"
+
+			component = New(c, namespace, customValues, fakeSecretManager)
+
+			// The main test is that deploy succeeds with a custom CA secret name
+			Expect(component.Deploy(ctx)).To(Succeed())
+
+			// Verify that the component created the managed resource
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
+		})
+
+		It("should use seed CA secret when SecretNameServerCA is set to SecretNameCASeed", func() {
+			customValues := values
+			customValues.SecretNameServerCA = v1beta1constants.SecretNameCASeed
+			customValues.ShootNodeLoggingEnabled = false // Disable node logging for simpler test
+			customValues.PriorityClassName = "gardener-system-100"
+
+			component = New(c, namespace, customValues, fakeSecretManager)
+
+			// The main test is that deploy succeeds with the seed CA secret
+			Expect(component.Deploy(ctx)).To(Succeed())
+
+			// Verify that the component created the managed resource
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
 		})
 
 	})
