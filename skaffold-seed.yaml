@@ -217,9 +217,6 @@ build:
             - pkg/component/observability/logging/vali/templates/vali-config.yaml
             - pkg/component/observability/logging/vali/templates/vali-init.sh
             - pkg/component/observability/logging/victoria/operator
-            - pkg/component/observability/logging/victoria/operator/templates/crd-operator.victoriametrics.com_vlagents.yaml
-            - pkg/component/observability/logging/victoria/operator/templates/crd-operator.victoriametrics.com_vlclusters.yaml
-            - pkg/component/observability/logging/victoria/operator/templates/crd-operator.victoriametrics.com_vlogs.yaml
             - pkg/component/observability/logging/victoria/operator/templates/crd-operator.victoriametrics.com_vlsingles.yaml
             - pkg/component/observability/monitoring/alertmanager
             - pkg/component/observability/monitoring/blackboxexporter
