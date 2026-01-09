@@ -1363,8 +1363,8 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, version string
 	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.ScanInterval, fldPath.Child("scanInterval"))...)
 
 	if expander := autoScaler.Expander; expander != nil {
-		expanderArray := strings.Split(string(*expander), ",")
-		for _, exp := range expanderArray {
+		expanderArray := strings.SplitSeq(string(*expander), ",")
+		for exp := range expanderArray {
 			if !availableClusterAutoscalerExpanderModes.Has(exp) {
 				allErrs = append(allErrs, field.NotSupported(fldPath.Child("expander"), *expander, sets.List(availableClusterAutoscalerExpanderModes)))
 			}
