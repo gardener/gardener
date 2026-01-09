@@ -13,6 +13,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,11 +56,12 @@ var _ = Describe("VictoriaOperator", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		serviceAccount     *corev1.ServiceAccount
-		deployment         *appsv1.Deployment
-		vpa                *vpaautoscalingv1.VerticalPodAutoscaler
-		clusterRole        *rbacv1.ClusterRole
-		clusterRoleBinding *rbacv1.ClusterRoleBinding
+		serviceAccount      *corev1.ServiceAccount
+		deployment          *appsv1.Deployment
+		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
+		clusterRole         *rbacv1.ClusterRole
+		clusterRoleBinding  *rbacv1.ClusterRoleBinding
+		podDisruptionBudget *policyv1.PodDisruptionBudget
 	)
 
 	BeforeEach(func() {
@@ -101,6 +103,7 @@ var _ = Describe("VictoriaOperator", func() {
 					"app":                 "victoria-operator",
 					"role":                "observability",
 					"gardener.cloud/role": "observability",
+					"high-availability-config.resources.gardener.cloud/type": "controller",
 				},
 			},
 			AutomountServiceAccountToken: ptr.To(false),
@@ -114,6 +117,7 @@ var _ = Describe("VictoriaOperator", func() {
 					"app":                 "victoria-operator",
 					"role":                "observability",
 					"gardener.cloud/role": "observability",
+					"high-availability-config.resources.gardener.cloud/type": "controller",
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
@@ -124,16 +128,18 @@ var _ = Describe("VictoriaOperator", func() {
 						"app":                 "victoria-operator",
 						"role":                "observability",
 						"gardener.cloud/role": "observability",
+						"high-availability-config.resources.gardener.cloud/type": "controller",
 					},
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
-							"app":                              "victoria-operator",
-							"role":                             "observability",
-							"gardener.cloud/role":              "observability",
-							"networking.gardener.cloud/to-dns": "allowed",
-							"networking.gardener.cloud/to-runtime-apiserver": "allowed",
+							"app":                 "victoria-operator",
+							"role":                "observability",
+							"gardener.cloud/role": "observability",
+							"high-availability-config.resources.gardener.cloud/type": "controller",
+							"networking.gardener.cloud/to-dns":                       "allowed",
+							"networking.gardener.cloud/to-runtime-apiserver":         "allowed",
 						},
 					},
 					Spec: corev1.PodSpec{
@@ -177,18 +183,22 @@ var _ = Describe("VictoriaOperator", func() {
 										Value: "false",
 									},
 									{
+										Name:  "VM_ENABLEDPROMETHEUSCONVERTER_ALERTMANAGERCONFIG",
+										Value: "false",
+									},
+									{
 										Name:  "VM_ENABLEDPROMETHEUSCONVERTER_SCRAPECONFIG",
 										Value: "false",
+									},
+									{
+										Name:  "VM_DISABLESELFSERVICESCRAPECREATION",
+										Value: "true",
 									},
 								},
 								Resources: corev1.ResourceRequirements{
 									Requests: map[corev1.ResourceName]resource.Quantity{
 										corev1.ResourceCPU:    resource.MustParse("80m"),
 										corev1.ResourceMemory: resource.MustParse("120Mi"),
-									},
-									Limits: map[corev1.ResourceName]resource.Quantity{
-										corev1.ResourceCPU:    resource.MustParse("120m"),
-										corev1.ResourceMemory: resource.MustParse("520Mi"),
 									},
 								},
 								LivenessProbe: &corev1.Probe{
@@ -214,6 +224,7 @@ var _ = Describe("VictoriaOperator", func() {
 								SecurityContext: &corev1.SecurityContext{
 									AllowPrivilegeEscalation: ptr.To(false),
 									Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
+									RunAsNonRoot:             ptr.To(true),
 								},
 							},
 						},
@@ -230,6 +241,7 @@ var _ = Describe("VictoriaOperator", func() {
 					"app":                 "victoria-operator",
 					"role":                "observability",
 					"gardener.cloud/role": "observability",
+					"high-availability-config.resources.gardener.cloud/type": "controller",
 				},
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
@@ -261,118 +273,56 @@ var _ = Describe("VictoriaOperator", func() {
 					"app":                 "victoria-operator",
 					"role":                "observability",
 					"gardener.cloud/role": "observability",
+					"high-availability-config.resources.gardener.cloud/type": "controller",
 				},
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
-					NonResourceURLs: []string{"/metrics", "/metrics/resources", "/metrics/slis"},
-					Verbs:           []string{"get", "watch", "list"},
-				},
-				{
 					APIGroups: []string{""},
 					Resources: []string{
-						"configmaps", "configmaps/finalizers", "endpoints", "events",
 						"persistentvolumeclaims", "persistentvolumeclaims/finalizers",
-						"pods/eviction", "secrets", "secrets/finalizers", "services",
-						"services/finalizers", "serviceaccounts", "serviceaccounts/finalizers",
+						"services", "services/finalizers", "deployments", "deployments/finalizers",
+						"serviceaccounts", "serviceaccounts/finalizers",
 					},
-					Verbs: []string{"*"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{
-						"configmaps/status", "pods", "nodes", "nodes/proxy",
-						"nodes/metrics", "namespaces",
-					},
-					Verbs: []string{"get", "list", "watch"},
+					Verbs: []string{"create", "watch", "list", "get", "delete", "patch"},
 				},
 				{
 					APIGroups: []string{"apps"},
 					Resources: []string{
-						"deployments", "deployments/finalizers", "statefulsets",
-						"statefulsets/finalizers", "daemonsets", "daemonsets/finalizers",
-						"replicasets", "statefulsets/status",
+						"deployments", "deployments/finalizers",
 					},
-					Verbs: []string{"*"},
+					Verbs: []string{"list", "watch", "create", "get", "delete", "patch"},
 				},
 				{
-					APIGroups: []string{"monitoring.coreos.com"},
-					Resources: []string{"*"},
-					Verbs:     []string{"*"},
-				},
-				{
-					APIGroups: []string{"rbac.authorization.k8s.io"},
+					APIGroups: []string{""},
 					Resources: []string{
-						"clusterrolebindings", "clusterrolebindings/finalizers",
-						"clusterroles", "clusterroles/finalizers", "roles", "rolebindings",
+						"configmaps/status", "pods",
 					},
-					Verbs: []string{"*"},
+					Verbs: []string{"get", "list", "watch"},
 				},
 				{
-					APIGroups: []string{"storage.k8s.io"},
-					Resources: []string{"storageclasses"},
-					Verbs:     []string{"list", "get", "watch"},
-				},
-				{
-					APIGroups: []string{"policy"},
-					Resources: []string{"poddisruptionbudgets", "poddisruptionbudgets/finalizers"},
-					Verbs:     []string{"*"},
-				},
-				{
-					APIGroups: []string{"route.openshift.io", "image.openshift.io"},
-					Resources: []string{"routers/metrics", "registry/metrics"},
-					Verbs:     []string{"get"},
-				},
-				{
-					APIGroups: []string{"autoscaling"},
-					Resources: []string{"horizontalpodautoscalers"},
-					Verbs:     []string{"*"},
-				},
-				{
-					APIGroups: []string{"networking.k8s.io"},
-					Resources: []string{"ingresses", "ingresses/finalizers"},
-					Verbs:     []string{"*"},
-				},
-				{
-					APIGroups: []string{"apiextensions.k8s.io"},
-					Resources: []string{"customresourcedefinitions"},
-					Verbs:     []string{"get", "list"},
-				},
-				{
-					APIGroups: []string{"discovery.k8s.io"},
-					Resources: []string{"endpointslices"},
-					Verbs:     []string{"list", "watch", "get"},
+					APIGroups: []string{""},
+					Resources: []string{
+						"events",
+					},
+					Verbs: []string{"create"},
 				},
 				{
 					APIGroups: []string{"operator.victoriametrics.com"},
 					Resources: []string{
-						"vlagents", "vlagents/finalizers", "vlagents/status",
-						"vlogs", "vlogs/finalizers", "vlogs/status",
 						"vlsingles", "vlsingles/finalizers", "vlsingles/status",
-						"vlclusters", "vlclusters/finalizers", "vlclusters/status",
-						"vmagents", "vmagents/finalizers", "vmagents/status",
-						"vmalertmanagerconfigs", "vmalertmanagerconfigs/finalizers", "vmalertmanagerconfigs/status",
-						"vmalertmanagers", "vmalertmanagers/finalizers", "vmalertmanagers/status",
-						"vmalerts", "vmalerts/finalizers", "vmalerts/status",
-						"vmauths", "vmauths/finalizers", "vmauths/status",
-						"vmclusters", "vmclusters/finalizers", "vmclusters/status",
-						"vmnodescrapes", "vmnodescrapes/finalizers", "vmnodescrapes/status",
-						"vmpodscrapes", "vmpodscrapes/finalizers", "vmpodscrapes/status",
-						"vmprobes", "vmprobes/finalizers", "vmprobes/status",
-						"vmrules", "vmrules/finalizers", "vmrules/status",
-						"vmscrapeconfigs", "vmscrapeconfigs/finalizers", "vmscrapeconfigs/status",
-						"vmservicescrapes", "vmservicescrapes/finalizers", "vmservicescrapes/status",
-						"vmsingles", "vmsingles/finalizers", "vmsingles/status",
-						"vmstaticscrapes", "vmstaticscrapes/finalizers", "vmstaticscrapes/status",
-						"vmusers", "vmusers/finalizers", "vmusers/status",
-						"vmanomalies", "vmanomalies/finalizers", "vmanomalies/status",
 					},
 					Verbs: []string{"*"},
 				},
 				{
 					APIGroups: []string{"coordination.k8s.io"},
 					Resources: []string{"leases"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"get", "create", "update"},
+				},
+				{
+					APIGroups: []string{"apiextensions.k8s.io"},
+					Resources: []string{"customresourcedefinitions"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 			},
 		}
@@ -384,6 +334,7 @@ var _ = Describe("VictoriaOperator", func() {
 					"app":                 "victoria-operator",
 					"role":                "observability",
 					"gardener.cloud/role": "observability",
+					"high-availability-config.resources.gardener.cloud/type": "controller",
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -396,6 +347,31 @@ var _ = Describe("VictoriaOperator", func() {
 				Name:      "victoria-operator",
 				Namespace: namespace,
 			}},
+		}
+
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "victoria-operator",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":                 "victoria-operator",
+					"role":                "observability",
+					"gardener.cloud/role": "observability",
+					"high-availability-config.resources.gardener.cloud/type": "controller",
+				},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app":                 "victoria-operator",
+						"role":                "observability",
+						"gardener.cloud/role": "observability",
+						"high-availability-config.resources.gardener.cloud/type": "controller",
+					},
+				},
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			},
 		}
 	})
 
@@ -457,6 +433,7 @@ var _ = Describe("VictoriaOperator", func() {
 					vpa,
 					clusterRole,
 					clusterRoleBinding,
+					podDisruptionBudget,
 				))
 			})
 		})
