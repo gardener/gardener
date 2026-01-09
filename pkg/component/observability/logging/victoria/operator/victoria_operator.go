@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
