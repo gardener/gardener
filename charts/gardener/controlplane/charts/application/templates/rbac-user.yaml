@@ -662,6 +662,12 @@ rules:
 - apiGroups:
   - core.gardener.cloud
   resources:
+  - shoots/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - core.gardener.cloud
+  resources:
   - namespacedcloudprofiles
   verbs:
   - get
