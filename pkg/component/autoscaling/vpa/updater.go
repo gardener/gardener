@@ -359,4 +359,14 @@ func (v *vpa) reconcileUpdaterServiceMonitor(serviceMonitor *monitoringv1.Servic
 			},
 		}},
 	}
+
+	if v.values.ClusterType == component.ClusterTypeShoot && !v.values.IsManagedSeed {
+		serviceMonitor.Spec.Endpoints[0].MetricRelabelConfigs = []monitoringv1.RelabelConfig{
+			{
+				SourceLabels: []monitoringv1.LabelName{"vpa_namespace"},
+				Regex:        "(kube-system|)",
+				Action:       "keep",
+			},
+		}
+	}
 }
