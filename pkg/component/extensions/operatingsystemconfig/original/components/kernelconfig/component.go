@@ -6,6 +6,7 @@ package kernelconfig
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
@@ -32,14 +33,10 @@ func (component) Name() string {
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	var newData = make(map[string]string, len(data))
 
-	for key, value := range data {
-		newData[key] = value
-	}
+	maps.Copy(newData, data)
 
 	if !ctx.KubeProxyEnabled {
-		for key, value := range nonKubeProxyData {
-			newData[key] = value
-		}
+		maps.Copy(newData, nonKubeProxyData)
 	}
 
 	if ptr.Deref(ctx.KubeletConfigParameters.ProtectKernelDefaults, true) {
@@ -55,9 +52,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	}
 
 	// Custom kernel settings for worker group
-	for key, value := range ctx.Sysctls {
-		newData[key] = value
-	}
+	maps.Copy(newData, ctx.Sysctls)
 
 	// Content should be in well-defined order
 	keys := make([]string, 0, len(newData))

@@ -339,9 +339,7 @@ func mergeService(scheme *runtime.Scheme, oldObj, newObj runtime.Object) error {
 		}
 
 		if len(newService.Annotations) > 0 {
-			for annotation, value := range newService.Annotations {
-				mergedAnnotations[annotation] = value
-			}
+			maps.Copy(mergedAnnotations, newService.Annotations)
 		}
 
 		newService.Annotations = mergedAnnotations

@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -711,9 +712,7 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 	kubeletConfig := v1beta1helper.CalculateEffectiveKubeletConfiguration(o.values.KubeletConfig, worker.Kubernetes)
 
 	images := make(map[string]*imagevectorutils.Image, len(o.values.Images))
-	for imageName, image := range o.values.Images {
-		images[imageName] = image
-	}
+	maps.Copy(images, o.values.Images)
 
 	images[imagevector.ContainerImageNameHyperkube], err = imagevector.Containers().FindImage(imagevector.ContainerImageNameHyperkube, imagevectorutils.RuntimeVersion(kubernetesVersion.String()), imagevectorutils.TargetVersion(kubernetesVersion.String()))
 	if err != nil {

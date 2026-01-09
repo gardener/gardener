@@ -7,6 +7,7 @@ package operatingsystemconfig_test
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 	"time"
@@ -193,9 +194,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}
 
 				imagesCopy := make(map[string]*imagevector.Image, len(images))
-				for imageName, image := range images {
-					imagesCopy[imageName] = image
-				}
+				maps.Copy(imagesCopy, images)
 				imagesCopy["hyperkube"] = &imagevector.Image{Repository: ptr.To("europe-docker.pkg.dev/gardener-project/releases/hyperkube"), Tag: ptr.To("v" + k8sVersion.String())}
 
 				initUnits, initFiles, _ := initConfigFn(
