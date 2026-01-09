@@ -7,6 +7,7 @@ package backupbucketscheck
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/clock"
@@ -69,11 +70,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	switch {
 	case len(erroneousBackupBuckets) > 0:
-		errorMsg := "The following BackupBuckets have issues:"
+		var errorMsg strings.Builder
+		errorMsg.WriteString("The following BackupBuckets have issues:")
 		for _, bb := range erroneousBackupBuckets {
-			errorMsg += fmt.Sprintf("\n* %s", bb)
+			errorMsg.WriteString(fmt.Sprintf("\n* %s", bb))
 		}
-		conditionBackupBucketsReady = utils.SetToProgressingOrFalse(r.Clock, conditionThreshold, conditionBackupBucketsReady, "BackupBucketsError", errorMsg)
+		conditionBackupBucketsReady = utils.SetToProgressingOrFalse(r.Clock, conditionThreshold, conditionBackupBucketsReady, "BackupBucketsError", errorMsg.String())
 		if updateErr := utils.PatchSeedCondition(ctx, log, r.Client.Status(), seed, conditionBackupBucketsReady); updateErr != nil {
 			return reconcile.Result{}, updateErr
 		}

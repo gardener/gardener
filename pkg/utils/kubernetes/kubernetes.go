@@ -255,11 +255,12 @@ func MapStringBoolToCommandLineParameter(m map[string]bool, param string) string
 
 	slices.Sort(keys)
 
-	out := param
+	var out strings.Builder
+	out.WriteString(param)
 	for _, key := range keys {
-		out += fmt.Sprintf("%s=%s,", key, strconv.FormatBool(m[key]))
+		out.WriteString(fmt.Sprintf("%s=%s,", key, strconv.FormatBool(m[key])))
 	}
-	return strings.TrimSuffix(out, ",")
+	return strings.TrimSuffix(out.String(), ",")
 }
 
 // ReconcileServicePorts reconciles the existing service ports with the desired ports. This means that it takes the

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 
 	"k8s.io/component-helpers/node/util/sysctl"
 	"k8s.io/utils/ptr"
@@ -64,9 +65,9 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		keys = append(keys, key)
 	}
 	slices.Sort(keys)
-	fileContent := ""
+	var fileContent strings.Builder
 	for _, key := range keys {
-		fileContent += fmt.Sprintf("%s = %s\n", key, newData[key])
+		fileContent.WriteString(fmt.Sprintf("%s = %s\n", key, newData[key]))
 	}
 
 	kernelSettingsFile := extensionsv1alpha1.File{
@@ -74,7 +75,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		Permissions: ptr.To[uint32](0644),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
-				Data: fileContent,
+				Data: fileContent.String(),
 			},
 		},
 	}

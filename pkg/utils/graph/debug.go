@@ -29,7 +29,7 @@ func NewDebugHandler(graph *graph) http.HandlerFunc {
 
 func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	var (
-		out string
+		out strings.Builder
 
 		kind      = getQueryParameter(r.URL.Query(), "kind")
 		namespace = getQueryParameter(r.URL.Query(), "namespace")
@@ -60,23 +60,23 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	sort.Sort(vertexSorter(nodes))
 
 	// Render filtering form.
-	out += `
+	out.WriteString(`
 <form action="` + DebugHandlerPath + `" method="GET">
-  <select name="kind">`
-	out += fmt.Sprintf(`<option value=""%s>&lt;all&gt;</option>`, selected("", kind))
+  <select name="kind">`)
+	out.WriteString(fmt.Sprintf(`<option value=""%s>&lt;all&gt;</option>`, selected("", kind)))
 	for _, vt := range VertexTypes {
-		out += fmt.Sprintf(`<option value="%s"%s>%s</option>`, vt.Kind, selected(vt.Kind, kind), vt.Kind)
+		out.WriteString(fmt.Sprintf(`<option value="%s"%s>%s</option>`, vt.Kind, selected(vt.Kind, kind), vt.Kind))
 	}
-	out += `
+	out.WriteString(`
   </select>
   <input type="test" name="namespace" value="` + namespace + `" />
   <input type="test" name="name" value="` + name + `" />
   <input type="submit" value="go" />
-</form>` + separate(true)
+</form>` + separate(true))
 
 	// Iterate over each nodes, determine and sort their incoming and outgoing neighbors, and render the output.
 	for i, v := range nodes {
-		out += indent(0, "# %s", link(v))
+		out.WriteString(indent(0, "# %s", link(v)))
 
 		for _, n := range []struct {
 			prefix   string
@@ -92,18 +92,18 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 			sort.Sort(vertexSorter(neighbors))
 
 			if len(neighbors) > 0 {
-				out += indent(1, "%s (%d)", n.prefix, len(neighbors))
+				out.WriteString(indent(1, "%s (%d)", n.prefix, len(neighbors)))
 				for _, u := range neighbors {
-					out += indent(2, link(u))
+					out.WriteString(indent(2, link(u)))
 				}
 			}
 		}
 
-		out += emptyNewline() + separate(i < len(nodes)-1)
+		out.WriteString(emptyNewline() + separate(i < len(nodes)-1))
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprint(w, `<font size="2" face="Courier New">`+out+`</font>`)
+	fmt.Fprint(w, `<font size="2" face="Courier New">`+out.String()+`</font>`)
 }
 
 func getQueryParameter(query url.Values, param string) string {
