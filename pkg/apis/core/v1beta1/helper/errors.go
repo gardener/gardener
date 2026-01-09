@@ -6,6 +6,7 @@ package helper
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"time"
 
@@ -199,10 +200,8 @@ func HasNonRetryableErrorCode(lastErrors ...gardencorev1beta1.LastError) bool {
 // contains the given ErrorCode <code>.
 func HasErrorCode(lastErrors []gardencorev1beta1.LastError, code gardencorev1beta1.ErrorCode) bool {
 	for _, lastError := range lastErrors {
-		for _, current := range lastError.Codes {
-			if current == code {
-				return true
-			}
+		if slices.Contains(lastError.Codes, code) {
+			return true
 		}
 	}
 

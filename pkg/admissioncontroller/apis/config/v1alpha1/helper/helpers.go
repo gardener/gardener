@@ -6,6 +6,7 @@ package helper
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	authenticationv1 "k8s.io/api/authentication/v1"
@@ -66,12 +67,7 @@ func UserGroupMatches(subject rbacv1.Subject, userInfo authenticationv1.UserInfo
 		return true
 	}
 
-	for _, group := range userInfo.Groups {
-		if group == subject.Name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(userInfo.Groups, subject.Name)
 }
 
 // ServiceAccountMatches returns `true` if the given service account in the subject has a match in the given userConfig.

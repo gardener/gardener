@@ -7,6 +7,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 
 	"github.com/gardener/gardener/imagevector"
@@ -83,10 +84,8 @@ func (b *Botanist) isShootNodeLoggingEnabled() bool {
 	if b.Shoot != nil && !b.Shoot.IsWorkerless && b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) &&
 		gardenlethelper.IsValiEnabled(b.Config) && b.Config != nil &&
 		b.Config.Logging != nil && b.Config.Logging.ShootNodeLogging != nil {
-		for _, purpose := range b.Config.Logging.ShootNodeLogging.ShootPurposes {
-			if b.Shoot.Purpose == purpose {
-				return true
-			}
+		if slices.Contains(b.Config.Logging.ShootNodeLogging.ShootPurposes, b.Shoot.Purpose) {
+			return true
 		}
 	}
 	return false

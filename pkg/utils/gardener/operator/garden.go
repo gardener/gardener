@@ -34,20 +34,14 @@ import (
 func IsServedByGardenerAPIServer(resource string) bool {
 	groupResource := schema.ParseGroupResource(resource)
 
-	for _, groupName := range []string{
+	return slices.Contains([]string{
 		authentication.GroupName,
 		gardencore.GroupName,
 		operations.GroupName,
 		security.GroupName,
 		settings.GroupName,
 		seedmanagement.GroupName,
-	} {
-		if groupName == groupResource.Group {
-			return true
-		}
-	}
-
-	return false
+	}, groupResource.Group)
 }
 
 // IsServedByKubeAPIServer returns true if the passed resources is served by the Kube API Server.
