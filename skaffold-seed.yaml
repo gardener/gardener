@@ -78,6 +78,7 @@ build:
             - pkg/apis/settings
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
+            - pkg/apiserver/registry/seedmanagement/utils
             - pkg/chartrenderer
             - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes

@@ -130,8 +130,10 @@ var _ = Describe("ManagedSeed", func() {
 					Namespace: namespace,
 				},
 				CredentialsRef: corev1.ObjectReference{
-					Name:      dnsSecretName,
-					Namespace: namespace,
+					APIVersion: "v1",
+					Kind:       "Secret",
+					Name:       dnsSecretName,
+					Namespace:  namespace,
 				},
 			}
 			secretBinding = &gardencorev1beta1.SecretBinding{
@@ -153,9 +155,11 @@ var _ = Describe("ManagedSeed", func() {
 					DNS: core.SeedDNS{
 						Provider: &core.SeedDNSProvider{
 							Type: dnsProvider,
-							SecretRef: corev1.SecretReference{
-								Name:      name,
-								Namespace: namespace,
+							CredentialsRef: corev1.ObjectReference{
+								APIVersion: "v1",
+								Kind:       "Secret",
+								Name:       name,
+								Namespace:  namespace,
 							},
 						},
 					},
@@ -188,9 +192,11 @@ var _ = Describe("ManagedSeed", func() {
 					DNS: gardencorev1beta1.SeedDNS{
 						Provider: &gardencorev1beta1.SeedDNSProvider{
 							Type: dnsProvider,
-							SecretRef: corev1.SecretReference{
-								Name:      name,
-								Namespace: namespace,
+							CredentialsRef: corev1.ObjectReference{
+								APIVersion: "v1",
+								Kind:       "Secret",
+								Name:       name,
+								Namespace:  namespace,
 							},
 						},
 						Defaults: []gardencorev1beta1.SeedDNSProviderConfig{
@@ -393,8 +399,8 @@ var _ = Describe("ManagedSeed", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				seedx.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{
-					Type:      "type",
-					SecretRef: corev1.SecretReference{Name: "bar", Namespace: "garden"},
+					Type:           "type",
+					CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "bar", Namespace: "garden"},
 				}
 				Expect(managedSeed.Spec.Gardenlet).To(Equal(seedmanagement.GardenletConfig{
 					Config: &gardenletconfigv1alpha1.GardenletConfiguration{
@@ -442,8 +448,8 @@ var _ = Describe("ManagedSeed", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				seedx.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{
-					Type:      "type",
-					SecretRef: corev1.SecretReference{Name: "bar", Namespace: "garden"},
+					Type:           "type",
+					CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "bar", Namespace: "garden"},
 				}
 				Expect(managedSeed.Spec.Gardenlet).To(Equal(seedmanagement.GardenletConfig{
 					Config: &gardenletconfigv1alpha1.GardenletConfiguration{
@@ -491,8 +497,8 @@ var _ = Describe("ManagedSeed", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				seedx.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{
-					Type:      "type",
-					SecretRef: corev1.SecretReference{Name: "bar", Namespace: "garden"},
+					Type:           "type",
+					CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "bar", Namespace: "garden"},
 				}
 				Expect(managedSeed.Spec.Gardenlet).To(Equal(seedmanagement.GardenletConfig{
 					Config: &gardenletconfigv1alpha1.GardenletConfiguration{
