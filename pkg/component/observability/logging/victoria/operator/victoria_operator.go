@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,7 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -31,16 +31,21 @@ import (
 )
 
 const (
-	// managedResourceName is the name of the ManagedResource for the victoria-operator resources.
-	managedResourceName = "victoria-operator"
-	// serviceAccountName is the name of the ServiceAccount for the victoria-operator.
-	serviceAccountName = "victoria-operator"
-	// deploymentName is the name of the Deployment for the victoria-operator.
-	deploymentName = "victoria-operator"
-	// healthProbePort is the port for health probe.
+	// name is the base name for victoria-operator resources.
+	name = "victoria-operator"
+
+	// Resource names
+	managedResourceName     = name
+	serviceAccountName      = name
+	deploymentName          = name
+	clusterRoleName         = name
+	clusterRoleBindingName  = name
+	podDisruptionBudgetName = name
+	vpaName                 = name
+
+	// Ports
 	healthProbePort = 8081
-	// metricsPort is the port for metrics.
-	metricsPort = 8080
+	metricsPort     = 8080
 )
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy or
@@ -237,7 +242,7 @@ func (v *victoriaOperator) deployment() *appsv1.Deployment {
 func (v *victoriaOperator) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploymentName,
+			Name:      vpaName,
 			Namespace: v.namespace,
 			Labels:    GetLabels(),
 		},
@@ -267,7 +272,7 @@ func (v *victoriaOperator) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 func (v *victoriaOperator) clusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "victoria-operator",
+			Name:   clusterRoleName,
 			Labels: GetLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{
@@ -325,13 +330,13 @@ func (v *victoriaOperator) clusterRole() *rbacv1.ClusterRole {
 func (v *victoriaOperator) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "victoria-operator",
+			Name:   clusterRoleBindingName,
 			Labels: GetLabels(),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     "victoria-operator",
+			Name:     clusterRoleName,
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -346,7 +351,7 @@ func (v *victoriaOperator) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 func (v *victoriaOperator) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 	pdb := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "victoria-operator",
+			Name:      podDisruptionBudgetName,
 			Namespace: v.namespace,
 			Labels:    GetLabels(),
 		},
@@ -363,7 +368,7 @@ func (v *victoriaOperator) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 // GetLabels returns the labels for the victoria-operator.
 func GetLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp:                    "victoria-operator",
+		v1beta1constants.LabelApp:                    name,
 		v1beta1constants.LabelRole:                   v1beta1constants.LabelObservability,
 		v1beta1constants.GardenRole:                  v1beta1constants.GardenRoleObservability,
 		resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
