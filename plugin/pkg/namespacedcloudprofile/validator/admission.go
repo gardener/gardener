@@ -301,14 +301,13 @@ func (c *validationContext) validateMachineImageOverrides(ctx context.Context, a
 						oldMachineImageVersion, imageVersionAlreadyInNamespacedCloudProfile = oldVersionsSpec.GetImageVersion(image.Name, imageVersion.Version)
 
 						oldMachineImageVersionWithoutExpiration := oldMachineImageVersion.DeepCopy()
-						imageVersionWithoutExpiration := imageVersion.DeepCopy()
-						if imageVersion.ExpirationDate != nil {
-							oldMachineImageVersionWithoutExpiration.ExpirationDate = nil
-							imageVersionWithoutExpiration.ExpirationDate = nil
-						}
+						machineImageVersionWithoutExpiration := imageVersion.DeepCopy()
+						oldMachineImageVersionWithoutExpiration.ExpirationDate = nil
+						machineImageVersionWithoutExpiration.ExpirationDate = nil
 						// Compare the old and new image version without considering the expiration date.
+						// The expiration date is neglected here because it is the only field allowed to change for an existing image version.
 						// If the image versions are equal except for the expiration date, then the update is allowed.
-						if imageVersionAlreadyInNamespacedCloudProfile && !reflect.DeepEqual(oldMachineImageVersionWithoutExpiration, imageVersionWithoutExpiration) {
+						if imageVersionAlreadyInNamespacedCloudProfile && !reflect.DeepEqual(oldMachineImageVersionWithoutExpiration, machineImageVersionWithoutExpiration) {
 							allErrs = append(allErrs, field.Forbidden(imageVersionIndexPath, fmt.Sprintf("cannot update the machine image version spec (except for the expiration date) of \"%s@%s\", as this version has been added to the parent CloudProfile by now", image.Name, imageVersion.Version)))
 						}
 					}
