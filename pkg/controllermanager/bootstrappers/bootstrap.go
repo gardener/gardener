@@ -35,7 +35,7 @@ type Bootstrapper struct {
 func (b *Bootstrapper) Start(parentCtx context.Context) error {
 	// Other controllers depend on garden cluster bootstrapping.
 	// Hence, if we can't bootstrap the garden cluster in a short timeout, terminate and try again after restart.
-	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(parentCtx, time.Minute)
 	defer cancel()
 
 	kubernetesClient, err := kubernetesclientset.NewForConfig(b.RESTConfig)
@@ -54,6 +54,10 @@ func (b *Bootstrapper) Start(parentCtx context.Context) error {
 
 	if err := secretsManager.Cleanup(ctx); err != nil {
 		return fmt.Errorf("failed cleaning up no longer required secrets: %w", err)
+	}
+
+	if err := b.bumpProjectResourceQuotas(ctx); err != nil {
+		return fmt.Errorf("failed bumping project resource quotas: %w", err)
 	}
 
 	b.Log.Info("Successfully bootstrapped Garden cluster")
