@@ -177,4 +177,52 @@ var _ = Describe("Changes", func() {
 			Expect(saKeyRotation).To(BeFalse())
 		})
 	})
+
+	Describe("CollectAllFiles", func() {
+		It("should return all files when NodeName is empty", func() {
+			osc := &extensionsv1alpha1.OperatingSystemConfig{
+				Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+					Files: []extensionsv1alpha1.File{
+						{Path: "/etc/foo", HostName: nil},
+						{Path: "/etc/bar", HostName: nil},
+					},
+				},
+				Status: extensionsv1alpha1.OperatingSystemConfigStatus{
+					ExtensionFiles: []extensionsv1alpha1.File{
+						{Path: "/etc/baz", HostName: nil},
+					},
+				},
+			}
+			Expect(CollectAllFiles(osc, "node-1")).To(ConsistOf(
+				extensionsv1alpha1.File{Path: "/etc/foo", HostName: nil},
+				extensionsv1alpha1.File{Path: "/etc/bar", HostName: nil},
+				extensionsv1alpha1.File{Path: "/etc/baz", HostName: nil},
+			))
+		})
+
+		It("should filter files by NodeName", func() {
+			osc := &extensionsv1alpha1.OperatingSystemConfig{
+				Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+					Files: []extensionsv1alpha1.File{
+						{Path: "/etc/foo", HostName: ptr.To("node-1")},
+						{Path: "/etc/bar", HostName: ptr.To("node-2")},
+						{Path: "/etc/all", HostName: nil},
+					},
+				},
+				Status: extensionsv1alpha1.OperatingSystemConfigStatus{
+					ExtensionFiles: []extensionsv1alpha1.File{
+						{Path: "/etc/baz", HostName: ptr.To("node-1")},
+						{Path: "/etc/qux", HostName: ptr.To("node-3")},
+						{Path: "/etc/sts", HostName: nil},
+					},
+				},
+			}
+			Expect(CollectAllFiles(osc, "node-1")).To(ConsistOf(
+				extensionsv1alpha1.File{Path: "/etc/foo", HostName: ptr.To("node-1")},
+				extensionsv1alpha1.File{Path: "/etc/baz", HostName: ptr.To("node-1")},
+				extensionsv1alpha1.File{Path: "/etc/all", HostName: nil},
+				extensionsv1alpha1.File{Path: "/etc/sts", HostName: nil},
+			))
+		})
+	})
 })
