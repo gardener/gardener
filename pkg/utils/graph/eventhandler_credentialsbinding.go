@@ -12,6 +12,7 @@ import (
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 )
 
@@ -64,15 +65,17 @@ func (g *graph) HandleCredentialsBindingCreateOrUpdate(credentialsBinding *secur
 	defer g.lock.Unlock()
 
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeCredentialsBinding, credentialsBinding.Namespace, credentialsBinding.Name)
+	g.deleteAllIncomingEdges(VertexTypeInternalSecret, VertexTypeCredentialsBinding, credentialsBinding.Namespace, credentialsBinding.Name)
 	g.deleteAllIncomingEdges(VertexTypeWorkloadIdentity, VertexTypeCredentialsBinding, credentialsBinding.Namespace, credentialsBinding.Name)
 
 	var (
 		credentialsBindingVertex = g.getOrCreateVertex(VertexTypeCredentialsBinding, credentialsBinding.Namespace, credentialsBinding.Name)
 		credentialsVertex        *Vertex
 	)
-	if credentialsBinding.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
-		credentialsBinding.CredentialsRef.Kind == "WorkloadIdentity" {
+	if credentialsBinding.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() && credentialsBinding.CredentialsRef.Kind == "WorkloadIdentity" {
 		credentialsVertex = g.getOrCreateVertex(VertexTypeWorkloadIdentity, credentialsBinding.CredentialsRef.Namespace, credentialsBinding.CredentialsRef.Name)
+	} else if credentialsBinding.CredentialsRef.APIVersion == gardencorev1beta1.SchemeGroupVersion.String() && credentialsBinding.CredentialsRef.Kind == "InternalSecret" {
+		credentialsVertex = g.getOrCreateVertex(VertexTypeInternalSecret, credentialsBinding.CredentialsRef.Namespace, credentialsBinding.CredentialsRef.Name)
 	} else {
 		credentialsVertex = g.getOrCreateVertex(VertexTypeSecret, credentialsBinding.CredentialsRef.Namespace, credentialsBinding.CredentialsRef.Name)
 	}
