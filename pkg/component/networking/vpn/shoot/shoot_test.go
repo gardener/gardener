@@ -426,7 +426,7 @@ var _ = Describe("VPNShoot", func() {
 					}
 				} else {
 					volumeMounts = nil
-					for i := 0; i < clients; i++ {
+					for i := range clients {
 						volumeMounts = append(volumeMounts, corev1.VolumeMount{
 							Name:      fmt.Sprintf("vpn-shoot-%d", i),
 							MountPath: fmt.Sprintf("/srv/secrets/vpn-client-%d", i),

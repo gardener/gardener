@@ -822,7 +822,7 @@ var _ = Describe("extensions", func() {
 		})
 
 		It("should properly annotate all extension objects for migration", func() {
-			for i := 0; i < 4; i++ {
+			for i := range 4 {
 				containerRuntimeExtension := &extensionsv1alpha1.ContainerRuntime{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: namespace,
@@ -845,7 +845,7 @@ var _ = Describe("extensions", func() {
 		})
 
 		It("should properly annotate only the desired extension objects for migration", func() {
-			for i := 0; i < 4; i++ {
+			for i := range 4 {
 				containerRuntimeExtension := &extensionsv1alpha1.ContainerRuntime{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: namespace,

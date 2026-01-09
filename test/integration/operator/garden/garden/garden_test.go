@@ -678,7 +678,7 @@ spec:
 
 			if desiredReplicas := int(ptr.Deref(deployment.Spec.Replicas, 1)); len(podList.Items) != desiredReplicas {
 				g.Expect(testClient.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(testNamespace.Name), client.MatchingLabels(kubeapiserver.GetLabels()))).To(Succeed())
-				for i := 0; i < desiredReplicas; i++ {
+				for i := range desiredReplicas {
 					g.Expect(testClient.Create(ctx, &corev1.Pod{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("virtual-garden-kube-apiserver-%d", i),
@@ -804,7 +804,7 @@ spec:
 
 			if desiredReplicas := int(ptr.Deref(deployment.Spec.Replicas, 1)); len(podList.Items) != desiredReplicas {
 				g.Expect(testClient.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(testNamespace.Name), client.MatchingLabels(map[string]string{"app": "kubernetes", "role": "controller-manager"}))).To(Succeed())
-				for i := 0; i < desiredReplicas; i++ {
+				for i := range desiredReplicas {
 					g.Expect(testClient.Create(ctx, &corev1.Pod{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("virtual-garden-kube-controller-manager-%d", i),

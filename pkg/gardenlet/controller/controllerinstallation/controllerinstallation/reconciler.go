@@ -617,7 +617,7 @@ func (r *Reconciler) MutateSpecForSelfHostedShootExtensions(obj runtime.Object) 
 // CalculateUsablePorts returns the next usable port range for the next controller installation.
 func (r *Reconciler) CalculateUsablePorts() ([]int, error) {
 	var ports []int
-	for i := 0; i < usablePortsRangeSize; i++ {
+	for range usablePortsRangeSize {
 		p, _, err := netutils.SuggestPort("")
 		if err != nil {
 			return nil, fmt.Errorf("failed to find a usable port: %w", err)

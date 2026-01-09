@@ -82,7 +82,7 @@ func suggest(listenHost string) (port int, resolvedHost string, err error) {
 // It makes sure that new port allocated does not conflict with old ports
 // allocated within 1 minute.
 func SuggestPort(listenHost string) (port int, resolvedHost string, err error) {
-	for i := 0; i < portConflictRetry; i++ {
+	for range portConflictRetry {
 		port, resolvedHost, err = suggest(listenHost)
 		if err != nil {
 			return
