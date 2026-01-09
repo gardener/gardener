@@ -258,8 +258,8 @@ func ValidateProjectMember(member core.ProjectMember, fldPath *field.Path) field
 			allErrs = append(allErrs, field.NotSupported(rolesPath, role, append(sets.List(supportedRoles), core.ProjectMemberExtensionPrefix+"*")))
 		}
 
-		if strings.HasPrefix(role, core.ProjectMemberExtensionPrefix) {
-			extensionRoleName := strings.TrimPrefix(role, core.ProjectMemberExtensionPrefix)
+		if after, ok := strings.CutPrefix(role, core.ProjectMemberExtensionPrefix); ok {
+			extensionRoleName := after
 
 			if len(extensionRoleName) > extensionRoleMaxLength {
 				allErrs = append(allErrs, field.TooLong(rolesPath, role, extensionRoleMaxLength))

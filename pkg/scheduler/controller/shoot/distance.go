@@ -15,9 +15,9 @@ var orientations = []string{"north", "south", "east", "west", "central"}
 // orientation extracts an orientation relative to a base from a region name
 func orientation(name string) (normalized string, orientation string) {
 	for _, o := range orientations {
-		if i := strings.Index(name, o); i >= 0 {
+		if before, after, ok := strings.Cut(name, o); ok {
 			orientation = o
-			normalized = name[:i] + ":" + name[i+len(o):]
+			normalized = before + ":" + after
 			return
 		}
 	}
