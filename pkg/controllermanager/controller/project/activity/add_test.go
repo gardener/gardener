@@ -98,11 +98,11 @@ var _ = Describe("Add", func() {
 		})
 	})
 
-	Describe("NeedsSecretOrCredentialsBindingReferenceLabelPredicate", func() {
+	Describe("HasSecretOrCredentialsBindingReferenceLabelPredicate", func() {
 		var p predicate.Predicate
 
 		BeforeEach(func() {
-			p = reconciler.NeedsSecretOrCredentialsBindingReferenceLabelPredicate()
+			p = reconciler.HasSecretOrCredentialsBindingReferenceLabelPredicate()
 		})
 
 		DescribeTable("#Create",

@@ -70,7 +70,7 @@ type Shoot struct {
 
 	shootState atomic.Value
 
-	// Credentials is either [*corev1.Secret] or [*securityv1alpha1.WorkloadIdentity]
+	// Credentials is either [*corev1.Secret], [*gardencorev1bet1.InternalSecret], or [*securityv1alpha1.WorkloadIdentity]
 	Credentials   client.Object
 	CloudProfile  *gardencorev1beta1.CloudProfile
 	ExposureClass *gardencorev1beta1.ExposureClass

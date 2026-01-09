@@ -99,6 +99,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 		{"Shoots", r.projectInUseDueToShoots},
 		{"BackupEntries", r.projectInUseDueToBackupEntries},
 		{"Secrets", r.projectInUseDueToSecrets},
+		{"InternalSecrets", r.projectInUseDueToInternalSecrets},
 		{"WorkloadIdentities", r.projectInUseDueToWorkloadIdentities},
 		{"Quotas", r.projectInUseDueToQuotas},
 	} {
@@ -149,13 +150,12 @@ func (r *Reconciler) projectInUseDueToBackupEntries(ctx context.Context, namespa
 func (r *Reconciler) projectInUseDueToWorkloadIdentities(ctx context.Context, namespace string) (bool, error) {
 	workloadIdentityList := &metav1.PartialObjectMetadataList{}
 	workloadIdentityList.SetGroupVersionKind(securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentityList"))
-	err := r.Client.List(
+	if err := r.Client.List(
 		ctx,
 		workloadIdentityList,
 		client.InNamespace(namespace),
 		client.MatchingLabels{v1beta1constants.LabelCredentialsBindingReference: "true"},
-	)
-	if err != nil {
+	); err != nil {
 		return false, err
 	}
 
@@ -173,6 +173,35 @@ func (r *Reconciler) projectInUseDueToWorkloadIdentities(ctx context.Context, na
 			credentialsBinding.CredentialsRef.Kind == "WorkloadIdentity" &&
 			credentialsBinding.CredentialsRef.Namespace == namespace &&
 			workloadIdentityNames.Has(credentialsBinding.CredentialsRef.Name)
+	})
+}
+
+func (r *Reconciler) projectInUseDueToInternalSecrets(ctx context.Context, namespace string) (bool, error) {
+	internalSecretList := &metav1.PartialObjectMetadataList{}
+	internalSecretList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("InternalSecretList"))
+	if err := r.Client.List(
+		ctx,
+		internalSecretList,
+		client.InNamespace(namespace),
+		client.MatchingLabels{v1beta1constants.LabelCredentialsBindingReference: "true"},
+	); err != nil {
+		return false, err
+	}
+
+	if len(internalSecretList.Items) == 0 {
+		return false, nil
+	}
+
+	internalSecretNames := make(sets.Set[string], len(internalSecretList.Items))
+	for _, workloadIdentity := range internalSecretList.Items {
+		internalSecretNames.Insert(workloadIdentity.Name)
+	}
+
+	return r.relevantCredentialsBindingsInUse(ctx, func(credentialsBinding securityv1alpha1.CredentialsBinding) bool {
+		return credentialsBinding.CredentialsRef.APIVersion == gardencorev1beta1.SchemeGroupVersion.String() &&
+			credentialsBinding.CredentialsRef.Kind == "InternalSecret" &&
+			credentialsBinding.CredentialsRef.Namespace == namespace &&
+			internalSecretNames.Has(credentialsBinding.CredentialsRef.Name)
 	})
 }
 
