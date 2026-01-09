@@ -45,6 +45,8 @@ controllers:
         eventsThreshold: 1000000
         activeDeadlineDuration: "3h"
         metricsScrapeWaitDuration: "60s"
+    virtualGardenerResourceManagerAdditionalNamespaces:
+    - my-custom-namespace
   gardenCare:
     syncPeriod: 1m
     conditionThresholds:

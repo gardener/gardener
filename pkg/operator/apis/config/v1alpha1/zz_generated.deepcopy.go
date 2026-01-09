@@ -196,6 +196,11 @@ func (in *GardenControllerConfig) DeepCopyInto(out *GardenControllerConfig) {
 		*out = new(configv1alpha1.ETCDConfig)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.VirtualGardenerResourceManagerAdditionalNamespaces != nil {
+		in, out := &in.VirtualGardenerResourceManagerAdditionalNamespaces, &out.VirtualGardenerResourceManagerAdditionalNamespaces
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
