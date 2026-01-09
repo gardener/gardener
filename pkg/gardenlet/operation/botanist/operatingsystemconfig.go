@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/component-base/version"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -79,6 +80,11 @@ func (b *Botanist) OperatingSystemConfigValues() (*operatingsystemconfig.Values,
 		openTelemetryCollectorLogShipperEnabled, openTelemetryIngressHost = true, b.ComputeOpenTelemetryCollectorHost()
 	}
 
+	var region *string
+	if !b.Shoot.HasManagedInfrastructure() {
+		region = ptr.To(b.Shoot.GetInfo().Spec.Region)
+	}
+
 	return &operatingsystemconfig.Values{
 		Namespace:         b.Shoot.ControlPlaneNamespace,
 		KubernetesVersion: b.Shoot.KubernetesVersion,
@@ -98,6 +104,7 @@ func (b *Botanist) OperatingSystemConfigValues() (*operatingsystemconfig.Values,
 			NodeMonitorGracePeriod:                  *b.Shoot.GetInfo().Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod,
 			PrimaryIPFamily:                         b.Shoot.GetInfo().Spec.Networking.IPFamilies[0],
 			KubeProxyConfig:                         b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy,
+			Region:                                  region,
 		},
 	}, nil
 }
