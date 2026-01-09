@@ -82,8 +82,11 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 
 	gardenerutils.SyncCloudProfileFields(oldShoot, newShoot)
 
-	// Ensure that encrypted resources are synced from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
+	// Ensure that encrypted resources are synced from `status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
 	SyncEncryptedResourcesStatus(newShoot)
+
+	// Ensure that encrypted provider type is set in `status.credentials.encryptionAtRest.providerType`.
+	SyncEncryptedProviderStatus(newShoot)
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
@@ -288,8 +291,11 @@ func (shootStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.
 		newShoot.Generation = oldShoot.Generation + 1
 	}
 
-	// Ensure that encrypted resources are synced from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
+	// Ensure that encrypted resources are synced from `status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
 	SyncEncryptedResourcesStatus(newShoot)
+
+	// Ensure that encrypted provider type is set in `status.credentials.encryptionAtRest.providerType`.
+	SyncEncryptedProviderStatus(newShoot)
 }
 
 func (shootStatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
@@ -422,4 +428,25 @@ func SyncEncryptedResourcesStatus(shoot *core.Shoot) {
 func cleanUpOperation(operation string) string {
 	operations := utils.SplitAndTrimString(operation, v1beta1constants.GardenerOperationsSeparator)
 	return strings.Join(sets.New(operations...).UnsortedList(), v1beta1constants.GardenerOperationsSeparator)
+}
+
+// SyncEncryptedProviderStatus ensures the status fields shoot.spec.kubernetes.kubeAPIServer.encryptionConfig.provider.type
+// and shoot.status.credentials.encryptionAtRest.providerType are in sync, when status provider type in not set.
+func SyncEncryptedProviderStatus(shoot *core.Shoot) {
+	// TODO(AleksandarSavchev): Remove this function after v1.136 has been released.
+	encryptionProviderType := gardencorehelper.GetEncryptionProviderType(shoot.Spec.Kubernetes.KubeAPIServer)
+	if len(encryptionProviderType) == 0 {
+		return
+	}
+
+	if shoot.Status.Credentials == nil {
+		shoot.Status.Credentials = &core.ShootCredentials{}
+	}
+	if shoot.Status.Credentials.EncryptionAtRest == nil {
+		shoot.Status.Credentials.EncryptionAtRest = &core.EncryptionAtRest{}
+	}
+
+	if len(shoot.Status.Credentials.EncryptionAtRest.ProviderType) == 0 {
+		shoot.Status.Credentials.EncryptionAtRest.ProviderType = encryptionProviderType
+	}
 }

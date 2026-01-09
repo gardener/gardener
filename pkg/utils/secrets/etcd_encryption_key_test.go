@@ -14,6 +14,7 @@ import (
 var _ = Describe("Etcd Encryption Key Secrets", func() {
 	var (
 		name         = "etcd encryption key"
+		provider     = "foo"
 		secretLength = 17
 	)
 
@@ -23,6 +24,7 @@ var _ = Describe("Etcd Encryption Key Secrets", func() {
 		BeforeEach(func() {
 			config = &ETCDEncryptionKeySecretConfig{
 				Name:         name,
+				Provider:     provider,
 				SecretLength: secretLength,
 			}
 		})
@@ -58,6 +60,7 @@ var _ = Describe("Etcd Encryption Key Secrets", func() {
 					"key":      []byte("key-62135596800"),
 					"secret":   []byte("_________________"),
 					"encoding": []byte("none"),
+					"provider": []byte("foo"),
 				}))
 			})
 		})

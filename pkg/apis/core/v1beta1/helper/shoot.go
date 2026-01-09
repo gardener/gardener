@@ -714,6 +714,26 @@ func IsETCDEncryptionKeyAutoRotationEnabled(shoot *gardencorev1beta1.Shoot) bool
 		shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod.Duration != 0
 }
 
+// GetEncryptionProviderType returns the encryption provider type.
+func GetEncryptionProviderType(apiServerConfig *gardencorev1beta1.KubeAPIServerConfig) gardencorev1beta1.EncryptionProviderType {
+	if apiServerConfig != nil &&
+		apiServerConfig.EncryptionConfig != nil &&
+		apiServerConfig.EncryptionConfig.Provider.Type != nil {
+		return *apiServerConfig.EncryptionConfig.Provider.Type
+	}
+
+	return ""
+}
+
+// GetEncryptionProviderInStatus returns the encryption provider from the shoot status.
+func GetEncryptionProviderInStatus(gardenStatus gardencorev1beta1.ShootStatus) gardencorev1beta1.EncryptionProviderType {
+	if gardenStatus.Credentials != nil && gardenStatus.Credentials.EncryptionAtRest != nil {
+		return gardenStatus.Credentials.EncryptionAtRest.ProviderType
+	}
+
+	return ""
+}
+
 // IsUpdateStrategyInPlace returns true if the given machine update strategy is either AutoInPlaceUpdate or ManualInPlaceUpdate.
 func IsUpdateStrategyInPlace(updateStrategy *gardencorev1beta1.MachineUpdateStrategy) bool {
 	if updateStrategy == nil {
