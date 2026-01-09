@@ -8,6 +8,8 @@ import (
 	"context"
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -40,9 +42,14 @@ func createShootClientFromDynamicKubeconfig(
 		return nil, err
 	}
 
+	// create shoot client with both shoot and seed schemes to be used for managed seeds as well
+	scheme := runtime.NewScheme()
+	utilruntime.Must(kubernetes.AddShootSchemeToScheme(scheme))
+	utilruntime.Must(kubernetes.AddSeedSchemeToScheme(scheme))
+
 	return kubernetes.NewClientFromBytes(
 		kubeconfig,
-		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.ShootScheme}),
+		kubernetes.WithClientOptions(client.Options{Scheme: scheme}),
 		kubernetes.WithDisabledCachedClient(),
 	)
 }

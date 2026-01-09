@@ -18,6 +18,21 @@ import (
 func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 	return []*monitoringv1alpha1.ScrapeConfig{
 		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "prometheus-" + Label,
+			},
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				RelabelConfigs: []monitoringv1.RelabelConfig{{
+					Action:      "replace",
+					Replacement: ptr.To("prometheus-" + Label),
+					TargetLabel: "job",
+				}},
+				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
+					Targets: []monitoringv1alpha1.Target{"localhost:9090"},
+				}},
+			},
+		},
+		{
 			ObjectMeta: metav1.ObjectMeta{Name: "prometheus"},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
 				HonorTimestamps: ptr.To(false),
@@ -26,11 +41,11 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 					"match[]": {
 						`{__name__=~"metering:.+", __name__!~"metering:.+(over_time|_seconds|:this_month)"}`,
 						`{__name__=~"seed:(.+):(.+)"}`,
-						`{job="kube-state-metrics",namespace=~"garden|extension-.+|istio-(.+)"}`,
-						`{job="kube-state-metrics",namespace=~"shoot-.+",pod=~"kube-apiserver-.+"}`,
-						`{job="kube-state-metrics",namespace=""}`,
-						`{job="cadvisor",namespace=~"garden|extension-.+|istio-(.+)"}`,
-						`{job="etcd-druid",namespace="garden"}`,
+						`{__name__=~"kube_.+",job="kube-state-metrics",namespace=~"garden|extension-.+|istio-(.+)"}`,
+						`{__name__=~"kube_.+",job="kube-state-metrics",namespace=~"shoot-.+",pod=~"kube-apiserver-.+"}`,
+						`{__name__=~"kube_.+",job="kube-state-metrics",namespace=""}`,
+						`{__name__=~"container_.+",job="cadvisor",namespace=~"garden|extension-.+|istio-(.+)"}`,
+						`{__name__=~"etcddruid_.+",job="etcd-druid",namespace="garden"}`,
 					},
 				},
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
@@ -43,7 +58,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 							"__meta_kubernetes_service_name",
 							"__meta_kubernetes_service_port_name",
 						},
-						Regex:  "prometheus-cache;" + prometheus.ServicePortName,
+						Regex:  "prometheus-cache;" + prometheus.ServicePorts().Web.Name,
 						Action: "keep",
 					},
 					{

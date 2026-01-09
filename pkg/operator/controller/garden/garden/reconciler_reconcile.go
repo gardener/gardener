@@ -599,7 +599,8 @@ func (r *Reconciler) reconcile(
 					return err
 				}
 				primaryIngressDomain := garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
-				return r.deployGardenPrometheus(ctx, log, secretsManager, c.prometheusGarden, virtualClusterClient, aggregatePrometheusIngressHost, primaryIngressDomain)
+				discoveryServerEnabled := garden.Spec.VirtualCluster.Gardener.DiscoveryServer != nil
+				return r.deployGardenPrometheus(ctx, log, secretsManager, c.prometheusGarden, virtualClusterClient, aggregatePrometheusIngressHost, primaryIngressDomain, discoveryServerEnabled)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady, initializeVirtualClusterClient),
 		})
@@ -1010,7 +1011,7 @@ func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden
 	}
 }
 
-func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger, secretsManager secretsmanager.Interface, prometheus prometheus.Interface, virtualGardenClient client.Client, aggregatePrometheusIngressHost string, primaryIngressDomain string) error {
+func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger, secretsManager secretsmanager.Interface, prometheus prometheus.Interface, virtualGardenClient client.Client, aggregatePrometheusIngressHost string, primaryIngressDomain string, discoveryServerEnabled bool) error {
 	if err := gardenerutils.NewShootAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Reconcile(ctx, r.RuntimeClientSet.Client()); err != nil {
 		return fmt.Errorf("failed reconciling access secret for garden prometheus: %w", err)
 	}
@@ -1052,6 +1053,7 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 	var (
 		prometheusAggregateTargets        []monitoringv1alpha1.Target
 		prometheusAggregateIngressTargets []monitoringv1alpha1.Target
+		prometheusAggregateTargetNames    []string
 	)
 	for _, seed := range seedList.Items {
 		if seed.Spec.Ingress != nil {
@@ -1061,6 +1063,7 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 			} else {
 				prometheusAggregateIngressTargets = append(prometheusAggregateIngressTargets, monitoringv1alpha1.Target(ingressHost))
 			}
+			prometheusAggregateTargetNames = append(prometheusAggregateTargetNames, seed.Name)
 		}
 	}
 
@@ -1100,6 +1103,13 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 	prometheus.SetAdditionalAlertRelabelConfigs(additionalAlertRelabelConfigs)
 
 	prometheus.SetCentralScrapeConfigs(gardenprometheus.CentralScrapeConfigs(prometheusAggregateTargets, prometheusAggregateIngressTargets, globalMonitoringSecretRuntime))
+
+	rules, err := gardenprometheus.CentralPrometheusRules(discoveryServerEnabled, prometheusAggregateTargetNames)
+	if err != nil {
+		return fmt.Errorf("failed creating central Prometheus rules: %w", err)
+	}
+	prometheus.SetCentralPrometheusRules(rules)
+
 	return prometheus.Deploy(ctx)
 }
 

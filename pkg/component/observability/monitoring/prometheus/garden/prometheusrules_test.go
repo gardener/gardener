@@ -14,9 +14,11 @@ import (
 )
 
 var _ = ginkgo.Describe("PrometheusRules", func() {
+	seedNames := []string{"abc"}
 	ginkgo.Describe("#CentralPrometheusRules", func() {
 		ginkgo.DescribeTable("should return the expected objects", func(isGardenerDiscoveryServerEnabled bool) {
-			config := CentralPrometheusRules(isGardenerDiscoveryServerEnabled)
+			config, err := CentralPrometheusRules(isGardenerDiscoveryServerEnabled, seedNames)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(config).To(HaveExactElements(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"TypeMeta":   MatchFields(IgnoreExtras, Fields{"APIVersion": Equal("monitoring.coreos.com/v1"), "Kind": Equal("PrometheusRule")}),
@@ -25,6 +27,10 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"TypeMeta":   MatchFields(IgnoreExtras, Fields{"APIVersion": Equal("monitoring.coreos.com/v1"), "Kind": Equal("PrometheusRule")}),
 					"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd")}),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"TypeMeta":   MatchFields(IgnoreExtras, Fields{"APIVersion": Equal("monitoring.coreos.com/v1"), "Kind": Equal("PrometheusRule")}),
+					"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("healthcheck")}),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"TypeMeta":   MatchFields(IgnoreExtras, Fields{"APIVersion": Equal("monitoring.coreos.com/v1"), "Kind": Equal("PrometheusRule")}),
@@ -50,6 +56,7 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 
 			testGardenerDiscoverServerAlert(config, isGardenerDiscoveryServerEnabled)
 
+			test.PrometheusRule(healthcheck, "testdata/healthcheck.prometheusrule.test.yaml")
 			test.PrometheusRule(metering, "testdata/metering-meta.prometheusrule.test.yaml")
 			test.PrometheusRule(seed, "testdata/seed.prometheusrule.test.yaml")
 			test.PrometheusRule(shoot, "testdata/shoot.prometheusrule.test.yaml")

@@ -1,0 +1,121 @@
+rule_files:
+  - healthcheck.prometheusrule.yaml
+
+# The Prometheus documentation https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
+# describes how to write unit tests for Prometheus recording rules in general.
+#
+# This file follows some conventions in addition.
+#
+# - A blank line is used to separate the different categories of the input series from each other.
+#
+#   - Group 1: Indentation guide for better readability. The values are aligned vertically to form columns,
+#     making it easy to visually match each value to its evaluation interval.
+#   - Group 2: The time series that are relevant for the test together with the expected result.
+#   - Group 3: Other time series that are needed for the test to pass.
+#
+# - The assertion in the `promql_expr_test` uses set difference operations
+#   to ensure that the actual result and the expected result are the same.
+#
+# - YAML anchors and aliases are used to reduce duplication.
+#
+# - All the tests are executed for 11 intervals (0m to 10m).
+#
+tests:
+  # The focus of this test is the `prometheus_rule_group_iterations_total` time series.
+  #
+  # This test shows that healthcheck:up will report an unhealthy state:
+  # - for the first iteration of the rule evaluation after Prometheus is deployed, and
+  # - for the first iteration after Prometheus was down for longer than 5 minutes, and
+  # - if this metric is missing.
+  - input_series:
+      - series: indentation
+        values: stale stale stale stale stale stale stale stale stale stale stale
+      - series: eval_time
+        values: 0     1     2     3     4     5     6     7     8     9     10
+
+      - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
+        values: 0     1     2     stale _     _     _     _     0     1     0
+      - series: expected_healthcheck:up
+        values: 0     1     1     0     0     0     0     0     0     1     1
+    promql_expr_test: &promql_expr_test
+      - expr: &expr |2
+            healthcheck:up          !=     expected_healthcheck:up
+          or
+            healthcheck:up          unless expected_healthcheck:up
+          or
+            expected_healthcheck:up unless healthcheck:up
+        eval_time: 0m
+      - expr: *expr
+        eval_time: 1m
+      - expr: *expr
+        eval_time: 2m
+      - expr: *expr
+        eval_time: 3m
+      - expr: *expr
+        eval_time: 4m
+      - expr: *expr
+        eval_time: 5m
+      - expr: *expr
+        eval_time: 6m
+      - expr: *expr
+        eval_time: 7m
+      - expr: *expr
+        eval_time: 8m
+      - expr: *expr
+        eval_time: 9m
+      - expr: *expr
+        eval_time: 10m
+
+  # The focus of this test is the `up` time series.
+  #
+  # This test shows that the healthcheck:up tracks the up status of the existing targets.
+  - input_series:
+      - series: indentation
+        values: stale stale stale stale stale stale stale stale stale stale stale
+      - series: eval_time
+        values: 0     1     2     3     4     5     6     7     8     9     10
+
+      - series: up
+        values: 1     1     1     0     1     stale _     _     0     0     1
+      - series: expected_healthcheck:up
+        values: 0     1     1     0     1     1     1     1     0     0     1
+
+      - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
+        values: 0+1x10
+    promql_expr_test: *promql_expr_test
+
+  # The focus of this test is the `prometheus_target_scrape_pool_targets` time series.
+  #
+  # This test shows that healthcheck:up will report an unhealthy state if a scrape pool has no targets.
+  - input_series:
+      - series: indentation
+        values: stale stale stale stale stale stale stale stale stale stale stale
+      - series: eval_time
+        values: 0     1     2     3     4     5     6     7     8     9     10
+
+      - series: prometheus_target_scrape_pool_targets
+        values: 1     1     1     0     0     1     1     1     1     1     1
+      - series: expected_healthcheck:up
+        values: 0     1     1     0     0     1     1     1     1     1     1
+
+      - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
+        values: 0+1x10
+    promql_expr_test: *promql_expr_test
+
+  # The focus of this test is the scrape_samples_scraped_scrape_samples_post_metric_relabeling time series.
+  #
+  # This test shows that healthcheck:up will report an unhealthy state if a scrape job yields zero samples.
+  - input_series:
+      - series: indentation
+        values: stale stale stale stale stale stale stale stale stale stale stale
+      - series: eval_time
+        values: 0     1     2     3     4     5     6     7     8     9     10
+
+      - series: scrape_samples_post_metric_relabeling
+        values: 100   100   0     100   100   0     0     0     0     0     100
+      - series: expected_healthcheck:up
+        values: 0     1     0     1     1     0     0     0     0     0     1
+
+      - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
+        values: 0+1x10
+    promql_expr_test: *promql_expr_test

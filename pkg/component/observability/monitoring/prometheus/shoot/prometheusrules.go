@@ -29,6 +29,9 @@ var (
 	alertManager     *monitoringv1.PrometheusRule
 
 	// worker rules
+	//go:embed assets/prometheusrules/worker/healthcheck.yaml
+	workerHealthcheckYAML []byte
+	workerHealthcheck     *monitoringv1.PrometheusRule
 	//go:embed assets/prometheusrules/worker/kube-kubelet.yaml
 	workerKubeKubeletYAML []byte
 	workerKubeKubelet     *monitoringv1.PrometheusRule
@@ -40,6 +43,9 @@ var (
 	workerNetworking     *monitoringv1.PrometheusRule
 
 	// workerless rules
+	//go:embed assets/prometheusrules/workerless/healthcheck.yaml
+	workerlessHealthcheckYAML []byte
+	workerlessHealthcheck     *monitoringv1.PrometheusRule
 	//go:embed assets/prometheusrules/workerless/kube-pods.yaml
 	workerlessKubePodsYAML []byte
 	workerlessKubePods     *monitoringv1.PrometheusRule
@@ -60,6 +66,8 @@ func init() {
 	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, alertManagerYAML, alertManager))
 
 	// worker rules
+	workerHealthcheck = &monitoringv1.PrometheusRule{}
+	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, workerHealthcheckYAML, workerHealthcheck))
 	workerKubeKubelet = &monitoringv1.PrometheusRule{}
 	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, workerKubeKubeletYAML, workerKubeKubelet))
 	workerKubePods = &monitoringv1.PrometheusRule{}
@@ -68,6 +76,8 @@ func init() {
 	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, workerNetworkingYAML, workerNetworking))
 
 	// workerless rules
+	workerlessHealthcheck = &monitoringv1.PrometheusRule{}
+	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, workerlessHealthcheckYAML, workerlessHealthcheck))
 	workerlessKubePods = &monitoringv1.PrometheusRule{}
 	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, workerlessKubePodsYAML, workerlessKubePods))
 	workerlessNetworking = &monitoringv1.PrometheusRule{}
@@ -82,9 +92,9 @@ func CentralPrometheusRules(isWorkerless, wantsAlertmanager bool) []*monitoringv
 	}
 
 	if isWorkerless {
-		out = append(out, workerlessKubePods.DeepCopy(), workerlessNetworking.DeepCopy())
+		out = append(out, workerlessHealthcheck.DeepCopy(), workerlessKubePods.DeepCopy(), workerlessNetworking.DeepCopy())
 	} else {
-		out = append(out, workerKubeKubelet.DeepCopy(), workerKubePods.DeepCopy(), workerNetworking.DeepCopy())
+		out = append(out, workerHealthcheck.DeepCopy(), workerKubeKubelet.DeepCopy(), workerKubePods.DeepCopy(), workerNetworking.DeepCopy())
 	}
 
 	if wantsAlertmanager {
