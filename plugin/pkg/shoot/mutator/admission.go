@@ -528,6 +528,19 @@ func getDefaultMachineImage(
 	var defaultImage *gardencorev1beta1.MachineImage
 
 	if image != nil && len(image.Name) != 0 {
+		if slices.ContainsFunc(machineImages, func(machineImage gardencorev1beta1.MachineImage) bool {
+			if machineImage.Name != image.Name {
+				return false
+			}
+
+			return slices.ContainsFunc(machineImage.Versions, func(version gardencorev1beta1.MachineImageVersion) bool {
+				return version.Version == image.Version
+			})
+		}) {
+			// if there is an exact match with an image in the cloud profile, do not default anything
+			return image, nil
+		}
+
 		for _, mi := range machineImages {
 			machineImage := mi
 			if machineImage.Name == image.Name {
