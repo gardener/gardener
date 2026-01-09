@@ -3507,7 +3507,7 @@ func schema_pkg_apis_core_v1beta1_DNSProvider(ref common.ReferenceCallback) comm
 					},
 					"secretName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SecretName is a name of a secret containing credentials for the stated domain and the provider. When not specified, the Gardener will use the cloud provider credentials referenced by the Shoot and try to find respective credentials there (primary provider only). Specifying this field may override this behavior, i.e. forcing the Gardener to only look into the given secret.",
+							Description: "SecretName is a name of a secret containing credentials for the stated domain and the provider. When not specified, the Gardener will use the cloud provider credentials referenced by the Shoot and try to find respective credentials there (primary provider only). Specifying this field may override this behavior, i.e. forcing the Gardener to only look into the given secret.\n\nDeprecated: This field is deprecated and will be forbidden starting from Kubernetes 1.35. Please use `CredentialsRef` instead. Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -3525,11 +3525,17 @@ func schema_pkg_apis_core_v1beta1_DNSProvider(ref common.ReferenceCallback) comm
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
 						},
 					},
+					"credentialsRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CredentialsRef is a reference to a resource providing credentials for the DNS provider. Supported resources are Secret and WorkloadIdentity.",
+							Ref:         ref("k8s.io/api/autoscaling/v1.CrossVersionObjectReference"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude", "k8s.io/api/autoscaling/v1.CrossVersionObjectReference"},
 	}
 }
 

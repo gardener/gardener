@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -73,13 +74,21 @@ var _ = Describe("Extensions", func() {
 						Domain: ptr.To("foo.gardener.cloud"),
 						Providers: []gardencorev1beta1.DNSProvider{
 							{
-								Type:       ptr.To("clouddns"),
-								Primary:    ptr.To(true),
-								SecretName: ptr.To("dns-credentials"),
+								Type:    ptr.To("clouddns"),
+								Primary: ptr.To(true),
+								CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+									APIVersion: "v1",
+									Kind:       "Secret",
+									Name:       "dns-credentials",
+								},
 							},
 							{
-								Type:       ptr.To("unused"),
-								SecretName: ptr.To("dns-credentials-unused"),
+								Type: ptr.To("unused"),
+								CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+									APIVersion: "v1",
+									Kind:       "Secret",
+									Name:       "dns-credentials-unused",
+								},
 							},
 						},
 					},

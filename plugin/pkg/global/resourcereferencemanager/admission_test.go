@@ -1482,9 +1482,15 @@ var _ = Describe("resourcereferencemanager", func() {
 
 					mutate(&coreShoot)
 
-					kubeClient.AddReactor("get", resource, func(_ testing.Action) (bool, runtime.Object, error) {
-						return true, nil, errors.New("nope, out of luck")
-					})
+					if resource == "workloadidentities" {
+						gardenSecurityClient.AddReactor("get", resource, func(_ testing.Action) (bool, runtime.Object, error) {
+							return true, nil, errors.New("nope, out of luck")
+						})
+					} else {
+						kubeClient.AddReactor("get", resource, func(_ testing.Action) (bool, runtime.Object, error) {
+							return true, nil, errors.New("nope, out of luck")
+						})
+					}
 
 					user := &user.DefaultInfo{Name: allowedUser}
 					attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
@@ -1502,9 +1508,15 @@ var _ = Describe("resourcereferencemanager", func() {
 
 					mutate(&coreShoot)
 
-					kubeClient.AddReactor("get", resource, func(_ testing.Action) (bool, runtime.Object, error) {
-						return true, nil, errors.New("nope, out of luck")
-					})
+					if resource == "workloadidentities" {
+						gardenSecurityClient.AddReactor("get", resource, func(_ testing.Action) (bool, runtime.Object, error) {
+							return true, nil, errors.New("nope, out of luck")
+						})
+					} else {
+						kubeClient.AddReactor("get", resource, func(_ testing.Action) (bool, runtime.Object, error) {
+							return true, nil, errors.New("nope, out of luck")
+						})
+					}
 
 					user := &user.DefaultInfo{Name: allowedUser}
 					attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
@@ -1525,9 +1537,15 @@ var _ = Describe("resourcereferencemanager", func() {
 					now := metav1.Now()
 					coreShoot.DeletionTimestamp = &now
 
-					kubeClient.AddReactor("get", resource, func(_ testing.Action) (bool, runtime.Object, error) {
-						return true, nil, errors.New("nope, out of luck")
-					})
+					if resource == "workloadidentities" {
+						gardenSecurityClient.AddReactor("get", resource, func(_ testing.Action) (bool, runtime.Object, error) {
+							return true, nil, errors.New("nope, out of luck")
+						})
+					} else {
+						kubeClient.AddReactor("get", resource, func(_ testing.Action) (bool, runtime.Object, error) {
+							return true, nil, errors.New("nope, out of luck")
+						})
+					}
 
 					user := &user.DefaultInfo{Name: allowedUser}
 					attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
@@ -1548,6 +1566,10 @@ var _ = Describe("resourcereferencemanager", func() {
 						return true, nil, nil
 					})
 
+					gardenSecurityClient.AddReactor("get", "workloadidentities", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, nil, nil
+					})
+
 					user := &user.DefaultInfo{Name: allowedUser}
 					attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
@@ -1555,14 +1577,30 @@ var _ = Describe("resourcereferencemanager", func() {
 				})
 			}
 
-			Context("DNS provider secrets", func() {
-				tests("DNS provider secret", "secrets", func(shoot *core.Shoot) {
+			Context("DNS provider credentials", func() {
+				tests("DNS provider Secret", "secrets", func(shoot *core.Shoot) {
 					shoot.Spec.DNS = &core.DNS{
-						Providers: []core.DNSProvider{
-							{SecretName: ptr.To("foo")},
-						},
+						Providers: []core.DNSProvider{{
+							CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+								APIVersion: "v1",
+								Kind:       "Secret",
+								Name:       "foo",
+							},
+						}},
 					}
-				}, "failed to resolve DNS provider secret reference")
+				}, "failed to resolve credentials reference of type Secret")
+
+				tests("DNS provider WorkloadIdentity", "workloadidentities", func(shoot *core.Shoot) {
+					shoot.Spec.DNS = &core.DNS{
+						Providers: []core.DNSProvider{{
+							CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+								APIVersion: "security.gardener.cloud/v1alpha1",
+								Kind:       "WorkloadIdentity",
+								Name:       "foo",
+							},
+						}},
+					}
+				}, "failed to resolve credentials reference of type WorkloadIdentity")
 			})
 
 			Context("admission plugin kubeconfig secrets", func() {
