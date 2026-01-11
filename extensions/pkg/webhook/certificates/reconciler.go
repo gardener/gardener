@@ -180,33 +180,44 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	log.Info("Generated webhook server cert", "serverSecretName", serverSecret.Name)
 
 	for _, sourceWebhookConfig := range r.SourceWebhookConfigs.GetWebhookConfigs() {
-		if err := r.reconcileSourceWebhookConfig(ctx, sourceWebhookConfig, caBundleSecret); err != nil {
+		if err := r.reconcileWebhookConfig(ctx, sourceWebhookConfig, caBundleSecret); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error reconciling source webhook config %s: %w", client.ObjectKeyFromObject(sourceWebhookConfig), err)
 		}
 		log.Info("Updated source webhook config with new CA bundle", "webhookConfig", sourceWebhookConfig)
 	}
 
 	if r.ShootWebhookConfigs != nil && r.ShootWebhookConfigs.HasWebhookConfig() {
-		for _, shootWebhookConfig := range r.ShootWebhookConfigs.GetWebhookConfigs() {
-			// update shoot webhook config object (in memory) with the freshly created CA bundle which is also used by the
-			// ControlPlane actuator
-			if err := extensionswebhook.InjectCABundleIntoWebhookConfig(shootWebhookConfig, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]); err != nil {
-				return reconcile.Result{}, err
+		if r.ShootWebhookManagedResourceName == "" {
+			// Manage shoot webhooks without ManagedResource
+			for _, shootWebhookConfig := range r.ShootWebhookConfigs.GetWebhookConfigs() {
+				if err := r.reconcileWebhookConfig(ctx, shootWebhookConfig, caBundleSecret); err != nil {
+					return reconcile.Result{}, fmt.Errorf("error reconciling shoot webhook config %s: %w", client.ObjectKeyFromObject(shootWebhookConfig), err)
+				}
+				log.Info("Updated shoot webhook config with new CA bundle", "webhookConfig", shootWebhookConfig)
 			}
-		}
+		} else {
+			// Manage shoot webhooks via ManagedResource
+			for _, shootWebhookConfig := range r.ShootWebhookConfigs.GetWebhookConfigs() {
+				// update shoot webhook config object (in memory) with the freshly created CA bundle which is also used by the
+				// ControlPlane actuator
+				if err := extensionswebhook.InjectCABundleIntoWebhookConfig(shootWebhookConfig, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]); err != nil {
+					return reconcile.Result{}, err
+				}
+			}
 
-		r.AtomicShootWebhookConfigs.Store(r.ShootWebhookConfigs.DeepCopy())
+			r.AtomicShootWebhookConfigs.Store(r.ShootWebhookConfigs.DeepCopy())
 
-		// reconcile all shoot webhook configs with the freshly created CA bundle
-		if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, r.client, r.ShootWebhookManagedResourceName, r.ShootNamespaceSelector, *r.ShootWebhookConfigs); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error reconciling all shoot webhook configs: %w", err)
-		}
+			// reconcile all shoot webhook configs with the freshly created CA bundle
+			if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, r.client, r.ShootWebhookManagedResourceName, r.ShootNamespaceSelector, *r.ShootWebhookConfigs); err != nil {
+				return reconcile.Result{}, fmt.Errorf("error reconciling all shoot webhook configs: %w", err)
+			}
 
-		if r.ShootWebhookConfigs.MutatingWebhookConfig != nil {
-			log.Info("Updated all shoot mutating webhook configs with new CA bundle", "webhookConfig", r.ShootWebhookConfigs.MutatingWebhookConfig)
-		}
-		if r.ShootWebhookConfigs.ValidatingWebhookConfig != nil {
-			log.Info("Updated all shoot validating webhook configs with new CA bundle", "webhookConfig", r.ShootWebhookConfigs.ValidatingWebhookConfig)
+			if r.ShootWebhookConfigs.MutatingWebhookConfig != nil {
+				log.Info("Updated all shoot mutating webhook configs with new CA bundle", "webhookConfig", r.ShootWebhookConfigs.MutatingWebhookConfig)
+			}
+			if r.ShootWebhookConfigs.ValidatingWebhookConfig != nil {
+				log.Info("Updated all shoot validating webhook configs with new CA bundle", "webhookConfig", r.ShootWebhookConfigs.ValidatingWebhookConfig)
+			}
 		}
 	}
 
@@ -217,9 +228,9 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	return reconcile.Result{RequeueAfter: r.SyncPeriod}, nil
 }
 
-func (r *reconciler) reconcileSourceWebhookConfig(ctx context.Context, sourceWebhookConfig client.Object, caBundleSecret *corev1.Secret) error {
+func (r *reconciler) reconcileWebhookConfig(ctx context.Context, webhookConfig client.Object, caBundleSecret *corev1.Secret) error {
 	// copy object so that we don't lose its name on API/client errors
-	config := sourceWebhookConfig.DeepCopyObject().(client.Object)
+	config := webhookConfig.DeepCopyObject().(client.Object)
 	if err := r.client.Get(ctx, client.ObjectKeyFromObject(config), config); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
