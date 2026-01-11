@@ -60,6 +60,10 @@ type reconciler struct {
 	Identity string
 	// Name of the component.
 	ComponentName string
+	// DoNotPrefixComponentName can be set if the ComponentName should not be prefixed with 'gardener-extension-'. If
+	// unset (or set to false), the ComponentName will be prefixed with 'gardener-extension-' unless it already starts
+	// with 'gardener-'.
+	DoNotPrefixComponentName bool
 	// ShootWebhookManagedResourceName is the name of the ManagedResource containing the raw shoot webhook config.
 	ShootWebhookManagedResourceName string
 	// ShootNamespaceSelector is a label selector for shoot namespaces relevant to the extension.
@@ -253,6 +257,6 @@ func (r *reconciler) generateWebhookCA(ctx context.Context, sm secretsmanager.In
 
 func (r *reconciler) generateWebhookServerCert(ctx context.Context, sm secretsmanager.Interface) (*corev1.Secret, error) {
 	// use current CA for signing server cert to prevent mismatches when dropping the old CA from the webhook config
-	return sm.Generate(ctx, getWebhookServerCertConfig(r.ServerSecretName, r.Namespace, r.ComponentName, r.Mode, r.URL),
+	return sm.Generate(ctx, getWebhookServerCertConfig(r.ServerSecretName, r.Namespace, r.ComponentName, r.DoNotPrefixComponentName, r.Mode, r.URL),
 		secretsmanager.SignedByCA(r.CASecretName, secretsmanager.UseCurrentCA))
 }

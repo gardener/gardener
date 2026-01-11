@@ -27,12 +27,16 @@ import (
 
 var _ = Describe("Registration", func() {
 	Describe("#PrefixedName", func() {
-		It("should return an empty string", func() {
-			Expect(PrefixedName("gardener-foo")).To(Equal("gardener-foo"))
+		It("should not prefix because name starts with 'gardener'", func() {
+			Expect(PrefixedName("gardener-foo", false)).To(Equal("gardener-foo"))
 		})
 
-		It("should return 'gardener-extension-'", func() {
-			Expect(PrefixedName("provider-bar")).To(Equal("gardener-extension-provider-bar"))
+		It("should prefix with 'gardener-extension-'", func() {
+			Expect(PrefixedName("provider-bar", false)).To(Equal("gardener-extension-provider-bar"))
+		})
+
+		It("should not prefix with 'gardener-extension-' because explicitly skipped", func() {
+			Expect(PrefixedName("provider-bar", true)).To(Equal("provider-bar"))
 		})
 	})
 
@@ -185,7 +189,7 @@ var _ = Describe("Registration", func() {
 
 		DescribeTable("it should return the expected configs",
 			func(mode, url string) {
-				seedWebhookConfig, shootWebhookConfig, err := BuildWebhookConfigs(webhooks, fakeClient, namespace, providerName, servicePort, mode, url, nil)
+				seedWebhookConfig, shootWebhookConfig, err := BuildWebhookConfigs(webhooks, fakeClient, namespace, providerName, false, servicePort, mode, url, nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				var (

@@ -168,7 +168,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *o
 		nil,
 		nil,
 		"",
-		Name,
+		Name, false,
 		v1beta1constants.GardenNamespace,
 		mode,
 		url,

@@ -34,12 +34,13 @@ func AddCertificateManagementToManager(
 	shootNamespaceSelector map[string]string,
 	shootWebhookManagedResourceName string,
 	componentName string,
+	doNotPrefixComponentName bool,
 	namespace string,
 	mode string,
 	url string,
 ) error {
 	var (
-		identity         = webhook.PrefixedName(componentName) + "-webhook"
+		identity         = webhook.PrefixedName(componentName, doNotPrefixComponentName) + "-webhook"
 		caSecretName     = "ca-" + componentName + "-webhook"
 		serverSecretName = componentName + "-webhook-server"
 	)
@@ -57,6 +58,7 @@ func AddCertificateManagementToManager(
 		Namespace:                       namespace,
 		Identity:                        identity,
 		ComponentName:                   componentName,
+		DoNotPrefixComponentName:        doNotPrefixComponentName,
 		ShootWebhookManagedResourceName: shootWebhookManagedResourceName,
 		ShootNamespaceSelector:          shootNamespaceSelector,
 		Mode:                            mode,

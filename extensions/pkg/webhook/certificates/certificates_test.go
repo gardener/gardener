@@ -33,7 +33,7 @@ var _ = Describe("Certificates", func() {
 		DescribeTable("should generate the expected certificate",
 			func(mode, url string, assertServerCertFn func(*x509.Certificate)) {
 				By("Validate generated CA certificate")
-				caCertPEM, err := GenerateUnmanagedCertificates(providerName, certDir, mode, url)
+				caCertPEM, err := GenerateUnmanagedCertificates(providerName, false, certDir, mode, url)
 				Expect(err).NotTo(HaveOccurred())
 
 				caCert, err := utils.DecodeCertificate(caCertPEM)

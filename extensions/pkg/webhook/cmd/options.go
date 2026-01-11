@@ -295,7 +295,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		webhooks,
 		mgr.GetClient(),
 		c.Server.Namespace,
-		c.extensionName,
+		c.extensionName, false,
 		servicePort,
 		c.Server.Mode,
 		c.Server.URL,
@@ -318,7 +318,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 				path = parsedURL.Path
 			}
 
-			return extensionswebhook.BuildClientConfigFor(path, c.Server.Namespace, c.extensionName, servicePort, c.Server.Mode, c.Server.URL, nil), nil
+			return extensionswebhook.BuildClientConfigFor(path, c.Server.Namespace, c.extensionName, false, servicePort, c.Server.Mode, c.Server.URL, nil), nil
 		}
 
 		if shootWebhookConfigs.ValidatingWebhookConfig != nil {
@@ -366,7 +366,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		mgr.GetLogger().Info("Running webhooks with unmanaged certificates (i.e., the webhook CA will not be rotated automatically). " +
 			"This mode is supposed to be used for development purposes only. Make sure to configure --webhook-config-namespace in production.")
 
-		caBundle, err := certificates.GenerateUnmanagedCertificates(c.extensionName, defaultServer.Options.CertDir, c.Server.Mode, c.Server.URL)
+		caBundle, err := certificates.GenerateUnmanagedCertificates(c.extensionName, false, defaultServer.Options.CertDir, c.Server.Mode, c.Server.URL)
 		if err != nil {
 			return nil, fmt.Errorf("error generating new certificates for webhook server: %w", err)
 		}
@@ -410,7 +410,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		atomicShootWebhookConfigs,
 		c.shootNamespaceSelector,
 		c.shootWebhookManagedResourceName,
-		c.extensionName,
+		c.extensionName, false,
 		c.Server.Namespace,
 		c.Server.Mode,
 		c.Server.URL,
