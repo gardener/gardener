@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/spf13/pflag"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -26,6 +27,7 @@ import (
 	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/operator"
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 const (
@@ -423,10 +425,16 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 
 func (c *AddToManagerConfig) reconcileSeedWebhookConfig(mgr manager.Manager, webhookConfigs extensionswebhook.Configs, caBundle []byte) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
+		timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
 		for _, webhookConfig := range webhookConfigs.GetWebhookConfigs() {
-			if err := extensionswebhook.ReconcileSeedWebhookConfig(ctx, mgr.GetClient(), webhookConfig, c.Server.OwnerNamespace, caBundle); err != nil {
-				return fmt.Errorf("error reconciling seed webhook config: %w", err)
-			}
+			return retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (bool, error) {
+				if err := extensionswebhook.ReconcileSeedWebhookConfig(ctx, mgr.GetClient(), webhookConfig, c.Server.OwnerNamespace, caBundle); err != nil {
+					return retry.MinorError(fmt.Errorf("error reconciling seed webhook config: %w", err))
+				}
+				return retry.Ok()
+			})
 		}
 		return nil
 	}
