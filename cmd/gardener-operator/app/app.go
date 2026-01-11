@@ -16,13 +16,9 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -34,7 +30,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
@@ -176,10 +171,6 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *o
 		return fmt.Errorf("failed adding webhook certificate management to manager: %w", err)
 	}
 
-	log.Info("Adding webhook config reconciliation func to manager")
-	if err := mgr.Add(reconcileWebhookConfigurations(ctx, mgr, validatingWebhookConfiguration, mutatingWebhookConfiguration)); err != nil {
-		return fmt.Errorf("failed adding webhook config reconciliation func: %w", err)
-	}
 	log.Info("Adding migrations runnable func to manager")
 	if err := mgr.Add(runMigrations(ctx, mgr.GetClient(), log)); err != nil {
 		return fmt.Errorf("failed adding migrations runnable func to manager: %w", err)
@@ -210,84 +201,4 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *o
 
 	log.Info("Starting manager")
 	return mgr.Start(ctx)
-}
-
-func reconcileWebhookConfigurations(
-	ctx context.Context,
-	mgr manager.Manager,
-	validatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfiguration,
-	mutatingWebhookConfiguration *admissionregistrationv1.MutatingWebhookConfiguration,
-) manager.RunnableFunc {
-	return func(context.Context) error {
-		mgr.GetLogger().Info("Reconciling webhook configurations",
-			"validatingWebhookConfiguration", client.ObjectKeyFromObject(validatingWebhookConfiguration),
-			"mutatingWebhookConfiguration", client.ObjectKeyFromObject(mutatingWebhookConfiguration),
-		)
-
-		valWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: validatingWebhookConfiguration.Name}}
-		if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, mgr.GetClient(), valWebhook, func() error {
-			// The CA bundle is updated asynchronously by a separate certificates reconciler. Hence, when we update the
-			// webhook configuration here, let's make sure to not overwrite existing CA bundles in the webhooks.
-			if err := extensionswebhook.InjectCABundleIntoWebhookConfig(validatingWebhookConfiguration, getCurrentCABundle(valWebhook)); err != nil {
-				return err
-			}
-
-			valWebhook.Webhooks = validatingWebhookConfiguration.Webhooks
-			return nil
-		}); err != nil {
-			return err
-		}
-
-		mutWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: mutatingWebhookConfiguration.Name}}
-		if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, mgr.GetClient(), mutWebhook, func() error {
-			// The CA bundle is updated asynchronously by a separate certificates reconciler. Hence, when we update the
-			// webhook configuration here, let's make sure to not overwrite existing CA bundles in the webhooks.
-			if err := extensionswebhook.InjectCABundleIntoWebhookConfig(mutatingWebhookConfiguration, getCurrentCABundle(mutWebhook)); err != nil {
-				return err
-			}
-
-			mutWebhook.Webhooks = mutatingWebhookConfiguration.Webhooks
-			return nil
-		}); err != nil {
-			return err
-		}
-
-		validatingWebhookConfiguration = valWebhook
-		mutatingWebhookConfiguration = mutWebhook
-		return nil
-	}
-}
-
-func getCurrentCABundle(webhookConfig client.Object) []byte {
-	// All webhooks in this configuration are served by the same endpoint, hence they all have to use the same CA
-	// bundle. We simply take the first bundle we find and consider it the current bundle for all webhooks.
-
-	switch config := webhookConfig.(type) {
-	case *admissionregistrationv1.MutatingWebhookConfiguration:
-		for _, w := range config.Webhooks {
-			if len(w.ClientConfig.CABundle) > 0 {
-				return w.ClientConfig.CABundle
-			}
-		}
-	case *admissionregistrationv1.ValidatingWebhookConfiguration:
-		for _, w := range config.Webhooks {
-			if len(w.ClientConfig.CABundle) > 0 {
-				return w.ClientConfig.CABundle
-			}
-		}
-	case *admissionregistrationv1beta1.MutatingWebhookConfiguration:
-		for _, w := range config.Webhooks {
-			if len(w.ClientConfig.CABundle) > 0 {
-				return w.ClientConfig.CABundle
-			}
-		}
-	case *admissionregistrationv1beta1.ValidatingWebhookConfiguration:
-		for _, w := range config.Webhooks {
-			if len(w.ClientConfig.CABundle) > 0 {
-				return w.ClientConfig.CABundle
-			}
-		}
-	}
-
-	return nil
 }
