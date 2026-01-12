@@ -28,9 +28,11 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/features"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/garden/care"
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -554,6 +556,8 @@ var _ = Describe("Garden health", func() {
 			)
 
 			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.PrometheusHealthChecks, true))
+
 				prometheus = &monitoringv1.Prometheus{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "foo",
@@ -612,6 +616,22 @@ var _ = Describe("Garden health", func() {
 					nil,
 					gardenNamespace,
 					healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(healthy)),
+				).Check(ctx, gardenConditions)
+
+				expectHealthyObservabilityComponents(updatedConditions)
+			})
+
+			It("should set ObservabilityComponentsHealthy condition to true if Prometheus health check is down but the PrometheusHealthChecks feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.PrometheusHealthChecks, false))
+
+				updatedConditions := NewHealth(
+					garden,
+					runtimeClient,
+					gardenClientSet,
+					fakeClock,
+					nil,
+					gardenNamespace,
+					healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(unhealthy)),
 				).Check(ctx, gardenConditions)
 
 				expectHealthyObservabilityComponents(updatedConditions)

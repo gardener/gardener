@@ -24,8 +24,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/features"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -103,6 +105,8 @@ var _ = Describe("Seed health", func() {
 			)
 
 			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.PrometheusHealthChecks, true))
+
 				prometheus = &monitoringv1.Prometheus{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "foo",
@@ -159,6 +163,20 @@ var _ = Describe("Seed health", func() {
 				})
 
 				expectHealthySystemComponents(healthCheck.Check(ctx, conditions))
+			})
+
+			It("should set SeedSystemComponentsHealthy condition to true if Prometheus health check is down but the PrometheusHealthChecks feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.PrometheusHealthChecks, false))
+
+				healthChecker := checker.NewHealthChecker(c, fakeClock, checker.WithPrometheusHealthChecker(unhealthy))
+
+				healthCheck := NewHealth(seed, c, fakeClock, nil, healthChecker)
+				conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
+					Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
+				})
+
+				updatedConditions := healthCheck.Check(ctx, conditions)
+				expectHealthySystemComponents(updatedConditions)
 			})
 
 			Context("Prometheus is filtered out from the health check", func() {
