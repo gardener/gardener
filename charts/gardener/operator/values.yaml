@@ -71,9 +71,9 @@ config:
           eventsThreshold: 1000000
           activeDeadlineDuration: "3h"
           metricsScrapeWaitDuration: "60s"
-      # backupLeaderElection:
-      #   reelectionPeriod: 5s
-      #   etcdConnectionTimeout: 5s
+    #   backupLeaderElection:
+    #     reelectionPeriod: 5s
+    #     etcdConnectionTimeout: 5s
     gardenCare:
       syncPeriod: 1m
       conditionThresholds:

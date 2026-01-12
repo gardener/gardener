@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/sets"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
@@ -248,7 +249,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.virtualGardenGardenerResourceManager, err = r.newVirtualGardenGardenerResourceManager(secretsManager)
+	c.virtualGardenGardenerResourceManager, err = r.newVirtualGardenGardenerResourceManager(garden, secretsManager)
 	if err != nil {
 		return
 	}
@@ -430,7 +431,12 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 	})
 }
 
-func (r *Reconciler) newVirtualGardenGardenerResourceManager(secretsManager secretsmanager.Interface) (resourcemanager.Interface, error) {
+func (r *Reconciler) newVirtualGardenGardenerResourceManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (resourcemanager.Interface, error) {
+	var additionalTargetNamespaces []string
+	if garden.Spec.VirtualCluster.Gardener.ResourceManager != nil {
+		additionalTargetNamespaces = garden.Spec.VirtualCluster.Gardener.ResourceManager.AdditionalTargetNamespaces
+	}
+
 	return sharedcomponent.NewTargetGardenerResourceManager(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, resourcemanager.Values{
 		IsWorkerless:             true,
 		LogLevel:                 r.Config.LogLevel,
@@ -439,15 +445,17 @@ func (r *Reconciler) newVirtualGardenGardenerResourceManager(secretsManager secr
 		PriorityClassName:        v1beta1constants.PriorityClassNameGardenSystem400,
 		RuntimeKubernetesVersion: r.RuntimeVersion,
 		SecretNameServerCA:       operatorv1alpha1.SecretNameCARuntime,
-		TargetNamespaces:         []string{v1beta1constants.GardenNamespace, metav1.NamespaceSystem, gardencorev1beta1.GardenerShootIssuerNamespace, gardencorev1beta1.GardenerSystemPublicNamespace},
+		TargetNamespaces: sets.List(sets.New(
+			v1beta1constants.GardenNamespace,
+			metav1.NamespaceSystem,
+			gardencorev1beta1.GardenerShootIssuerNamespace,
+			gardencorev1beta1.GardenerSystemPublicNamespace,
+		).Insert(additionalTargetNamespaces...)),
 	})
 }
 
 func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
-	var (
-		featureGates map[string]bool
-	)
-
+	var featureGates map[string]bool
 	if garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler != nil {
 		featureGates = garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.FeatureGates
 	}

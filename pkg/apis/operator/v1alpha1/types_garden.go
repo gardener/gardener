@@ -482,6 +482,9 @@ type Gardener struct {
 	// DiscoveryServer contains configuration settings for the gardener-discovery-server.
 	// +optional
 	DiscoveryServer *GardenerDiscoveryServerConfig `json:"gardenerDiscoveryServer,omitempty"`
+	// ResourceManager contains configuration settings for the gardener-resource-manager.
+	// +optional
+	ResourceManager *GardenerResourceManagerConfig `json:"gardenerResourceManager,omitempty"`
 }
 
 // GardenerAPIServerConfig contains configuration settings for the gardener-apiserver.
@@ -602,6 +605,13 @@ type ProjectQuotaConfiguration struct {
 	// Defaults to empty LabelSelector, which matches all projects.
 	// +optional
 	ProjectSelector *metav1.LabelSelector `json:"projectSelector,omitempty"`
+}
+
+// GardenerResourceManagerConfig contains configuration settings for the gardener-resource-manager.
+type GardenerResourceManagerConfig struct {
+	// AdditionalTargetNamespaces allows specifying custom target namespaces for the gardener-resource-manager instance.
+	// +optional
+	AdditionalTargetNamespaces []string `json:"additionalTargetNamespaces,omitempty"`
 }
 
 // GardenerSchedulerConfig contains configuration settings for the gardener-scheduler.

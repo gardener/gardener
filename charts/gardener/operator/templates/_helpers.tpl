@@ -153,4 +153,3 @@ config.yaml: |
 {{- define "operator.config.name" -}}
 gardener-operator-configmap-{{ include "operator.config.data" . | sha256sum | trunc 8 }}
 {{- end -}}
-

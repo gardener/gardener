@@ -308,6 +308,9 @@ spec:
     #   ingress:
     #     enabled: true
       gardenerDiscoveryServer: {}
+    # gardenerResourceManager:
+    #   additionalTargetNamespaces:
+    #   - my-custom-namespace
     maintenance:
       timeWindow:
         begin: 220000+0100
