@@ -28,5 +28,6 @@ func GetFeatures() []featuregate.Feature {
 		features.VPAInPlaceUpdates,
 		features.CustomDNSServerInNodeLocalDNS,
 		features.VPNBondingModeRoundRobin,
+		features.PrometheusHealthChecks,
 	}
 }

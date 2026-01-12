@@ -18,5 +18,6 @@ func RegisterFeatureGates() {
 		features.DoNotCopyBackupCredentials,
 		features.UseUnifiedHTTPProxyPort,
 		features.VPAInPlaceUpdates,
+		features.PrometheusHealthChecks,
 	)))
 }

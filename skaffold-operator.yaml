@@ -1040,6 +1040,7 @@ deploy:
           replicaCount: 2
           config.featureGates.IstioTLSTermination: true
           config.featureGates.VPAInPlaceUpdates: true
+          config.featureGates.PrometheusHealthChecks: true
         createNamespace: true
         wait: true
 profiles:

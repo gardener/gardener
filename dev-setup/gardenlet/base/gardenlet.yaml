@@ -16,6 +16,7 @@ spec:
       OpenTelemetryCollector: true
       VPAInPlaceUpdates: true
       VPNBondingModeRoundRobin: true
+      PrometheusHealthChecks: true
     controllers:
       shoot:
         reconcileInMaintenanceOnly: true
