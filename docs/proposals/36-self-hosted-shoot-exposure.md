@@ -37,12 +37,14 @@ Hence, the internal domain is not relevant for this proposal.
 
 For convenience and consistency, Gardener should support exposing self-hosted shoot clusters externally via a DNS name using the same pattern as the external domain of hosted shoot clusters.
 However, in self-hosted shoot clusters, the control plane is hosted within the shoot cluster itself, and there is no hosting seed cluster to provide the necessary exposure mechanism, i.e., no istio ingress gateway.
-In case of a self-hosted shoot cluster with unmanaged infrastructure, Gardener expects the operator to manually set up the necessary DNS record pointing to the control plane nodes or an external load balancer.
 
 For self-hosted shoot clusters with managed infrastructure, Gardener reuses many existing components (e.g., extensions and machine-controller-manager) for managing the infrastructure, control plane components, and machines.
 Similarly, it should provide a standardized way to externally expose the API server of self-hosted shoot clusters using existing components.
 However, there is no mechanism in these existing components to handle the exposure of a Kubernetes control plane in the desired way.
 Hence, this proposal introduces a new extension resource for this particular purpose.
+
+In case of a self-hosted shoot cluster with unmanaged infrastructure, Gardener expects the operator to manually set up the necessary DNS record pointing to the control plane nodes or an external load balancer.
+While the focus of this proposal is on self-hosted shoot clusters with managed infrastructure, some of the described mechanisms could also be applied to expose self-hosted shoot clusters with unmanaged infrastructure.
 
 ### Goals
 
@@ -51,10 +53,10 @@ Hence, this proposal introduces a new extension resource for this particular pur
 - Provide a flexible, extension-based mechanism for control plane exposure by defining a new Gardener extension resource
 - Support multiple exposure strategies (e.g., cloud load balancer or DNS) to fit different use cases
 - Allow extensions to implement provider-specific/custom logic for exposing shoot control planes
+- Allow reusing the exposure mechanisms for shoot clusters with unmanaged infrastructure where applicable
 
 ### Non-Goals
 
-- Exposing shoot clusters with unmanaged infrastructure
 - Add an internal domain for self-hosted shoot clusters
 - Defining the full lifecycle or implementation details of all possible exposure strategies
 
@@ -82,6 +84,7 @@ spec:
 
 In the control plane worker pool, a new optional `exposure` field is added.
 It can be used to specify that the control plane should be exposed using a `SelfHostedShootExposure` extension (via the `extension` field, see [The `SelfHostedShootExposure` Extension Resource](#selfhostedshootexposure-extension-resource)) or directly via DNS (via the `dns` field, see [DNS-Based Exposure](#dns-based-control-plane-exposure)).
+If the `exposure` field is omitted, the control plane is not exposed externally by Gardener via either mechanism.
 
 The `extension.type` field specifies which `SelfHostedShootExposure` extension should be used, defaulting to the value of `spec.provider.type` if not set.
 Additional configuration for the extension can be provided via the optional `extension.providerConfig` field.
@@ -101,6 +104,10 @@ spec:
   # extensionsv1alpha1.DefaultSpec
   type: stackit
   providerConfig: {} # *runtime.RawExtension
+
+  secretRef: # corev1.SecretReference
+    name: cloudprovider
+    namespace: kube-system
 
   # control plane endpoints that should be exposed
   endpoints:
@@ -126,6 +133,7 @@ status:
 ```
 
 The `spec` includes the default set of fields included in all extension resources like `type` and `providerConfig` (see [GEP-01](01-extensibility.md)).
+For shoots with managed infrastructure, the `secretRef` field references the credentials secret that should be used by the extension controller to manage the necessary infrastructure resources (similar to the `Infrastructure` extension resource).
 Additionally, the `spec.endpoints` list contains all healthy control plane node addresses that should be exposed.
 Each endpoint includes the node name, a list of addresses (based on the `Node.status.addresses` list) and the port of the API server (usually `443`).
 
