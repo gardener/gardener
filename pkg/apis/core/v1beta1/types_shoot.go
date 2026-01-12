@@ -586,7 +586,7 @@ type DNSProvider struct {
 	// CredentialsRef is a reference to a resource providing credentials for the DNS provider.
 	// Supported resources are Secret and WorkloadIdentity.
 	// +optional
-	CredentialsRef *autoscalingv1.CrossVersionObjectReference `json:"credentialsRef" protobuf:"bytes,6,opt,name=credentialsRef"`
+	CredentialsRef *autoscalingv1.CrossVersionObjectReference `json:"credentialsRef,omitempty" protobuf:"bytes,6,opt,name=credentialsRef"`
 }
 
 // DNSIncludeExclude contains information about which domains shall be included/excluded.
