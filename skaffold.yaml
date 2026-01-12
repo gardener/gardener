@@ -973,9 +973,9 @@ profiles:
       rawYaml:
         - example/gardener-local/gardenlet/secret-bootstrap-token-extensions.yaml
         - example/provider-extensions/garden/controlplane/domain-workload-identities.yaml
-      kustomize:
-        paths:
-          - example/provider-extensions/garden/project/with-workload-identity
+        - example/provider-extensions/garden/project/base/project.yaml
+        - example/provider-extensions/garden/project/with-workload-identity/credentials/infrastructure-workloadidentities.yaml
+        - example/provider-extensions/garden/project/with-workload-identity/credentials/credentialsbindings.yaml
     deploy:
       kubectl: {}
   - name: extensions-without-workload-identity
@@ -983,9 +983,9 @@ profiles:
       rawYaml:
         - example/gardener-local/gardenlet/secret-bootstrap-token-extensions.yaml
         - example/provider-extensions/garden/controlplane/domain-secrets.yaml
-      kustomize:
-        paths:
-          - example/provider-extensions/garden/project/without-workload-identity
+        - example/provider-extensions/garden/project/base/project.yaml
+        - example/provider-extensions/garden/project/without-workload-identity/credentials/infrastructure-secrets.yaml
+        - example/provider-extensions/garden/project/without-workload-identity/credentials/credentialsbindings.yaml
     deploy:
       kubectl: {}
 ---
