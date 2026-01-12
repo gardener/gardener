@@ -5,6 +5,8 @@
 package client
 
 import (
+	victoriametricsv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
+	victoriametricsv1beta1 "github.com/VictoriaMetrics/operator/api/operator/v1beta1"
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	opentelemetryv1alpha1 "github.com/open-telemetry/opentelemetry-operator/apis/v1alpha1"
 	opentelemetryv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
@@ -65,6 +67,8 @@ var (
 		persesv1alpha1.AddToScheme,
 		opentelemetryv1alpha1.AddToScheme,
 		opentelemetryv1beta1.AddToScheme,
+		victoriametricsv1beta1.AddToScheme,
+		victoriametricsv1.AddToScheme,
 		func(scheme *runtime.Scheme) error {
 			apiextensionsinstall.Install(scheme)
 			return nil
