@@ -682,7 +682,7 @@ func createSeed(region string, zones []string, accessRestrictions []gardencorev1
 			DNS: gardencorev1beta1.SeedDNS{
 				Provider: &gardencorev1beta1.SeedDNSProvider{
 					Type: "provider-type",
-					CredentialsRef: corev1.ObjectReference{
+					CredentialsRef: &corev1.ObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
 						Name:       "some-secret",

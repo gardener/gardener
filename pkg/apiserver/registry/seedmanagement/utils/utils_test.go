@@ -31,7 +31,7 @@ var _ = Describe("Utils", func() {
 
 			utils.SyncSeedDNSProviderCredentials(dns)
 
-			Expect(dns.CredentialsRef).To(Equal(corev1.ObjectReference{
+			Expect(dns.CredentialsRef).To(Equal(&corev1.ObjectReference{
 				APIVersion: "v1",
 				Kind:       "Secret",
 				Namespace:  "garden",
@@ -45,7 +45,7 @@ var _ = Describe("Utils", func() {
 
 		It("should sync secretRef when only credentialsRef is set with a Secret", func() {
 			dns := &gardencorev1beta1.SeedDNSProvider{
-				CredentialsRef: corev1.ObjectReference{
+				CredentialsRef: &corev1.ObjectReference{
 					APIVersion: "v1",
 					Kind:       "Secret",
 					Namespace:  "garden",
@@ -59,7 +59,7 @@ var _ = Describe("Utils", func() {
 				Name:      "dns-secret",
 				Namespace: "garden",
 			}))
-			Expect(dns.CredentialsRef).To(Equal(corev1.ObjectReference{
+			Expect(dns.CredentialsRef).To(Equal(&corev1.ObjectReference{
 				APIVersion: "v1",
 				Kind:       "Secret",
 				Namespace:  "garden",
@@ -69,7 +69,7 @@ var _ = Describe("Utils", func() {
 
 		It("should not sync when credentialsRef refers to WorkloadIdentity", func() {
 			dns := &gardencorev1beta1.SeedDNSProvider{
-				CredentialsRef: corev1.ObjectReference{
+				CredentialsRef: &corev1.ObjectReference{
 					APIVersion: "security.gardener.cloud/v1alpha1",
 					Kind:       "WorkloadIdentity",
 					Namespace:  "garden",
@@ -80,7 +80,7 @@ var _ = Describe("Utils", func() {
 			utils.SyncSeedDNSProviderCredentials(dns)
 
 			Expect(dns.SecretRef).To(Equal(corev1.SecretReference{}))
-			Expect(dns.CredentialsRef).To(Equal(corev1.ObjectReference{
+			Expect(dns.CredentialsRef).To(Equal(&corev1.ObjectReference{
 				APIVersion: "security.gardener.cloud/v1alpha1",
 				Kind:       "WorkloadIdentity",
 				Namespace:  "garden",
@@ -94,7 +94,7 @@ var _ = Describe("Utils", func() {
 			utils.SyncSeedDNSProviderCredentials(dns)
 
 			Expect(dns.SecretRef).To(Equal(corev1.SecretReference{}))
-			Expect(dns.CredentialsRef).To(Equal(corev1.ObjectReference{}))
+			Expect(dns.CredentialsRef).To(BeNil())
 		})
 
 		It("should not sync when both fields are set", func() {
@@ -103,7 +103,7 @@ var _ = Describe("Utils", func() {
 					Name:      "secret-name",
 					Namespace: "secret-namespace",
 				},
-				CredentialsRef: corev1.ObjectReference{
+				CredentialsRef: &corev1.ObjectReference{
 					APIVersion: "v1",
 					Kind:       "Secret",
 					Namespace:  "ref-namespace",
@@ -120,7 +120,7 @@ var _ = Describe("Utils", func() {
 
 		It("should not sync when credentialsRef kind is not Secret", func() {
 			dns := &gardencorev1beta1.SeedDNSProvider{
-				CredentialsRef: corev1.ObjectReference{
+				CredentialsRef: &corev1.ObjectReference{
 					APIVersion: "v1",
 					Kind:       "ConfigMap",
 					Namespace:  "garden",
@@ -136,7 +136,7 @@ var _ = Describe("Utils", func() {
 
 		It("should not sync when credentialsRef APIVersion is not v1", func() {
 			dns := &gardencorev1beta1.SeedDNSProvider{
-				CredentialsRef: corev1.ObjectReference{
+				CredentialsRef: &corev1.ObjectReference{
 					APIVersion: "v2",
 					Kind:       "Secret",
 					Namespace:  "garden",

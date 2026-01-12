@@ -61,7 +61,7 @@ func (r *Reconciler) newIngressDNSRecord(ctx context.Context, log logr.Logger, s
 
 func getDNSProviderSecretData(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) (map[string][]byte, error) {
 	if dnsConfig := seed.Spec.DNS; dnsConfig.Provider != nil {
-		credentials, err := kubernetesutils.GetCredentialsByObjectReference(ctx, gardenClient, dnsConfig.Provider.CredentialsRef)
+		credentials, err := kubernetesutils.GetCredentialsByObjectReference(ctx, gardenClient, *dnsConfig.Provider.CredentialsRef)
 		if err != nil {
 			return nil, err
 		}

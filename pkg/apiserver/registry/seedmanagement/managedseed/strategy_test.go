@@ -101,7 +101,7 @@ var _ = Describe("Strategy", func() {
 											Namespace: "namespace",
 											Name:      "name",
 										},
-										CredentialsRef: corev1.ObjectReference{
+										CredentialsRef: &corev1.ObjectReference{
 											APIVersion: "v1",
 											Kind:       "Secret",
 											Namespace:  "namespace",
@@ -142,7 +142,7 @@ var _ = Describe("Strategy", func() {
 							Spec: gardencorev1beta1.SeedSpec{
 								DNS: gardencorev1beta1.SeedDNS{
 									Provider: &gardencorev1beta1.SeedDNSProvider{
-										CredentialsRef: corev1.ObjectReference{
+										CredentialsRef: &corev1.ObjectReference{
 											APIVersion: "v1",
 											Kind:       "Secret",
 											Namespace:  "namespace",
@@ -173,7 +173,7 @@ var _ = Describe("Strategy", func() {
 											Namespace: "namespace",
 											Name:      "name",
 										},
-										CredentialsRef: corev1.ObjectReference{
+										CredentialsRef: &corev1.ObjectReference{
 											APIVersion: "v1",
 											Kind:       "Secret",
 											Namespace:  "namespace",
@@ -192,7 +192,7 @@ var _ = Describe("Strategy", func() {
 							Spec: gardencorev1beta1.SeedSpec{
 								DNS: gardencorev1beta1.SeedDNS{
 									Provider: &gardencorev1beta1.SeedDNSProvider{
-										CredentialsRef: corev1.ObjectReference{
+										CredentialsRef: &corev1.ObjectReference{
 											APIVersion: "v1",
 											Kind:       "Secret",
 											Namespace:  "namespace",

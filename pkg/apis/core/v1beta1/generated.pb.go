@@ -15792,16 +15792,18 @@ func (m *SeedDNSProvider) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	{
-		size, err := m.CredentialsRef.MarshalToSizedBuffer(dAtA[:i])
-		if err != nil {
-			return 0, err
+	if m.CredentialsRef != nil {
+		{
+			size, err := m.CredentialsRef.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
 		}
-		i -= size
-		i = encodeVarintGenerated(dAtA, i, uint64(size))
+		i--
+		dAtA[i] = 0x2a
 	}
-	i--
-	dAtA[i] = 0x2a
 	{
 		size, err := m.SecretRef.MarshalToSizedBuffer(dAtA[:i])
 		if err != nil {
@@ -22888,8 +22890,10 @@ func (m *SeedDNSProvider) Size() (n int) {
 	n += 1 + l + sovGenerated(uint64(l))
 	l = m.SecretRef.Size()
 	n += 1 + l + sovGenerated(uint64(l))
-	l = m.CredentialsRef.Size()
-	n += 1 + l + sovGenerated(uint64(l))
+	if m.CredentialsRef != nil {
+		l = m.CredentialsRef.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
 	return n
 }
 
@@ -26534,7 +26538,7 @@ func (this *SeedDNSProvider) String() string {
 	s := strings.Join([]string{`&SeedDNSProvider{`,
 		`Type:` + fmt.Sprintf("%v", this.Type) + `,`,
 		`SecretRef:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.SecretRef), "SecretReference", "v1.SecretReference", 1), `&`, ``, 1) + `,`,
-		`CredentialsRef:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.CredentialsRef), "ObjectReference", "v1.ObjectReference", 1), `&`, ``, 1) + `,`,
+		`CredentialsRef:` + strings.Replace(fmt.Sprintf("%v", this.CredentialsRef), "ObjectReference", "v1.ObjectReference", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -53261,6 +53265,9 @@ func (m *SeedDNSProvider) Unmarshal(dAtA []byte) error {
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
+			}
+			if m.CredentialsRef == nil {
+				m.CredentialsRef = &v1.ObjectReference{}
 			}
 			if err := m.CredentialsRef.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err

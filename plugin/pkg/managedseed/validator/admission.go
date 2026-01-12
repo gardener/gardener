@@ -422,11 +422,11 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 	}
 
 	// Initialize a reference to the primary DNS provider secret
-	var credentialsRef corev1.ObjectReference
+	var credentialsRef *corev1.ObjectReference
 	if creds := primaryProvider.CredentialsRef; creds != nil {
 		switch apiVersion, kind := creds.APIVersion, creds.Kind; {
 		case apiVersion == corev1.SchemeGroupVersion.String() && kind == "Secret":
-			credentialsRef = corev1.ObjectReference{
+			credentialsRef = &corev1.ObjectReference{
 				APIVersion: apiVersion,
 				Kind:       kind,
 				Name:       creds.Name,
@@ -446,7 +446,7 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 			}
 			return nil, apierrors.NewInternalError(fmt.Errorf("could not get secret binding %s/%s: %v", shoot.Namespace, *shoot.Spec.SecretBindingName, err))
 		}
-		credentialsRef = corev1.ObjectReference{
+		credentialsRef = &corev1.ObjectReference{
 			APIVersion: corev1.SchemeGroupVersion.String(),
 			Kind:       "Secret",
 			Name:       secretBinding.SecretRef.Name,
@@ -463,7 +463,7 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 		}
 		switch apiVersion, kind := credentialsBinding.CredentialsRef.APIVersion, credentialsBinding.CredentialsRef.Kind; {
 		case apiVersion == corev1.SchemeGroupVersion.String() && kind == "Secret":
-			credentialsRef = corev1.ObjectReference{
+			credentialsRef = &corev1.ObjectReference{
 				APIVersion: apiVersion,
 				Kind:       kind,
 				Name:       credentialsBinding.CredentialsRef.Name,
@@ -498,7 +498,7 @@ func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencorev1beta
 				if strings.HasSuffix(*shoot.Spec.DNS.Domain, "."+seedDNSDefault.Domain) {
 					return &gardencore.SeedDNSProvider{
 						Type:           seedDNSDefault.Type,
-						CredentialsRef: seedDNSDefault.CredentialsRef,
+						CredentialsRef: &seedDNSDefault.CredentialsRef,
 					}, nil
 				}
 			}
@@ -525,7 +525,7 @@ func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencorev1beta
 		if strings.HasSuffix(*shoot.Spec.DNS.Domain, domain) {
 			return &gardencore.SeedDNSProvider{
 				Type: provider,
-				CredentialsRef: corev1.ObjectReference{
+				CredentialsRef: &corev1.ObjectReference{
 					APIVersion: corev1.SchemeGroupVersion.String(),
 					Kind:       "Secret",
 					Name:       secret.Name,

@@ -175,7 +175,7 @@ func SyncDNSProviderCredentials(seed *core.Seed) {
 
 	// secretRef is set and credentialsRef is not, sync both fields.
 	if !isSecretRefEmpty(dnsProvider.SecretRef) && isCredentialsRefEmpty(dnsProvider.CredentialsRef) {
-		dnsProvider.CredentialsRef = corev1.ObjectReference{
+		dnsProvider.CredentialsRef = &corev1.ObjectReference{
 			APIVersion: corev1.SchemeGroupVersion.String(),
 			Kind:       "Secret",
 			Namespace:  dnsProvider.SecretRef.Namespace,
@@ -208,7 +208,7 @@ func isSecretRefEmpty(secretRef corev1.SecretReference) bool {
 	return secretRef.Name == "" && secretRef.Namespace == ""
 }
 
-func isCredentialsRefEmpty(credentialsRef corev1.ObjectReference) bool {
-	return credentialsRef.APIVersion == "" && credentialsRef.Kind == "" &&
-		credentialsRef.Name == "" && credentialsRef.Namespace == ""
+func isCredentialsRefEmpty(credentialsRef *corev1.ObjectReference) bool {
+	return credentialsRef == nil ||
+		credentialsRef.APIVersion == "" && credentialsRef.Kind == "" && credentialsRef.Name == "" && credentialsRef.Namespace == ""
 }

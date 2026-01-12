@@ -50,7 +50,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				DNS: core.SeedDNS{
 					Provider: &core.SeedDNSProvider{
 						Type: "foo",
-						CredentialsRef: corev1.ObjectReference{
+						CredentialsRef: &corev1.ObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
 							Name:       "secret",

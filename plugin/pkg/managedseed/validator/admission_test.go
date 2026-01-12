@@ -156,7 +156,7 @@ var _ = Describe("ManagedSeed", func() {
 					DNS: core.SeedDNS{
 						Provider: &core.SeedDNSProvider{
 							Type: dnsProvider,
-							CredentialsRef: corev1.ObjectReference{
+							CredentialsRef: &corev1.ObjectReference{
 								APIVersion: "v1",
 								Kind:       "Secret",
 								Name:       name,
@@ -193,7 +193,7 @@ var _ = Describe("ManagedSeed", func() {
 					DNS: gardencorev1beta1.SeedDNS{
 						Provider: &gardencorev1beta1.SeedDNSProvider{
 							Type: dnsProvider,
-							CredentialsRef: corev1.ObjectReference{
+							CredentialsRef: &corev1.ObjectReference{
 								APIVersion: "v1",
 								Kind:       "Secret",
 								Name:       name,
@@ -405,7 +405,7 @@ var _ = Describe("ManagedSeed", func() {
 
 				seedx.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{
 					Type:           "type",
-					CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "bar", Namespace: "garden"},
+					CredentialsRef: &corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "bar", Namespace: "garden"},
 				}
 				Expect(managedSeed.Spec.Gardenlet).To(Equal(seedmanagement.GardenletConfig{
 					Config: &gardenletconfigv1alpha1.GardenletConfiguration{
@@ -487,7 +487,7 @@ var _ = Describe("ManagedSeed", func() {
 
 				seedx.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{
 					Type:           "type",
-					CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "bar", Namespace: "garden"},
+					CredentialsRef: &corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "bar", Namespace: "garden"},
 				}
 				Expect(managedSeed.Spec.Gardenlet).To(Equal(seedmanagement.GardenletConfig{
 					Config: &gardenletconfigv1alpha1.GardenletConfiguration{
@@ -535,7 +535,7 @@ var _ = Describe("ManagedSeed", func() {
 
 				seedx.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{
 					Type:           "type",
-					CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "bar", Namespace: "garden"},
+					CredentialsRef: &corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "bar", Namespace: "garden"},
 				}
 				Expect(managedSeed.Spec.Gardenlet).To(Equal(seedmanagement.GardenletConfig{
 					Config: &gardenletconfigv1alpha1.GardenletConfiguration{

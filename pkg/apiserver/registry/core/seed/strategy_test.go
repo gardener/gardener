@@ -133,7 +133,7 @@ var _ = Describe("Strategy", func() {
 							Namespace: "namespace",
 							Name:      "name",
 						},
-						CredentialsRef: corev1.ObjectReference{
+						CredentialsRef: &corev1.ObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
 							Namespace:  "namespace",
@@ -153,7 +153,7 @@ var _ = Describe("Strategy", func() {
 
 				It("should bump generation when seed.spec.dns.provider.credentialsRef is synced with seed.spec.dns.provider.secretRef", func() {
 					newSeed.Spec.DNS.Provider = &core.SeedDNSProvider{
-						CredentialsRef: corev1.ObjectReference{
+						CredentialsRef: &corev1.ObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
 							Namespace:  "namespace",
@@ -172,7 +172,7 @@ var _ = Describe("Strategy", func() {
 							Namespace: "namespace",
 							Name:      "name",
 						},
-						CredentialsRef: corev1.ObjectReference{
+						CredentialsRef: &corev1.ObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
 							Namespace:  "namespace",
@@ -180,7 +180,7 @@ var _ = Describe("Strategy", func() {
 						},
 					}
 					newSeed.Spec.DNS.Provider = &core.SeedDNSProvider{
-						CredentialsRef: corev1.ObjectReference{
+						CredentialsRef: &corev1.ObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
 							Namespace:  "namespace",
@@ -210,7 +210,7 @@ var _ = Describe("Strategy", func() {
 				},
 			}
 
-			Expect(seed.Spec.DNS.Provider.CredentialsRef).To(Equal(corev1.ObjectReference{}))
+			Expect(seed.Spec.DNS.Provider.CredentialsRef).To(BeNil())
 
 			SyncDNSProviderCredentials(seed)
 
@@ -223,7 +223,7 @@ var _ = Describe("Strategy", func() {
 
 		It("should sync dns.provider.credentialsRef referring secret with dns.provider.secretRef", func() {
 			seed.Spec.DNS.Provider = &core.SeedDNSProvider{
-				CredentialsRef: corev1.ObjectReference{
+				CredentialsRef: &corev1.ObjectReference{
 					APIVersion: "v1",
 					Kind:       "Secret",
 					Namespace:  "namespace",
@@ -242,7 +242,7 @@ var _ = Describe("Strategy", func() {
 
 		It("should not sync dns.provider.credentialsRef referring workloadidentity with dns.provider.secretRef", func() {
 			seed.Spec.DNS.Provider = &core.SeedDNSProvider{
-				CredentialsRef: corev1.ObjectReference{
+				CredentialsRef: &corev1.ObjectReference{
 					APIVersion: "security.gardener.cloud/v1alpha1",
 					Kind:       "WorkloadIdentity",
 					Namespace:  "namespace",
@@ -261,7 +261,7 @@ var _ = Describe("Strategy", func() {
 
 		It("should not sync empty dns.provider.credentialsRef with dns.provider.secretRef", func() {
 			seed.Spec.DNS.Provider = &core.SeedDNSProvider{
-				CredentialsRef: corev1.ObjectReference{},
+				CredentialsRef: nil,
 				SecretRef:      corev1.SecretReference{},
 			}
 
@@ -269,12 +269,12 @@ var _ = Describe("Strategy", func() {
 
 			Expect(seed.Spec.DNS.Provider.SecretRef.Namespace).To(BeEmpty())
 			Expect(seed.Spec.DNS.Provider.SecretRef.Name).To(BeEmpty())
-			Expect(seed.Spec.DNS.Provider.CredentialsRef).To(Equal(corev1.ObjectReference{}))
+			Expect(seed.Spec.DNS.Provider.CredentialsRef).To(BeNil())
 		})
 
 		It("should not sync dns.provider.credentialsRef with dns.provider.secretRef when they refer different resources", func() {
 			seed.Spec.DNS.Provider = &core.SeedDNSProvider{
-				CredentialsRef: corev1.ObjectReference{
+				CredentialsRef: &corev1.ObjectReference{
 					APIVersion: "security.gardener.cloud/v1alpha1",
 					Kind:       "WorkloadIdentity",
 					Namespace:  "namespace",

@@ -8071,12 +8071,11 @@ func schema_pkg_apis_core_v1beta1_SeedDNSProvider(ref common.ReferenceCallback) 
 					"credentialsRef": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CredentialsRef is a reference to a resource holding the credentials used for authentication with the DNS provider. As of now, only v1.Secret is supported.",
-							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
 				},
-				Required: []string{"type", "secretRef", "credentialsRef"},
+				Required: []string{"type", "secretRef"},
 			},
 		},
 		Dependencies: []string{

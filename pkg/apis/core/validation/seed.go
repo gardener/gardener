@@ -230,21 +230,25 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 			allErrs = append(allErrs, field.Required(dnsProviderPath.Child("type"), "DNS provider type must be set"))
 		}
 
-		allErrs = append(allErrs, ValidateCredentialsRef(dnsProvider.CredentialsRef, dnsProviderPath.Child("credentialsRef"))...)
+		if dnsProvider.CredentialsRef == nil {
+			allErrs = append(allErrs, field.Required(dnsProviderPath.Child("credentialsRef"), "must be set to refer a Secret or WorkloadIdentity"))
+		} else {
+			allErrs = append(allErrs, ValidateCredentialsRef(*dnsProvider.CredentialsRef, dnsProviderPath.Child("credentialsRef"))...)
 
-		if dnsProvider.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
-			dnsProvider.CredentialsRef.Kind == "Secret" {
-			if dnsProvider.SecretRef.Name != dnsProvider.CredentialsRef.Name ||
-				dnsProvider.SecretRef.Namespace != dnsProvider.CredentialsRef.Namespace {
-				allErrs = append(allErrs, field.Invalid(dnsProviderPath.Child("secretRef"), dnsProvider.SecretRef, "must refer to the same Secret as credentialsRef"))
-			}
-		} else if dnsProvider.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
-			dnsProvider.CredentialsRef.Kind == "WorkloadIdentity" {
-			if dnsProvider.SecretRef.Name != "" {
-				allErrs = append(allErrs, field.Forbidden(dnsProviderPath.Child("secretRef", "name"), "must not be set when credentialsRef refers to a WorkloadIdentity"))
-			}
-			if dnsProvider.SecretRef.Namespace != "" {
-				allErrs = append(allErrs, field.Forbidden(dnsProviderPath.Child("secretRef", "namespace"), "must not be set when credentialsRef refers to a WorkloadIdentity"))
+			if dnsProvider.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
+				dnsProvider.CredentialsRef.Kind == "Secret" {
+				if dnsProvider.SecretRef.Name != dnsProvider.CredentialsRef.Name ||
+					dnsProvider.SecretRef.Namespace != dnsProvider.CredentialsRef.Namespace {
+					allErrs = append(allErrs, field.Invalid(dnsProviderPath.Child("secretRef"), dnsProvider.SecretRef, "must refer to the same Secret as credentialsRef"))
+				}
+			} else if dnsProvider.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
+				dnsProvider.CredentialsRef.Kind == "WorkloadIdentity" {
+				if dnsProvider.SecretRef.Name != "" {
+					allErrs = append(allErrs, field.Forbidden(dnsProviderPath.Child("secretRef", "name"), "must not be set when credentialsRef refers to a WorkloadIdentity"))
+				}
+				if dnsProvider.SecretRef.Namespace != "" {
+					allErrs = append(allErrs, field.Forbidden(dnsProviderPath.Child("secretRef", "namespace"), "must not be set when credentialsRef refers to a WorkloadIdentity"))
+				}
 			}
 		}
 	}

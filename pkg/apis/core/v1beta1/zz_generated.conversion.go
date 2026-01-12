@@ -6130,7 +6130,7 @@ func Convert_core_SeedDNS_To_v1beta1_SeedDNS(in *core.SeedDNS, out *SeedDNS, s c
 func autoConvert_v1beta1_SeedDNSProvider_To_core_SeedDNSProvider(in *SeedDNSProvider, out *core.SeedDNSProvider, s conversion.Scope) error {
 	out.Type = in.Type
 	out.SecretRef = in.SecretRef
-	out.CredentialsRef = in.CredentialsRef
+	out.CredentialsRef = (*v1.ObjectReference)(unsafe.Pointer(in.CredentialsRef))
 	return nil
 }
 
@@ -6142,7 +6142,7 @@ func Convert_v1beta1_SeedDNSProvider_To_core_SeedDNSProvider(in *SeedDNSProvider
 func autoConvert_core_SeedDNSProvider_To_v1beta1_SeedDNSProvider(in *core.SeedDNSProvider, out *SeedDNSProvider, s conversion.Scope) error {
 	out.Type = in.Type
 	out.SecretRef = in.SecretRef
-	out.CredentialsRef = in.CredentialsRef
+	out.CredentialsRef = (*v1.ObjectReference)(unsafe.Pointer(in.CredentialsRef))
 	return nil
 }
 

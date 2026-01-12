@@ -19,7 +19,7 @@ func SyncSeedDNSProviderCredentials(dns *gardencorev1beta1.SeedDNSProvider) {
 
 	// secretRef is set and credentialsRef is not, sync both fields.
 	if !isSecretRefEmpty(dns.SecretRef) && isCredentialsRefEmpty(dns.CredentialsRef) {
-		dns.CredentialsRef = corev1.ObjectReference{
+		dns.CredentialsRef = &corev1.ObjectReference{
 			APIVersion: corev1.SchemeGroupVersion.String(),
 			Kind:       "Secret",
 			Namespace:  dns.SecretRef.Namespace,
@@ -52,7 +52,7 @@ func isSecretRefEmpty(secretRef corev1.SecretReference) bool {
 	return secretRef.Name == "" && secretRef.Namespace == ""
 }
 
-func isCredentialsRefEmpty(credentialsRef corev1.ObjectReference) bool {
-	return credentialsRef.APIVersion == "" && credentialsRef.Kind == "" &&
-		credentialsRef.Name == "" && credentialsRef.Namespace == ""
+func isCredentialsRefEmpty(credentialsRef *corev1.ObjectReference) bool {
+	return credentialsRef == nil ||
+		credentialsRef.APIVersion == "" && credentialsRef.Kind == "" && credentialsRef.Name == "" && credentialsRef.Namespace == ""
 }

@@ -201,7 +201,8 @@ type SeedDNSProvider struct {
 	// CredentialsRef is a reference to a resource holding the credentials used for
 	// authentication with the DNS provider.
 	// As of now, only v1.Secret is supported.
-	CredentialsRef corev1.ObjectReference `json:"credentialsRef" protobuf:"bytes,5,opt,name=credentialsRef"`
+	// +optional
+	CredentialsRef *corev1.ObjectReference `json:"credentialsRef,omitempty" protobuf:"bytes,5,opt,name=credentialsRef"`
 }
 
 // Ingress configures the Ingress specific settings of the cluster
