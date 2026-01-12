@@ -135,6 +135,7 @@ status:
 The `spec` includes the default set of fields included in all extension resources like `type` and `providerConfig` (see [GEP-01](01-extensibility.md)).
 For shoots with managed infrastructure, the `secretRef` field references the credentials secret that should be used by the extension controller to manage the necessary infrastructure resources (similar to the `Infrastructure` extension resource).
 Additionally, the `spec.endpoints` list contains all healthy control plane node addresses that should be exposed.
+Control plane nodes are considered healthy if their `status.conditions` list contains a condition of type `Ready` with status `True` and does not contain any condition of type `{Disk,Memory,PID}Pressure` or `NetworkUnavailable` with a status other than `False` and the node has healthy etcd and kube-apiserver pods.
 Each endpoint includes the node name, a list of addresses (based on the `Node.status.addresses` list) and the port of the API server (usually `443`).
 
 The `status` includes the default fields included in all extension resources like `observedGeneration` and `lastOperation`.
