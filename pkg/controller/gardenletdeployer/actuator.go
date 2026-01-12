@@ -28,6 +28,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -94,6 +95,11 @@ func (a *Actuator) Reconcile(
 	if err != nil {
 		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
 		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error()), fmt.Errorf("could not get target client: %w", err)
+	}
+
+	if err := a.verifyExistingGardenlet(ctx, targetClient.Client(), obj.GetName()); err != nil {
+		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
+		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error()), err
 	}
 
 	// Create or update garden namespace in the target cluster
@@ -423,6 +429,44 @@ func (a *Actuator) getGardenletDeployment(ctx context.Context, targetClient kube
 		return nil, err
 	}
 	return deployment, nil
+}
+
+// verifyExistingGardenlet checks if the existing gardenlet deployment (if any) is configured with the same seed name
+// as the object currently reconciled. This can help preventing multiple deployments with different seed configuration
+// into the same cluster (e.g., because of kubeconfig configuration issues).
+func (a *Actuator) verifyExistingGardenlet(ctx context.Context, targetClient client.Reader, currentSeedName string) error {
+	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameGardenlet, Namespace: a.GardenletNamespaceTarget}}
+	if err := targetClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed reading %s deployment: %w", client.ObjectKeyFromObject(deployment), err)
+		}
+		return nil
+	}
+
+	configMapVolumeIndex := slices.IndexFunc(deployment.Spec.Template.Spec.Volumes, func(volume corev1.Volume) bool {
+		return volume.Name == "gardenlet-config"
+	})
+	if configMapVolumeIndex < 0 || deployment.Spec.Template.Spec.Volumes[configMapVolumeIndex].ConfigMap == nil {
+		return nil
+	}
+
+	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: deployment.Spec.Template.Spec.Volumes[configMapVolumeIndex].ConfigMap.Name, Namespace: a.GardenletNamespaceTarget}}
+	if err := targetClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
+		return fmt.Errorf("failed reading %s ConfigMap: %w", client.ObjectKeyFromObject(configMap), err)
+	}
+
+	gardenletConfig, err := encoding.DecodeGardenletConfigurationFromBytes([]byte(configMap.Data["config.yaml"]), false)
+	if err != nil {
+		return fmt.Errorf("failed to decode gardenlet configuration in ConfigMap %s: %w", client.ObjectKeyFromObject(configMap), err)
+	}
+
+	if gardenletConfig.SeedConfig != nil && gardenletConfig.SeedConfig.Name != currentSeedName {
+		return fmt.Errorf("found existing gardenlet deployment with ConfigMap %s which uses seed name %q - this seed "+
+			"name doesn't match to %q (for the object currently reconciling). Check if the correct target cluster "+
+			"kubeconfig is used", configMap.Name, gardenletConfig.SeedConfig.Name, currentSeedName)
+	}
+
+	return nil
 }
 
 func (a *Actuator) checkSeedSpec(ctx context.Context, spec *gardencorev1beta1.SeedSpec) error {
