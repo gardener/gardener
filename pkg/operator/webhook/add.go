@@ -179,7 +179,7 @@ func getClientConfig(webhookPath, mode, url string) admissionregistrationv1.Webh
 	return webhook.BuildClientConfigFor(
 		webhookPath,
 		v1beta1constants.GardenNamespace,
-		"gardener-operator",
+		"gardener-operator", false,
 		443,
 		mode,
 		url,

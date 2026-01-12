@@ -19,7 +19,7 @@ import (
 
 // GenerateUnmanagedCertificates generates a one-off CA and server cert for a webhook server. The server certificate and
 // key are written to certDir. This is useful for local development.
-func GenerateUnmanagedCertificates(providerName, certDir, mode, url string) ([]byte, error) {
+func GenerateUnmanagedCertificates(providerName string, doNotPrefixComponentName bool, certDir, mode, url string) ([]byte, error) {
 	caConfig := getWebhookCAConfig(providerName)
 	// we want to use a long validity here, because we don't auto-renew certificates
 	caConfig.Validity = ptr.To(10 * 365 * 24 * time.Hour) // 10y
@@ -29,7 +29,7 @@ func GenerateUnmanagedCertificates(providerName, certDir, mode, url string) ([]b
 		return nil, err
 	}
 
-	serverConfig := getWebhookServerCertConfig(providerName, "", providerName, mode, url)
+	serverConfig := getWebhookServerCertConfig(providerName, "", providerName, doNotPrefixComponentName, mode, url)
 	serverConfig.SigningCA = caCert
 
 	serverCert, err := serverConfig.GenerateCertificate()
@@ -51,7 +51,7 @@ func getWebhookCAConfig(name string) *secretsutils.CertificateSecretConfig {
 	}
 }
 
-func getWebhookServerCertConfig(name, namespace, componentName, mode, url string) *secretsutils.CertificateSecretConfig {
+func getWebhookServerCertConfig(name, namespace, componentName string, doNotPrefixComponentName bool, mode, url string) *secretsutils.CertificateSecretConfig {
 	var (
 		dnsNames    []string
 		ipAddresses []net.IP
@@ -72,11 +72,11 @@ func getWebhookServerCertConfig(name, namespace, componentName, mode, url string
 		}
 
 	case webhook.ModeService:
-		dnsNames = []string{webhook.PrefixedName(componentName)}
+		dnsNames = []string{webhook.PrefixedName(componentName, doNotPrefixComponentName)}
 		if namespace != "" {
 			dnsNames = append(dnsNames,
-				fmt.Sprintf("%s.%s", webhook.PrefixedName(componentName), namespace),
-				fmt.Sprintf("%s.%s.svc", webhook.PrefixedName(componentName), namespace),
+				fmt.Sprintf("%s.%s", webhook.PrefixedName(componentName, doNotPrefixComponentName), namespace),
+				fmt.Sprintf("%s.%s.svc", webhook.PrefixedName(componentName, doNotPrefixComponentName), namespace),
 			)
 		}
 	}

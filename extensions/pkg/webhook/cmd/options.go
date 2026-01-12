@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/spf13/pflag"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -26,6 +27,7 @@ import (
 	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/operator"
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 const (
@@ -295,7 +297,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		webhooks,
 		mgr.GetClient(),
 		c.Server.Namespace,
-		c.extensionName,
+		c.extensionName, false,
 		servicePort,
 		c.Server.Mode,
 		c.Server.URL,
@@ -318,7 +320,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 				path = parsedURL.Path
 			}
 
-			return extensionswebhook.BuildClientConfigFor(path, c.Server.Namespace, c.extensionName, servicePort, c.Server.Mode, c.Server.URL, nil), nil
+			return extensionswebhook.BuildClientConfigFor(path, c.Server.Namespace, c.extensionName, false, servicePort, c.Server.Mode, c.Server.URL, nil), nil
 		}
 
 		if shootWebhookConfigs.ValidatingWebhookConfig != nil {
@@ -366,7 +368,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		mgr.GetLogger().Info("Running webhooks with unmanaged certificates (i.e., the webhook CA will not be rotated automatically). " +
 			"This mode is supposed to be used for development purposes only. Make sure to configure --webhook-config-namespace in production.")
 
-		caBundle, err := certificates.GenerateUnmanagedCertificates(c.extensionName, defaultServer.Options.CertDir, c.Server.Mode, c.Server.URL)
+		caBundle, err := certificates.GenerateUnmanagedCertificates(c.extensionName, false, defaultServer.Options.CertDir, c.Server.Mode, c.Server.URL)
 		if err != nil {
 			return nil, fmt.Errorf("error generating new certificates for webhook server: %w", err)
 		}
@@ -410,7 +412,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		atomicShootWebhookConfigs,
 		c.shootNamespaceSelector,
 		c.shootWebhookManagedResourceName,
-		c.extensionName,
+		c.extensionName, false,
 		c.Server.Namespace,
 		c.Server.Mode,
 		c.Server.URL,
@@ -423,10 +425,16 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 
 func (c *AddToManagerConfig) reconcileSeedWebhookConfig(mgr manager.Manager, webhookConfigs extensionswebhook.Configs, caBundle []byte) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
+		timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
 		for _, webhookConfig := range webhookConfigs.GetWebhookConfigs() {
-			if err := extensionswebhook.ReconcileSeedWebhookConfig(ctx, mgr.GetClient(), webhookConfig, c.Server.OwnerNamespace, caBundle); err != nil {
-				return fmt.Errorf("error reconciling seed webhook config: %w", err)
-			}
+			return retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (bool, error) {
+				if err := extensionswebhook.ReconcileSeedWebhookConfig(ctx, mgr.GetClient(), webhookConfig, c.Server.OwnerNamespace, caBundle); err != nil {
+					return retry.MinorError(fmt.Errorf("error reconciling seed webhook config: %w", err))
+				}
+				return retry.Ok()
+			})
 		}
 		return nil
 	}

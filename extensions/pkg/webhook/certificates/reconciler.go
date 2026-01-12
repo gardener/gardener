@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
@@ -60,6 +61,10 @@ type reconciler struct {
 	Identity string
 	// Name of the component.
 	ComponentName string
+	// DoNotPrefixComponentName can be set if the ComponentName should not be prefixed with 'gardener-extension-'. If
+	// unset (or set to false), the ComponentName will be prefixed with 'gardener-extension-' unless it already starts
+	// with 'gardener-'.
+	DoNotPrefixComponentName bool
 	// ShootWebhookManagedResourceName is the name of the ManagedResource containing the raw shoot webhook config.
 	ShootWebhookManagedResourceName string
 	// ShootNamespaceSelector is a label selector for shoot namespaces relevant to the extension.
@@ -216,7 +221,14 @@ func (r *reconciler) reconcileSourceWebhookConfig(ctx context.Context, sourceWeb
 	// copy object so that we don't lose its name on API/client errors
 	config := sourceWebhookConfig.DeepCopyObject().(client.Object)
 	if err := r.client.Get(ctx, client.ObjectKeyFromObject(config), config); err != nil {
-		return err
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+
+		if err := extensionswebhook.InjectCABundleIntoWebhookConfig(config, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]); err != nil {
+			return err
+		}
+		return r.client.Create(ctx, config)
 	}
 
 	patch := client.MergeFromWithOptions(config.DeepCopyObject().(client.Object), client.MergeFromWithOptimisticLock{})
@@ -253,6 +265,6 @@ func (r *reconciler) generateWebhookCA(ctx context.Context, sm secretsmanager.In
 
 func (r *reconciler) generateWebhookServerCert(ctx context.Context, sm secretsmanager.Interface) (*corev1.Secret, error) {
 	// use current CA for signing server cert to prevent mismatches when dropping the old CA from the webhook config
-	return sm.Generate(ctx, getWebhookServerCertConfig(r.ServerSecretName, r.Namespace, r.ComponentName, r.Mode, r.URL),
+	return sm.Generate(ctx, getWebhookServerCertConfig(r.ServerSecretName, r.Namespace, r.ComponentName, r.DoNotPrefixComponentName, r.Mode, r.URL),
 		secretsmanager.SignedByCA(r.CASecretName, secretsmanager.UseCurrentCA))
 }
