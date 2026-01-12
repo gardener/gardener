@@ -13,6 +13,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.6.0
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/docker/cli v29.1.4+incompatible
+	github.com/elliotchance/orderedmap/v3 v3.1.0
 	github.com/fluent/fluent-operator/v3 v3.5.0
 	github.com/gardener/cert-management v0.19.0
 	github.com/gardener/dependency-watchdog v1.6.0

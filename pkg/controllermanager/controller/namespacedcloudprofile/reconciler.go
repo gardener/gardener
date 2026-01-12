@@ -7,8 +7,8 @@ package namespacedcloudprofile
 import (
 	"context"
 	"fmt"
+	"slices"
 
-	"golang.org/x/exp/maps"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -216,20 +216,25 @@ func mergeMachineImageVersions(base, override gardencorev1beta1.MachineImageVers
 }
 
 func mergeDeep[T any](baseArr, override []T, keyFunc func(T) string, mergeFunc func(T, T) T, allowAdditional bool) []T {
-	existing := utils.CreateMapFromSlice(baseArr, keyFunc)
+	existing := utils.CreateOrderedMapFromSlice(baseArr, keyFunc)
 	for _, value := range override {
 		key := keyFunc(value)
-		if _, exists := existing[key]; !exists {
+		existingValue, exists := existing.Get(key)
+		if !exists {
 			if allowAdditional {
-				existing[key] = value
+				existing.Set(key, value)
 			}
 			continue
 		}
 		if mergeFunc != nil {
-			existing[key] = mergeFunc(existing[key], value)
+			existing.Set(key, mergeFunc(existingValue, value))
 		} else {
-			existing[key] = value
+			existing.Set(key, value)
 		}
 	}
-	return maps.Values(existing)
+	if res := slices.Collect(existing.Values()); res != nil {
+		return res
+	}
+	// If the merged result is empty, slices.Collect returns nil. Instead, return the baseArr as-is (which might be an empty slice but not nil).
+	return baseArr
 }

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/elliotchance/orderedmap/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -70,12 +71,17 @@ func MergeStringMaps[T any](oldMap map[string]T, newMaps ...map[string]T) map[st
 
 // CreateMapFromSlice converts the values of an array to a map using a key function.
 func CreateMapFromSlice[K comparable, T any](arr []T, keyFunc func(T) K) map[K]T {
-	mapped := make(map[K]T, len(arr))
+	return maps.Collect(CreateOrderedMapFromSlice(arr, keyFunc).AllFromFront())
+}
+
+// CreateOrderedMapFromSlice converts the values of an array to an ordered map using a key function.
+func CreateOrderedMapFromSlice[K comparable, T any](arr []T, keyFunc func(T) K) *orderedmap.OrderedMap[K, T] {
+	mapped := orderedmap.NewOrderedMapWithCapacity[K, T](len(arr))
 	if keyFunc == nil {
 		return mapped
 	}
 	for _, value := range arr {
-		mapped[keyFunc(value)] = value
+		mapped.Set(keyFunc(value), value)
 	}
 	return mapped
 }
