@@ -13,5 +13,5 @@ import (
 
 func TestUtils(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Utils Suite")
+	RunSpecs(t, "APIServer Registry SeedManagement Utils Suite")
 }
