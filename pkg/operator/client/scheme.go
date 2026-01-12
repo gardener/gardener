@@ -5,6 +5,8 @@
 package client
 
 import (
+	victoriametricsv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
+	victoriametricsv1beta1 "github.com/VictoriaMetrics/operator/api/operator/v1beta1"
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -61,6 +63,8 @@ var (
 		monitoringv1beta1.AddToScheme,
 		monitoringv1alpha1.AddToScheme,
 		persesv1alpha1.AddToScheme,
+		victoriametricsv1beta1.AddToScheme,
+		victoriametricsv1.AddToScheme,
 		func(scheme *runtime.Scheme) error {
 			apiextensionsinstall.Install(scheme)
 			return nil
