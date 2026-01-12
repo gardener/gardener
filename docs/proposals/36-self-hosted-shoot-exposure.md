@@ -28,10 +28,14 @@ It defines a new extension resource, `SelfHostedShootExposure`, and describes ho
 
 ## Motivation
 
-API servers of hosted shoot clusters can be accessed externally via a DNS name (`api.<Shoot.spec.dns.domain>`).
-The DNS record points to the load balancer of the istio ingress gateway of the hosting seed cluster (see [GEP-08](08-shoot-apiserver-via-sni.md)).
+API servers of hosted shoot clusters can be accessed externally via a DNS name  following the pattern `api.<Shoot.spec.dns.domain>` ("external domain").
+The DNS record points to the load balancer of an istio ingress gateway of the hosting seed cluster (see [GEP-08](08-shoot-apiserver-via-sni.md)).
+Apart from this external domain which might be chosen by the shoot owner, Gardener also creates an "internal domain" for hosted shoot clusters, i.e., a DNS record with the same values.
+The internal domain is configured by the operator in `Seed.spec.dns.internal.domain` and cannot be influenced by the shoot owner.
+Self-hosted shoot clusters only have an external domain based on the `Shoot` manifest, as there is no `Seed` object for configuring the internal domain.
+Hence, the internal domain is not relevant for this proposal.
 
-For convenience and consistency, self-hosted shoot clusters should also be accessible externally via a DNS name using the same pattern.
+For convenience and consistency, Gardener should support exposing self-hosted shoot clusters externally via a DNS name using the same pattern as the external domain of hosted shoot clusters.
 However, in self-hosted shoot clusters, the control plane is hosted within the shoot cluster itself, and there is no hosting seed cluster to provide the necessary exposure mechanism, i.e., no istio ingress gateway.
 In case of a self-hosted shoot cluster with unmanaged infrastructure, Gardener expects the operator to manually set up the necessary DNS record pointing to the control plane nodes or an external load balancer.
 
@@ -43,6 +47,7 @@ Hence, this proposal introduces a new extension resource for this particular pur
 ### Goals
 
 - Enable external access to the API server of self-hosted shoot clusters with managed infrastructure
+- Use the same DNS name pattern for self-hosted shoot clusters as for hosted shoot clusters (external domain)
 - Provide a flexible, extension-based mechanism for control plane exposure by defining a new Gardener extension resource
 - Support multiple exposure strategies (e.g., cloud load balancer or DNS) to fit different use cases
 - Allow extensions to implement provider-specific/custom logic for exposing shoot control planes
@@ -50,6 +55,7 @@ Hence, this proposal introduces a new extension resource for this particular pur
 ### Non-Goals
 
 - Exposing shoot clusters with unmanaged infrastructure
+- Add an internal domain for self-hosted shoot clusters
 - Defining the full lifecycle or implementation details of all possible exposure strategies
 
 ## Proposal
@@ -112,7 +118,7 @@ status:
   lastOperation:
     type: Reconcile
     state: Succeeded
-  
+
   # endpoints of the exposure mechanism
   ingress: # []corev1.LoadBalancerIngress
   - ip: 1.2.3.4
