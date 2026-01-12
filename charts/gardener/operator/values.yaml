@@ -74,7 +74,6 @@ config:
     #   backupLeaderElection:
     #     reelectionPeriod: 5s
     #     etcdConnectionTimeout: 5s
-    # virtualGardenerResourceManagerAdditionalNamespaces: []
     gardenCare:
       syncPeriod: 1m
       conditionThresholds:

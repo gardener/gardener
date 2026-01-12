@@ -204,7 +204,7 @@ The virtual garden control plane components are:
 - `virtual-garden-etcd-events`
 - `virtual-garden-kube-apiserver`
 - `virtual-garden-kube-controller-manager`
-- `virtual-garden-gardener-resource-manager` (use `.controllers.garden.virtualGardenerResourceManagerAdditionalNamespaces[]` to configure custom namespaces in the virtual cluster this `gardener-resource-manager` should handle)
+- `virtual-garden-gardener-resource-manager` (use `.spec.virtualCluster.gardener.resourceManager.additionalTargetNamespaces[]` in the `Garden` API to configure custom namespaces in the virtual cluster this `gardener-resource-manager` should handle)
 
 If the `.spec.virtualCluster.controlPlane.highAvailability={}` is set then these components will be deployed in a "highly available" mode.
 For ETCD, this means that there will be 3 replicas each.

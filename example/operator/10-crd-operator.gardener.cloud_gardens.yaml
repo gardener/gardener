@@ -1316,6 +1316,18 @@ spec:
                         description: DiscoveryServer contains configuration settings
                           for the gardener-discovery-server.
                         type: object
+                      gardenerResourceManager:
+                        description: ResourceManager contains configuration settings
+                          for the gardener-resource-manager.
+                        properties:
+                          additionalTargetNamespaces:
+                            description: AdditionalTargetNamespaces allows specifying
+                              custom target namespaces for the gardener-resource-manager
+                              instance.
+                            items:
+                              type: string
+                            type: array
+                        type: object
                       gardenerScheduler:
                         description: Scheduler contains configuration settings for
                           the gardener-scheduler.

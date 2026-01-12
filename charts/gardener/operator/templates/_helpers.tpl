@@ -94,10 +94,6 @@ config.yaml: |
       etcdConfig:
 {{ toYaml .Values.config.controllers.garden.etcdConfig | indent 8 }}
       {{- end }}
-      {{- if .Values.config.controllers.garden.virtualGardenerResourceManagerAdditionalNamespaces }}
-      virtualGardenerResourceManagerAdditionalNamespaces:
-{{ toYaml .Values.config.controllers.garden.virtualGardenerResourceManagerAdditionalNamespaces | indent 8 }}
-      {{- end }}
     {{- if .Values.config.controllers.gardenCare }}
     gardenCare:
       {{- if .Values.config.controllers.gardenCare.syncPeriod }}

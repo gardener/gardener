@@ -99,10 +99,6 @@ type GardenControllerConfig struct {
 	// backup compaction feature of ETCD backup-restore functionality.
 	// +optional
 	ETCDConfig *gardenletconfigv1alpha1.ETCDConfig `json:"etcdConfig,omitempty"`
-	// VirtualGardenerResourceManagerAdditionalNamespaces allows specifying custom namespaces for the virtual cluster's
-	// gardener-resource-manager instance.
-	// +optional
-	VirtualGardenerResourceManagerAdditionalNamespaces []string `json:"virtualGardenerResourceManagerAdditionalNamespaces,omitempty"`
 }
 
 // GardenletDeployerControllerConfig is the configuration for the gardenlet deployer controller.

@@ -1981,6 +1981,20 @@ GardenerDiscoveryServerConfig
 <p>DiscoveryServer contains configuration settings for the gardener-discovery-server.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>gardenerResourceManager</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerResourceManagerConfig">
+GardenerResourceManagerConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ResourceManager contains configuration settings for the gardener-resource-manager.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.GardenerAPIServerConfig">GardenerAPIServerConfig
@@ -2385,6 +2399,37 @@ DashboardIngress
 <p>
 <p>GardenerDiscoveryServerConfig contains configuration settings for the gardener-discovery-server.</p>
 </p>
+<h3 id="operator.gardener.cloud/v1alpha1.GardenerResourceManagerConfig">GardenerResourceManagerConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Gardener">Gardener</a>)
+</p>
+<p>
+<p>GardenerResourceManagerConfig contains configuration settings for the gardener-resource-manager.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>additionalTargetNamespaces</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AdditionalTargetNamespaces allows specifying custom target namespaces for the gardener-resource-manager instance.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.GardenerSchedulerConfig">GardenerSchedulerConfig
 </h3>
 <p>
