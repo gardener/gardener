@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -60,6 +61,8 @@ func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	newShoot.Status = core.ShootStatus{}
 
 	gardenerutils.SyncCloudProfileFields(nil, newShoot)
+
+	SyncDNSProviderCredentials(newShoot)
 }
 
 func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
@@ -75,6 +78,8 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 	if op, ok := newShoot.Annotations[v1beta1constants.GardenerMaintenanceOperation]; ok {
 		newShoot.Annotations[v1beta1constants.GardenerMaintenanceOperation] = cleanUpOperation(op)
 	}
+
+	SyncDNSProviderCredentials(newShoot)
 
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
@@ -290,6 +295,11 @@ func (shootStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.
 
 	// Ensure that encrypted resources are synced from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
 	SyncEncryptedResourcesStatus(newShoot)
+
+	// Ensure credentialsRef is synced even on /status subresource requests.
+	// Some clients are patching just the status which still results in update events
+	// for those watching the resource.
+	SyncDNSProviderCredentials(newShoot)
 }
 
 func (shootStatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
@@ -329,6 +339,10 @@ func (shootBindingStrategy) PrepareForUpdate(_ context.Context, obj, old runtime
 	if !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
+
+	// Ensure credentialsRef is synced even on /binding subresource requests
+	// as it us updating the shoot spec.
+	SyncDNSProviderCredentials(newShoot)
 }
 
 func (shootBindingStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
@@ -422,4 +436,35 @@ func SyncEncryptedResourcesStatus(shoot *core.Shoot) {
 func cleanUpOperation(operation string) string {
 	operations := utils.SplitAndTrimString(operation, v1beta1constants.GardenerOperationsSeparator)
 	return strings.Join(sets.New(operations...).UnsortedList(), v1beta1constants.GardenerOperationsSeparator)
+}
+
+// SyncDNSProviderCredentials ensures spec.dns.providers[].secretName and spec.dns.providers[].credentialsRef are in sync
+// when possible.
+//
+// TODO(vpnachev): Remove this function once support for Kubernetes 1.34 is dropped.
+func SyncDNSProviderCredentials(shoot *core.Shoot) {
+	if shoot.Spec.DNS == nil {
+		return
+	}
+
+	for idx, provider := range shoot.Spec.DNS.Providers {
+		if provider.SecretName != nil && provider.CredentialsRef == nil {
+			shoot.Spec.DNS.Providers[idx].CredentialsRef = &autoscalingv1.CrossVersionObjectReference{
+				APIVersion: "v1",
+				Kind:       "Secret",
+				Name:       *provider.SecretName,
+			}
+			continue
+		}
+
+		if provider.SecretName == nil && provider.CredentialsRef != nil && provider.CredentialsRef.APIVersion == "v1" && provider.CredentialsRef.Kind == "Secret" {
+			shoot.Spec.DNS.Providers[idx].SecretName = &provider.CredentialsRef.Name
+			continue
+		}
+
+		// in all other cases we can do nothing:
+		// - both fields are unset -> we have nothing to sync
+		// - both fields are set -> let the validation check if they are correct
+		// - credentialsRef refer to WorkloadIdentity -> secretRef should stay unset
+	}
 }

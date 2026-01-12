@@ -35,15 +35,4 @@ var _ = Describe("Dns", func() {
 			DNSZone:     "zoo",
 		}, Equal("bar"), Equal("foo"), Equal("zoo"), Not(HaveOccurred())),
 	)
-
-	DescribeTable("#GenerateDNSProviderName",
-		func(secretName, providerType, expectedName string) {
-			Expect(GenerateDNSProviderName(secretName, providerType)).To(Equal(expectedName))
-		},
-
-		Entry("both empty", "", "", ""),
-		Entry("secretName empty", "", "provider-type", "provider-type"),
-		Entry("providerType empty", "secret-name", "", "secret-name"),
-		Entry("both set", "secret-name", "provider-type", "provider-type-secret-name"),
-	)
 })

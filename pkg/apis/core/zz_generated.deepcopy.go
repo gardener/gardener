@@ -10,6 +10,7 @@
 package core
 
 import (
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -1714,6 +1715,11 @@ func (in *DNSProvider) DeepCopyInto(out *DNSProvider) {
 		in, out := &in.Zones, &out.Zones
 		*out = new(DNSIncludeExclude)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.CredentialsRef != nil {
+		in, out := &in.CredentialsRef, &out.CredentialsRef
+		*out = new(autoscalingv1.CrossVersionObjectReference)
+		**out = **in
 	}
 	return
 }

@@ -13,6 +13,7 @@ import (
 	unsafe "unsafe"
 
 	core "github.com/gardener/gardener/pkg/apis/core"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -3489,6 +3490,7 @@ func autoConvert_v1beta1_DNSProvider_To_core_DNSProvider(in *DNSProvider, out *c
 	out.SecretName = (*string)(unsafe.Pointer(in.SecretName))
 	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.Zones = (*core.DNSIncludeExclude)(unsafe.Pointer(in.Zones))
+	out.CredentialsRef = (*autoscalingv1.CrossVersionObjectReference)(unsafe.Pointer(in.CredentialsRef))
 	return nil
 }
 
@@ -3503,6 +3505,7 @@ func autoConvert_core_DNSProvider_To_v1beta1_DNSProvider(in *core.DNSProvider, o
 	out.SecretName = (*string)(unsafe.Pointer(in.SecretName))
 	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.Zones = (*DNSIncludeExclude)(unsafe.Pointer(in.Zones))
+	out.CredentialsRef = (*autoscalingv1.CrossVersionObjectReference)(unsafe.Pointer(in.CredentialsRef))
 	return nil
 }
 

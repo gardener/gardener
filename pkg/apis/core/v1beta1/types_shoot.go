@@ -7,6 +7,7 @@ package v1beta1
 import (
 	"time"
 
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -567,8 +568,11 @@ type DNSProvider struct {
 	// provider. When not specified, the Gardener will use the cloud provider credentials referenced
 	// by the Shoot and try to find respective credentials there (primary provider only). Specifying this field may override
 	// this behavior, i.e. forcing the Gardener to only look into the given secret.
+	//
+	// Deprecated: This field is deprecated and will be forbidden starting from Kubernetes 1.35. Please use `CredentialsRef` instead.
+	// Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.
 	// +optional
-	SecretName *string `json:"secretName,omitempty" protobuf:"bytes,3,opt,name=secretName"`
+	SecretName *string `json:"secretName,omitempty" protobuf:"bytes,3,opt,name=secretName"` // TODO(vpnachev): Remove this field once support for Kubernetes 1.34 is dropped.
 	// Type is the DNS provider type.
 	// +optional
 	Type *string `json:"type,omitempty" protobuf:"bytes,4,opt,name=type"`
@@ -579,6 +583,10 @@ type DNSProvider struct {
 	// Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.
 	// +optional
 	Zones *DNSIncludeExclude `json:"zones,omitempty" protobuf:"bytes,5,opt,name=zones"`
+	// CredentialsRef is a reference to a resource providing credentials for the DNS provider.
+	// Supported resources are Secret and WorkloadIdentity.
+	// +optional
+	CredentialsRef *autoscalingv1.CrossVersionObjectReference `json:"credentialsRef,omitempty" protobuf:"bytes,6,opt,name=credentialsRef"`
 }
 
 // DNSIncludeExclude contains information about which domains shall be included/excluded.

@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -239,8 +240,12 @@ var _ = Describe("dns", func() {
 						Type: &providerType,
 					},
 					{
-						Type:       &providerType,
-						SecretName: &secretName,
+						Type: &providerType,
+						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       secretName,
+						},
 					},
 				}
 
@@ -258,9 +263,9 @@ var _ = Describe("dns", func() {
 						"Primary": Equal(ptr.To(true)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":       Equal(ptr.To(providerType)),
-						"Primary":    BeNil(),
-						"SecretName": Equal(ptr.To(secretName)),
+						"Type":           Equal(ptr.To(providerType)),
+						"Primary":        BeNil(),
+						"CredentialsRef": Equal(&autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: secretName}),
 					}),
 				))
 			})
@@ -273,12 +278,20 @@ var _ = Describe("dns", func() {
 				shoot.Spec.DNS.Domain = &shootDomain
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type:       &providerType,
-						SecretName: &secretName2,
+						Type: &providerType,
+						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       secretName2,
+						},
 					},
 					{
-						Type:       &providerType,
-						SecretName: &secretName,
+						Type: &providerType,
+						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       secretName,
+						},
 					},
 				}
 
@@ -298,9 +311,9 @@ var _ = Describe("dns", func() {
 						"Type": Equal(ptr.To(providerType)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":       Equal(ptr.To(providerType)),
-						"Primary":    Equal(ptr.To(true)),
-						"SecretName": Equal(ptr.To(secretName)),
+						"Type":           Equal(ptr.To(providerType)),
+						"Primary":        Equal(ptr.To(true)),
+						"CredentialsRef": Equal(&autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: secretName}),
 					}),
 				))
 			})
@@ -315,11 +328,19 @@ var _ = Describe("dns", func() {
 						Type: &providerType,
 					},
 					{
-						Type:       &providerType,
-						SecretName: &secretName,
+						Type: &providerType,
+						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       secretName,
+						},
 					},
 					{
-						SecretName: &secretName,
+						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       secretName,
+						},
 					},
 				}
 
@@ -347,8 +368,12 @@ var _ = Describe("dns", func() {
 						Type: &providerType,
 					},
 					{
-						Type:       &providerType,
-						SecretName: &secretName,
+						Type: &providerType,
+						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       secretName,
+						},
 					},
 					{
 						Type: &providerType,
@@ -369,9 +394,9 @@ var _ = Describe("dns", func() {
 						"Primary": BeNil(),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":       Equal(ptr.To(providerType)),
-						"Primary":    BeNil(),
-						"SecretName": Equal(ptr.To(secretName)),
+						"Type":           Equal(ptr.To(providerType)),
+						"Primary":        BeNil(),
+						"CredentialsRef": Equal(&autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: secretName}),
 					}),
 					MatchFields(IgnoreExtras, Fields{
 						"Type":    Equal(ptr.To(providerType)),
@@ -540,8 +565,12 @@ var _ = Describe("dns", func() {
 			It("should not set a primary provider because a default domain was generated for the shoot (no domain)", func() {
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type:       &providerType,
-						SecretName: &secretName,
+						Type: &providerType,
+						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       secretName,
+						},
 					},
 				}
 
@@ -555,18 +584,22 @@ var _ = Describe("dns", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(fmt.Sprintf("%s.%s.%s", shootName, projectName, domain)))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
-					"Type":       Equal(ptr.To(providerType)),
-					"Primary":    BeNil(),
-					"SecretName": Equal(ptr.To(secretName)),
+					"Type":           Equal(ptr.To(providerType)),
+					"Primary":        BeNil(),
+					"CredentialsRef": Equal(&autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: secretName}),
 				})))
 			})
 
 			It("should forbid setting a primary provider because a default domain was generated for the shoot (no domain)", func() {
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type:       &providerType,
-						SecretName: &secretName,
-						Primary:    ptr.To(true),
+						Type: &providerType,
+						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       secretName,
+						},
+						Primary: ptr.To(true),
 					},
 				}
 
@@ -589,9 +622,13 @@ var _ = Describe("dns", func() {
 				shoot.Spec.DNS.Domain = &shootDomain
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type:       &providerType,
-						SecretName: &secretName,
-						Primary:    ptr.To(true),
+						Type: &providerType,
+						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       secretName,
+						},
+						Primary: ptr.To(true),
 					},
 				}
 

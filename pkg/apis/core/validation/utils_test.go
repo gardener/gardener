@@ -421,6 +421,77 @@ var _ = Describe("Utils tests", func() {
 		),
 	)
 
+	DescribeTable("#ValidateLocalCredentialsRef",
+		func(ref autoscalingv1.CrossVersionObjectReference, matcher gomegatypes.GomegaMatcher) {
+			fldPath := field.NewPath("credentialsRef")
+			errList := ValidateLocalCredentialsRef(ref, fldPath)
+			Expect(errList).To(matcher)
+		},
+		Entry("should allow v1.Secret",
+			autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"},
+			BeEmpty(),
+		),
+		Entry("should allow security.gardener.cloud/v1alpha1.WorkloadIdentity",
+			autoscalingv1.CrossVersionObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: "foo"},
+			BeEmpty(),
+		),
+		Entry("should forbid v1.Secret with non DNS1123 name",
+			autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "Foo"},
+			ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("credentialsRef.name"),
+					"BadValue": Equal("Foo"),
+				})),
+			),
+		),
+
+		Entry("should forbid credentialsRef with empty apiVersion, kind, or name",
+			autoscalingv1.CrossVersionObjectReference{APIVersion: "", Kind: "", Name: ""},
+			ContainElements(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("credentialsRef.apiVersion"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("credentialsRef.kind"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("credentialsRef.name"),
+				})),
+			),
+		),
+		Entry("should forbid v1.ConfigMap",
+			autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "foo"},
+			ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("credentialsRef"),
+				})),
+			),
+		),
+		Entry("should forbid security.gardener.cloud/v1alpha1.FooBar",
+			autoscalingv1.CrossVersionObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "FooBar", Name: "foo"},
+			ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("credentialsRef"),
+				})),
+			),
+		),
+		Entry("should forbid security.gardener.cloud/v2alpha1.WorkloadIdentity",
+			autoscalingv1.CrossVersionObjectReference{APIVersion: "security.gardener.cloud/v2alpha1", Kind: "WorkloadIdentity", Name: "foo"},
+			ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("credentialsRef"),
+				})),
+			),
+		),
+	)
+
 	Describe("#ValidateMachineImages", func() {
 		DescribeTable("should not allow invalid machine image names",
 			func(name string, shouldFail bool) {

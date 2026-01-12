@@ -565,45 +565,7 @@ func ValidateResources(resources []core.NamedResourceReference, fldPath *field.P
 // ValidateCredentialsRef ensures that a resource of GVK v1.Secret or security.gardener.cloud/v1alpha1.WorkloadIdentity
 // is referred, and its name and namespace are properly set.
 func ValidateCredentialsRef(ref corev1.ObjectReference, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if len(ref.APIVersion) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("apiVersion"), "must provide an apiVersion"))
-	}
-
-	if len(ref.Kind) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("kind"), "must provide a kind"))
-	}
-
-	if len(ref.Name) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
-	}
-
-	for _, err := range validation.IsDNS1123Subdomain(ref.Name) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("name"), ref.Name, err))
-	}
-
-	if len(ref.Namespace) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("namespace"), "must provide a namespace"))
-	}
-
-	for _, err := range validation.IsDNS1123Subdomain(ref.Namespace) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), ref.Namespace, err))
-	}
-
-	var (
-		secret           = corev1.SchemeGroupVersion.WithKind("Secret")
-		workloadIdentity = securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentity")
-
-		allowedGVKs = sets.New(secret, workloadIdentity)
-		validGVKs   = []string{secret.String(), workloadIdentity.String()}
-	)
-
-	if !allowedGVKs.Has(ref.GroupVersionKind()) {
-		allErrs = append(allErrs, field.NotSupported(fldPath, ref.String(), validGVKs))
-	}
-
-	return allErrs
+	return validateCredentialsRef(ref, true, fldPath)
 }
 
 // ValidateObjectReferenceNameAndNamespace ensures the name in the ObjectReference is set.
@@ -625,6 +587,68 @@ func ValidateObjectReferenceNameAndNamespace(ref corev1.ObjectReference, fldPath
 		for _, err := range apivalidation.ValidateNamespaceName(ref.Namespace, false) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), ref.Namespace, err))
 		}
+	}
+
+	return allErrs
+}
+
+// ValidateLocalCredentialsRef ensures that a resource of GVK v1.Secret or security.gardener.cloud/v1alpha1.WorkloadIdentity
+// is referred, and its name is properly set.
+func ValidateLocalCredentialsRef(ref autoscalingv1.CrossVersionObjectReference, fldPath *field.Path) field.ErrorList {
+	return validateCredentialsRef(
+		corev1.ObjectReference{
+			APIVersion: ref.APIVersion,
+			Kind:       ref.Kind,
+			Name:       ref.Name,
+		},
+		false,
+		fldPath,
+	)
+}
+
+func validateCredentialsRef(ref corev1.ObjectReference, requireNamespace bool, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(ref.APIVersion) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("apiVersion"), "must provide an apiVersion"))
+	}
+
+	if len(ref.Kind) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("kind"), "must provide a kind"))
+	}
+
+	if len(ref.Name) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
+	}
+
+	for _, err := range validation.IsDNS1123Subdomain(ref.Name) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("name"), ref.Name, err))
+	}
+
+	if requireNamespace {
+		if len(ref.Namespace) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("namespace"), "must provide a namespace"))
+		}
+
+		for _, err := range validation.IsDNS1123Subdomain(ref.Namespace) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), ref.Namespace, err))
+		}
+	} else {
+		if len(ref.Namespace) != 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), ref.Namespace, "namespace must not be set"))
+		}
+	}
+
+	var (
+		secret           = corev1.SchemeGroupVersion.WithKind("Secret")
+		workloadIdentity = securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentity")
+
+		allowedGVKs = sets.New(secret, workloadIdentity)
+		validGVKs   = []string{secret.String(), workloadIdentity.String()}
+	)
+
+	if !allowedGVKs.Has(ref.GroupVersionKind()) {
+		allErrs = append(allErrs, field.NotSupported(fldPath, ref.String(), validGVKs))
 	}
 
 	return allErrs
