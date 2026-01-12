@@ -6,6 +6,7 @@ package unstructured
 
 import (
 	"context"
+	"maps"
 
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -151,9 +152,7 @@ func mergeObjectContents(dest, src map[string]any) map[string]any {
 func FilterMetadata(content map[string]any, fields ...string) map[string]any {
 	// Copy content to result
 	result := make(map[string]any)
-	for key, value := range content {
-		result[key] = value
-	}
+	maps.Copy(result, content)
 
 	// Delete specified fields from result
 	if metadata, ok := result["metadata"].(map[string]any); ok {

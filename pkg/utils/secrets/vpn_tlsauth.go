@@ -69,7 +69,7 @@ func generateVPNKey() ([]byte, error) {
 
 	var formattedKeyString string
 
-	for i := 0; i < 16; i++ {
+	for i := range 16 {
 		formattedKeyString = formattedKeyString + keyString[i*32:((i+1)*32)] + "\n"
 	}
 

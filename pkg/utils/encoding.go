@@ -14,6 +14,7 @@ import (
 	"errors"
 	"slices"
 	"strconv"
+	"strings"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -131,7 +132,7 @@ func ComputeSHA256Hex(in []byte) string {
 
 // HashForMap creates a hash value for a map of type map[string]any and returns it.
 func HashForMap(m map[string]any) string {
-	var hash string
+	var hash strings.Builder
 	keys := make([]string, 0, len(m))
 
 	for k := range m {
@@ -143,23 +144,23 @@ func HashForMap(m map[string]any) string {
 	for _, k := range keys {
 		switch v := m[k].(type) {
 		case string:
-			hash += ComputeSHA256Hex([]byte(v))
+			hash.WriteString(ComputeSHA256Hex([]byte(v)))
 		case int:
-			hash += ComputeSHA256Hex([]byte(strconv.Itoa(v)))
+			hash.WriteString(ComputeSHA256Hex([]byte(strconv.Itoa(v))))
 		case bool:
-			hash += ComputeSHA256Hex([]byte(strconv.FormatBool(v)))
+			hash.WriteString(ComputeSHA256Hex([]byte(strconv.FormatBool(v))))
 		case []string:
 			for _, val := range v {
-				hash += ComputeSHA256Hex([]byte(val))
+				hash.WriteString(ComputeSHA256Hex([]byte(val)))
 			}
 		case map[string]any:
-			hash += HashForMap(v)
+			hash.WriteString(HashForMap(v))
 		case []map[string]any:
 			for _, val := range v {
-				hash += HashForMap(val)
+				hash.WriteString(HashForMap(val))
 			}
 		}
 	}
 
-	return ComputeSHA256Hex([]byte(hash))
+	return ComputeSHA256Hex([]byte(hash.String()))
 }

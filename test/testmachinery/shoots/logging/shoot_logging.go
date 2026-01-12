@@ -28,7 +28,6 @@ import (
 )
 
 const (
-	shootInitializationTimeout          = 2 * time.Minute
 	shootGetLogsFromValiTimeout         = 5 * time.Minute
 	shootLoggerDeploymentCleanupTimeout = 5 * time.Minute
 

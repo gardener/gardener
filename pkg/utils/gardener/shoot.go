@@ -943,10 +943,10 @@ func CalculateWorkerPoolHashForInPlaceUpdate(workerPoolName string, kubernetesVe
 
 	data = append(data, CalculateDataStringForKubeletConfiguration(kubeletConfig)...)
 
-	var result string
+	var result strings.Builder
 	for _, v := range data {
-		result += utils.ComputeSHA256Hex([]byte(v))
+		result.WriteString(utils.ComputeSHA256Hex([]byte(v)))
 	}
 
-	return utils.ComputeSHA256Hex([]byte(result))[:16], nil
+	return utils.ComputeSHA256Hex([]byte(result.String()))[:16], nil
 }

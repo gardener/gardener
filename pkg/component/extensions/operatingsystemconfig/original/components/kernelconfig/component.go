@@ -6,8 +6,10 @@ package kernelconfig
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
+	"strings"
 
 	"k8s.io/component-helpers/node/util/sysctl"
 	"k8s.io/utils/ptr"
@@ -31,14 +33,10 @@ func (component) Name() string {
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	var newData = make(map[string]string, len(data))
 
-	for key, value := range data {
-		newData[key] = value
-	}
+	maps.Copy(newData, data)
 
 	if !ctx.KubeProxyEnabled {
-		for key, value := range nonKubeProxyData {
-			newData[key] = value
-		}
+		maps.Copy(newData, nonKubeProxyData)
 	}
 
 	if ptr.Deref(ctx.KubeletConfigParameters.ProtectKernelDefaults, true) {
@@ -54,9 +52,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	}
 
 	// Custom kernel settings for worker group
-	for key, value := range ctx.Sysctls {
-		newData[key] = value
-	}
+	maps.Copy(newData, ctx.Sysctls)
 
 	// Content should be in well-defined order
 	keys := make([]string, 0, len(newData))
@@ -64,9 +60,9 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		keys = append(keys, key)
 	}
 	slices.Sort(keys)
-	fileContent := ""
+	var fileContent strings.Builder
 	for _, key := range keys {
-		fileContent += fmt.Sprintf("%s = %s\n", key, newData[key])
+		fileContent.WriteString(fmt.Sprintf("%s = %s\n", key, newData[key]))
 	}
 
 	kernelSettingsFile := extensionsv1alpha1.File{
@@ -74,7 +70,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		Permissions: ptr.To[uint32](0644),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
-				Data: fileContent,
+				Data: fileContent.String(),
 			},
 		},
 	}

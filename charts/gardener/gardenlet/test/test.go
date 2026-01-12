@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
@@ -895,11 +896,11 @@ func VerifyGardenletComponentConfigConfigMap(
 		}
 		list := &corev1.ConfigMapList{}
 		Expect(c.List(ctx, list)).ToNot(HaveOccurred())
-		cmNames := ""
+		var cmNames strings.Builder
 		for _, cm := range list.Items {
-			cmNames += " " + cm.Name
+			cmNames.WriteString(" " + cm.Name)
 		}
-		ginkgo.Fail("Could not find unique gardenlet configmap " + uniqueName + ", possibly the unique name has changed. Found:" + cmNames)
+		ginkgo.Fail("Could not find unique gardenlet configmap " + uniqueName + ", possibly the unique name has changed. Found:" + cmNames.String())
 	}
 
 	Expect(componentConfigCm.Labels).To(DeepEqual(expectedComponentConfigCm.Labels))

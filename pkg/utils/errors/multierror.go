@@ -6,6 +6,7 @@ package errors
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/go-multierror"
 )
@@ -20,14 +21,14 @@ func NewErrorFormatFuncWithPrefix(prefix string) multierror.ErrorFormatFunc {
 			return fmt.Sprintf("%s: 1 error occurred: %s", prefix, es[0])
 		}
 
-		combinedMsg := ""
+		var combinedMsg strings.Builder
 		for i, err := range es {
 			if i > 0 {
-				combinedMsg += ", "
+				combinedMsg.WriteString(", ")
 			}
-			combinedMsg += err.Error()
+			combinedMsg.WriteString(err.Error())
 		}
 
-		return fmt.Sprintf("%s: %d errors occurred: [%s]", prefix, len(es), combinedMsg)
+		return fmt.Sprintf("%s: %d errors occurred: [%s]", prefix, len(es), combinedMsg.String())
 	}
 }

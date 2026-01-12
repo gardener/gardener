@@ -266,10 +266,7 @@ func (r *Reconciler) computeRequeueAfterDuration(ctx context.Context, log logr.L
 }
 
 func (r *Reconciler) renewDuration(expirationTimestamp time.Time) time.Duration {
-	expirationDuration := expirationTimestamp.UTC().Sub(r.Clock.Now().UTC())
-	if expirationDuration >= maxExpirationDuration {
-		expirationDuration = maxExpirationDuration
-	}
+	expirationDuration := min(expirationTimestamp.UTC().Sub(r.Clock.Now().UTC()), maxExpirationDuration)
 
 	return r.JitterFunc(expirationDuration*80/100, 0.05)
 }

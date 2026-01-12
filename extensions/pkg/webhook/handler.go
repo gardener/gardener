@@ -203,7 +203,7 @@ func (h *handler) handle(ctx context.Context, req admission.Request, action hand
 }
 
 func (h *handler) addAdditionalValuesToContext(ctx context.Context, action handlerAction) (context.Context, error) {
-	var obj interface{}
+	var obj any
 
 	switch {
 	case action.mutator != nil:

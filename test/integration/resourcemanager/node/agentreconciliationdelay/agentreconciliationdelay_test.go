@@ -119,7 +119,7 @@ var _ = Describe("AgentReconciliationDelay tests", func() {
 })
 
 func prepareNodes(count int) {
-	for i := 0; i < count; i++ {
+	for range count {
 		node := newNode()
 
 		ExpectWithOffset(1, testClient.Create(ctx, node)).To(Succeed(), "node "+node.Name)

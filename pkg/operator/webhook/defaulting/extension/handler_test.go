@@ -210,7 +210,7 @@ var _ = Describe("Handler", func() {
 						{
 							Operation: "add",
 							Path:      "/spec/resources/0/clusterCompatibility",
-							Value:     []interface{}{"shoot"},
+							Value:     []any{"shoot"},
 						},
 					},
 					AdmissionResponse: admissionv1.AdmissionResponse{

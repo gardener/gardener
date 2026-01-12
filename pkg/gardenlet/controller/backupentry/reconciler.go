@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strconv"
 	"time"
 
@@ -720,10 +721,8 @@ func computeGracePeriod(deletionGracePeriodHours int, deletionGracePeriodShootPu
 	}
 
 	// Otherwise, the grace period only applies for the purposes in the list.
-	for _, p := range deletionGracePeriodShootPurposes {
-		if p == shootPurpose {
-			return time.Hour * time.Duration(deletionGracePeriodHours)
-		}
+	if slices.Contains(deletionGracePeriodShootPurposes, shootPurpose) {
+		return time.Hour * time.Duration(deletionGracePeriodHours)
 	}
 
 	// If the shoot purpose was not found in the list then the grace period does not apply.

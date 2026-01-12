@@ -8,7 +8,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"maps"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -712,9 +714,7 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 	kubeletConfig := v1beta1helper.CalculateEffectiveKubeletConfiguration(o.values.KubeletConfig, worker.Kubernetes)
 
 	images := make(map[string]*imagevectorutils.Image, len(o.values.Images))
-	for imageName, image := range o.values.Images {
-		images[imageName] = image
-	}
+	maps.Copy(images, o.values.Images)
 
 	images[imagevector.ContainerImageNameHyperkube], err = imagevector.Containers().FindImage(imagevector.ContainerImageNameHyperkube, imagevectorutils.RuntimeVersion(kubernetesVersion.String()), imagevectorutils.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
@@ -1110,12 +1110,12 @@ func KeyV2(
 
 	data = append(data, gardenerutils.CalculateDataStringForKubeletConfiguration(kubeletConfiguration)...)
 
-	var result string
+	var result strings.Builder
 	for _, v := range data {
-		result += utils.ComputeSHA256Hex([]byte(v))
+		result.WriteString(utils.ComputeSHA256Hex([]byte(v)))
 	}
 
-	return fmt.Sprintf("gardener-node-agent-%s-%s", worker.Name, utils.ComputeSHA256Hex([]byte(result))[:16])
+	return fmt.Sprintf("gardener-node-agent-%s-%s", worker.Name, utils.ComputeSHA256Hex([]byte(result.String()))[:16])
 }
 
 func keySuffix(version int, machineImage *gardencorev1beta1.ShootMachineImage, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {

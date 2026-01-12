@@ -196,7 +196,7 @@ func (pq waitForPriorityQueue) Swap(i, j int) {
 
 // Push adds an item to the queue. Push should not be called directly; instead,
 // use `heap.Push`.
-func (pq *waitForPriorityQueue) Push(x interface{}) {
+func (pq *waitForPriorityQueue) Push(x any) {
 	n := len(*pq)
 	item := x.(*waitFor)
 	item.index = n
@@ -205,7 +205,7 @@ func (pq *waitForPriorityQueue) Push(x interface{}) {
 
 // Pop removes an item from the queue. Pop should not be called directly;
 // instead, use `heap.Pop`.
-func (pq *waitForPriorityQueue) Pop() interface{} {
+func (pq *waitForPriorityQueue) Pop() any {
 	n := len(*pq)
 	item := (*pq)[n-1]
 	item.index = -1
@@ -215,7 +215,7 @@ func (pq *waitForPriorityQueue) Pop() interface{} {
 
 // Peek returns the item at the beginning of the queue, without removing the
 // item or otherwise mutating the queue. It is safe to call directly.
-func (pq waitForPriorityQueue) Peek() interface{} {
+func (pq waitForPriorityQueue) Peek() any {
 	return pq[0]
 }
 

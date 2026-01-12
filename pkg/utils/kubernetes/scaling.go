@@ -43,7 +43,7 @@ func ScaleDeployment(ctx context.Context, c client.Client, key client.ObjectKey,
 
 // scaleResource scales resource's 'spec.replicas' to replicas count
 func scaleResource(ctx context.Context, c client.Client, obj client.Object, replicas int32) error {
-	patch := []byte(fmt.Sprintf(`{"spec":{"replicas":%d}}`, replicas))
+	patch := fmt.Appendf(nil, `{"spec":{"replicas":%d}}`, replicas)
 	return c.SubResource("scale").Patch(ctx, obj, client.RawPatch(types.MergePatchType, patch))
 }
 

@@ -62,7 +62,7 @@ type MapFlag map[string]string
 
 // Set parses a string of the form "key1=value1,key2=value2,..." into a map[string]string.
 func (m MapFlag) Set(value string) error {
-	for _, pair := range strings.Split(value, ",") {
+	for pair := range strings.SplitSeq(value, ",") {
 		if len(pair) == 0 {
 			continue
 		}

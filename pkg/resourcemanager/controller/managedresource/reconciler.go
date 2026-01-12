@@ -843,10 +843,8 @@ func eventsForObject(ctx context.Context, scheme *runtime.Scheme, c client.Clien
 		eventLimit = 5
 	)
 
-	for _, gk := range relevantGKs {
-		if gk == obj.GetObjectKind().GroupVersionKind().GroupKind() {
-			return kubernetesutils.FetchEventMessages(ctx, scheme, c, obj, corev1.EventTypeWarning, eventLimit)
-		}
+	if slices.Contains(relevantGKs, obj.GetObjectKind().GroupVersionKind().GroupKind()) {
+		return kubernetesutils.FetchEventMessages(ctx, scheme, c, obj, corev1.EventTypeWarning, eventLimit)
 	}
 	return "", nil
 }

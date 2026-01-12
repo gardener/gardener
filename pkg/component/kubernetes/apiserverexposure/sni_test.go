@@ -377,7 +377,7 @@ var _ = Describe("#SNI", func() {
 				mrData := validateManagedResourceAndGetData(ctx, c, expectedManagedResourceSNI)
 
 				var envoyFilterObjectsMetas []metav1.ObjectMeta
-				for _, mrDataSet := range strings.Split(string(mrData), "---\n") {
+				for mrDataSet := range strings.SplitSeq(string(mrData), "---\n") {
 					if mrDataSet == "" {
 						continue
 					}
@@ -405,7 +405,7 @@ var _ = Describe("#SNI", func() {
 				mrData := validateManagedResourceAndGetData(ctx, c, expectedManagedResourceTLSSecrets)
 
 				var secretObjectsMetas []metav1.ObjectMeta
-				for _, mrDataSet := range strings.Split(string(mrData), "---\n") {
+				for mrDataSet := range strings.SplitSeq(string(mrData), "---\n") {
 					if mrDataSet == "" {
 						continue
 					}

@@ -7,6 +7,7 @@ package terraformer
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -133,9 +134,7 @@ func createOrUpdateConfigMap(ctx context.Context, c client.Client, namespace, na
 		if configMap.Data == nil {
 			configMap.Data = make(map[string]string)
 		}
-		for key, value := range values {
-			configMap.Data[key] = value
-		}
+		maps.Copy(configMap.Data, values)
 		if ownerRef != nil {
 			configMap.SetOwnerReferences(kubernetesutils.MergeOwnerReferences(configMap.OwnerReferences, *ownerRef))
 		}

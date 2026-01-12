@@ -7,6 +7,7 @@ package utils
 import (
 	"encoding/json"
 	"slices"
+	"strings"
 )
 
 func computeChecksum(data map[string][]byte) string {
@@ -17,12 +18,12 @@ func computeChecksum(data map[string][]byte) string {
 
 	slices.Sort(keys)
 
-	var hash string
+	var hash strings.Builder
 	for _, k := range keys {
-		hash += ComputeSHA256Hex(data[k])
+		hash.WriteString(ComputeSHA256Hex(data[k]))
 	}
 
-	return ComputeSHA256Hex([]byte(hash))
+	return ComputeSHA256Hex([]byte(hash.String()))
 }
 
 // ComputeSecretChecksum computes the sha256 checksum of secret data.

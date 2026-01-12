@@ -210,7 +210,7 @@ var _ = Describe("Deployment", func() {
 
 			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
 
-			for i := 0; i < 2; i++ {
+			for i := range 2 {
 				Expect(fakeClient.Create(ctx, &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fmt.Sprintf("pod%d", i),
@@ -304,7 +304,7 @@ var _ = Describe("Deployment", func() {
 		})
 
 		It("should not consider the deployment as updated since there are still terminating pods", func() {
-			for i := 0; i < 2; i++ {
+			for range 2 {
 				p := pod.DeepCopy()
 				Expect(fakeClient.Create(ctx, p)).To(Succeed())
 			}

@@ -167,8 +167,8 @@ func parseAnnotationCfg(cfg string) (map[string]string, error) {
 		return nil, nil
 	}
 	result := make(map[string]string)
-	annotations := strings.Split(cfg, ",")
-	for _, annotation := range annotations {
+	annotations := strings.SplitSeq(cfg, ",")
+	for annotation := range annotations {
 		annotation = strings.TrimSpace(annotation)
 		if !StringSet(annotation) {
 			continue
@@ -281,7 +281,7 @@ func setShootNetworkingSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreati
 
 	if strings.Contains(cfg.ipFamilies, ",") {
 		shoot.Spec.Networking.IPFamilies = nil
-		for _, part := range strings.Split(cfg.ipFamilies, ",") {
+		for part := range strings.SplitSeq(cfg.ipFamilies, ",") {
 			shoot.Spec.Networking.IPFamilies = append(shoot.Spec.Networking.IPFamilies, gardencorev1beta1.IPFamily(part))
 		}
 	} else if StringSet(cfg.ipFamilies) {

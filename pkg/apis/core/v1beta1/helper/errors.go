@@ -6,6 +6,7 @@ package helper
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"time"
 
@@ -179,32 +180,23 @@ func LastErrorWithTaskID(description string, taskID string, codes ...gardencorev
 // HasNonRetryableErrorCode returns true if at least one of given list of last errors has at least one error code that
 // indicates that an automatic retry would not help fixing the problem.
 func HasNonRetryableErrorCode(lastErrors ...gardencorev1beta1.LastError) bool {
-	for _, lastError := range lastErrors {
-		for _, code := range lastError.Codes {
-			if code == gardencorev1beta1.ErrorInfraUnauthenticated ||
-				code == gardencorev1beta1.ErrorInfraUnauthorized ||
-				code == gardencorev1beta1.ErrorInfraDependencies ||
-				code == gardencorev1beta1.ErrorInfraQuotaExceeded ||
-				code == gardencorev1beta1.ErrorInfraRateLimitsExceeded ||
-				code == gardencorev1beta1.ErrorConfigurationProblem ||
-				code == gardencorev1beta1.ErrorProblematicWebhook {
-				return true
-			}
-		}
-	}
-	return false
+	return slices.ContainsFunc(lastErrors, func(lastError gardencorev1beta1.LastError) bool {
+		return sets.New(
+			gardencorev1beta1.ErrorInfraUnauthenticated,
+			gardencorev1beta1.ErrorInfraUnauthorized,
+			gardencorev1beta1.ErrorInfraDependencies,
+			gardencorev1beta1.ErrorInfraQuotaExceeded,
+			gardencorev1beta1.ErrorInfraRateLimitsExceeded,
+			gardencorev1beta1.ErrorConfigurationProblem,
+			gardencorev1beta1.ErrorProblematicWebhook,
+		).HasAny(lastError.Codes...)
+	})
 }
 
 // HasErrorCode checks whether at least one LastError from the given slice of LastErrors <lastErrors>
 // contains the given ErrorCode <code>.
 func HasErrorCode(lastErrors []gardencorev1beta1.LastError, code gardencorev1beta1.ErrorCode) bool {
-	for _, lastError := range lastErrors {
-		for _, current := range lastError.Codes {
-			if current == code {
-				return true
-			}
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(lastErrors, func(lastError gardencorev1beta1.LastError) bool {
+		return slices.Contains(lastError.Codes, code)
+	})
 }
