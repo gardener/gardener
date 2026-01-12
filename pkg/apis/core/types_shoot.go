@@ -802,7 +802,6 @@ type EncryptionConfig struct {
 	// Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
 	// Wildcards are not supported for now.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
-	// +optional
 	Resources []string
 	// Provider contains information about the encryption provider.
 	Provider EncryptionProvider
@@ -815,7 +814,6 @@ type EncryptionProvider struct {
 	// Supported types:
 	//   - "aescbc"
 	// Defaults to aescbc.
-	// +optional
 	Type *EncryptionProviderType
 }
 

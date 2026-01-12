@@ -340,8 +340,8 @@ func GetEncryptionProviderType(apiServerConfig *core.KubeAPIServerConfig) core.E
 	return ""
 }
 
-// GetEncryptionProviderInStatus returns the encryption provider from the shoot status.
-func GetEncryptionProviderInStatus(status core.ShootStatus) core.EncryptionProviderType {
+// GetEncryptionProviderTypeInStatus returns the encryption provider from the shoot status.
+func GetEncryptionProviderTypeInStatus(status core.ShootStatus) core.EncryptionProviderType {
 	if status.Credentials != nil && status.Credentials.EncryptionAtRest != nil {
 		return status.Credentials.EncryptionAtRest.ProviderType
 	}

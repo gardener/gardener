@@ -2797,7 +2797,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(BeEmpty())
 				})
 
-				It("should deny specifying not available provider type", func() {
+				It("should deny specifying unavailable provider type", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Provider: core.EncryptionProvider{
 							Type: ptr.To(core.EncryptionProviderType("fake")),

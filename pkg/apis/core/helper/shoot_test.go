@@ -617,7 +617,7 @@ var _ = Describe("Helper", func() {
 
 		DescribeTable("#GetEncryptionProviderInStatus",
 			func(status core.ShootStatus, expected string) {
-				Expect(string(GetEncryptionProviderInStatus(status))).To(Equal(expected))
+				Expect(string(GetEncryptionProviderTypeInStatus(status))).To(Equal(expected))
 			},
 			Entry("no credentials field", core.ShootStatus{}, ""),
 			Entry("without provider", core.ShootStatus{Credentials: &core.ShootCredentials{}}, ""),

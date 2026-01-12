@@ -282,8 +282,8 @@ func GetEncryptionProviderType(apiServerConfig *operatorv1alpha1.KubeAPIServerCo
 	return ""
 }
 
-// GetEncryptionProviderInStatus returns the encryption provider from the garden status.
-func GetEncryptionProviderInStatus(gardenStatus operatorv1alpha1.GardenStatus) gardencorev1beta1.EncryptionProviderType {
+// GetEncryptionProviderTypeInStatus returns the encryption provider from the garden status.
+func GetEncryptionProviderTypeInStatus(gardenStatus operatorv1alpha1.GardenStatus) gardencorev1beta1.EncryptionProviderType {
 	if gardenStatus.Credentials != nil && gardenStatus.Credentials.EncryptionAtRest != nil {
 		return gardenStatus.Credentials.EncryptionAtRest.ProviderType
 	}

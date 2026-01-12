@@ -177,7 +177,7 @@ func (r *Reconciler) reconcile(
 		// Both kube-apiserver and garden-apiserver must use the same encryption provider type.
 		// This is validated by a webhook, so we can read from either apiserver config.
 		encryptionProviderToUse = v1beta1helper.GetEncryptionProviderType(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig)
-		encryptionProvider      = helper.GetEncryptionProviderInStatus(garden.Status)
+		encryptionProvider      = helper.GetEncryptionProviderTypeInStatus(garden.Status)
 
 		g                              = flow.NewGraph("Garden reconciliation")
 		generateGenericTokenKubeconfig = g.Add(flow.Task{
