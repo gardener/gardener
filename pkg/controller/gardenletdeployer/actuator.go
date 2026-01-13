@@ -97,7 +97,7 @@ func (a *Actuator) Reconcile(
 		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error()), fmt.Errorf("could not get target client: %w", err)
 	}
 
-	if err := a.verifyExistingGardenlet(ctx, targetClient.Client(), obj.GetName()); err != nil {
+	if err := a.verifyExistingGardenlet(ctx, log, targetClient.Client(), obj.GetName()); err != nil {
 		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
 		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error()), err
 	}
@@ -434,7 +434,7 @@ func (a *Actuator) getGardenletDeployment(ctx context.Context, targetClient kube
 // verifyExistingGardenlet checks if the existing gardenlet deployment (if any) is configured with the same seed name
 // as the object currently reconciled. This can help preventing multiple deployments with different seed configuration
 // into the same cluster (e.g., because of kubeconfig configuration issues).
-func (a *Actuator) verifyExistingGardenlet(ctx context.Context, targetClient client.Reader, currentSeedName string) error {
+func (a *Actuator) verifyExistingGardenlet(ctx context.Context, log logr.Logger, targetClient client.Reader, currentSeedName string) error {
 	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameGardenlet, Namespace: a.GardenletNamespaceTarget}}
 	if err := targetClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -447,6 +447,7 @@ func (a *Actuator) verifyExistingGardenlet(ctx context.Context, targetClient cli
 		return volume.Name == "gardenlet-config"
 	})
 	if configMapVolumeIndex < 0 || deployment.Spec.Template.Spec.Volumes[configMapVolumeIndex].ConfigMap == nil {
+		log.Info("Existing gardenlet deployment found, but config volume mount is missing or not using ConfigMap - cannot perform the configuration checks")
 		return nil
 	}
 
