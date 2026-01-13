@@ -1789,6 +1789,17 @@ var _ = Describe("Seed Validation Tests", func() {
 				}))
 			})
 
+			It("should not allow WorkloadIdentity as DNS provider credentialsRef ", func() {
+				seed.Spec.DNS.Provider.CredentialsRef.APIVersion = "security.gardener.cloud/v1alpha1"
+				seed.Spec.DNS.Provider.CredentialsRef.Kind = "WorkloadIdentity"
+				seed.Spec.DNS.Provider.SecretRef = corev1.SecretReference{}
+
+				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.dns.provider.credentialsRef"),
+				}))
+			})
+
 			It("should fail if DNS provider config is empty", func() {
 				seed.Spec.DNS.Provider = &core.SeedDNSProvider{}
 
@@ -1830,6 +1841,10 @@ var _ = Describe("Seed Validation Tests", func() {
 					}, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("spec.dns.provider.secretRef.namespace"),
+					}, Fields{
+						// TODO(vpnachev): Allow workload identity credentials when the known controllers support it.
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.dns.provider.credentialsRef"),
 					},
 				))
 			})
