@@ -653,7 +653,7 @@
       },
       "id": 14,
       "panels": [],
-      "title": "Pod in-place resource updates within \"$namespace\" namespace",
+      "title": "Pod in-place resource updates within \"$vpa_namespace\" namespace",
       "type": "row"
     },
     {
@@ -706,7 +706,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_in_place_updated_pods_total{pod=~\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
+          "expr": "sum(ceil(increase(vpa_updater_in_place_updated_pods_total{pod=~\"$pod\", vpa_namespace=~\"$vpa_namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
           "hide": false,
           "interval": "",
           "legendFormat": "{{vpa_namespace}}/{{vpa_name}}",
@@ -714,7 +714,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_in_place_updated_pods_total{pod=~\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval])))",
+          "expr": "sum(ceil(increase(vpa_updater_in_place_updated_pods_total{pod=~\"$pod\", vpa_namespace=~\"$vpa_namespace\"}[$__rate_interval])))",
           "hide": false,
           "interval": "",
           "legendFormat": "Total",
@@ -815,7 +815,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_failed_in_place_update_attempts_total{pod=~\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
+          "expr": "sum(ceil(increase(vpa_updater_failed_in_place_update_attempts_total{pod=~\"$pod\", vpa_namespace=~\"$vpa_namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
           "hide": false,
           "interval": "",
           "legendFormat": "{{vpa_namespace}}/{{vpa_name}}",
@@ -823,7 +823,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_failed_in_place_update_attempts_total{pod=~\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval])))",
+          "expr": "sum(ceil(increase(vpa_updater_failed_in_place_update_attempts_total{pod=~\"$pod\", vpa_namespace=~\"$vpa_namespace\"}[$__rate_interval])))",
           "hide": false,
           "interval": "",
           "legendFormat": "Total",
@@ -885,7 +885,7 @@
       },
       "id": 22,
       "panels": [],
-      "title": "Pod evictions within \"$namespace\" namespace",
+      "title": "Pod evictions within \"$vpa_namespace\" namespace",
       "type": "row"
     },
     {
@@ -938,7 +938,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_evicted_pods_total{pod=~\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
+          "expr": "sum(ceil(increase(vpa_updater_evicted_pods_total{pod=~\"$pod\", vpa_namespace=~\"$vpa_namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
           "hide": false,
           "interval": "",
           "legendFormat": "{{vpa_namespace}}/{{vpa_name}}",
@@ -946,7 +946,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_evicted_pods_total{pod=~\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval])))",
+          "expr": "sum(ceil(increase(vpa_updater_evicted_pods_total{pod=~\"$pod\", vpa_namespace=~\"$vpa_namespace\"}[$__rate_interval])))",
           "hide": false,
           "interval": "",
           "legendFormat": "Total",
@@ -1047,7 +1047,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_failed_eviction_attempts_total{pod=~\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
+          "expr": "sum(ceil(increase(vpa_updater_failed_eviction_attempts_total{pod=~\"$pod\", vpa_namespace=~\"$vpa_namespace\"}[$__rate_interval]))) by (vpa_name,vpa_namespace)",
           "hide": false,
           "interval": "",
           "legendFormat": "{{vpa_namespace}}/{{vpa_name}}",
@@ -1055,7 +1055,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_failed_eviction_attempts_total{pod=~\"$pod\", vpa_namespace=~\"$namespace\"}[$__rate_interval])))",
+          "expr": "sum(ceil(increase(vpa_updater_failed_eviction_attempts_total{pod=~\"$pod\", vpa_namespace=~\"$vpa_namespace\"}[$__rate_interval])))",
           "hide": false,
           "interval": "",
           "legendFormat": "Total",
@@ -1165,9 +1165,9 @@
         "error": null,
         "hide": 0,
         "includeAll": false,
-        "label": "namespace",
+        "label": "VPA object namespace",
         "multi": true,
-        "name": "namespace",
+        "name": "vpa_namespace",
         "options": [],
         "query": {
           "query": "{__name__=~\"vpa_updater_.+\", pod=~\"$pod\", vpa_namespace!=\"\"}",
