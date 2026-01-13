@@ -48,9 +48,10 @@ func IsDualStack(ipFamilies []IPFamily) bool {
 	hasIPv4 := false
 	hasIPv6 := false
 	for _, family := range ipFamilies {
-		if family == IPFamilyIPv4 {
+		switch family {
+		case IPFamilyIPv4:
 			hasIPv4 = true
-		} else if family == IPFamilyIPv6 {
+		case IPFamilyIPv6:
 			hasIPv6 = true
 		}
 	}
