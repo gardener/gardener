@@ -18,6 +18,10 @@ const (
 	AnnotationKeyDesiredOperation = "desired-operation"
 	// AnnotationValueOperationDelete is a constant for a value of an annotation describing the delete operation.
 	AnnotationValueOperationDelete = "delete"
+	// AnnotationKeyRestored is a constant for a key of an annotation specifying whether the resource was restored.
+	AnnotationKeyRestored="restored"
+	// AnnotationKeyMigrated is a constant for a key of an annotation specifying whether the resource was migrated.
+	AnnotationKeyMigrated="migrated"
 	// AnnotationKeyDesiredOperationState is a constant for a key of an annotation describing the desired operation
 	// state.
 	AnnotationKeyDesiredOperationState = "desired-operation-state"
