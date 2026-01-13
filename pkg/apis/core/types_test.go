@@ -54,6 +54,9 @@ var _ = Describe("API Types", func() {
 		It("should return false for IPv6 single-stack", func() {
 			Expect(IsDualStack([]IPFamily{IPFamilyIPv6})).To(BeFalse())
 		})
+		It("should return false for passing IPv6 twice", func() {
+			Expect(IsDualStack([]IPFamily{IPFamilyIPv6, IPFamilyIPv6})).To(BeFalse())
+		})
 		It("should return true for dual-stack in IPv4, IPv6 order", func() {
 			Expect(IsDualStack([]IPFamily{IPFamilyIPv4, IPFamilyIPv6})).To(BeTrue())
 		})
