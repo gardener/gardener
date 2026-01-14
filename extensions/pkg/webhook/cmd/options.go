@@ -7,17 +7,14 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/spf13/pflag"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -302,62 +299,10 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		c.Server.Mode,
 		c.Server.URL,
 		nil,
+		mergeShootWebhooksIntoSeedWebhooks,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not create webhooks: %w", err)
-	}
-
-	if mergeShootWebhooksIntoSeedWebhooks {
-		clientConfig := func(in admissionregistrationv1.WebhookClientConfig) (admissionregistrationv1.WebhookClientConfig, error) {
-			var path string
-			if in.Service != nil {
-				path = ptr.Deref(in.Service.Path, "")
-			} else if u := in.URL; u != nil {
-				parsedURL, err := url.Parse(*u)
-				if err != nil {
-					return admissionregistrationv1.WebhookClientConfig{}, fmt.Errorf("failed to parse URL %q: %w", *u, err)
-				}
-				path = parsedURL.Path
-			}
-
-			return extensionswebhook.BuildClientConfigFor(path, c.Server.Namespace, c.extensionName, false, servicePort, c.Server.Mode, c.Server.URL, nil), nil
-		}
-
-		if shootWebhookConfigs.ValidatingWebhookConfig != nil {
-			for _, webhook := range shootWebhookConfigs.ValidatingWebhookConfig.Webhooks {
-				mutatedClientConfig, err := clientConfig(webhook.ClientConfig)
-				if err != nil {
-					return nil, fmt.Errorf("failed computing new client config while merging shoot validating webhook %q into seed webhooks: %w", webhook.Name, err)
-				}
-				webhook.ClientConfig = mutatedClientConfig
-
-				if seedWebhookConfigs.ValidatingWebhookConfig == nil {
-					seedWebhookConfigs.ValidatingWebhookConfig = &admissionregistrationv1.ValidatingWebhookConfiguration{
-						ObjectMeta: extensionswebhook.InitialWebhookConfig(extensionswebhook.NamePrefix + c.extensionName),
-					}
-				}
-
-				seedWebhookConfigs.ValidatingWebhookConfig.Webhooks = append(seedWebhookConfigs.ValidatingWebhookConfig.Webhooks, webhook)
-			}
-		}
-
-		if shootWebhookConfigs.MutatingWebhookConfig != nil {
-			for _, webhook := range shootWebhookConfigs.MutatingWebhookConfig.Webhooks {
-				mutatedClientConfig, err := clientConfig(webhook.ClientConfig)
-				if err != nil {
-					return nil, fmt.Errorf("failed computing new client config while merging shoot mutating webhook %q into seed webhooks: %w", webhook.Name, err)
-				}
-				webhook.ClientConfig = mutatedClientConfig
-
-				if seedWebhookConfigs.MutatingWebhookConfig == nil {
-					seedWebhookConfigs.MutatingWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
-						ObjectMeta: extensionswebhook.InitialWebhookConfig(extensionswebhook.NamePrefix + c.extensionName),
-					}
-				}
-
-				seedWebhookConfigs.MutatingWebhookConfig.Webhooks = append(seedWebhookConfigs.MutatingWebhookConfig.Webhooks, webhook)
-			}
-		}
 	}
 
 	atomicShootWebhookConfigs := &atomic.Value{}
