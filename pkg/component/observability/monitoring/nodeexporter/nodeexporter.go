@@ -424,7 +424,6 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("50m"),
 										corev1.ResourceMemory: resource.MustParse("50Mi"),
 									},
 								},
