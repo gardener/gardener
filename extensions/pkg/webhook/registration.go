@@ -111,7 +111,7 @@ func BuildWebhookConfigs(
 
 	for _, webhook := range webhooks {
 		var (
-			name  = NamePrefix + providerName
+			name  = PrefixedName(providerName, doNotPrefixComponentName)
 			rules []admissionregistrationv1.RuleWithOperations
 		)
 
