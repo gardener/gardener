@@ -7,11 +7,12 @@ package matchers
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/onsi/gomega/format"
-	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -136,11 +137,11 @@ func findMismatchObjects(availableObjects map[string]client.Object, expectedObje
 }
 
 func findMissingObjects(availableObjects map[string]client.Object, expectedObjects map[string]client.Object) []string {
-	return sets.New(maps.Keys(expectedObjects)...).Difference(sets.New(maps.Keys(availableObjects)...)).UnsortedList()
+	return sets.New(slices.Collect(maps.Keys(expectedObjects))...).Difference(sets.New(slices.Collect(maps.Keys(availableObjects))...)).UnsortedList()
 }
 
 func findExtraObjects(availableObjects map[string]client.Object, expectedObjects map[string]client.Object) []string {
-	return sets.New(maps.Keys(availableObjects)...).Difference(sets.New(maps.Keys(expectedObjects)...)).UnsortedList()
+	return sets.New(slices.Collect(maps.Keys(availableObjects))...).Difference(sets.New(slices.Collect(maps.Keys(expectedObjects))...)).UnsortedList()
 }
 
 func objectKey(obj client.Object, scheme *runtime.Scheme) string {

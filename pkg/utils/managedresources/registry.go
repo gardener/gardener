@@ -9,13 +9,13 @@ import (
 	"cmp"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"reflect"
 	"slices"
 	"strings"
 
 	"github.com/andybalholm/brotli"
 	"go.yaml.in/yaml/v4"
-	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -139,7 +139,7 @@ func (r *Registry) AddSerialized(filename string, serializationYAML []byte) {
 // The map holds a single key `data.yaml.br` with a value containing all objects,
 // concatenated and compressed by the Brotli algorithm.
 func (r *Registry) SerializedObjects() (map[string][]byte, error) {
-	objectKeys := maps.Keys(r.nameToObject)
+	objectKeys := slices.Collect(maps.Keys(r.nameToObject))
 	slices.Sort(objectKeys)
 
 	var (
@@ -185,7 +185,7 @@ func (r *Registry) AddAllAndSerialize(objects ...client.Object) (map[string][]by
 
 // RegisteredObjects returns a slice of registered objects.
 func (r *Registry) RegisteredObjects() []client.Object {
-	objectKeys := maps.Keys(r.nameToObject)
+	objectKeys := slices.Collect(maps.Keys(r.nameToObject))
 	slices.Sort(objectKeys)
 
 	out := make([]client.Object, 0, len(r.nameToObject))
