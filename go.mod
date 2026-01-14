@@ -57,7 +57,7 @@ require (
 	golang.org/x/time v0.14.0
 	golang.org/x/tools v0.40.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
-	gonum.org/v1/gonum v0.16.0
+	gonum.org/v1/gonum v0.17.0
 	google.golang.org/protobuf v1.36.11
 	helm.sh/helm/v3 v3.19.4
 	istio.io/api v1.27.5
