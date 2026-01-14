@@ -412,6 +412,8 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: '*'
+      controlledResources:
+      - memory
       controlledValues: RequestsOnly
       minAllowed:
         memory: 50Mi

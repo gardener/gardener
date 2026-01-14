@@ -483,7 +483,8 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							ContainerName:       vpaautoscalingv1.DefaultContainerResourcePolicy,
+							ControlledResources: &[]corev1.ResourceName{corev1.ResourceMemory},
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("50Mi"),
 							},
