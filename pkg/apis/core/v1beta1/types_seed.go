@@ -186,13 +186,23 @@ type SeedDNSProvider struct {
 	// Type describes the type of the dns-provider, for example `aws-route53`
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.
-	SecretRef corev1.SecretReference `json:"secretRef" protobuf:"bytes,2,opt,name=secretRef"`
+	//
+	// Deprecated: This field is deprecated and will be removed after v1.138.0 is released.
+	// Please use `CredentialsRef` instead.
+	// Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.
+	SecretRef corev1.SecretReference `json:"secretRef" protobuf:"bytes,2,opt,name=secretRef"` // TODO(vpnachev): Remove this field after v1.138.0 has been released.
 
 	// Domains is tombstoned to show why 3 is reserved protobuf tag.
 	// Domains *DNSIncludeExclude `json:"domains,omitempty" protobuf:"bytes,3,opt,name=domains"`
 
 	// Zones is tombstoned to show why 4 is reserved protobuf tag.
 	// Zones *DNSIncludeExclude `json:"zones,omitempty" protobuf:"bytes,4,opt,name=zones"`
+
+	// CredentialsRef is a reference to a resource holding the credentials used for
+	// authentication with the DNS provider.
+	// As of now, only v1.Secret is supported.
+	// +optional
+	CredentialsRef *corev1.ObjectReference `json:"credentialsRef,omitempty" protobuf:"bytes,5,opt,name=credentialsRef"`
 }
 
 // Ingress configures the Ingress specific settings of the cluster

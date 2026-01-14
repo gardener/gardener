@@ -17,6 +17,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
@@ -220,18 +221,37 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		if seedSpec.DNS.Provider == nil {
 			allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider"),
 				"ingress controller requires dns.provider to be set"))
+		}
+	}
+
+	if dnsProvider := seedSpec.DNS.Provider; dnsProvider != nil {
+		dnsProviderPath := fldPath.Child("dns", "provider")
+		if len(dnsProvider.Type) == 0 {
+			allErrs = append(allErrs, field.Required(dnsProviderPath.Child("type"), "DNS provider type must be set"))
+		}
+
+		if dnsProvider.CredentialsRef == nil {
+			allErrs = append(allErrs, field.Required(dnsProviderPath.Child("credentialsRef"), "must be set to refer a Secret or WorkloadIdentity"))
 		} else {
-			if len(seedSpec.DNS.Provider.Type) == 0 {
-				allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider", "type"),
-					"DNS provider type must be set"))
-			}
-			if len(seedSpec.DNS.Provider.SecretRef.Name) == 0 {
-				allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider", "secretRef", "name"),
-					"secret reference name must be set"))
-			}
-			if len(seedSpec.DNS.Provider.SecretRef.Namespace) == 0 {
-				allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider", "secretRef", "namespace"),
-					"secret reference namespace must be set"))
+			allErrs = append(allErrs, ValidateCredentialsRef(*dnsProvider.CredentialsRef, dnsProviderPath.Child("credentialsRef"))...)
+
+			if dnsProvider.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
+				dnsProvider.CredentialsRef.Kind == "Secret" {
+				if dnsProvider.SecretRef.Name != dnsProvider.CredentialsRef.Name ||
+					dnsProvider.SecretRef.Namespace != dnsProvider.CredentialsRef.Namespace {
+					allErrs = append(allErrs, field.Invalid(dnsProviderPath.Child("secretRef"), dnsProvider.SecretRef, "must refer to the same Secret as credentialsRef"))
+				}
+			} else if dnsProvider.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
+				dnsProvider.CredentialsRef.Kind == "WorkloadIdentity" {
+				if dnsProvider.SecretRef.Name != "" {
+					allErrs = append(allErrs, field.Forbidden(dnsProviderPath.Child("secretRef", "name"), "must not be set when credentialsRef refers to a WorkloadIdentity"))
+				}
+				if dnsProvider.SecretRef.Namespace != "" {
+					allErrs = append(allErrs, field.Forbidden(dnsProviderPath.Child("secretRef", "namespace"), "must not be set when credentialsRef refers to a WorkloadIdentity"))
+				}
+
+				// TODO(vpnachev): Allow workload identity credentials when the known controllers support it.
+				allErrs = append(allErrs, field.Forbidden(dnsProviderPath.Child("credentialsRef"), "workload identity is not yet supported for DNS providers"))
 			}
 		}
 	}

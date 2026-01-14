@@ -109,9 +109,11 @@ var _ = Describe("Seed Care controller tests", func() {
 					},
 					Provider: &gardencorev1beta1.SeedDNSProvider{
 						Type: "providerType",
-						SecretRef: corev1.SecretReference{
-							Name:      "some-secret",
-							Namespace: "some-namespace",
+						CredentialsRef: &corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "some-secret",
+							Namespace:  "some-namespace",
 						},
 					},
 				},

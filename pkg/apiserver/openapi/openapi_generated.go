@@ -8063,9 +8063,15 @@ func schema_pkg_apis_core_v1beta1_SeedDNSProvider(ref common.ReferenceCallback) 
 					},
 					"secretRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.",
+							Description: "SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.\n\nDeprecated: This field is deprecated and will be removed after v1.138.0 is released. Please use `CredentialsRef` instead. Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
+						},
+					},
+					"credentialsRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CredentialsRef is a reference to a resource holding the credentials used for authentication with the DNS provider. As of now, only v1.Secret is supported.",
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
 				},
@@ -8073,7 +8079,7 @@ func schema_pkg_apis_core_v1beta1_SeedDNSProvider(ref common.ReferenceCallback) 
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.SecretReference"},
+			"k8s.io/api/core/v1.ObjectReference", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 

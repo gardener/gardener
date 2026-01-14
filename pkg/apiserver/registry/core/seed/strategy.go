@@ -7,6 +7,7 @@ package seed
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -41,6 +42,8 @@ func (s Strategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 
 	seed.Generation = 1
 	seed.Status = core.SeedStatus{}
+
+	SyncDNSProviderCredentials(seed)
 }
 
 // PrepareForUpdate is invoked on update before validation to normalize
@@ -51,6 +54,8 @@ func (s Strategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newSeed := obj.(*core.Seed)
 	oldSeed := old.(*core.Seed)
 	newSeed.Status = oldSeed.Status
+
+	SyncDNSProviderCredentials(newSeed)
 
 	if mustIncreaseGeneration(oldSeed, newSeed) {
 		newSeed.Generation = oldSeed.Generation + 1
@@ -145,9 +150,65 @@ func (s StatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Obj
 	newSeed := obj.(*core.Seed)
 	oldSeed := old.(*core.Seed)
 	newSeed.Spec = oldSeed.Spec
+
+	// Ensure credentialsRef is synced even on /status subresource requests.
+	// Some clients are patching just the status which still results in update events
+	// for those watching the resource.
+	SyncDNSProviderCredentials(newSeed)
 }
 
 // ValidateUpdate validates the update on the given old and new object.
 func (StatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateSeedStatusUpdate(obj.(*core.Seed), old.(*core.Seed))
+}
+
+// SyncDNSProviderCredentials ensures spec.dns.provider.secretRef and spec.dns.provider.credentialsRef
+// are in sync when possible.
+//
+// TODO(vpnachev): Remove this function after v1.138.0 has been released.
+func SyncDNSProviderCredentials(seed *core.Seed) {
+	if seed.Spec.DNS.Provider == nil {
+		return
+	}
+
+	dnsProvider := seed.Spec.DNS.Provider
+
+	// secretRef is set and credentialsRef is not, sync both fields.
+	if !isSecretRefEmpty(dnsProvider.SecretRef) && isCredentialsRefEmpty(dnsProvider.CredentialsRef) {
+		dnsProvider.CredentialsRef = &corev1.ObjectReference{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Secret",
+			Namespace:  dnsProvider.SecretRef.Namespace,
+			Name:       dnsProvider.SecretRef.Name,
+		}
+
+		return
+	}
+
+	// secretRef is unset and credentialsRef refer a secret, sync both fields.
+	if isSecretRefEmpty(dnsProvider.SecretRef) &&
+		!isCredentialsRefEmpty(dnsProvider.CredentialsRef) &&
+		dnsProvider.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
+		dnsProvider.CredentialsRef.Kind == "Secret" {
+		dnsProvider.SecretRef = corev1.SecretReference{
+			Namespace: dnsProvider.CredentialsRef.Namespace,
+			Name:      dnsProvider.CredentialsRef.Name,
+		}
+
+		return
+	}
+
+	// in all other cases we can do nothing:
+	// - both fields are unset -> we have nothing to sync
+	// - both fields are set -> let the validation check if they are correct
+	// - credentialsRef refer to WorkloadIdentity -> secretRef should stay unset
+}
+
+func isSecretRefEmpty(secretRef corev1.SecretReference) bool {
+	return secretRef.Name == "" && secretRef.Namespace == ""
+}
+
+func isCredentialsRefEmpty(credentialsRef *corev1.ObjectReference) bool {
+	return credentialsRef == nil ||
+		credentialsRef.APIVersion == "" && credentialsRef.Kind == "" && credentialsRef.Name == "" && credentialsRef.Namespace == ""
 }

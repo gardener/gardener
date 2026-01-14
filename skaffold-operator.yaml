@@ -553,6 +553,7 @@ build:
             - pkg/apiserver/registry/seedmanagement/managedseedset
             - pkg/apiserver/registry/seedmanagement/managedseedset/storage
             - pkg/apiserver/registry/seedmanagement/rest
+            - pkg/apiserver/registry/seedmanagement/utils
             - pkg/apiserver/registry/settings/clusteropenidconnectpreset
             - pkg/apiserver/registry/settings/clusteropenidconnectpreset/storage
             - pkg/apiserver/registry/settings/openidconnectpreset

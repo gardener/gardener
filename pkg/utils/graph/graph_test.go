@@ -185,7 +185,12 @@ var _ = Describe("graph for seeds", func() {
 				},
 				DNS: gardencorev1beta1.SeedDNS{
 					Provider: &gardencorev1beta1.SeedDNSProvider{
-						SecretRef: seed1DNSProviderSecretRef,
+						CredentialsRef: &corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       seed1DNSProviderSecretRef.Name,
+							Namespace:  seed1DNSProviderSecretRef.Namespace,
+						},
 					},
 					Internal: &gardencorev1beta1.SeedDNSProviderConfig{
 						CredentialsRef: seed1InternalDNSCredentialsRef,
@@ -539,7 +544,14 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		By("Update (all secret refs)")
 		seed1Copy = seed1.DeepCopy()
 		seed1.Spec.Backup = &gardencorev1beta1.Backup{CredentialsRef: &seed1BackupSecretCredentialsRef}
-		seed1.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{SecretRef: seed1DNSProviderSecretRef}
+		seed1.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{
+			CredentialsRef: &corev1.ObjectReference{
+				APIVersion: "v1",
+				Kind:       "Secret",
+				Name:       seed1DNSProviderSecretRef.Name,
+				Namespace:  seed1DNSProviderSecretRef.Namespace,
+			},
+		}
 		seed1.Spec.DNS.Internal = &gardencorev1beta1.SeedDNSProviderConfig{CredentialsRef: seed1InternalDNSCredentialsRef}
 		seed1.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
 			{

@@ -9,14 +9,17 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	. "github.com/gardener/gardener/pkg/apiserver/registry/seedmanagement/managedseed"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 var _ = Describe("Strategy", func() {
@@ -61,6 +64,150 @@ var _ = Describe("Strategy", func() {
 		It("should not increase the generation if neither the spec has changed nor the deletion timestamp is set", func() {
 			strategy.PrepareForUpdate(ctx, newManagedSeed, oldManagedSeed)
 			Expect(newManagedSeed.Generation).To(Equal(oldManagedSeed.Generation))
+		})
+
+		Context("#SyncDNSProviderCredentials", func() {
+			It("should bump generation when seed.spec.dns.provider.secretRef is synced with seed.spec.dns.provider.credentialsRef", func() {
+				newManagedSeed.Spec.Gardenlet.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
+					SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+						SeedTemplate: gardencorev1beta1.SeedTemplate{
+							Spec: gardencorev1beta1.SeedSpec{
+								DNS: gardencorev1beta1.SeedDNS{
+									Provider: &gardencorev1beta1.SeedDNSProvider{
+										SecretRef: corev1.SecretReference{
+											Namespace: "namespace",
+											Name:      "name",
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				oldManagedSeed = newManagedSeed.DeepCopy()
+
+				strategy.PrepareForUpdate(ctx, newManagedSeed, oldManagedSeed)
+				Expect(newManagedSeed.Generation).To(Equal(oldManagedSeed.Generation + 1))
+			})
+
+			It("should not bump generation when seed.spec.dns.provider.secretRef is already synced with seed.spec.dns.provider.credentialsRef", func() {
+				oldManagedSeed.Spec.Gardenlet.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
+					SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+						SeedTemplate: gardencorev1beta1.SeedTemplate{
+							Spec: gardencorev1beta1.SeedSpec{
+								DNS: gardencorev1beta1.SeedDNS{
+									Provider: &gardencorev1beta1.SeedDNSProvider{
+										SecretRef: corev1.SecretReference{
+											Namespace: "namespace",
+											Name:      "name",
+										},
+										CredentialsRef: &corev1.ObjectReference{
+											APIVersion: "v1",
+											Kind:       "Secret",
+											Namespace:  "namespace",
+											Name:       "name",
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				newManagedSeed.Spec.Gardenlet.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
+					SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+						SeedTemplate: gardencorev1beta1.SeedTemplate{
+							Spec: gardencorev1beta1.SeedSpec{
+								DNS: gardencorev1beta1.SeedDNS{
+									Provider: &gardencorev1beta1.SeedDNSProvider{
+										SecretRef: corev1.SecretReference{
+											Namespace: "namespace",
+											Name:      "name",
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				strategy.PrepareForUpdate(ctx, newManagedSeed, oldManagedSeed)
+				Expect(newManagedSeed.Generation).To(Equal(oldManagedSeed.Generation))
+			})
+
+			It("should bump generation when seed.spec.dns.provider.credentialsRef is synced with seed.spec.dns.provider.secretRef", func() {
+				newManagedSeed.Spec.Gardenlet.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
+					SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+						SeedTemplate: gardencorev1beta1.SeedTemplate{
+							Spec: gardencorev1beta1.SeedSpec{
+								DNS: gardencorev1beta1.SeedDNS{
+									Provider: &gardencorev1beta1.SeedDNSProvider{
+										CredentialsRef: &corev1.ObjectReference{
+											APIVersion: "v1",
+											Kind:       "Secret",
+											Namespace:  "namespace",
+											Name:       "name",
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				oldManagedSeed = newManagedSeed.DeepCopy()
+
+				strategy.PrepareForUpdate(ctx, newManagedSeed, oldManagedSeed)
+				Expect(newManagedSeed.Generation).To(Equal(oldManagedSeed.Generation + 1))
+			})
+
+			It("should not bump generation when seed.spec.dns.provider.credentialsRef is already synced with seed.spec.dns.provider.secretRef", func() {
+
+				oldManagedSeed.Spec.Gardenlet.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
+					SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+						SeedTemplate: gardencorev1beta1.SeedTemplate{
+							Spec: gardencorev1beta1.SeedSpec{
+								DNS: gardencorev1beta1.SeedDNS{
+									Provider: &gardencorev1beta1.SeedDNSProvider{
+										SecretRef: corev1.SecretReference{
+											Namespace: "namespace",
+											Name:      "name",
+										},
+										CredentialsRef: &corev1.ObjectReference{
+											APIVersion: "v1",
+											Kind:       "Secret",
+											Namespace:  "namespace",
+											Name:       "name",
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				newManagedSeed.Spec.Gardenlet.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
+					SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+						SeedTemplate: gardencorev1beta1.SeedTemplate{
+							Spec: gardencorev1beta1.SeedSpec{
+								DNS: gardencorev1beta1.SeedDNS{
+									Provider: &gardencorev1beta1.SeedDNSProvider{
+										CredentialsRef: &corev1.ObjectReference{
+											APIVersion: "v1",
+											Kind:       "Secret",
+											Namespace:  "namespace",
+											Name:       "name",
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				strategy.PrepareForUpdate(ctx, newManagedSeed, oldManagedSeed)
+				Expect(newManagedSeed.Generation).To(Equal(oldManagedSeed.Generation))
+			})
 		})
 	})
 })
