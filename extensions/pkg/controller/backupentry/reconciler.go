@@ -179,7 +179,7 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, be *extensions
 	_, err := kubernetesutils.GetSecretMetadataByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
+			return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %w", err)
 		}
 
 		log.Info("Skipping deletion as referred secret does not exist any more")
@@ -203,10 +203,20 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, be *extensions
 		return reconcile.Result{}, err
 	}
 
-	// re-fetch secretMetadata since r.actuator.Delete might take long, during which the Secret's resourceVersion might change.
+	// Re-fetch secretMetadata because r.actuator.Delete may take a long time to complete. During this period,
+	// the gardenlet BackupEntry reconciler may modify the referenced Secret as part of its deletion flow.
+	// Ref: https://github.com/gardener/gardener/blob/aae8c452607280e1008393519651bb66c282264c/pkg/gardenlet/controller/backupentry/reconciler.go#L347-L349
+	//
+	// Specifically, the Secret is patched with an updated `gardener.cloud/timestamp` annotation (set to the
+	// current time), which increments its `resourceVersion` even when the actual data and labels remain unchanged.
+	// Ref: https://github.com/gardener/gardener/blob/aae8c452607280e1008393519651bb66c282264c/pkg/gardenlet/controller/backupentry/reconciler.go#L669-L676
+	//
+	// The gardenlet BackupEntry reconciler repeats this reconciliation every 5 seconds (value of `RequeueDurationWhenResourceDeletionStillPresent`) until
+	// the BackupEntry is fully deleted.
+	// Ref: https://github.com/gardener/gardener/blob/aae8c452607280e1008393519651bb66c282264c/pkg/gardenlet/controller/backupentry/reconciler.go#L376
 	secretMetadata, err := kubernetesutils.GetSecretMetadataByReference(ctx, r.client, &be.Spec.SecretRef)
-	if err != nil && !apierrors.IsNotFound(err) {
-		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %w", err)
 	}
 
 	if controllerutil.ContainsFinalizer(secretMetadata, FinalizerName) {
