@@ -245,6 +245,8 @@ type EncryptionAtRest struct {
 	// Secrets are encrypted by default and are not part of the list.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
 	Resources []string
+	// ProviderType is the used encryption provider type.
+	ProviderType EncryptionProviderType
 }
 
 // CARotation contains information about the certificate authority credential rotation.
@@ -798,6 +800,18 @@ type EncryptionConfig struct {
 	// Wildcards are not supported for now.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
 	Resources []string
+	// Provider contains information about the encryption provider.
+	Provider EncryptionProvider
+}
+
+// EncryptionProvider contains information about the encryption provider.
+type EncryptionProvider struct {
+	// Type contains the type of the encryption provider.
+	//
+	// Supported types:
+	//   - "aescbc"
+	// Defaults to aescbc.
+	Type *EncryptionProviderType
 }
 
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.
