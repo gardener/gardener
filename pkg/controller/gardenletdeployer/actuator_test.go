@@ -6,6 +6,7 @@ package gardenletdeployer
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -456,6 +457,71 @@ var _ = Describe("Interface", func() {
 				},
 			)
 		}
+
+		expectVerifyExistingGardenletNotFound = func() {
+			// Verification: gardenlet deployment not found (normal case)
+			shootClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: "gardenlet"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, _ *appsv1.Deployment, _ ...client.GetOption) error {
+					return apierrors.NewNotFound(appsv1.Resource("deployment"), "gardenlet")
+				},
+			)
+		}
+
+		expectVerifyExistingGardenletWithDifferentSeed = func(differentSeedName string) {
+			deploymentWithConfigMap := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardenlet",
+					Namespace: v1beta1constants.GardenNamespace,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Volumes: []corev1.Volume{
+								{
+									Name: "gardenlet-config",
+									VolumeSource: corev1.VolumeSource{
+										ConfigMap: &corev1.ConfigMapVolumeSource{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: "gardenlet-config-12345",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			shootClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: v1beta1constants.DeploymentNameGardenlet}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, d *appsv1.Deployment, _ ...client.GetOption) error {
+					*d = *deploymentWithConfigMap
+					return nil
+				},
+			)
+
+			gardenletConfigMap := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardenlet-config-12345",
+					Namespace: v1beta1constants.GardenNamespace,
+				},
+				Data: map[string]string{
+					"config.yaml": fmt.Sprintf(`apiVersion: gardenlet.config.gardener.cloud/v1alpha1
+kind: GardenletConfiguration
+seedConfig:
+  metadata:
+    name: %s
+`, differentSeedName),
+				},
+			}
+
+			shootClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: "gardenlet-config-12345"}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
+					*cm = *gardenletConfigMap
+					return nil
+				},
+			)
+		}
 	)
 
 	Describe("#Reconcile", func() {
@@ -470,6 +536,7 @@ var _ = Describe("Interface", func() {
 
 			It("should create the garden namespace and seed secrets, and deploy gardenlet (with bootstrap)", func() {
 				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).Return(nil)
+				expectVerifyExistingGardenletNotFound()
 				expectGetSeed(false)
 				expectCheckSeedSpec()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
@@ -510,6 +577,7 @@ var _ = Describe("Interface", func() {
 					},
 				}
 				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).Return(nil)
+				expectVerifyExistingGardenletNotFound()
 				expectGetSeed(false)
 				expectCheckSeedSpec()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
@@ -531,6 +599,7 @@ var _ = Describe("Interface", func() {
 			})
 
 			It("should return error when backup secret does not exist", func() {
+				expectVerifyExistingGardenletNotFound()
 				expectCheckSeedSpec()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
@@ -548,6 +617,7 @@ var _ = Describe("Interface", func() {
 			It("should remove owner reference from backup secret", func() {
 				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).Return(nil)
 
+				expectVerifyExistingGardenletNotFound()
 				expectGetSeed(false)
 				expectCheckSeedSpec()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
@@ -581,6 +651,7 @@ var _ = Describe("Interface", func() {
 				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).Return(nil)
 				seed.Status.ClientCertificateExpirationTimestamp = &metav1.Time{Time: time.Now().Add(time.Hour)}
 
+				expectVerifyExistingGardenletNotFound()
 				expectGetSeed(true)
 				expectCheckSeedSpec()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
@@ -606,6 +677,7 @@ var _ = Describe("Interface", func() {
 				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).Return(nil)
 				seed.Status.ClientCertificateExpirationTimestamp = &metav1.Time{Time: time.Now().Add(-time.Hour)}
 
+				expectVerifyExistingGardenletNotFound()
 				expectDeleteKubeconfigSecret()
 				expectGetSeed(true)
 				expectCheckSeedSpec()
@@ -635,6 +707,7 @@ var _ = Describe("Interface", func() {
 					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRenewKubeconfig,
 				}
 
+				expectVerifyExistingGardenletNotFound()
 				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Renewing gardenlet kubeconfig secret due to operation annotation")
 				expectDeleteKubeconfigSecret()
 				gardenClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
@@ -666,6 +739,7 @@ var _ = Describe("Interface", func() {
 				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).Return(nil)
 				managedSeed.Spec.Gardenlet.Bootstrap = ptr.To(seedmanagementv1alpha1.BootstrapNone)
 
+				expectVerifyExistingGardenletNotFound()
 				expectGetSeed(false)
 				expectCheckSeedSpec()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
@@ -704,6 +778,7 @@ var _ = Describe("Interface", func() {
 			})
 
 			It("should deploy the gardenlet", func() {
+				expectVerifyExistingGardenletNotFound()
 				recorder.EXPECT().Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
 				recorder.EXPECT().Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
@@ -729,13 +804,14 @@ var _ = Describe("Interface", func() {
 		Context("seed is garden", func() {
 			BeforeEach(func() {
 				managedSeed.Spec.Gardenlet = gardenlet
+			})
+
+			It("should create the garden namespace and seed secrets, and deploy gardenlet (with bootstrap)", func() {
 				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
 					list.Items = append(list.Items, metav1.PartialObjectMetadata{})
 					return nil
 				})
-			})
-
-			It("should create the garden namespace and seed secrets, and deploy gardenlet (with bootstrap)", func() {
+				expectVerifyExistingGardenletNotFound()
 				expectGetSeed(false)
 				expectCheckSeedSpec()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
@@ -758,8 +834,13 @@ var _ = Describe("Interface", func() {
 			})
 
 			It("should create the garden namespace and seed secrets, and deploy gardenlet (with bootstrap and non-expired gardenlet client cert)", func() {
+				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, metav1.PartialObjectMetadata{})
+					return nil
+				})
 				seed.Status.ClientCertificateExpirationTimestamp = &metav1.Time{Time: time.Now().Add(time.Hour)}
 
+				expectVerifyExistingGardenletNotFound()
 				expectGetSeed(true)
 				expectCheckSeedSpec()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
@@ -782,8 +863,13 @@ var _ = Describe("Interface", func() {
 			})
 
 			It("should create the garden namespace and seed secrets, and deploy gardenlet (with bootstrap and expired gardenlet client cert)", func() {
+				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, metav1.PartialObjectMetadata{})
+					return nil
+				})
 				seed.Status.ClientCertificateExpirationTimestamp = &metav1.Time{Time: time.Now().Add(-time.Hour)}
 
+				expectVerifyExistingGardenletNotFound()
 				expectDeleteKubeconfigSecret()
 				expectGetSeed(true)
 				expectCheckSeedSpec()
@@ -807,11 +893,16 @@ var _ = Describe("Interface", func() {
 			})
 
 			It("should create the garden namespace and seed secrets, and deploy gardenlet (with bootstrap, non-expired gardenlet client cert, and renew-kubeconfig annotation)", func() {
+				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, metav1.PartialObjectMetadata{})
+					return nil
+				})
 				seed.Status.ClientCertificateExpirationTimestamp = &metav1.Time{Time: time.Now().Add(time.Hour)}
 				managedSeed.Annotations = map[string]string{
 					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRenewKubeconfig,
 				}
 
+				expectVerifyExistingGardenletNotFound()
 				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Renewing gardenlet kubeconfig secret due to operation annotation")
 				expectDeleteKubeconfigSecret()
 				gardenClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
@@ -840,8 +931,13 @@ var _ = Describe("Interface", func() {
 			})
 
 			It("should create the garden namespace and seed secrets, and deploy gardenlet (without bootstrap)", func() {
+				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, metav1.PartialObjectMetadata{})
+					return nil
+				})
 				managedSeed.Spec.Gardenlet.Bootstrap = ptr.To(seedmanagementv1alpha1.BootstrapNone)
 
+				expectVerifyExistingGardenletNotFound()
 				expectGetSeed(false)
 				expectCheckSeedSpec()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
@@ -860,6 +956,17 @@ var _ = Describe("Interface", func() {
 					WithStatus(gardencorev1beta1.ConditionTrue),
 					WithReason(gardencorev1beta1.EventReconciled),
 				))
+			})
+
+			It("should return error when existing gardenlet uses different seed name", func() {
+				expectVerifyExistingGardenletWithDifferentSeed("other-seed")
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, gomock.Any())
+
+				_, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ContainSubstring("found existing gardenlet deployment with ConfigMap")))
+				Expect(err).To(MatchError(ContainSubstring(`uses seed name "other-seed"`)))
+				Expect(err).To(MatchError(ContainSubstring(`doesn't match to "test"`)))
 			})
 		})
 
