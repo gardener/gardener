@@ -131,7 +131,7 @@ type testAuthProvider struct {
 var _ auth.AccessController = &testAuthProvider{}
 
 func (a *testAuthProvider) Authorized(r *http.Request, _ ...auth.Access) (*auth.Grant, error) {
-	if r.Method == "GET" && strings.Contains(r.URL.Path, "/blobs/") {
+	if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/blobs/") {
 		a.receivedAuthorization = r.Header.Get("Authorization")
 	}
 	return &auth.Grant{User: auth.UserInfo{Name: "dummy"}}, nil
