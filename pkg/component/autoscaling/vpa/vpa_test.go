@@ -2077,7 +2077,7 @@ var _ = Describe("VPA", func() {
 						Expect(vpa.Deploy(ctx)).To(Succeed())
 					})
 
-					It("should have merics relabel config keeping only `vpa_namespace=kube-system` metrics", func() {
+					It("should only keep metrics without `vpa_namespace` label or labeled with `vpa_namespace=kube-system`", func() {
 						serviceMonitorExpected := serviceMonitorUpdaterFor(component.ClusterTypeShoot, false, false)
 						serviceMonitorExpected.ResourceVersion = "1"
 
