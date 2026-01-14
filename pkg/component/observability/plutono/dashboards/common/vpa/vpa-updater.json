@@ -368,8 +368,8 @@
           "exemplar": true,
           "expr": "sum(vpa_updater_vpas_with_in_place_updatable_pods_total{pod=~\"$pod\"})",
           "interval": "",
-          "legendFormat": "Matching in-place update criteria",
-          "refId": "Matching criteria"
+          "legendFormat": "In-place updatable",
+          "refId": "In-place updatable"
         },
         {
           "exemplar": true,
@@ -377,14 +377,14 @@
           "hide": false,
           "interval": "",
           "legendFormat": "Successfully in-place updated",
-          "refId": "Successfully updater"
+          "refId": "Successfully updated"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "VPAs with Pods matching in-place update criteria",
+      "title": "VPAs with in-place updatable Pods",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -586,8 +586,8 @@
           "exemplar": true,
           "expr": "sum(vpa_updater_vpas_with_evictable_pods_total{pod=~\"$pod\"}) by (update_mode)",
           "interval": "",
-          "legendFormat": "Matching eviction with '{{update_mode}}' mode",
-          "refId": "Matching criteria"
+          "legendFormat": "Evictable with '{{update_mode}}' update mode",
+          "refId": "Evictable"
         },
         {
           "exemplar": true,
@@ -602,7 +602,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "VPAs with Pods matching eviction criteria",
+      "title": "VPAs with evictable Pods",
       "tooltip": {
         "shared": true,
         "sort": 0,
