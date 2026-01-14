@@ -128,7 +128,7 @@ type ManagedSeedSetStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional
-	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,10,rep,name=conditions"`
+	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,10,rep,name=conditions"`
 	// PendingReplica, if not empty, indicates the replica that is currently pending creation, update, or deletion.
 	// This replica is in a state that requires the controller to wait for it to change before advancing to the next replica.
 	// +optional
