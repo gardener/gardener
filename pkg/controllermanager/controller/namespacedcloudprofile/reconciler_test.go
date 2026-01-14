@@ -133,7 +133,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			gomock.InOrder(
 				c.EXPECT().Status().Return(sw),
 				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"machineImages":[],"machineTypes":[],"providerConfig":{"key":"value"}}}}`))
+					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"providerConfig":{"key":"value"}}}}`))
 					return nil
 				}),
 			)
@@ -163,7 +163,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			gomock.InOrder(
 				c.EXPECT().Status().Return(sw),
 				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"machineImages":[],"machineTypes":[],"providerConfig":{"key2":null}}}}`))
+					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"providerConfig":{"key2":null}}}}`))
 					return nil
 				}),
 			)
@@ -252,7 +252,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			gomock.InOrder(
 				c.EXPECT().Status().Return(sw),
 				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"kubernetes":{"versions":[{"version":"1.0.0"}]},"machineImages":[],"machineTypes":[]}}}`))
+					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"kubernetes":{"versions":[{"version":"1.0.0"}]}}}}`))
 					return nil
 				}),
 			)
@@ -282,7 +282,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			gomock.InOrder(
 				c.EXPECT().Status().Return(sw),
 				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"status":{"cloudProfileSpec":{"kubernetes":{"versions":[{"expirationDate":"%s","version":"1.0.0"}]},"machineImages":[],"machineTypes":[]}}}`, newExpiryDate.UTC().Format(time.RFC3339))))
+					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"status":{"cloudProfileSpec":{"kubernetes":{"versions":[{"expirationDate":"%s","version":"1.0.0"}]}}}}`, newExpiryDate.UTC().Format(time.RFC3339))))
 					return nil
 				}),
 			)
@@ -310,7 +310,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			gomock.InOrder(
 				c.EXPECT().Status().Return(sw),
 				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"kubernetes":{"versions":[{"version":"1.0.0"}]},"machineImages":[],"machineTypes":[]},"observedGeneration":7}}`))
+					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"kubernetes":{"versions":[{"version":"1.0.0"}]}},"observedGeneration":7}}`))
 					return nil
 				}),
 			)
@@ -491,7 +491,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						ContainSubstring(`{"status":{"cloudProfileSpec":{"machineImages":[`),
 						ContainSubstring(machineImageParent),
 						ContainSubstring(machineImageNamespacedCloudProfile),
-						ContainSubstring(`],"machineTypes":[]}}}`),
+						ContainSubstring(`]}}}`),
 					))
 					return nil
 				}),
@@ -538,7 +538,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						ContainSubstring(`{"status":{"cloudProfileSpec":{"machineImages":[{"name":"test-image","updateStrategy":"major","versions":[`),
 						ContainSubstring(versionOverride),
 						ContainSubstring(versionAdded),
-						ContainSubstring(`]}],"machineTypes":[]}}}`),
+						ContainSubstring(`]}]}}}`),
 					))
 					return nil
 				}),
@@ -575,7 +575,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					Expect(patch.Data(o)).To(And(
 						ContainSubstring(`{"status":{"cloudProfileSpec":{"machineImages":[{"name":"test-image","updateStrategy":"minor","versions":[`),
 						ContainSubstring(`{"architectures":["amd64"],"cri":[{"name":"containerd"}],"kubeletVersionConstraint":"==1.30.0","version":"1.0.0"}`),
-						ContainSubstring(`]}],"machineTypes":[]}}}`),
+						ContainSubstring(`]}]}}}`),
 					))
 					return nil
 				}),
@@ -628,7 +628,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			gomock.InOrder(
 				c.EXPECT().Status().Return(sw),
 				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"machineImages":[],"machineTypes":[{"architecture":"amd64","cpu":"1","gpu":"5","memory":"3Gi","name":"test-type-namespaced"}]}}}`))
+					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"machineTypes":[{"architecture":"amd64","cpu":"1","gpu":"5","memory":"3Gi","name":"test-type-namespaced"}]}}}`))
 					return nil
 				}),
 			)
@@ -665,7 +665,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
 					// Order of machine type array in patch is not guaranteed
 					Expect(patch.Data(o)).To(And(
-						ContainSubstring(`{"status":{"cloudProfileSpec":{"machineImages":[],"machineTypes":[`),
+						ContainSubstring(`{"status":{"cloudProfileSpec":{"machineTypes":[`),
 						ContainSubstring(`{"architecture":"amd64","cpu":"1","gpu":"5","memory":"3Gi","name":"test-type-namespaced"}`),
 						ContainSubstring(`{"architecture":"amd64","cpu":"2","gpu":"7","memory":"10Gi","name":"test-type"}`),
 					))
@@ -870,6 +870,115 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 		})
 
 		Describe("#MergeCloudProfiles", func() {
+			Describe("retain order of parent CloudProfile when merging", func() {
+				var (
+					cloudProfile           *gardencorev1beta1.CloudProfile
+					namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile
+				)
+
+				BeforeEach(func() {
+					cloudProfile = &gardencorev1beta1.CloudProfile{
+						Spec: gardencorev1beta1.CloudProfileSpec{
+							MachineCapabilities: []gardencorev1beta1.CapabilityDefinition{
+								{Name: "architecture", Values: []string{"amd64", "arm64"}},
+								{Name: "cap-a", Values: []string{"featured", "standard"}},
+								{Name: "cap-b", Values: []string{"one", "two", "three"}},
+							},
+							MachineImages: []gardencorev1beta1.MachineImage{
+								{Name: "image-a"},
+								{
+									Name: "image-b",
+									Versions: []gardencorev1beta1.MachineImageVersion{
+										{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0"}, Architectures: []string{"amd64"}, CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{{Capabilities: map[string]gardencorev1beta1.CapabilityValues{
+											"architecture": {"amd64"},
+											"cap-b":        {"three", "two", "one"},
+											"cap-a":        {"standard"},
+										}}}},
+										{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "2.0"}, Architectures: []string{"amd64"}, CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{{Capabilities: map[string]gardencorev1beta1.CapabilityValues{
+											"architecture": {"amd64"},
+										}}}},
+										{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "3.0"}, Architectures: []string{"arm64"}, CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{{Capabilities: map[string]gardencorev1beta1.CapabilityValues{
+											"architecture": {"arm64"},
+											"cap-a":        {"featured"},
+										}}}},
+									},
+								},
+								{Name: "image-c"},
+							},
+							MachineTypes: []gardencorev1beta1.MachineType{
+								{Name: "type-a", Architecture: ptr.To("amd64")},
+								{Name: "type-b", Architecture: ptr.To("amd64")},
+								{Name: "type-c", Architecture: ptr.To("amd64")},
+							},
+							VolumeTypes: []gardencorev1beta1.VolumeType{
+								{Name: "volume-a"},
+								{Name: "volume-b"},
+								{Name: "volume-c"},
+							},
+							Kubernetes: gardencorev1beta1.KubernetesSettings{Versions: []gardencorev1beta1.ExpirableVersion{
+								{Version: "1.35.0"},
+								{Version: "1.34.1"},
+								{Version: "1.34.0"},
+							}},
+						},
+					}
+					namespacedCloudProfile = &gardencorev1beta1.NamespacedCloudProfile{}
+				})
+
+				It("should match the CloudProfile for no overrides", func() {
+					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+					Expect(namespacedCloudProfile.Status.CloudProfileSpec).To(Equal(cloudProfile.Spec))
+				})
+
+				It("should add new elements and apply overrides consistently while keeping the existing elements ordered", func() {
+					expirationDate := metav1.NewTime(time.Now().Add(time.Hour))
+
+					namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+						{
+							Name: "image-b",
+							Versions: []gardencorev1beta1.MachineImageVersion{
+								{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "2.0", ExpirationDate: &expirationDate}},
+								{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "4.0"}, Architectures: []string{"amd64"}, CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{{Capabilities: map[string]gardencorev1beta1.CapabilityValues{
+									"architecture": {"amd64"},
+								}}}},
+							},
+						},
+					}
+					namespacedCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
+						{Name: "type-d", Architecture: ptr.To("amd64")},
+					}
+					namespacedCloudProfile.Spec.VolumeTypes = []gardencorev1beta1.VolumeType{
+						{Name: "volume-d"},
+					}
+					namespacedCloudProfile.Spec.Kubernetes = ptr.To(gardencorev1beta1.KubernetesSettings{
+						Versions: []gardencorev1beta1.ExpirableVersion{
+							{Version: "1.34.1", ExpirationDate: &expirationDate},
+						},
+					})
+
+					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+					expectedSpec := cloudProfile.Spec.DeepCopy()
+
+					expectedSpec.MachineImages[1].Versions[1].ExpirationDate = &expirationDate
+					expectedSpec.MachineImages[1].Versions = append(expectedSpec.MachineImages[1].Versions, gardencorev1beta1.MachineImageVersion{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "4.0"},
+						Architectures:    []string{"amd64"},
+						CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{{Capabilities: map[string]gardencorev1beta1.CapabilityValues{
+							"architecture": {"amd64"},
+						}}},
+					})
+					expectedSpec.MachineTypes = append(expectedSpec.MachineTypes, gardencorev1beta1.MachineType{Name: "type-d", Architecture: ptr.To("amd64"), Capabilities: map[string]gardencorev1beta1.CapabilityValues{
+						"architecture": {"amd64"},
+					}})
+					expectedSpec.VolumeTypes = append(expectedSpec.VolumeTypes, gardencorev1beta1.VolumeType{Name: "volume-d"})
+					expectedSpec.Kubernetes.Versions[1].ExpirationDate = &expirationDate
+
+					Expect(namespacedCloudProfile.Status.CloudProfileSpec).To(Equal(*expectedSpec))
+				})
+			})
+
 			Describe("merge limits.maxNodesTotal correctly", func() {
 				var (
 					cloudProfile           *gardencorev1beta1.CloudProfile
