@@ -189,8 +189,11 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 				APIServerConfig: cfg.APIServer,
 			},
 			&bootstrappers.OSCChecker{
-				Log: log.WithName("bootstrapper-file-checker"),
-				FS:  fs,
+				Log:      log.WithName("bootstrapper-file-checker"),
+				FS:       fs,
+				Client:   mgr.GetClient(),
+				Recorder: mgr.GetEventRecorderFor("osc-checker"),
+				NodeName: nodeName,
 			},
 		},
 		ActualRunnables: []manager.Runnable{

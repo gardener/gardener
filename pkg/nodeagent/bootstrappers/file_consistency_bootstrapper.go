@@ -5,28 +5,42 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
 const lastAppliedOSCPath = "/var/lib/gardener-node-agent/last-applied-osc.yaml"
-const oscEventsPath = "/var/lib/gardener-node-agent/osc-events.yaml"
 
 type OSCChecker struct {
-	Log logr.Logger
-	FS  afero.Afero
+	Log      logr.Logger
+	FS       afero.Afero
+	Client   client.Client
+	Recorder record.EventRecorder
+	NodeName string
+
+	node *corev1.Node
 }
 
 func (c *OSCChecker) Start(ctx context.Context) error {
 	c.Log.Info("Starting OSC checker bootstrapper")
+
+	// Try to fetch node
+	var node corev1.Node
+	if err := c.Client.Get(ctx, client.ObjectKey{Name: c.NodeName}, &node); err != nil {
+		c.Log.Info("Node not found yet, skipping OSC checks", "node", c.NodeName)
+		return nil
+	}
+	c.node = &node
 
 	// Load last applied OSC
 	raw, err := c.FS.ReadFile(lastAppliedOSCPath)
@@ -43,194 +57,181 @@ func (c *OSCChecker) Start(ctx context.Context) error {
 		return fmt.Errorf("cannot parse OSC YAML: %w", err)
 	}
 
-	// File check
+	// File checks
 	for _, f := range osc.Spec.Files {
 		c.checkFile(f)
 	}
 
-	// Unit Check
+	// Unit checks
 	for _, unit := range osc.Spec.Units {
-		unitPath := filepath.Join("/etc/systemd/system", unit.Name)
-		c.checkUnitFile(unitPath, &unit)
+		c.checkUnitFile(&unit)
 
-		// Drop-ins
 		for _, di := range unit.DropIns {
-			diPath := filepath.Join("/etc/systemd/system", unit.Name+".d", di.Name)
+			diPath := c.resolveDropInPath(unit.Name, di.Name)
 			c.checkDropInFile(diPath, &di, unit.Name)
 		}
 
-		// Enable/Disable
 		if unit.Enable != nil {
 			c.checkUnitEnabled(unit.Name, *unit.Enable)
 		}
 
-		// Dependency files
 		for _, dep := range unit.FilePaths {
-			if _, err := os.Stat(dep); os.IsNotExist(err) {
+			if _, err := c.FS.Stat(dep); os.IsNotExist(err) {
 				c.Log.Info("DEPENDENCY MISSING", "unit", unit.Name, "file", dep)
-				c.emitEvent(corev1.EventTypeWarning, "DependencyMissing", fmt.Sprintf("Dependency file %s for unit %s is missing", dep, unit.Name))
+				c.emitEvent(
+					corev1.EventTypeWarning,
+					"DependencyMissing",
+					fmt.Sprintf("Dependency file %s for unit %s is missing", dep, unit.Name),
+				)
 			}
 		}
 	}
 
 	c.Log.Info("Finished OSC checking bootstrapper")
 	return nil
-
 }
 
-// Check files
 func (c *OSCChecker) checkFile(f v1alpha1.File) {
-	if f.Content.Inline == nil {
-		return
-	}
-
-	if f.Content.ImageRef != nil {
-		return
-	}
-
 	inline := f.Content.Inline
-	if inline == nil || inline.Data == "" {
+	if inline == nil || inline.Data == "" || f.Content.ImageRef != nil {
 		return
 	}
 
 	var expectedBytes []byte
-	var decErr error
+	var err error
+
 	switch inline.Encoding {
 	case "", "plain":
 		expectedBytes = []byte(inline.Data)
 	case "b64", "base64":
-		expectedBytes, decErr = utils.DecodeBase64(inline.Data)
-		if decErr != nil {
-			c.Log.Error(decErr, "Failed to decode inline base64", "path", f.Path)
-			c.emitEvent(corev1.EventTypeWarning, "FileDecodeError", fmt.Sprintf("Failed to decode base64 content for file %s", f.Path))
+		expectedBytes, err = utils.DecodeBase64(inline.Data)
+		if err != nil {
+			c.emitEvent(corev1.EventTypeWarning, "FileDecodeError",
+				fmt.Sprintf("Failed to decode base64 content for file %s", f.Path))
 			return
 		}
 	default:
-		c.Log.Error(nil, "Unsupported encoding", "encoding", inline.Encoding, "path", f.Path)
-		c.emitEvent(corev1.EventTypeWarning, "FileUnsupportedEncoding", fmt.Sprintf("Unsupported encoding %s for file %s", inline.Encoding, f.Path))
+		c.emitEvent(corev1.EventTypeWarning, "FileUnsupportedEncoding",
+			fmt.Sprintf("Unsupported encoding %s for file %s", inline.Encoding, f.Path))
 		return
 	}
 
 	expectedHash := utils.ComputeSHA256Hex(expectedBytes)
-	realPath := filepath.Clean(f.Path)
-	actualBytes, err := c.FS.ReadFile(realPath)
+	actualBytes, err := c.FS.ReadFile(filepath.Clean(f.Path))
 	if err != nil {
 		if os.IsNotExist(err) {
-			c.Log.Info("FILE MISSING", "path", f.Path)
-			c.emitEvent(corev1.EventTypeWarning, "FileMissing", fmt.Sprintf("File %s is missing", f.Path))
+			c.emitEvent(corev1.EventTypeWarning, "FileMissing",
+				fmt.Sprintf("File %s is missing", f.Path))
 		} else {
-			c.Log.Error(err, "Failed to read existing file", "path", f.Path)
-			c.emitEvent(corev1.EventTypeWarning, "FileReadError", fmt.Sprintf("Failed to read file %s", f.Path))
+			c.emitEvent(corev1.EventTypeWarning, "FileReadError",
+				fmt.Sprintf("Failed to read file %s", f.Path))
 		}
 		return
 	}
 
 	actualHash := utils.ComputeSHA256Hex(actualBytes)
-	if expectedHash == actualHash {
-		c.Log.Info("FILE OK", "path", f.Path)
-	} else {
-		c.Log.Info("FILE MISMATCH", "path", f.Path, "expectedSHA256", expectedHash, "actualSHA256", actualHash)
-		c.emitEvent(corev1.EventTypeWarning, "FileMismatch", fmt.Sprintf("File %s mismatch: expected SHA256 %s, actual SHA256 %s", f.Path, expectedHash, actualHash))
+	if expectedHash != actualHash {
+		c.emitEvent(corev1.EventTypeWarning, "FileMismatch",
+			fmt.Sprintf("File %s mismatch: expected %s, actual %s",
+				f.Path, expectedHash, actualHash))
 	}
-
 }
 
-// Check unit file content
-func (c *OSCChecker) checkUnitFile(path string, unit *v1alpha1.Unit) {
-	raw, err := os.ReadFile(path)
+func (c *OSCChecker) checkUnitFile(unit *v1alpha1.Unit) {
+	path := c.resolveUnitPath(unit.Name)
+
+	raw, err := c.FS.ReadFile(path)
 	if err != nil {
-		c.Log.Info("UNIT FILE MISSING", "unit", unit.Name, "path", path)
-		c.emitEvent(corev1.EventTypeWarning, "UnitFileMissing", fmt.Sprintf("Unit file %s is missing", unit.Name))
+		c.emitEvent(corev1.EventTypeWarning, "UnitFileMissing",
+			fmt.Sprintf("Unit file %s is missing", unit.Name))
 		return
 	}
 
 	if unit.Content == nil {
-		c.Log.Info("UNIT CONTENT NOT SPECIFIED IN OSC (skipping content check)", "unit", unit.Name)
 		return
 	}
 
-	expectedBytes := []byte(*unit.Content)
-	actualBytes := raw
-	expectedHash := utils.ComputeSHA256Hex(expectedBytes)
-	actualHash := utils.ComputeSHA256Hex(actualBytes)
+	expectedHash := utils.ComputeSHA256Hex([]byte(*unit.Content))
+	actualHash := utils.ComputeSHA256Hex(raw)
 
-	if expectedHash == actualHash {
-		c.Log.Info("UNIT FILE OK", "unit", unit.Name, "path", path)
-	} else {
-		c.Log.Info("UNIT CONTENT MISMATCH", "unit", unit.Name, "path", path, "expectedSHA256", expectedHash, "actualSHA256", actualHash)
-		c.emitEvent(corev1.EventTypeWarning, "UnitMismatch", fmt.Sprintf("Unit %s content mismatch: expected SHA256 %s, actual SHA256 %s", unit.Name, expectedHash, actualHash))
+	if expectedHash != actualHash {
+		c.emitEvent(corev1.EventTypeWarning, "UnitMismatch",
+			fmt.Sprintf("Unit %s content mismatch", unit.Name))
 	}
-
 }
 
-// Check drop-in files
 func (c *OSCChecker) checkDropInFile(path string, di *v1alpha1.DropIn, unitName string) {
-	raw, err := os.ReadFile(path)
+	raw, err := c.FS.ReadFile(path)
 	if err != nil {
-		c.Log.Info("DROP-IN MISSING", "path", path, "unit", unitName, "dropIn", di.Name)
-		c.emitEvent(corev1.EventTypeWarning, "DropInMissing", fmt.Sprintf("Drop-in %s for unit %s is missing", di.Name, unitName))
+		c.emitEvent(corev1.EventTypeWarning, "DropInMissing",
+			fmt.Sprintf("Drop-in %s for unit %s is missing", di.Name, unitName))
 		return
 	}
 
-	expectedBytes := []byte(di.Content)
-	actualBytes := raw
-	expectedHash := utils.ComputeSHA256Hex(expectedBytes)
-	actualHash := utils.ComputeSHA256Hex(actualBytes)
+	expectedHash := utils.ComputeSHA256Hex([]byte(di.Content))
+	actualHash := utils.ComputeSHA256Hex(raw)
 
-	if expectedHash == actualHash {
-		c.Log.Info("DROP-IN FILE OK", "unit", unitName, "dropIn", di.Name)
-	} else {
-		c.Log.Info("DROP-IN CONTENT MISMATCH", "unit", unitName, "dropIn", di.Name, "expectedSHA256", expectedHash, "actualSHA256", actualHash)
-		c.emitEvent(corev1.EventTypeWarning, "DropInMismatch", fmt.Sprintf("Drop-in %s for unit %s mismatch: expected SHA256 %s, actual SHA256 %s", di.Name, unitName, expectedHash, actualHash))
+	if expectedHash != actualHash {
+		c.emitEvent(corev1.EventTypeWarning, "DropInMismatch",
+			fmt.Sprintf("Drop-in %s for unit %s mismatch", di.Name, unitName))
 	}
-
 }
 
-// Check enable/disable state
 func (c *OSCChecker) checkUnitEnabled(name string, expect bool) {
-	wantDir := filepath.Join("/etc/systemd/system/multi-user.target.wants", name)
-	_, err := os.Stat(wantDir)
-	isEnabled := err == nil
+	want := filepath.Join("/etc/systemd/system/multi-user.target.wants", name)
+	_, err := c.FS.Stat(want)
+	actual := err == nil
 
-	if isEnabled == expect {
-		c.Log.Info("UNIT ENABLE STATE OK", "unit", name, "enabled", expect)
-	} else {
-		c.Log.Info("UNIT ENABLE STATE MISMATCH", "unit", name, "expected", expect, "actual", isEnabled)
-		c.emitEvent(corev1.EventTypeWarning, "UnitEnableMismatch", fmt.Sprintf("Unit %s enable state mismatch: expected %t, actual %t", name, expect, isEnabled))
-	}
-
-}
-
-func (c *OSCChecker) emitEvent(eventType, reason, message string) {
-	event := OSCEvent{
-		Timestamp: time.Now().UTC(),
-		Type:      eventType,
-		Reason:    reason,
-		Message:   message,
-	}
-
-	var list OSCEventList
-
-	raw, err := c.FS.ReadFile(oscEventsPath)
-	if err == nil {
-		_ = yaml.Unmarshal(raw, &list)
-	} else {
-		list = OSCEventList{
-			APIVersion: "nodeagent.gardener.cloud/v1alpha1",
-			Kind:       "OSCEventList",
+	if !actual && expect {
+		unitPath := c.resolveUnitPath(name)
+		if data, err := c.FS.ReadFile(unitPath); err == nil {
+			if !strings.Contains(string(data), "[Install]") {
+				actual = true // static unit
+			}
 		}
 	}
 
-	list.Items = append(list.Items, event)
+	if actual != expect {
+		c.emitEvent(corev1.EventTypeWarning, "UnitEnableMismatch",
+			fmt.Sprintf("Unit %s enable state mismatch: expected %t, actual %t",
+				name, expect, actual))
+	}
+}
 
-	out, err := yaml.Marshal(&list)
-	if err != nil {
-		c.Log.Error(err, "Failed to marshal OSC events")
+func (c *OSCChecker) resolveUnitPath(name string) string {
+	paths := []string{
+		filepath.Join("/etc/systemd/system", name),
+		filepath.Join("/usr/lib/systemd/system", name),
+		filepath.Join("/lib/systemd/system", name),
+	}
+
+	for _, p := range paths {
+		if _, err := c.FS.Stat(p); err == nil {
+			return p
+		}
+	}
+	return filepath.Join("/etc/systemd/system", name) // fallback
+}
+
+func (c *OSCChecker) resolveDropInPath(unitName, dropInName string) string {
+	unitPath := c.resolveUnitPath(unitName)
+	unitDir := filepath.Dir(unitPath)
+
+	return filepath.Join(unitDir, unitName+".d", dropInName)
+}
+
+func (c *OSCChecker) emitEvent(eventType, reason, message string) {
+	if c.node == nil {
 		return
 	}
 
-	_ = c.FS.MkdirAll(filepath.Dir(oscEventsPath), 0o755)
-	_ = c.FS.WriteFile(oscEventsPath, out, 0o644)
+	c.Log.Info("Emitting OSC event",
+		"node", c.node.Name,
+		"reason", reason,
+		"message", message,
+	)
+
+	c.Recorder.Event(c.node, eventType, reason, message)
 }
 
 func (c *OSCChecker) NeedLeaderElection() bool { return false }
