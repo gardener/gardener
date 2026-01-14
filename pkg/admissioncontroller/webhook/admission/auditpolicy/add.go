@@ -54,5 +54,5 @@ func NewHandler(apiReader, c client.Reader, decoder admission.Decoder) admission
 }
 
 func admitConfig(auditPolicyRaw string, _ []*gardencore.Shoot) (int32, error) {
-	return configvalidator.AdmitAudtPolicy(auditPolicyRaw)
+	return configvalidator.AdmitAuditPolicy(auditPolicyRaw)
 }

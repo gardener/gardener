@@ -263,19 +263,19 @@ rules:
 
 			It("has no AuditConfig for KubeAPIServer", func() {
 				garden.Spec.VirtualCluster.Gardener.APIServer = nil
-				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig.AuditConfig = nil
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditConfig = nil
 				test(admissionv1.Create, nil, garden, true, statusCodeAllowed, "no audit policy config map reference found in garden spec", "")
 			})
 
 			It("has no audit policy for KubeAPIServer", func() {
 				garden.Spec.VirtualCluster.Gardener.APIServer = nil
-				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig.AuditConfig.AuditPolicy = nil
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy = nil
 				test(admissionv1.Create, nil, garden, true, statusCodeAllowed, "no audit policy config map reference found in garden spec", "")
 			})
 
 			It("has no audit policy cm Ref for KubeAPIServer", func() {
 				garden.Spec.VirtualCluster.Gardener.APIServer = nil
-				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig.AuditConfig.AuditPolicy.ConfigMapRef = nil
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef = nil
 				test(admissionv1.Create, nil, garden, true, statusCodeAllowed, "no audit policy config map reference found in garden spec", "")
 			})
 
@@ -382,7 +382,7 @@ rules:
 					Data: map[string]string{"policy": validAuditPolicy},
 				}
 				newGarden := garden.DeepCopy()
-				newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name = cmNameOther
+				newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name = cmNameOther
 				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: gardenNs, Name: cmNameOther}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
 					*cm = returnedCm
 					return nil

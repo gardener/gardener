@@ -25,8 +25,8 @@ func init() {
 	decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
 }
 
-// AdmitAudtPolicy validates the provided audit policy.
-func AdmitAudtPolicy(auditPolicyRaw string) (int32, error) {
+// AdmitAuditPolicy validates the provided audit policy.
+func AdmitAuditPolicy(auditPolicyRaw string) (int32, error) {
 	obj, schemaVersion, err := decoder.Decode([]byte(auditPolicyRaw), nil, nil)
 	if err != nil {
 		return http.StatusUnprocessableEntity, fmt.Errorf("failed to decode the provided audit policy: %w", err)

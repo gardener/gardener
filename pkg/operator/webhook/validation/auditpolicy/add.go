@@ -55,12 +55,12 @@ func NewHandler(apiReader, c client.Reader, decoderAdmission admission.Decoder, 
 				configMapNames["gardener-apiserver-audit-policy"] = garden.Spec.VirtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name
 			}
 
-			if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig.AuditConfig != nil &&
-				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig.AuditConfig.AuditPolicy != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig.AuditConfig.AuditPolicy.ConfigMapRef != nil {
-				configMapNames["virtual-garden-kube-apiserver-audit-policy"] = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name
+			if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditConfig != nil &&
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef != nil {
+				configMapNames["virtual-garden-kube-apiserver-audit-policy"] = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name
 			}
 			return configMapNames
 		},
-		AdmitGardenConfig: configvalidator.AdmitAudtPolicy,
+		AdmitGardenConfig: configvalidator.AdmitAuditPolicy,
 	}
 }

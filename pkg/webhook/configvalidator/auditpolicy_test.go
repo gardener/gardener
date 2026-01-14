@@ -13,7 +13,7 @@ import (
 	. "github.com/gardener/gardener/pkg/webhook/configvalidator"
 )
 
-var _ = Describe("AdmitAudtPolicy", func() {
+var _ = Describe("AdmitAuditPolicy", func() {
 	Describe("valid audit policies", func() {
 		It("should accept a valid minimal audit policy", func() {
 			auditPolicy := `
@@ -22,7 +22,7 @@ kind: Policy
 rules:
 - level: Metadata
 `
-			statusCode, err := AdmitAudtPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(0)))
 		})
@@ -54,7 +54,7 @@ rules:
   - group: ""
     resources: ["pods"]
 `
-			statusCode, err := AdmitAudtPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(0)))
 		})
@@ -68,7 +68,7 @@ omitStages:
 rules:
 - level: Metadata
 `
-			statusCode, err := AdmitAudtPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(0)))
 		})
@@ -85,7 +85,7 @@ rules:
     resource: "pods"
     namespace: "default"
 `
-			statusCode, err := AdmitAudtPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(0)))
 		})
@@ -97,7 +97,7 @@ rules:
 invalid: yaml: content
   - missing quotes
 `
-			statusCode, err := AdmitAudtPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy)
 			Expect(err).To(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(http.StatusUnprocessableEntity)))
 			Expect(err.Error()).To(ContainSubstring("failed to decode the provided audit policy"))
@@ -105,7 +105,7 @@ invalid: yaml: content
 
 		It("should reject empty content", func() {
 			auditPolicy := ""
-			statusCode, err := AdmitAudtPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy)
 			Expect(err).To(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(http.StatusUnprocessableEntity)))
 			Expect(err.Error()).To(ContainSubstring("failed to decode the provided audit policy"))
@@ -117,7 +117,7 @@ kind: Policy
 rules:
 - level: Metadata
 `
-			statusCode, err := AdmitAudtPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy)
 			Expect(err).To(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(http.StatusUnprocessableEntity)))
 		})
@@ -128,7 +128,7 @@ apiVersion: audit.k8s.io/v1
 rules:
 - level: Metadata
 `
-			statusCode, err := AdmitAudtPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy)
 			Expect(err).To(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(http.StatusUnprocessableEntity)))
 		})
@@ -140,7 +140,7 @@ kind: Policy
 rules:
 - level: InvalidLevel
 `
-			statusCode, err := AdmitAudtPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy)
 			Expect(err).To(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(http.StatusUnprocessableEntity)))
 			Expect(err.Error()).To(ContainSubstring("provided invalid audit policy"))
@@ -155,7 +155,7 @@ omitStages:
 rules:
 - level: Metadata
 `
-			statusCode, err := AdmitAudtPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy)
 			Expect(err).To(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(http.StatusUnprocessableEntity)))
 			Expect(err.Error()).To(ContainSubstring("provided invalid audit policy"))
