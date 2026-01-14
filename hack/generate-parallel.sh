@@ -81,7 +81,7 @@ should_generate_api_docs() {
     local pkg_path="${pkg#github.com/gardener/gardener/}"
 
     # If API directory changed → regenerate
-    if ! git diff --quiet HEAD -- "$pkg_path" 2>/dev/null; then
+    if ! git diff --quiet master -- "$pkg_path" 2>/dev/null; then
       return 0
     fi
   done
@@ -124,7 +124,7 @@ should_generate_mocks() {
     local pkg_path="${pkg#github.com/gardener/gardener/}"
 
     # If source package changed → regenerate
-    if ! git diff --quiet HEAD -- "$pkg_path" 2>/dev/null; then
+    if ! git diff --quiet master -- "$pkg_path" 2>/dev/null; then
       return 0
     fi
   done
