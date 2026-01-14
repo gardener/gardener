@@ -836,7 +836,7 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 			credentialsResource = "internalsecrets"
 			credentialsKind = "InternalSecret"
 		} else {
-			return errors.New("unknown credentials ref: CredentialsBinding is referencing neither a Secret nor a WorkloadIdentity")
+			return errors.New("unknown credentials ref: CredentialsBinding is referencing neither a Secret nor an InternalSecret nor a WorkloadIdentity")
 		}
 		credentialsNamespace = b.CredentialsRef.Namespace
 		credentialsName = b.CredentialsRef.Name

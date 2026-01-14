@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -76,10 +77,12 @@ func (g *graph) HandleCredentialsBindingCreateOrUpdate(credentialsBinding *secur
 		credentialsVertex = g.getOrCreateVertex(VertexTypeWorkloadIdentity, credentialsBinding.CredentialsRef.Namespace, credentialsBinding.CredentialsRef.Name)
 	} else if credentialsBinding.CredentialsRef.APIVersion == gardencorev1beta1.SchemeGroupVersion.String() && credentialsBinding.CredentialsRef.Kind == "InternalSecret" {
 		credentialsVertex = g.getOrCreateVertex(VertexTypeInternalSecret, credentialsBinding.CredentialsRef.Namespace, credentialsBinding.CredentialsRef.Name)
-	} else {
+	} else if credentialsBinding.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() && credentialsBinding.CredentialsRef.Kind == "Secret" {
 		credentialsVertex = g.getOrCreateVertex(VertexTypeSecret, credentialsBinding.CredentialsRef.Namespace, credentialsBinding.CredentialsRef.Name)
 	}
-	g.addEdge(credentialsVertex, credentialsBindingVertex)
+	if credentialsVertex != nil {
+		g.addEdge(credentialsVertex, credentialsBindingVertex)
+	}
 }
 
 func (g *graph) handleCredentialsBindingDelete(credentialsBinding *securityv1alpha1.CredentialsBinding) {

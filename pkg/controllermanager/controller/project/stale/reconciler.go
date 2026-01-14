@@ -193,8 +193,8 @@ func (r *Reconciler) projectInUseDueToInternalSecrets(ctx context.Context, names
 	}
 
 	internalSecretNames := make(sets.Set[string], len(internalSecretList.Items))
-	for _, workloadIdentity := range internalSecretList.Items {
-		internalSecretNames.Insert(workloadIdentity.Name)
+	for _, internalSecret := range internalSecretList.Items {
+		internalSecretNames.Insert(internalSecret.Name)
 	}
 
 	return r.relevantCredentialsBindingsInUse(ctx, func(credentialsBinding securityv1alpha1.CredentialsBinding) bool {

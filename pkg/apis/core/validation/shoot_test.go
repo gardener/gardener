@@ -2271,7 +2271,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeNotSupported),
 							"Field":  Equal("spec.dns.providers[0].credentialsRef"),
-							"Detail": Equal(`supported values: "/v1, Kind=Secret", "security.gardener.cloud/v1alpha1, Kind=WorkloadIdentity"`),
+							"Detail": Equal(`supported values: "/v1, Kind=Secret", "core.gardener.cloud/v1beta1, Kind=InternalSecret", "security.gardener.cloud/v1alpha1, Kind=WorkloadIdentity"`),
 						}))),
 					),
 				)
