@@ -27,7 +27,9 @@ spec:
   dns:
     provider:
       type: aws-route53
-      secretRef:
+      credentialsRef:
+        apiVersion: v1
+        kind: Secret
         name: ingress-secret
         namespace: garden
     internal:

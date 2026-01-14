@@ -49,7 +49,9 @@ spec:
         dns:
           provider:
             type: local
-            secretRef:
+            credentialsRef:
+              apiVersion: v1
+              kind: Secret
               name: internal-domain-internal-local-gardener-cloud
               namespace: garden
           internal:

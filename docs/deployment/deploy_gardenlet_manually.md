@@ -25,7 +25,9 @@ In this case, `gardenlet` needs to be deployed manually, meaning that its [Helm 
     dns:
       provider:
         type: aws-route53
-        secretRef:
+        credentialsRef:
+          apiVersion: v1
+          kind: Secret
           name: ingress-secret
           namespace: garden
     ingress:
@@ -168,7 +170,9 @@ For all supported infrastructure providers, see [Known Extension Implementations
         dns:
           provider:
             type: <provider>
-            secretRef:
+            credentialsRef:
+              apiVersion: v1
+              kind: Secret
               name: ingress-secret
               namespace: garden
         ingress: # see prerequisites
@@ -302,7 +306,9 @@ config:
       dns:
         provider:
           type: <provider>
-          secretRef:
+          credentialsRef:
+            apiVersion: v1
+            kind: Secret
             name: ingress-secret
             namespace: garden
       ingress: # see prerequisites
@@ -466,7 +472,9 @@ spec:
             namespace: garden
         dns:
           provider:
-            secretRef:
+            credentialsRef:
+              apiVersion: v1
+              kind: Secret
               name: internal-domain-internal-local-gardener-cloud
               namespace: garden
             type: local
