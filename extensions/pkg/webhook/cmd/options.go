@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	extensionscmdcontroller "github.com/gardener/gardener/extensions/pkg/controller/cmd"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
 	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
@@ -191,8 +192,9 @@ type AddToManagerOptions struct {
 	shootWebhookManagedResourceName string
 	shootNamespaceSelector          map[string]string
 
-	Server ServerOptions
-	Switch SwitchOptions
+	General *extensionscmdcontroller.GeneralOptions
+	Server  ServerOptions
+	Switch  SwitchOptions
 }
 
 // NewAddToManagerOptions creates new AddToManagerOptions with the given server name, server, and switch options.
@@ -201,6 +203,7 @@ func NewAddToManagerOptions(
 	extensionName string,
 	shootWebhookManagedResourceName string,
 	shootNamespaceSelector map[string]string,
+	generalOpts *extensionscmdcontroller.GeneralOptions,
 	serverOpts *ServerOptions,
 	switchOpts *SwitchOptions,
 ) *AddToManagerOptions {
@@ -213,6 +216,7 @@ func NewAddToManagerOptions(
 		extensionName:                   name,
 		shootWebhookManagedResourceName: shootWebhookManagedResourceName,
 		shootNamespaceSelector:          shootNamespaceSelector,
+		General:                         generalOpts,
 		Server:                          *serverOpts,
 		Switch:                          *switchOpts,
 	}
@@ -220,12 +224,22 @@ func NewAddToManagerOptions(
 
 // AddFlags implements Option.
 func (c *AddToManagerOptions) AddFlags(fs *pflag.FlagSet) {
+	if c.General != nil {
+		c.General.AddFlags(fs)
+	}
+
 	c.Switch.AddFlags(fs)
 	c.Server.AddFlags(fs)
 }
 
 // Complete implements Option.
 func (c *AddToManagerOptions) Complete() error {
+	if c.General != nil {
+		if err := c.General.Complete(); err != nil {
+			return err
+		}
+	}
+
 	if err := c.Switch.Complete(); err != nil {
 		return err
 	}
@@ -235,7 +249,7 @@ func (c *AddToManagerOptions) Complete() error {
 
 // Completed returns the completed AddToManagerConfig. Only call this if a previous call to `Complete` succeeded.
 func (c *AddToManagerOptions) Completed() *AddToManagerConfig {
-	return &AddToManagerConfig{
+	config := &AddToManagerConfig{
 		extensionName:                   c.extensionName,
 		shootWebhookManagedResourceName: c.shootWebhookManagedResourceName,
 		shootNamespaceSelector:          c.shootNamespaceSelector,
@@ -243,6 +257,12 @@ func (c *AddToManagerOptions) Completed() *AddToManagerConfig {
 		Server: *c.Server.Completed(),
 		Switch: *c.Switch.Completed(),
 	}
+
+	if c.General != nil {
+		config.General = *c.General.Completed()
+	}
+
+	return config
 }
 
 // AddToManagerConfig is a completed AddToManager configuration.
@@ -251,15 +271,16 @@ type AddToManagerConfig struct {
 	shootWebhookManagedResourceName string
 	shootNamespaceSelector          map[string]string
 
-	Server ServerConfig
-	Switch SwitchConfig
-	Clock  clock.Clock
+	General extensionscmdcontroller.GeneralConfig
+	Server  ServerConfig
+	Switch  SwitchConfig
+	Clock   clock.Clock
 }
 
 // AddToManager instantiates all webhooks of this configuration. If there are any webhooks, it creates a
 // webhook server, registers the webhooks and adds the server to the manager. Otherwise, it is a no-op.
 // It generates and registers the seed targeted webhooks via a MutatingWebhookConfiguration.
-func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster cluster.Cluster, mergeShootWebhooksIntoSeedWebhooks bool) (*atomic.Value, error) {
+func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster cluster.Cluster) (*atomic.Value, error) {
 	if c.Clock == nil {
 		c.Clock = &clock.RealClock{}
 	}
@@ -299,7 +320,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		c.Server.Mode,
 		c.Server.URL,
 		nil,
-		mergeShootWebhooksIntoSeedWebhooks,
+		c.General.SelfHostedShootCluster,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not create webhooks: %w", err)
