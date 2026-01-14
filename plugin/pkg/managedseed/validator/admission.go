@@ -27,7 +27,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementhelper "github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
@@ -452,20 +451,7 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 			}
 			return nil, apierrors.NewInternalError(fmt.Errorf("could not get credentials binding %s/%s: %v", shoot.Namespace, *shoot.Spec.CredentialsBindingName, err))
 		}
-		switch apiVersion, kind := credentialsBinding.CredentialsRef.APIVersion, credentialsBinding.CredentialsRef.Kind; {
-		case apiVersion == corev1.SchemeGroupVersion.String() && kind == "Secret":
-			credentialsRef = &corev1.ObjectReference{
-				APIVersion: apiVersion,
-				Kind:       kind,
-				Name:       credentialsBinding.CredentialsRef.Name,
-				Namespace:  credentialsBinding.CredentialsRef.Namespace,
-			}
-		case apiVersion == securityv1alpha1.SchemeGroupVersion.String() && kind == "WorkloadIdentity":
-			// TODO(vpnachev): This code should handle dns provider credentials of type WorkloadIdentity
-			return nil, fmt.Errorf("shoot credentials of type WorkloadIdentity cannot be used as domain secret")
-		default:
-			return nil, fmt.Errorf("shoot credentials of type apiVersion=%q kind=%q cannot be used as domain secret", apiVersion, kind)
-		}
+		credentialsRef = &credentialsBinding.CredentialsRef
 	} else {
 		return nil, fmt.Errorf("cannot initialize a reference to the primary DNS provider credentials of shoot %s", client.ObjectKeyFromObject(shoot))
 	}

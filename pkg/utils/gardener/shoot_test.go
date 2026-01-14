@@ -1241,7 +1241,7 @@ var _ = Describe("Shoot", func() {
 
 			_, err := ConstructExternalDomain(ctx, fakeClient, shoot, nil, nil)
 			Expect(err).To(And(
-				MatchError(ContainSubstring(`could not get dns provider credentials "&CrossVersionObjectReference{Kind:ConfigMap,Name:config-map-1,APIVersion:v1,}"`)),
+				MatchError(ContainSubstring(`could not get dns provider credentials from reference "&CrossVersionObjectReference{Kind:ConfigMap,Name:config-map-1,APIVersion:v1,}"`)),
 				MatchError(ContainSubstring("unsupported credentials reference: default/config-map-1, /v1, Kind=ConfigMap")),
 			))
 		})

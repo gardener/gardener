@@ -472,7 +472,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("Update (DNS credentials ref to workloadidentity)")
 		seed1Copy = seed1.DeepCopy()
-		seed1.Spec.DNS.Provider.CredentialsRef = seed1DNSProviderWorkloadIdentityCredentialsRef
+		seed1.Spec.DNS.Provider.CredentialsRef = &seed1DNSProviderWorkloadIdentityCredentialsRef
 		fakeInformerSeed.Update(seed1Copy, seed1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(10))
 		Expect(graph.graph.Edges().Len()).To(Equal(9))

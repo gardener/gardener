@@ -249,9 +249,6 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 				if dnsProvider.SecretRef.Namespace != "" {
 					allErrs = append(allErrs, field.Forbidden(dnsProviderPath.Child("secretRef", "namespace"), "must not be set when credentialsRef refers to a WorkloadIdentity"))
 				}
-
-				// TODO(vpnachev): Allow workload identity credentials when the known controllers support it.
-				allErrs = append(allErrs, field.Forbidden(dnsProviderPath.Child("credentialsRef"), "workload identity is not yet supported for DNS providers"))
 			}
 		}
 	}

@@ -657,7 +657,6 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 			default:
 				return nil, fmt.Errorf("unexpected shoot credentials type %T", creds)
 			}
-			externalDomain.Credentials = shootCredentials
 		}
 		if primaryProvider.Type != nil {
 			externalDomain.Provider = *primaryProvider.Type
