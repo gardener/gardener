@@ -1327,11 +1327,10 @@ type KubeProxyConfig struct {
 }
 
 // ProxyMode available in Linux platform: 'userspace' (older, going to be EOL), 'iptables'
-// (newer, faster), 'ipvs' (newest, better in performance and scalability).
-// As of now only 'iptables' and 'ipvs' is supported by Gardener.
+// (newer, faster), 'nftables', and 'ipvs' (deprecated starting with Kubernetes 1.35).
+// As of now only 'iptables', 'nftables' and 'ipvs' (deprecated starting with Kubernetes 1.35) is supported by Gardener.
 // In Linux platform, if the iptables proxy is selected, regardless of how, but the system's kernel or iptables versions are
-// insufficient, this always falls back to the userspace proxy. IPVS mode will be enabled when proxy mode is set to 'ipvs',
-// and the fall back path is firstly iptables and then userspace.
+// insufficient, this always falls back to the userspace proxy.
 type ProxyMode string
 
 const (

@@ -59,6 +59,14 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 		warnings = append(warnings, "you are setting the spec.cloudProfileName field. The field is deprecated and will be forcefully set empty starting with Kubernetes 1.34. Use the new spec.cloudProfile.name field instead.")
 	}
 
+	if helper.IsKubeProxyIPVSMode(shoot.Spec.Kubernetes.KubeProxy) {
+		if err == nil && versionutils.ConstraintK8sGreaterEqual135.Check(kubernetesVersion) {
+			warnings = append(warnings, "you are using IPVS mode for kube-proxy. The IPVS mode is deprecated starting with Kubernetes 1.35. Please switch to iptables or nftables mode.")
+		} else if oldShoot != nil && !helper.IsKubeProxyIPVSMode(oldShoot.Spec.Kubernetes.KubeProxy) {
+			warnings = append(warnings, "you have switched to IPVS mode for kube-proxy. The IPVS mode is deprecated starting with Kubernetes 1.35. Please switch to iptables or nftables mode.")
+		}
+	}
+
 	if shoot.Spec.SecretBindingName != nil {
 		warnings = append(warnings, "spec.secretBindingName is deprecated and will be disallowed starting with Kubernetes 1.34. For migration instructions, see: https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md")
 	}

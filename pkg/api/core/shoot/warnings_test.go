@@ -304,5 +304,40 @@ var _ = Describe("Warnings", func() {
 				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(BeEmpty())
 			})
 		})
+
+		Describe("shoot.spec.kubernetes.kubeProxy.mode", func() {
+			It("should print a warning when kube-proxy mode is set to 'IPVS' and the Kubernetes version is >= v1.35", func() {
+				shoot.Spec.Kubernetes.Version = "1.35.0"
+				shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
+					Enabled: ptr.To(true),
+					Mode:    ptr.To(core.ProxyModeIPVS),
+				}
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are using IPVS mode for kube-proxy")))
+			})
+
+			It("should not print a warning when kube-proxy mode is set to 'IPVS' and the Kubernetes version is < v1.35", func() {
+				shoot.Spec.Kubernetes.Version = "1.34.0"
+				shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
+					Enabled: ptr.To(true),
+					Mode:    ptr.To(core.ProxyModeIPVS),
+				}
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(BeEmpty())
+			})
+
+			It("should print a warning when kube-proxy mode is switched to 'IPVS' for Kubernetes versions < 1.35", func() {
+				shoot.Spec.Kubernetes.Version = "1.34.0"
+				shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
+					Enabled: ptr.To(true),
+					Mode:    ptr.To(core.ProxyModeIPVS),
+				}
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
+					Enabled: ptr.To(true),
+					Mode:    ptr.To(core.ProxyModeIPTables),
+				}
+
+				Expect(GetWarnings(ctx, shoot, oldShoot, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you have switched to IPVS mode for kube-proxy")))
+			})
+		})
 	})
 })

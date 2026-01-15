@@ -10744,11 +10744,10 @@ WorkersSettings
 </p>
 <p>
 <p>ProxyMode available in Linux platform: &lsquo;userspace&rsquo; (older, going to be EOL), &lsquo;iptables&rsquo;
-(newer, faster), &lsquo;ipvs&rsquo; (newest, better in performance and scalability).
-As of now only &lsquo;iptables&rsquo; and &lsquo;ipvs&rsquo; is supported by Gardener.
+(newer, faster), &lsquo;nftables&rsquo;, and &lsquo;ipvs&rsquo; (deprecated starting with Kubernetes 1.35).
+As of now only &lsquo;iptables&rsquo;, &lsquo;nftables&rsquo; and &lsquo;ipvs&rsquo; (deprecated starting with Kubernetes 1.35) is supported by Gardener.
 In Linux platform, if the iptables proxy is selected, regardless of how, but the system&rsquo;s kernel or iptables versions are
-insufficient, this always falls back to the userspace proxy. IPVS mode will be enabled when proxy mode is set to &lsquo;ipvs&rsquo;,
-and the fall back path is firstly iptables and then userspace.</p>
+insufficient, this always falls back to the userspace proxy.</p>
 </p>
 <h3 id="core.gardener.cloud/v1beta1.QuotaSpec">QuotaSpec
 </h3>
