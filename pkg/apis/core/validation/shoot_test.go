@@ -156,9 +156,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				},
 				Spec: core.ShootSpec{
 					Addons: &core.Addons{
-						KubernetesDashboard: &core.KubernetesDashboard{
-							Addon: addon,
-						},
 						NginxIngress: &core.NginxIngress{
 							Addon: addon,
 						},
@@ -708,13 +705,31 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid unsupported addon configuration", func() {
-				shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = ptr.To("does-not-exist")
+				shoot.Spec.Kubernetes.Version = "1.34.0"
+				shoot.Spec.Addons.KubernetesDashboard = &core.KubernetesDashboard{
+					Addon:              addon,
+					AuthenticationMode: ptr.To("does-not-exist"),
+				}
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("spec.addons.kubernetesDashboard.authenticationMode"),
+				}))))
+			})
+
+			It("should forbid kubernetes dashboard for k8s versions >= 1.35", func() {
+				shoot.Spec.Kubernetes.Version = "1.35.0"
+				shoot.Spec.Addons.KubernetesDashboard = &core.KubernetesDashboard{
+					Addon: addon,
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.addons.kubernetesDashboard"),
 				}))))
 			})
 

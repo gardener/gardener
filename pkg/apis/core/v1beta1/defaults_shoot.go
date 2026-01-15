@@ -8,6 +8,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -15,10 +16,13 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // SetDefaults_Shoot sets default values for Shoot objects.
 func SetDefaults_Shoot(obj *Shoot) {
+	k8sVersion, _ := semver.NewVersion(obj.Spec.Kubernetes.Version)
+
 	if obj.Spec.Kubernetes.KubeAPIServer == nil {
 		obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{}
 	}
@@ -118,12 +122,15 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if obj.Spec.Addons == nil {
 			obj.Spec.Addons = &Addons{}
 		}
-		if obj.Spec.Addons.KubernetesDashboard == nil {
-			obj.Spec.Addons.KubernetesDashboard = &KubernetesDashboard{}
-		}
-		if obj.Spec.Addons.KubernetesDashboard.AuthenticationMode == nil {
-			defaultAuthMode := KubernetesDashboardAuthModeToken
-			obj.Spec.Addons.KubernetesDashboard.AuthenticationMode = &defaultAuthMode
+
+		if k8sVersion == nil || !versionutils.ConstraintK8sGreaterEqual135.Check(k8sVersion) {
+			if obj.Spec.Addons.KubernetesDashboard == nil {
+				obj.Spec.Addons.KubernetesDashboard = &KubernetesDashboard{}
+			}
+			if obj.Spec.Addons.KubernetesDashboard.AuthenticationMode == nil {
+				defaultAuthMode := KubernetesDashboardAuthModeToken
+				obj.Spec.Addons.KubernetesDashboard.AuthenticationMode = &defaultAuthMode
+			}
 		}
 
 		if obj.Spec.Kubernetes.Kubelet == nil {

@@ -37,6 +37,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 		shoot131     *gardencorev1beta1.Shoot
 		shoot132     *gardencorev1beta1.Shoot
 		shoot133     *gardencorev1beta1.Shoot
+		shoot134     *gardencorev1beta1.Shoot
 
 		// Test Machine Image
 		machineImageName             = "foo-image"
@@ -376,9 +377,9 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: testNamespace.Name},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: ptr.To("my-provider-account"),
-				CloudProfile:      &gardencorev1beta1.CloudProfileReference{Name: cloudProfile.Name},
-				Region:            "foo-region",
+				CredentialsBindingName: ptr.To("my-provider-account"),
+				CloudProfile:           &gardencorev1beta1.CloudProfileReference{Name: cloudProfile.Name},
+				Region:                 "foo-region",
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo-provider",
 					Workers: []gardencorev1beta1.Worker{
@@ -426,6 +427,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 		shoot131 = shoot.DeepCopy()
 		shoot132 = shoot.DeepCopy()
 		shoot133 = shoot.DeepCopy()
+		shoot134 = shoot.DeepCopy()
 		// set dummy kubernetes version to shoot
 		shoot.Spec.Kubernetes.Version = testKubernetesVersionLowPatchLowMinor.Version
 
@@ -1868,6 +1870,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 
 				shoot133.Spec.Kubernetes.Version = "1.33.0"
 				shoot133.Spec.SecretBindingName = &secretBindingName
+				shoot133.Spec.CredentialsBindingName = nil
 
 				secret = &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1972,6 +1975,52 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 					Expect(client.IgnoreNotFound(testClient.Delete(ctx, credentialsBinding))).To(Succeed())
 				})
 			})
+
+			It("should disable the kubernetes dashboard when force updating to Kubernetes 1.35", func() {
+				shoot134.Spec.Kubernetes.Version = "1.34.0"
+				shoot134.Spec.Addons = &gardencorev1beta1.Addons{
+					KubernetesDashboard: &gardencorev1beta1.KubernetesDashboard{
+						Addon: gardencorev1beta1.Addon{
+							Enabled: true,
+						},
+					},
+				}
+
+				By("Create Shoot with k8s v1.34")
+				Expect(testClient.Create(ctx, shoot134)).To(Succeed())
+				log.Info("Created shoot with k8s v1.34", "shoot", client.ObjectKeyFromObject(shoot133))
+
+				DeferCleanup(func() {
+					By("Delete Shoot with k8s v1.34")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot134))).To(Succeed())
+				})
+
+				Expect(shoot134.Spec.Addons.KubernetesDashboard).NotTo(BeNil())
+
+				By("Expire Shoot's kubernetes version in the CloudProfile to force update to 1.35")
+				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, shoot134.Spec.CloudProfile.Name, "1.34.0", &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+
+				By("Wait until manager has observed the CloudProfile update")
+				waitKubernetesVersionToBeExpiredInCloudProfile(shoot134.Spec.CloudProfile.Name, "1.34.0", &expirationDateInThePast)
+
+				By("Trigger maintenance")
+				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot134, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+
+				By("Wait for maintenance to complete and verify migration")
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot134), shoot134)).To(Succeed())
+					g.Expect(shoot134.Status.LastMaintenance).NotTo(BeNil())
+
+					g.Expect(shoot134.Spec.Kubernetes.Version).To(Equal("1.35.0"))
+
+					g.Expect(shoot134.Spec.Addons.KubernetesDashboard).To(BeNil(), "KubernetesDashboard should be unset after migration")
+
+					g.Expect(shoot134.Status.LastMaintenance.Description).To(ContainSubstring(".spec.addons.kubernetesDashboard was removed. Reason: Kubernetes dashboard is archived and can no longer be used for Shoot clusters using Kubernetes version 1.35+"))
+					g.Expect(shoot134.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot134.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
+				}).Should(Succeed())
+			})
+
 		})
 	})
 

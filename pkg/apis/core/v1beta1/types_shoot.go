@@ -479,6 +479,8 @@ type ShootAdvertisedAddress struct {
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.
 type Addons struct {
 	// KubernetesDashboard holds configuration settings for the kubernetes dashboard addon.
+	// Deprecated: This field is deprecated. Enabling the kubernetes dashboard will be forbidden starting from Kubernetes 1.35.
+	// TODO(timuthy): Drop this field after support for Kubernetes 1.34 is dropped.
 	// +optional
 	KubernetesDashboard *KubernetesDashboard `json:"kubernetesDashboard,omitempty" protobuf:"bytes,1,opt,name=kubernetesDashboard"`
 	// NginxIngress holds configuration settings for the nginx-ingress addon.

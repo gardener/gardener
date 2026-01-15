@@ -305,7 +305,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 
 	allErrs = append(allErrs, ValidateCloudProfileReference(spec.CloudProfile, spec.CloudProfileName, k8sVersion, fldPath)...)
 	allErrs = append(allErrs, validateProvider(meta.Namespace, spec.Provider, spec.Kubernetes, spec.Networking, workerless, fldPath.Child("provider"), inTemplate)...)
-	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Purpose, workerless, fldPath.Child("addons"))...)
+	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Purpose, workerless, k8sVersion, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, ValidateResources(spec.Resources, fldPath.Child("resources"), true)...)
@@ -618,7 +618,7 @@ func validateAdvertisedURL(URL string, fldPath *field.Path) field.ErrorList {
 	return allErrors
 }
 
-func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless bool, fldPath *field.Path) field.ErrorList {
+func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless bool, k8sVersion *semver.Version, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if workerless && addons != nil {
@@ -656,7 +656,9 @@ func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless 
 	}
 
 	if helper.KubernetesDashboardEnabled(addons) {
-		if authMode := addons.KubernetesDashboard.AuthenticationMode; authMode != nil {
+		if versionutils.ConstraintK8sGreaterEqual135.Check(k8sVersion) {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubernetesDashboard"), "for Kubernetes versions >= 1.35, kubernetesDashboard is no longer supported"))
+		} else if authMode := addons.KubernetesDashboard.AuthenticationMode; authMode != nil {
 			if !availableKubernetesDashboardAuthenticationModes.Has(*authMode) {
 				allErrs = append(allErrs, field.NotSupported(fldPath.Child("kubernetesDashboard", "authenticationMode"), *authMode, sets.List(availableKubernetesDashboardAuthenticationModes)))
 			}

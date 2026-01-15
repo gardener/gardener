@@ -511,6 +511,26 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Addons.KubernetesDashboard.AuthenticationMode).To(PointTo(Equal(KubernetesDashboardAuthModeToken)))
 		})
 
+		It("should not default the kubernetesDashboard field for shoots with kubernetes >= 1.35", func() {
+			obj.Spec.Addons = nil
+			obj.Spec.Kubernetes.Version = "1.35"
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Addons).NotTo(BeNil())
+			Expect(obj.Spec.Addons.KubernetesDashboard).To(BeNil())
+		})
+
+		It("should not default the kubernetesDashboard field when version is invalid", func() {
+			obj.Spec.Addons = nil
+			obj.Spec.Kubernetes.Version = "123"
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Addons).NotTo(BeNil())
+			Expect(obj.Spec.Addons.KubernetesDashboard).To(BeNil())
+		})
+
 		It("should not overwrite the already set values for kubernetesDashboard field", func() {
 			obj.Spec.Addons = &Addons{
 				KubernetesDashboard: &KubernetesDashboard{
