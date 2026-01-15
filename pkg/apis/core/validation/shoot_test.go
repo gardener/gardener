@@ -1010,7 +1010,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.secretBindingName"),
-						"Detail": Equal("is no longer supported for Kubernetes >= 1.34, use spec.credentialsBindingName instead"),
+						"Detail": Equal("for Kubernetes versions >= 1.34, secretBindingName field is no longer supported, use spec.credentialsBindingName instead"),
 					}))))
 				},
 				Entry("should forbid secretBindingName for Kubernetes = 1.34", "1.34.0"),
@@ -2518,7 +2518,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
+						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.clientAuthentication"),
 					}))
 				})
@@ -3555,9 +3555,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
+					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.kubernetes.kubeControllerManager.podEvictionTimeout"),
-					"Detail": ContainSubstring("podEvictionTimeout is no longer supported by Gardener starting from Kubernetes 1.33"),
+					"Detail": ContainSubstring("for Kubernetes versions >= 1.33, podEvictionTimeout field is no longer supported"),
 				}))))
 			})
 
@@ -3935,7 +3935,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("maxEmptyBulkDelete"),
-						"Detail": Equal("is not supported for kubernetes v1.33 and above, use maxScaleDownParallelism instead"),
+						"Detail": Equal("for Kubernetes versions >= 1.33, maxEmptyBulkDelete field is no longer supported, use maxScaleDownParallelism instead"),
 					}))),
 				),
 				Entry("valid with maxScaleDownParallelism", core.ClusterAutoscaler{
@@ -8507,7 +8507,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.cloudProfileName"),
-						"Detail": ContainSubstring("cloudProfileName must not be set"),
+						"Detail": ContainSubstring("cloudProfileName field is no longer supported"),
 					}))))
 			})
 		})

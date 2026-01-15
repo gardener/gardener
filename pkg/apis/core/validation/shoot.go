@@ -337,7 +337,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 		// Forbid secretBindingName for Kubernetes versions >= 1.34
 		if spec.SecretBindingName != nil && len(*spec.SecretBindingName) > 0 &&
 			k8sVersion != nil && versionutils.ConstraintK8sGreaterEqual134.Check(k8sVersion) {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretBindingName"), "is no longer supported for Kubernetes >= 1.34, use spec.credentialsBindingName instead"))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretBindingName"), "for Kubernetes versions >= 1.34, secretBindingName field is no longer supported, use spec.credentialsBindingName instead"))
 		}
 	}
 
@@ -657,7 +657,7 @@ func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless 
 
 	if helper.KubernetesDashboardEnabled(addons) {
 		if versionutils.ConstraintK8sGreaterEqual135.Check(k8sVersion) {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubernetesDashboard"), "for Kubernetes versions >= 1.35, kubernetesDashboard is no longer supported"))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubernetesDashboard"), "for Kubernetes versions >= 1.35, kubernetesDashboard field is no longer supported"))
 		} else if authMode := addons.KubernetesDashboard.AuthenticationMode; authMode != nil {
 			if !availableKubernetesDashboardAuthenticationModes.Has(*authMode) {
 				allErrs = append(allErrs, field.NotSupported(fldPath.Child("kubernetesDashboard", "authenticationMode"), *authMode, sets.List(availableKubernetesDashboardAuthenticationModes)))
@@ -1445,7 +1445,7 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, version string
 
 	if maxEmptyBulkDelete := autoScaler.MaxEmptyBulkDelete; maxEmptyBulkDelete != nil {
 		if unsupportedVersion, _ := versionutils.CompareVersions(version, ">=", "1.33"); unsupportedVersion {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("maxEmptyBulkDelete"), "is not supported for kubernetes v1.33 and above, use maxScaleDownParallelism instead"))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("maxEmptyBulkDelete"), "for Kubernetes versions >= 1.33, maxEmptyBulkDelete field is no longer supported, use maxScaleDownParallelism instead"))
 		}
 		if *maxEmptyBulkDelete < 0 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("maxEmptyBulkDelete"), *maxEmptyBulkDelete, "can not be negative"))
@@ -1484,7 +1484,7 @@ func ValidateCloudProfileReference(cloudProfileReference *core.CloudProfileRefer
 	allErrs := field.ErrorList{}
 
 	if k8sVersion != nil && versionutils.ConstraintK8sGreaterEqual134.Check(k8sVersion) && ptr.Deref(cloudProfileName, "") != "" {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("cloudProfileName"), "starting with k8s v1.34, cloudProfileName must not be set. Instead, use spec.cloudProfile.name"))
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("cloudProfileName"), "for Kubernetes version >= 1.34, cloudProfileName field is no longer supported, use spec.cloudProfile.name instead"))
 	}
 
 	fldPath = fldPath.Child("cloudProfile")
@@ -1685,7 +1685,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 		// TODO(AleksandarSavchev): Remove this check as soon as v1.31 is the least supported Kubernetes version in Gardener.
 		k8sGreaterEqual131, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.31")
 		if oidc.ClientAuthentication != nil && k8sGreaterEqual131 {
-			allErrs = append(allErrs, field.Invalid(oidcPath.Child("clientAuthentication"), *oidc.ClientAuthentication, "for Kubernetes versions >= 1.31, clientAuthentication field is no longer supported"))
+			allErrs = append(allErrs, field.Forbidden(oidcPath.Child("clientAuthentication"), "for Kubernetes versions >= 1.31, clientAuthentication field is no longer supported"))
 		}
 		if oidc.GroupsClaim != nil && len(*oidc.GroupsClaim) == 0 {
 			allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsClaim"), *oidc.GroupsClaim, "groupsClaim cannot be empty when key is provided"))
@@ -1870,7 +1870,7 @@ func ValidateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networ
 		// TODO(plkokanov): Remove this check after support for Kubernetes 1.32 is dropped.
 		if podEvictionTimeout := kcm.PodEvictionTimeout; podEvictionTimeout != nil {
 			if k8sGreaterEqual133, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.33"); k8sGreaterEqual133 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("podEvictionTimeout"), podEvictionTimeout, "podEvictionTimeout is no longer supported by Gardener starting from Kubernetes 1.33"))
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("podEvictionTimeout"), "for Kubernetes versions >= 1.33, podEvictionTimeout field is no longer supported"))
 			} else if podEvictionTimeout.Duration <= 0 {
 				allErrs = append(allErrs, field.Invalid(fldPath.Child("podEvictionTimeout"), podEvictionTimeout.Duration, "podEvictionTimeout must be larger than 0"))
 			}
@@ -2438,7 +2438,7 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, fld
 		allErrs = append(allErrs, validateKubeletConfigReserved(kubeletConfig.SystemReserved, fldPath.Child("systemReserved"))...)
 
 		if k8sGreaterEqual131, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.31"); k8sGreaterEqual131 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("systemReserved"), kubeletConfig.SystemReserved, "systemReserved is no longer supported by Gardener starting from Kubernetes 1.31"))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("systemReserved"), kubeletConfig.SystemReserved, "for Kubernetes versions >= 1.31, systemReserved field is no longer supported"))
 		}
 	}
 	if v := kubeletConfig.ImageMinimumGCAge; v != nil {
