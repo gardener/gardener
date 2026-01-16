@@ -42,7 +42,7 @@ type Domain struct {
 	Provider string
 	// Zone is the zone where the DNS records are managed.
 	Zone string
-	// Credentials is a resouce containing credentials for a DNS service provider.
+	// Credentials is a resource containing credentials for a DNS service provider.
 	// Supported resources are v1.Secret and security.gardener.cloud/v1alpha1.WorkloadIdentity.
 	Credentials client.Object
 }
