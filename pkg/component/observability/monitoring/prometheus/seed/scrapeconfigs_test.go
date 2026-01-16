@@ -21,12 +21,12 @@ var _ = Describe("ScrapeConfigs", func() {
 			Expect(seed.CentralScrapeConfigs()).To(HaveExactElements(
 				&monitoringv1alpha1.ScrapeConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "prometheus",
+						Name: "prometheus-seed",
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
 						RelabelConfigs: []monitoringv1.RelabelConfig{{
 							Action:      "replace",
-							Replacement: ptr.To("prometheus"),
+							Replacement: ptr.To("prometheus-seed"),
 							TargetLabel: "job",
 						}},
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
@@ -44,10 +44,10 @@ var _ = Describe("ScrapeConfigs", func() {
 						MetricsPath:     ptr.To("/federate"),
 						Params: map[string][]string{
 							"match[]": {
-								`{job="cadvisor",namespace=~"extension-(.+)"}`,
-								`{job="cadvisor",namespace="garden"}`,
-								`{job="cadvisor",namespace=~"istio-(.+)"}`,
-								`{job="cadvisor",namespace="kube-system"}`,
+								`{__name__=~"container_.+",job="cadvisor",namespace=~"extension-(.+)"}`,
+								`{__name__=~"container_.+",job="cadvisor",namespace="garden"}`,
+								`{__name__=~"container_.+",job="cadvisor",namespace=~"istio-(.+)"}`,
+								`{__name__=~"container_.+",job="cadvisor",namespace="kube-system"}`,
 							},
 						},
 						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{

@@ -6,6 +6,7 @@ package care_test
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,8 +28,11 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/features"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/garden/care"
+	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -128,13 +133,14 @@ var _ = Describe("Garden health", func() {
 					fakeClock,
 					nil,
 					gardenNamespace,
+					healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 				).Check(ctx, gardenConditions)
 
 				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions).To(ContainElements(
-					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "RuntimeComponentsRunning", "All runtime components are healthy."),
-					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "VirtualComponentsRunning", "All virtual garden components are healthy."),
-					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy."),
+					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.RuntimeComponentsHealthy, gardencorev1beta1.ConditionTrue, "RuntimeComponentsRunning", "All runtime components are healthy."),
+					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.VirtualComponentsHealthy, gardencorev1beta1.ConditionTrue, "VirtualComponentsRunning", "All virtual garden components are healthy."),
+					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.ObservabilityComponentsHealthy, gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy."),
 				))
 			})
 		})
@@ -150,12 +156,13 @@ var _ = Describe("Garden health", func() {
 							fakeClock,
 							nil,
 							gardenNamespace,
+							healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 						).Check(ctx, gardenConditions)
 
 						Expect(updatedConditions).ToNot(BeEmpty())
 						Expect(updatedConditions).To(ContainElements(
-							beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message),
-							beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message),
+							beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.RuntimeComponentsHealthy, gardencorev1beta1.ConditionFalse, reason, message),
+							beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.VirtualComponentsHealthy, gardencorev1beta1.ConditionFalse, reason, message),
 						))
 					})
 
@@ -168,22 +175,27 @@ var _ = Describe("Garden health", func() {
 						It("should set RuntimeComponentsHealthy and VirtualComponentsHealthy conditions to Progressing if time is within threshold duration", func() {
 							fakeClock.Step(30 * time.Second)
 
+							conditionThresholds := map[gardencorev1beta1.ConditionType]time.Duration{
+								operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
+								operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
+							}
 							updatedConditions := NewHealth(
 								garden,
 								runtimeClient,
 								gardenClientSet,
 								fakeClock,
-								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
-									operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
-								},
+								conditionThresholds,
 								gardenNamespace,
+								healthchecker.NewHealthChecker(runtimeClient,
+									fakeClock,
+									healthchecker.WithConditionThresholds(conditionThresholds),
+									healthchecker.WithLastOperation(garden.Status.LastOperation)),
 							).Check(ctx, gardenConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
 							Expect(updatedConditions).To(ContainElements(
-								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
-								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
+								beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.RuntimeComponentsHealthy, gardencorev1beta1.ConditionProgressing, reason, message),
+								beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.VirtualComponentsHealthy, gardencorev1beta1.ConditionProgressing, reason, message),
 							))
 						})
 					})
@@ -197,22 +209,27 @@ var _ = Describe("Garden health", func() {
 						It("should set RuntimeComponentsHealthy and VirtualComponentsHealthy conditions to Progressing if time is within threshold duration", func() {
 							fakeClock.Step(30 * time.Second)
 
+							conditionThresholds := map[gardencorev1beta1.ConditionType]time.Duration{
+								operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
+								operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
+							}
 							updatedConditions := NewHealth(
 								garden,
 								runtimeClient,
 								gardenClientSet,
 								fakeClock,
-								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
-									operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
-								},
+								conditionThresholds,
 								gardenNamespace,
+								healthchecker.NewHealthChecker(runtimeClient,
+									fakeClock,
+									healthchecker.WithConditionThresholds(conditionThresholds),
+									healthchecker.WithLastOperation(garden.Status.LastOperation)),
 							).Check(ctx, gardenConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
 							Expect(updatedConditions).To(ContainElements(
-								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
-								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
+								beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.RuntimeComponentsHealthy, gardencorev1beta1.ConditionProgressing, reason, message),
+								beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.VirtualComponentsHealthy, gardencorev1beta1.ConditionProgressing, reason, message),
 							))
 						})
 					})
@@ -226,44 +243,54 @@ var _ = Describe("Garden health", func() {
 						It("should not set RuntimeComponentsHealthy and VirtualComponentsHealthy conditions to Progressing if Progressing threshold duration has not expired", func() {
 							fakeClock.Step(30 * time.Second)
 
+							conditionThresholds := map[gardencorev1beta1.ConditionType]time.Duration{
+								operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
+								operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
+							}
 							updatedConditions := NewHealth(
 								garden,
 								runtimeClient,
 								gardenClientSet,
 								fakeClock,
-								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
-									operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
-								},
+								conditionThresholds,
 								gardenNamespace,
+								healthchecker.NewHealthChecker(runtimeClient,
+									fakeClock,
+									healthchecker.WithConditionThresholds(conditionThresholds),
+									healthchecker.WithLastOperation(garden.Status.LastOperation)),
 							).Check(ctx, gardenConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
 							Expect(updatedConditions).To(ContainElements(
-								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
-								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
+								beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.RuntimeComponentsHealthy, gardencorev1beta1.ConditionProgressing, reason, message),
+								beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.VirtualComponentsHealthy, gardencorev1beta1.ConditionProgressing, reason, message),
 							))
 						})
 
 						It("should set RuntimeComponentsHealthy and VirtualComponentsHealthy conditions to false if Progressing threshold duration has expired", func() {
 							fakeClock.Step(90 * time.Second)
 
+							conditionThresholds := map[gardencorev1beta1.ConditionType]time.Duration{
+								operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
+								operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
+							}
 							updatedConditions := NewHealth(
 								garden,
 								runtimeClient,
 								gardenClientSet,
 								fakeClock,
-								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
-									operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
-								},
+								conditionThresholds,
 								gardenNamespace,
+								healthchecker.NewHealthChecker(runtimeClient,
+									fakeClock,
+									healthchecker.WithConditionThresholds(conditionThresholds),
+									healthchecker.WithLastOperation(garden.Status.LastOperation)),
 							).Check(ctx, gardenConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
 							Expect(updatedConditions).To(ContainElements(
-								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message),
-								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message),
+								beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.RuntimeComponentsHealthy, gardencorev1beta1.ConditionFalse, reason, message),
+								beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.VirtualComponentsHealthy, gardencorev1beta1.ConditionFalse, reason, message),
 							))
 						})
 					})
@@ -353,11 +380,16 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
+						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
 					Expect(updatedConditions).To(ContainElements(
-						beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "DeploymentMissing", "Missing required deployments: [virtual-garden-gardener-resource-manager virtual-garden-kube-apiserver virtual-garden-kube-controller-manager]"),
+						beConditionOfTypeWithStatusReasonAndMessage(
+							operatorv1alpha1.VirtualComponentsHealthy,
+							gardencorev1beta1.ConditionFalse,
+							"DeploymentMissing",
+							"Missing required deployments: [virtual-garden-gardener-resource-manager virtual-garden-kube-apiserver virtual-garden-kube-controller-manager]"),
 					))
 				})
 
@@ -376,11 +408,12 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
+						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
 					Expect(updatedConditions).To(ContainElements(
-						beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "DeploymentUnhealthy", "is unhealthy: condition \"Available\" is missing"),
+						beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.VirtualComponentsHealthy, gardencorev1beta1.ConditionFalse, "DeploymentUnhealthy", "is unhealthy: condition \"Available\" is missing"),
 					))
 				})
 			})
@@ -400,11 +433,16 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
+						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
 					Expect(updatedConditions).To(ContainElements(
-						beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "EtcdMissing", "Missing required etcds: [virtual-garden-etcd-events virtual-garden-etcd-main]"),
+						beConditionOfTypeWithStatusReasonAndMessage(
+							operatorv1alpha1.VirtualComponentsHealthy,
+							gardencorev1beta1.ConditionFalse,
+							"EtcdMissing",
+							"Missing required etcds: [virtual-garden-etcd-events virtual-garden-etcd-main]"),
 					))
 				})
 
@@ -420,11 +458,16 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
+						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
 					Expect(updatedConditions).To(ContainElements(
-						beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "EtcdUnhealthy", "Etcd extension resource \"virtual-garden-etcd-events\" is unhealthy: etcd \"virtual-garden-etcd-events\" is not ready yet"),
+						beConditionOfTypeWithStatusReasonAndMessage(
+							operatorv1alpha1.VirtualComponentsHealthy,
+							gardencorev1beta1.ConditionFalse,
+							"EtcdUnhealthy",
+							"Etcd extension resource \"virtual-garden-etcd-events\" is unhealthy: etcd \"virtual-garden-etcd-events\" is not ready yet"),
 					))
 				})
 			})
@@ -440,6 +483,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
+						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
@@ -456,6 +500,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
+						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
@@ -472,6 +517,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
+						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
@@ -491,10 +537,149 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
+						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
 					Expect(updatedConditions).To(ContainCondition(OfType(operatorv1alpha1.ObservabilityComponentsHealthy), WithReason("MissingManagedResourceCondition")))
+				})
+			})
+		})
+
+		Context("When there are Prometheus in the runtime cluster", func() {
+			var (
+				prometheus *monitoringv1.Prometheus
+
+				healthy   = func(_ context.Context, _ string, _ int) (bool, error) { return true, nil }
+				unhealthy = func(_ context.Context, _ string, _ int) (bool, error) { return false, nil }
+				erroring  = func(_ context.Context, _ string, _ int) (bool, error) { return false, errors.New("test error") }
+			)
+
+			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.PrometheusHealthChecks, true))
+
+				prometheus = &monitoringv1.Prometheus{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo",
+						Namespace: v1beta1constants.GardenNamespace,
+						Labels:    map[string]string{"health-check-by": "gardener-operator"},
+					},
+				}
+
+				Expect(runtimeClient.Create(ctx, prometheus)).To(Succeed())
+			})
+
+			It("should set ObservabilityComponentsHealthy condition to false if Prometheus health check is down", func() {
+				updatedConditions := NewHealth(
+					garden,
+					runtimeClient,
+					gardenClientSet,
+					fakeClock,
+					nil,
+					gardenNamespace,
+					healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(unhealthy)),
+				).Check(ctx, gardenConditions)
+
+				Expect(updatedConditions).To(ContainElements(
+					beConditionOfTypeWithStatusReasonAndMessage(
+						operatorv1alpha1.ObservabilityComponentsHealthy,
+						gardencorev1beta1.ConditionFalse,
+						"PrometheusHealthCheckDown",
+						`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "healthcheck" for more details.`)))
+			})
+
+			It("should set ObservabilityComponentsHealthy condition to false if Prometheus health check is erroring", func() {
+				updatedConditions := NewHealth(
+					garden,
+					runtimeClient,
+					gardenClientSet,
+					fakeClock,
+					nil,
+					gardenNamespace,
+					healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(erroring)),
+				).Check(ctx, gardenConditions)
+
+				Expect(updatedConditions).To(ContainElements(
+					beConditionOfTypeWithStatusReasonAndMessage(
+						operatorv1alpha1.ObservabilityComponentsHealthy,
+						gardencorev1beta1.ConditionFalse,
+						"PrometheusHealthCheckError",
+						`Querying Prometheus pod "garden/prometheus-foo-0" for health checking returned an error: test error`)))
+			})
+
+			It("should set ObservabilityComponentsHealthy condition to true if Prometheus is healthy", func() {
+				updatedConditions := NewHealth(
+					garden,
+					runtimeClient,
+					gardenClientSet,
+					fakeClock,
+					nil,
+					gardenNamespace,
+					healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(healthy)),
+				).Check(ctx, gardenConditions)
+
+				expectHealthyObservabilityComponents(updatedConditions)
+			})
+
+			It("should set ObservabilityComponentsHealthy condition to true if Prometheus health check is down but the PrometheusHealthChecks feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.PrometheusHealthChecks, false))
+
+				updatedConditions := NewHealth(
+					garden,
+					runtimeClient,
+					gardenClientSet,
+					fakeClock,
+					nil,
+					gardenNamespace,
+					healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(unhealthy)),
+				).Check(ctx, gardenConditions)
+
+				expectHealthyObservabilityComponents(updatedConditions)
+			})
+
+			Context("Prometheus is filtered out from the health check", func() {
+				var (
+					healthChecker *healthchecker.HealthChecker
+					conditions    []gardencorev1beta1.Condition
+				)
+
+				// Starting from an unhealthy Prometheus that sets the condition to unhealthy, make sure the condition
+				// is set to healthy if the Prometheus resource is filtered out.
+				BeforeEach(func() {
+					healthChecker = healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(unhealthy))
+					conditions = NewHealth(
+						garden,
+						runtimeClient,
+						gardenClientSet,
+						fakeClock,
+						nil,
+						gardenNamespace,
+						healthChecker,
+					).Check(ctx, gardenConditions)
+
+					Expect(conditions).To(ContainElements(
+						beConditionOfTypeWithStatusReasonAndMessage(
+							operatorv1alpha1.ObservabilityComponentsHealthy,
+							gardencorev1beta1.ConditionFalse,
+							"PrometheusHealthCheckDown",
+							`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "healthcheck" for more details.`)))
+				})
+
+				It("should ignore the Prometheus resource if it doesn't have the right health-check-by label", func() {
+					prometheus.Labels = map[string]string{"health-check-by": "foo"}
+					Expect(runtimeClient.Update(ctx, prometheus)).To(Succeed())
+
+					conditions = NewHealth(
+						garden,
+						runtimeClient,
+						gardenClientSet,
+						fakeClock,
+						nil,
+						gardenNamespace,
+						healthChecker,
+					).Check(ctx, gardenConditions)
+
+					expectHealthyObservabilityComponents(conditions)
 				})
 			})
 		})
@@ -506,10 +691,10 @@ var _ = Describe("Garden health", func() {
 				conditions := NewGardenConditions(fakeClock, operatorv1alpha1.GardenStatus{})
 
 				Expect(conditions.ConvertToSlice()).To(ConsistOf(
-					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
-					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
-					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
-					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.RuntimeComponentsHealthy, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.VirtualComponentsHealthy, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.VirtualGardenAPIServerAvailable, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.ObservabilityComponentsHealthy, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 
@@ -523,9 +708,9 @@ var _ = Describe("Garden health", func() {
 
 				Expect(conditions.ConvertToSlice()).To(HaveExactElements(
 					OfType("VirtualGardenAPIServerAvailable"),
-					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
-					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
-					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.RuntimeComponentsHealthy, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.VirtualComponentsHealthy, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.ObservabilityComponentsHealthy, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 		})
@@ -558,8 +743,8 @@ var _ = Describe("Garden health", func() {
 	})
 })
 
-func beConditionWithStatusReasonAndMessage(status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
-	return And(WithStatus(status), WithReason(reason), WithMessage(message))
+func beConditionOfTypeWithStatusReasonAndMessage(typ gardencorev1beta1.ConditionType, status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
+	return And(OfType(typ), WithStatus(status), WithReason(reason), WithMessage(message))
 }
 
 func healthyManagedResource(name string, relevantCareCondition string) *resourcesv1alpha1.ManagedResource {
@@ -714,4 +899,14 @@ func newEtcd(namespace, name string, healthy bool) *druidcorev1alpha1.Etcd {
 			Ready: ptr.To(healthy),
 		},
 	}
+}
+
+func expectHealthyObservabilityComponents(conditions []gardencorev1beta1.Condition) {
+	Expect(conditions).To(ContainElements(
+		beConditionOfTypeWithStatusReasonAndMessage(
+			operatorv1alpha1.ObservabilityComponentsHealthy,
+			gardencorev1beta1.ConditionTrue,
+			"ObservabilityComponentsRunning",
+			"All observability components are healthy."),
+	))
 }

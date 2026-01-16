@@ -37,7 +37,7 @@ func AdditionalScrapeConfigs() []string {
 func CentralScrapeConfigs(prometheusAggregateTargets []monitoringv1alpha1.Target, prometheusAggregateIngressTargets []monitoringv1alpha1.Target, globalMonitoringSecret *corev1.Secret) []*monitoringv1alpha1.ScrapeConfig {
 	out := []*monitoringv1alpha1.ScrapeConfig{{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "prometheus",
+			Name: "prometheus-" + Label,
 		},
 		Spec: monitoringv1alpha1.ScrapeConfigSpec{
 			StaticConfigs: []monitoringv1alpha1.StaticConfig{{
@@ -45,7 +45,7 @@ func CentralScrapeConfigs(prometheusAggregateTargets []monitoringv1alpha1.Target
 			}},
 			RelabelConfigs: []monitoringv1.RelabelConfig{{
 				Action:      "replace",
-				Replacement: ptr.To("prometheus-garden"),
+				Replacement: ptr.To("prometheus-" + Label),
 				TargetLabel: "job",
 			}},
 			MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig("prometheus_(.+)"),

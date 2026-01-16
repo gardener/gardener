@@ -1,0 +1,73 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: healthcheck
+spec:
+  groups:
+    - name: healthcheck
+      rules:
+        # healthcheck{task="target:down"} is present for each scrape job target that is down.
+        - record: healthcheck
+          expr: up == 0
+          labels:
+            task: target:down
+
+        # healthcheck{task="scrape_pool:empty"} is present for each scrape pool that is empty.
+        - record: healthcheck
+          expr: prometheus_target_scrape_pool_targets == 0
+          labels:
+            task: scrape_pool:empty
+
+        # healthcheck{task="scrape:empty"} is present for each scrape job target that yields no samples after metric relabeling.
+        - record: healthcheck
+          expr: scrape_samples_post_metric_relabeling{job!="etcd-druid"} == 0
+          labels:
+            task: scrape:empty
+
+        # healthcheck{task="rule_evaluation:unknown_status"} is present when the evaluation status of these healthcheck rules is unknown.
+        - record: healthcheck
+          expr: absent(prometheus_rule_group_iterations_total{rule_group=~".*;healthcheck"})
+          labels:
+            task: rule_evaluation:unknown_status
+
+        # healthcheck{task="rule_evaluation:first_cycle"} is present in the first rule evaluation cycle.
+        #
+        # The first cycle is intentionally treated as unhealthy on a fresh Prometheus deployment
+        # or after a prolonged downtime.
+        #
+        # This prevents flaky end-to-end PR validation tests:
+        # Prometheus reports unhealthy until these healthcheck rules are ready to detect problems.
+        #
+        # Rationale: within an evaluation cycle, the order of scrapes and rule evaluations is undefined.
+        # Some scrape jobs may run only after the first evaluation of the healthcheck rules,
+        # so only the second evaluation can reliably confirm there are no issues.
+        - record: healthcheck
+          expr: max_over_time(prometheus_rule_group_iterations_total{rule_group=~".*;healthcheck"}[5m]) == 0
+          labels:
+            task: rule_evaluation:first_cycle
+
+        # healthcheck{task="cadvisor:absent"} is present when the cAdvisor metrics are missing.
+        # The cAdvisor metrics are important for calculating the metering metrics.
+        - record: healthcheck
+          expr: absent(container_cpu_usage_seconds_total{pod=~"gardenlet-.+"})
+          labels:
+            task: cadvisor:absent
+
+        # healthcheck{task="kube_state_metrics:absent"} is present when the kube-state-metrics metrics are missing.
+        # The kube-state-metrics metrics are important for calculating the metering metrics.
+        - record: healthcheck
+          expr: absent(kube_pod_container_resource_requests{pod=~"gardenlet-.+"})
+          labels:
+            task: kube_state_metrics:absent
+
+        # healthcheck:up indicates the overall health status.
+        #
+        # A query for `healthcheck:up` can return
+        # - no data points: this state is unhealthy. The healthcheck rules have not been executed yet or are not working properly.
+        # - a value == 0:   this state is unhealthy. See the `healthcheck` time series for details.
+        # - a value == 1:   this state is healthy. The healthcheck rules are working and there are no issues.
+        - record: healthcheck:up
+          expr: |2
+              count(healthcheck) * 0
+            or
+              vector(1)
