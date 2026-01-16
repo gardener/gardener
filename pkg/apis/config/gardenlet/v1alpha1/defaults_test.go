@@ -652,6 +652,12 @@ var _ = Describe("Defaults", func() {
 						Storage: &gardenValiStorage,
 					},
 				},
+				VictoriaLogs: &VictoriaLogs{
+					Enabled: ptr.To(true),
+					Garden: &GardenVictoriaLogs{
+						Storage: &DefaultCentralVictoriaLogsStorage,
+					},
+				},
 				ShootNodeLogging: &ShootNodeLogging{
 					ShootPurposes: []gardencorev1beta1.ShootPurpose{
 						"development",
