@@ -17,7 +17,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
-	"github.com/gardener/gardener/pkg/component/observability/logging/victorialogs"
 	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
@@ -172,19 +171,15 @@ func (b *Botanist) DefaultOtelCollector() (collector.Interface, error) {
 	), nil
 }
 
-// DefaultVictoriaLogs returns a deployer for the VictoriaLogs.
+// DefaultVictoriaLogs returns a deployer for VictoriaLogs.
 func (b *Botanist) DefaultVictoriaLogs() (component.DeployWaiter, error) {
-	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameVictoriaLogs)
-	if err != nil {
-		return nil, err
-	}
-
-	return victorialogs.New(
+	return shared.NewVictoriaLogs(
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
-		victorialogs.Values{
-			Image:   image.String(),
-			Storage: nil,
-		},
-	), nil
+		component.ClusterTypeShoot,
+		b.Shoot.GetReplicas(1),
+		v1beta1constants.PriorityClassNameShootControlPlane100,
+		nil,
+		false,
+	)
 }
