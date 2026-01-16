@@ -71,7 +71,6 @@ var _ = Describe("Deployment", func() {
 									"--max-mutating-requests-inflight=1",
 									"--vmodule=httplog=4",
 									"--v=3",
-									"--default-watch-cache-size=6",
 									"--watch-cache-sizes=bar.foo#0,foo.baz#7",
 								},
 								VolumeMounts: []corev1.VolumeMount{

@@ -10608,7 +10608,7 @@ func schema_pkg_apis_core_v1beta1_WatchCacheSizes(ref common.ReferenceCallback) 
 				Properties: map[string]spec.Schema{
 					"default": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Default configures the default watch cache size of the kube-apiserver (flag `--default-watch-cache-size`, defaults to 100). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/",
+							Description: "Default is not respected anymore by kube-apiserver. The cache is sized automatically. Deprecated: This field is deprecated. Setting the default cache size will be forbidden starting from Kubernetes 1.35.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},

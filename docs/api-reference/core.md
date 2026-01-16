@@ -7050,7 +7050,8 @@ string
 <p>KubeMaxPDVols is not respected anymore by kube-scheduler.
 The maximum number of attached volumes is configured by the CSI driver.
 More information can be found at <a href="https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits">https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits</a>.
-Deprecated: This field is deprecated. Using this field will be forbidden starting from Kubernetes 1.35.</p>
+Deprecated: This field is deprecated. Using this field will be forbidden starting from Kubernetes 1.35.
+TODO(timuthy): Drop this field after support for Kubernetes 1.35 is dropped.</p>
 </td>
 </tr>
 <tr>
@@ -15080,9 +15081,10 @@ int32
 </td>
 <td>
 <em>(Optional)</em>
-<p>Default configures the default watch cache size of the kube-apiserver
-(flag <code>--default-watch-cache-size</code>, defaults to 100).
-See: <a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/">https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/</a></p>
+<p>Default is not respected anymore by kube-apiserver.
+The cache is sized automatically.
+Deprecated: This field is deprecated. Setting the default cache size will be forbidden starting from Kubernetes 1.35.
+TODO(timuthy): Drop this field after support for Kubernetes 1.35 is dropped.</p>
 </td>
 </tr>
 <tr>

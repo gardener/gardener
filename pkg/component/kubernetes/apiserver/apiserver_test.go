@@ -4314,7 +4314,6 @@ kind: AuthenticationConfiguration
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
-						"--default-watch-cache-size=123",
 						"--watch-cache-sizes=foo#456,bar.baz#789",
 					))
 				})
@@ -4323,7 +4322,6 @@ kind: AuthenticationConfiguration
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElements(
-						ContainSubstring("--default-watch-cache-size="),
 						ContainSubstring("--watch-cache-sizes="),
 					))
 				})

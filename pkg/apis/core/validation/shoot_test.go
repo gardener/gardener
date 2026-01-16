@@ -2874,45 +2874,52 @@ var _ = Describe("Shoot Validation Tests", func() {
 				var negativeSize int32 = -1
 
 				DescribeTable("watch cache size validation",
-					func(sizes *core.WatchCacheSizes, matcher gomegatypes.GomegaMatcher) {
-						Expect(ValidateWatchCacheSizes(sizes, nil)).To(matcher)
+					func(version string, sizes *core.WatchCacheSizes, matcher gomegatypes.GomegaMatcher) {
+						k8sVersion, err := semver.NewVersion(version)
+						Expect(err).ToNot(HaveOccurred())
+						Expect(ValidateWatchCacheSizes(sizes, k8sVersion, nil)).To(matcher)
 					},
 
-					Entry("valid (unset)", nil, BeEmpty()),
-					Entry("valid (fields unset)", &core.WatchCacheSizes{}, BeEmpty()),
-					Entry("valid (default=0)", &core.WatchCacheSizes{
+					Entry("valid (unset)", "1.34.0", nil, BeEmpty()),
+					Entry("valid (fields unset)", "1.34.0", &core.WatchCacheSizes{}, BeEmpty()),
+					Entry("valid (default=0)", "1.34.0", &core.WatchCacheSizes{
 						Default: ptr.To[int32](0),
 					}, BeEmpty()),
-					Entry("valid (default>0)", &core.WatchCacheSizes{
+					Entry("valid (default>0)", "1.34.0", &core.WatchCacheSizes{
 						Default: ptr.To[int32](42),
 					}, BeEmpty()),
-					Entry("invalid (default<0)", &core.WatchCacheSizes{
+					Entry("invalid (default<0)", "1.34.0", &core.WatchCacheSizes{
 						Default: ptr.To(negativeSize),
 					}, ConsistOf(
 						field.Invalid(field.NewPath("default"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 					)),
+					Entry("invalid (default for k8s >= 1.35)", "1.35.0", &core.WatchCacheSizes{
+						Default: ptr.To[int32](50),
+					}, ConsistOf(
+						field.Forbidden(field.NewPath("default"), `for Kubernetes versions >= 1.35, configuring the default watch cache size is no longer supported`),
+					)),
 
 					// APIGroup unset (core group)
-					Entry("valid (core/secrets=0)", &core.WatchCacheSizes{
+					Entry("valid (core/secrets=0)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "secrets",
 							CacheSize: 0,
 						}},
 					}, BeEmpty()),
-					Entry("valid (API group empty)", &core.WatchCacheSizes{
+					Entry("valid (API group empty)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To(""),
 							Resource:  "secrets",
 							CacheSize: 0,
 						}},
 					}, BeEmpty()),
-					Entry("valid (core/secrets=>0)", &core.WatchCacheSizes{
+					Entry("valid (core/secrets=>0)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "secrets",
 							CacheSize: 42,
 						}},
 					}, BeEmpty()),
-					Entry("invalid (core/secrets=<0)", &core.WatchCacheSizes{
+					Entry("invalid (core/secrets=<0)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "secrets",
 							CacheSize: negativeSize,
@@ -2920,7 +2927,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Invalid(field.NewPath("resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 					)),
-					Entry("invalid (core resource empty)", &core.WatchCacheSizes{
+					Entry("invalid (core resource empty)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "",
 							CacheSize: 42,
@@ -2928,7 +2935,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Required(field.NewPath("resources[0].resource"), "must not be empty"),
 					)),
-					Entry("invalid (core resource with casing)", &core.WatchCacheSizes{
+					Entry("invalid (core resource with casing)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "Secrets",
 							CacheSize: 42,
@@ -2936,7 +2943,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Invalid(field.NewPath("resources[0].resource"), "Secrets", "must be lower case"),
 					)),
-					Entry("invalid (core resource with illegal character)", &core.WatchCacheSizes{
+					Entry("invalid (core resource with illegal character)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "secrets#",
 							CacheSize: 42,
@@ -2946,28 +2953,28 @@ var _ = Describe("Shoot Validation Tests", func() {
 					)),
 
 					// APIGroup set
-					Entry("valid (apps/deployments=0)", &core.WatchCacheSizes{
+					Entry("valid (apps/deployments=0)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To("apps"),
 							Resource:  "deployments",
 							CacheSize: 0,
 						}},
 					}, BeEmpty()),
-					Entry("valid (apps/deployments=>0)", &core.WatchCacheSizes{
+					Entry("valid (apps/deployments=>0)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To("apps"),
 							Resource:  "deployments",
 							CacheSize: 42,
 						}},
 					}, BeEmpty()),
-					Entry("valid (coordination.k8s.io/leases=0)", &core.WatchCacheSizes{
+					Entry("valid (coordination.k8s.io/leases=0)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To("coordination.k8s.io"),
 							Resource:  "leases",
 							CacheSize: 0,
 						}},
 					}, BeEmpty()),
-					Entry("invalid (apps/deployments=<0)", &core.WatchCacheSizes{
+					Entry("invalid (apps/deployments=<0)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To("apps"),
 							Resource:  "deployments",
@@ -2976,7 +2983,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Invalid(field.NewPath("resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 					)),
-					Entry("invalid (apps resource empty)", &core.WatchCacheSizes{
+					Entry("invalid (apps resource empty)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To("apps"),
 							Resource:  "",
@@ -2985,7 +2992,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Required(field.NewPath("resources[0].resource"), "must not be empty"),
 					)),
-					Entry("invalid (apps API group with casing)", &core.WatchCacheSizes{
+					Entry("invalid (apps API group with casing)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To("Apps"),
 							Resource:  "deployments",
@@ -2994,7 +3001,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Invalid(field.NewPath("resources[0].apiGroup"), "Apps", "must be lower case"),
 					)),
-					Entry("invalid (apps API group with illegal character)", &core.WatchCacheSizes{
+					Entry("invalid (apps API group with illegal character)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To("apps#"),
 							Resource:  "deployments",

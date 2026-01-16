@@ -349,5 +349,17 @@ var _ = Describe("Warnings", func() {
 				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are setting the spec.kubernetes.kubeScheduler.kubeMaxPDVols field")))
 			})
 		})
+
+		Describe("shoot.spec.kubernetes.kubeAPIServer.watchCacheSizes.default", func() {
+			It("should print a warning when default is set", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+					WatchCacheSizes: &core.WatchCacheSizes{
+						Default: ptr.To[int32](50),
+					},
+				}
+
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are setting the spec.kubernetes.kubeAPIServer.watchCacheSizes.default field")))
+			})
+		})
 	})
 })

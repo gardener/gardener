@@ -1067,7 +1067,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 	}
 
 	allErrs = append(allErrs, validateETCD(kubernetes.ETCD, fldPath.Child("etcd"))...)
-	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, opts.KubeAPIServerValidationOptions, workerless, gardenerutils.DefaultGroupResourcesForEncryption(), fldPath.Child("kubeAPIServer"))...)
+	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, opts.KubeAPIServerValidationOptions, workerless, gardenerutils.DefaultGroupResourcesForEncryption(), k8sVersion, fldPath.Child("kubeAPIServer"))...)
 	allErrs = append(allErrs, ValidateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)
 
 	if workerless {
@@ -1259,7 +1259,7 @@ func validateNetworkingStatus(networking *core.NetworkingStatus, fldPath *field.
 }
 
 // ValidateWatchCacheSizes validates the given WatchCacheSizes fields.
-func ValidateWatchCacheSizes(sizes *core.WatchCacheSizes, fldPath *field.Path) field.ErrorList {
+func ValidateWatchCacheSizes(sizes *core.WatchCacheSizes, k8sVersion *semver.Version, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	resourceInvalidCharacters := ",. #"
@@ -1267,7 +1267,11 @@ func ValidateWatchCacheSizes(sizes *core.WatchCacheSizes, fldPath *field.Path) f
 
 	if sizes != nil {
 		if defaultSize := sizes.Default; defaultSize != nil {
-			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*defaultSize), fldPath.Child("default"))...)
+			if versionutils.ConstraintK8sGreaterEqual135.Check(k8sVersion) {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("default"), "for Kubernetes versions >= 1.35, configuring the default watch cache size is no longer supported"))
+			} else {
+				allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*defaultSize), fldPath.Child("default"))...)
+			}
 		}
 
 		for idx, resourceWatchCacheSize := range sizes.Resources {
@@ -1649,7 +1653,7 @@ func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
 }
 
 // ValidateKubeAPIServer validates KubeAPIServerConfig.
-func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version string, opts KubeAPIServerValidationOptions, workerless bool, defaultEncryptedResources []schema.GroupResource, fldPath *field.Path) field.ErrorList {
+func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version string, opts KubeAPIServerValidationOptions, workerless bool, defaultEncryptedResources []schema.GroupResource, k8sVersion *semver.Version, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kubeAPIServer == nil {
@@ -1747,7 +1751,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 		}
 	}
 
-	allErrs = append(allErrs, ValidateWatchCacheSizes(kubeAPIServer.WatchCacheSizes, fldPath.Child("watchCacheSizes"))...)
+	allErrs = append(allErrs, ValidateWatchCacheSizes(kubeAPIServer.WatchCacheSizes, k8sVersion, fldPath.Child("watchCacheSizes"))...)
 
 	allErrs = append(allErrs, ValidateAPIServerLogging(kubeAPIServer.Logging, fldPath.Child("logging"))...)
 

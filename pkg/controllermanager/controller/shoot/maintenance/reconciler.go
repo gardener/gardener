@@ -259,6 +259,18 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 	}
 
+	// Remove default watch cache size when Shoot cluster is being forcefully updated to K8s >= 1.35..
+	{
+		oldK8sLess135 := versionutils.ConstraintK8sLess135.Check(oldShootKubernetesVersion)
+		newK8sGreaterEqual135 := versionutils.ConstraintK8sGreaterEqual135.Check(shootKubernetesVersion)
+		if oldK8sLess135 && newK8sGreaterEqual135 && shoot.Spec.Kubernetes.KubeAPIServer != nil &&
+			shoot.Spec.Kubernetes.KubeAPIServer.WatchCacheSizes != nil && shoot.Spec.Kubernetes.KubeAPIServer.WatchCacheSizes.Default != nil {
+			maintainedShoot.Spec.Kubernetes.KubeAPIServer.WatchCacheSizes.Default = nil
+			reason := ".spec.kubernetes.kubeAPIServer.watchCacheSizes.default was removed. Reason: the default size configuration is deprecated and not respected by the kube-apiserver"
+			operations = append(operations, reason)
+		}
+	}
+
 	// Now it's time to update worker pool kubernetes version if specified
 	for i, pool := range maintainedShoot.Spec.Provider.Workers {
 		if pool.Kubernetes == nil || pool.Kubernetes.Version == nil {

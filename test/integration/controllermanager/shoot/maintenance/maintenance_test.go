@@ -1988,6 +1988,11 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 				shoot134.Spec.Kubernetes.KubeScheduler = &gardencorev1beta1.KubeSchedulerConfig{
 					KubeMaxPDVols: ptr.To("20"),
 				}
+				shoot134.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+					WatchCacheSizes: &gardencorev1beta1.WatchCacheSizes{
+						Default: ptr.To[int32](50),
+					},
+				}
 
 				By("Create Shoot with k8s v1.34")
 				Expect(testClient.Create(ctx, shoot134)).To(Succeed())
@@ -2018,6 +2023,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 
 					g.Expect(shoot134.Spec.Addons.KubernetesDashboard).To(BeNil(), "KubernetesDashboard should be unset after migration")
 					g.Expect(shoot134.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols).To(BeNil(), "KubeMaxPDVols should be unset after migration")
+					g.Expect(shoot134.Spec.Kubernetes.KubeAPIServer.WatchCacheSizes.Default).To(BeNil(), "Default watch cache size should be unset after migration")
 
 					g.Expect(shoot134.Status.LastMaintenance.Description).To(ContainSubstring(".spec.addons.kubernetesDashboard was removed. Reason: Kubernetes dashboard is archived and can no longer be used for Shoot clusters using Kubernetes version 1.35+"))
 					g.Expect(shoot134.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))

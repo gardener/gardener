@@ -68,7 +68,11 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 	}
 
 	if shoot.Spec.Kubernetes.KubeScheduler != nil && shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols != nil {
-		warnings = append(warnings, "you are setting the spec.kubernetes.kubeScheduler.kubeMaxPDVols field. The field is deprecated and will be removed starting with Kubernetes 1.35. The kubeMaxPDVols configuration is no longer necessary as values are set by the respective CSI driver.")
+		warnings = append(warnings, "you are setting the spec.kubernetes.kubeScheduler.kubeMaxPDVols field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.35. The kubeMaxPDVols configuration is no longer necessary as values are set by the respective CSI driver.")
+	}
+
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil && shoot.Spec.Kubernetes.KubeAPIServer.WatchCacheSizes != nil && shoot.Spec.Kubernetes.KubeAPIServer.WatchCacheSizes.Default != nil {
+		warnings = append(warnings, "you are setting the spec.kubernetes.kubeAPIServer.watchCacheSizes.default field.  The field has been deprecated and is forbidden to be set starting from Kubernetes 1.35. The cache size is automatically sized by the kube-apiserver.")
 	}
 
 	if shoot.Spec.SecretBindingName != nil {

@@ -913,9 +913,10 @@ type AdmissionPlugin struct {
 
 // WatchCacheSizes contains configuration of the API server's watch cache sizes.
 type WatchCacheSizes struct {
-	// Default configures the default watch cache size of the kube-apiserver
-	// (flag `--default-watch-cache-size`, defaults to 100).
-	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+	// Default is not respected anymore by kube-apiserver.
+	// The cache is sized automatically.
+	// Deprecated: This field is deprecated. Setting the default cache size will be forbidden starting from Kubernetes 1.35.
+	// TODO(timuthy): Drop this field after support for Kubernetes 1.35 is dropped.
 	Default *int32
 	// Resources configures the watch cache size of the kube-apiserver per resource
 	// (flag `--watch-cache-sizes`).
