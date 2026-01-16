@@ -255,6 +255,7 @@ var _ = Describe("Fluent Operator", func() {
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("4m"),
 									corev1.ResourceMemory: resource.MustParse("50Mi"),
 								},
 							},
