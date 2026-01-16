@@ -255,7 +255,7 @@ var _ = Describe("Fluent Operator", func() {
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("20m"),
+									corev1.ResourceCPU:    resource.MustParse("4m"),
 									corev1.ResourceMemory: resource.MustParse("50Mi"),
 								},
 							},
@@ -300,7 +300,8 @@ var _ = Describe("Fluent Operator", func() {
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							ContainerName:       vpaautoscalingv1.DefaultContainerResourcePolicy,
+							ControlledResources: &[]corev1.ResourceName{corev1.ResourceMemory},
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("128Mi"),
 							},
