@@ -171,6 +171,7 @@ var _ = Describe("GardenerMetricsExporter", func() {
 					APIGroups: []string{seedmanagementv1alpha1.GroupName},
 					Resources: []string{
 						"managedseeds",
+						"gardenlets",
 					},
 					Verbs: []string{"get", "list", "watch"},
 				},

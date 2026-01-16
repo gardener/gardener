@@ -39,6 +39,7 @@ func (g *gardenerMetricsExporter) clusterRole() *rbacv1.ClusterRole {
 				APIGroups: []string{seedmanagementv1alpha1.GroupName},
 				Resources: []string{
 					"managedseeds",
+					"gardenlets",
 				},
 				Verbs: []string{"get", "list", "watch"},
 			},
