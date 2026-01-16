@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -462,8 +463,22 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying Vali",
-			Fn:           c.vali.Deploy,
+			Name: "Deploying Vali/VictoriaLogs",
+			Fn: func(ctx context.Context) error {
+				if err := c.vali.Deploy(ctx); err != nil {
+					return err
+				}
+				if features.DefaultFeatureGate.Enabled(features.DeployVictoriaLogs) {
+					if err := c.victoriaLogs.Deploy(ctx); err != nil {
+						return err
+					}
+				} else {
+					if err := c.victoriaLogs.Destroy(ctx); err != nil {
+						return err
+					}
+				}
+				return nil
+			},
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 			SkipIf:       seedIsGarden,
 		})

@@ -223,9 +223,16 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources, destroyFluentBit),
 			SkipIf:       seedIsGarden,
 		})
+		// TODO(rrhubenov): Remove Vali when `DeployVictoriaLogs` feature gate is GA.
 		destroyVali = g.Add(flow.Task{
 			Name:         "Destroy Vali",
 			Fn:           component.OpDestroyAndWait(c.vali).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources),
+			SkipIf:       seedIsGarden,
+		})
+		destroyVictoriaLogs = g.Add(flow.Task{
+			Name:         "Destroy VictoriaLogs",
+			Fn:           component.OpDestroyAndWait(c.victoriaLogs).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources),
 			SkipIf:       seedIsGarden,
 		})
@@ -241,9 +248,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 			SkipIf: seedIsGarden,
 		})
 		destroyVictoriaOperator = g.Add(flow.Task{
-			Name:   "Destroy Victoria Operator",
-			Fn:     component.OpDestroyAndWait(c.victoriaOperator).Destroy,
-			SkipIf: seedIsGarden,
+			Name:         "Destroy Victoria Operator",
+			Fn:           component.OpDestroyAndWait(c.victoriaOperator).Destroy,
+			SkipIf:       seedIsGarden,
+			Dependencies: flow.NewTaskIDs(destroyVictoriaLogs),
 		})
 		destroyExtensionResources = g.Add(flow.Task{
 			Name: "Deleting extension resources",
@@ -280,6 +288,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyFluentBit,
 			destroyFluentOperator,
 			destroyVali,
+			destroyVictoriaLogs,
 			destroyGardenletVPA,
 			destroyPersesOperator,
 			destroyVictoriaOperator,
