@@ -67,6 +67,10 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 		}
 	}
 
+	if shoot.Spec.Kubernetes.KubeScheduler != nil && shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols != nil {
+		warnings = append(warnings, "you are setting the spec.kubernetes.kubeScheduler.kubeMaxPDVols field. The field is deprecated and will be removed starting with Kubernetes 1.35. The kubeMaxPDVols configuration is no longer necessary as values are set by the respective CSI driver.")
+	}
+
 	if shoot.Spec.SecretBindingName != nil {
 		warnings = append(warnings, "spec.secretBindingName is deprecated and will be disallowed starting with Kubernetes 1.34. For migration instructions, see: https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md")
 	}

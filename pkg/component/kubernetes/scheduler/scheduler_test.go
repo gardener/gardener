@@ -57,8 +57,7 @@ var _ = Describe("KubeScheduler", func() {
 			KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 				FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false},
 			},
-			KubeMaxPDVols: ptr.To("23"),
-			Profile:       &profileBinPacking,
+			Profile: &profileBinPacking,
 		}
 		consistOf func(...client.Object) types.GomegaMatcher
 
@@ -180,14 +179,6 @@ var _ = Describe("KubeScheduler", func() {
 			},
 		}
 		deploymentFor = func(config *gardencorev1beta1.KubeSchedulerConfig, componentConfigFilePath string) *appsv1.Deployment {
-			var env []corev1.EnvVar
-			if config != nil && config.KubeMaxPDVols != nil {
-				env = append(env, corev1.EnvVar{
-					Name:  "KUBE_MAX_PD_VOLS",
-					Value: *config.KubeMaxPDVols,
-				})
-			}
-
 			configMap := configMapFor(componentConfigFilePath)
 
 			deploy := &appsv1.Deployment{
@@ -258,7 +249,6 @@ var _ = Describe("KubeScheduler", func() {
 											Protocol:      corev1.ProtocolTCP,
 										},
 									},
-									Env: env,
 									Resources: corev1.ResourceRequirements{
 										Requests: corev1.ResourceList{
 											corev1.ResourceCPU:    resource.MustParse("10m"),

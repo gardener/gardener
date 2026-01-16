@@ -309,7 +309,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, ValidateResources(spec.Resources, fldPath.Child("resources"), true)...)
-	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, opts, workerless, fldPath.Child("kubernetes"))...)
+	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, opts, workerless, k8sVersion, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateNetworking(spec.Networking, workerless, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"), workerless)...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
@@ -1058,7 +1058,7 @@ func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
 	return allErrs
 }
 
-func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking, opts shootValidationOptions, workerless bool, fldPath *field.Path) field.ErrorList {
+func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking, opts shootValidationOptions, workerless bool, k8sVersion *semver.Version, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(kubernetes.Version) == 0 {
@@ -1073,7 +1073,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 	if workerless {
 		allErrs = append(allErrs, validateKubernetesForWorkerlessShoot(kubernetes, fldPath)...)
 	} else {
-		allErrs = append(allErrs, validateKubeScheduler(kubernetes.KubeScheduler, kubernetes.Version, fldPath.Child("kubeScheduler"))...)
+		allErrs = append(allErrs, validateKubeScheduler(kubernetes.KubeScheduler, kubernetes.Version, k8sVersion, fldPath.Child("kubeScheduler"))...)
 		allErrs = append(allErrs, validateKubeProxy(kubernetes.KubeProxy, kubernetes.Version, fldPath.Child("kubeProxy"))...)
 
 		if kubernetes.Kubelet != nil {
@@ -1940,7 +1940,7 @@ func validateAPIAudiences(audiences []string, fldPath *field.Path) field.ErrorLi
 	return allErrs
 }
 
-func validateKubeScheduler(ks *core.KubeSchedulerConfig, version string, fldPath *field.Path) field.ErrorList {
+func validateKubeScheduler(ks *core.KubeSchedulerConfig, version string, k8sVersion *semver.Version, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if ks != nil {
 		profile := ks.Profile
@@ -1950,16 +1950,27 @@ func validateKubeScheduler(ks *core.KubeSchedulerConfig, version string, fldPath
 			}
 		}
 
-		if kubeMaxPDVols := ks.KubeMaxPDVols; kubeMaxPDVols != nil {
+		allErrs = append(allErrs, validateKubeMaxPDVols(ks.KubeMaxPDVols, k8sVersion, fldPath.Child("kubeMaxPDVols"))...)
+		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(ks.FeatureGates, version, fldPath.Child("featureGates"))...)
+	}
+
+	return allErrs
+}
+
+func validateKubeMaxPDVols(kubeMaxPDVols *string, k8sVersion *semver.Version, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if kubeMaxPDVols != nil {
+		if versionutils.ConstraintK8sGreaterEqual135.Check(k8sVersion) {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "for Kubernetes version >= 1.35, kubeMaxPDVols field is no longer supported"))
+		} else {
 			num, err := strconv.Atoi(*kubeMaxPDVols)
 			if err != nil {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeMaxPDVols"), *kubeMaxPDVols, fmt.Sprintf("conversion error: %v", err)))
+				allErrs = append(allErrs, field.Invalid(fldPath, *kubeMaxPDVols, fmt.Sprintf("conversion error: %v", err)))
 			} else if num < 1 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeMaxPDVols"), *kubeMaxPDVols, "must be positive"))
+				allErrs = append(allErrs, field.Invalid(fldPath, *kubeMaxPDVols, "must be positive"))
 			}
 		}
-
-		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(ks.FeatureGates, version, fldPath.Child("featureGates"))...)
 	}
 
 	return allErrs

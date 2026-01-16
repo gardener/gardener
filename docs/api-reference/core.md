@@ -2582,7 +2582,9 @@ KubernetesDashboard
 </td>
 <td>
 <em>(Optional)</em>
-<p>KubernetesDashboard holds configuration settings for the kubernetes dashboard addon.</p>
+<p>KubernetesDashboard holds configuration settings for the kubernetes dashboard addon.
+Deprecated: This field is deprecated. Enabling the kubernetes dashboard will be forbidden starting from Kubernetes 1.35.
+TODO(timuthy): Drop this field after support for Kubernetes 1.34 is dropped.</p>
 </td>
 </tr>
 <tr>
@@ -7045,10 +7047,10 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>KubeMaxPDVols allows to configure the <code>KUBE_MAX_PD_VOLS</code> environment variable for the kube-scheduler.
-Please find more information here: <a href="https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits">https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits</a>
-Note that using this field is considered alpha-/experimental-level and is on your own risk. You should be aware
-of all the side-effects and consequences when changing it.</p>
+<p>KubeMaxPDVols is not respected anymore by kube-scheduler.
+The maximum number of attached volumes is configured by the CSI driver.
+More information can be found at <a href="https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits">https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits</a>.
+Deprecated: This field is deprecated. Using this field will be forbidden starting from Kubernetes 1.35.</p>
 </td>
 </tr>
 <tr>

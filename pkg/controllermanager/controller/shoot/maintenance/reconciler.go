@@ -248,6 +248,17 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 	}
 
+	// Remove KubeMaxPDVols when Shoot cluster is being forcefully updated to K8s >= 1.35..
+	{
+		oldK8sLess135 := versionutils.ConstraintK8sLess135.Check(oldShootKubernetesVersion)
+		newK8sGreaterEqual135 := versionutils.ConstraintK8sGreaterEqual135.Check(shootKubernetesVersion)
+		if oldK8sLess135 && newK8sGreaterEqual135 && shoot.Spec.Kubernetes.KubeScheduler != nil && shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols != nil {
+			maintainedShoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = nil
+			reason := ".spec.kubernetes.kubeScheduler.kubeMaxPDVols was removed. Reason: kubeMaxPDVols is deprecated and not respected by the kube-scheduler"
+			operations = append(operations, reason)
+		}
+	}
+
 	// Now it's time to update worker pool kubernetes version if specified
 	for i, pool := range maintainedShoot.Spec.Provider.Workers {
 		if pool.Kubernetes == nil || pool.Kubernetes.Version == nil {

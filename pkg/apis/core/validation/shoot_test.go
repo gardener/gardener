@@ -3668,6 +3668,17 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
+			It("should fail when setting kubeMaxPDVols for kubernetes >= 1.35", func() {
+				shoot.Spec.Kubernetes.Version = "1.35.0"
+				shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = ptr.To("foo")
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.kubernetes.kubeScheduler.kubeMaxPDVols"),
+				}))))
+			})
+
 			It("should fail when setting invalid non positive kubeMaxPDVols", func() {
 				shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = ptr.To("0")
 

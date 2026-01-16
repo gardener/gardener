@@ -977,10 +977,11 @@ type HorizontalPodAutoscalerConfig struct {
 type KubeSchedulerConfig struct {
 	KubernetesConfig
 
-	// KubeMaxPDVols allows to configure the `KUBE_MAX_PD_VOLS` environment variable for the kube-scheduler.
-	// Please find more information here: https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits
-	// Note that using this field is considered alpha-/experimental-level and is on your own risk. You should be aware
-	// of all the side-effects and consequences when changing it.
+	// KubeMaxPDVols is not respected anymore by kube-scheduler.
+	// The maximum number of attached volumes is configured by the CSI driver.
+	// More information can be found at https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits.
+	// Deprecated: This field is deprecated. Using this field will be forbidden starting from Kubernetes 1.35.
+	// TODO(timuthy): Drop this field after support for Kubernetes 1.35 is dropped.
 	KubeMaxPDVols *string
 	// Profile configures the scheduling profile for the cluster.
 	// If not specified, the used profile is "balanced" (provides the default kube-scheduler behavior).

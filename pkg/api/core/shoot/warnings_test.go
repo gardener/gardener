@@ -339,5 +339,15 @@ var _ = Describe("Warnings", func() {
 				Expect(GetWarnings(ctx, shoot, oldShoot, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you have switched to IPVS mode for kube-proxy")))
 			})
 		})
+
+		Describe("shoot.spec.kubernetes.kubeScheduler.kubeMaxPDVols", func() {
+			It("should print a warning when kubeMaxPDVols is set", func() {
+				shoot.Spec.Kubernetes.KubeScheduler = &core.KubeSchedulerConfig{
+					KubeMaxPDVols: ptr.To("20"),
+				}
+
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are setting the spec.kubernetes.kubeScheduler.kubeMaxPDVols field")))
+			})
+		})
 	})
 })
