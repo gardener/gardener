@@ -102,6 +102,81 @@ should_generate_api_docs() {
   return 1
 }
 
+should_generate_crds() {
+  local dir=$1
+  local file=$2
+  local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+  # Source custom_packages array, get_group_package and parse_flags functions from generate-crds.sh
+  source <(sed -n '/^declare -A custom_packages/p; /^get_group_package[[:space:]]*(/,/^}/p; /^parse_flags(/,/^}/p' "$script_dir/generate-crds.sh") 2>/dev/null || return 0
+
+  # Extract groups from go:generate directives
+  local groups
+  groups=$(grep -E '//go:generate.*generate-crds.sh' "$file" | while read -r line; do
+    # Strip everything before generate-crds.sh
+    line="${line#*generate-crds.sh}"
+
+    # Tokenize and parse using parse_flags from generate-crds.sh
+    read -ra tokens <<< "$line"
+    args=()
+    parse_flags "${tokens[@]}"
+
+    # Output groups (stored in args array by parse_flags)
+    printf '%s\n' "${args[@]}"
+  done | sort -u)
+
+  # No detectable group → be safe
+  if [ -z "$groups" ]; then
+    return 0
+  fi
+
+  # Get current module path
+  local current_module="$(go list -m)"
+
+  for group in $groups; do
+    local package="$(get_group_package "$group" 2>/dev/null || echo "")"
+
+    # If we can't determine package, be safe and regenerate
+    if [ -z "$package" ]; then
+      return 0
+    fi
+
+    # Check if package is external (not from current module)
+    if [[ "$package" != "$current_module"/* ]]; then
+      # For external packages, check if go.mod changed
+      if ! git diff --quiet master -- go.mod 2>/dev/null; then
+        return 0
+      fi
+    else
+      # For internal packages, check if package directory changed
+      local pkg_path="${package#$current_module/}"
+      if ! git diff --quiet master -- "$pkg_path" 2>/dev/null; then
+        return 0
+      fi
+    fi
+  done
+
+  # Check if output files exist
+  local output_dir="$dir"
+  local prefix=""
+
+  # Try to extract prefix from command
+  if grep -q '//go:generate.*generate-crds.sh.*-p' "$file"; then
+    prefix=$(grep -E '//go:generate.*generate-crds.sh' "$file" | sed -n 's/.*-p[[:space:]]*\([^[:space:]]*\).*/\1/p' | head -n1)
+  fi
+
+  for group in $groups; do
+    local sanitized_group="${group%%_*}"
+    local pattern="${prefix}${sanitized_group}_*.yaml"
+
+    if ! ls "$output_dir"/$pattern &>/dev/null; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 should_generate_mocks() {
   local dir=$1
   local file=$2
@@ -172,11 +247,11 @@ echo "$ROOTS" | while IFS= read -r dir; do
     fi
     
     if grep -q '//go:generate' "$file"; then
-      # Check if file has mockgen or gen-crd-api-reference-docs
-      if grep -q '//go:generate.*mockgen' "$file" || grep -q '//go:generate.*gen-crd-api-reference-docs' "$file"; then
+      # Check if file has mockgen, gen-crd-api-reference-docs, or generate-crds.sh
+      if grep -q '//go:generate.*mockgen' "$file" || grep -q '//go:generate.*gen-crd-api-reference-docs' "$file" || grep -q '//go:generate.*generate-crds.sh' "$file"; then
         has_skippable=true
         # Check if there are other non-skippable directives
-        if grep '//go:generate' "$file" | grep -v 'mockgen' | grep -qv 'gen-crd-api-reference-docs'; then
+        if grep '//go:generate' "$file" | grep -v 'mockgen' | grep -v 'gen-crd-api-reference-docs' | grep -qv 'generate-crds.sh'; then
           has_only_skippable=false
           break
         fi
@@ -199,6 +274,10 @@ echo "$ROOTS" | while IFS= read -r dir; do
         break
       fi
       if grep -q '//go:generate.*gen-crd-api-reference-docs' "$file" && should_generate_api_docs "$dir" "$file"; then
+        needs_gen=true
+        break
+      fi
+      if grep -q '//go:generate.*generate-crds.sh' "$file" && should_generate_crds "$dir" "$file"; then
         needs_gen=true
         break
       fi
