@@ -364,7 +364,7 @@ spec:
           timeoutSeconds: 5
         resources:
           requests:
-            cpu: 50m
+            cpu: 3m
             memory: 50Mi
         securityContext:
           allowPrivilegeEscalation: false
@@ -413,6 +413,8 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: '*'
+      controlledResources:
+      - memory
       controlledValues: RequestsOnly
       minAllowed:
         memory: 50Mi
