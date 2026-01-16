@@ -132,17 +132,30 @@ var _ = Describe("VpnSeedServer", func() {
 							},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
-									TCPSocket: &corev1.TCPSocketAction{
-										Port: intstr.FromInt32(1194),
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/readyz",
+										Port: intstr.FromInt32(8080),
 									},
 								},
+								SuccessThreshold:    1,
+								FailureThreshold:    3,
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       5,
+								TimeoutSeconds:      2,
 							},
+
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
-									TCPSocket: &corev1.TCPSocketAction{
-										Port: intstr.FromInt32(1194),
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/healthz",
+										Port: intstr.FromInt32(8080),
 									},
 								},
+								SuccessThreshold:    1,
+								FailureThreshold:    3,
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       5,
+								TimeoutSeconds:      2,
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
@@ -171,6 +184,47 @@ var _ = Describe("VpnSeedServer", func() {
 								{
 									Name:      "tlsauth",
 									MountPath: "/srv/secrets/tlsauth",
+								},
+							},
+						},
+						{
+							Name:            "openvpn-readiness",
+							Image:           vpnSeedServerImage,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command: []string{
+								"/bin/vpn-server",
+								"readiness",
+							},
+							Env: []corev1.EnvVar{
+								{
+									Name:  "OPENVPN_STATUS_PATH",
+									Value: "/srv/status/openvpn.status",
+								},
+							},
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "readiness",
+									ContainerPort: 8080,
+									Protocol:      corev1.ProtocolTCP,
+								},
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceMemory: resource.MustParse("20M"),
+								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+								Capabilities: &corev1.Capabilities{
+									Drop: []corev1.Capability{
+										"all",
+									},
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "openvpn-status",
+									MountPath: "/srv/status",
 								},
 							},
 						},
@@ -247,19 +301,29 @@ var _ = Describe("VpnSeedServer", func() {
 								},
 							},
 						},
+						{
+							Name: "openvpn-status",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
+							},
+						},
 					},
 				},
 			}
+			mount := corev1.VolumeMount{
+				Name:      "openvpn-status",
+				MountPath: "/srv/status",
+			}
+			template.Spec.Containers[0].Env = append(template.Spec.Containers[0].Env, []corev1.EnvVar{
+				{
+					Name:  "OPENVPN_STATUS_PATH",
+					Value: "/srv/status/openvpn.status",
+				},
+			}...)
+			template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts, mount)
+
 			if highAvailability {
-				mount := corev1.VolumeMount{
-					Name:      "openvpn-status",
-					MountPath: "/srv/status",
-				}
 				template.Spec.Containers[0].Env = append(template.Spec.Containers[0].Env, []corev1.EnvVar{
-					{
-						Name:  "OPENVPN_STATUS_PATH",
-						Value: "/srv/status/openvpn.status",
-					},
 					{
 						Name: "POD_NAME",
 						ValueFrom: &corev1.EnvVarSource{
@@ -277,7 +341,6 @@ var _ = Describe("VpnSeedServer", func() {
 						Value: "2",
 					},
 				}...)
-				template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts, mount)
 				exporterContainer := corev1.Container{
 					Name:            "openvpn-exporter",
 					Image:           vpnSeedServerImage,
@@ -329,12 +392,6 @@ var _ = Describe("VpnSeedServer", func() {
 					VolumeMounts: []corev1.VolumeMount{mount},
 				}
 				template.Spec.Containers = append(template.Spec.Containers, exporterContainer)
-				template.Spec.Volumes = append(template.Spec.Volumes, corev1.Volume{
-					Name: "openvpn-status",
-					VolumeSource: corev1.VolumeSource{
-						EmptyDir: &corev1.EmptyDirVolumeSource{},
-					},
-				})
 			} else {
 				template.Spec.Containers = append(template.Spec.Containers, *envoy.GetEnvoyProxyContainer(apiServerProxyImage))
 				template.Spec.Volumes = append(template.Spec.Volumes, corev1.Volume{
@@ -515,6 +572,7 @@ var _ = Describe("VpnSeedServer", func() {
 				Selector: map[string]string{
 					v1beta1constants.LabelApp: "vpn-seed-server",
 				},
+				PublishNotReadyAddresses: true,
 			},
 		}
 
