@@ -36,9 +36,14 @@ import (
 
 // Domain contains information about a domain configured in the garden cluster.
 type Domain struct {
-	Domain      string
-	Provider    string
-	Zone        string
+	// Domain is the domain name to be used by the DNS provider.
+	Domain string
+	// Provider is the type of the DNS provider.
+	Provider string
+	// Zone is the zone where the DNS records are managed.
+	Zone string
+	// Credentials is a resouce containing credentials for a DNS service provider.
+	// Supported resources are v1.Secret and security.gardener.cloud/v1alpha1.WorkloadIdentity.
 	Credentials client.Object
 }
 
