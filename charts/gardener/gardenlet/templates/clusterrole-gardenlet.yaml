@@ -198,6 +198,7 @@ rules:
   - targetallocators.opentelemetry.io
   - opampbridges.opentelemetry.io
   - instrumentations.opentelemetry.io
+  - vlsingles.operator.victoriametrics.com
   verbs:
   - delete
 - apiGroups:

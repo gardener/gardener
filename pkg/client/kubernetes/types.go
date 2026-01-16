@@ -7,6 +7,8 @@ package kubernetes
 import (
 	"context"
 
+	victoriametricsv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
+	victoriametricsv1beta1 "github.com/VictoriaMetrics/operator/api/operator/v1beta1"
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -117,6 +119,8 @@ var (
 		persesv1alpha1.AddToScheme,
 		opentelemetryv1alpha1.AddToScheme,
 		opentelemetryv1beta1.AddToScheme,
+		victoriametricsv1beta1.AddToScheme,
+		victoriametricsv1.AddToScheme,
 	)
 
 	shootSchemeBuilder = runtime.NewSchemeBuilder(
