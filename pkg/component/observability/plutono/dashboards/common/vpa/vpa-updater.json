@@ -1070,7 +1070,6 @@
       "timeRegions": [],
       "timeShift": null,
       "title": "Failed Pod evictions by VPA",
-
       "description": "Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.",
       "tooltip": {
         "shared": true,
