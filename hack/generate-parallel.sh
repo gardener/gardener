@@ -198,13 +198,7 @@ should_generate_mocks() {
 
   # Check if any package changed
   for pkg in $packages; do
-    # If dependency is NOT a gardener package → always generate
-    if [[ "$pkg" != github.com/gardener/gardener/* ]]; then
-      return 0
-    fi
-
-    local pkg_path="${pkg#github.com/gardener/gardener/}"
-    if ! git diff --quiet master -- "$pkg_path" 2>/dev/null; then
+    if ! package_changed "$pkg"; then
       return 0
     fi
   done
