@@ -42,6 +42,7 @@ config:
     OpenTelemetryCollector: true
     UseUnifiedHTTPProxyPort: true
     VPAInPlaceUpdates: true
+    VPNBondingModeRoundRobin: true
   logging:
     enabled: true
     vali:
