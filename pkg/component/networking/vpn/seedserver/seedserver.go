@@ -69,9 +69,12 @@ const (
 	HighAvailabilityReplicaCount = 2
 	metricsPortName              = "metrics"
 	metricsPort                  = 15000
+	readinessPortName            = "readiness"
+	readinessPort                = 8080
 
-	envoyProxyContainerName      = "envoy-proxy"
-	openVPNExporterContainerName = "openvpn-exporter"
+	envoyProxyContainerName       = "envoy-proxy"
+	openVPNExporterContainerName  = "openvpn-exporter"
+	openVPNReadinessContainerName = "openvpn-readiness"
 
 	fileNameEnvoyConfig = "envoy.yaml"
 	fileNameCABundle    = "ca.crt"
@@ -337,17 +340,30 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					},
 					ReadinessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
-							TCPSocket: &corev1.TCPSocketAction{
-								Port: intstr.FromInt32(OpenVPNPort),
+							HTTPGet: &corev1.HTTPGetAction{
+								Path: "/readyz",
+								Port: intstr.FromInt32(readinessPort),
 							},
 						},
+						SuccessThreshold:    1,
+						FailureThreshold:    3,
+						InitialDelaySeconds: 5,
+						PeriodSeconds:       5,
+						TimeoutSeconds:      2,
 					},
+
 					LivenessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
-							TCPSocket: &corev1.TCPSocketAction{
-								Port: intstr.FromInt32(OpenVPNPort),
+							HTTPGet: &corev1.HTTPGetAction{
+								Path: "/healthz",
+								Port: intstr.FromInt32(readinessPort),
 							},
 						},
+						SuccessThreshold:    1,
+						FailureThreshold:    3,
+						InitialDelaySeconds: 5,
+						PeriodSeconds:       5,
+						TimeoutSeconds:      2,
 					},
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
@@ -438,9 +454,72 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 						},
 					},
 				},
+				// ensure the status volume is always present
+				{
+					Name: volumeNameStatusDir,
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				},
 			},
 		},
 	}
+
+	// ensure OPENVPN_STATUS_PATH and status dir mount are present for the main container in both HA and non-HA modes
+	template.Spec.Containers[0].Env = append(template.Spec.Containers[0].Env, corev1.EnvVar{
+		Name:  "OPENVPN_STATUS_PATH",
+		Value: filepath.Join(volumeMountPathStatusDir, "openvpn.status"),
+	})
+	template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+		Name:      volumeNameStatusDir,
+		MountPath: volumeMountPathStatusDir,
+	})
+
+	// define readiness container for both VPN modes
+	readinessContainer := corev1.Container{
+		Name:            openVPNReadinessContainerName,
+		Image:           v.values.ImageVPNSeedServer,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command: []string{
+			"/bin/vpn-server",
+			"readiness",
+		},
+		Env: []corev1.EnvVar{
+			{
+				Name:  "OPENVPN_STATUS_PATH",
+				Value: filepath.Join(volumeMountPathStatusDir, "openvpn.status"),
+			},
+		},
+		Ports: []corev1.ContainerPort{
+			{
+				Name:          readinessPortName,
+				ContainerPort: readinessPort,
+				Protocol:      corev1.ProtocolTCP,
+			},
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("20M"),
+			},
+		},
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: ptr.To(false),
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{
+					"all",
+				},
+			},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      volumeNameStatusDir,
+				MountPath: volumeMountPathStatusDir,
+			},
+		},
+	}
+
+	// add readiness container for both HA and non-HA VPN cases
+	template.Spec.Containers = append(template.Spec.Containers, readinessContainer)
 
 	if !v.values.HighAvailabilityEnabled {
 		template.Spec.Containers = append(template.Spec.Containers, *envoy.GetEnvoyProxyContainer(v.values.ImageAPIServerProxy))
@@ -455,13 +534,10 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			},
 		})
 	} else {
+		// HA specific env vars (status env/volume already added above)
 		template.Spec.Containers[0].Env = append(
 			template.Spec.Containers[0].Env,
 			[]corev1.EnvVar{
-				{
-					Name:  "OPENVPN_STATUS_PATH",
-					Value: filepath.Join(volumeMountPathStatusDir, "openvpn.status"),
-				},
 				{
 					Name: "POD_NAME",
 					ValueFrom: &corev1.EnvVarSource{
@@ -479,17 +555,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					Value: strconv.Itoa(v.values.HighAvailabilityNumberOfShootClients),
 				},
 			}...)
-		template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      volumeNameStatusDir,
-			MountPath: volumeMountPathStatusDir,
-		})
-		template.Spec.Volumes = append(template.Spec.Volumes, corev1.Volume{
-			Name: volumeNameStatusDir,
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
-			},
-		})
-
+		// exporter container uses the already-mounted status dir
 		exporterContainer := corev1.Container{
 			Name:            openVPNExporterContainerName,
 			Image:           v.values.ImageVPNSeedServer,
@@ -664,6 +730,9 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 				"statefulset.kubernetes.io/pod-name": v.indexedName(idx),
 			}
 		}
+
+		// In HA mode, we need to publish the service even if no pod is ready yet
+		service.Spec.PublishNotReadyAddresses = true
 
 		return nil
 	})
