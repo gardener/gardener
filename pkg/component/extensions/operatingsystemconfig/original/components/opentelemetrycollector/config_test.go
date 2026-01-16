@@ -205,7 +205,7 @@ service:
             exporter:
               prometheus:
                 host: 0.0.0.0
-                port: 8888
+                port: 18888
     logs:
       level: INFO
       encoding: json

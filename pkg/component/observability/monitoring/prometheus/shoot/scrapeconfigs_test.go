@@ -424,7 +424,7 @@ var _ = Describe("ScrapeConfigs", func() {
 								{
 									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
 									Regex:        `(.+)`,
-									Replacement:  ptr.To(`/api/v1/nodes/${1}:8888/proxy/metrics`),
+									Replacement:  ptr.To(`/api/v1/nodes/${1}:18888/proxy/metrics`),
 									TargetLabel:  "__metrics_path__",
 								},
 								{
