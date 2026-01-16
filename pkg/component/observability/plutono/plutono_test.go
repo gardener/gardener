@@ -685,7 +685,7 @@ status:
 					})
 
 					It("should successfully deploy all resources", func() {
-						checkDeployedResources("plutono-dashboards", 27)
+						checkDeployedResources("plutono-dashboards", 28)
 					})
 				})
 			})
@@ -701,7 +701,7 @@ status:
 					})
 
 					It("should successfully deploy all resources", func() {
-						checkDeployedResources("plutono-dashboards-garden", 31)
+						checkDeployedResources("plutono-dashboards-garden", 32)
 					})
 				})
 
@@ -754,7 +754,7 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					checkDeployedResources("plutono-dashboards", 38)
+					checkDeployedResources("plutono-dashboards", 39)
 				})
 			})
 

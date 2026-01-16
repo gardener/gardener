@@ -91,6 +91,8 @@ type Values struct {
 	ClusterType component.ClusterType
 	// IsGardenCluster specifies if the VPA is being deployed in a cluster registered as a Garden.
 	IsGardenCluster bool
+	// IsManagedSeed specifies if the VPA is being deployed in a Managed Seed clusters.
+	IsManagedSeed bool
 	// SecretNameServerCA is the name of the server CA secret.
 	SecretNameServerCA string
 	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
