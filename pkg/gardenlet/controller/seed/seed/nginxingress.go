@@ -7,15 +7,12 @@ package seed
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
-	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -25,7 +22,7 @@ import (
 )
 
 func (r *Reconciler) newIngressDNSRecord(ctx context.Context, log logr.Logger, seed *seedpkg.Seed, loadBalancerAddress string) (component.DeployMigrateWaiter, error) {
-	secretData, err := getDNSProviderSecretData(ctx, r.GardenClient, seed.GetInfo())
+	credentialsDeployer, err := getDNSProviderCredentialsDeployer(ctx, r.GardenClient, seed.GetInfo())
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +31,6 @@ func (r *Reconciler) newIngressDNSRecord(ctx context.Context, log logr.Logger, s
 		Name:                         "seed-ingress",
 		SecretName:                   "seed-ingress",
 		Namespace:                    r.GardenNamespace,
-		SecretData:                   secretData,
 		DNSName:                      seed.GetIngressFQDN("*"),
 		RecordType:                   extensionsv1alpha1helper.GetDNSRecordType(loadBalancerAddress),
 		ReconcileOnlyOnChangeOrError: true,
@@ -56,21 +52,17 @@ func (r *Reconciler) newIngressDNSRecord(ctx context.Context, log logr.Logger, s
 		dnsrecord.DefaultInterval,
 		dnsrecord.DefaultSevereThreshold,
 		dnsrecord.DefaultTimeout,
+		credentialsDeployer,
 	), nil
 }
 
-func getDNSProviderSecretData(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) (map[string][]byte, error) {
+func getDNSProviderCredentialsDeployer(ctx context.Context, gardenClient client.Reader, seed *gardencorev1beta1.Seed) (dnsrecord.CredentialsDeployFunc, error) {
 	if dnsConfig := seed.Spec.DNS; dnsConfig.Provider != nil {
 		credentials, err := kubernetesutils.GetCredentialsByObjectReference(ctx, gardenClient, *dnsConfig.Provider.CredentialsRef)
 		if err != nil {
 			return nil, err
 		}
-		switch creds := credentials.(type) {
-		case *corev1.Secret:
-			return creds.Data, nil
-		case *securityv1alpha1.WorkloadIdentity:
-			return nil, fmt.Errorf("WorkloadIdentity is not supported as DNS provider credentials") // TODO(vpnachev): Add support for WorkloadIdentity
-		}
+		return dnsrecord.CredentialsDeployerFromCredentials(credentials, seed), nil
 	}
 	return nil, nil
 }

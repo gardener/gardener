@@ -33,6 +33,7 @@ var _ = Describe("Shoot Reference controller tests", func() {
 		configMap4 *corev1.ConfigMap
 
 		workloadIdentity1 *securityv1alpha1.WorkloadIdentity
+		workloadIdentity2 *securityv1alpha1.WorkloadIdentity
 
 		allReferencedObjects []client.Object
 		shoot                *gardencorev1beta1.Shoot
@@ -51,10 +52,11 @@ var _ = Describe("Shoot Reference controller tests", func() {
 		configMap4 = initializeObject("configMap").(*corev1.ConfigMap)
 
 		workloadIdentity1 = initializeObject("workloadIdentity").(*securityv1alpha1.WorkloadIdentity)
+		workloadIdentity2 = initializeObject("workloadIdentity").(*securityv1alpha1.WorkloadIdentity)
 
 		allReferencedObjects = append([]client.Object{}, secret1, secret2, secret3, secret4, secret5)
 		allReferencedObjects = append(allReferencedObjects, configMap1, configMap2, configMap3, configMap4)
-		allReferencedObjects = append(allReferencedObjects, workloadIdentity1)
+		allReferencedObjects = append(allReferencedObjects, workloadIdentity1, workloadIdentity2)
 
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
@@ -88,7 +90,7 @@ var _ = Describe("Shoot Reference controller tests", func() {
 					Providers: []gardencorev1beta1.DNSProvider{
 						{Type: ptr.To("type"), CredentialsRef: &autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: secret1.Name}},
 						{Type: ptr.To("type"), CredentialsRef: &autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: secret2.Name}},
-						// {Type: ptr.To("type"), CredentialsRef: &autoscalingv1.CrossVersionObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: workloadIdentity2.Name}}, # // TODO(vpnachev): Enable workload identity credentials when the known controllers support it.
+						{Type: ptr.To("type"), CredentialsRef: &autoscalingv1.CrossVersionObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: workloadIdentity2.Name}},
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{

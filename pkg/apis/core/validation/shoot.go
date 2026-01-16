@@ -975,11 +975,6 @@ func validateDNSCredentialsRef(provider core.DNSProvider, fldPath *field.Path) f
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretName"), "must not be set when `credentialsRef` does not refer to secret resource"))
 			}
 		}
-
-		// TODO(vpnachev): Allow workload identity credentials when the known controllers support it.
-		if provider.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() && provider.CredentialsRef.Kind == "WorkloadIdentity" {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsRef"), "workload identity is not yet supported for DNS providers"))
-		}
 	}
 
 	return allErrs

@@ -137,21 +137,37 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 	}
 
 	if seed.Spec.DNS.Internal != nil {
-		// TODO(dimityrmirchev): handle/add support for workload identities
-		if seed.Spec.DNS.Internal.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
-			seed.Spec.DNS.Internal.CredentialsRef.Kind == "Secret" {
-			secretVertex := g.getOrCreateVertex(VertexTypeSecret, seed.Spec.DNS.Internal.CredentialsRef.Namespace, seed.Spec.DNS.Internal.CredentialsRef.Name)
-			g.addEdge(secretVertex, seedVertex)
+		var (
+			credentialsRef = seed.Spec.DNS.Internal.CredentialsRef
+			name           = credentialsRef.Name
+			namespace      = credentialsRef.Namespace
+			vertex         *Vertex
+		)
+		if credentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
+			credentialsRef.Kind == "WorkloadIdentity" {
+			vertex = g.getOrCreateVertex(VertexTypeWorkloadIdentity, namespace, name)
+		} else if credentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
+			credentialsRef.Kind == "Secret" {
+			vertex = g.getOrCreateVertex(VertexTypeSecret, namespace, name)
 		}
+		g.addEdge(vertex, seedVertex)
 	}
 
 	for _, defaultDNS := range seed.Spec.DNS.Defaults {
-		// TODO(dimityrmirchev): handle/add support for workload identities
-		if defaultDNS.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
-			defaultDNS.CredentialsRef.Kind == "Secret" {
-			secretVertex := g.getOrCreateVertex(VertexTypeSecret, defaultDNS.CredentialsRef.Namespace, defaultDNS.CredentialsRef.Name)
-			g.addEdge(secretVertex, seedVertex)
+		var (
+			credentialsRef = defaultDNS.CredentialsRef
+			name           = credentialsRef.Name
+			namespace      = credentialsRef.Namespace
+			vertex         *Vertex
+		)
+		if credentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
+			credentialsRef.Kind == "WorkloadIdentity" {
+			vertex = g.getOrCreateVertex(VertexTypeWorkloadIdentity, namespace, name)
+		} else if credentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
+			credentialsRef.Kind == "Secret" {
+			vertex = g.getOrCreateVertex(VertexTypeSecret, namespace, name)
 		}
+		g.addEdge(vertex, seedVertex)
 	}
 
 	addSeedResources(seed.Spec, g, seedVertex)

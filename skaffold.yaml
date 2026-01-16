@@ -622,13 +622,8 @@ profiles:
       - op: add
         path: /deploy/helm/releases/0/valuesFiles/-
         value: example/provider-extensions/garden/controlplane/workload-identity-issuer.yaml
-      - op: replace
-        path: /deploy/helm/hooks/after/0/host/command
-        value:
-          - kubectl
-          - apply
-          - -f
-          - example/provider-extensions/garden/controlplane/domain-secrets.yaml
+      - op: remove
+        path: /deploy/helm/hooks/after/0
   - name: debug
     activation:
       - command: debug
@@ -977,18 +972,20 @@ profiles:
     manifests:
       rawYaml:
         - example/gardener-local/gardenlet/secret-bootstrap-token-extensions.yaml
-      kustomize:
-        paths:
-          - example/provider-extensions/garden/project/with-workload-identity
+        - example/provider-extensions/garden/controlplane/domain-workload-identities.yaml
+        - example/provider-extensions/garden/project/base/project.yaml
+        - example/provider-extensions/garden/project/with-workload-identity/credentials/infrastructure-workloadidentities.yaml
+        - example/provider-extensions/garden/project/with-workload-identity/credentials/credentialsbindings.yaml
     deploy:
       kubectl: {}
   - name: extensions-without-workload-identity
     manifests:
       rawYaml:
         - example/gardener-local/gardenlet/secret-bootstrap-token-extensions.yaml
-      kustomize:
-        paths:
-          - example/provider-extensions/garden/project/without-workload-identity
+        - example/provider-extensions/garden/controlplane/domain-secrets.yaml
+        - example/provider-extensions/garden/project/base/project.yaml
+        - example/provider-extensions/garden/project/without-workload-identity/credentials/infrastructure-secrets.yaml
+        - example/provider-extensions/garden/project/without-workload-identity/credentials/credentialsbindings.yaml
     deploy:
       kubectl: {}
 ---
