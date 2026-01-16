@@ -351,6 +351,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 				},
 				ServiceAccount: collectorconstants.ServiceAccountName,
 			},
+			// TODO(rrhubenov): Remove `Vali` references and switch to only using VictoriaLogs components when the `DeployVictoriaLogs` feature gate is promoted to GA.
 			Config: otelv1beta1.Config{
 				Receivers: otelv1beta1.AnyConfig{
 					Object: map[string]any{
@@ -506,6 +507,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 		},
 	}
 
+	// TODO(rrhubenov): Remove when the `DeployVictoriaLogs` feature gate is promoted to GA and switch to only using VictoriaLogs components.
 	if o.values.DeployVictoriaLogs {
 		obj.Spec.Config.Service.Pipelines["logs/victorialogs"] = &otelv1beta1.Pipeline{
 			Exporters: []string{

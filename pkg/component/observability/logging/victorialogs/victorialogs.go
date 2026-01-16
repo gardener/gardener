@@ -37,6 +37,11 @@ type Values struct {
 	// Storage is the disk storage capacity of VictoriaLogs.
 	// If not set, ephemeral storage (emptyDir) will be used.
 	Storage *resource.Quantity
+
+	IsGardenCluster   bool
+	ClusterType       component.ClusterType
+	Replicas          int32
+	PriorityClassName string
 }
 
 type victoriaLogs struct {
