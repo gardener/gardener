@@ -32,7 +32,7 @@ const (
 	PathCACert = PathDirectory + "/ca.crt"
 	// MetricsPort is the port on which the OpenTelemetry collector exposes
 	// its internal metrics.
-	MetricsPort = 8888
+	MetricsPort = 18888
 
 	openTelemetryCollectorBinaryPath     = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/opentelemetry-collector"
 	openTelemetryCollectorKubeconfigPath = PathDirectory + "/kubeconfig"
