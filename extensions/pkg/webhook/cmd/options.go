@@ -7,21 +7,19 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/spf13/pflag"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	extensionscmdcontroller "github.com/gardener/gardener/extensions/pkg/controller/cmd"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
 	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
@@ -194,8 +192,9 @@ type AddToManagerOptions struct {
 	shootWebhookManagedResourceName string
 	shootNamespaceSelector          map[string]string
 
-	Server ServerOptions
-	Switch SwitchOptions
+	General *extensionscmdcontroller.GeneralOptions
+	Server  ServerOptions
+	Switch  SwitchOptions
 }
 
 // NewAddToManagerOptions creates new AddToManagerOptions with the given server name, server, and switch options.
@@ -204,6 +203,7 @@ func NewAddToManagerOptions(
 	extensionName string,
 	shootWebhookManagedResourceName string,
 	shootNamespaceSelector map[string]string,
+	generalOpts *extensionscmdcontroller.GeneralOptions,
 	serverOpts *ServerOptions,
 	switchOpts *SwitchOptions,
 ) *AddToManagerOptions {
@@ -216,6 +216,7 @@ func NewAddToManagerOptions(
 		extensionName:                   name,
 		shootWebhookManagedResourceName: shootWebhookManagedResourceName,
 		shootNamespaceSelector:          shootNamespaceSelector,
+		General:                         generalOpts,
 		Server:                          *serverOpts,
 		Switch:                          *switchOpts,
 	}
@@ -223,12 +224,22 @@ func NewAddToManagerOptions(
 
 // AddFlags implements Option.
 func (c *AddToManagerOptions) AddFlags(fs *pflag.FlagSet) {
+	if c.General != nil {
+		c.General.AddFlags(fs)
+	}
+
 	c.Switch.AddFlags(fs)
 	c.Server.AddFlags(fs)
 }
 
 // Complete implements Option.
 func (c *AddToManagerOptions) Complete() error {
+	if c.General != nil {
+		if err := c.General.Complete(); err != nil {
+			return err
+		}
+	}
+
 	if err := c.Switch.Complete(); err != nil {
 		return err
 	}
@@ -238,7 +249,7 @@ func (c *AddToManagerOptions) Complete() error {
 
 // Completed returns the completed AddToManagerConfig. Only call this if a previous call to `Complete` succeeded.
 func (c *AddToManagerOptions) Completed() *AddToManagerConfig {
-	return &AddToManagerConfig{
+	config := &AddToManagerConfig{
 		extensionName:                   c.extensionName,
 		shootWebhookManagedResourceName: c.shootWebhookManagedResourceName,
 		shootNamespaceSelector:          c.shootNamespaceSelector,
@@ -246,6 +257,12 @@ func (c *AddToManagerOptions) Completed() *AddToManagerConfig {
 		Server: *c.Server.Completed(),
 		Switch: *c.Switch.Completed(),
 	}
+
+	if c.General != nil {
+		config.General = *c.General.Completed()
+	}
+
+	return config
 }
 
 // AddToManagerConfig is a completed AddToManager configuration.
@@ -254,15 +271,16 @@ type AddToManagerConfig struct {
 	shootWebhookManagedResourceName string
 	shootNamespaceSelector          map[string]string
 
-	Server ServerConfig
-	Switch SwitchConfig
-	Clock  clock.Clock
+	General extensionscmdcontroller.GeneralConfig
+	Server  ServerConfig
+	Switch  SwitchConfig
+	Clock   clock.Clock
 }
 
 // AddToManager instantiates all webhooks of this configuration. If there are any webhooks, it creates a
 // webhook server, registers the webhooks and adds the server to the manager. Otherwise, it is a no-op.
 // It generates and registers the seed targeted webhooks via a MutatingWebhookConfiguration.
-func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster cluster.Cluster, mergeShootWebhooksIntoSeedWebhooks bool) (*atomic.Value, error) {
+func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster cluster.Cluster) (*atomic.Value, error) {
 	if c.Clock == nil {
 		c.Clock = &clock.RealClock{}
 	}
@@ -302,62 +320,10 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		c.Server.Mode,
 		c.Server.URL,
 		nil,
+		c.General.SelfHostedShootCluster,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not create webhooks: %w", err)
-	}
-
-	if mergeShootWebhooksIntoSeedWebhooks {
-		clientConfig := func(in admissionregistrationv1.WebhookClientConfig) (admissionregistrationv1.WebhookClientConfig, error) {
-			var path string
-			if in.Service != nil {
-				path = ptr.Deref(in.Service.Path, "")
-			} else if u := in.URL; u != nil {
-				parsedURL, err := url.Parse(*u)
-				if err != nil {
-					return admissionregistrationv1.WebhookClientConfig{}, fmt.Errorf("failed to parse URL %q: %w", *u, err)
-				}
-				path = parsedURL.Path
-			}
-
-			return extensionswebhook.BuildClientConfigFor(path, c.Server.Namespace, c.extensionName, false, servicePort, c.Server.Mode, c.Server.URL, nil), nil
-		}
-
-		if shootWebhookConfigs.ValidatingWebhookConfig != nil {
-			for _, webhook := range shootWebhookConfigs.ValidatingWebhookConfig.Webhooks {
-				mutatedClientConfig, err := clientConfig(webhook.ClientConfig)
-				if err != nil {
-					return nil, fmt.Errorf("failed computing new client config while merging shoot validating webhook %q into seed webhooks: %w", webhook.Name, err)
-				}
-				webhook.ClientConfig = mutatedClientConfig
-
-				if seedWebhookConfigs.ValidatingWebhookConfig == nil {
-					seedWebhookConfigs.ValidatingWebhookConfig = &admissionregistrationv1.ValidatingWebhookConfiguration{
-						ObjectMeta: extensionswebhook.InitialWebhookConfig(extensionswebhook.NamePrefix + c.extensionName),
-					}
-				}
-
-				seedWebhookConfigs.ValidatingWebhookConfig.Webhooks = append(seedWebhookConfigs.ValidatingWebhookConfig.Webhooks, webhook)
-			}
-		}
-
-		if shootWebhookConfigs.MutatingWebhookConfig != nil {
-			for _, webhook := range shootWebhookConfigs.MutatingWebhookConfig.Webhooks {
-				mutatedClientConfig, err := clientConfig(webhook.ClientConfig)
-				if err != nil {
-					return nil, fmt.Errorf("failed computing new client config while merging shoot mutating webhook %q into seed webhooks: %w", webhook.Name, err)
-				}
-				webhook.ClientConfig = mutatedClientConfig
-
-				if seedWebhookConfigs.MutatingWebhookConfig == nil {
-					seedWebhookConfigs.MutatingWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
-						ObjectMeta: extensionswebhook.InitialWebhookConfig(extensionswebhook.NamePrefix + c.extensionName),
-					}
-				}
-
-				seedWebhookConfigs.MutatingWebhookConfig.Webhooks = append(seedWebhookConfigs.MutatingWebhookConfig.Webhooks, webhook)
-			}
-		}
 	}
 
 	atomicShootWebhookConfigs := &atomic.Value{}

@@ -172,7 +172,7 @@ func addTestWebhookToManager(mgr manager.Manager) error {
 		}),
 	)
 
-	addToManagerOptions := extensionscmdwebhook.NewAddToManagerOptions(providerName, "", nil, &extensionscmdwebhook.ServerOptions{
+	addToManagerOptions := extensionscmdwebhook.NewAddToManagerOptions(providerName, "", nil, nil, &extensionscmdwebhook.ServerOptions{
 		Mode: extensionswebhook.ModeURL,
 		URL:  fmt.Sprintf("%s:%d", testEnv.WebhookInstallOptions.LocalServingHost, testEnv.WebhookInstallOptions.LocalServingPort),
 	}, switchOptions)
@@ -181,6 +181,6 @@ func addTestWebhookToManager(mgr manager.Manager) error {
 		return err
 	}
 
-	_, err := addToManagerOptions.Completed().AddToManager(ctx, mgr, nil, false)
+	_, err := addToManagerOptions.Completed().AddToManager(ctx, mgr, nil)
 	return err
 }
