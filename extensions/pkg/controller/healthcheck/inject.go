@@ -8,31 +8,31 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// ShootClient is an interface to be used to receive a shoot client.
-type ShootClient interface {
-	// InjectShootClient injects the shoot client
-	InjectShootClient(client.Client)
+// TargetClient is an interface to be used to receive a target/shoot client.
+type TargetClient interface {
+	// InjectTargetClient injects the shoot client
+	InjectTargetClient(client.Client)
 }
 
-// SeedClient is an interface to be used to receive a seed client.
-type SeedClient interface {
-	// InjectSeedClient injects the seed client
-	InjectSeedClient(client.Client)
+// SourceClient is an interface to be used to receive a source/seed client.
+type SourceClient interface {
+	// InjectSourceClient injects the source client
+	InjectSourceClient(client.Client)
 }
 
-// ShootClientInto will set the shoot client on i if i implements ShootClient.
-func ShootClientInto(client client.Client, i any) bool {
-	if s, ok := i.(ShootClient); ok {
-		s.InjectShootClient(client)
+// TargetClientInfo will set the target client on i if i implements TargetClient.
+func TargetClientInfo(client client.Client, i any) bool {
+	if s, ok := i.(TargetClient); ok {
+		s.InjectTargetClient(client)
 		return true
 	}
 	return false
 }
 
-// SeedClientInto will set the seed client on i if i implements SeedClient.
-func SeedClientInto(client client.Client, i any) bool {
-	if s, ok := i.(SeedClient); ok {
-		s.InjectSeedClient(client)
+// SourceClientInfo will set the source client on i if i implements SourceClient.
+func SourceClientInfo(client client.Client, i any) bool {
+	if s, ok := i.(SourceClient); ok {
+		s.InjectSourceClient(client)
 		return true
 	}
 	return false

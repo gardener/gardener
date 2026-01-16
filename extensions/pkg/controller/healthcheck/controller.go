@@ -121,7 +121,7 @@ func DefaultRegistration(
 		shootRestOptions = *opts.HealthCheckConfig.ShootRESTOptions
 	}
 
-	healthCheckActuator := NewActuator(mgr, args.Type, args.GetExtensionGroupVersionKind().Kind, getExtensionObjFunc, healthChecks, shootRestOptions)
+	healthCheckActuator := NewActuator(mgr, args.Type, args.GetExtensionGroupVersionKind().Kind, getExtensionObjFunc, healthChecks, shootRestOptions, args.ExtensionClasses)
 	return Register(mgr, args, healthCheckActuator)
 }
 
@@ -186,7 +186,7 @@ func add(mgr manager.Manager, args AddArgs, actuator HealthCheckActuator) error 
 
 	log.Log.Info("Registering health check controller", "kind", args.registeredExtension.groupVersionKind.Kind, "type", args.Type, "conditionTypes", args.registeredExtension.healthConditionTypes, "syncPeriod", args.SyncPeriod.Duration.String())
 
-	return builder.
+	builder := builder.
 		ControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(args.ControllerOptions).
@@ -194,14 +194,21 @@ func add(mgr manager.Manager, args AddArgs, actuator HealthCheckActuator) error 
 			args.registeredExtension.getExtensionObjFunc(),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicates...),
-		).
+		)
+
+	if isGardenExtensionClass(args.ExtensionClasses) {
+		return builder.
+			Complete(NewReconciler(mgr, actuator, *args.registeredExtension, args.SyncPeriod, args.ExtensionClasses))
+	}
+
+	return builder.
 		// watch Cluster of Shoot provider type (e.g. aws)
 		// this is to be notified when the Shoot is being hibernated (stop health checks) and wakes up (start health checks again)
 		Watches(
 			&extensionsv1alpha1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(mapper.ClusterToObjectMapper(mgr.GetClient(), args.GetExtensionObjListFunc, predicates)),
 		).
-		Complete(NewReconciler(mgr, actuator, *args.registeredExtension, args.SyncPeriod))
+		Complete(NewReconciler(mgr, actuator, *args.registeredExtension, args.SyncPeriod, args.ExtensionClasses))
 }
 
 func getHealthCheckTypes(healthChecks []ConditionTypeToHealthCheck) []string {
@@ -210,4 +217,8 @@ func getHealthCheckTypes(healthChecks []ConditionTypeToHealthCheck) []string {
 		types.Insert(healthCheck.ConditionType)
 	}
 	return types.UnsortedList()
+}
+
+func isGardenExtensionClass(extensionClasses []extensionsv1alpha1.ExtensionClass) bool {
+	return len(extensionClasses) == 1 && extensionClasses[0] == extensionsv1alpha1.ExtensionClassGarden
 }
