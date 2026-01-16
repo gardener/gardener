@@ -71,7 +71,7 @@ func (r *Reconciler) reconcile(ctx context.Context, credentialsBinding *security
 		}
 	}
 
-	// Add the Gardener finalizer to the referenced Secret/WorkloadIdentity
+	// Add the Gardener finalizer to the referenced Secret/InternalSecret/WorkloadIdentity
 	// to protect it from deletion as long as the CredentialsBinding resource exists.
 	credential, err := kubernetesutils.GetCredentialsByObjectReference(ctx, r.Client, credentialsBinding.CredentialsRef)
 	if err != nil {
@@ -98,16 +98,21 @@ func (r *Reconciler) reconcile(ctx context.Context, credentialsBinding *security
 		}
 	}
 
-	providerTypeLabelKey := v1beta1constants.LabelShootProviderPrefix + credentialsBinding.Provider.Type
-	labels := credential.GetLabels()
+	var (
+		providerTypeLabelKey = v1beta1constants.LabelShootProviderPrefix + credentialsBinding.Provider.Type
 
-	_, hasProviderKeyLabel := labels[providerTypeLabelKey]
-	_, hasCredentialsBindingRefLabel := labels[v1beta1constants.LabelCredentialsBindingReference]
-	secretNeedsLabel := !hasProviderKeyLabel && kind == "Secret"
-	workloadIdentityNeedsLabelRemoval := hasProviderKeyLabel && kind == "WorkloadIdentity"
-	if secretNeedsLabel || workloadIdentityNeedsLabelRemoval || !hasCredentialsBindingRefLabel {
+		labels                           = credential.GetLabels()
+		_, hasProviderKeyLabel           = labels[providerTypeLabelKey]
+		_, hasCredentialsBindingRefLabel = labels[v1beta1constants.LabelCredentialsBindingReference]
+
+		secretNeedsLabel                  = !hasProviderKeyLabel && kind == "Secret"
+		internalSecretNeedsLabel          = !hasProviderKeyLabel && kind == "InternalSecret"
+		workloadIdentityNeedsLabelRemoval = hasProviderKeyLabel && kind == "WorkloadIdentity"
+	)
+
+	if secretNeedsLabel || internalSecretNeedsLabel || workloadIdentityNeedsLabelRemoval || !hasCredentialsBindingRefLabel {
 		patch := client.MergeFrom(credential.DeepCopyObject().(client.Object))
-		if secretNeedsLabel {
+		if secretNeedsLabel || internalSecretNeedsLabel {
 			credential.SetLabels(utils.MergeStringMaps(credential.GetLabels(), map[string]string{
 				providerTypeLabelKey: "true",
 			}))
@@ -160,7 +165,7 @@ func (r *Reconciler) delete(ctx context.Context, credentialsBinding *securityv1a
 		return errCredentials
 	} else if errCredentials == nil {
 		// TODO(dimityrmirchev): remove this handling in a future release, the finalizer should be added by the reconcile function
-		// ensure the new finalizer is present on the referenced secret/workload identity before removing the old finalizer
+		// ensure the new finalizer is present on the referenced Secret/InternalSecret/WorkloadIdentity before removing the old finalizer
 		if !controllerutil.ContainsFinalizer(credential, finalizerName) && credential.GetDeletionTimestamp() == nil {
 			log.Info("Adding finalizer", "finalizer", finalizerName, kind, client.ObjectKeyFromObject(credential)) //nolint:logcheck
 			if err := controllerutils.AddFinalizers(ctx, r.Client, credential, finalizerName); err != nil {
@@ -212,7 +217,7 @@ func (r *Reconciler) delete(ctx context.Context, credentialsBinding *securityv1a
 			}
 		}
 
-		// Remove finalizer from referenced secret
+		// Remove finalizer from referenced credential resource
 		if controllerutil.ContainsFinalizer(credential, finalizerName) {
 			log.Info("Removing finalizer", "finalizer", finalizerName, kind, client.ObjectKeyFromObject(credential)) //nolint:logcheck
 			if err := controllerutils.RemoveFinalizers(ctx, r.Client, credential, finalizerName); err != nil {

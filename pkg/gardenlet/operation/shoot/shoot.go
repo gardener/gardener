@@ -135,6 +135,12 @@ func (b *Builder) WithShootCredentialsFrom(c client.Reader) *Builder {
 					return nil, err
 				}
 				return workloadIdentity, nil
+			} else if binding.CredentialsRef.GroupVersionKind() == gardencorev1beta1.SchemeGroupVersion.WithKind("InternalSecret") {
+				internalSecret := &gardencorev1beta1.InternalSecret{}
+				if err := c.Get(ctx, key, internalSecret); err != nil {
+					return nil, err
+				}
+				return internalSecret, nil
 			}
 		}
 

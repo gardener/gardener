@@ -18,6 +18,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
@@ -32,6 +33,7 @@ var _ = Describe("secretref", func() {
 
 		secretRef               *corev1.SecretReference
 		secret                  *corev1.Secret
+		internalSecret          *gardencorev1beta1.InternalSecret
 		workloadIdentity        *securityv1alpha1.WorkloadIdentity
 		objectRef               *corev1.ObjectReference
 		secretPartialObjectMeta *metav1.PartialObjectMetadata
@@ -71,6 +73,26 @@ var _ = Describe("secretref", func() {
 			},
 			Data: map[string][]byte{
 				"foo": []byte("bar"),
+			},
+			Type: corev1.SecretTypeOpaque,
+		}
+		internalSecret = &gardencorev1beta1.InternalSecret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion:         "core.gardener.cloud/v1beta1",
+						Kind:               "Shoot",
+						Name:               name,
+						UID:                "uid",
+						Controller:         ptr.To(true),
+						BlockOwnerDeletion: ptr.To(true),
+					},
+				},
+			},
+			Data: map[string][]byte{
+				"bar": []byte("foo"),
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
@@ -206,6 +228,39 @@ var _ = Describe("secretref", func() {
 			Expect(result).To(BeNil())
 		})
 
+		It("should get referenced InternalSecret", func() {
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.InternalSecret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, i *gardencorev1beta1.InternalSecret, _ ...client.GetOption) error {
+				*i = *internalSecret
+				return nil
+			})
+
+			objectRef = &corev1.ObjectReference{
+				APIVersion: "core.gardener.cloud/v1beta1",
+				Kind:       "InternalSecret",
+				Namespace:  namespace,
+				Name:       name,
+			}
+
+			result, err := kubernetesutils.GetCredentialsByObjectReference(ctx, c, *objectRef)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(internalSecret))
+		})
+
+		It("should fail to get referenced InternalSecret if reading it fails", func() {
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.InternalSecret{})).Return(fmt.Errorf("error"))
+
+			objectRef = &corev1.ObjectReference{
+				APIVersion: "core.gardener.cloud/v1beta1",
+				Kind:       "InternalSecret",
+				Namespace:  namespace,
+				Name:       name,
+			}
+
+			result, err := kubernetesutils.GetCredentialsByObjectReference(ctx, c, *objectRef)
+			Expect(err).To(HaveOccurred())
+			Expect(result).To(BeNil())
+		})
+
 		It("should get referenced WorkloadIdentity", func() {
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&securityv1alpha1.WorkloadIdentity{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, wi *securityv1alpha1.WorkloadIdentity, _ ...client.GetOption) error {
 				*wi = *workloadIdentity
@@ -239,7 +294,7 @@ var _ = Describe("secretref", func() {
 			Expect(result).To(BeNil())
 		})
 
-		It("should fail if object reference does not refer to a secret", func() {
+		It("should fail if object reference does not refer to a supported object", func() {
 			ref := &corev1.ObjectReference{
 				APIVersion: "foo.bar/v1alpha1",
 				Kind:       "Baz",

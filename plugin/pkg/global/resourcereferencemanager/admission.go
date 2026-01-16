@@ -84,6 +84,7 @@ type ReferenceManager struct {
 	seedLister                   gardencorev1beta1listers.SeedLister
 	shootLister                  gardencorev1beta1listers.ShootLister
 	secretBindingLister          gardencorev1beta1listers.SecretBindingLister
+	internalSecretLister         gardencorev1beta1listers.InternalSecretLister
 	credentialsBindingLister     securityv1alpha1listers.CredentialsBindingLister
 	workloadIdentityLister       securityv1alpha1listers.WorkloadIdentityLister
 	projectLister                gardencorev1beta1listers.ProjectLister
@@ -163,6 +164,9 @@ func (r *ReferenceManager) SetCoreInformerFactory(f gardencoreinformers.SharedIn
 	exposureClassInformer := f.Core().V1beta1().ExposureClasses()
 	r.exposureClassLister = exposureClassInformer.Lister()
 
+	internalSecretInformer := f.Core().V1beta1().InternalSecrets()
+	r.internalSecretLister = internalSecretInformer.Lister()
+
 	readyFuncs = append(readyFuncs,
 		seedInformer.Informer().HasSynced,
 		shootInformer.Informer().HasSynced,
@@ -173,7 +177,9 @@ func (r *ReferenceManager) SetCoreInformerFactory(f gardencoreinformers.SharedIn
 		quotaInformer.Informer().HasSynced,
 		projectInformer.Informer().HasSynced,
 		controllerDeploymentInformer.Informer().HasSynced,
-		exposureClassInformer.Informer().HasSynced)
+		exposureClassInformer.Informer().HasSynced,
+		internalSecretInformer.Informer().HasSynced,
+	)
 }
 
 // SetSeedManagementInformerFactory gets Lister from SharedInformerFactory.
@@ -824,8 +830,13 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 			credentialsAPIVersion = securityv1alpha1.SchemeGroupVersion.Version
 			credentialsResource = "workloadidentities"
 			credentialsKind = "WorkloadIdentity"
+		} else if b.CredentialsRef.APIVersion == gardencorev1beta1.SchemeGroupVersion.String() {
+			credentialsAPIGroup = gardencorev1beta1.SchemeGroupVersion.Group
+			credentialsAPIVersion = gardencorev1beta1.SchemeGroupVersion.Version
+			credentialsResource = "internalsecrets"
+			credentialsKind = "InternalSecret"
 		} else {
-			return errors.New("unknown credentials ref: CredentialsBinding is referencing neither a Secret nor a WorkloadIdentity")
+			return errors.New("unknown credentials ref: CredentialsBinding is referencing neither a Secret nor an InternalSecret nor a WorkloadIdentity")
 		}
 		credentialsNamespace = b.CredentialsRef.Namespace
 		credentialsName = b.CredentialsRef.Name
@@ -877,6 +888,14 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 			return err
 		}
 		if err := r.sanityCheckProviderSecret(ctx, credentialsNamespace, credentialsName, providerTypes); err != nil {
+			return err
+		}
+
+	case "InternalSecret":
+		if err := r.lookupInternalSecret(ctx, credentialsNamespace, credentialsName); err != nil {
+			return err
+		}
+		if err := r.sanityCheckProviderInternalSecret(ctx, credentialsNamespace, credentialsName, providerTypes); err != nil {
 			return err
 		}
 
@@ -1292,6 +1311,45 @@ func (r *ReferenceManager) lookupSecret(ctx context.Context, namespace, name str
 
 	_, err := lookupResource(ctx, namespace, name, secretFromLister, secretFromClient)
 	return err
+}
+
+func (r *ReferenceManager) lookupInternalSecret(ctx context.Context, namespace, name string) error {
+	internalSecretFromLister := func(_ context.Context, namespace, name string) (runtime.Object, error) {
+		return r.internalSecretLister.InternalSecrets(namespace).Get(name)
+	}
+
+	internalSecretFromClient := func(ctx context.Context, namespace, name string) (runtime.Object, error) {
+		return r.gardenCoreClient.CoreV1beta1().InternalSecrets(namespace).Get(ctx, name, kubernetesclient.DefaultGetOptions())
+	}
+
+	_, err := lookupResource(ctx, namespace, name, internalSecretFromLister, internalSecretFromClient)
+	return err
+}
+
+func (r *ReferenceManager) sanityCheckProviderInternalSecret(ctx context.Context, namespace, name string, providerTypes []string) error {
+	internalSecret, err := r.gardenCoreClient.CoreV1beta1().InternalSecrets(namespace).Get(ctx, name, kubernetesclient.DefaultGetOptions())
+	if err != nil {
+		return err
+	}
+
+	for _, providerType := range providerTypes {
+		dummyInternalSecret := &gardencorev1beta1.InternalSecret{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: name,
+				Namespace:    namespace,
+				Annotations:  internalSecret.Annotations,
+				Labels:       utils.MergeStringMaps(internalSecret.Labels, map[string]string{v1beta1constants.LabelShootProviderPrefix + providerType: "true"}),
+			},
+			Type: internalSecret.Type,
+			Data: internalSecret.Data,
+		}
+
+		if _, err := r.gardenCoreClient.CoreV1beta1().InternalSecrets(dummyInternalSecret.Namespace).Create(ctx, dummyInternalSecret, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}}); err != nil {
+			return fmt.Errorf("%s provider secret sanity check failed: %w", providerType, err)
+		}
+	}
+
+	return nil
 }
 
 func (r *ReferenceManager) lookupConfigMap(ctx context.Context, namespace, name string) error {

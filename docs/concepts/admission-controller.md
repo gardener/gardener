@@ -38,6 +38,12 @@ Namespaces are the backing entities of Gardener projects in which shoot cluster 
 This validation handler protects active namespaces against premature deletion requests.
 Therefore, it denies deletion requests if a namespace still contains shoot clusters or if it belongs to a non-deleting Gardener project (without `.metadata.deletionTimestamp`).
 
+### Provider Secret Labels
+
+`Secret`s and `InternalSecret`s referenced in `SecretBinding`s or `CredentialsBinding`s are automatically labeled with the corresponding provider types.
+This mutating handler syncs provider labels (with prefix `provider.shoot.gardener.cloud/<type>=true`) on these resources to ensure they are properly tagged with the provider type(s) that reference them.
+This helps with filtering (e.g., via label selectors in webhooks) and organizing credentials by their associated cloud providers.
+
 ### Resource Size Validator
 
 Since users directly apply Kubernetes native objects to the Garden cluster, it also involves the risk of being vulnerable to DoS attacks because these resources are continuously watched and read by controllers.

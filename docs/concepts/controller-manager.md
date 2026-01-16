@@ -133,13 +133,13 @@ You can read more about the purpose of this reconciler in [this document](../ext
 
 ### [`CredentialsBinding` Controller](../../pkg/controllermanager/controller/credentialsbinding)
 
-`CredentialsBinding`s reference `Secret`s, `WorkloadIdentity`s and `Quota`s and are themselves referenced by `Shoot`s.
+`CredentialsBinding`s reference `Secret`s, `InternalSecret`s, `WorkloadIdentity`s and `Quota`s and are themselves referenced by `Shoot`s.
 
 The controller adds finalizers to the referenced objects to ensure they don't get deleted while still being referenced.
 Similarly, to ensure that `CredentialsBinding`s in-use are always present in the system until the last referring `Shoot` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` referencing the `CredentialsBinding` anymore.
 
-Referenced `Secret`s and `WorkloadIdentity`s will also be labeled with `provider.shoot.gardener.cloud/<type>=true`, where `<type>` is the value of the `.provider.type` of the `CredentialsBinding`.
-Also, all referenced `Secret`s and `WorkloadIdentity`s, as well as `Quota`s, will be labeled with `reference.gardener.cloud/credentialsbinding=true` to allow for easily filtering for objects referenced by `CredentialsBinding`s.
+Referenced `Secret`s, `InternalSecret`s and `WorkloadIdentity`s will also be labeled with `provider.shoot.gardener.cloud/<type>=true`, where `<type>` is the value of the `.provider.type` of the `CredentialsBinding`.
+Also, all referenced `Secret`s, `InternalSecret`s and `WorkloadIdentity`s, as well as `Quota`s, will be labeled with `reference.gardener.cloud/credentialsbinding=true` to allow for easily filtering for objects referenced by `CredentialsBinding`s.
 
 ### [`Event` Controller](../../pkg/controllermanager/controller/event)
 
@@ -268,7 +268,7 @@ This reconciler is enabled by default and works as follows:
 1. Projects are considered as "stale"/not actively used when all of the following conditions apply: The namespace associated with the `Project` does not have any...
     1. `Shoot` resources.
     1. `BackupEntry` resources.
-    1. `Secret` resources that are referenced by a `SecretBinding` or a `CredentialsBinding` that is in use by a `Shoot` (not necessarily in the same namespace).
+    1. `Secret` or `InternalSecret` resources that are referenced by a `SecretBinding` or a `CredentialsBinding` that is in use by a `Shoot` (not necessarily in the same namespace).
     1. `WorkloadIdentity` resources that are referenced by a `CredentialsBinding` that is in use by a `Shoot` (not necessarily in the same namespace).
     1. `Quota` resources that are referenced by a `SecretBinding` or a `CredentialsBinding` that is in use by a `Shoot` (not necessarily in the same namespace).
     1. The time period when the project was used for the last time (`status.lastActivityTimestamp`) is longer than the configured `minimumLifetimeDays`
