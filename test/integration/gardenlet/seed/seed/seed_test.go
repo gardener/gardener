@@ -44,7 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/persesoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
-	oteloperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
+	opentelemetryoperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
@@ -644,7 +644,7 @@ var _ = Describe("Seed controller tests", func() {
 					// General CRDs are not deployed when seedIsGarden is true, as they are managed by the gardener-operator.
 					extensionCRD, err := extensionscrds.NewCRD(testClient, true, false)
 					Expect(err).NotTo(HaveOccurred())
-					openTelemetryCRD, err := oteloperator.NewCRDs(testClient)
+					openTelemetryCRD, err := opentelemetryoperator.NewCRDs(testClient)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(applier.ApplyManifest(ctx, managedResourceCRDReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
@@ -702,6 +702,7 @@ var _ = Describe("Seed controller tests", func() {
 					"prometheus-aggregate",
 					"kube-state-metrics-seed",
 					"referenced-resources-" + seedName,
+					"opentelemetry-collector",
 				}
 
 				if !seedIsGarden {

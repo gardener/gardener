@@ -78,6 +78,7 @@ var gardenManagedResourceList = []string{
 	"extension-registration-networking-cilium",
 	"local-ext-shoot",
 	"opentelemetry-operator",
+	"opentelemetry-collector",
 }
 
 var istioManagedResourceList = []string{

@@ -122,6 +122,7 @@ type components struct {
 	alertManager                  component.DeployWaiter
 	persesOperator                component.DeployWaiter
 	openTelemetryOperator         component.DeployWaiter
+	openTelemetryCollector        collector.Interface
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -222,6 +223,10 @@ func (r *Reconciler) instantiateComponents(
 
 	// observability components
 	c.openTelemetryOperator, err = r.newOpenTelemetryOperator()
+	if err != nil {
+		return
+	}
+	c.openTelemetryCollector, err = r.newOpenTelemetryCollector(secretsManager)
 	if err != nil {
 		return
 	}
@@ -846,6 +851,16 @@ func (r *Reconciler) newOpenTelemetryOperator() (component.DeployWaiter, error) 
 		r.GardenNamespace,
 		gardenlethelper.IsLoggingEnabled(&r.Config),
 		v1beta1constants.PriorityClassNameSeedSystem600,
+	)
+}
+
+func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Interface) (collector.Interface, error) {
+	return sharedcomponent.NewOpenTelemetryCollector(
+		r.SeedClientSet.Client(),
+		r.GardenNamespace,
+		v1beta1constants.PriorityClassNameSeedSystem600,
+		secretsManager,
+		v1beta1constants.SecretNameCASeed,
 	)
 }
 
