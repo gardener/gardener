@@ -15,6 +15,4 @@ echo "> Format Import Order"
 
 goimports_reviser_opts=${GOIMPORTS_REVISER_OPTIONS:-""}
 
-for p in "$@" ; do
-  goimports-reviser $goimports_reviser_opts -recursive $p
-done
+printf '%s\n' "$@" | parallel --will-cite goimports-reviser ${goimports_reviser_opts} -recursive {}
