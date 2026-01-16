@@ -30,18 +30,43 @@ kubectl create \
 You also can use controller-runtime `client` (>= v0.14.3) to create such a kubeconfig from your go code like so:
 
 ```go
-expiration := 10 * time.Minute
-expirationSeconds := int64(expiration.Seconds())
-adminKubeconfigRequest := &authenticationv1alpha1.AdminKubeconfigRequest{
-  Spec: authenticationv1alpha1.AdminKubeconfigRequestSpec{
-    ExpirationSeconds: &expirationSeconds,
-  },
-}
-err := client.SubResource("adminkubeconfig").Create(ctx, shoot, adminKubeconfigRequest)
-if err != nil {
-  return err
-}
-config = adminKubeconfigRequest.Status.Kubeconfig
+import (
+  "context"
+  "time"
+
+  authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
+  gardenercorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+  "github.com/gardener/gardener/pkg/client/kubernetes"
+  metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+  "sigs.k8s.io/controller-runtime/pkg/client"
+  "sigs.k8s.io/controller-runtime/pkg/client/config"
+)
+
+...
+    expiration := 10 * time.Minute
+    expirationSeconds := int64(expiration.Seconds())
+    adminKubeconfigRequest := &authenticationv1alpha1.AdminKubeconfigRequest{
+      Spec: authenticationv1alpha1.AdminKubeconfigRequestSpec{
+        ExpirationSeconds: &expirationSeconds,
+      },
+    }
+    shoot := &gardenercorev1beta1.Shoot{
+      ObjectMeta: metav1.ObjectMeta{
+        Name:      "my-shoot",
+        Namespace: "my-namespace",
+      },
+    }
+
+    kubeClient, err := client.New(config.GetConfigOrDie(), client.Options{Scheme: kubernetes.GardenScheme})
+    if err != nil {
+      return err
+    }
+    err = kubeClient.SubResource("adminkubeconfig").Create(context.TODO(), shoot, adminKubeconfigRequest)
+    if err != nil {
+      return err
+    }
+    config := adminKubeconfigRequest.Status.Kubeconfig
+...
 ```
 
 In Python, you can use the native [`kubernetes` client](https://github.com/kubernetes-client/python) to create such a kubeconfig like this:
