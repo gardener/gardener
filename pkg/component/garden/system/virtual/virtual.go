@@ -475,6 +475,11 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				},
 				{
 					APIGroups: []string{gardencorev1beta1.GroupName},
+					Resources: []string{"shoots/finalizers"},
+					Verbs:     []string{"update"},
+				},
+				{
+					APIGroups: []string{gardencorev1beta1.GroupName},
 					Resources: []string{"namespacedcloudprofiles"},
 					Verbs:     []string{"get", "list", "watch", "create", "patch", "update", "delete"},
 				},
