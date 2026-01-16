@@ -126,26 +126,43 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			return err
 		}
 
-		machineClasses = append(machineClasses, &machinev1alpha1.MachineClass{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: machinev1alpha1.SchemeGroupVersion.String(),
-				Kind:       "MachineClass",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      className,
-				Namespace: w.worker.Namespace,
-			},
-			SecretRef: &corev1.SecretReference{
-				Name:      className,
-				Namespace: w.worker.Namespace,
-			},
-			CredentialsSecretRef: &corev1.SecretReference{
-				Name:      w.worker.Spec.SecretRef.Name,
-				Namespace: w.worker.Spec.SecretRef.Namespace,
-			},
-			Provider:     local.Type,
-			ProviderSpec: runtime.RawExtension{Raw: providerConfigBytes},
-		})
+		arch := ptr.Deref(pool.Architecture, v1beta1constants.ArchitectureAMD64)
+
+		zones := pool.Zones
+		if len(pool.Zones) == 0 {
+			zones = []string{"0"} // fallback zone if no zones are defined as this field must be filled for MCM to work.
+		}
+		for _, zone := range zones {
+			machineClass := &machinev1alpha1.MachineClass{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: machinev1alpha1.SchemeGroupVersion.String(),
+					Kind:       "MachineClass",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      className,
+					Namespace: w.worker.Namespace,
+				},
+				SecretRef: &corev1.SecretReference{
+					Name:      className,
+					Namespace: w.worker.Namespace,
+				},
+				CredentialsSecretRef: &corev1.SecretReference{
+					Name:      w.worker.Spec.SecretRef.Name,
+					Namespace: w.worker.Spec.SecretRef.Namespace,
+				},
+				Provider:     local.Type,
+				ProviderSpec: runtime.RawExtension{Raw: providerConfigBytes},
+				NodeTemplate: &machinev1alpha1.NodeTemplate{
+					Capacity:        pool.NodeTemplate.Capacity,
+					VirtualCapacity: pool.NodeTemplate.VirtualCapacity,
+					InstanceType:    pool.MachineType,
+					Region:          w.worker.Spec.Region,
+					Zone:            zone,
+					Architecture:    &arch,
+				},
+			}
+			machineClasses = append(machineClasses, machineClass)
+		}
 
 		updateConfiguration := machinev1alpha1.UpdateConfiguration{
 			MaxUnavailable: &pool.MaxUnavailable,

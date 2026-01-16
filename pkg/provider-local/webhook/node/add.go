@@ -37,7 +37,7 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 
 	var (
 		provider = local.Type
-		types    = []extensionswebhook.Type{{Obj: &corev1.Node{}, Subresource: ptr.To("status")}}
+		types    = []extensionswebhook.Type{{Obj: &corev1.Node{}, Subresource: ptr.To("*")}}
 	)
 
 	logger = logger.WithValues("provider", provider)
