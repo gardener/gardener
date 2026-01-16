@@ -27,5 +27,9 @@ func (m *mutator) Mutate(_ context.Context, newObj, _ client.Object) error {
 		resourceList[corev1.ResourceMemory] = local.NodeResourceMemory
 	}
 
+	if len(node.Spec.ProviderID) == 0 {
+		node.Spec.ProviderID = node.Name // MCM requires ProviderID to be set to act on the NodeGroup.
+	}
+
 	return nil
 }
