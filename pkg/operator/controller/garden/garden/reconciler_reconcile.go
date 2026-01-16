@@ -578,8 +578,23 @@ func (r *Reconciler) reconcile(
 			Fn:   c.fluentBit.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name:   "Deploying Vali",
-			Fn:     c.vali.Deploy,
+			Name: "Deploying Vali",
+			Fn: func(ctx context.Context) error {
+				if err := c.vali.Deploy(ctx); err != nil {
+					return err
+				}
+				if features.DefaultFeatureGate.Enabled(features.DeployVictoriaLogs) {
+					if err := c.victoriaLogs.Deploy(ctx); err != nil {
+						return err
+					}
+				} else {
+					if err := c.victoriaLogs.Destroy(ctx); err != nil {
+						return err
+					}
+				}
+				return nil
+			},
+			// TODO(rrhubenov): Is a `victoriaLogsEnabled` needed here?
 			SkipIf: !enableVali,
 		})
 		_ = g.Add(flow.Task{
