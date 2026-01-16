@@ -16,6 +16,38 @@ fi
 
 pushd "$PROJECT_ROOT" > /dev/null
 
+# Helper function to check if package has changed
+package_changed() {
+  local package=$1
+  local current_module="$(go list -m)"
+
+  # Check if package is external (not from current module)
+  if [[ "$package" != "$current_module"/* ]]; then
+    # For external packages, check if go.mod changed
+    git diff --quiet master -- go.mod 2>/dev/null
+    return $?
+  else
+    # For internal packages, check if package directory changed
+    local pkg_path="${package#$current_module/}"
+    git diff --quiet master -- "$pkg_path" 2>/dev/null
+    return $?
+  fi
+}
+
+# Helper function to check if output files exist
+output_files_exist() {
+  local dir=$1
+  shift
+  local files=("$@")
+
+  for file in "${files[@]}"; do
+    if [ ! -f "$dir/$file" ]; then
+      return 1
+    fi
+  done
+  return 0
+}
+
 extract_mockgen_packages() {
   local file=$1
 
@@ -76,11 +108,9 @@ should_generate_api_docs() {
     return 0
   fi
 
+  # Check if any package changed
   for pkg in $packages; do
-    # Strip module prefix to get repo-relative path
     local pkg_path="${pkg#github.com/gardener/gardener/}"
-
-    # If API directory changed → regenerate
     if ! git diff --quiet master -- "$pkg_path" 2>/dev/null; then
       return 0
     fi
@@ -92,9 +122,7 @@ should_generate_api_docs() {
     sed -n 's/.*-out-file[[:space:]]*\([^[:space:]]*\).*/\1/p')
 
   for gen_file in $generated; do
-    # Resolve relative path from directory
-    local full_path="$dir/$gen_file"
-    if [ ! -f "$full_path" ]; then
+    if [ ! -f "$dir/$gen_file" ]; then
       return 0
     fi
   done
@@ -113,15 +141,10 @@ should_generate_crds() {
   # Extract groups from go:generate directives
   local groups
   groups=$(grep -E '//go:generate.*generate-crds.sh' "$file" | while read -r line; do
-    # Strip everything before generate-crds.sh
     line="${line#*generate-crds.sh}"
-
-    # Tokenize and parse using parse_flags from generate-crds.sh
     read -ra tokens <<< "$line"
     args=()
     parse_flags "${tokens[@]}"
-
-    # Output groups (stored in args array by parse_flags)
     printf '%s\n' "${args[@]}"
   done | sort -u)
 
@@ -130,46 +153,30 @@ should_generate_crds() {
     return 0
   fi
 
-  # Get current module path
-  local current_module="$(go list -m)"
-
+  # Check if any group's package changed
   for group in $groups; do
     local package="$(get_group_package "$group" 2>/dev/null || echo "")"
-
+    
     # If we can't determine package, be safe and regenerate
     if [ -z "$package" ]; then
       return 0
     fi
 
-    # Check if package is external (not from current module)
-    if [[ "$package" != "$current_module"/* ]]; then
-      # For external packages, check if go.mod changed
-      if ! git diff --quiet master -- go.mod 2>/dev/null; then
-        return 0
-      fi
-    else
-      # For internal packages, check if package directory changed
-      local pkg_path="${package#$current_module/}"
-      if ! git diff --quiet master -- "$pkg_path" 2>/dev/null; then
-        return 0
-      fi
+    # Check if package changed
+    if ! package_changed "$package"; then
+      return 0
     fi
   done
 
   # Check if output files exist
-  local output_dir="$dir"
   local prefix=""
-
-  # Try to extract prefix from command
   if grep -q '//go:generate.*generate-crds.sh.*-p' "$file"; then
     prefix=$(grep -E '//go:generate.*generate-crds.sh' "$file" | sed -n 's/.*-p[[:space:]]*\([^[:space:]]*\).*/\1/p' | head -n1)
   fi
 
   for group in $groups; do
     local sanitized_group="${group%%_*}"
-    local pattern="${prefix}${sanitized_group}_*.yaml"
-
-    if ! ls "$output_dir"/$pattern &>/dev/null; then
+    if ! ls "$dir"/${prefix}${sanitized_group}_*.yaml &>/dev/null; then
       return 0
     fi
   done
@@ -189,22 +196,20 @@ should_generate_mocks() {
     return 0
   fi
 
+  # Check if any package changed
   for pkg in $packages; do
     # If dependency is NOT a gardener package → always generate
     if [[ "$pkg" != github.com/gardener/gardener/* ]]; then
       return 0
     fi
 
-    # Strip module prefix to get repo-relative path
     local pkg_path="${pkg#github.com/gardener/gardener/}"
-
-    # If source package changed → regenerate
     if ! git diff --quiet master -- "$pkg_path" 2>/dev/null; then
       return 0
     fi
   done
 
-  # Check destination files exist
+  # Check if output files exist
   local generated
   generated=$(grep -E '//go:generate.*mockgen' "$file" |
     sed -n 's/.*-destination=\([^ ]*\).*/\1/p')
@@ -231,27 +236,23 @@ ROOTS=${ROOTS:-$(
 )}
 popd > /dev/null
 
-# Filter mockgen-only directories
+# Filter directories that need generation
 echo "$ROOTS" | while IFS= read -r dir; do
   if [ -z "$dir" ]; then
     continue
   fi
   
-  # Check if directory has only mockgen or api-docs directives
+  # Check if directory has only skippable directives (mockgen, api-docs, or crds)
   has_only_skippable=true
   has_skippable=false
   
   for file in "$dir"/*.go; do
-    if [ ! -f "$file" ]; then
-      continue
-    fi
+    [ -f "$file" ] || continue
     
     if grep -q '//go:generate' "$file"; then
-      # Check if file has mockgen, gen-crd-api-reference-docs, or generate-crds.sh
-      if grep -q '//go:generate.*mockgen' "$file" || grep -q '//go:generate.*gen-crd-api-reference-docs' "$file" || grep -q '//go:generate.*generate-crds.sh' "$file"; then
+      if grep -qE '//go:generate.*(mockgen|gen-crd-api-reference-docs|generate-crds\.sh)' "$file"; then
         has_skippable=true
-        # Check if there are other non-skippable directives
-        if grep '//go:generate' "$file" | grep -v 'mockgen' | grep -v 'gen-crd-api-reference-docs' | grep -qv 'generate-crds.sh'; then
+        if grep '//go:generate' "$file" | grep -vE '(mockgen|gen-crd-api-reference-docs|generate-crds\.sh)' | grep -q .; then
           has_only_skippable=false
           break
         fi
@@ -266,9 +267,8 @@ echo "$ROOTS" | while IFS= read -r dir; do
   if [ "$has_only_skippable" = true ] && [ "$has_skippable" = true ]; then
     needs_gen=false
     for file in "$dir"/*.go; do
-      if [ ! -f "$file" ]; then
-        continue
-      fi
+      [ -f "$file" ] || continue
+      
       if grep -q '//go:generate.*mockgen' "$file" && should_generate_mocks "$dir" "$file"; then
         needs_gen=true
         break
