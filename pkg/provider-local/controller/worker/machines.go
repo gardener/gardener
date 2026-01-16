@@ -88,51 +88,53 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			return err
 		}
 
-		var (
-			deploymentName = fmt.Sprintf("%s-%s", w.cluster.Shoot.Status.TechnicalID, pool.Name)
-			className      = fmt.Sprintf("%s-%s", deploymentName, workerPoolHash)
-		)
-
-		machineClassSecrets = append(machineClassSecrets, &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: corev1.SchemeGroupVersion.String(),
-				Kind:       "Secret",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      className,
-				Namespace: w.worker.Namespace,
-				Labels:    map[string]string{v1beta1constants.GardenerPurpose: v1beta1constants.GardenPurposeMachineClass},
-			},
-			Type: corev1.SecretTypeOpaque,
-			Data: map[string][]byte{"userData": userData},
-		})
-
-		providerConfig := map[string]any{
-			"image":     image.Image,
-			"namespace": w.cluster.Shoot.Status.TechnicalID,
-		}
-
-		for _, ipFamily := range w.cluster.Shoot.Spec.Networking.IPFamilies {
-			key := "ipPoolNameV4"
-			if ipFamily == gardencorev1beta1.IPFamilyIPv6 {
-				key = "ipPoolNameV6"
-			}
-
-			providerConfig[key] = infrastructure.IPPoolName(w.cluster.Shoot.Status.TechnicalID, string(ipFamily))
-		}
-
-		providerConfigBytes, err := json.Marshal(providerConfig)
-		if err != nil {
-			return err
-		}
-
-		arch := ptr.Deref(pool.Architecture, v1beta1constants.ArchitectureAMD64)
-
 		zones := pool.Zones
 		if len(pool.Zones) == 0 {
-			zones = []string{"0"} // fallback zone if no zones are defined as this field must be filled for MCM to work.
+			zones = []string{w.worker.Spec.Region} // fallback zone if no zones are defined as this field must be filled for MCM to work.
 		}
-		for _, zone := range zones {
+		zoneLen := int32(len(zones)) // #nosec: G115 - We do check if pool Zones exceeds max_int32.
+		for zoneIndex, zone := range zones {
+			var (
+				zoneIdx        = int32(zoneIndex) // #nosec: G115 - We do check if pool Zones exceeds max_int32.
+				deploymentName = fmt.Sprintf("%s-%s-z%d", w.cluster.Shoot.Status.TechnicalID, pool.Name, zoneIdx+1)
+				className      = fmt.Sprintf("%s-%s", deploymentName, workerPoolHash)
+			)
+
+			machineClassSecrets = append(machineClassSecrets, &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Secret",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      className,
+					Namespace: w.worker.Namespace,
+					Labels:    map[string]string{v1beta1constants.GardenerPurpose: v1beta1constants.GardenPurposeMachineClass},
+				},
+				Type: corev1.SecretTypeOpaque,
+				Data: map[string][]byte{"userData": userData},
+			})
+
+			providerConfig := map[string]any{
+				"image":     image.Image,
+				"namespace": w.cluster.Shoot.Status.TechnicalID,
+			}
+
+			for _, ipFamily := range w.cluster.Shoot.Spec.Networking.IPFamilies {
+				key := "ipPoolNameV4"
+				if ipFamily == gardencorev1beta1.IPFamilyIPv6 {
+					key = "ipPoolNameV6"
+				}
+
+				providerConfig[key] = infrastructure.IPPoolName(w.cluster.Shoot.Status.TechnicalID, string(ipFamily))
+			}
+
+			providerConfigBytes, err := json.Marshal(providerConfig)
+			if err != nil {
+				return err
+			}
+
+			arch := ptr.Deref(pool.Architecture, v1beta1constants.ArchitectureAMD64)
+
 			machineClass := &machinev1alpha1.MachineClass{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: machinev1alpha1.SchemeGroupVersion.String(),
@@ -162,54 +164,54 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 				},
 			}
 			machineClasses = append(machineClasses, machineClass)
-		}
 
-		updateConfiguration := machinev1alpha1.UpdateConfiguration{
-			MaxUnavailable: &pool.MaxUnavailable,
-			MaxSurge:       &pool.MaxSurge,
-		}
+			updateConfiguration := machinev1alpha1.UpdateConfiguration{
+				MaxUnavailable: &pool.MaxUnavailable,
+				MaxSurge:       &pool.MaxSurge,
+			}
 
-		machineDeploymentStrategy := machinev1alpha1.MachineDeploymentStrategy{
-			Type: machinev1alpha1.RollingUpdateMachineDeploymentStrategyType,
-			RollingUpdate: &machinev1alpha1.RollingUpdateMachineDeployment{
-				UpdateConfiguration: updateConfiguration,
-			},
-		}
-
-		switch ptr.Deref(pool.UpdateStrategy, "") {
-		case gardencorev1beta1.AutoInPlaceUpdate:
-			machineDeploymentStrategy = machinev1alpha1.MachineDeploymentStrategy{
-				Type: machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType,
-				InPlaceUpdate: &machinev1alpha1.InPlaceUpdateMachineDeployment{
+			machineDeploymentStrategy := machinev1alpha1.MachineDeploymentStrategy{
+				Type: machinev1alpha1.RollingUpdateMachineDeploymentStrategyType,
+				RollingUpdate: &machinev1alpha1.RollingUpdateMachineDeployment{
 					UpdateConfiguration: updateConfiguration,
-					OrchestrationType:   machinev1alpha1.OrchestrationTypeAuto,
 				},
 			}
-		case gardencorev1beta1.ManualInPlaceUpdate:
-			machineDeploymentStrategy = machinev1alpha1.MachineDeploymentStrategy{
-				Type: machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType,
-				InPlaceUpdate: &machinev1alpha1.InPlaceUpdateMachineDeployment{
-					UpdateConfiguration: updateConfiguration,
-					OrchestrationType:   machinev1alpha1.OrchestrationTypeManual,
-				},
-			}
-		}
 
-		machineDeployments = append(machineDeployments, worker.MachineDeployment{
-			Name:                         deploymentName,
-			ClassName:                    className,
-			SecretName:                   className,
-			Minimum:                      pool.Minimum,
-			Maximum:                      pool.Maximum,
-			Strategy:                     machineDeploymentStrategy,
-			PoolName:                     pool.Name,
-			Priority:                     pool.Priority,
-			Labels:                       pool.Labels,
-			Annotations:                  pool.Annotations,
-			Taints:                       pool.Taints,
-			MachineConfiguration:         genericworkeractuator.ReadMachineConfiguration(pool),
-			ClusterAutoscalerAnnotations: extensionsv1alpha1helper.GetMachineDeploymentClusterAutoscalerAnnotations(pool.ClusterAutoscaler),
-		})
+			switch ptr.Deref(pool.UpdateStrategy, "") {
+			case gardencorev1beta1.AutoInPlaceUpdate:
+				machineDeploymentStrategy = machinev1alpha1.MachineDeploymentStrategy{
+					Type: machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType,
+					InPlaceUpdate: &machinev1alpha1.InPlaceUpdateMachineDeployment{
+						UpdateConfiguration: updateConfiguration,
+						OrchestrationType:   machinev1alpha1.OrchestrationTypeAuto,
+					},
+				}
+			case gardencorev1beta1.ManualInPlaceUpdate:
+				machineDeploymentStrategy = machinev1alpha1.MachineDeploymentStrategy{
+					Type: machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType,
+					InPlaceUpdate: &machinev1alpha1.InPlaceUpdateMachineDeployment{
+						UpdateConfiguration: updateConfiguration,
+						OrchestrationType:   machinev1alpha1.OrchestrationTypeManual,
+					},
+				}
+			}
+
+			machineDeployments = append(machineDeployments, worker.MachineDeployment{
+				Name:                         deploymentName,
+				ClassName:                    className,
+				SecretName:                   className,
+				Minimum:                      worker.DistributeOverZones(zoneIdx, pool.Minimum, zoneLen),
+				Maximum:                      worker.DistributeOverZones(zoneIdx, pool.Maximum, zoneLen),
+				Strategy:                     machineDeploymentStrategy,
+				PoolName:                     pool.Name,
+				Priority:                     pool.Priority,
+				Labels:                       pool.Labels,
+				Annotations:                  pool.Annotations,
+				Taints:                       pool.Taints,
+				MachineConfiguration:         genericworkeractuator.ReadMachineConfiguration(pool),
+				ClusterAutoscalerAnnotations: extensionsv1alpha1helper.GetMachineDeploymentClusterAutoscalerAnnotations(pool.ClusterAutoscaler),
+			})
+		}
 	}
 
 	w.machineClassSecrets = machineClassSecrets
