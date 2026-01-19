@@ -62,7 +62,7 @@ func (g *gardenerScheduler) deployment(secretGenericTokenKubeconfig, secretVirtu
 					},
 					Containers: []corev1.Container{
 						{
-							Name:            DeploymentName,
+							Name:            containerName,
 							Image:           g.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
