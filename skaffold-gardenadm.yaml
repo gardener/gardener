@@ -301,6 +301,7 @@ build:
             - pkg/nodeagent/apis/config/v1alpha1
             - pkg/nodeagent/apis/config/v1alpha1/helper
             - pkg/nodeagent/bootstrappers
+            - pkg/nodeagent/containerd
             - pkg/nodeagent/controller/healthcheck
             - pkg/nodeagent/controller/operatingsystemconfig
             - pkg/nodeagent/controller/operatingsystemconfig/templates/containerd-hosts.toml.tpl
@@ -452,6 +453,7 @@ build:
             - pkg/nodeagent/bootstrap
             - pkg/nodeagent/bootstrap/templates/scripts/format-kubelet-data-volume.tpl.sh
             - pkg/nodeagent/bootstrappers
+            - pkg/nodeagent/containerd
             - pkg/nodeagent/controller
             - pkg/nodeagent/controller/certificate
             - pkg/nodeagent/controller/healthcheck

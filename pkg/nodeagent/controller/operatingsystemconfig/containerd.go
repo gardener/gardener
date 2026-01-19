@@ -45,7 +45,7 @@ func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Log
 		return fmt.Errorf("failed to ensure containerd default config: %w", err)
 	}
 
-	if err := r.ensureContainerdConfiguration(log, osc.Spec.CRIConfig); err != nil {
+	if err := r.ensureContainerdConfiguration(ctx, log, osc.Spec.CRIConfig); err != nil {
 		return fmt.Errorf("failed to ensure containerd config: %w", err)
 	}
 

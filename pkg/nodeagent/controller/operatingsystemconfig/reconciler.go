@@ -48,6 +48,7 @@ import (
 	kubeletcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentcontainerd "github.com/gardener/gardener/pkg/nodeagent/containerd"
 	healthcheckcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 	filespkg "github.com/gardener/gardener/pkg/nodeagent/files"
@@ -95,17 +96,18 @@ func init() {
 // Reconciler decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
 // node.
 type Reconciler struct {
-	Client        client.Client
-	Config        nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig
-	ConfigDir     string
-	Recorder      record.EventRecorder
-	DBus          dbus.DBus
-	FS            afero.Afero
-	Extractor     registry.Extractor
-	CancelContext context.CancelFunc
-	HostName      string
-	NodeName      string
-	MachineName   string
+	Client           client.Client
+	ContainerdClient nodeagentcontainerd.ContainerdClient
+	Config           nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig
+	ConfigDir        string
+	Recorder         record.EventRecorder
+	DBus             dbus.DBus
+	FS               afero.Afero
+	Extractor        registry.Extractor
+	CancelContext    context.CancelFunc
+	HostName         string
+	NodeName         string
+	MachineName      string
 	// SkipWritingStateFiles is used by gardenadm when it deploys the provision OSC. In this case, both the "last
 	// applied configuration" and the "last computed changes" files should not be written. Otherwise,
 	// gardener-node-agent might delete files which exist in the provision OSC only after it comes up and reconciles the

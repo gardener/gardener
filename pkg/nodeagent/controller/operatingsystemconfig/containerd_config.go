@@ -17,6 +17,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	nodeagentcontainerd "github.com/gardener/gardener/pkg/nodeagent/containerd"
 	"github.com/gardener/gardener/pkg/utils/structuredmap"
 )
 
@@ -36,6 +37,7 @@ const (
 	sandboxImagePath
 	cgroupDriverPath
 	cniPluginPath
+	cniPluginsPaths
 )
 
 var (
@@ -58,6 +60,7 @@ var (
 			sandboxImagePath:   {"plugins", "io.containerd.cri.v1.images", "pinned_images", "sandbox"},
 			cgroupDriverPath:   {"plugins", "io.containerd.cri.v1.runtime", "containerd", "runtimes", "runc", "options", "SystemdCgroup"},
 			cniPluginPath:      {"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dir"},
+			cniPluginsPaths:    {"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dirs"},
 		},
 	}
 
@@ -108,7 +111,7 @@ func (r *Reconciler) ensureContainerdDefaultConfig(ctx context.Context) error {
 }
 
 // ensureContainerdConfiguration sets the configuration for containerd.
-func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *extensionsv1alpha1.CRIConfig) error {
+func (r *Reconciler) ensureContainerdConfiguration(ctx context.Context, log logr.Logger, criConfig *extensionsv1alpha1.CRIConfig) error {
 	config, err := r.FS.ReadFile(configFile)
 	if err != nil {
 		return fmt.Errorf("unable to read containerd config.toml: %w", err)
@@ -175,14 +178,32 @@ func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *e
 				return criConfig.Containerd.SandboxImage, nil
 			},
 		},
-		{
-			name: "CNI plugin dir",
-			path: containerdConfigPaths[configFileVersion][cniPluginPath],
-			setFn: func(_ any) (any, error) {
-				return cniPluginDir, nil
-			},
-		},
 	}
+
+	// containerd 2.2 is using config file version 3 but the CNI plugin path now ends in "bin_dirs" (note plural)
+	// and hence takes an array of strings
+	cniPluginPath := containerdConfigPaths[configFileVersion][cniPluginPath]
+
+	containerdGreaterThanEqual22, err := nodeagentcontainerd.VersionGreaterThanEqual22(ctx, r.ContainerdClient)
+	if err != nil {
+		return err
+	}
+
+	if configFileVersion >= 3 && containerdGreaterThanEqual22 {
+		cniPluginPath = containerdConfigPaths[configFileVersion][cniPluginsPaths]
+	}
+
+	patches = append(patches, patch{
+		name: "CNI plugin dir",
+		path: cniPluginPath,
+		setFn: func(_ any) (any, error) {
+			if configFileVersion >= 3 && containerdGreaterThanEqual22 {
+				return []string{cniPluginDir}, nil
+			} else {
+				return cniPluginDir, nil
+			}
+		},
+	})
 
 	if criConfig.CgroupDriver != nil {
 		patches = append(patches, patch{

@@ -7,11 +7,7 @@ package healthcheck
 import (
 	"fmt"
 	"net"
-	"os"
 
-	containerd "github.com/containerd/containerd/v2/client"
-	"github.com/containerd/containerd/v2/defaults"
-	"github.com/containerd/containerd/v2/pkg/namespaces"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -19,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/gardener/gardener/pkg/nodeagent/containerd"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 )
 
@@ -64,17 +61,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.P
 func (r *Reconciler) setDefaultHealthChecks() error {
 	clock := clock.RealClock{}
 
-	address := os.Getenv("CONTAINERD_ADDRESS")
-	if address == "" {
-		address = defaults.DefaultAddress
-	}
-
-	namespace := os.Getenv(namespaces.NamespaceEnvVar)
-	if namespace == "" {
-		namespace = namespaces.Default
-	}
-
-	client, err := containerd.New(address, containerd.WithDefaultNamespace(namespace))
+	client, err := containerd.NewContainerdClient()
 	if err != nil {
 		return fmt.Errorf("error creating containerd client: %w", err)
 	}

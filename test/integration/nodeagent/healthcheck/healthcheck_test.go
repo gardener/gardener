@@ -6,14 +6,12 @@ package healthcheck_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"time"
 
-	containerd "github.com/containerd/containerd/v2/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -30,6 +28,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	fakecontainerdclient "github.com/gardener/gardener/pkg/nodeagent/containerd/fake"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
@@ -42,7 +41,7 @@ var _ = Describe("Healthcheck controller tests", func() {
 		node               *corev1.Node
 		fakeDBus           *fakedbus.DBus
 		interfaceAddresses []string
-		containerdClient   *fakeContainerdClient
+		containerdClient   *fakecontainerdclient.FakeContainerdClient
 		kubeletHealthcheck *healthcheck.KubeletHealthChecker
 		ts                 *httptest.Server
 	)
@@ -73,9 +72,8 @@ var _ = Describe("Healthcheck controller tests", func() {
 			}
 			return result, nil
 		}
-		containerdClient = &fakeContainerdClient{
-			returnError: false,
-		}
+		containerdClient = fakecontainerdclient.NewFakeClient()
+
 		nodeName = testRunID
 
 		kubeletHealthcheck = healthcheck.NewKubeletHealthChecker(
@@ -143,7 +141,7 @@ var _ = Describe("Healthcheck controller tests", func() {
 	It("Containerd health should be false", func() {
 		By("Start fake kubelet healthz endpoint")
 		kubeletHealthcheck.SetKubeletHealthEndpoint(ts.URL)
-		containerdClient.returnError = true
+		containerdClient.SetReturnError(true)
 		clock.Step(80 * time.Second)
 		Eventually(func() []fakedbus.SystemdAction {
 			return fakeDBus.Actions
@@ -202,14 +200,3 @@ var _ = Describe("Healthcheck controller tests", func() {
 		}).Should(ConsistOf(corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "1.2.3.4"}))
 	})
 })
-
-type fakeContainerdClient struct {
-	returnError bool
-}
-
-func (f *fakeContainerdClient) Version(_ context.Context) (containerd.Version, error) {
-	if f.returnError {
-		return containerd.Version{}, errors.New("calling fake containerd socket error")
-	}
-	return containerd.Version{Version: "fake version"}, nil
-}
