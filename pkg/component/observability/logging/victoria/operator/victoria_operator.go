@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -78,14 +79,9 @@ type victoriaOperator struct {
 func (v *victoriaOperator) Deploy(ctx context.Context) error {
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	deployment := v.deployment()
-	if err := references.InjectAnnotations(deployment); err != nil {
-		return err
-	}
-
 	resources, err := registry.AddAllAndSerialize(
 		v.serviceAccount(),
-		deployment,
+		v.deployment(),
 		v.vpa(),
 		v.clusterRole(),
 		v.clusterRoleBinding(),
@@ -236,6 +232,7 @@ func (v *victoriaOperator) deployment() *appsv1.Deployment {
 		},
 	}
 
+	utilruntime.Must(references.InjectAnnotations(deployment))
 	return deployment
 }
 
