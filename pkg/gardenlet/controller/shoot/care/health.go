@@ -161,7 +161,7 @@ func (h *Health) Check(
 		conditions.observabilityComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.observabilityComponentsHealthy, nil, err)
 	} else {
 		taskFns = append(taskFns, func(ctx context.Context) error {
-			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy, extensionConditionsObservabilityComponentsHealthy, managedResourceList.Items, prometheusList.Items, healthCheckOutdatedThreshold)
+			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy, extensionConditionsObservabilityComponentsHealthy, managedResourceList.Items, prometheusList, healthCheckOutdatedThreshold)
 			conditions.observabilityComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.observabilityComponentsHealthy, newObservabilityComponents, err)
 			return nil
 		})
@@ -486,7 +486,7 @@ func (h *Health) checkObservabilityComponents(
 	condition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
 	managedResources []resourcesv1alpha1.ManagedResource,
-	prometheuses []monitoringv1.Prometheus,
+	prometheuses *monitoringv1.PrometheusList,
 	healthCheckOutdatedThreshold *metav1.Duration,
 ) (
 	*gardencorev1beta1.Condition,

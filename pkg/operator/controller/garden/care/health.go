@@ -119,13 +119,13 @@ func (h *health) listManagedResources(ctx context.Context) ([]resourcesv1alpha1.
 	return append(managedResourceListGarden.Items, managedResourceListIstioSystem.Items...), nil
 }
 
-func (h *health) listPrometheuses(ctx context.Context) ([]monitoringv1.Prometheus, error) {
+func (h *health) listPrometheuses(ctx context.Context) (*monitoringv1.PrometheusList, error) {
 	prometheusList := &monitoringv1.PrometheusList{}
 	if err := h.runtimeClient.List(ctx, prometheusList, client.InNamespace(h.gardenNamespace)); err != nil {
 		return nil, fmt.Errorf("failed listing Prometheuses in namespace %s: %w", h.gardenNamespace, err)
 	}
 
-	return prometheusList.Items, nil
+	return prometheusList, nil
 }
 
 // checkAPIServerAvailability checks if the API server of a virtual garden is reachable and measures the response time.
@@ -172,7 +172,7 @@ func (h *health) checkVirtualComponents(ctx context.Context, condition gardencor
 }
 
 // checkObservabilityComponents checks whether the observability components are healthy.
-func (h *health) checkObservabilityComponents(ctx context.Context, condition gardencorev1beta1.Condition, managedResources []resourcesv1alpha1.ManagedResource, prometheuses []monitoringv1.Prometheus) *gardencorev1beta1.Condition {
+func (h *health) checkObservabilityComponents(ctx context.Context, condition gardencorev1beta1.Condition, managedResources []resourcesv1alpha1.ManagedResource, prometheuses *monitoringv1.PrometheusList) *gardencorev1beta1.Condition {
 	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
 		return managedResource.Labels[v1beta1constants.LabelCareConditionType] == string(operatorv1alpha1.ObservabilityComponentsHealthy)
 	}, nil); exitCondition != nil {

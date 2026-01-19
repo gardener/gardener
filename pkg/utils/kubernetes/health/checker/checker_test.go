@@ -740,7 +740,7 @@ var _ = Describe("HealthChecker", func() {
 				filterFalseFunc = func(*monitoringv1.Prometheus) bool { return false }
 
 				healthChecker               *HealthChecker
-				prometheuses                []monitoringv1.Prometheus
+				prometheuses                *monitoringv1.PrometheusList
 				testPrometheusHealthChecker health.PrometheusHealthChecker
 
 				healthy   = func() (bool, error) { return true, nil }
@@ -761,17 +761,19 @@ var _ = Describe("HealthChecker", func() {
 						return testPrometheusHealthChecker(ctx, endpoint, port)
 					}))
 
-				prometheuses = []monitoringv1.Prometheus{{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "testprom",
-						Namespace: namespace,
-					},
-					Spec: monitoringv1.PrometheusSpec{
-						CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
-							Replicas: ptr.To(int32(3)),
+				prometheuses = &monitoringv1.PrometheusList{
+					Items: []monitoringv1.Prometheus{{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "testprom",
+							Namespace: namespace,
 						},
-					},
-				}}
+						Spec: monitoringv1.PrometheusSpec{
+							CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
+								Replicas: ptr.To(int32(3)),
+							},
+						},
+					}},
+				}
 			})
 
 			It("should skip when filter function returns false", func() {
@@ -876,14 +878,14 @@ var _ = Describe("HealthChecker", func() {
 					return false, errors.New(msg)
 				}
 
-				prometheuses[0].Spec.Replicas = ptr.To(int32(0))
+				prometheuses.Items[0].Spec.Replicas = ptr.To(int32(0))
 				result := healthChecker.CheckPrometheuses(ctx, condition, prometheuses, filterTrueFunc)
 				Expect(result).To(BeNil())
 			})
 
 			Context("multiple Prometheus", func() {
 				BeforeEach(func() {
-					prometheuses = append(prometheuses, monitoringv1.Prometheus{
+					prometheuses.Items = append(prometheuses.Items, monitoringv1.Prometheus{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "testprom2",
 							Namespace: namespace,
@@ -904,10 +906,10 @@ var _ = Describe("HealthChecker", func() {
 					}
 
 					// Validate the test input contains more than one Prometheus with more than one replica
-					Expect(prometheuses[0].Name).To(Equal("testprom"))
-					Expect(prometheuses[1].Name).To(Equal("testprom2"))
-					Expect(*prometheuses[0].Spec.Replicas).To(Equal(int32(3)))
-					Expect(*prometheuses[1].Spec.Replicas).To(Equal(int32(3)))
+					Expect(prometheuses.Items[0].Name).To(Equal("testprom"))
+					Expect(prometheuses.Items[1].Name).To(Equal("testprom2"))
+					Expect(*prometheuses.Items[0].Spec.Replicas).To(Equal(int32(3)))
+					Expect(*prometheuses.Items[1].Spec.Replicas).To(Equal(int32(3)))
 
 					// The test should take a bit more than the check duration
 					maxDuration := checkDuration + 50*time.Millisecond
@@ -950,7 +952,7 @@ var _ = Describe("HealthChecker", func() {
 						`Access Prometheus UI and query for "healthcheck" for more details.`))
 
 					// Change the order of managed resources and expect the same result
-					prometheuses = []monitoringv1.Prometheus{prometheuses[1], prometheuses[0]}
+					prometheuses = &monitoringv1.PrometheusList{Items: []monitoringv1.Prometheus{prometheuses.Items[1], prometheuses.Items[0]}}
 					result2 := healthChecker.CheckPrometheuses(ctx, condition, prometheuses, filterTrueFunc)
 					Expect(result2).To(Equal(result))
 				})

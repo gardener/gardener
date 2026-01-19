@@ -26,6 +26,16 @@ func ByCreationTimestamp() SortBy {
 	}
 }
 
+// ByNamespaceAndName returns a comparison function for sorting based on namespace and name.
+func ByNamespaceAndName() SortBy {
+	return func(o1, o2 client.Object) bool {
+		if o1.GetNamespace() == o2.GetNamespace() {
+			return o1.GetName() < o2.GetName()
+		}
+		return o1.GetNamespace() < o2.GetNamespace()
+	}
+}
+
 // SortBy the type of a "less" function that defines the ordering of its object arguments.
 type SortBy func(o1, o2 client.Object) bool
 

@@ -8,8 +8,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"slices"
-	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -30,6 +28,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
@@ -540,25 +539,19 @@ func (h *HealthChecker) checkControllerInstallationConditions(
 func (h *HealthChecker) CheckPrometheuses(
 	ctx context.Context,
 	condition gardencorev1beta1.Condition,
-	prometheuses []monitoringv1.Prometheus,
+	prometheuses *monitoringv1.PrometheusList,
 	filterFunc func(*monitoringv1.Prometheus) bool,
 ) *gardencorev1beta1.Condition {
 	// Guarantee failed conditions are returned in a stable order to avoid too many writes to condition statuses.
-	prometheusesSorted := make([]monitoringv1.Prometheus, len(prometheuses))
-	copy(prometheusesSorted, prometheuses)
-	slices.SortFunc(prometheusesSorted, func(i, j monitoringv1.Prometheus) int {
-		if i.Namespace == j.Namespace {
-			return strings.Compare(i.Name, j.Name)
-		}
-		return strings.Compare(i.Namespace, j.Namespace)
-	})
+	prometheusesSorted := prometheuses.DeepCopy()
+	kubernetesutils.ByNamespaceAndName().Sort(prometheusesSorted)
 
 	var (
 		tasks      []flow.TaskFn
-		conditions = make([]*gardencorev1beta1.Condition, len(prometheusesSorted))
+		conditions = make([]*gardencorev1beta1.Condition, len(prometheusesSorted.Items))
 	)
 
-	for i, prometheus := range prometheusesSorted {
+	for i, prometheus := range prometheusesSorted.Items {
 		if filterFunc != nil && !filterFunc(&prometheus) {
 			continue
 		}

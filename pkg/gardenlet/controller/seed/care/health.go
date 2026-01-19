@@ -87,16 +87,16 @@ func (h *health) listManagedResources(ctx context.Context) ([]resourcesv1alpha1.
 	return append(managedResourceListGarden.Items, managedResourceListIstioSystem.Items...), nil
 }
 
-func (h *health) listPrometheuses(ctx context.Context) ([]monitoringv1.Prometheus, error) {
+func (h *health) listPrometheuses(ctx context.Context) (*monitoringv1.PrometheusList, error) {
 	prometheusList := &monitoringv1.PrometheusList{}
 	if err := h.seedClient.List(ctx, prometheusList, client.InNamespace(ptr.Deref(h.namespace, v1beta1constants.GardenNamespace))); err != nil {
 		return nil, fmt.Errorf("failed listing Prometheuses in namespace %s: %w", ptr.Deref(h.namespace, v1beta1constants.GardenNamespace), err)
 	}
 
-	return prometheusList.Items, nil
+	return prometheusList, nil
 }
 
-func (h *health) checkSystemComponents(ctx context.Context, condition gardencorev1beta1.Condition, managedResources []resourcesv1alpha1.ManagedResource, prometheuses []monitoringv1.Prometheus) *gardencorev1beta1.Condition {
+func (h *health) checkSystemComponents(ctx context.Context, condition gardencorev1beta1.Condition, managedResources []resourcesv1alpha1.ManagedResource, prometheuses *monitoringv1.PrometheusList) *gardencorev1beta1.Condition {
 	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
 		return managedResource.Spec.Class != nil
 	}, nil); exitCondition != nil {
