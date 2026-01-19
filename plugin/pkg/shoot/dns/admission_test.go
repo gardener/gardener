@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	"github.com/onsi/gomega/types"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -29,6 +30,17 @@ import (
 	. "github.com/gardener/gardener/plugin/pkg/shoot/dns"
 )
 
+const (
+	namespace   = "my-namespace"
+	projectName = "my-project"
+	seedName    = "my-seed"
+	shootName   = "shoot"
+
+	domain               = "example.com"
+	domainHigherPriority = "higher.example.com"
+	domainLowerPriority  = "lower.example.com"
+)
+
 var _ = Describe("dns", func() {
 
 	Describe("#Admit", func() {
@@ -40,15 +52,6 @@ var _ = Describe("dns", func() {
 			seed  gardencorev1beta1.Seed
 			shoot core.Shoot
 
-			namespace   = "my-namespace"
-			projectName = "my-project"
-			seedName    = "my-seed"
-			shootName   = "shoot"
-
-			domain               = "example.com"
-			domainHigherPriority = "higher.example.com"
-			domainLowerPriority  = "lower.example.com"
-
 			provider = core.DNSUnmanaged
 
 			project = gardencorev1beta1.Project{
@@ -56,7 +59,7 @@ var _ = Describe("dns", func() {
 					Name: projectName,
 				},
 				Spec: gardencorev1beta1.ProjectSpec{
-					Namespace: &namespace,
+					Namespace: ptr.To(namespace),
 				},
 			}
 
@@ -118,7 +121,7 @@ var _ = Describe("dns", func() {
 				},
 				Spec: core.ShootSpec{
 					DNS:      &core.DNS{},
-					SeedName: &seedName,
+					SeedName: ptr.To(seedName),
 				},
 			}
 		)
@@ -318,45 +321,6 @@ var _ = Describe("dns", func() {
 				))
 			})
 
-			It("should not allow functionless DNS providers on create w/ seed assignment", func() {
-				var (
-					shootDomain = "my-shoot.my-private-domain.com"
-				)
-				shoot.Spec.DNS.Domain = &shootDomain
-				shoot.Spec.DNS.Providers = []core.DNSProvider{
-					{
-						Type: &providerType,
-					},
-					{
-						Type: &providerType,
-						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
-							APIVersion: "v1",
-							Kind:       "Secret",
-							Name:       secretName,
-						},
-					},
-					{
-						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
-							APIVersion: "v1",
-							Kind:       "Secret",
-							Name:       secretName,
-						},
-					},
-				}
-
-				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
-					"ErrStatus": MatchFields(IgnoreExtras, Fields{
-						"Code": Equal(int32(http.StatusUnprocessableEntity)),
-					})},
-				)))
-			})
-
 			It("should not remove functionless DNS providers on create w/o seed assignment", func() {
 				var (
 					shootDomain = "my-shoot.my-private-domain.com"
@@ -403,42 +367,6 @@ var _ = Describe("dns", func() {
 						"Primary": BeNil(),
 					}),
 				))
-			})
-
-			It("should forbid functionless DNS providers on updates w/ seed assignment", func() {
-				var (
-					shootDomain = "my-shoot.my-private-domain.com"
-				)
-				shoot.Spec.DNS.Domain = &shootDomain
-				oldShoot := shoot.DeepCopy()
-
-				providers := []core.DNSProvider{
-					{
-						Type: &providerType,
-					},
-					{
-						Type:    &providerType,
-						Primary: ptr.To(true),
-					},
-					{
-						Type: &providerType,
-					},
-				}
-
-				oldShoot.Spec.DNS.Providers = []core.DNSProvider{providers[1]}
-				shoot.Spec.DNS.Providers = providers
-
-				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
-					"ErrStatus": MatchFields(IgnoreExtras, Fields{
-						"Code": Equal(int32(http.StatusUnprocessableEntity)),
-					})},
-				)))
 			})
 
 			It("should not remove functionless DNS providers on updates w/o seed assignment", func() {
@@ -891,5 +819,192 @@ var _ = Describe("dns", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
+	})
+
+	Describe("#Validate", func() {
+		var (
+			ctx                 context.Context
+			admissionHandler    *DNS
+			kubeInformerFactory kubeinformers.SharedInformerFactory
+			coreInformerFactory gardencoreinformers.SharedInformerFactory
+
+			shoot     core.Shoot
+			provider  = core.DNSUnmanaged
+			shootBase = core.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      shootName,
+					Namespace: namespace,
+				},
+				Spec: core.ShootSpec{
+					DNS:      &core.DNS{},
+					SeedName: ptr.To(seedName),
+				},
+			}
+		)
+
+		BeforeEach(func() {
+			ctx = context.TODO()
+			var err error
+			admissionHandler, err = New()
+			Expect(err).ToNot(HaveOccurred())
+
+			admissionHandler.AssignReadyFunc(func() bool { return true })
+			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
+			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
+
+			shootBase.Spec.DNS.Domain = nil
+			shootBase.Spec.DNS.Providers = []core.DNSProvider{
+				{
+					Type: &provider,
+				},
+			}
+			shoot = shootBase
+		})
+
+		It("should skip validation when resource is not Shoot", func() {
+			attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("NonShoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("nonshoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+			Expect(admissionHandler.Validate(ctx, attrs, nil)).ToNot(HaveOccurred())
+		})
+
+		It("should skip validation when request is for subresource other than 'binding'", func() {
+			attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "status", admission.Update, &metav1.UpdateOptions{}, false, nil)
+			Expect(admissionHandler.Validate(ctx, attrs, nil)).ToNot(HaveOccurred())
+		})
+
+		It("should fail validation when request is for object other than Shoot", func() {
+			secret := &corev1.Secret{}
+			attrs := admission.NewAttributesRecord(secret, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+			Expect(admissionHandler.Validate(ctx, attrs, nil)).To(And(
+				HaveOccurred(),
+				BeBadRequestError(),
+				MatchError("could not convert resource into Shoot object"),
+			))
+		})
+
+		It("should skip validation when the request is of Update type and shoot.spec.seedName is unset ", func() {
+			shoot.Spec.SeedName = nil
+			attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+			Expect(admissionHandler.Validate(ctx, attrs, nil)).ToNot(HaveOccurred())
+		})
+
+		It("should fail validation when the request is of Update type and oldShoot cannot be converted to Shoot object ", func() {
+			oldShoot := &corev1.Secret{}
+			attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+			Expect(admissionHandler.Validate(ctx, attrs, nil)).To(And(
+				HaveOccurred(),
+				BeBadRequestError(),
+				MatchError("could not convert old resource into Shoot object"),
+			))
+		})
+
+		DescribeTable("checkFunctionlessDNSProviders", func(oldShootSeedName *string, shootDNS *core.DNS, operation admission.Operation, matcher types.GomegaMatcher) {
+			var oldShoot *core.Shoot
+			if operation == admission.Update {
+				oldShoot = shoot.DeepCopy()
+				oldShoot.Spec.SeedName = oldShootSeedName
+			}
+			shoot.Spec.DNS = shootDNS
+
+			attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", operation, &metav1.UpdateOptions{}, false, nil)
+			Expect(admissionHandler.Validate(ctx, attrs, nil)).To(matcher)
+
+		},
+			Entry("[UPDATE] should successfully validate when oldShoot has spec.seedName set, and new shoot has spec.dns set",
+				ptr.To(seedName),
+				&core.DNS{
+					Providers: []core.DNSProvider{
+						{
+							Primary: ptr.To(true),
+							Type:    &provider,
+						},
+					},
+				},
+				admission.Update,
+				Succeed(),
+			),
+			Entry("[UPDATE] should skip validation when oldShoot has spec.seedName unset",
+				nil,
+				&core.DNS{
+					Providers: []core.DNSProvider{
+						{
+							Primary: ptr.To(true),
+							Type:    &provider,
+						},
+					},
+				},
+				admission.Update,
+				Succeed(),
+			),
+			Entry("[UPDATE] should successfully validate when new shoot has spec.dns unset",
+				ptr.To(seedName),
+				nil,
+				admission.Update,
+				Succeed(),
+			),
+			Entry("[UPDATE] should detect invalid DNS configuration",
+				ptr.To(seedName),
+				&core.DNS{
+					Providers: []core.DNSProvider{
+						{
+							Primary: ptr.To(false),
+							Type:    nil,
+						},
+					},
+				},
+				admission.Update,
+				And(
+					HaveOccurred(),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"ErrStatus": MatchFields(IgnoreExtras, Fields{
+							"Code":    Equal(int32(http.StatusUnprocessableEntity)),
+							"Message": ContainSubstring("Required value: non-primary DNS providers must specify `type` and `credentialsRef`"),
+						})},
+					)),
+				),
+			),
+			Entry("[CREATE] Should skip validation when spec.dns is unset",
+				ptr.To(seedName),
+				nil,
+				admission.Create,
+				Succeed(),
+			),
+			Entry("[CREATE] should successfully validate when new shoot has spec.dns unset",
+				ptr.To(seedName),
+				&core.DNS{
+					Providers: []core.DNSProvider{
+						{
+							Primary: ptr.To(true),
+							Type:    &provider,
+						},
+					},
+				},
+				admission.Create,
+				Succeed(),
+			),
+			Entry("[CREATE] should detect invalid DNS configuration",
+				ptr.To(seedName),
+				&core.DNS{
+					Providers: []core.DNSProvider{
+						{
+							Primary: ptr.To(false),
+							Type:    nil,
+						},
+					},
+				},
+				admission.Create,
+				And(
+					HaveOccurred(),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"ErrStatus": MatchFields(IgnoreExtras, Fields{
+							"Code":    Equal(int32(http.StatusUnprocessableEntity)),
+							"Message": ContainSubstring("Required value: non-primary DNS providers must specify `type` and `credentialsRef`"),
+						})},
+					)),
+				),
+			),
+		)
 	})
 })

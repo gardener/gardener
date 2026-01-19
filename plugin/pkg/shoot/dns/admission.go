@@ -104,7 +104,10 @@ func (d *DNS) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.MutationInterface = (*DNS)(nil)
+var (
+	_ admission.MutationInterface   = (*DNS)(nil)
+	_ admission.ValidationInterface = (*DNS)(nil)
+)
 
 // Admit tries to determine a DNS hosted zone for the Shoot's external domain.
 func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
@@ -195,10 +198,6 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 		if shoot.Spec.SeedName == nil {
 			return nil
 		}
-
-		if oldShoot.Spec.SeedName != nil && shoot.Spec.DNS != nil {
-			return checkFunctionlessDNSProviders(a, shoot)
-		}
 	}
 
 	specPath := field.NewPath("spec")
@@ -217,9 +216,6 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 
 	if shoot.Spec.DNS != nil {
 		if err := setPrimaryDNSProvider(a, shoot, defaultDomains); err != nil {
-			return err
-		}
-		if err := checkFunctionlessDNSProviders(a, shoot); err != nil {
 			return err
 		}
 	}
@@ -413,4 +409,60 @@ func getDefaultDomains(secretLister kubecorev1listers.SecretLister, seedLister g
 		defaultDomains = append(defaultDomains, domain)
 	}
 	return defaultDomains, nil
+}
+
+// Validate DNS settings of the shoot.
+func (d *DNS) Validate(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
+	// Wait until the caches have been synced
+	if d.readyFunc == nil {
+		d.AssignReadyFunc(func() bool {
+			for _, readyFunc := range readyFuncs {
+				if !readyFunc() {
+					return false
+				}
+			}
+			return true
+		})
+	}
+	if !d.WaitForReady() {
+		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
+	}
+
+	// Ignore all kinds other than Shoot
+	if a.GetKind().GroupKind() != core.Kind("Shoot") {
+		return nil
+	}
+	// Ignore updates to all subresources, except for binding
+	// Binding subresource is required because there are fields being set in the shoot
+	// when it is scheduled and we want this plugin to be triggered.
+	if a.GetSubresource() != "" && a.GetSubresource() != "binding" {
+		return nil
+	}
+	shoot, ok := a.GetObject().(*core.Shoot)
+	if !ok {
+		return apierrors.NewBadRequest("could not convert resource into Shoot object")
+	}
+
+	if a.GetOperation() == admission.Update {
+		if shoot.Spec.SeedName == nil {
+			return nil
+		}
+
+		oldShoot, ok := a.GetOldObject().(*core.Shoot)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert old resource into Shoot object")
+		}
+
+		if oldShoot.Spec.SeedName != nil && shoot.Spec.DNS != nil {
+			return checkFunctionlessDNSProviders(a, shoot)
+		}
+	}
+
+	if shoot.Spec.DNS != nil {
+		if err := checkFunctionlessDNSProviders(a, shoot); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

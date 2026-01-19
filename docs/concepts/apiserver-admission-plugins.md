@@ -99,10 +99,10 @@ This prevents misconfigurations that would otherwise allow users to create such 
 
 **Type**: Validating. **Enabled by default**: Yes.
 
-This admission controller reacts on `UPDATE` operations for `CredentialsBinding`s, `SecretBinding`s, `Shoot`s. 
+This admission controller reacts on `UPDATE` operations for `CredentialsBinding`s, `SecretBinding`s, `Shoot`s.
 It ensures that the finalizers of these resources are not removed by users, as long as the affected resource is still in use.
 For `CredentialsBinding`s and `SecretBinding`s this means, that the `gardener` finalizer can only be removed if the binding is not referenced by any `Shoot`.
-In case of `Shoot`s, the `gardener` finalizer can only be removed if the last operation of the `Shoot` indicates a successful deletion. 
+In case of `Shoot`s, the `gardener` finalizer can only be removed if the last operation of the `Shoot` indicates a successful deletion.
 
 ## `ManagedSeed`
 
@@ -197,7 +197,7 @@ When the seed is using `WorkloadIdentity` as backup credentials, the plugin ensu
 
 ## `ShootDNS`
 
-**Type**: Mutating. **Enabled by default**: Yes.
+**Type**: Validating and Mutating. **Enabled by default**: Yes.
 
 This admission controller reacts on `CREATE` and `UPDATE` operations for `Shoot`s.
 It tries to assign a default domain to the `Shoot`.
