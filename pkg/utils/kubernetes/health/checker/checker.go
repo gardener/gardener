@@ -559,7 +559,7 @@ func (h *HealthChecker) CheckPrometheuses(
 	)
 
 	for i, prometheus := range prometheusesSorted {
-		if !filterFunc(&prometheus) {
+		if filterFunc != nil && !filterFunc(&prometheus) {
 			continue
 		}
 

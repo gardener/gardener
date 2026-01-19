@@ -525,12 +525,8 @@ func (h *Health) checkObservabilityComponents(
 		return exitCondition, nil
 	}
 
-	filterFunc := func(_ *monitoringv1.Prometheus) bool {
-		return true
-	}
-
 	if features.DefaultFeatureGate.Enabled(features.PrometheusHealthChecks) {
-		if exitCondition := h.healthChecker.CheckPrometheuses(ctx, condition, prometheuses, filterFunc); exitCondition != nil {
+		if exitCondition := h.healthChecker.CheckPrometheuses(ctx, condition, prometheuses, nil); exitCondition != nil {
 			return exitCondition, nil
 		}
 	}

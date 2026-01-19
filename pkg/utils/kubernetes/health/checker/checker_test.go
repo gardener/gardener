@@ -786,6 +786,15 @@ var _ = Describe("HealthChecker", func() {
 				Expect(result).To(BeNil())
 			})
 
+			It("should return failing condition when filter function is nil", func() {
+				testPrometheusHealthChecker = func(_ context.Context, _ string, _ int) (bool, error) {
+					return unhealthy()
+				}
+
+				result := healthChecker.CheckPrometheuses(ctx, condition, prometheuses, nil)
+				Expect(result).NotTo(BeNil())
+			})
+
 			It("should return error condition when health check returns error in at least a replica", func() {
 				testPrometheusHealthChecker = func(_ context.Context, endpoint string, port int) (bool, error) {
 					Expect(port).To(Equal(9090))
