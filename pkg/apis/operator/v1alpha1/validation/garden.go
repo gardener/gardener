@@ -503,7 +503,7 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 			seenResources.Insert(gr)
 		}
 
-		if helper.GetGardenEncryptionProviderType(config) != helper.GetEncryptionProviderType(kubeAPIServerConfig) {
+		if helper.GetGardenAPIServerEncryptionProviderType(config) != helper.GetKubeAPIServerEncryptionProviderType(kubeAPIServerConfig) {
 			allErrs = append(allErrs, field.Invalid(encryptionConfigPath.Child("provider", "type"), config.EncryptionConfig.Provider.Type, "field must be equal to spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.provider.type"))
 		}
 	}

@@ -234,7 +234,7 @@ func DeployKubeAPIServer(
 	seedPodNetwork *net.IPNet,
 	resourcesToEncrypt []string,
 	encryptedResources []string,
-	encryptionTypeToUse gardencorev1beta1.EncryptionProviderType,
+	encryptionProviderType gardencorev1beta1.EncryptionProviderType,
 	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
 	wantScaleDown bool,
 ) error {
@@ -285,7 +285,7 @@ func DeployKubeAPIServer(
 		etcdEncryptionKeyRotationPhase,
 		append(resourcesToEncrypt, sets.List(gardenerutils.DefaultResourcesForEncryption())...),
 		append(encryptedResources, sets.List(gardenerutils.DefaultResourcesForEncryption())...),
-		encryptionTypeToUse,
+		encryptionProviderType,
 	)
 	if err != nil {
 		return err
