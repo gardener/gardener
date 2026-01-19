@@ -15,6 +15,7 @@ spec:
       IstioTLSTermination: true
       OpenTelemetryCollector: true
       VPAInPlaceUpdates: true
+      VPNBondingModeRoundRobin: true
     controllers:
       shoot:
         reconcileInMaintenanceOnly: true
