@@ -298,18 +298,17 @@ func ValidateShootObjectMetaUpdate(_, _ metav1.ObjectMeta, _ *field.Path) field.
 // ValidateShootSpec validates the specification of a Shoot object.
 func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootValidationOptions, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	var (
-		allErrs       = field.ErrorList{}
-		workerless    = len(spec.Provider.Workers) == 0
-		k8sVersion, _ = semver.NewVersion(spec.Kubernetes.Version)
+		allErrs    = field.ErrorList{}
+		workerless = len(spec.Provider.Workers) == 0
 	)
 
-	allErrs = append(allErrs, ValidateCloudProfileReference(spec.CloudProfile, spec.CloudProfileName, k8sVersion, fldPath)...)
+	allErrs = append(allErrs, ValidateCloudProfileReference(spec.CloudProfile, spec.CloudProfileName, spec.Kubernetes.Version, fldPath)...)
 	allErrs = append(allErrs, validateProvider(meta.Namespace, spec.Provider, spec.Kubernetes, spec.Networking, workerless, fldPath.Child("provider"), inTemplate)...)
-	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Purpose, workerless, k8sVersion, fldPath.Child("addons"))...)
+	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Purpose, workerless, spec.Kubernetes.Version, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, ValidateResources(spec.Resources, fldPath.Child("resources"), true)...)
-	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, opts, workerless, k8sVersion, fldPath.Child("kubernetes"))...)
+	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, opts, workerless, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateNetworking(spec.Networking, workerless, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"), workerless)...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
@@ -336,7 +335,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 		// TODO(dimityrmirchev) Remove once we drop support for Kubernetes <= 1.33
 		// Forbid secretBindingName for Kubernetes versions >= 1.34
 		if spec.SecretBindingName != nil && len(*spec.SecretBindingName) > 0 &&
-			k8sVersion != nil && versionutils.ConstraintK8sGreaterEqual134.Check(k8sVersion) {
+			spec.Kubernetes.Version != "" && versionutils.ConstraintK8sGreaterEqual134.CheckVersion(spec.Kubernetes.Version) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretBindingName"), "for Kubernetes versions >= 1.34, secretBindingName field is no longer supported, use spec.credentialsBindingName instead"))
 		}
 	}
@@ -379,10 +378,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 
 // ValidateShootSpecUpdate validates the specification of a Shoot object.
 func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
-	var (
-		allErrs       = field.ErrorList{}
-		k8sVersion, _ = semver.NewVersion(newSpec.Kubernetes.Version)
-	)
+	allErrs := field.ErrorList{}
 
 	if newObjectMeta.DeletionTimestamp != nil && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
 		diff := deep.Equal(newSpec, oldSpec)
@@ -390,7 +386,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Region, oldSpec.Region, fldPath.Child("region"))...)
-	allErrs = append(allErrs, ValidateCloudProfileReference(newSpec.CloudProfile, newSpec.CloudProfileName, k8sVersion, fldPath)...)
+	allErrs = append(allErrs, ValidateCloudProfileReference(newSpec.CloudProfile, newSpec.CloudProfileName, newSpec.Kubernetes.Version, fldPath)...)
 
 	if oldSpec.CredentialsBindingName != nil && len(ptr.Deref(newSpec.CredentialsBindingName, "")) == 0 {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsBindingName"), "the field cannot be unset"))
@@ -618,7 +614,7 @@ func validateAdvertisedURL(URL string, fldPath *field.Path) field.ErrorList {
 	return allErrors
 }
 
-func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless bool, k8sVersion *semver.Version, fldPath *field.Path) field.ErrorList {
+func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless bool, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if workerless && addons != nil {
@@ -656,7 +652,7 @@ func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless 
 	}
 
 	if helper.KubernetesDashboardEnabled(addons) {
-		if versionutils.ConstraintK8sGreaterEqual135.Check(k8sVersion) {
+		if versionutils.ConstraintK8sGreaterEqual135.CheckVersion(kubernetesVersion) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubernetesDashboard"), "for Kubernetes versions >= 1.35, kubernetesDashboard field is no longer supported"))
 		} else if authMode := addons.KubernetesDashboard.AuthenticationMode; authMode != nil {
 			if !availableKubernetesDashboardAuthenticationModes.Has(*authMode) {
@@ -1058,22 +1054,22 @@ func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
 	return allErrs
 }
 
-func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking, opts shootValidationOptions, workerless bool, k8sVersion *semver.Version, fldPath *field.Path) field.ErrorList {
+func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking, opts shootValidationOptions, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if len(kubernetes.Version) == 0 {
+	if kubernetes.Version == "" {
 		allErrs = append(allErrs, field.Required(fldPath.Child("version"), "kubernetes version must not be empty"))
 		return allErrs
 	}
 
 	allErrs = append(allErrs, validateETCD(kubernetes.ETCD, fldPath.Child("etcd"))...)
-	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, opts.KubeAPIServerValidationOptions, workerless, gardenerutils.DefaultGroupResourcesForEncryption(), k8sVersion, fldPath.Child("kubeAPIServer"))...)
+	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, opts.KubeAPIServerValidationOptions, workerless, gardenerutils.DefaultGroupResourcesForEncryption(), fldPath.Child("kubeAPIServer"))...)
 	allErrs = append(allErrs, ValidateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)
 
 	if workerless {
 		allErrs = append(allErrs, validateKubernetesForWorkerlessShoot(kubernetes, fldPath)...)
 	} else {
-		allErrs = append(allErrs, validateKubeScheduler(kubernetes.KubeScheduler, kubernetes.Version, k8sVersion, fldPath.Child("kubeScheduler"))...)
+		allErrs = append(allErrs, validateKubeScheduler(kubernetes.KubeScheduler, kubernetes.Version, fldPath.Child("kubeScheduler"))...)
 		allErrs = append(allErrs, validateKubeProxy(kubernetes.KubeProxy, kubernetes.Version, fldPath.Child("kubeProxy"))...)
 
 		if kubernetes.Kubelet != nil {
@@ -1259,7 +1255,7 @@ func validateNetworkingStatus(networking *core.NetworkingStatus, fldPath *field.
 }
 
 // ValidateWatchCacheSizes validates the given WatchCacheSizes fields.
-func ValidateWatchCacheSizes(sizes *core.WatchCacheSizes, k8sVersion *semver.Version, fldPath *field.Path) field.ErrorList {
+func ValidateWatchCacheSizes(sizes *core.WatchCacheSizes, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	resourceInvalidCharacters := ",. #"
@@ -1267,7 +1263,7 @@ func ValidateWatchCacheSizes(sizes *core.WatchCacheSizes, k8sVersion *semver.Ver
 
 	if sizes != nil {
 		if defaultSize := sizes.Default; defaultSize != nil {
-			if versionutils.ConstraintK8sGreaterEqual135.Check(k8sVersion) {
+			if versionutils.ConstraintK8sGreaterEqual135.CheckVersion(kubernetesVersion) {
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("default"), "for Kubernetes versions >= 1.35, configuring the default watch cache size is no longer supported"))
 			} else {
 				allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*defaultSize), fldPath.Child("default"))...)
@@ -1399,7 +1395,7 @@ func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEn
 }
 
 // ValidateClusterAutoscaler validates the given ClusterAutoscaler fields.
-func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, version string, fldPath *field.Path) field.ErrorList {
+func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.ScaleDownDelayAfterAdd, fldPath.Child("scaleDownDelayAfterAdd"))...)
@@ -1434,21 +1430,21 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, version string
 	}
 
 	if startupTaints := autoScaler.StartupTaints; startupTaints != nil {
-		allErrs = append(allErrs, validateClusterAutoscalerTaints(startupTaints, "StartupTaints", version, fldPath.Child("startupTaints"))...)
+		allErrs = append(allErrs, validateClusterAutoscalerTaints(startupTaints, "StartupTaints", kubernetesVersion, fldPath.Child("startupTaints"))...)
 	}
 
 	if statusTaints := autoScaler.StatusTaints; statusTaints != nil {
-		allErrs = append(allErrs, validateClusterAutoscalerTaints(statusTaints, "StatusTaints", version, fldPath.Child("statusTaints"))...)
+		allErrs = append(allErrs, validateClusterAutoscalerTaints(statusTaints, "StatusTaints", kubernetesVersion, fldPath.Child("statusTaints"))...)
 	}
 
 	if ignoreTaints := autoScaler.IgnoreTaints; ignoreTaints != nil {
-		allErrs = append(allErrs, validateClusterAutoscalerTaints(ignoreTaints, "IgnoreTaints", version, fldPath.Child("ignoreTaints"))...)
+		allErrs = append(allErrs, validateClusterAutoscalerTaints(ignoreTaints, "IgnoreTaints", kubernetesVersion, fldPath.Child("ignoreTaints"))...)
 	}
 
 	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.NewPodScaleUpDelay, fldPath.Child("newPodScaleUpDelay"))...)
 
 	if maxEmptyBulkDelete := autoScaler.MaxEmptyBulkDelete; maxEmptyBulkDelete != nil {
-		if unsupportedVersion, _ := versionutils.CompareVersions(version, ">=", "1.33"); unsupportedVersion {
+		if versionutils.ConstraintK8sGreaterEqual133.CheckVersion(kubernetesVersion) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("maxEmptyBulkDelete"), "for Kubernetes versions >= 1.33, maxEmptyBulkDelete field is no longer supported, use maxScaleDownParallelism instead"))
 		}
 		if *maxEmptyBulkDelete < 0 {
@@ -1484,10 +1480,10 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, version string
 }
 
 // ValidateCloudProfileReference validates the given CloudProfileReference fields.
-func ValidateCloudProfileReference(cloudProfileReference *core.CloudProfileReference, cloudProfileName *string, k8sVersion *semver.Version, fldPath *field.Path) field.ErrorList {
+func ValidateCloudProfileReference(cloudProfileReference *core.CloudProfileReference, cloudProfileName *string, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if k8sVersion != nil && versionutils.ConstraintK8sGreaterEqual134.Check(k8sVersion) && ptr.Deref(cloudProfileName, "") != "" {
+	if kubernetesVersion != "" && versionutils.ConstraintK8sGreaterEqual134.CheckVersion(kubernetesVersion) && ptr.Deref(cloudProfileName, "") != "" {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("cloudProfileName"), "for Kubernetes version >= 1.34, cloudProfileName field is no longer supported, use spec.cloudProfile.name instead"))
 	}
 
@@ -1653,7 +1649,7 @@ func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
 }
 
 // ValidateKubeAPIServer validates KubeAPIServerConfig.
-func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version string, opts KubeAPIServerValidationOptions, workerless bool, defaultEncryptedResources []schema.GroupResource, k8sVersion *semver.Version, fldPath *field.Path) field.ErrorList {
+func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, kubernetesVersion string, opts KubeAPIServerValidationOptions, workerless bool, defaultEncryptedResources []schema.GroupResource, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kubeAPIServer == nil {
@@ -1661,8 +1657,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 	}
 
 	// TODO(AleksandarSavchev): Remove this check as soon as v1.32 is the least supported Kubernetes version in Gardener.
-	k8sGreaterEqual132, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.32")
-	if oidc := kubeAPIServer.OIDCConfig; k8sGreaterEqual132 && oidc != nil {
+	if oidc := kubeAPIServer.OIDCConfig; versionutils.ConstraintK8sGreaterEqual132.CheckVersion(kubernetesVersion) && oidc != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("oidcConfig"), *oidc, "for Kubernetes versions >= 1.32, oidcConfig field is no longer supported"))
 	} else if oidc != nil {
 		oidcPath := fldPath.Child("oidcConfig")
@@ -1687,8 +1682,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 			}
 		}
 		// TODO(AleksandarSavchev): Remove this check as soon as v1.31 is the least supported Kubernetes version in Gardener.
-		k8sGreaterEqual131, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.31")
-		if oidc.ClientAuthentication != nil && k8sGreaterEqual131 {
+		if oidc.ClientAuthentication != nil && versionutils.ConstraintK8sGreaterEqual131.CheckVersion(kubernetesVersion) {
 			allErrs = append(allErrs, field.Forbidden(oidcPath.Child("clientAuthentication"), "for Kubernetes versions >= 1.31, clientAuthentication field is no longer supported"))
 		}
 		if oidc.GroupsClaim != nil && len(*oidc.GroupsClaim) == 0 {
@@ -1710,13 +1704,12 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 		}
 	}
 
-	k8sGreaterEqual135, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.35")
-	if kubeAPIServer.EnableAnonymousAuthentication != nil && k8sGreaterEqual135 {
+	if kubeAPIServer.EnableAnonymousAuthentication != nil && versionutils.ConstraintK8sGreaterEqual135.CheckVersion(kubernetesVersion) {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("enableAnonymousAuthentication"), "for Kubernetes versions >= 1.35, enableAnonymousAuthentication field is no longer supported"))
 	}
 
-	allErrs = append(allErrs, admissionpluginsvalidation.ValidateAdmissionPlugins(kubeAPIServer.AdmissionPlugins, version, fldPath.Child("admissionPlugins"))...)
-	allErrs = append(allErrs, apigroupsvalidation.ValidateAPIGroupVersions(kubeAPIServer.RuntimeConfig, version, workerless, fldPath.Child("runtimeConfig"))...)
+	allErrs = append(allErrs, admissionpluginsvalidation.ValidateAdmissionPlugins(kubeAPIServer.AdmissionPlugins, kubernetesVersion, fldPath.Child("admissionPlugins"))...)
+	allErrs = append(allErrs, apigroupsvalidation.ValidateAPIGroupVersions(kubeAPIServer.RuntimeConfig, kubernetesVersion, workerless, fldPath.Child("runtimeConfig"))...)
 
 	if auditConfig := kubeAPIServer.AuditConfig; auditConfig != nil {
 		auditPath := fldPath.Child("auditConfig")
@@ -1751,7 +1744,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 		}
 	}
 
-	allErrs = append(allErrs, ValidateWatchCacheSizes(kubeAPIServer.WatchCacheSizes, k8sVersion, fldPath.Child("watchCacheSizes"))...)
+	allErrs = append(allErrs, ValidateWatchCacheSizes(kubeAPIServer.WatchCacheSizes, kubernetesVersion, fldPath.Child("watchCacheSizes"))...)
 
 	allErrs = append(allErrs, ValidateAPIServerLogging(kubeAPIServer.Logging, fldPath.Child("logging"))...)
 
@@ -1823,7 +1816,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 		fldPath.Child("autoscaling"))...,
 	)
 
-	allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kubeAPIServer.FeatureGates, version, fldPath.Child("featureGates"))...)
+	allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kubeAPIServer.FeatureGates, kubernetesVersion, fldPath.Child("featureGates"))...)
 
 	allErrs = append(allErrs, validateAPIAudiences(kubeAPIServer.APIAudiences, fldPath.Child("apiAudiences"))...)
 
@@ -1855,7 +1848,7 @@ func ValidateOIDCIssuerURL(issuerURL string, issuerFldPath *field.Path) field.Er
 }
 
 // ValidateKubeControllerManager validates KubeControllerManagerConfig.
-func ValidateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networking *core.Networking, version string, workerless bool, fldPath *field.Path) field.ErrorList {
+func ValidateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networking *core.Networking, kubernetesVersion string, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kcm == nil {
@@ -1873,7 +1866,7 @@ func ValidateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networ
 
 		// TODO(plkokanov): Remove this check after support for Kubernetes 1.32 is dropped.
 		if podEvictionTimeout := kcm.PodEvictionTimeout; podEvictionTimeout != nil {
-			if k8sGreaterEqual133, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.33"); k8sGreaterEqual133 {
+			if versionutils.ConstraintK8sGreaterEqual133.CheckVersion(kubernetesVersion) {
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("podEvictionTimeout"), "for Kubernetes versions >= 1.33, podEvictionTimeout field is no longer supported"))
 			} else if podEvictionTimeout.Duration <= 0 {
 				allErrs = append(allErrs, field.Invalid(fldPath.Child("podEvictionTimeout"), podEvictionTimeout.Duration, "podEvictionTimeout must be larger than 0"))
@@ -1919,7 +1912,7 @@ func ValidateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networ
 		}
 	}
 
-	allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kcm.FeatureGates, version, fldPath.Child("featureGates"))...)
+	allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kcm.FeatureGates, kubernetesVersion, fldPath.Child("featureGates"))...)
 
 	return allErrs
 }
@@ -1944,7 +1937,7 @@ func validateAPIAudiences(audiences []string, fldPath *field.Path) field.ErrorLi
 	return allErrs
 }
 
-func validateKubeScheduler(ks *core.KubeSchedulerConfig, version string, k8sVersion *semver.Version, fldPath *field.Path) field.ErrorList {
+func validateKubeScheduler(ks *core.KubeSchedulerConfig, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if ks != nil {
 		profile := ks.Profile
@@ -1954,18 +1947,18 @@ func validateKubeScheduler(ks *core.KubeSchedulerConfig, version string, k8sVers
 			}
 		}
 
-		allErrs = append(allErrs, validateKubeMaxPDVols(ks.KubeMaxPDVols, k8sVersion, fldPath.Child("kubeMaxPDVols"))...)
-		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(ks.FeatureGates, version, fldPath.Child("featureGates"))...)
+		allErrs = append(allErrs, validateKubeMaxPDVols(ks.KubeMaxPDVols, kubernetesVersion, fldPath.Child("kubeMaxPDVols"))...)
+		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(ks.FeatureGates, kubernetesVersion, fldPath.Child("featureGates"))...)
 	}
 
 	return allErrs
 }
 
-func validateKubeMaxPDVols(kubeMaxPDVols *string, k8sVersion *semver.Version, fldPath *field.Path) field.ErrorList {
+func validateKubeMaxPDVols(kubeMaxPDVols *string, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kubeMaxPDVols != nil {
-		if versionutils.ConstraintK8sGreaterEqual135.Check(k8sVersion) {
+		if versionutils.ConstraintK8sGreaterEqual135.CheckVersion(kubernetesVersion) {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "for Kubernetes version >= 1.35, kubeMaxPDVols field is no longer supported"))
 		} else {
 			num, err := strconv.Atoi(*kubeMaxPDVols)
@@ -1980,7 +1973,7 @@ func validateKubeMaxPDVols(kubeMaxPDVols *string, k8sVersion *semver.Version, fl
 	return allErrs
 }
 
-func validateKubeProxy(kp *core.KubeProxyConfig, version string, fldPath *field.Path) field.ErrorList {
+func validateKubeProxy(kp *core.KubeProxyConfig, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if kp != nil {
 		if kp.Mode == nil {
@@ -1988,12 +1981,7 @@ func validateKubeProxy(kp *core.KubeProxyConfig, version string, fldPath *field.
 		} else if mode := *kp.Mode; !availableProxyModes.Has(string(mode)) {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("mode"), mode, sets.List(availableProxyModes)))
 		} else if *kp.Mode == core.ProxyModeNFTables {
-			shootKubernetesVersion, err := semver.NewVersion(version)
-			if err != nil {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("mode"), mode, fmt.Sprintf("unable to parse kubernetes version %q: %v", version, err)))
-				return allErrs
-			}
-			if versionutils.ConstraintK8sLess131.Check(shootKubernetesVersion) {
+			if versionutils.ConstraintK8sLess131.CheckVersion(kubernetesVersion) {
 				if value, ok := kp.FeatureGates["NFTablesProxyMode"]; !ok || !value {
 					allErrs = append(allErrs, field.Invalid(fldPath.Child("mode"), mode, "NFTables mode requires feature gate NFTablesProxyMode=true for Kubernetes < 1.31"))
 				}
@@ -2003,7 +1991,7 @@ func validateKubeProxy(kp *core.KubeProxyConfig, version string, fldPath *field.
 				}
 			}
 		}
-		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kp.FeatureGates, version, fldPath.Child("featureGates"))...)
+		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kp.FeatureGates, kubernetesVersion, fldPath.Child("featureGates"))...)
 	}
 	return allErrs
 }
@@ -2409,7 +2397,7 @@ func ValidateClusterAutoscalerOptions(caOptions *core.ClusterAutoscalerOptions, 
 const PodPIDsLimitMinimum int64 = 100
 
 // ValidateKubeletConfig validates the KubeletConfig object.
-func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, fldPath *field.Path) field.ErrorList {
+func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kubeletConfig.CPUManagerPolicy != nil {
@@ -2452,7 +2440,7 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, fld
 	if kubeletConfig.SystemReserved != nil {
 		allErrs = append(allErrs, validateKubeletConfigReserved(kubeletConfig.SystemReserved, fldPath.Child("systemReserved"))...)
 
-		if k8sGreaterEqual131, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.31"); k8sGreaterEqual131 {
+		if versionutils.ConstraintK8sGreaterEqual131.CheckVersion(kubernetesVersion) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("systemReserved"), kubeletConfig.SystemReserved, "for Kubernetes versions >= 1.31, systemReserved field is no longer supported"))
 		}
 	}
@@ -2471,7 +2459,7 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, fld
 	if kubeletConfig.ImageGCHighThresholdPercent != nil && kubeletConfig.ImageGCLowThresholdPercent != nil && *kubeletConfig.ImageGCLowThresholdPercent >= *kubeletConfig.ImageGCHighThresholdPercent {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("imageGCLowThresholdPercent"), "imageGCLowThresholdPercent must be less than imageGCHighThresholdPercent"))
 	}
-	allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kubeletConfig.FeatureGates, version, fldPath.Child("featureGates"))...)
+	allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kubeletConfig.FeatureGates, kubernetesVersion, fldPath.Child("featureGates"))...)
 	if v := kubeletConfig.RegistryPullQPS; v != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), fldPath.Child("registryPullQPS"))...)
 	}
@@ -2592,14 +2580,14 @@ var (
 	}
 )
 
-func validateClusterAutoscalerTaints(taints []string, option string, version string, fldPath *field.Path) field.ErrorList {
+func validateClusterAutoscalerTaints(taints []string, option string, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	supported, err := optionVersionRanges[option].Contains(version)
+	supported, err := optionVersionRanges[option].Contains(kubernetesVersion)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child(option), option, err.Error()))
 	} else if !supported {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child(option), "not supported in Kubernetes version "+version))
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child(option), "not supported in Kubernetes version "+kubernetesVersion))
 	}
 
 	taintKeySet := sets.New[string]()
@@ -3072,7 +3060,7 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 		fldPathMaintOp     = fldPath.Key(v1beta1constants.GardenerMaintenanceOperation)
 		allErrs            = field.ErrorList{}
 		encryptedResources = sets.New[schema.GroupResource]()
-		k8sLess134, _      = versionutils.CheckVersionMeetsConstraint(shoot.Spec.Kubernetes.Version, "< 1.34")
+		k8sLess134         = versionutils.ConstraintK8sLess134.CheckVersion(shoot.Spec.Kubernetes.Version)
 	)
 
 	if len(operations) == 0 && len(maintenanceOperations) == 0 {
@@ -3190,7 +3178,7 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 
 func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	k8sLess134, _ := versionutils.CheckVersionMeetsConstraint(shoot.Spec.Kubernetes.Version, "< 1.34")
+	k8sLess134 := versionutils.ConstraintK8sLess134.CheckVersion(shoot.Spec.Kubernetes.Version)
 
 	switch operation {
 	case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:

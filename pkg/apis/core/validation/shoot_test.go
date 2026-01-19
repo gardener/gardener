@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -2875,9 +2874,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				DescribeTable("watch cache size validation",
 					func(version string, sizes *core.WatchCacheSizes, matcher gomegatypes.GomegaMatcher) {
-						k8sVersion, err := semver.NewVersion(version)
-						Expect(err).ToNot(HaveOccurred())
-						Expect(ValidateWatchCacheSizes(sizes, k8sVersion, nil)).To(matcher)
+						Expect(ValidateWatchCacheSizes(sizes, version, nil)).To(matcher)
 					},
 
 					Entry("valid (unset)", "1.34.0", nil, BeEmpty()),
@@ -8432,7 +8429,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should not allow using no cloudProfile reference", func() {
-				errList := ValidateCloudProfileReference(nil, nil, nil, fldPath)
+				errList := ValidateCloudProfileReference(nil, nil, "", fldPath)
 
 				Expect(errList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -8448,7 +8445,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "",
 				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, nil, nil, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, nil, "", fldPath)
 
 				Expect(errList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -8464,7 +8461,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "my-profile",
 				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, nil, nil, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, nil, "", fldPath)
 
 				Expect(errList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -8480,7 +8477,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "my-profile",
 				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, nil, nil, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, nil, "", fldPath)
 
 				Expect(errList).To(BeEmpty())
 			})
@@ -8491,35 +8488,29 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "my-profile",
 				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, nil, nil, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, nil, "", fldPath)
 
 				Expect(errList).To(BeEmpty())
 			})
 
 			It("should still allow creation using the cloudProfileName for k8s < v1.34", func() {
-				var (
-					k8sVersion            = semver.MustParse("v1.33.0")
-					cloudProfileReference = &core.CloudProfileReference{
-						Kind: "CloudProfile",
-						Name: "my-profile",
-					}
-				)
+				cloudProfileReference := &core.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: "my-profile",
+				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, ptr.To(cloudProfileReference.Name), k8sVersion, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, ptr.To(cloudProfileReference.Name), "v1.33.0", fldPath)
 
 				Expect(errList).To(BeEmpty())
 			})
 
 			It("should not allow creation using the cloudProfileName for k8s >= v1.34", func() {
-				var (
-					k8sVersion            = semver.MustParse("v1.34.0")
-					cloudProfileReference = &core.CloudProfileReference{
-						Kind: "CloudProfile",
-						Name: "my-profile",
-					}
-				)
+				cloudProfileReference := &core.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: "my-profile",
+				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, ptr.To(cloudProfileReference.Name), k8sVersion, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, ptr.To(cloudProfileReference.Name), "v1.34.0", fldPath)
 
 				Expect(errList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{

@@ -15,7 +15,7 @@ import (
 
 var _ = Describe("Version", func() {
 	DescribeTable("Constraints",
-		func(constraint *semver.Constraints, version *semver.Version, matcher gomegatypes.GomegaMatcher) {
+		func(constraint *Constraints, version *semver.Version, matcher gomegatypes.GomegaMatcher) {
 			Expect(constraint.Check(version)).To(matcher)
 		},
 
