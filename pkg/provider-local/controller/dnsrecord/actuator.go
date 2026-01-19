@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -132,16 +133,33 @@ func (a *Actuator) configForDNSRecord(ctx context.Context, dnsRecord *extensions
 		return "", err
 	}
 
-	var zone string
+	istioNamespaceSuffix := ""
 	if zones, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok &&
 		!strings.Contains(zones, ",") && len(cluster.Seed.Spec.Provider.Zones) > 1 &&
 		v1beta1helper.SeedSettingZonalIngressEnabled(cluster.Seed.Spec.Settings) {
-		zone = zones
+		istioNamespaceSuffix = "--" + zones
 	}
-	istioNamespaceSuffix := ""
-	if zone != "" {
-		istioNamespaceSuffix = "--" + zone
+	if exposureClass := cluster.Shoot.Spec.ExposureClassName; exposureClass != nil {
+		expClassNamespace, err := a.exposureClassNamespaceName(ctx, *exposureClass)
+		if err != nil {
+			return "", err
+		}
+		istioNamespaceSuffix, _ = strings.CutPrefix(expClassNamespace, "istio-ingress")
 	}
 
 	return "rewrite stop name regex " + regexp.QuoteMeta(dnsRecord.Spec.Name) + " istio-ingressgateway.istio-ingress" + istioNamespaceSuffix + ".svc.cluster.local answer auto", nil
+}
+
+func (a *Actuator) exposureClassNamespaceName(ctx context.Context, exposureClass string) (string, error) {
+	exposureClassNamespaceLabels := client.MatchingLabels{v1beta1constants.LabelExposureClassHandlerName: exposureClass}
+	namespaceList := &corev1.NamespaceList{}
+
+	if err := a.RuntimeClient.List(ctx, namespaceList, exposureClassNamespaceLabels); err != nil {
+		return "", err
+	}
+
+	if len(namespaceList.Items) != 1 {
+		return "", nil
+	}
+	return namespaceList.Items[0].Name, nil
 }

@@ -71,6 +71,7 @@ spec:
         - --service-zone-1-ip={{ .Values.controllers.service.zone1IP }}
         - --service-zone-2-ip={{ .Values.controllers.service.zone2IP }}
         - --service-bastion-ip={{ .Values.controllers.service.bastionIP }}
+        - --service-exposureclass-ip={{ .Values.controllers.service.exposureclassIP }}
         - --backupbucket-local-dir={{ .Values.controllers.backupbucket.localDir }}
         - --backupbucket-container-mount-path={{ .Values.controllers.backupbucket.containerMountPath }}
         - --heartbeat-namespace={{ .Release.Namespace }}

@@ -10,6 +10,11 @@ spec:
   config:
     apiVersion: gardenlet.config.gardener.cloud/v1alpha1
     kind: GardenletConfiguration
+    exposureClassHandlers:
+      - name: exposureclass
+        sni:
+          ingress:
+            namespace: istio-ingress-exposureclass
     featureGates:
       DefaultSeccompProfile: true
       IstioTLSTermination: true

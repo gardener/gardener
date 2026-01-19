@@ -18,6 +18,18 @@
   hostPort: 8443
   listenAddress: {{ $listenAddress }}
 {{- end }}
+{{- range $listenAddress :=  .Values.gardener.seed.exposureClass.listenAddresses }}
+- containerPort:  32767
+  hostPort: 443
+  listenAddress: {{ $listenAddress }}
+# http proxy
+- containerPort:  32766
+  hostPort: 8443
+  listenAddress: {{ $listenAddress }}
+- containerPort:  32765
+  hostPort: 8132
+  listenAddress: {{ $listenAddress }}
+{{- end }}
 {{- end }}
 {{- end }}
 

@@ -13,3 +13,4 @@ components:
 - ../../components/credentials/secret-project-garden
 - ../../components/credentials/secret-project-local
 - ../../components/credentials/workloadidentity-project-local
+- ../../components/exposureclasses

@@ -29,6 +29,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, predicates ...predicate.P
 	if r.BastionIP == "" {
 		r.BastionIP = "172.18.255.22"
 	}
+	if r.ExposureClassIP == "" {
+		r.ExposureClassIP = "172.18.255.31"
+	}
 
 	return builder.
 		ControllerManagedBy(mgr).

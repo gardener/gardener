@@ -80,7 +80,38 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
+	if exposureClass := cluster.Shoot.Spec.ExposureClassName; exposureClass != nil {
+		peer, err := r.exposureClassNetworkPolicyPeer(ctx, *exposureClass)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		if peer != nil {
+			networkPolicyAllowToIstioIngressGateway.Spec.Egress[0].To = append(networkPolicyAllowToIstioIngressGateway.Spec.Egress[0].To, *peer)
+		}
+	}
+
 	return reconcile.Result{}, r.Client.Patch(ctx, networkPolicyAllowToIstioIngressGateway, client.Apply, local.FieldOwner, client.ForceOwnership)
+}
+
+func (r *Reconciler) exposureClassNetworkPolicyPeer(ctx context.Context, exposureClass string) (*networkingv1.NetworkPolicyPeer, error) {
+	exposureClassNamespaceLabels := client.MatchingLabels{v1beta1constants.LabelExposureClassHandlerName: exposureClass}
+	namespaceList := &corev1.NamespaceList{}
+
+	if err := r.Client.List(ctx, namespaceList, exposureClassNamespaceLabels); err != nil {
+		return nil, err
+	}
+
+	if len(namespaceList.Items) != 1 {
+		return nil, nil
+	}
+
+	return &networkingv1.NetworkPolicyPeer{
+		NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": namespaceList.Items[0].Name}},
+		PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+			"app":                       "istio-ingressgateway",
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleExposureClassHandler,
+		}},
+	}, nil
 }
 
 func emptyNetworkPolicy(name, namespace string) *networkingv1.NetworkPolicy {

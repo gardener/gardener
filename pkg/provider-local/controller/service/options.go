@@ -26,6 +26,8 @@ type ControllerOptions struct {
 	Zone2IP string
 	// BastionIP is the bastion IP.
 	BastionIP string
+	// ExposureClassIP is the IP address used for the istio ingress gateway of the ExposureClass "exposureclass".
+	ExposureClassIP string
 
 	config *ControllerConfig
 }
@@ -39,11 +41,12 @@ func (c *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&c.Zone1IP, "zone-1-ip", c.Zone1IP, "Overwrite LoadBalancer IP to use for istio ingress-gateway service for seed in zone 1")
 	fs.StringVar(&c.Zone2IP, "zone-2-ip", c.Zone2IP, "Overwrite LoadBalancer IP to use for istio ingress-gateway service for seed in zone 2")
 	fs.StringVar(&c.BastionIP, "bastion-ip", c.BastionIP, "Overwrite LoadBalancer IP to use for bastion service")
+	fs.StringVar(&c.ExposureClassIP, "exposureclass-ip", c.ExposureClassIP, "Overwrite LoadBalancer IP to use for istio ingress-gateway service of ExposureClass \"exposureclass\"")
 }
 
 // Complete implements Completer.Complete.
 func (c *ControllerOptions) Complete() error {
-	c.config = &ControllerConfig{c.MaxConcurrentReconciles, c.HostIP, c.VirtualGardenIP, c.Zone0IP, c.Zone1IP, c.Zone2IP, c.BastionIP}
+	c.config = &ControllerConfig{c.MaxConcurrentReconciles, c.HostIP, c.VirtualGardenIP, c.Zone0IP, c.Zone1IP, c.Zone2IP, c.BastionIP, c.ExposureClassIP}
 	return nil
 }
 
@@ -68,6 +71,8 @@ type ControllerConfig struct {
 	Zone2IP string
 	// BastionIP is the bastion IP.
 	BastionIP string
+	// ExposureClassIP is the IP address used for the istio ingress gateway of the ExposureClass "exposureclass".
+	ExposureClassIP string
 }
 
 // Apply sets the values of this ControllerConfig in the given AddOptions.
@@ -79,4 +84,5 @@ func (c *ControllerConfig) Apply(opts *AddOptions) {
 	opts.Zone1IP = c.Zone1IP
 	opts.Zone2IP = c.Zone2IP
 	opts.BastionIP = c.BastionIP
+	opts.ExposureClassIP = c.ExposureClassIP
 }

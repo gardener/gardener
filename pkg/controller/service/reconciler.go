@@ -26,21 +26,25 @@ var (
 	keyIstioIngressGatewayZone1 = client.ObjectKey{Namespace: "istio-ingress--1", Name: "istio-ingressgateway"}
 	keyIstioIngressGatewayZone2 = client.ObjectKey{Namespace: "istio-ingress--2", Name: "istio-ingressgateway"}
 
+	keyIstioIngressGatewayExposureClass = client.ObjectKey{Namespace: "istio-ingress-exposureclass", Name: "istio-ingressgateway"}
+
 	keyVirtualGardenIstioIngressGateway = client.ObjectKey{Namespace: "virtual-garden-istio-ingress", Name: "istio-ingressgateway"}
 )
 
 const (
-	nodePortIstioIngressGateway      int32 = 30443
-	nodePortIstioIngressGatewayZone0 int32 = 30444
-	nodePortIstioIngressGatewayZone1 int32 = 30445
-	nodePortIstioIngressGatewayZone2 int32 = 30446
+	nodePortIstioIngressGateway              int32 = 30443
+	nodePortIstioIngressGatewayZone0         int32 = 30444
+	nodePortIstioIngressGatewayZone1         int32 = 30445
+	nodePortIstioIngressGatewayZone2         int32 = 30446
+	nodePortIstioIngressGatewayExposureClass int32 = 32767
 
 	nodePortVirtualGardenIstioIngressGateway int32 = 31443
 
-	nodePortHTTPProxyIstioIngressGateway      int32 = 32443
-	nodePortHTTPProxyIstioIngressGatewayZone0 int32 = 32444
-	nodePortHTTPProxyIstioIngressGatewayZone1 int32 = 32445
-	nodePortHTTPProxyIstioIngressGatewayZone2 int32 = 32446
+	nodePortHTTPProxyIstioIngressGateway              int32 = 32443
+	nodePortHTTPProxyIstioIngressGatewayZone0         int32 = 32444
+	nodePortHTTPProxyIstioIngressGatewayZone1         int32 = 32445
+	nodePortHTTPProxyIstioIngressGatewayZone2         int32 = 32446
+	nodePortHTTPProxyIstioIngressGatewayExposureClass int32 = 32766
 
 	nodePortBastion int32 = 30022
 )
@@ -51,6 +55,8 @@ const (
 	nodePortTunnelIstioIngressGatewayZone0 int32 = 32133
 	nodePortTunnelIstioIngressGatewayZone1 int32 = 32134
 	nodePortTunnelIstioIngressGatewayZone2 int32 = 32135
+
+	nodePortTunnelIstioIngressGatewayExposureClass int32 = 32765
 )
 
 // Reconciler is a reconciler for Service resources.
@@ -62,6 +68,7 @@ type Reconciler struct {
 	Zone1IP         string
 	Zone2IP         string
 	BastionIP       string
+	ExposureClassIP string
 }
 
 // Reconcile reconciles Service resources.
@@ -120,6 +127,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	case keyVirtualGardenIstioIngressGateway:
 		nodePort = nodePortVirtualGardenIstioIngressGateway
 		ips = append(ips, r.VirtualGardenIP)
+	case keyIstioIngressGatewayExposureClass:
+		nodePort = nodePortIstioIngressGatewayExposureClass
+		nodePortHTTPProxy = nodePortHTTPProxyIstioIngressGatewayExposureClass
+		nodePortTunnel = nodePortTunnelIstioIngressGatewayExposureClass
+		ips = append(ips, r.ExposureClassIP)
 	}
 
 	if isBastion {

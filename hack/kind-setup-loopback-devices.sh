@@ -8,6 +8,7 @@ set -o nounset
 
 MULTI_ZONAL="false"
 CLUSTER_NAME=""
+EXPOSURE_CLASS=false
 IPFAMILY="ipv4"
 
 SUDO=""
@@ -27,6 +28,9 @@ parse_flags() {
     --multi-zonal)
       MULTI_ZONAL=true
       ;;
+    --exposure-class)
+      EXPOSURE_CLASS=true
+      ;;
     esac
 
     shift
@@ -44,6 +48,13 @@ if [[ "$MULTI_ZONAL" == "true" ]]; then
   LOOPBACK_IP_ADDRESSES+=(172.18.255.10 172.18.255.11 172.18.255.12)
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
     LOOPBACK_IP_ADDRESSES+=(::10 ::11 ::12)
+  fi
+fi
+
+if ${EXPOSURE_CLASS}; then 
+  LOOPBACK_IP_ADDRESSES+=(172.18.255.31)
+  if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
+    LOOPBACK_IP_ADDRESSES+=(::31)
   fi
 fi
 

@@ -40,6 +40,8 @@ type AddOptions struct {
 	Zone2IP string
 	// BastionIP is the bastion IP.
 	BastionIP string
+	// ExposureClassIP is the IP address used for the istio ingress gateway of the ExposureClass "exposureclass".
+	ExposureClassIP string
 }
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
@@ -71,6 +73,12 @@ func AddToManagerWithOptions(_ context.Context, mgr manager.Manager, opts AddOpt
 	}
 	predicates = append(predicates, bastionPredicate)
 
+	exposureclassPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: map[string]string{"app": "istio-ingressgateway", v1beta1constants.GardenRole: v1beta1constants.GardenRoleExposureClassHandler}})
+	if err != nil {
+		return err
+	}
+	predicates = append(predicates, exposureclassPredicate)
+
 	return (&service.Reconciler{
 		HostIP:          opts.HostIP,
 		VirtualGardenIP: opts.VirtualGardenIP,
@@ -78,6 +86,7 @@ func AddToManagerWithOptions(_ context.Context, mgr manager.Manager, opts AddOpt
 		Zone1IP:         opts.Zone1IP,
 		Zone2IP:         opts.Zone2IP,
 		BastionIP:       opts.BastionIP,
+		ExposureClassIP: opts.ExposureClassIP,
 	}).AddToManager(mgr, predicate.Or(predicates...))
 }
 
