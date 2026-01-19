@@ -45,7 +45,6 @@ func NewOpenTelemetryCollector(
 			LokiEndpoint:            "http://" + valiconstants.ServiceName + ":" + strconv.Itoa(valiconstants.ValiPort) + valiconstants.PushEndpoint,
 			Replicas:                1,
 			ShootNodeLoggingEnabled: false,
-			IngressHost:             "",
 			SecretNameServerCA:      secretNameServerCA,
 			PriorityClassName:       priorityClassName,
 		},

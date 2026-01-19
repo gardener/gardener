@@ -628,7 +628,6 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			// Verify that the component created the managed resource
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
 		})
-
 	})
 
 	Describe("#Destroy", func() {
