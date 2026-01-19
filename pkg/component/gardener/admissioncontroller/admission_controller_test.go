@@ -1354,14 +1354,24 @@ func mutatingWebhookConfiguration(namespace string, caBundle []byte) *admissionr
 				Name:                    "sync-provider-secret-labels.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				TimeoutSeconds:          ptr.To[int32](10),
-				Rules: []admissionregistrationv1.RuleWithOperations{{
-					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
-					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{""},
-						APIVersions: []string{"v1"},
-						Resources:   []string{"secrets"},
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{""},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"secrets"},
+						},
 					},
-				}},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"core.gardener.cloud"},
+							APIVersions: []string{"v1beta1"},
+							Resources:   []string{"internalsecrets"},
+						},
+					},
+				},
 				FailurePolicy: &failurePolicyFail,
 				NamespaceSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{

@@ -1477,9 +1477,44 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, credentialsBinding1.CredentialsRef.Namespace, credentialsBinding1.CredentialsRef.Name, VertexTypeCredentialsBinding, credentialsBinding1.Namespace, credentialsBinding1.Name)).To(BeFalse())
 	})
 
+	It("should behave as expected for securityv1alpha1.CredentialsBinding referencing an InternalSecret", func() {
+		credentialsBinding1.CredentialsRef.APIVersion = gardencorev1beta1.SchemeGroupVersion.String()
+		credentialsBinding1.CredentialsRef.Kind = "InternalSecret"
+
+		By("Add")
+		fakeInformerCredentialsBinding.Add(credentialsBinding1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeInternalSecret, credentialsBinding1.CredentialsRef.Namespace, credentialsBinding1.CredentialsRef.Name, VertexTypeCredentialsBinding, credentialsBinding1.Namespace, credentialsBinding1.Name)).To(BeTrue())
+
+		By("Update (irrelevant change)")
+		credentialsBinding1Copy := credentialsBinding1.DeepCopy()
+		credentialsBinding1.Quotas = []corev1.ObjectReference{{}, {}, {}}
+		fakeInformerCredentialsBinding.Update(credentialsBinding1Copy, credentialsBinding1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeInternalSecret, credentialsBinding1.CredentialsRef.Namespace, credentialsBinding1.CredentialsRef.Name, VertexTypeCredentialsBinding, credentialsBinding1.Namespace, credentialsBinding1.Name)).To(BeTrue())
+
+		By("Update (credentialsref)")
+		credentialsBinding1Copy = credentialsBinding1.DeepCopy()
+		credentialsBinding1.CredentialsRef = corev1.ObjectReference{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "InternalSecret", Namespace: "new-cb-secret-namespace", Name: "new-cb-secret-name"}
+		fakeInformerCredentialsBinding.Update(credentialsBinding1Copy, credentialsBinding1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeInternalSecret, credentialsBinding1Copy.CredentialsRef.Namespace, credentialsBinding1Copy.CredentialsRef.Name, VertexTypeCredentialsBinding, credentialsBinding1.Namespace, credentialsBinding1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeInternalSecret, credentialsBinding1.CredentialsRef.Namespace, credentialsBinding1.CredentialsRef.Name, VertexTypeCredentialsBinding, credentialsBinding1.Namespace, credentialsBinding1.Name)).To(BeTrue())
+
+		By("Delete")
+		fakeInformerCredentialsBinding.Delete(credentialsBinding1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeInternalSecret, credentialsBinding1.CredentialsRef.Namespace, credentialsBinding1.CredentialsRef.Name, VertexTypeCredentialsBinding, credentialsBinding1.Namespace, credentialsBinding1.Name)).To(BeFalse())
+	})
+
 	It("should behave as expected for securityv1alpha1.CredentialsBinding referencing a WorkloadIdentity", func() {
 		credentialsBinding1.CredentialsRef.APIVersion = securityv1alpha1.SchemeGroupVersion.String()
 		credentialsBinding1.CredentialsRef.Kind = "WorkloadIdentity"
+
 		By("Add")
 		fakeInformerCredentialsBinding.Add(credentialsBinding1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(2))

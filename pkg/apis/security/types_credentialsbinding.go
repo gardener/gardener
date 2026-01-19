@@ -22,7 +22,8 @@ type CredentialsBinding struct {
 	// This field is immutable.
 	Provider CredentialsBindingProvider
 	// CredentialsRef is a reference to a resource holding the credentials.
-	// Accepted resources are core/v1.Secret and security.gardener.cloud/v1alpha1.WorkloadIdentity
+	// Accepted resources are core/v1.Secret, core.gardener.cloud/v1beta1.InternalSecret, and
+	// security.gardener.cloud/v1alpha1.WorkloadIdentity.
 	// This field is immutable.
 	CredentialsRef corev1.ObjectReference
 	// Quotas is a list of references to Quota objects in the same or another namespace.

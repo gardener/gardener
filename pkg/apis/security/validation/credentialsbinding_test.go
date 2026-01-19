@@ -45,6 +45,18 @@ var _ = Describe("CredentialsBinding Validation Tests", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
+		It("[InternalSecret] should not return any errors", func() {
+			credentialsBinding.CredentialsRef = corev1.ObjectReference{
+				APIVersion: "core.gardener.cloud/v1beta1",
+				Kind:       "InternalSecret",
+				Name:       "my-internal-secret",
+				Namespace:  "my-namespace",
+			}
+			errorList := ValidateCredentialsBinding(credentialsBinding)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
 		It("[WorkloadIdentity] should not return any errors", func() {
 			credentialsBinding.CredentialsRef = corev1.ObjectReference{
 				APIVersion: "security.gardener.cloud/v1alpha1",

@@ -686,8 +686,12 @@ func (c *validationContext) validateCredentialsBindingChange(
 			credentialsAPIGroup = securityv1alpha1.SchemeGroupVersion.Group
 			credentialsAPIVersion = securityv1alpha1.SchemeGroupVersion.Version
 			credentialsResource = "workloadidentities"
+		} else if credentialsBinding.CredentialsRef.APIVersion == gardencorev1beta1.SchemeGroupVersion.String() {
+			credentialsAPIGroup = gardencorev1beta1.SchemeGroupVersion.Group
+			credentialsAPIVersion = gardencorev1beta1.SchemeGroupVersion.Version
+			credentialsResource = "internalsecrets"
 		} else {
-			return authorizer.AttributesRecord{}, errors.New("unknown credentials ref: CredentialsBinding is referencing neither a Secret nor a WorkloadIdentity")
+			return authorizer.AttributesRecord{}, errors.New("unknown credentials ref: CredentialsBinding is referencing neither a Secret nor an InternalSecret nor a WorkloadIdentity")
 		}
 		return authorizer.AttributesRecord{
 			User:            a.GetUserInfo(),

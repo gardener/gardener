@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 )
 
@@ -81,12 +82,15 @@ func DeleteSecretByObjectReference(ctx context.Context, c client.Client, ref *co
 	return client.IgnoreNotFound(c.Delete(ctx, secret))
 }
 
-// GetCredentialsByObjectReference returns the credentials, being Secret or WorkloadIdentity, referenced by the given object reference.
+// GetCredentialsByObjectReference returns the credentials, being Secret, InternalSecret, or WorkloadIdentity,
+// referenced by the given object reference.
 func GetCredentialsByObjectReference(ctx context.Context, c client.Reader, ref corev1.ObjectReference) (client.Object, error) {
 	var obj client.Object
 	switch ref.GroupVersionKind() {
 	case corev1.SchemeGroupVersion.WithKind("Secret"):
 		obj = &corev1.Secret{}
+	case gardencorev1beta1.SchemeGroupVersion.WithKind("InternalSecret"):
+		obj = &gardencorev1beta1.InternalSecret{}
 	case securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentity"):
 		obj = &securityv1alpha1.WorkloadIdentity{}
 	default:

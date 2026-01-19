@@ -24,6 +24,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
@@ -562,8 +563,8 @@ func ValidateResources(resources []core.NamedResourceReference, fldPath *field.P
 	return allErrs
 }
 
-// ValidateCredentialsRef ensures that a resource of GVK v1.Secret or security.gardener.cloud/v1alpha1.WorkloadIdentity
-// is referred, and its name and namespace are properly set.
+// ValidateCredentialsRef ensures that a resource of GVK v1.Secret, core.gardener.cloud/v1beta1.InternalSecret, or
+// security.gardener.cloud/v1alpha1.WorkloadIdentity is referred, and its name and namespace are properly set.
 func ValidateCredentialsRef(ref corev1.ObjectReference, fldPath *field.Path) field.ErrorList {
 	return validateCredentialsRef(ref, true, fldPath)
 }
@@ -641,10 +642,11 @@ func validateCredentialsRef(ref corev1.ObjectReference, requireNamespace bool, f
 
 	var (
 		secret           = corev1.SchemeGroupVersion.WithKind("Secret")
+		internalSecret   = gardencorev1beta1.SchemeGroupVersion.WithKind("InternalSecret")
 		workloadIdentity = securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentity")
 
-		allowedGVKs = sets.New(secret, workloadIdentity)
-		validGVKs   = []string{secret.String(), workloadIdentity.String()}
+		allowedGVKs = sets.New(secret, internalSecret, workloadIdentity)
+		validGVKs   = []string{secret.String(), internalSecret.String(), workloadIdentity.String()}
 	)
 
 	if !allowedGVKs.Has(ref.GroupVersionKind()) {

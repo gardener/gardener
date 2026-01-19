@@ -62,12 +62,17 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Watches(
 			&gardencorev1beta1.Quota{},
 			handler.EnqueueRequestsFromMapFunc(r.MapObjectToProject(mgr.GetLogger().WithValues("controller", ControllerName))),
-			builder.WithPredicates(r.OnlyNewlyCreatedObjects(), r.NeedsSecretOrCredentialsBindingReferenceLabelPredicate()),
+			builder.WithPredicates(r.OnlyNewlyCreatedObjects(), r.HasSecretOrCredentialsBindingReferenceLabelPredicate()),
 		).
 		Watches(
 			&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(r.MapObjectToProject(mgr.GetLogger().WithValues("controller", ControllerName))),
-			builder.WithPredicates(r.OnlyNewlyCreatedObjects(), r.NeedsSecretOrCredentialsBindingReferenceLabelPredicate()),
+			builder.WithPredicates(r.OnlyNewlyCreatedObjects(), r.HasSecretOrCredentialsBindingReferenceLabelPredicate()),
+		).
+		Watches(
+			&gardencorev1beta1.InternalSecret{},
+			handler.EnqueueRequestsFromMapFunc(r.MapObjectToProject(mgr.GetLogger().WithValues("controller", ControllerName))),
+			builder.WithPredicates(r.OnlyNewlyCreatedObjects(), r.HasSecretOrCredentialsBindingReferenceLabelPredicate()),
 		).
 		Complete(r)
 }
@@ -87,9 +92,9 @@ func (r *Reconciler) OnlyNewlyCreatedObjects() predicate.Predicate {
 	}
 }
 
-// NeedsSecretOrCredentialsBindingReferenceLabelPredicate returns a predicate which only returns true when the objects have the
-// reference.gardener.cloud/secretbinding or reference.gardener.cloud/credentialsbinding label.
-func (r *Reconciler) NeedsSecretOrCredentialsBindingReferenceLabelPredicate() predicate.Predicate {
+// HasSecretOrCredentialsBindingReferenceLabelPredicate returns a predicate which only returns true when the objects
+// have the reference.gardener.cloud/secretbinding or reference.gardener.cloud/credentialsbinding label.
+func (r *Reconciler) HasSecretOrCredentialsBindingReferenceLabelPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			objMeta, err := meta.Accessor(e.Object)
