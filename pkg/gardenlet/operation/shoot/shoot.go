@@ -298,7 +298,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 
 	shoot.EncryptionProviderToUse = v1beta1helper.GetEncryptionProviderType(shoot.GetInfo().Spec.Kubernetes.KubeAPIServer)
 	if shootStatus.Credentials != nil {
-		shoot.UsedEncryptionProvider = shootStatus.Credentials.EncryptionAtRest.ProviderType
+		shoot.UsedEncryptionProvider = shootStatus.Credentials.EncryptionAtRest.Provider.Type
 	}
 
 	if b.seed != nil {

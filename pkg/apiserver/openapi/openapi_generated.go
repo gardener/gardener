@@ -97,6 +97,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionAtRest":                            schema_pkg_apis_core_v1beta1_EncryptionAtRest(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig":                            schema_pkg_apis_core_v1beta1_EncryptionConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionProvider":                          schema_pkg_apis_core_v1beta1_EncryptionProvider(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionProviderStatus":                    schema_pkg_apis_core_v1beta1_EncryptionProviderStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion":                            schema_pkg_apis_core_v1beta1_ExpirableVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Exposure":                                    schema_pkg_apis_core_v1beta1_Exposure(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClass":                               schema_pkg_apis_core_v1beta1_ExposureClass(ref),
@@ -3776,18 +3777,19 @@ func schema_pkg_apis_core_v1beta1_EncryptionAtRest(ref common.ReferenceCallback)
 							},
 						},
 					},
-					"providerType": {
+					"provider": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ProviderType is the used encryption provider type.",
-							Default:     "",
-							Type:        []string{"string"},
-							Format:      "",
+							Description: "Provider contains information about Shoot encryption provider.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionProviderStatus"),
 						},
 					},
 				},
-				Required: []string{"providerType"},
+				Required: []string{"provider"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionProviderStatus"},
 	}
 }
 
@@ -3844,6 +3846,28 @@ func schema_pkg_apis_core_v1beta1_EncryptionProvider(ref common.ReferenceCallbac
 						},
 					},
 				},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_EncryptionProviderStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "EncryptionProviderStatus contains information about Shoot encryption provider.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type is the used encryption provider type.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"type"},
 			},
 		},
 	}

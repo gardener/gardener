@@ -247,7 +247,7 @@ var _ = Describe("Strategy", func() {
 			})
 		})
 
-		DescribeTable("should sync encryption provider in  status.credentials.encryptionAtRest.providerType",
+		DescribeTable("should sync encryption provider in status.credentials.encryptionAtRest.providerType",
 			func(providerType *core.EncryptionProviderType, status core.ShootStatus, expectedStatus core.ShootStatus) {
 				oldShoot := &core.Shoot{
 					Spec: core.ShootSpec{
@@ -273,7 +273,9 @@ var _ = Describe("Strategy", func() {
 				core.ShootStatus{
 					Credentials: &core.ShootCredentials{
 						EncryptionAtRest: &core.EncryptionAtRest{
-							ProviderType: core.EncryptionProviderTypeAESCBC,
+							Provider: core.EncryptionProviderStatus{
+								Type: core.EncryptionProviderTypeAESCBC,
+							},
 						},
 					},
 				},
@@ -282,14 +284,18 @@ var _ = Describe("Strategy", func() {
 				core.ShootStatus{
 					Credentials: &core.ShootCredentials{
 						EncryptionAtRest: &core.EncryptionAtRest{
-							ProviderType: core.EncryptionProviderType("foo"),
+							Provider: core.EncryptionProviderStatus{
+								Type: core.EncryptionProviderType("foo"),
+							},
 						},
 					},
 				},
 				core.ShootStatus{
 					Credentials: &core.ShootCredentials{
 						EncryptionAtRest: &core.EncryptionAtRest{
-							ProviderType: core.EncryptionProviderType("foo"),
+							Provider: core.EncryptionProviderStatus{
+								Type: core.EncryptionProviderType("foo"),
+							},
 						},
 					},
 				},
@@ -1126,7 +1132,9 @@ var _ = Describe("Strategy", func() {
 				core.ShootStatus{
 					Credentials: &core.ShootCredentials{
 						EncryptionAtRest: &core.EncryptionAtRest{
-							ProviderType: core.EncryptionProviderTypeAESCBC,
+							Provider: core.EncryptionProviderStatus{
+								Type: core.EncryptionProviderTypeAESCBC,
+							},
 						},
 					},
 				},
@@ -1135,14 +1143,18 @@ var _ = Describe("Strategy", func() {
 				core.ShootStatus{
 					Credentials: &core.ShootCredentials{
 						EncryptionAtRest: &core.EncryptionAtRest{
-							ProviderType: core.EncryptionProviderType("foo"),
+							Provider: core.EncryptionProviderStatus{
+								Type: core.EncryptionProviderType("foo"),
+							},
 						},
 					},
 				},
 				core.ShootStatus{
 					Credentials: &core.ShootCredentials{
 						EncryptionAtRest: &core.EncryptionAtRest{
-							ProviderType: core.EncryptionProviderType("foo"),
+							Provider: core.EncryptionProviderStatus{
+								Type: core.EncryptionProviderType("foo"),
+							},
 						},
 					},
 				},

@@ -66,7 +66,9 @@ var _ = Describe("Handler", func() {
 			defaultStatus = operatorv1alpha1.GardenStatus{
 				Credentials: &operatorv1alpha1.Credentials{
 					EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
-						ProviderType: gardencorev1beta1.EncryptionProviderTypeAESCBC,
+						Provider: operatorv1alpha1.EncryptionProviderStatus{
+							Type: gardencorev1beta1.EncryptionProviderTypeAESCBC,
+						},
 					},
 				},
 			}
@@ -181,7 +183,9 @@ var _ = Describe("Handler", func() {
 				operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
-							ProviderType: gardencorev1beta1.EncryptionProviderTypeAESCBC,
+							Provider: operatorv1alpha1.EncryptionProviderStatus{
+								Type: gardencorev1beta1.EncryptionProviderTypeAESCBC,
+							},
 						},
 					},
 				},
@@ -193,8 +197,10 @@ var _ = Describe("Handler", func() {
 				operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
-							Resources:    []string{"configmaps", "shoots.core.gardener.cloud"},
-							ProviderType: gardencorev1beta1.EncryptionProviderTypeAESCBC,
+							Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
+							Provider: operatorv1alpha1.EncryptionProviderStatus{
+								Type: gardencorev1beta1.EncryptionProviderTypeAESCBC,
+							},
 						},
 					},
 					EncryptedResources: []string{"configmaps", "shoots.core.gardener.cloud"},
@@ -212,8 +218,10 @@ var _ = Describe("Handler", func() {
 				operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
-							Resources:    []string{"configmaps", "shoots.core.gardener.cloud"},
-							ProviderType: gardencorev1beta1.EncryptionProviderTypeAESCBC,
+							Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
+							Provider: operatorv1alpha1.EncryptionProviderStatus{
+								Type: gardencorev1beta1.EncryptionProviderTypeAESCBC,
+							},
 						},
 					},
 					EncryptedResources: []string{"configmaps"},

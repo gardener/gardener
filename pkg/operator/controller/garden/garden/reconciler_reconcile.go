@@ -541,7 +541,7 @@ func (r *Reconciler) reconcile(
 						garden.Status.Credentials.EncryptionAtRest = &operatorv1alpha1.EncryptionAtRest{}
 					}
 
-					garden.Status.Credentials.EncryptionAtRest.ProviderType = encryptionProviderToUse
+					garden.Status.Credentials.EncryptionAtRest.Provider.Type = encryptionProviderToUse
 
 					if len(encryptedResources) > 0 {
 						garden.Status.Credentials.EncryptionAtRest.Resources = shared.StringifyGroupResources(encryptedResources)
@@ -1016,7 +1016,7 @@ func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden
 			gardenerAPIServer,
 			shared.StringifyGroupResources(getGardenerResourcesForEncryption(garden)),
 			utils.FilterEntriesByFilterFn(helper.GetEncryptedResourcesInStatus(garden.Status), operator.IsServedByGardenerAPIServer),
-			helper.GetGardenEncryptionProviderType(garden.Spec.VirtualCluster.Gardener.APIServer),
+			helper.GetGardenAPIServerEncryptionProviderType(garden.Spec.VirtualCluster.Gardener.APIServer),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
 			helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials),
 		)

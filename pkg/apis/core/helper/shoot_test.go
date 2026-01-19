@@ -621,7 +621,15 @@ var _ = Describe("Helper", func() {
 			},
 			Entry("no credentials field", core.ShootStatus{}, ""),
 			Entry("without provider", core.ShootStatus{Credentials: &core.ShootCredentials{}}, ""),
-			Entry("with provider", core.ShootStatus{Credentials: &core.ShootCredentials{EncryptionAtRest: &core.EncryptionAtRest{ProviderType: EncryptionProviderType}}}, "foo"),
+			Entry("with provider", core.ShootStatus{
+				Credentials: &core.ShootCredentials{
+					EncryptionAtRest: &core.EncryptionAtRest{
+						Provider: core.EncryptionProviderStatus{
+							Type: EncryptionProviderType,
+						},
+					},
+				},
+			}, "foo"),
 		)
 	})
 

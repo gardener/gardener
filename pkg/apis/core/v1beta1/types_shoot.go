@@ -322,8 +322,14 @@ type EncryptionAtRest struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
 	// +optional
 	Resources []string `json:"resources,omitempty" protobuf:"bytes,1,rep,name=resources"`
-	// ProviderType is the used encryption provider type.
-	ProviderType EncryptionProviderType `json:"providerType" protobuf:"bytes,2,opt,name=providerType"`
+	// Provider contains information about Shoot encryption provider.
+	Provider EncryptionProviderStatus `json:"provider" protobuf:"bytes,2,opt,name=provider"`
+}
+
+// EncryptionProviderStatus contains information about Shoot encryption provider.
+type EncryptionProviderStatus struct {
+	// Type is the used encryption provider type.
+	Type EncryptionProviderType `json:"type" protobuf:"bytes,1,opt,name=type"`
 }
 
 // CARotation contains information about the certificate authority credential rotation.

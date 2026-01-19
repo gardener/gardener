@@ -41,7 +41,7 @@ var _ = Describe("GardenerAPIServer", func() {
 		runtimeClient               client.Client
 		namespace                   = "foo"
 		clusterIdentity             = "cluster-id"
-		etcdEncryptionType          = gardencorev1beta1.EncryptionProviderTypeAESCBC
+		encryptionProviderType      = gardencorev1beta1.EncryptionProviderTypeAESCBC
 		workloadIdentityTokenIssuer = "https://issuer.gardener.cloud.local"
 		topologyAwareRoutingEnabled = false
 		goAwayChance                = 0.001337
@@ -439,7 +439,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				gardenerAPIServer.EXPECT().SetWorkloadIdentityKeyRotationPhase(workloadIdentityKeyRotationPhase)
 				gardenerAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployGardenerAPIServer(ctx, runtimeClient, namespace, gardenerAPIServer, nil, nil, etcdEncryptionType, etcdEncryptionKeyRotationPhase, workloadIdentityKeyRotationPhase)).To(Succeed())
+				Expect(DeployGardenerAPIServer(ctx, runtimeClient, namespace, gardenerAPIServer, nil, nil, encryptionProviderType, etcdEncryptionKeyRotationPhase, workloadIdentityKeyRotationPhase)).To(Succeed())
 
 				if finalizeTest != nil {
 					finalizeTest()
@@ -454,7 +454,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
-					EncryptionProvider:    etcdEncryptionType,
+					EncryptionProvider:    encryptionProviderType,
 				},
 				nil,
 			),
@@ -475,7 +475,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
-					EncryptionProvider:    etcdEncryptionType,
+					EncryptionProvider:    encryptionProviderType,
 				},
 				nil,
 			),
@@ -497,7 +497,7 @@ var _ = Describe("GardenerAPIServer", func() {
 						EncryptWithCurrentKey: true,
 						ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 						EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
-						EncryptionProvider:    etcdEncryptionType,
+						EncryptionProvider:    encryptionProviderType,
 					})
 					gardenerAPIServer.EXPECT().Deploy(ctx)
 				},
@@ -506,7 +506,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					EncryptWithCurrentKey: false,
 					ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
-					EncryptionProvider:    etcdEncryptionType,
+					EncryptionProvider:    encryptionProviderType,
 				},
 				func() {
 					deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver", Namespace: namespace}}
@@ -522,7 +522,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
-					EncryptionProvider:    etcdEncryptionType,
+					EncryptionProvider:    encryptionProviderType,
 				},
 				nil,
 			),
@@ -543,7 +543,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
-					EncryptionProvider:    etcdEncryptionType,
+					EncryptionProvider:    encryptionProviderType,
 				},
 				func() {
 					deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver", Namespace: namespace}}
@@ -559,7 +559,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
-					EncryptionProvider:    etcdEncryptionType,
+					EncryptionProvider:    encryptionProviderType,
 				},
 				nil,
 			),
@@ -581,14 +581,14 @@ var _ = Describe("GardenerAPIServer", func() {
 						"internalsecrets.core.gardener.cloud",
 						"shootstates.core.gardener.cloud",
 					},
-					EncryptionProvider: etcdEncryptionType,
+					EncryptionProvider: encryptionProviderType,
 				}
 
 				gardenerAPIServer.EXPECT().SetETCDEncryptionConfig(expectedETCDEncryptionConfig)
 				gardenerAPIServer.EXPECT().SetWorkloadIdentityKeyRotationPhase(workloadIdentityKeyRotationPhase)
 				gardenerAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployGardenerAPIServer(ctx, runtimeClient, namespace, gardenerAPIServer, nil, nil, etcdEncryptionType, etcdEncryptionKeyRotationPhase, workloadIdentityKeyRotationPhase)).To(Succeed())
+				Expect(DeployGardenerAPIServer(ctx, runtimeClient, namespace, gardenerAPIServer, nil, nil, encryptionProviderType, etcdEncryptionKeyRotationPhase, workloadIdentityKeyRotationPhase)).To(Succeed())
 			})
 
 			It("It should deploy GardenerAPIServer with the default resources appended to the passed resources", func() {
@@ -610,7 +610,7 @@ var _ = Describe("GardenerAPIServer", func() {
 						"internalsecrets.core.gardener.cloud",
 						"shootstates.core.gardener.cloud",
 					},
-					EncryptionProvider: etcdEncryptionType,
+					EncryptionProvider: encryptionProviderType,
 				}
 
 				gardenerAPIServer.EXPECT().SetETCDEncryptionConfig(expectedETCDEncryptionConfig)
@@ -627,7 +627,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					"bastions.operations.gardener.cloud",
 				}
 
-				Expect(DeployGardenerAPIServer(ctx, runtimeClient, namespace, gardenerAPIServer, resourcesToEncrypt, encryptedResources, etcdEncryptionType, etcdEncryptionKeyRotationPhase, workloadIdentityKeyRotationPhase)).To(Succeed())
+				Expect(DeployGardenerAPIServer(ctx, runtimeClient, namespace, gardenerAPIServer, resourcesToEncrypt, encryptedResources, encryptionProviderType, etcdEncryptionKeyRotationPhase, workloadIdentityKeyRotationPhase)).To(Succeed())
 			})
 		})
 	})

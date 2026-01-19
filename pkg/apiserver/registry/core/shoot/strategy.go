@@ -508,7 +508,7 @@ func SyncEncryptedProviderStatus(shoot *core.Shoot) {
 		shoot.Status.Credentials.EncryptionAtRest = &core.EncryptionAtRest{}
 	}
 
-	if len(shoot.Status.Credentials.EncryptionAtRest.ProviderType) == 0 {
-		shoot.Status.Credentials.EncryptionAtRest.ProviderType = encryptionProviderType
+	if len(shoot.Status.Credentials.EncryptionAtRest.Provider.Type) == 0 {
+		shoot.Status.Credentials.EncryptionAtRest.Provider.Type = encryptionProviderType
 	}
 }

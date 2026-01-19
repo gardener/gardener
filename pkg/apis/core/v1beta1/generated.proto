@@ -1042,8 +1042,8 @@ message EncryptionAtRest {
   // +optional
   repeated string resources = 1;
 
-  // ProviderType is the used encryption provider type.
-  optional string providerType = 2;
+  // Provider contains information about Shoot encryption provider.
+  optional EncryptionProviderStatus provider = 2;
 }
 
 // EncryptionConfig contains customizable encryption configuration of the API server.
@@ -1067,6 +1067,12 @@ message EncryptionProvider {
   //   - "aescbc"
   // Defaults to aescbc.
   // +optional
+  optional string type = 1;
+}
+
+// EncryptionProviderStatus contains information about Shoot encryption provider.
+message EncryptionProviderStatus {
+  // Type is the used encryption provider type.
   optional string type = 1;
 }
 

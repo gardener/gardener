@@ -247,7 +247,7 @@ func computeAPIServerETCDEncryptionConfig(
 	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
 	resourcesToEncrypt []string,
 	encryptedResources []string,
-	encryptionTypeToUse gardencorev1beta1.EncryptionProviderType,
+	encryptionProviderType gardencorev1beta1.EncryptionProviderType,
 ) (
 	apiserver.ETCDEncryptionConfig,
 	error,
@@ -257,7 +257,7 @@ func computeAPIServerETCDEncryptionConfig(
 		EncryptWithCurrentKey: true,
 		ResourcesToEncrypt:    resourcesToEncrypt,
 		EncryptedResources:    encryptedResources,
-		EncryptionProvider:    encryptionTypeToUse,
+		EncryptionProvider:    encryptionProviderType,
 	}
 
 	if etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationPreparing {

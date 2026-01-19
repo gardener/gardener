@@ -1199,13 +1199,45 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/concepts/oper
 </tr>
 <tr>
 <td>
-<code>providerType</code></br>
+<code>provider</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.EncryptionProviderStatus">
+EncryptionProviderStatus
+</a>
+</em>
+</td>
+<td>
+<p>Provider contains information about virtual garden encryption provider.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.EncryptionProviderStatus">EncryptionProviderStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.EncryptionAtRest">EncryptionAtRest</a>)
+</p>
+<p>
+<p>EncryptionProviderStatus contains information about virtual garden encryption provider.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code></br>
 <em>
 github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionProviderType
 </em>
 </td>
 <td>
-<p>ProviderType is the used encryption provider type.</p>
+<p>Type is the used encryption provider type.</p>
 </td>
 </tr>
 </tbody>

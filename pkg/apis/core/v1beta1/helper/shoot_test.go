@@ -1862,7 +1862,15 @@ var _ = Describe("Helper", func() {
 			},
 			Entry("no credentials field", gardencorev1beta1.ShootStatus{}, ""),
 			Entry("without provider", gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}, ""),
-			Entry("with provider", gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{EncryptionAtRest: &gardencorev1beta1.EncryptionAtRest{ProviderType: EncryptionProviderType}}}, "foo"),
+			Entry("with provider", gardencorev1beta1.ShootStatus{
+				Credentials: &gardencorev1beta1.ShootCredentials{
+					EncryptionAtRest: &gardencorev1beta1.EncryptionAtRest{
+						Provider: gardencorev1beta1.EncryptionProviderStatus{
+							Type: EncryptionProviderType,
+						},
+					},
+				},
+			}, "foo"),
 		)
 	})
 

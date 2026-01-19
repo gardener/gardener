@@ -507,7 +507,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 							shoot.Status.Credentials.EncryptionAtRest = &gardencorev1beta1.EncryptionAtRest{}
 						}
 
-						shoot.Status.Credentials.EncryptionAtRest.ProviderType = encryptionProviderType
+						shoot.Status.Credentials.EncryptionAtRest.Provider.Type = encryptionProviderType
 
 						if len(encryptedResources) > 0 {
 							shoot.Status.Credentials.EncryptionAtRest.Resources = encryptedResources

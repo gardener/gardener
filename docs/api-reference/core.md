@@ -5656,15 +5656,15 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/securit
 </tr>
 <tr>
 <td>
-<code>providerType</code></br>
+<code>provider</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.EncryptionProviderType">
-EncryptionProviderType
+<a href="#core.gardener.cloud/v1beta1.EncryptionProviderStatus">
+EncryptionProviderStatus
 </a>
 </em>
 </td>
 <td>
-<p>ProviderType is the used encryption provider type.</p>
+<p>Provider contains information about Shoot encryption provider.</p>
 </td>
 </tr>
 </tbody>
@@ -5752,12 +5752,44 @@ Defaults to aescbc.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.EncryptionProviderStatus">EncryptionProviderStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.EncryptionAtRest">EncryptionAtRest</a>)
+</p>
+<p>
+<p>EncryptionProviderStatus contains information about Shoot encryption provider.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.EncryptionProviderType">
+EncryptionProviderType
+</a>
+</em>
+</td>
+<td>
+<p>Type is the used encryption provider type.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.EncryptionProviderType">EncryptionProviderType
 (<code>string</code> alias)</p></h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.EncryptionAtRest">EncryptionAtRest</a>, 
-<a href="#core.gardener.cloud/v1beta1.EncryptionProvider">EncryptionProvider</a>)
+<a href="#core.gardener.cloud/v1beta1.EncryptionProvider">EncryptionProvider</a>, 
+<a href="#core.gardener.cloud/v1beta1.EncryptionProviderStatus">EncryptionProviderStatus</a>)
 </p>
 <p>
 <p>EncryptionProviderType is a type alias for the encryption provider type string.</p>
