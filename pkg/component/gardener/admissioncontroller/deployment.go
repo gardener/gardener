@@ -67,7 +67,7 @@ func (a *gardenerAdmissionController) deployment(secretServerCert, secretGeneric
 					},
 					Containers: []corev1.Container{
 						{
-							Name:            DeploymentName,
+							Name:            ContainerName,
 							Image:           a.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
