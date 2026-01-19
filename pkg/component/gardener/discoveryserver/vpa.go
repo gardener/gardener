@@ -31,14 +31,20 @@ func (g *gardenerDiscoveryServer) verticalPodAutoscaler() *vpaautoscalingv1.Vert
 				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-					ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
-					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-					MinAllowed: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("10m"),
-						corev1.ResourceMemory: resource.MustParse("64Mi"),
+				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+					{
+						ContainerName:    containerName,
+						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+						MinAllowed: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("10m"),
+							corev1.ResourceMemory: resource.MustParse("64Mi"),
+						},
 					},
-				}},
+					{
+						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+					},
+				},
 			},
 		},
 	}
