@@ -24,11 +24,17 @@ func (g *gardenerAPIServer) serviceMonitor() *monitoringv1.ServiceMonitor {
 			Endpoints: []monitoringv1.Endpoint{{
 				TargetPort: ptr.To(intstr.FromInt32(port)),
 				Scheme:     ptr.To(monitoringv1.SchemeHTTPS),
-				TLSConfig:  &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
-				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{Name: garden.AccessSecretName},
-					Key:                  resourcesv1alpha1.DataKeyToken,
-				}},
+				HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+					HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+						HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
+							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: garden.AccessSecretName},
+								Key:                  resourcesv1alpha1.DataKeyToken,
+							}},
+						},
+					},
+				},
 				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
 					"authentication_attempts",
 					"authenticated_user_requests",

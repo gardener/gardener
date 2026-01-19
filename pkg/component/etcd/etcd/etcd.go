@@ -453,18 +453,22 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				{
 					Port:   portNameClient,
 					Scheme: ptr.To(monitoringv1.SchemeHTTPS),
-					TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
-						// This is needed because the etcd's certificates are not are generated for a specific pod IP.
-						InsecureSkipVerify: ptr.To(true),
-						Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
-							Key:                  secretsutils.DataKeyCertificate,
-						}},
-						KeySecret: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
-							Key:                  secretsutils.DataKeyPrivateKey,
+					HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
+								// This is needed because the etcd's certificates are not are generated for a specific pod IP.
+								InsecureSkipVerify: ptr.To(true),
+								Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
+									Key:                  secretsutils.DataKeyCertificate,
+								}},
+								KeySecret: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
+									Key:                  secretsutils.DataKeyPrivateKey,
+								},
+							}},
 						},
-					}},
+					},
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_app_kubernetes_io_part_of"},
@@ -484,18 +488,22 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				{
 					Port:   portNameBackupRestore,
 					Scheme: ptr.To(monitoringv1.SchemeHTTPS),
-					TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
-						// This is needed because the etcd's certificates are not are generated for a specific pod IP.
-						InsecureSkipVerify: ptr.To(true),
-						Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
-							Key:                  secretsutils.DataKeyCertificate,
-						}},
-						KeySecret: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
-							Key:                  secretsutils.DataKeyPrivateKey,
+					HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
+								// This is needed because the etcd's certificates are not are generated for a specific pod IP.
+								InsecureSkipVerify: ptr.To(true),
+								Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
+									Key:                  secretsutils.DataKeyCertificate,
+								}},
+								KeySecret: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
+									Key:                  secretsutils.DataKeyPrivateKey,
+								},
+							}},
 						},
-					}},
+					},
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_app_kubernetes_io_part_of"},

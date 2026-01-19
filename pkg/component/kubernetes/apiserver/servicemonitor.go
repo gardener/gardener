@@ -38,11 +38,17 @@ func (k *kubeAPIServer) reconcileServiceMonitor(ctx context.Context, serviceMoni
 			Endpoints: []monitoringv1.Endpoint{{
 				TargetPort: ptr.To(intstr.FromInt32(kubeapiserverconstants.Port)),
 				Scheme:     ptr.To(monitoringv1.SchemeHTTPS),
-				TLSConfig:  &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
-				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{Name: k.prometheusAccessSecretName()},
-					Key:                  resourcesv1alpha1.DataKeyToken,
-				}},
+				HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+					HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+						HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
+							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: k.prometheusAccessSecretName()},
+								Key:                  resourcesv1alpha1.DataKeyToken,
+							}},
+						},
+					},
+				},
 				RelabelConfigs: []monitoringv1.RelabelConfig{{
 					Action: "labelmap",
 					Regex:  `__meta_kubernetes_service_label_(.+)`,

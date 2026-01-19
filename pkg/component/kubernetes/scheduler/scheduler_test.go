@@ -425,13 +425,19 @@ var _ = Describe("KubeScheduler", func() {
 					"role": "scheduler",
 				}},
 				Endpoints: []monitoringv1.Endpoint{{
-					Port:      "metrics",
-					Scheme:    ptr.To(monitoringv1.SchemeHTTPS),
-					TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
-					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
-						Key:                  "token",
-					}},
+					Port:   "metrics",
+					Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+					HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+							HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
+								Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
+									Key:                  "token",
+								}},
+							},
+						},
+					},
 					RelabelConfigs: []monitoringv1.RelabelConfig{{
 						Action: "labelmap",
 						Regex:  `__meta_kubernetes_service_label_(.+)`,

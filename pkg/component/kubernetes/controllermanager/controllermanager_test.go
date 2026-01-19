@@ -235,13 +235,19 @@ var _ = Describe("KubeControllerManager", func() {
 				Spec: monitoringv1.ServiceMonitorSpec{
 					Selector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "kubernetes", "role": "controller-manager"}},
 					Endpoints: []monitoringv1.Endpoint{{
-						Port:      "metrics",
-						Scheme:    ptr.To(monitoringv1.SchemeHTTPS),
-						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
-						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-" + prometheusName},
-							Key:                  "token",
-						}},
+						Port:   "metrics",
+						Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+						HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+							HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+								TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+								HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
+									Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+										LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-" + prometheusName},
+										Key:                  "token",
+									}},
+								},
+							},
+						},
 						RelabelConfigs: []monitoringv1.RelabelConfig{{
 							Action: "labelmap",
 							Regex:  `__meta_kubernetes_service_label_(.+)`,

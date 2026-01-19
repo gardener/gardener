@@ -477,17 +477,21 @@ var _ = Describe("Etcd", func() {
 						{
 							Port:   "client",
 							Scheme: ptr.To(monitoringv1.SchemeHTTPS),
-							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
-								InsecureSkipVerify: ptr.To(true),
-								Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
-									LocalObjectReference: corev1.LocalObjectReference{Name: clientSecretName},
-									Key:                  secretsutils.DataKeyCertificate,
-								}},
-								KeySecret: &corev1.SecretKeySelector{
-									LocalObjectReference: corev1.LocalObjectReference{Name: clientSecretName},
-									Key:                  secretsutils.DataKeyPrivateKey,
+							HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+								HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+									TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
+										InsecureSkipVerify: ptr.To(true),
+										Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{Name: clientSecretName},
+											Key:                  secretsutils.DataKeyCertificate,
+										}},
+										KeySecret: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{Name: clientSecretName},
+											Key:                  secretsutils.DataKeyPrivateKey,
+										},
+									}},
 								},
-							}},
+							},
 							RelabelConfigs: []monitoringv1.RelabelConfig{
 								{
 									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_app_kubernetes_io_part_of"},
@@ -507,17 +511,21 @@ var _ = Describe("Etcd", func() {
 						{
 							Port:   "backuprestore",
 							Scheme: ptr.To(monitoringv1.SchemeHTTPS),
-							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
-								InsecureSkipVerify: ptr.To(true),
-								Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
-									LocalObjectReference: corev1.LocalObjectReference{Name: clientSecretName},
-									Key:                  secretsutils.DataKeyCertificate,
-								}},
-								KeySecret: &corev1.SecretKeySelector{
-									LocalObjectReference: corev1.LocalObjectReference{Name: clientSecretName},
-									Key:                  secretsutils.DataKeyPrivateKey,
+							HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+								HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+									TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
+										InsecureSkipVerify: ptr.To(true),
+										Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{Name: clientSecretName},
+											Key:                  secretsutils.DataKeyCertificate,
+										}},
+										KeySecret: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{Name: clientSecretName},
+											Key:                  secretsutils.DataKeyPrivateKey,
+										},
+									}},
 								},
-							}},
+							},
 							RelabelConfigs: []monitoringv1.RelabelConfig{
 								{
 									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_app_kubernetes_io_part_of"},
