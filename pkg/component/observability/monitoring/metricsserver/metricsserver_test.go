@@ -80,10 +80,12 @@ metadata:
 spec:
   resourcePolicy:
     containerPolicies:
-    - containerName: '*'
+    - containerName: metrics-server
       controlledValues: RequestsOnly
       minAllowed:
         memory: 60Mi
+    - containerName: '*'
+      mode: "Off"
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
