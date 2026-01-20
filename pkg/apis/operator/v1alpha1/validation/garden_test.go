@@ -3175,6 +3175,43 @@ var _ = Describe("Validation Tests", func() {
 						"Detail": Equal("must not contain a fragment"),
 					}))))
 				})
+
+				It("should allow invalid accepted issuer URLs to be updated with valid ones", func() {
+					oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.ServiceAccountConfig = &gardencorev1beta1.ServiceAccountConfig{
+						AcceptedIssuers: []string{"http://issuer.com"},
+					}
+					newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.ServiceAccountConfig = &gardencorev1beta1.ServiceAccountConfig{
+						AcceptedIssuers: []string{"https://issuer.com"},
+					}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(BeEmpty())
+				})
+
+				It("should allow invalid event ttl on update if it is unchanged", func() {
+					oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour * 24 * 10}
+					newGarden := oldGarden.DeepCopy()
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(BeEmpty())
+				})
+
+				It("should not allow invalid event ttl on update if it is changed", func() {
+					oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour * 24 * 10}
+					newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour * 24 * 42}
+
+					errorList := ValidateGardenUpdate(oldGarden, newGarden, extensions)
+					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.eventTTL"),
+						"Detail": Equal("can not be longer than 1d"),
+					}))))
+				})
+
+				It("should allow invalid event ttl to be updated with valid ones", func() {
+					oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour * 24 * 10}
+					newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour * 24}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(BeEmpty())
+				})
 			})
 		})
 	})
