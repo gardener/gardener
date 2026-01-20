@@ -29,6 +29,7 @@ import (
 func ValidateManagedSeedSet(ManagedSeedSet *seedmanagement.ManagedSeedSet) field.ErrorList {
 	opts := gardencorevalidation.KubeAPIServerValidationOptions{
 		AllowInvalidAcceptedIssuers: false,
+		AllowInvalidEventTTL:        false,
 	}
 
 	return ValidateManagedSeedSetWithOps(ManagedSeedSet, opts)
@@ -56,6 +57,8 @@ func ValidateManagedSeedSetUpdate(newManagedSeedSet, oldManagedSeedSet *seedmana
 		AllowInvalidAcceptedIssuers: oldManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer != nil && newManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer != nil &&
 			oldManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil && newManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil &&
 			apiequality.Semantic.DeepEqual(oldManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers, newManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers),
+		AllowInvalidEventTTL: oldManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer != nil && newManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer != nil &&
+			apiequality.Semantic.DeepEqual(oldManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer.EventTTL, newManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer.EventTTL),
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newManagedSeedSet.ObjectMeta, &oldManagedSeedSet.ObjectMeta, field.NewPath("metadata"))...)
