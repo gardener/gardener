@@ -21,7 +21,7 @@ func GetClusterParsers(labels map[string]string) []*fluentbitv1alpha2.ClusterPar
 			},
 			Spec: fluentbitv1alpha2.ParserSpec{
 				Regex: &fluentbitv1alpha2parser.Regex{
-					Regex:      "^(?<time>[^ ]+) (stdout|stderr) ([^ ]*) (?<log>.*)$",
+					Regex:      "^(?<time>[^ ]+) (?<stream>stdout|stderr) (?<logtag>[^ ]*) (?<log>.*)$",
 					TimeKey:    "time",
 					TimeFormat: "%Y-%m-%dT%H:%M:%S.%L%z",
 					TimeKeep:   ptr.To(true),
