@@ -226,14 +226,14 @@ var _ = Describe("Certificates tests", func() {
 				switchOptions = extensionscmdwebhook.NewSwitchOptions(
 					extensionscmdwebhook.Switch(shootMutatingWebhookName, newShootMutatingWebhook),
 				)
-				webhookOptions = extensionscmdwebhook.NewAddToManagerOptions(extensionName, shootWebhookManagedResourceName, shootNamespaceSelector, serverOptions, switchOptions)
+				webhookOptions = extensionscmdwebhook.NewAddToManagerOptions(extensionName, shootWebhookManagedResourceName, shootNamespaceSelector, nil, serverOptions, switchOptions)
 			)
 
 			shootWebhookConfig.ValidatingWebhookConfig = nil
 			Expect(webhookOptions.Complete()).To(Succeed())
 			webhookConfig := webhookOptions.Completed()
 			webhookConfig.Clock = fakeClock
-			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr, nil, false)
+			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr, nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			defaultServer, ok = mgr.GetWebhookServer().(*webhook.DefaultServer)
@@ -422,13 +422,13 @@ var _ = Describe("Certificates tests", func() {
 					extensionscmdwebhook.Switch(shootMutatingWebhookName, newShootMutatingWebhook),
 					extensionscmdwebhook.Switch(shootValidatingWebhookName, newShootValidatingWebhook),
 				)
-				webhookOptions = extensionscmdwebhook.NewAddToManagerOptions(extensionName, shootWebhookManagedResourceName, shootNamespaceSelector, serverOptions, switchOptions)
+				webhookOptions = extensionscmdwebhook.NewAddToManagerOptions(extensionName, shootWebhookManagedResourceName, shootNamespaceSelector, nil, serverOptions, switchOptions)
 			)
 
 			Expect(webhookOptions.Complete()).To(Succeed())
 			webhookConfig := webhookOptions.Completed()
 			webhookConfig.Clock = fakeClock
-			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr, nil, false)
+			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr, nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			defaultServer, ok = mgr.GetWebhookServer().(*webhook.DefaultServer)

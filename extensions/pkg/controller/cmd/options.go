@@ -495,7 +495,10 @@ type GeneralConfig struct {
 
 // Complete implements Complete.
 func (r *GeneralOptions) Complete() error {
-	r.config = &GeneralConfig{r.GardenerVersion, r.SelfHostedShootCluster}
+	r.config = &GeneralConfig{
+		GardenerVersion:        r.GardenerVersion,
+		SelfHostedShootCluster: r.SelfHostedShootCluster,
+	}
 	return nil
 }
 
@@ -506,6 +509,12 @@ func (r *GeneralOptions) Completed() *GeneralConfig {
 
 // AddFlags implements Flagger.AddFlags.
 func (r *GeneralOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&r.GardenerVersion, GardenerVersionFlag, "", "Version of the gardenlet.")
-	fs.BoolVar(&r.SelfHostedShootCluster, SelfHostedShootClusterFlag, false, "Does the extension run in a self-hosted shoot cluster?")
+	// GeneralOptions is used in various places and AddFlags might be called multiple times.
+	// Hence, flag registration must only happen once.
+	if fs.Lookup(GardenerVersionFlag) == nil {
+		fs.StringVar(&r.GardenerVersion, GardenerVersionFlag, "", "Version of the gardenlet / gardener-operator.")
+	}
+	if fs.Lookup(SelfHostedShootClusterFlag) == nil {
+		fs.BoolVar(&r.SelfHostedShootCluster, SelfHostedShootClusterFlag, false, "Does the extension run in a self-hosted shoot cluster?")
+	}
 }

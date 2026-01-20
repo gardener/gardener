@@ -94,6 +94,7 @@ func BuildWebhookConfigs(
 	servicePort int,
 	mode, url string,
 	caBundle []byte,
+	mergeShootWebhooksIntoSeedWebhooks bool,
 ) (
 	seedWebhookConfigs Configs,
 	shootWebhookConfigs Configs,
@@ -111,7 +112,7 @@ func BuildWebhookConfigs(
 
 	for _, webhook := range webhooks {
 		var (
-			name  = NamePrefix + providerName
+			name  = PrefixedName(providerName, doNotPrefixComponentName)
 			rules []admissionregistrationv1.RuleWithOperations
 		)
 
@@ -123,7 +124,18 @@ func BuildWebhookConfigs(
 			rules = append(rules, *rule)
 		}
 
-		switch webhook.Target {
+		target := webhook.Target
+		webhookCABundle := caBundle
+		failurePolicy := getFailurePolicy(admissionregistrationv1.Fail, webhook.FailurePolicy)
+
+		// Handle extra settings when shoot webhooks are merged into seed webhooks (self-hosted shoot case).
+		if mergeShootWebhooksIntoSeedWebhooks && target == TargetShoot {
+			target = TargetSeed
+			webhookCABundle = nil
+			failurePolicy = getFailurePolicy(admissionregistrationv1.Ignore, webhook.FailurePolicy)
+		}
+
+		switch target {
 		case TargetSeed:
 			// if all webhooks for one target are removed in a new version, extensions need to explicitly delete the respective
 			// webhook config
@@ -133,9 +145,9 @@ func BuildWebhookConfigs(
 				*webhook,
 				providerName,
 				rules,
-				getFailurePolicy(admissionregistrationv1.Fail, webhook.FailurePolicy),
+				failurePolicy,
 				&exact,
-				BuildClientConfigFor(webhook.Path, namespace, providerName, doNotPrefixComponentName, servicePort, mode, url, caBundle),
+				BuildClientConfigFor(webhook.Path, namespace, providerName, doNotPrefixComponentName, servicePort, mode, url, webhookCABundle),
 				&sideEffects,
 			)
 
