@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 )
 
@@ -26,7 +27,7 @@ var _ = Describe("Logging", func() {
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:   "journald-kubelet",
-							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
+							Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 						},
 						Spec: fluentbitv1alpha2.InputSpec{
 							Systemd: &fluentbitv1alpha2input.Systemd{
@@ -43,10 +44,10 @@ var _ = Describe("Logging", func() {
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:   "journald-kubelet",
-							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
+							Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 						},
 						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: "journald.kubelet",
+							Match: "journald.kubelet.*",
 							FilterItems: []fluentbitv1alpha2.FilterItem{
 								{
 									RecordModifier: &fluentbitv1alpha2filter.RecordModifier{
