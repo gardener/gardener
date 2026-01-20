@@ -3329,7 +3329,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should not allow to specify an event ttl duration longer than 1d", func() {
+			It("should not allow to specify an event ttl duration longer than 24h", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour * 24 * 2}
 
 				errorList := ValidateShoot(shoot)
@@ -3337,7 +3337,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.kubernetes.kubeAPIServer.eventTTL"),
-					"Detail": Equal("can not be longer than 1d"),
+					"Detail": Equal("can not be longer than 24h"),
 				}))))
 			})
 
@@ -3359,7 +3359,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.kubernetes.kubeAPIServer.eventTTL"),
-					"Detail": Equal("can not be longer than 1d"),
+					"Detail": Equal("can not be longer than 24h"),
 				}))))
 			})
 
