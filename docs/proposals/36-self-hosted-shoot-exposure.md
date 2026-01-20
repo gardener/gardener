@@ -14,12 +14,19 @@ reviewers:
 
 ## Table of Contents
 
-- [Summary](#summary)
-- [Motivation](#motivation)
-  - [Goals](#goals)
-  - [Non-Goals](#non-goals)
-- [Proposal](#proposal)
-- [Alternatives](#alternatives)
+* [Summary](#summary)
+* [Motivation](#motivation)
+  * [Goals](#goals)
+  * [Non-Goals](#non-goals)
+* [Proposal](#proposal)
+  * [`Shoot` API Changes](#shoot-api-changes)
+  * [`SelfHostedShootExposure` Extension Resource](#selfhostedshootexposure-extension-resource)
+    * [Extension Controller Interface](#extension-controller-interface)
+    * [Examples of Possible Extension Implementations](#examples-of-possible-extension-implementations)
+  * [DNS-Based Control Plane Exposure](#dns-based-control-plane-exposure)
+  * [gardenlet Controller for Updating Control Plane Endpoints](#gardenlet-controller-for-updating-control-plane-endpoints)
+* [Alternatives](#alternatives)
+  * [Service of Type `LoadBalancer`](#service-of-type-loadbalancer)
 
 ## Summary
 
