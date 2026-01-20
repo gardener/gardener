@@ -33,6 +33,10 @@ var _ = Describe("ScrapeConfigs", func() {
 								`{job="kube-state-metrics",namespace=""}`,
 								`{job="cadvisor",namespace=~"garden|extension-.+|istio-(.+)"}`,
 								`{job="etcd-druid",namespace="garden"}`,
+								`{__name__=~"kubelet_volume_stats_used_bytes"}`,
+								`{__name__=~"kubelet_volume_stats_capacity_bytes"}`,
+								`{__name__=~"kubelet_volume_stats_inodes_used"}`,
+								`{__name__=~"kubelet_volume_stats_inodes"}`,
 							},
 						},
 						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
