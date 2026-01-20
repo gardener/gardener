@@ -7363,6 +7363,33 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))))
 				})
 			})
+
+			Context("Machine image version update", func() {
+				It("should allow downgrading the machine image version in case of rolling update strategy", func() {
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoRollingUpdate)
+					shoot.Spec.Provider.Workers[0].Machine.Image.Version = "2.0.0"
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Provider.Workers[0].Machine.Image.Version = "1.0.0"
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+
+				It("should forbid downgrading the machine image version in case of in-place update strategy", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+					shoot.Spec.Provider.Workers[0].Machine.Image.Version = "2.0.0"
+
+					newShoot := prepareShootForUpdate(shoot)
+
+					newShoot.Spec.Provider.Workers[0].Machine.Image.Version = "1.0.0"
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.provider.workers[0].machine.image.version"),
+						"Detail": Equal("machine image version downgrade is not supported when the update strategy is AutoInPlaceUpdate or ManualInPlaceUpdate"),
+					}))))
+				})
+			})
 		})
 	})
 
