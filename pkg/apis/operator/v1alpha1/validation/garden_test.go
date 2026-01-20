@@ -1972,7 +1972,7 @@ var _ = Describe("Validation Tests", func() {
 							))
 						})
 
-						It("should deny specifying invalid encryption provider tyoe for k8s and gardener api server", func() {
+						It("should deny specifying invalid encryption provider type for k8s and gardener api server", func() {
 							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 								Provider: gardencorev1beta1.EncryptionProvider{
 									Type: ptr.To(gardencorev1beta1.EncryptionProviderType("foo")),
