@@ -86,7 +86,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, err
 		}
 		if peer != nil {
-			networkPolicyAllowToIstioIngressGateway.Spec.Egress[0].To = append(networkPolicyAllowToIstioIngressGateway.Spec.Egress[0].To, *peer)
+			networkPolicyAllowToIstioIngressGateway.Spec.Egress[0].To = []networkingv1.NetworkPolicyPeer{*peer}
 		}
 	}
 
@@ -102,7 +102,7 @@ func (r *Reconciler) exposureClassNetworkPolicyPeer(ctx context.Context, exposur
 	}
 
 	if len(namespaceList.Items) != 1 {
-		return nil, nil
+		return nil, fmt.Errorf("namespace for exposure class %s not found", exposureClass)
 	}
 
 	return &networkingv1.NetworkPolicyPeer{
@@ -110,6 +110,7 @@ func (r *Reconciler) exposureClassNetworkPolicyPeer(ctx context.Context, exposur
 		PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
 			"app":                       "istio-ingressgateway",
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleExposureClassHandler,
+			v1beta1constants.LabelExposureClassHandlerName: exposureClass,
 		}},
 	}, nil
 }
