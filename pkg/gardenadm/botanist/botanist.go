@@ -348,7 +348,6 @@ func newShootObject(
 	// However, when bootstrapping a self-hosted shoot cluster with `gardenadm bootstrap` using a temporary local cluster,
 	// we want to avoid conflicts with kube-system components of the bootstrap cluster by placing all shoot-related
 	// components in another namespace. In this case, we use the technical ID as the control plane namespace, as usual.
-	// TODO(timebertt): double-check if this causes problems when importing the state into the self-hosted shoot cluster
 	if !runsControlPlane {
 		obj.ControlPlaneNamespace = resources.Shoot.Status.TechnicalID
 	}
