@@ -5,6 +5,8 @@
 package gardenlet_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -132,6 +134,10 @@ var _ = Describe("Gardenlet controller test", func() {
 			Eventually(func() error {
 				return mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet)
 			}).Should(BeNotFoundError())
+			// Ensure in-flight reconciliation loops are done
+			Consistently(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet)
+			}, 5*time.Second, 1*time.Second).Should(BeNotFoundError())
 
 			By("Delete and wait for Gardenlet deployment to be gone")
 			Eventually(func(g Gomega) {
