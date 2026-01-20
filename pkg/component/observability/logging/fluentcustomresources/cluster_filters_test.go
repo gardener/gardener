@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 )
@@ -31,17 +30,22 @@ var _ = Describe("Logging", func() {
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							// This filter will be the second one of fluent-bit because the operator orders them by name
-							Name:   "02-containerd",
+							Name:   "01-systemd",
 							Labels: labels,
 						},
 						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: "kubernetes.*",
+							Match: "systemd.*",
 							FilterItems: []fluentbitv1alpha2.FilterItem{
 								{
-									Parser: &fluentbitv1alpha2filter.Parser{
-										KeyName:     "log",
-										Parser:      "containerd-parser",
-										ReserveData: ptr.To(true),
+									Lua: &fluentbitv1alpha2filter.Lua{
+										Script: corev1.ConfigMapKeySelector{
+											Key: "add_time_and_systemd_attr.lua",
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: configName,
+											},
+										},
+										Call:        "add_time_and_systemd_attr",
+										TimeAsTable: true,
 									},
 								},
 							},
@@ -50,7 +54,7 @@ var _ = Describe("Logging", func() {
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							// This filter will be the third one of fluent-bit because the operator orders them by name
-							Name:   "03-add-tag-to-record",
+							Name:   "02-add-tag-to-record",
 							Labels: labels,
 						},
 						Spec: fluentbitv1alpha2.FilterSpec{
