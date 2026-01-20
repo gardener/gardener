@@ -1162,13 +1162,23 @@
         "useTags": false
       },
       {
-        "allValue": null,
+        "allValue": ".+",
+        "current": {
+          "selected": true,
+          "tags": [],
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
         "datasource": "${datasource}",
         "definition": "{__name__=~\"vpa_updater_.+\", pod=~\"$pod\", vpa_namespace!=\"\"}",
         "description": null,
         "error": null,
         "hide": 0,
-        "includeAll": false,
+        "includeAll": true,
         "label": "VPA object namespace",
         "multi": true,
         "name": "vpa_namespace",
