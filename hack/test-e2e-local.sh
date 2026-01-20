@@ -65,42 +65,7 @@ case $TYPE in
 
   default)
     seed_name="local"
-    shoot_names=(
-      e2e-managedseed.garden
-      e2e-hib.local
-      e2e-hib-wl.local
-      e2e-unpriv.local
-      e2e-wake-up.local
-      e2e-wake-up-wl.local
-      e2e-wake-up-ncp.local
-      e2e-migrate.local
-      e2e-migrate-wl.local
-      e2e-mgr-hib.local
-      e2e-rotate.local
-      e2e-rotate-wl.local
-      e2e-rot-noroll.local
-      e2e-rot-ip.local
-      e2e-rot-nr-ip.local
-      e2e-rot-etcd.local
-      e2e-default.local
-      e2e-default-wl.local
-      e2e-default-ip.local
-      e2e-force-delete.local
-      e2e-fd-hib.local
-      e2e-upd-node.local
-      e2e-upd-node-wl.local
-      e2e-upd-node-ovr.local
-      e2e-upgrade.local
-      e2e-upgrade-wl.local
-      e2e-upg-ha.local
-      e2e-upg-ha-wl.local
-      e2e-upg-hib.local
-      e2e-upg-hib-wl.local
-      e2e-auth-one.local
-      e2e-auth-two.local
-      e2e-layer4-lb.local
-    )
-
+    
     ingress_names=(
       gu-local--e2e-rotate
       gu-local--e2e-rotate-wl
@@ -109,34 +74,12 @@ case $TYPE in
     )
 
     if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
-      for shoot in "${shoot_names[@]}" ; do
-        if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" && ("$shoot" == "e2e-upg-ha.local" || "$shoot" == "e2e-upg-ha-wl.local") ]]; then
-          # Do not add the entry for the e2e-upd-zone test as the target ip is dynamic.
-          # The shoot cluster in e2e-upd-zone is created as single-zone control plane and afterwards updated to a multi-zone control plane.
-          # This means that the external loadbalancer IP will change from a zone-specific istio ingress gateway to the default istio ingress gateway.
-          # A static mapping (to the default istio ingress gateway) as done here will not work in this scenario.
-          # The e2e-upd-zone test uses the in-cluster coredns for name resolution and can therefore resolve the api endpoint.
-          continue
-        fi
-        printf "\n$local_address api.%s.external.local.gardener.cloud\n$local_address api.%s.internal.local.gardener.cloud\n" $shoot $shoot >>/etc/hosts
-      done
       for ingress in "${ingress_names[@]}" ; do
         printf "\n$local_address %s.ingress.$seed_name.seed.local.gardener.cloud\n" $ingress >>/etc/hosts
       done
     else
       missing_entries=()
 
-      for shoot in "${shoot_names[@]}"; do
-        if [[ ("${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" || -z "${SHOOT_FAILURE_TOLERANCE_TYPE:-}") && ("$shoot" == "e2e-upg-ha.local" || "$shoot" == "e2e-upg-ha-wl.local") ]]; then
-          # Do not check the entry for the e2e-upg-ha and e2e-upg-ha-wl tests as the target IP is dynamic.
-          continue
-        fi
-        for ip in internal external; do
-          if ! grep -q -x "$local_address api.$shoot.$ip.local.gardener.cloud" /etc/hosts; then
-            missing_entries+=("$local_address api.$shoot.$ip.local.gardener.cloud")
-          fi
-        done
-      done
       for ingress in "${ingress_names[@]}" ; do
           if ! grep -q -x "$local_address $ingress.ingress.$seed_name.seed.local.gardener.cloud" /etc/hosts; then
             missing_entries+=("$local_address $ingress.ingress.$seed_name.seed.local.gardener.cloud")
