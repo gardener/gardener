@@ -471,6 +471,15 @@ func (f *fluentBit) getClusterFluentBitConfig() *fluentbitv1alpha2.ClusterFluent
 				HttpServer:   ptr.To(true),
 				HttpListen:   "::",
 				HttpPort:     ptr.To[int32](2020),
+				Storage: &fluentbitv1alpha2.Storage{
+					Path:                      "/var/fluentbit/chunks",
+					Sync:                      "normal",
+					Metrics:                   "on",
+					Checksum:                  "off",
+					MaxChunksUp:               ptr.To[int64](200),
+					BacklogMemLimit:           "50M",
+					DeleteIrrecoverableChunks: "on",
+				},
 			},
 			InputSelector: metav1.LabelSelector{
 				MatchLabels: getCustomResourcesLabels(),
