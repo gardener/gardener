@@ -288,6 +288,21 @@ var _ = Describe("istiod", func() {
 			data, _ := os.ReadFile("./test_charts/ingress_namespace.yaml")
 			return string(data)
 		}
+
+		istioProxyProtocolEnvoyFilterVPNUnified = func() string {
+			data, _ := os.ReadFile("./test_charts/proxyprotocol_envoyfilter_vpn_unified.yaml")
+			return string(data)
+		}
+
+		istioIngressHTTPConnectGatewayUnified = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_http_connect_gateway_unified.yaml")
+			return string(data)
+		}
+
+		istioIngressEnvoyVPNFilterUnified = func(i int) string {
+			data, _ := os.ReadFile("./test_charts/ingress_vpn_envoy_filter_unified.yaml")
+			return strings.Split(string(data), "---\n")[i]
+		}
 	)
 
 	BeforeEach(func() {
@@ -377,7 +392,8 @@ var _ = Describe("istiod", func() {
 			))
 		})
 
-		checkSuccessfulDeployment := func(minReplicas, maxReplicas *int) {
+		getAndCheckManagedResourceSecret := func() {
+			GinkgoHelper()
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstio), managedResourceIstio)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -401,6 +417,10 @@ var _ = Describe("istiod", func() {
 			Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceIstioSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceIstioSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+		}
+
+		checkSuccessfulDeployment := func(minReplicas, maxReplicas *int) {
+			getAndCheckManagedResourceSecret()
 
 			expectedIstioManifests := []string{
 				istioIngressNamespace(),
@@ -806,6 +826,51 @@ var _ = Describe("istiod", func() {
 
 			It("should successfully deploy all resources", func() {
 				checkSuccessfulDeployment(nil, nil)
+			})
+		})
+
+		Context("With UseUnifiedHTTPProxyPort feature gate enabled", func() {
+			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseUnifiedHTTPProxyPort, true))
+			})
+
+			It("should successfully deploy all resources", func() {
+				getAndCheckManagedResourceSecret()
+
+				expectedIstioManifests := []string{
+					istioIngressHTTPConnectGatewayUnified(),
+					istioIngressEnvoyVPNFilterUnified(0),
+					istioIngressEnvoyVPNFilterUnified(1),
+				}
+
+				By("Verify istio resources")
+				var err error
+				istioManifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceIstioSecret.Data)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(istioManifests).To(ContainElements(expectedIstioManifests))
+			})
+
+			Context("with proxy protocol termination", func() {
+				BeforeEach(func() {
+					igw[0].TerminateLoadBalancerProxyProtocol = true
+				})
+
+				It("should successfully deploy all resources", func() {
+					getAndCheckManagedResourceSecret()
+
+					expectedIstioManifests := []string{
+						istioIngressHTTPConnectGatewayUnified(),
+						istioIngressEnvoyVPNFilterUnified(0),
+						istioIngressEnvoyVPNFilterUnified(1),
+						istioProxyProtocolEnvoyFilterVPNUnified(),
+					}
+
+					By("Verify istio resources")
+					var err error
+					istioManifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceIstioSecret.Data)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(istioManifests).To(ContainElements(expectedIstioManifests))
+				})
 			})
 		})
 	})

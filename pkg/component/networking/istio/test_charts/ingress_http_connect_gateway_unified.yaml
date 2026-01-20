@@ -1,0 +1,24 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: http-connect
+  namespace: test-ingress
+spec:
+  selector:
+    app: istio-ingressgateway
+    foo: bar
+  servers:
+  - hosts:
+    # This service FQDN does not exist, the gateway just needs to be present so that istio opens the port
+    - non-existing-blackhole.garden.svc.cluster.local
+    port:
+      name: http-proxy
+      number: 8443
+      protocol: HTTP
+  - hosts:
+    # This service FQDN does not exist, the gateway just needs to be present so that istio opens the port
+    - non-existing-blackhole.garden.svc.cluster.local
+    port:
+      name: tls-tunnel
+      number: 8132
+      protocol: HTTP

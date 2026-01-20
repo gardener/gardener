@@ -28,7 +28,6 @@ spec:
           typed_config:
             "@type": type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
 ---
-# TODO(hown3d): Drop with RemoveHTTPProxyLegacyPort feature gate
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -41,11 +40,12 @@ spec:
     labels:
 {{ .Values.labels | toYaml | indent 6 }}
   configPatches:
+  {{- range $name, $p := .Values.vpn.ports }}
   - applyTo: LISTENER
     match:
       context: GATEWAY
       listener:
-        portNumber: 8132
+        portNumber: {{ $p.port }}
     patch:
       operation: MERGE
       value:
@@ -55,4 +55,5 @@ spec:
             '@type': type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol
             allow_requests_without_proxy_protocol: true
         per_connection_buffer_limit_bytes: 32768
+  {{- end }}
 {{ end -}}
