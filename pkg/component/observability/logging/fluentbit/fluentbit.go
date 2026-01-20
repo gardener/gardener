@@ -8,6 +8,8 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
@@ -299,6 +301,21 @@ func getLabels() map[string]string {
 		v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleLogging,
 		v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+	}
+	return utils.MergeStringMaps(labels, getTargetNetworkPolicyLabels())
+}
+
+func getTargetNetworkPolicyLabels() map[string]string {
+	if slices.ContainsFunc(features.DefaultFeatureGate.KnownFeatures(), func(s string) bool {
+		return strings.HasPrefix(s, string(features.OpenTelemetryCollector)+"=")
+	}) && features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		return map[string]string{
+			gardenerutils.NetworkPolicyLabel("opentelemetry-collector-collector", 4317):                    v1beta1constants.LabelNetworkPolicyAllowed,
+			"networking.resources.gardener.cloud/to-all-shoots-opentelemetry-collector-collector-tcp-4317": v1beta1constants.LabelNetworkPolicyAllowed,
+		}
+	}
+
+	return map[string]string{
 		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
 		"networking.resources.gardener.cloud/to-all-shoots-logging-tcp-3100":                v1beta1constants.LabelNetworkPolicyAllowed,
 	}
