@@ -18,6 +18,7 @@ var _ = BeforeSuite(func() {
 	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
 		features.OpenTelemetryCollector,
 	)))
+	utilruntime.Must(features.DefaultFeatureGate.Set("OpenTelemetryCollector=true"))
 })
 
 func TestFluentBit(t *testing.T) {

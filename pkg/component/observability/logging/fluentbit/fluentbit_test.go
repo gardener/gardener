@@ -67,9 +67,9 @@ var _ = Describe("Fluent Bit", func() {
 					"role":                             "logging",
 					"gardener.cloud/role":              "logging",
 					"networking.gardener.cloud/to-dns": "allowed",
-					"networking.gardener.cloud/to-runtime-apiserver":                     "allowed",
-					"networking.resources.gardener.cloud/to-all-shoots-logging-tcp-3100": "allowed",
-					"networking.resources.gardener.cloud/to-logging-tcp-3100":            "allowed",
+					"networking.gardener.cloud/to-runtime-apiserver":                                               "allowed",
+					"networking.resources.gardener.cloud/to-all-shoots-opentelemetry-collector-collector-tcp-4317": "allowed",
+					"networking.resources.gardener.cloud/to-opentelemetry-collector-collector-tcp-4317":            "allowed",
 				}},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port: "metrics",
@@ -103,9 +103,9 @@ var _ = Describe("Fluent Bit", func() {
 					"role":                             "logging",
 					"gardener.cloud/role":              "logging",
 					"networking.gardener.cloud/to-dns": "allowed",
-					"networking.gardener.cloud/to-runtime-apiserver":                     "allowed",
-					"networking.resources.gardener.cloud/to-all-shoots-logging-tcp-3100": "allowed",
-					"networking.resources.gardener.cloud/to-logging-tcp-3100":            "allowed",
+					"networking.gardener.cloud/to-runtime-apiserver":                                               "allowed",
+					"networking.resources.gardener.cloud/to-all-shoots-opentelemetry-collector-collector-tcp-4317": "allowed",
+					"networking.resources.gardener.cloud/to-opentelemetry-collector-collector-tcp-4317":            "allowed",
 				}},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port: "metrics-plugin",
@@ -282,14 +282,14 @@ var _ = Describe("Fluent Bit", func() {
 			Expect(customResourcesManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			test.ExpectKindWithNameAndNamespace(manifests, "ConfigMap", "fluent-bit-lua-config", namespace)
-			test.ExpectKindWithNameAndNamespace(manifests, "FluentBit", "fluent-bit-8259c", namespace)
+			test.ExpectKindWithNameAndNamespace(manifests, "FluentBit", "fluent-bit-c6dcd", namespace)
 			test.ExpectKindWithNameAndNamespace(manifests, "ClusterFluentBitConfig", "fluent-bit-config", "")
 			test.ExpectKindWithNameAndNamespace(manifests, "ClusterInput", "tail-kubernetes", "")
 			test.ExpectKindWithNameAndNamespace(manifests, "ClusterFilter", "01-systemd", "")
 			test.ExpectKindWithNameAndNamespace(manifests, "ClusterFilter", "02-add-tag-to-record", "")
 			test.ExpectKindWithNameAndNamespace(manifests, "ClusterFilter", "zz-modify-severity", "")
 			test.ExpectKindWithNameAndNamespace(manifests, "ClusterParser", "containerd-parser", "")
-			test.ExpectKindWithNameAndNamespace(manifests, "ClusterOutput", "journald", "")
+			test.ExpectKindWithNameAndNamespace(manifests, "ClusterOutput", "systemd", "")
 
 			componenttest.PrometheusRule(prometheusRule, "testdata/fluent-bit.prometheusrule.test.yaml")
 		})
@@ -300,7 +300,7 @@ var _ = Describe("Fluent Bit", func() {
 			})
 			It("should not deploy vali ClusterOutputs", func() {
 				Expect(component.Deploy(ctx)).To(Succeed())
-				Expect(customResourcesManagedResourceSecret.Data).NotTo(HaveKey("clusteroutput____journald.yaml"))
+				Expect(customResourcesManagedResourceSecret.Data).NotTo(HaveKey("clusteroutput____systemd.yaml"))
 			})
 
 		})
