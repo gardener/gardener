@@ -1802,7 +1802,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("eventTTL"), *kubeAPIServer.EventTTL, "can not be negative"))
 		}
 		if kubeAPIServer.EventTTL.Duration > time.Hour*24 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("eventTTL"), *kubeAPIServer.EventTTL, "can not be longer than 1d"))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("eventTTL"), *kubeAPIServer.EventTTL, "can not be longer than 24h"))
 		}
 	}
 

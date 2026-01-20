@@ -3202,7 +3202,7 @@ var _ = Describe("Validation Tests", func() {
 					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.eventTTL"),
-						"Detail": Equal("can not be longer than 1d"),
+						"Detail": Equal("can not be longer than 24h"),
 					}))))
 				})
 
