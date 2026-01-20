@@ -368,11 +368,6 @@ var _ = Describe("Seed Validation Tests", func() {
 						"Field": Equal("spec.dns.internal.domain"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.dns.internal.credentialsRef"),
-						"Detail": Equal("credentialsRef must reference a Secret"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.dns.internal.credentialsRef.apiVersion"),
 					})),
@@ -434,6 +429,21 @@ var _ = Describe("Seed Validation Tests", func() {
 				errorList := ValidateSeed(seed)
 				Expect(errorList).To(BeEmpty())
 			})
+
+			It("should allow WorkloadIdentity credentials", func() {
+				seed.Spec.DNS.Internal = &core.SeedDNSProviderConfig{
+					Type:   "foo",
+					Domain: "foo.example.com",
+					Zone:   ptr.To("zone-1"),
+					CredentialsRef: corev1.ObjectReference{
+						APIVersion: "security.gardener.cloud/v1alpha1",
+						Kind:       "WorkloadIdentity",
+						Name:       "internal-domain",
+						Namespace:  "garden",
+					},
+				}
+				Expect(ValidateSeed(seed)).To(BeEmpty())
+			})
 		})
 
 		Context("defaults DNS", func() {
@@ -448,11 +458,6 @@ var _ = Describe("Seed Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.dns.defaults[0].domain"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.dns.defaults[0].credentialsRef"),
-						"Detail": Equal("credentialsRef must reference a Secret"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
@@ -535,9 +540,9 @@ var _ = Describe("Seed Validation Tests", func() {
 						Domain: "bar.example.com",
 						Zone:   ptr.To("zone-2"),
 						CredentialsRef: corev1.ObjectReference{
-							APIVersion: "v1",
-							Kind:       "Secret",
-							Name:       "default-domain-2",
+							APIVersion: "security.gardener.cloud/v1alpha1",
+							Kind:       "WorkloadIdentity",
+							Name:       "default-domain-wi",
 							Namespace:  "garden",
 						},
 					},
@@ -602,11 +607,6 @@ var _ = Describe("Seed Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{ // required type
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.dns.defaults[1].type"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{ // invalid credentialsRef (must reference a Secret)
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.dns.defaults[1].credentialsRef"),
-						"Detail": Equal("credentialsRef must reference a Secret"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{ // required apiVersion
 						"Type":  Equal(field.ErrorTypeRequired),
@@ -1712,6 +1712,18 @@ var _ = Describe("Seed Validation Tests", func() {
 				Expect(ValidateSeed(seed)).To(BeEmpty())
 			})
 
+			It("should allow WorkloadIdentity credentials", func() {
+				seed.Spec.DNS.Provider.CredentialsRef = &corev1.ObjectReference{
+					APIVersion: "security.gardener.cloud/v1alpha1",
+					Kind:       "WorkloadIdentity",
+					Name:       "bar",
+					Namespace:  "garden",
+				}
+				seed.Spec.DNS.Provider.SecretRef = corev1.SecretReference{}
+
+				Expect(ValidateSeed(seed)).To(BeEmpty())
+			})
+
 			It("should fail if DNS provider type is not set", func() {
 				seed.Spec.DNS.Provider.Type = ""
 
@@ -1789,15 +1801,12 @@ var _ = Describe("Seed Validation Tests", func() {
 				}))
 			})
 
-			It("should not allow WorkloadIdentity as DNS provider credentialsRef ", func() {
+			It("should allow WorkloadIdentity as DNS provider credentialsRef ", func() {
 				seed.Spec.DNS.Provider.CredentialsRef.APIVersion = "security.gardener.cloud/v1alpha1"
 				seed.Spec.DNS.Provider.CredentialsRef.Kind = "WorkloadIdentity"
 				seed.Spec.DNS.Provider.SecretRef = corev1.SecretReference{}
 
-				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.dns.provider.credentialsRef"),
-				}))
+				Expect(ValidateSeed(seed)).To(BeEmpty())
 			})
 
 			It("should fail if DNS provider config is empty", func() {
@@ -1841,10 +1850,6 @@ var _ = Describe("Seed Validation Tests", func() {
 					}, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("spec.dns.provider.secretRef.namespace"),
-					}, Fields{
-						// TODO(vpnachev): Allow workload identity credentials when the known controllers support it.
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.dns.provider.credentialsRef"),
 					},
 				))
 			})

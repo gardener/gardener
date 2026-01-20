@@ -8069,7 +8069,7 @@ func schema_pkg_apis_core_v1beta1_SeedDNSProvider(ref common.ReferenceCallback) 
 					},
 					"credentialsRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CredentialsRef is a reference to a resource holding the credentials used for authentication with the DNS provider. As of now, only v1.Secret is supported.",
+							Description: "CredentialsRef is a reference to a resource holding the credentials used for authentication with the DNS provider. Supported referenced resources are v1.Secrets and security.gardener.cloud/v1alpha1.WorkloadIdentity",
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
@@ -8114,7 +8114,7 @@ func schema_pkg_apis_core_v1beta1_SeedDNSProviderConfig(ref common.ReferenceCall
 					},
 					"credentialsRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CredentialsRef is a reference to a resource holding the credentials used for authentication with the DNS provider. As of now, only v1.Secrets are supported.",
+							Description: "CredentialsRef is a reference to a resource holding the credentials used for authentication with the DNS provider. Supported referenced resources are v1.Secrets and security.gardener.cloud/v1alpha1.WorkloadIdentity",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},

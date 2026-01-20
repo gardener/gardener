@@ -249,9 +249,6 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 				if dnsProvider.SecretRef.Namespace != "" {
 					allErrs = append(allErrs, field.Forbidden(dnsProviderPath.Child("secretRef", "namespace"), "must not be set when credentialsRef refers to a WorkloadIdentity"))
 				}
-
-				// TODO(vpnachev): Allow workload identity credentials when the known controllers support it.
-				allErrs = append(allErrs, field.Forbidden(dnsProviderPath.Child("credentialsRef"), "workload identity is not yet supported for DNS providers"))
 			}
 		}
 	}
@@ -499,12 +496,6 @@ func validateSeedDNSProviderConfig(dnsConfig core.SeedDNSProviderConfig, fldPath
 
 	if len(dnsConfig.Type) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "cannot be empty"))
-	}
-
-	// TODO(dimityrmirchev): Add support for workload identity
-	// remove this check once the support is added as ValidateCredentialsRef already does the necessary validation
-	if dnsConfig.CredentialsRef.Kind != "Secret" || dnsConfig.CredentialsRef.APIVersion != corev1.SchemeGroupVersion.String() {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("credentialsRef"), dnsConfig.CredentialsRef, "credentialsRef must reference a Secret"))
 	}
 
 	allErrs = append(allErrs, ValidateCredentialsRef(dnsConfig.CredentialsRef, fldPath.Child("credentialsRef"))...)

@@ -67,7 +67,9 @@ spec:
             namespace: garden
         dns:
           provider:
-            secretRef:
+            credentialsRef:
+              apiVersion: v1
+              kind: Secret
               name: internal-domain-internal-local-gardener-cloud
               namespace: garden
             type: local
@@ -168,7 +170,7 @@ The garden cluster connection of your seeds are configured automatically by `gar
 You could also specify the `gardenClusterAddress` and `gardenClusterCACert` in the `Gardenlet` resource manually, but this is not recommended.
 
 If `GardenClusterAddress` is unset `gardener-operator` will determine the address automatically based on the `Garden` resource.
-It is set to `"api." + garden.spec.virtualCluster.dns.domains[0]` which should cover most use cases since this is the immutable address of the garden cluster.  
+It is set to `"api." + garden.spec.virtualCluster.dns.domains[0]` which should cover most use cases since this is the immutable address of the garden cluster.
 If the runtime cluster is used as a seed cluster and `IstioTLSTermination` feature is not active, `gardenlet` overwrites the address with the internal service address of the garden cluster at runtime.
 This happens for this single seed cluster only, so any managed seed running on this seed cluster will still use the default address of the garden cluster.
 

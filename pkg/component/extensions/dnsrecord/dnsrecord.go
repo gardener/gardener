@@ -19,10 +19,12 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
 
 const (
@@ -35,6 +37,9 @@ const (
 	// of a DNSRecord resource.
 	DefaultTimeout = 2 * time.Minute
 )
+
+// CredentialsDeployFunc is a function type that deploys credentials into a given secret.
+type CredentialsDeployFunc func(context.Context, client.Client, *corev1.Secret) error
 
 // TimeNow returns the current time. Exposed for testing.
 var TimeNow = time.Now
@@ -67,11 +72,8 @@ type Values struct {
 	// Class holds the extension class used to control the responsibility for multiple provider extensions.
 	Class *extensionsv1alpha1.ExtensionClass
 	// UseExistingSecret indicates whether to use an existing secret referenced by SecretName instead of creating/updating
-	// it with the given SecretData.
+	// it with the given credentials.
 	UseExistingSecret bool
-	// SecretData is the secret data of the DNSRecord (containing provider credentials, etc.), used for creating/updating
-	// the secret referenced by SecretName. Ignored if UseExistingSecret is true.
-	SecretData map[string][]byte
 	// Zone is the DNS hosted zone of the DNSRecord.
 	Zone *string
 	// DNSName is the fully qualified domain name of the DNSRecord.
@@ -96,6 +98,7 @@ func New(
 	waitInterval time.Duration,
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
+	deployCredentials CredentialsDeployFunc,
 ) Interface {
 	return &dnsRecord{
 		log:                 log,
@@ -104,6 +107,7 @@ func New(
 		waitInterval:        waitInterval,
 		waitSevereThreshold: waitSevereThreshold,
 		waitTimeout:         waitTimeout,
+		deployCredentials:   deployCredentials,
 
 		dnsRecord: &extensionsv1alpha1.DNSRecord{
 			ObjectMeta: metav1.ObjectMeta{
@@ -127,6 +131,7 @@ type dnsRecord struct {
 	waitInterval        time.Duration
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
+	deployCredentials   CredentialsDeployFunc
 
 	dnsRecord *extensionsv1alpha1.DNSRecord
 	secret    *corev1.Secret
@@ -221,12 +226,11 @@ func (d *dnsRecord) deploySecret(ctx context.Context) error {
 		return nil
 	}
 
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, d.client, d.secret, func() error {
-		d.secret.Type = corev1.SecretTypeOpaque
-		d.secret.Data = d.values.SecretData
+	if d.deployCredentials == nil {
 		return nil
-	})
-	return err
+	}
+
+	return d.deployCredentials(ctx, d.client, d.secret)
 }
 
 // Restore uses the seed client and the ShootState to create the DNSRecord resource and restore its state.
@@ -353,4 +357,37 @@ func (d *dnsRecord) isTimestampInvalidOrAfterLastUpdateTime() bool {
 	}
 
 	return false
+}
+
+// DeploySecretCredentials returns a [CredentialsDeployFunc] that deploys the given secret data into a Secret.
+func DeploySecretCredentials(secretData map[string][]byte) CredentialsDeployFunc {
+	return func(ctx context.Context, c client.Client, secret *corev1.Secret) error {
+		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, secret, func() error {
+			secret.Annotations = nil
+			secret.Labels = nil
+			secret.Type = corev1.SecretTypeOpaque
+			secret.Data = secretData
+			return nil
+		})
+		return err
+	}
+}
+
+// DeployWorkloadIdentityCredentials returns a [CredentialsDeployFunc] that deploys the given Workload Identity credentials into a Secret.
+func DeployWorkloadIdentityCredentials(workloadIdentity *securityv1alpha1.WorkloadIdentity, referringObj client.Object) CredentialsDeployFunc {
+	return func(ctx context.Context, c client.Client, secret *corev1.Secret) error {
+		return workloadidentity.Deploy(ctx, c, workloadIdentity, secret.Name, secret.Namespace, nil, nil, referringObj)
+	}
+}
+
+// CredentialsDeployerFromCredentials returns a CredentialsDeployFunc based on the type of the provided credentials.
+func CredentialsDeployerFromCredentials(credentials client.Object, referringObj client.Object) CredentialsDeployFunc {
+	switch creds := credentials.(type) {
+	case *corev1.Secret:
+		return DeploySecretCredentials(creds.Data)
+	case *securityv1alpha1.WorkloadIdentity:
+		return DeployWorkloadIdentityCredentials(creds, referringObj)
+	default:
+		return nil
+	}
 }

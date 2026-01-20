@@ -116,13 +116,15 @@ func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 		},
 	}
 
+	var credentialsDeployer extensionsdnsrecord.CredentialsDeployFunc
+
 	// Set component values even if the nginx-ingress addons is not enabled.
 	if b.NeedsExternalDNS() {
 		values.Type = b.Shoot.ExternalDomain.Provider
 		if b.Shoot.ExternalDomain.Zone != "" {
 			values.Zone = &b.Shoot.ExternalDomain.Zone
 		}
-		values.SecretData = b.Shoot.ExternalDomain.SecretData
+		credentialsDeployer = extensionsdnsrecord.CredentialsDeployerFromCredentials(b.Shoot.ExternalDomain.Credentials, b.Shoot.GetInfo())
 		values.DNSName = b.Shoot.GetIngressFQDN("*")
 	}
 
@@ -133,6 +135,7 @@ func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 		extensionsdnsrecord.DefaultInterval,
 		extensionsdnsrecord.DefaultSevereThreshold,
 		extensionsdnsrecord.DefaultTimeout,
+		credentialsDeployer,
 	)
 }
 

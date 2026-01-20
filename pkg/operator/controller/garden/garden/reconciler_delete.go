@@ -534,6 +534,7 @@ func (r *Reconciler) destroyDNSRecords(ctx context.Context, log logr.Logger) err
 				dnsrecord.DefaultInterval,
 				dnsrecord.DefaultSevereThreshold,
 				dnsrecord.DefaultTimeout,
+				nil, // when values.SecretName is not set credentialsDeployer is not needed
 			)).Destroy(ctx)
 		})
 	}

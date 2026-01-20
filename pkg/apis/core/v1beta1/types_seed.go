@@ -177,7 +177,8 @@ type SeedDNSProviderConfig struct {
 	Zone *string `json:"zone,omitempty" protobuf:"bytes,3,opt,name=zone"`
 	// CredentialsRef is a reference to a resource holding the credentials used for
 	// authentication with the DNS provider.
-	// As of now, only v1.Secrets are supported.
+	// Supported referenced resources are v1.Secrets and
+	// security.gardener.cloud/v1alpha1.WorkloadIdentity
 	CredentialsRef corev1.ObjectReference `json:"credentialsRef" protobuf:"bytes,4,opt,name=credentialsRef"`
 }
 
@@ -200,7 +201,8 @@ type SeedDNSProvider struct {
 
 	// CredentialsRef is a reference to a resource holding the credentials used for
 	// authentication with the DNS provider.
-	// As of now, only v1.Secret is supported.
+	// Supported referenced resources are v1.Secrets and
+	// security.gardener.cloud/v1alpha1.WorkloadIdentity
 	// +optional
 	CredentialsRef *corev1.ObjectReference `json:"credentialsRef,omitempty" protobuf:"bytes,5,opt,name=credentialsRef"`
 }
