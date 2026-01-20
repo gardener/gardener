@@ -43,6 +43,7 @@ config:
     UseUnifiedHTTPProxyPort: true
     VPAInPlaceUpdates: true
     VPNBondingModeRoundRobin: true
+    PrometheusHealthChecks: true
   logging:
     enabled: true
     vali:

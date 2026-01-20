@@ -5,8 +5,6 @@
 package prometheus
 
 import (
-	"strconv"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,7 +17,6 @@ import (
 const (
 	containerNameCortex   = "cortex"
 	cortexConfigNameInfix = "cortex"
-	portCortex            = 9091
 
 	dataKeyCortexConfig         = "config.yaml"
 	volumeNameCortexConfig      = "cortex-config"
@@ -39,7 +36,7 @@ func (p *prometheus) cortexContainer() corev1.Container {
 		},
 		Ports: []corev1.ContainerPort{{
 			Name:          "frontend",
-			ContainerPort: portCortex,
+			ContainerPort: servicePorts.Cortex.TargetPort.IntVal,
 			Protocol:      corev1.ProtocolTCP,
 		}},
 		SecurityContext: &corev1.SecurityContext{
@@ -81,9 +78,9 @@ http_prefix:
 api:
   response_compression_enabled: true
 server:
-  http_listen_port: ` + strconv.Itoa(portCortex) + `
+  http_listen_port: ` + servicePorts.Cortex.TargetPort.String() + `
 frontend:
-  downstream_url: http://localhost:` + strconv.Itoa(port) + `
+  downstream_url: http://localhost:` + servicePorts.Web.TargetPort.String() + `
   log_queries_longer_than: -1s
 query_range:
   split_queries_by_interval: 24h

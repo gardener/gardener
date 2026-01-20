@@ -130,6 +130,7 @@ honor_labels: true`
 			RetentionSize:       retentionSize,
 			ExternalLabels:      externalLabels,
 			AdditionalPodLabels: additionalLabels,
+			HealthCheckBy:       "some-component",
 		}
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
@@ -283,9 +284,10 @@ honor_labels: true`
 					Name:      name,
 					Namespace: namespace,
 					Labels: map[string]string{
-						"app":  "prometheus",
-						"role": "monitoring",
-						"name": name,
+						"app":             "prometheus",
+						"role":            "monitoring",
+						"name":            name,
+						"health-check-by": "some-component",
 					},
 				},
 				Spec: monitoringv1.PrometheusSpec{
@@ -1161,7 +1163,12 @@ query_range:
 					})
 					Expect(references.InjectAnnotations(prometheusObj)).To(Succeed())
 
-					service.Spec.Ports[0].TargetPort = intstr.FromInt32(9091)
+					service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{
+						Name:       "cortex",
+						Port:       81,
+						TargetPort: intstr.FromInt32(9091),
+						Protocol:   corev1.ProtocolTCP,
+					})
 
 					vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
 						ContainerName: "cortex",

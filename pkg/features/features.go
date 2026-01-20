@@ -85,6 +85,12 @@ const (
 	// owner: @domdom82
 	// alpha: v1.135.0
 	VPNBondingModeRoundRobin featuregate.Feature = "VPNBondingModeRoundRobin"
+
+	// PrometheusHealthChecks enables care controllers to query Prometheus for enhanced health checks of monitoring components. Detected health issues
+	// are reported in the respective `Shoot`, `Seed`, or `Garden` resource.
+	// owner: @vicwicker @istvanballok
+	// alpha: v1.135.0
+	PrometheusHealthChecks featuregate.Feature = "PrometheusHealthChecks"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -123,6 +129,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	VPAInPlaceUpdates:             {Default: false, PreRelease: featuregate.Alpha},
 	CustomDNSServerInNodeLocalDNS: {Default: true, PreRelease: featuregate.Beta},
 	VPNBondingModeRoundRobin:      {Default: false, PreRelease: featuregate.Alpha},
+	PrometheusHealthChecks:        {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

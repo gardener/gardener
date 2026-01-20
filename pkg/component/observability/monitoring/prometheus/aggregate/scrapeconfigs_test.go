@@ -20,6 +20,19 @@ var _ = Describe("ScrapeConfigs", func() {
 		It("should return the expected objects", func() {
 			Expect(aggregate.CentralScrapeConfigs()).To(HaveExactElements(
 				&monitoringv1alpha1.ScrapeConfig{
+					ObjectMeta: metav1.ObjectMeta{Name: "prometheus-aggregate"},
+					Spec: monitoringv1alpha1.ScrapeConfigSpec{
+						RelabelConfigs: []monitoringv1.RelabelConfig{{
+							Action:      "replace",
+							Replacement: ptr.To("prometheus-aggregate"),
+							TargetLabel: "job",
+						}},
+						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
+							Targets: []monitoringv1alpha1.Target{"localhost:9090"},
+						}},
+					},
+				},
+				&monitoringv1alpha1.ScrapeConfig{
 					ObjectMeta: metav1.ObjectMeta{Name: "prometheus"},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
 						HonorTimestamps: ptr.To(false),
@@ -28,11 +41,11 @@ var _ = Describe("ScrapeConfigs", func() {
 							"match[]": {
 								`{__name__=~"metering:.+", __name__!~"metering:.+(over_time|_seconds|:this_month)"}`,
 								`{__name__=~"seed:(.+):(.+)"}`,
-								`{job="kube-state-metrics",namespace=~"garden|extension-.+|istio-(.+)"}`,
-								`{job="kube-state-metrics",namespace=~"shoot-.+",pod=~"kube-apiserver-.+"}`,
-								`{job="kube-state-metrics",namespace=""}`,
-								`{job="cadvisor",namespace=~"garden|extension-.+|istio-(.+)"}`,
-								`{job="etcd-druid",namespace="garden"}`,
+								`{__name__=~"kube_.+",job="kube-state-metrics",namespace=~"garden|extension-.+|istio-(.+)"}`,
+								`{__name__=~"kube_.+",job="kube-state-metrics",namespace=~"shoot-.+",pod=~"kube-apiserver-.+"}`,
+								`{__name__=~"kube_.+",job="kube-state-metrics",namespace=""}`,
+								`{__name__=~"container_.+",job="cadvisor",namespace=~"garden|extension-.+|istio-(.+)"}`,
+								`{__name__=~"etcddruid_.+",job="etcd-druid",namespace="garden"}`,
 							},
 						},
 						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{

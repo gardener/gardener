@@ -27,10 +27,10 @@ func (t *terminal) serviceMonitor() *monitoringv1.ServiceMonitor {
 					LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-garden"},
 					Key:                  "token",
 				}},
-				MetricRelabelConfigs: append([]monitoringv1.RelabelConfig{{
+				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 					Action: "labeldrop",
 					Regex:  `url`,
-				}}, monitoringutils.StandardMetricRelabelConfig()...),
+				}},
 			}},
 		},
 	}

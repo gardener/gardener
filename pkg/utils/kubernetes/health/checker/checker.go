@@ -12,6 +12,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,12 +20,15 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/flow"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
@@ -49,24 +53,48 @@ var (
 
 // HealthChecker contains the condition thresholds.
 type HealthChecker struct {
-	reader              client.Reader
-	clock               clock.Clock
-	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration
-	lastOperation       *gardencorev1beta1.LastOperation
+	reader                  client.Reader
+	clock                   clock.Clock
+	conditionThresholds     map[gardencorev1beta1.ConditionType]time.Duration
+	lastOperation           *gardencorev1beta1.LastOperation
+	prometheusHealthChecker health.PrometheusHealthChecker
 }
 
 // NewHealthChecker creates a new health checker.
-func NewHealthChecker(
-	reader client.Reader,
-	clock clock.Clock,
-	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
-	lastOperation *gardencorev1beta1.LastOperation,
-) *HealthChecker {
-	return &HealthChecker{
-		reader:              reader,
-		clock:               clock,
-		conditionThresholds: conditionThresholds,
-		lastOperation:       lastOperation,
+func NewHealthChecker(reader client.Reader, clock clock.Clock, opts ...option) *HealthChecker {
+	healthChecker := &HealthChecker{
+		reader:                  reader,
+		clock:                   clock,
+		prometheusHealthChecker: health.IsPrometheusHealthy,
+	}
+
+	for _, opt := range opts {
+		opt(healthChecker)
+	}
+
+	return healthChecker
+}
+
+type option func(*HealthChecker)
+
+// WithConditionThresholds sets the condition thresholds to be used for condition transitions.
+func WithConditionThresholds(thresholds map[gardencorev1beta1.ConditionType]time.Duration) option {
+	return func(h *HealthChecker) {
+		h.conditionThresholds = thresholds
+	}
+}
+
+// WithLastOperation sets the last operation to be used for condition transitions.
+func WithLastOperation(lastOp *gardencorev1beta1.LastOperation) option {
+	return func(h *HealthChecker) {
+		h.lastOperation = lastOp
+	}
+}
+
+// WithPrometheusHealthChecker sets the Prometheus health checker function.
+func WithPrometheusHealthChecker(prometheusHealthChecker health.PrometheusHealthChecker) option {
+	return func(h *HealthChecker) {
+		h.prometheusHealthChecker = prometheusHealthChecker
 	}
 }
 
@@ -505,4 +533,89 @@ func (h *HealthChecker) checkControllerInstallationConditions(
 	}
 
 	return nil, nil
+}
+
+// CheckPrometheuses checks the health of Prometheus resources from a list in case the provided filter func returns true.
+func (h *HealthChecker) CheckPrometheuses(
+	ctx context.Context,
+	condition gardencorev1beta1.Condition,
+	prometheuses *monitoringv1.PrometheusList,
+	filterFunc func(*monitoringv1.Prometheus) bool,
+) *gardencorev1beta1.Condition {
+	// Guarantee failed conditions are returned in a stable order to avoid too many writes to condition statuses.
+	prometheusesSorted := prometheuses.DeepCopy()
+	kubernetesutils.ByNamespaceAndName().Sort(prometheusesSorted)
+
+	var (
+		tasks      []flow.TaskFn
+		conditions = make([]*gardencorev1beta1.Condition, len(prometheusesSorted.Items))
+	)
+
+	for i, prometheus := range prometheusesSorted.Items {
+		if filterFunc != nil && !filterFunc(&prometheus) {
+			continue
+		}
+
+		tasks = append(tasks, func(ctx context.Context) error {
+			conditions[i] = h.CheckPrometheus(ctx, condition, &prometheus)
+			return nil
+		})
+	}
+
+	if err := flow.Parallel(tasks...)(ctx); err != nil {
+		return ptr.To(v1beta1helper.NewConditionOrError(h.clock, condition, nil, fmt.Errorf("failed checking Prometheuses: %w", err)))
+	}
+
+	return firstNotNil(conditions)
+}
+
+// CheckPrometheus checks the health of the given Prometheus resource.
+func (h *HealthChecker) CheckPrometheus(ctx context.Context, condition gardencorev1beta1.Condition, prometheus *monitoringv1.Prometheus) *gardencorev1beta1.Condition {
+	var (
+		replicas   = int(ptr.Deref(prometheus.Spec.Replicas, 1))
+		tasks      = make([]flow.TaskFn, replicas)
+		conditions = make([]*gardencorev1beta1.Condition, replicas)
+	)
+
+	for r := range replicas {
+		tasks[r] = func(ctx context.Context) error {
+			conditions[r] = h.checkPrometheusReplicaHealth(ctx, condition, prometheus, r)
+			return nil
+		}
+	}
+
+	if err := flow.Parallel(tasks...)(ctx); err != nil {
+		return ptr.To(v1beta1helper.NewConditionOrError(h.clock, condition, nil, fmt.Errorf(`failed checking Prometheus "%s/%s" replicas: %w`, prometheus.Namespace, prometheus.Name, err)))
+	}
+
+	return firstNotNil(conditions)
+}
+
+func (h *HealthChecker) checkPrometheusReplicaHealth(ctx context.Context, condition gardencorev1beta1.Condition, prometheus *monitoringv1.Prometheus, replica int) *gardencorev1beta1.Condition {
+	var (
+		serviceName = ptr.Deref(prometheus.Spec.ServiceName, "prometheus-operated")
+		endpoint    = fmt.Sprintf("prometheus-%s-%d.%s.%s.svc.cluster.local", prometheus.Name, replica, serviceName, prometheus.Namespace)
+	)
+
+	isPrometheusHealthy, err := h.prometheusHealthChecker(ctx, endpoint, 9090)
+	if err != nil {
+		msg := fmt.Sprintf(`Querying Prometheus pod "%s/prometheus-%s-%d" for health checking returned an error: %v`, prometheus.Namespace, prometheus.Name, replica, err)
+		return ptr.To(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "PrometheusHealthCheckError", msg))
+	}
+
+	if !isPrometheusHealthy {
+		msg := fmt.Sprintf(`There are health issues in Prometheus pod "%s/prometheus-%s-%d". Access Prometheus UI and query for "healthcheck" for more details.`, prometheus.Namespace, prometheus.Name, replica)
+		return ptr.To(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "PrometheusHealthCheckDown", msg))
+	}
+
+	return nil
+}
+
+func firstNotNil[T any](items []*T) *T {
+	for _, c := range items {
+		if c != nil {
+			return c
+		}
+	}
+	return nil
 }

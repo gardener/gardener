@@ -755,9 +755,11 @@ build:
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/optional/alertmanager.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/prometheus.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/verticalpodautoscaler.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/healthcheck.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/kube-kubelet.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/kube-pods.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/networking.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/workerless/healthcheck.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/workerless/kube-pods.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/workerless/networking.yaml
             - pkg/component/observability/monitoring/utils
@@ -1197,8 +1199,10 @@ build:
             - pkg/component/observability/monitoring/persesoperator/templates/crd-perses.dev_persesdatasources.yaml
             - pkg/component/observability/monitoring/prometheus
             - pkg/component/observability/monitoring/prometheus/aggregate
+            - pkg/component/observability/monitoring/prometheus/aggregate/assets/prometheusrules/healthcheck.yaml
             - pkg/component/observability/monitoring/prometheus/aggregate/assets/prometheusrules/metering.rules.stateful.yaml
             - pkg/component/observability/monitoring/prometheus/cache
+            - pkg/component/observability/monitoring/prometheus/cache/assets/prometheusrules/healthcheck.yaml
             - pkg/component/observability/monitoring/prometheus/cache/assets/prometheusrules/metering.rules.stateful.yaml
             - pkg/component/observability/monitoring/prometheus/cache/assets/prometheusrules/metering.rules.yaml
             - pkg/component/observability/monitoring/prometheus/cache/assets/prometheusrules/recording-rules.rules.yaml
@@ -1207,19 +1211,23 @@ build:
             - pkg/component/observability/monitoring/prometheus/garden
             - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/auditlog.yaml
             - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/etcd.yaml
+            - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/healthcheck.yaml.tmpl
             - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/metering-meta.yaml
             - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/recording.yaml
             - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/seed.yaml
             - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/shoot.yaml
             - pkg/component/observability/monitoring/prometheus/garden/assets/scrapeconfigs/cadvisor.yaml
             - pkg/component/observability/monitoring/prometheus/seed
+            - pkg/component/observability/monitoring/prometheus/seed/assets/prometheusrules/healthcheck.yaml
             - pkg/component/observability/monitoring/prometheus/shoot
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/optional/alertmanager.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/prometheus.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/verticalpodautoscaler.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/healthcheck.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/kube-kubelet.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/kube-pods.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/networking.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/workerless/healthcheck.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/workerless/kube-pods.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/workerless/networking.yaml
             - pkg/component/observability/monitoring/prometheusoperator

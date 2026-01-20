@@ -20,12 +20,12 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 	return []*monitoringv1alpha1.ScrapeConfig{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "prometheus",
+				Name: "prometheus-" + Label,
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
 				RelabelConfigs: []monitoringv1.RelabelConfig{{
 					Action:      "replace",
-					Replacement: ptr.To("prometheus"),
+					Replacement: ptr.To("prometheus-" + Label),
 					TargetLabel: "job",
 				}},
 				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
@@ -43,10 +43,10 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 				MetricsPath:     ptr.To("/federate"),
 				Params: map[string][]string{
 					"match[]": {
-						`{job="cadvisor",namespace=~"extension-(.+)"}`,
-						`{job="cadvisor",namespace="garden"}`,
-						`{job="cadvisor",namespace=~"istio-(.+)"}`,
-						`{job="cadvisor",namespace="kube-system"}`,
+						`{__name__=~"container_.+",job="cadvisor",namespace=~"extension-(.+)"}`,
+						`{__name__=~"container_.+",job="cadvisor",namespace="garden"}`,
+						`{__name__=~"container_.+",job="cadvisor",namespace=~"istio-(.+)"}`,
+						`{__name__=~"container_.+",job="cadvisor",namespace="kube-system"}`,
 					},
 				},
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
@@ -59,7 +59,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 							"__meta_kubernetes_service_name",
 							"__meta_kubernetes_service_port_name",
 						},
-						Regex:  "prometheus-cache;" + prometheus.ServicePortName,
+						Regex:  "prometheus-cache;" + prometheus.ServicePorts().Web.Name,
 						Action: "keep",
 					},
 					{

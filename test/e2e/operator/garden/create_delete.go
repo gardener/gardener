@@ -10,10 +10,12 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
@@ -78,6 +80,9 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			Expect(configMap.Data).To(HaveKey("gardenerAPIServer"))
 		}, SpecTimeout(time.Minute))
 
+		itShouldVerifyPrometheusHealthCheck(s, "garden")
+		itShouldVerifyPrometheusHealthCheck(s, "longterm")
+
 		ItShouldDeleteGarden(s)
 		ItShouldWaitForGardenToBeDeleted(s)
 		ItShouldCleanUp(s)
@@ -113,3 +118,54 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 	})
 })
+
+func itShouldVerifyPrometheusHealthCheck(s *GardenContext, prometheusName string) {
+	rule := &monitoringv1.PrometheusRule{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      prometheusName + "-test-job-down",
+			Namespace: "garden",
+			Labels:    map[string]string{"prometheus": prometheusName},
+		},
+		Spec: monitoringv1.PrometheusRuleSpec{
+			Groups: []monitoringv1.RuleGroup{
+				{
+					Name: prometheusName + "-test-job-down",
+					Rules: []monitoringv1.Rule{
+						{
+							Record: "up",
+							Expr:   intstr.FromString("vector(0)"),
+							Labels: map[string]string{"job": "test"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	ItShouldCreatePrometheusRuleForGarden(s, rule)
+
+	It("Wait until ObservabilityComponentsHealthy is false", func(ctx SpecContext) {
+		Eventually(ctx, s.GardenKomega.Object(s.Garden)).Should(
+			HaveField("Status.Conditions", ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(gardencorev1beta1.ConditionType(v1beta1constants.ObservabilityComponentsHealthy)),
+				"Status": Equal(gardencorev1beta1.ConditionFalse),
+				"Reason": Equal("PrometheusHealthCheckDown"),
+				"Message": Equal(`There are health issues in Prometheus pod "garden/prometheus-` + prometheusName + `-0". ` +
+					`Access Prometheus UI and query for "healthcheck" for more details.`),
+			}))),
+		)
+	}, SpecTimeout(10*time.Minute))
+
+	ItShouldDeletePrometheusRuleForGarden(s, rule)
+
+	It("Wait until ObservabilityComponentsHealthy is true", func(ctx SpecContext) {
+		Eventually(ctx, s.GardenKomega.Object(s.Garden)).Should(
+			HaveField("Status.Conditions", ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":    Equal(gardencorev1beta1.ConditionType(v1beta1constants.ObservabilityComponentsHealthy)),
+				"Status":  Equal(gardencorev1beta1.ConditionTrue),
+				"Reason":  Equal("ObservabilityComponentsRunning"),
+				"Message": Equal("All observability components are healthy."),
+			}))),
+		)
+	}, SpecTimeout(10*time.Minute))
+}

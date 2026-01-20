@@ -28,15 +28,17 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 				Expect(CentralPrometheusRules(isWorkerless, wantsAlertmanager)).To(HaveExactElements(matchers...))
 			},
 
-			ginkgo.Entry("workerless, w/o alertmanager", true, false, []string{"prometheus", "verticalpodautoscaler", "kube-pods", "networking"}),
-			ginkgo.Entry("workerless, w/ alertmanager", true, true, []string{"prometheus", "verticalpodautoscaler", "kube-pods", "networking", "alertmanager"}),
-			ginkgo.Entry("w/ workers, w/o alertmanager", false, false, []string{"prometheus", "verticalpodautoscaler", "kube-kubelet", "kube-pods", "networking"}),
-			ginkgo.Entry("w/ workers, w/ alertmanager", false, true, []string{"prometheus", "verticalpodautoscaler", "kube-kubelet", "kube-pods", "networking", "alertmanager"}),
+			ginkgo.Entry("workerless, w/o alertmanager", true, false, []string{"prometheus", "verticalpodautoscaler", "healthcheck", "kube-pods", "networking"}),
+			ginkgo.Entry("workerless, w/ alertmanager", true, true, []string{"prometheus", "verticalpodautoscaler", "healthcheck", "kube-pods", "networking", "alertmanager"}),
+			ginkgo.Entry("w/ workers, w/o alertmanager", false, false, []string{"prometheus", "verticalpodautoscaler", "healthcheck", "kube-kubelet", "kube-pods", "networking"}),
+			ginkgo.Entry("w/ workers, w/ alertmanager", false, true, []string{"prometheus", "verticalpodautoscaler", "healthcheck", "kube-kubelet", "kube-pods", "networking", "alertmanager"}),
 		)
 
 		ginkgo.It("should run the rules tests", func() {
 			test.PrometheusRule(prometheus, "testdata/prometheus.prometheusrule.test.yaml")
 			test.PrometheusRule(vpa, "testdata/verticalpodautoscaler.prometheusrule.test.yaml")
+			test.PrometheusRule(workerHealthcheck, "testdata/worker/healthcheck.prometheusrule.test.yaml")
+			test.PrometheusRule(workerlessHealthcheck, "testdata/workerless/healthcheck.prometheusrule.test.yaml")
 			test.PrometheusRule(workerKubeKubelet, "testdata/worker/kube-kubelet.prometheusrule.test.yaml")
 			test.PrometheusRule(workerKubePods, "testdata/worker/kube-pods.prometheusrule.test.yaml")
 		})

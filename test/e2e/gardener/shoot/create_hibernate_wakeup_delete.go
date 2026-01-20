@@ -5,13 +5,17 @@
 package shoot
 
 import (
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -34,6 +38,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldInitializeShootClient(s)
 			ItShouldGetResponsibleSeed(s)
 			seed.ItShouldInitializeSeedClient(&s.SeedContext)
+
+			// validate Prometheus health checks are in place for the shoot Prometheus.
+			itShouldVerifyShootPrometheusHealthCheck(s)
 
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
 				inclusterclient.VerifyInClusterAccessToAPIServer(s)
@@ -159,4 +166,61 @@ func addCustomMachineImage(namespacedCloudProfile *gardencorev1beta1.NamespacedC
 			]}`),
 	}
 	return namespacedCloudProfile
+}
+
+func itShouldVerifyShootPrometheusHealthCheck(s *ShootContext) {
+	if os.Getenv("IPFAMILY") == "ipv6" {
+		// TODO(vicwicker): Run the tests normally for IPv6 once the shoot cross-node communication in the local setup works.
+		s.Log.Info("Skip shoot Prometheus health check test in IPv6 mode due to cross-node communication issues in the test setup")
+		return
+	}
+
+	rule := &monitoringv1.PrometheusRule{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "shoot-test-job-down",
+			Namespace: "shoot--local--" + s.Shoot.Name,
+			Labels:    map[string]string{"prometheus": "shoot"},
+		},
+		Spec: monitoringv1.PrometheusRuleSpec{
+			Groups: []monitoringv1.RuleGroup{
+				{
+					Name: "shoot-test-job-down",
+					Rules: []monitoringv1.Rule{
+						{
+							Record: "up",
+							Expr:   intstr.FromString("vector(0)"),
+							Labels: map[string]string{"job": "test"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	seed.ItShouldCreatePrometheusRuleForSeed(&s.SeedContext, rule)
+
+	It("Wait until ObservabilityComponentsHealthy is false", func(ctx SpecContext) {
+		Eventually(ctx, s.GardenKomega.Object(s.Shoot)).Should(
+			HaveField("Status.Conditions", ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(gardencorev1beta1.ShootObservabilityComponentsHealthy),
+				"Status": Equal(gardencorev1beta1.ConditionFalse),
+				"Reason": Equal("PrometheusHealthCheckDown"),
+				"Message": Equal(`There are health issues in Prometheus pod "shoot--local--` + s.Shoot.Name + `/prometheus-shoot-0". ` +
+					`Access Prometheus UI and query for "healthcheck" for more details.`),
+			}))),
+		)
+	}, SpecTimeout(10*time.Minute))
+
+	seed.ItShouldDeletePrometheusRuleForSeed(&s.SeedContext, rule)
+
+	It("Wait until ObservabilityComponentsHealthy is true", func(ctx SpecContext) {
+		Eventually(ctx, s.GardenKomega.Object(s.Shoot)).Should(
+			HaveField("Status.Conditions", ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":    Equal(gardencorev1beta1.ShootObservabilityComponentsHealthy),
+				"Status":  Equal(gardencorev1beta1.ConditionTrue),
+				"Reason":  Equal("ObservabilityComponentsRunning"),
+				"Message": Equal("All observability components are healthy."),
+			}))),
+		)
+	}, SpecTimeout(10*time.Minute))
 }

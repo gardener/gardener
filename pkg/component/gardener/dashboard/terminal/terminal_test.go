@@ -405,11 +405,6 @@ server:
 							Action: "labeldrop",
 							Regex:  `url`,
 						},
-						{
-							SourceLabels: []monitoringv1.LabelName{"__name__"},
-							Action:       "keep",
-							Regex:        `^()$`,
-						},
 					},
 				}},
 			},
