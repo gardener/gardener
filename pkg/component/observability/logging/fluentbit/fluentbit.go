@@ -30,6 +30,7 @@ import (
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -45,6 +46,8 @@ var (
 	modify_severity_lua string
 	//go:embed lua/add_tag_to_record.lua
 	add_tag_to_record_lua string
+	//go:embed lua/add_time_and_systemd_attr.lua
+	add_time_and_systemd_attr_lua string
 )
 
 // Values is the values for fluent-bit configurations
@@ -88,8 +91,9 @@ func (f *fluentBit) Deploy(ctx context.Context) error {
 				Namespace: f.namespace,
 			},
 			Data: map[string]string{
-				"modify_severity.lua":   modify_severity_lua,
-				"add_tag_to_record.lua": add_tag_to_record_lua,
+				"modify_severity.lua":           modify_severity_lua,
+				"add_tag_to_record.lua":         add_tag_to_record_lua,
+				"add_time_and_systemd_attr.lua": add_time_and_systemd_attr_lua,
 			},
 		}
 		serviceMonitor = &monitoringv1.ServiceMonitor{
@@ -295,7 +299,7 @@ func (f *fluentBit) WaitCleanup(ctx context.Context) error {
 }
 
 func getLabels() map[string]string {
-	return map[string]string{
+	labels := map[string]string{
 		v1beta1constants.LabelApp:                             v1beta1constants.DaemonSetNameFluentBit,
 		v1beta1constants.LabelRole:                            v1beta1constants.LabelLogging,
 		v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleLogging,
