@@ -887,7 +887,7 @@
       },
       "id": 22,
       "panels": [],
-      "title": "Pod evictions by namespace",
+      "title": "Pod evictions",
       "type": "row"
     },
     {
