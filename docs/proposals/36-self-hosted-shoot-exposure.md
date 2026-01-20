@@ -30,7 +30,11 @@ It defines a new extension resource, `SelfHostedShootExposure`, and describes ho
 
 API servers of hosted shoot clusters can be accessed externally via a DNS name  following the pattern `api.<Shoot.spec.dns.domain>` ("external domain").
 The DNS record points to the load balancer of an istio ingress gateway of the hosting seed cluster (see [GEP-08](08-shoot-apiserver-via-sni.md)).
-Apart from this external domain which might be chosen by the shoot owner, Gardener also creates an "internal domain" for hosted shoot clusters, i.e., a DNS record with the same values.
+For convenience, shoot owners can omit the `Shoot.spec.dns.domain` field when creating the `Shoot` object to use a default domain provided by the operator as the cluster's external domain.
+This mechanism relies on configuration in the garden cluster, which might not be available at the time of bootstrapping the self-hosted shoot cluster.
+However, the external domain is required for bootstrapping the cluster as of now, eliminating the option of using a default domain.
+
+Apart from the external domain which might be chosen by the shoot owner, Gardener also creates an "internal domain" for hosted shoot clusters, i.e., a DNS record with the same values.
 The internal domain is configured by the operator in `Seed.spec.dns.internal.domain` and cannot be influenced by the shoot owner.
 Self-hosted shoot clusters only have an external domain based on the `Shoot` manifest, as there is no `Seed` object for configuring the internal domain.
 Hence, the internal domain is not relevant for this proposal.
@@ -58,6 +62,7 @@ While the focus of this proposal is on self-hosted shoot clusters with managed i
 ### Non-Goals
 
 - Add an internal domain for self-hosted shoot clusters
+- Add support for using default domains for self-hosted shoot clusters
 - Defining the full lifecycle or implementation details of all possible exposure strategies
 
 ## Proposal
@@ -88,6 +93,11 @@ If the `exposure` field is omitted, the control plane is not exposed externally 
 
 The `extension.type` field specifies which `SelfHostedShootExposure` extension should be used, defaulting to the value of `spec.provider.type` if not set.
 Additional configuration for the extension can be provided via the optional `extension.providerConfig` field.
+
+The `exposure` field is mutable and supports switching between the two exposure mechanisms or enabling/disabling control plane exposure during the lifetime of the self-hosted shoot cluster.
+Switching from one exposure mechanism to another results in the creation/deletion of the `SelfHostedShootExposure` object and updating the corresponding `DNSRecord.spec.values[]` list accordingly.
+When disabling control plane exposure, the `SelfHostedShootExposure` object is deleted (if it exists), and the corresponding `DNSRecord.spec.values[]` list is updated one last time to contain the addresses of all control plane nodes (as created during initial bootstrapping).
+From this point onward, the control plane exposure is no longer managed by Gardener and needs to be handled manually by the operator.
 
 ### `SelfHostedShootExposure` Extension Resource
 
@@ -135,8 +145,11 @@ status:
 The `spec` includes the default set of fields included in all extension resources like `type` and `providerConfig` (see [GEP-01](01-extensibility.md)).
 For shoots with managed infrastructure, the `secretRef` field references the credentials secret that should be used by the extension controller to manage the necessary infrastructure resources (similar to the `Infrastructure` extension resource).
 Additionally, the `spec.endpoints` list contains all healthy control plane node addresses that should be exposed.
-Control plane nodes are considered healthy if their `status.conditions` list contains a condition of type `Ready` with status `True` and does not contain any condition of type `{Disk,Memory,PID}Pressure` or `NetworkUnavailable` with a status other than `False` and the node has healthy etcd and kube-apiserver pods.
 Each endpoint includes the node name, a list of addresses (based on the `Node.status.addresses` list) and the port of the API server (usually `443`).
+
+Control plane nodes are considered healthy if their `status.conditions` list contains a condition of type `Ready` with status `True` and does not contain any condition of type `{Disk,Memory,PID}Pressure` or `NetworkUnavailable` with a status other than `False` and the node has healthy etcd and kube-apiserver pods.
+Also, control plane nodes that are marked for deletion or maintenance operations (e.g., replacement by machine-controller-manager, cluster-autoscaler scale-down, or in-place update) are excluded from the endpoints list.
+With this filtering in place, there is no need for a more sophisticated health check mechanism in the `SelfHostedShootExposure` extension implementation itself.
 
 The `status` includes the default fields included in all extension resources like `observedGeneration` and `lastOperation`.
 Additionally, the `status.ingress` list contains resulting addresses of the exposure mechanism, e.g., the IPs or hostnames of a load balancer.
@@ -172,6 +185,7 @@ E.g., in an OpenStack environment with layer 2 connectivity but without load bal
 
 In [provider-local](../extensions/provider-local.md), the `SelfHostedShootExposure` controller can create a `Service` of type `LoadBalancer` in underlying kind cluster and configure it to forward traffic to the control plane nodes.
 The `LoadBalancer` service in the kind cluster would simulate a cloud provider load balancer by forwarding traffic from the host machine on a specific IP (bound to the loopback device) to the control plane machines hosted as pods in the kind cluster.
+Potentially, the `LoadBalancer` service in the kind cluster could be implemented using [cloud-provider-kind](https://github.com/kubernetes-sigs/cloud-provider-kind) (see [Hackathon 2025-11 results](https://gardener.cloud/community/hackathons/2025-11/#%E2%9A%96%EF%B8%8F%EF%B8%8F-load-balancer-controller-for-provider-local), separate work stream).
 
 ### DNS-Based Control Plane Exposure
 
@@ -190,13 +204,11 @@ The gardenlet responsible for the self-hosted shoot cluster (deployed by `garden
 If the shoot uses a `SelfHostedShootExposure` extension, the controller updates the `SelfHostedShootExposure.spec.endpoints[]` list with the `.status.addresses[]` of all healthy control plane nodes.
 Once the `SelfHostedShootExposure` object has been reconciled successfully, the controller updates the corresponding `DNSRecord` object's `.spec.values[]` with the addresses reported by the extension in `SelfHostedShootExposure.status.ingress[]` if necessary.
 
-If the shoot uses DNS-based control plane exposure, the controller directly updates the `DNSRecord` object's `.spec.values[]` with the addresses of all healthy control plane nodes.
-
-#### Future Optimization
-
 Not all extensions implementing `SelfHostedShootExposure` require continuously updated control plane endpoints.
 E.g., an extension using kube-vip only needs to create the infrastructure resources once and then kube-vip will elect a leader and dynamically advertise the virtual IP from one of the healthy control plane nodes.
-To omit unnecessary API requests made by the gardenlet controller, a future enhancement could be to add a field to the `ControllerRegistration` API that allows extensions to specify if they need a continuously updated `SelfHostedShootExposure.spec.endpoints` list or not.
+To omit unnecessary API requests made by the gardenlet controller, we add a field to the `ControllerRegistration` API that allows extensions to specify if they need a continuously updated `SelfHostedShootExposure.spec.endpoints` list or not.
+
+If the shoot uses DNS-based control plane exposure, the controller directly updates the `DNSRecord` object's `.spec.values[]` with the addresses of all healthy control plane nodes.
 
 ## Alternatives
 
