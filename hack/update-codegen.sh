@@ -466,13 +466,66 @@ else
   fi
 fi
 
+# Groups that only use gen_helpers (safe to run in parallel)
+HELPERS_ONLY_GROUPS=(
+  "authentication_groups"
+  "extensions_groups"
+  "resources_groups"
+  "operator_groups"
+  "operations_groups"
+  "operatorconfig_groups"
+  "controllermanager_groups"
+  "admissioncontroller_groups"
+  "scheduler_groups"
+  "gardenlet_groups"
+  "resourcemanager_groups"
+  "shootresourcereservation_groups"
+  "shoottolerationrestriction_groups"
+  "shootdnsrewriting_groups"
+  "provider_local_groups"
+  "extensions_config_groups"
+  "nodeagent_groups"
+)
+
+# Groups that use gen_client (must be serialized to avoid race conditions)
+CLIENT_GROUPS=(
+  "core_groups"
+  "seedmanagement_groups"
+  "settings_groups"
+  "security_groups"
+)
+
 printf "\n> Generating codegen for groups: %s\n" "${valid_options[*]}"
 if [[ "$MODE" == "sequential" ]]; then
   for target in "${valid_options[@]}"; do
     "$target"
   done
 elif [[ "$MODE" == "parallel" ]]; then
-  parallel --will-cite ::: "${valid_options[@]}"
+  # Separate groups into helpers-only and client-gen groups
+  helpers_to_run=()
+  clients_to_run=()
+  
+  for option in "${valid_options[@]}"; do
+    if [[ " ${CLIENT_GROUPS[*]} " =~ " ${option} " ]]; then
+      clients_to_run+=("$option")
+    elif [[ " ${HELPERS_ONLY_GROUPS[*]} " =~ " ${option} " ]]; then
+      helpers_to_run+=("$option")
+    fi
+  done
+  
+  # Run helpers-only groups in parallel (safe)
+  if [[ ${#helpers_to_run[@]} -gt 0 ]]; then
+    printf "> Running helpers-only groups in parallel: %s\n" "${helpers_to_run[*]}"
+    parallel --will-cite --halt now,fail=1 ::: "${helpers_to_run[@]}"
+  fi
+  
+  # Run client-gen groups sequentially to avoid race conditions
+  if [[ ${#clients_to_run[@]} -gt 0 ]]; then
+    printf "> Running client-gen groups sequentially: %s\n" "${clients_to_run[*]}"
+    for target in "${clients_to_run[@]}"; do
+      "$target"
+    done
+  fi
 else
   printf "ERROR: Invalid mode ('%s'). Specify either 'parallel' or 'sequential'\n\n" "$MODE"
   exit 1
