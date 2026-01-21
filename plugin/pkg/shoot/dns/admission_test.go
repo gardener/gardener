@@ -823,44 +823,33 @@ var _ = Describe("dns", func() {
 
 	Describe("#Validate", func() {
 		var (
-			ctx                 context.Context
-			admissionHandler    *DNS
-			kubeInformerFactory kubeinformers.SharedInformerFactory
-			coreInformerFactory gardencoreinformers.SharedInformerFactory
+			ctx              context.Context
+			admissionHandler *DNS
 
-			shoot     core.Shoot
-			provider  = core.DNSUnmanaged
-			shootBase = core.Shoot{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      shootName,
-					Namespace: namespace,
-				},
-				Spec: core.ShootSpec{
-					DNS:      &core.DNS{},
-					SeedName: ptr.To(seedName),
-				},
-			}
+			shoot    core.Shoot
+			provider = core.DNSUnmanaged
 		)
 
 		BeforeEach(func() {
-			ctx = context.TODO()
+			ctx = context.Background()
 			var err error
 			admissionHandler, err = New()
 			Expect(err).ToNot(HaveOccurred())
 
 			admissionHandler.AssignReadyFunc(func() bool { return true })
-			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
-			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
-
-			shootBase.Spec.DNS.Domain = nil
-			shootBase.Spec.DNS.Providers = []core.DNSProvider{
-				{
-					Type: &provider,
+			shoot = core.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      shootName,
+					Namespace: namespace,
+				},
+				Spec: core.ShootSpec{
+					DNS: &core.DNS{
+						Domain:    nil,
+						Providers: []core.DNSProvider{{Type: &provider}},
+					},
+					SeedName: ptr.To(seedName),
 				},
 			}
-			shoot = shootBase
 		})
 
 		It("should skip validation when resource is not Shoot", func() {

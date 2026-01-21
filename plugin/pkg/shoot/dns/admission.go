@@ -222,19 +222,6 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 	return nil
 }
 
-// checkFunctionlessDNSProviders returns an error if a non-primary provider isn't configured correctly.
-func checkFunctionlessDNSProviders(a admission.Attributes, shoot *core.Shoot) error {
-	dns := shoot.Spec.DNS
-	fldPath := field.NewPath("spec", "dns", "providers")
-	for idx, provider := range dns.Providers {
-		if !ptr.Deref(provider.Primary, false) && (provider.Type == nil || provider.CredentialsRef == nil) {
-			fieldErr := field.Required(fldPath.Index(idx), "non-primary DNS providers must specify `type` and `credentialsRef`")
-			return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
-		}
-	}
-	return nil
-}
-
 // checkPrimaryDNSProvider checks if the shoot uses a default domain and returns an error
 // if a primary provider is used at the same time.
 func checkPrimaryDNSProvider(a admission.Attributes, shoot *core.Shoot, defaultDomains []string) error {
@@ -464,5 +451,18 @@ func (d *DNS) Validate(_ context.Context, a admission.Attributes, _ admission.Ob
 		}
 	}
 
+	return nil
+}
+
+// checkFunctionlessDNSProviders returns an error if a non-primary provider isn't configured correctly.
+func checkFunctionlessDNSProviders(a admission.Attributes, shoot *core.Shoot) error {
+	dns := shoot.Spec.DNS
+	fldPath := field.NewPath("spec", "dns", "providers")
+	for idx, provider := range dns.Providers {
+		if !ptr.Deref(provider.Primary, false) && (provider.Type == nil || provider.CredentialsRef == nil) {
+			fieldErr := field.Required(fldPath.Index(idx), "non-primary DNS providers must specify `type` and `credentialsRef`")
+			return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
+		}
+	}
 	return nil
 }
