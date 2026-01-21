@@ -204,19 +204,26 @@ var _ = Describe("containerd configuration file tests", func() {
 	)
 
 	It("should configure CNI plugin dirs as array at corresponding path for containerd >= 2.2", func() {
-		cniPluginDirs := structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dirs"}
+		var (
+			cniPluginDirPath  = structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dir"}
+			cniPluginDirsPath = structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dirs"}
+		)
 
 		containerdClient.SetFakeContainerdVersion("2.2.1")
 
 		Expect(loadContainerdConfig("testfiles/containerd-config.toml-v3", r.FS)).To(Succeed())
 		Expect(r.ReconcileContainerdConfig(ctx, log, osc)).To(Succeed())
 
-		configValue, err := getContainerdConfigValue(r.FS, cniPluginDirs)
+		pluginDirValue, err := getContainerdConfigValue(r.FS, cniPluginDirPath)
 		Expect(err).ToNot(HaveOccurred())
-		pluginDirs, ok := configValue.([]any)
+		Expect(pluginDirValue).To(BeNil())
+
+		configValue, err := getContainerdConfigValue(r.FS, cniPluginDirsPath)
+		Expect(err).ToNot(HaveOccurred())
+		pluginDirsValue, ok := configValue.([]any)
 		Expect(ok).To(BeTrue())
-		Expect(pluginDirs).To(HaveLen(1))
-		Expect(pluginDirs).To(ContainElements("/opt/cni/bin"))
+		Expect(pluginDirsValue).To(HaveLen(1))
+		Expect(pluginDirsValue).To(ContainElements("/opt/cni/bin"))
 	})
 
 	Describe("plugin configuration paths inserted by osc plugin config", func() {

@@ -182,28 +182,37 @@ func (r *Reconciler) ensureContainerdConfiguration(ctx context.Context, log logr
 
 	// containerd 2.2 is using config file version 3 but the CNI plugin path now ends in "bin_dirs" (note plural)
 	// and hence takes an array of strings
-	cniPluginPath := containerdConfigPaths[configFileVersion][cniPluginPath]
-
 	containerdGreaterThanEqual22, err := nodeagentcontainerd.VersionGreaterThanEqual22(ctx, r.ContainerdClient)
 	if err != nil {
 		return err
 	}
 
 	if configFileVersion >= 3 && containerdGreaterThanEqual22 {
-		cniPluginPath = containerdConfigPaths[configFileVersion][cniPluginsPaths]
-	}
-
-	patches = append(patches, patch{
-		name: "CNI plugin dir",
-		path: cniPluginPath,
-		setFn: func(_ any) (any, error) {
-			if configFileVersion >= 3 && containerdGreaterThanEqual22 {
-				return []string{cniPluginDir}, nil
-			} else {
+		patches = append(patches,
+			patch{
+				name: "CNI plugin dirs",
+				path: containerdConfigPaths[configFileVersion][cniPluginsPaths],
+				setFn: func(_ any) (any, error) {
+					return []string{cniPluginDir}, nil
+				},
+			},
+			patch{
+				name: "remove deprecated CNI plugin dir",
+				path: containerdConfigPaths[configFileVersion][cniPluginPath],
+				setFn: func(_ any) (any, error) {
+					return nil, nil
+				},
+			},
+		)
+	} else {
+		patches = append(patches, patch{
+			name: "CNI plugin dir",
+			path: containerdConfigPaths[configFileVersion][cniPluginPath],
+			setFn: func(_ any) (any, error) {
 				return cniPluginDir, nil
-			}
-		},
-	})
+			},
+		})
+	}
 
 	if criConfig.CgroupDriver != nil {
 		patches = append(patches, patch{

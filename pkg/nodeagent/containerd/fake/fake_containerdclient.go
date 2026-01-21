@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	defaultContainerdVersion = "1.7.2"
+	defaultContainerdVersion = "2.1.2"
 )
 
 // FakeContainerdClient is a fake containerd client used for testing
