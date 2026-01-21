@@ -737,7 +737,7 @@ type KubeAPIServerConfig struct {
 	// This field is forbidden for clusters with Kubernetes version >= 1.35.
 	// Please use anonymous authentication configuration instead.
 	// For more information see: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration
-	EnableAnonymousAuthentication *bool
+	EnableAnonymousAuthentication *bool // TODO(dimityrmirchev): Drop this field when support for Kubernetes 1.34 is dropped.
 	// EventTTL controls the amount of time to retain events.
 	EventTTL *metav1.Duration
 	// Logging contains configuration settings for the log verbosity and access logging

@@ -979,7 +979,7 @@ type KubeAPIServerConfig struct {
 	// This field is forbidden for clusters with Kubernetes version >= 1.35.
 	// Please use anonymous authentication configuration instead.
 	// +optional
-	EnableAnonymousAuthentication *bool `json:"enableAnonymousAuthentication,omitempty" protobuf:"varint,11,opt,name=enableAnonymousAuthentication"`
+	EnableAnonymousAuthentication *bool `json:"enableAnonymousAuthentication,omitempty" protobuf:"varint,11,opt,name=enableAnonymousAuthentication"` // TODO(dimityrmirchev): Drop this field when support for Kubernetes 1.34 is dropped.
 	// EventTTL controls the amount of time to retain events.
 	// Defaults to 1h.
 	// +optional
