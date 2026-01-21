@@ -2012,14 +2012,18 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-				g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring("Credentials \"rotate-ssh-keypair\": SSH keypair rotation started"))
-				g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring("Credentials \"rotate-observability-credentials\": Observability passwords rotation started"))
-				g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring("Credentials \"rotate-etcd-encryption-key\": ETCD Encryption key rotation started"))
+				g.Expect(shoot.Status.LastMaintenance.Description).To(And(
+					ContainSubstring("Credentials \"rotate-ssh-keypair\": SSH keypair rotation started"),
+					ContainSubstring("Credentials \"rotate-observability-credentials\": Observability passwords rotation started"),
+					ContainSubstring("Credentials \"rotate-etcd-encryption-key\": ETCD Encryption key rotation started"),
+				))
 				g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 				g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
-				g.Expect(shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation]).To(ContainSubstring("rotate-ssh-keypair"))
-				g.Expect(shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation]).To(ContainSubstring("rotate-observability-credentials"))
-				g.Expect(shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation]).To(ContainSubstring("rotate-etcd-encryption-key"))
+				g.Expect(shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation]).To(And(
+					ContainSubstring("rotate-ssh-keypair"),
+					ContainSubstring("rotate-observability-credentials"),
+					ContainSubstring("rotate-etcd-encryption-key"),
+				))
 			}).Should(Succeed())
 		})
 	})
