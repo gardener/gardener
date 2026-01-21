@@ -289,9 +289,9 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
-		istioProxyProtocolEnvoyFilterVPNUnified = func() string {
+		istioProxyProtocolEnvoyFilterVPNUnified = func(i int) string {
 			data, _ := os.ReadFile("./test_charts/proxyprotocol_envoyfilter_vpn_unified.yaml")
-			return string(data)
+			return strings.Split(string(data), "---\n")[i]
 		}
 
 		istioIngressHTTPConnectGatewayUnified = func() string {
@@ -862,7 +862,8 @@ var _ = Describe("istiod", func() {
 						istioIngressHTTPConnectGatewayUnified(),
 						istioIngressEnvoyVPNFilterUnified(0),
 						istioIngressEnvoyVPNFilterUnified(1),
-						istioProxyProtocolEnvoyFilterVPNUnified(),
+						istioProxyProtocolEnvoyFilterVPNUnified(0),
+						istioProxyProtocolEnvoyFilterVPNUnified(1),
 					}
 
 					By("Verify istio resources")
