@@ -1934,6 +1934,99 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 			})
 		})
 	})
+
+	Describe("Credentials rotation maintenance test", func() {
+		BeforeEach(func() {
+			patch := client.MergeFrom(shoot.DeepCopy())
+			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeReconcile}
+			Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+		})
+
+		DescribeTable("should auto rotate credentials",
+			func(credentialsAutoRotation gardencorev1beta1.MaintenanceCredentialsAutoRotation, maintenanceOperation, descriptionSubstring, operation string) {
+				patch := client.MergeFrom(shoot.DeepCopy())
+				if len(maintenanceOperation) > 0 {
+					shoot.Annotations = map[string]string{
+						"maintenance.gardener.cloud/operation": maintenanceOperation,
+					}
+				}
+				shoot.Spec.Maintenance.AutoRotation = &gardencorev1beta1.MaintenanceAutoRotation{
+					Credentials: &credentialsAutoRotation,
+				}
+				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
+				fakeClock.SetTime(fakeClock.Now().Add(2 * time.Hour))
+
+				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+
+				Eventually(func(g Gomega) string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(descriptionSubstring))
+					g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
+					return shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation]
+				}).Should(Equal(operation))
+			},
+			Entry("ssh key pair", gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+				SSHKeypair: &gardencorev1beta1.MaintenanceRotationConfig{
+					RotationPeriod: ptr.To(metav1.Duration{Duration: time.Hour}),
+				},
+			}, "", "Credentials \"rotate-ssh-keypair\": SSH keypair rotation started", "rotate-ssh-keypair"),
+			Entry("observability credentials", gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+				Observability: &gardencorev1beta1.MaintenanceRotationConfig{
+					RotationPeriod: ptr.To(metav1.Duration{Duration: time.Hour}),
+				},
+			}, "", "Credentials \"rotate-observability-credentials\": Observability passwords rotation started", "rotate-observability-credentials"),
+			Entry("etcd encryption key", gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+				ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+					RotationPeriod: ptr.To(metav1.Duration{Duration: time.Hour}),
+				},
+			}, "", "Credentials \"rotate-etcd-encryption-key\": ETCD Encryption key rotation started", "rotate-etcd-encryption-key"),
+			Entry("etcd encryption key when encryption key rotation start maintenance operation is set", gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+				ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+					RotationPeriod: ptr.To(metav1.Duration{Duration: time.Hour}),
+				},
+			}, "rotate-etcd-encryption-key-start", "Credentials \"rotate-etcd-encryption-key\": ETCD Encryption key rotation started", "rotate-etcd-encryption-key-start"),
+		)
+
+		It("should auto rotate multiple credentials", func() {
+			patch := client.MergeFrom(shoot.DeepCopy())
+			shoot.Spec.Maintenance.AutoRotation = &gardencorev1beta1.MaintenanceAutoRotation{
+				Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+					SSHKeypair: &gardencorev1beta1.MaintenanceRotationConfig{
+						RotationPeriod: ptr.To(metav1.Duration{Duration: time.Hour}),
+					},
+					Observability: &gardencorev1beta1.MaintenanceRotationConfig{
+						RotationPeriod: ptr.To(metav1.Duration{Duration: time.Hour}),
+					},
+					ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+						RotationPeriod: ptr.To(metav1.Duration{Duration: time.Hour}),
+					},
+				},
+			}
+			Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
+			fakeClock.SetTime(fakeClock.Now().Add(2 * time.Hour))
+
+			Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
+				g.Expect(shoot.Status.LastMaintenance.Description).To(And(
+					ContainSubstring("Credentials \"rotate-ssh-keypair\": SSH keypair rotation started"),
+					ContainSubstring("Credentials \"rotate-observability-credentials\": Observability passwords rotation started"),
+					ContainSubstring("Credentials \"rotate-etcd-encryption-key\": ETCD Encryption key rotation started"),
+				))
+				g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+				g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
+				g.Expect(shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation]).To(And(
+					ContainSubstring("rotate-ssh-keypair"),
+					ContainSubstring("rotate-observability-credentials"),
+					ContainSubstring("rotate-etcd-encryption-key"),
+				))
+			}).Should(Succeed())
+		})
+	})
 },
 	Entry("with capabilities in CloudProfile", true),
 	Entry("without capabilities in CloudProfile", false),
