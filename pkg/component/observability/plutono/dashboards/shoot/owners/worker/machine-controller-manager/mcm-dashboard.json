@@ -1,6 +1,6 @@
 {
   "description": "Information about the operations of the Machine Controller Manager",
-  "editable": true,
+  "editable": false,
   "gnetId": null,
   "graphTooltip": 0,
   "id": 16,
@@ -446,14 +446,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(mcm_cloud_api_requests_total[1m])",
+          "expr": "rate(mcm_cloud_api_requests_total{name=\"${controlloop}\"}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{provider}} / {{service}} ({{pod}})",
           "refId": "A"
         },
         {
-          "expr": "rate(mcm_cloud_api_requests_failed_total[1m])",
+          "expr": "rate(mcm_cloud_api_requests_failed_total{name=\"${controlloop}\"}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Error: {{provider}} / {{service}} ({{pod}})",
@@ -653,7 +653,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "mcm_workqueue_queue_duration_seconds_sum / mcm_workqueue_queue_duration_seconds_count",
+          "expr": "mcm_workqueue_queue_duration_seconds_sum{name=\"${controlloop}\"} / mcm_workqueue_queue_duration_seconds_count{name=\"${controlloop}\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -738,7 +738,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "mcm_workqueue_queue_duration_seconds_sum",
+          "expr": "mcm_workqueue_queue_duration_seconds_sum{name=\"${controlloop}\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -823,7 +823,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "mcm_workqueue_depth",
+          "expr": "mcm_workqueue_depth{name=\"${controlloop}\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "${controlloop} ({{pod}})",
@@ -908,7 +908,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(mcm_workqueue_adds_total[5m])",
+          "expr": "rate(mcm_workqueue_adds_total{name=\"${controlloop}\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "${controlloop} ({{pod}})",
@@ -993,7 +993,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(mcm_workqueue_retries_total[5m])",
+          "expr": "rate(mcm_workqueue_retries_total{name=\"${controlloop}\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "${controlloop} ({{pod}})",
