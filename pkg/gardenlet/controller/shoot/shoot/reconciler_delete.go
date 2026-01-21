@@ -503,7 +503,6 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		waitUntilManagedResourcesDeleted = g.Add(flow.Task{
 			Name:         "Waiting until managed resources have been deleted",
 			Fn:           flow.TaskFn(botanist.WaitUntilManagedResourcesDeleted).Timeout(10 * time.Minute),
-			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(deleteDWDResources),
 		})
 		deleteExtensionResourcesBeforeKubeAPIServer = g.Add(flow.Task{
