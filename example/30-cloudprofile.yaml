@@ -30,15 +30,14 @@ spec:
   #   values: [amd64,arm64]
   kubernetes:
     versions:
-      - version: 1.34.3
-      - version: 1.32.11
-      - version: 1.31.14
-      - version: 1.30.14
-        # - version: 1.33.7 # CloudProfileVersionClassificationLifecycles feature gate enabled
-        #   lifecycle:
-        #   - classification: preview
-        #   - classification: supported
-        #     startTime: "2024-12-01T00:00:00Z"
+      - version: 1.33.2
+        # lifecycle: # VersionClassificationLifecycle feature gate enabled
+        # - classification: preview
+        # - classification: supported
+        #   startTime: "2024-12-01T00:00:00Z"
+      - version: 1.32.4
+      - version: 1.31.6
+      - version: 1.30.8
         expirationDate: 2025-11-30T01:02:03Z # optional
   machineImages:
     - name: gardenlinux
@@ -65,7 +64,7 @@ spec:
     - name: ubuntu
       versions:
         - version: 18.04.201906170
-          # lifecycle: # CloudProfileVersionClassificationLifecycles feature gate enabled
+          # lifecycle: # VersionClassificationLifecycle feature gate enabled
           # - classification: preview
           # - classification: supported
           #   startTime: "2024-12-01T00:00:00Z"
