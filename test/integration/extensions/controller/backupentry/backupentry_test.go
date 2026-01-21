@@ -272,8 +272,8 @@ var _ = Describe("BackupEntry", func() {
 			var (
 				// When the operation annotation is ignored then there is the Secret and Namespace mappers which may lead to multiple
 				// reconciliations, hence we are okay with both Create/Reconcile last operation types.
-				// Due to the same reason, the time when the BackupBucket is read it can be under reconciliation.
-				// Still, the `Succeeded` state is ensured by each call of waitForBackupBucketToBeReady.
+				// Due to the same reason, the time when the BackupEntry is read it can be under reconciliation.
+				// Still, the `Succeeded` state is ensured by each call of waitForBackupEntryToBeReady.
 				lastOperationTypeMatcher  = Or(Equal(gardencorev1beta1.LastOperationTypeCreate), Equal(gardencorev1beta1.LastOperationTypeReconcile))
 				lastOperationStateMatcher = Or(Equal(gardencorev1beta1.LastOperationStateSucceeded), Equal(gardencorev1beta1.LastOperationStateProcessing))
 			)
@@ -375,7 +375,7 @@ var _ = Describe("BackupEntry", func() {
 					Expect(waitForBackupEntryToBeReady(ctx, testClient, log, backupEntry, backupEntry.Status.LastOperation.LastUpdateTime)).To(Succeed())
 				})
 
-				It("should verify that BackupEntry has is reconciled after modification of Namespace and has new time-in annotation", func() {
+				It("should verify that BackupEntry is reconciled after modification of Namespace and has new time-in annotation", func() {
 					Expect(testClient.Get(ctx, backupEntryObjectKey, backupEntry)).To(Succeed())
 					verifyBackupEntry(backupEntry, 1, 1, modificationTimeIn, Equal(gardencorev1beta1.LastOperationTypeReconcile), lastOperationStateMatcher)
 				})
@@ -477,13 +477,13 @@ var _ = Describe("BackupEntry", func() {
 				Expect(client.IgnoreNotFound(testClient.Delete(ctx, backupEntry))).To(Succeed())
 			})
 
-			It("should wait until backupentry and secret are deleted", func() {
+			It("should wait until BackupEntry and Secret are deleted", func() {
 				Eventually(func() error {
 					return testClient.Get(ctx, backupEntryObjectKey, backupEntry)
 				}).Should(BeNotFoundError())
 
 				Expect(testClient.Get(ctx, client.ObjectKey{Name: testNamespace.Name}, testNamespace)).To(Succeed())
-				Expect(testNamespace.Annotations[extensionsintegrationtest.AnnotationKeyDesiredOperation]).To(Equal(extensionsintegrationtest.AnnotationValueOperationDelete))
+				Expect(testNamespace.Annotations).To(HaveKeyWithValue(extensionsintegrationtest.AnnotationKeyDesiredOperation, extensionsintegrationtest.AnnotationValueOperationDelete))
 
 				Expect(testClient.Get(ctx, backupEntrySecretObjectKey, backupEntrySecret)).To(Succeed())
 				Expect(backupEntrySecret.Finalizers).NotTo(ConsistOf(extensionsbackupentrycontroller.FinalizerName))
@@ -497,11 +497,11 @@ var _ = Describe("BackupEntry", func() {
 				})).To(Succeed())
 			})
 
-			It("should delete backupEntry", func() {
+			It("should delete BackupEntry", func() {
 				Expect(client.IgnoreNotFound(testClient.Delete(ctx, backupEntry))).To(Succeed())
 			})
 
-			It("should transitioned to error", func() {
+			It("should transition to error", func() {
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
 					g.Expect(backupEntry.Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeDelete))
@@ -515,13 +515,13 @@ var _ = Describe("BackupEntry", func() {
 				})).To(Succeed())
 			})
 
-			It("should wait until backupentry and secret are deleted", func() {
+			It("should wait until BackupEntry and Secret are deleted", func() {
 				Eventually(func() error {
 					return testClient.Get(ctx, backupEntryObjectKey, backupEntry)
 				}).Should(BeNotFoundError())
 
 				Expect(testClient.Get(ctx, client.ObjectKey{Name: testNamespace.Name}, testNamespace)).To(Succeed())
-				Expect(testNamespace.Annotations[extensionsintegrationtest.AnnotationKeyDesiredOperation]).To(Equal(extensionsintegrationtest.AnnotationValueOperationDelete))
+				Expect(testNamespace.Annotations).To(HaveKeyWithValue(extensionsintegrationtest.AnnotationKeyDesiredOperation, extensionsintegrationtest.AnnotationValueOperationDelete))
 
 				Expect(testClient.Get(ctx, backupEntrySecretObjectKey, backupEntrySecret)).To(Succeed())
 				Expect(backupEntrySecret.Finalizers).NotTo(ConsistOf(extensionsbackupentrycontroller.FinalizerName))
@@ -586,8 +586,10 @@ var _ = Describe("BackupEntry", func() {
 				Expect(testClient.Get(ctx, backupEntryObjectKey, backupEntry)).To(Succeed())
 				verifyBackupEntry(backupEntry, 1, 1, modificationTimeIn, lastOperationTypeMatcher, Equal(gardencorev1beta1.LastOperationStateSucceeded))
 
-				Expect(backupEntry.Annotations).ToNot(HaveKey(v1beta1constants.GardenerOperation))
-				Expect(backupEntry.Annotations).To(HaveKeyWithValue(extensionsintegrationtest.AnnotationKeyDesiredOperation, v1beta1constants.GardenerOperationRestore))
+				Expect(backupEntry.Annotations).To(And(
+					Not(HaveKey(v1beta1constants.GardenerOperation)),
+					HaveKeyWithValue(extensionsintegrationtest.AnnotationKeyDesiredOperation, v1beta1constants.GardenerOperationRestore),
+				))
 			})
 		})
 
@@ -621,8 +623,10 @@ var _ = Describe("BackupEntry", func() {
 				Expect(testClient.Get(ctx, backupEntryObjectKey, backupEntry)).To(Succeed())
 				verifyBackupEntry(backupEntry, 1, 1, creationTimeIn, lastOperationTypeMatcher, Equal(gardencorev1beta1.LastOperationStateSucceeded))
 
-				Expect(backupEntry.Annotations).ToNot(HaveKey(v1beta1constants.GardenerOperation))
-				Expect(backupEntry.Annotations).To(HaveKeyWithValue(extensionsintegrationtest.AnnotationKeyDesiredOperation, v1beta1constants.GardenerOperationRestore))
+				Expect(backupEntry.Annotations).To(And(
+					Not(HaveKey(v1beta1constants.GardenerOperation)),
+					HaveKeyWithValue(extensionsintegrationtest.AnnotationKeyDesiredOperation, v1beta1constants.GardenerOperationRestore),
+				))
 			})
 		})
 	})
@@ -656,8 +660,10 @@ var _ = Describe("BackupEntry", func() {
 				Expect(testClient.Get(ctx, backupEntryObjectKey, backupEntry)).To(Succeed())
 				Expect(backupEntry.Finalizers).To(BeEmpty())
 
-				Expect(backupEntry.Annotations).ToNot(HaveKey(v1beta1constants.GardenerOperation))
-				Expect(backupEntry.Annotations).To(HaveKeyWithValue(extensionsintegrationtest.AnnotationKeyDesiredOperation, v1beta1constants.GardenerOperationMigrate))
+				Expect(backupEntry.Annotations).To(And(
+					Not(HaveKey(v1beta1constants.GardenerOperation)),
+					HaveKeyWithValue(extensionsintegrationtest.AnnotationKeyDesiredOperation, v1beta1constants.GardenerOperationMigrate),
+				))
 
 				Expect(testClient.Get(ctx, backupEntrySecretObjectKey, backupEntrySecret)).To(Succeed())
 				Expect(backupEntrySecret.Finalizers).To(BeEmpty())
@@ -694,8 +700,10 @@ var _ = Describe("BackupEntry", func() {
 				Expect(testClient.Get(ctx, backupEntryObjectKey, backupEntry)).To(Succeed())
 				Expect(backupEntry.Finalizers).To(BeEmpty())
 
-				Expect(backupEntry.Annotations).ToNot(HaveKey(v1beta1constants.GardenerOperation))
-				Expect(backupEntry.Annotations).To(HaveKeyWithValue(extensionsintegrationtest.AnnotationKeyDesiredOperation, v1beta1constants.GardenerOperationMigrate))
+				Expect(backupEntry.Annotations).To(And(
+					Not(HaveKey(v1beta1constants.GardenerOperation)),
+					HaveKeyWithValue(extensionsintegrationtest.AnnotationKeyDesiredOperation, v1beta1constants.GardenerOperationMigrate),
+				))
 
 				Expect(testClient.Get(ctx, backupEntrySecretObjectKey, backupEntrySecret)).To(Succeed())
 				Expect(backupEntrySecret.Finalizers).To(BeEmpty())
@@ -705,7 +713,7 @@ var _ = Describe("BackupEntry", func() {
 })
 
 func patchBackupEntryObject(ctx context.Context, c client.Client, backupEntry *extensionsv1alpha1.BackupEntry, transform func()) error {
-	if err := testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry); err != nil {
+	if err := c.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry); err != nil {
 		return err
 	}
 
