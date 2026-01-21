@@ -653,7 +653,7 @@
       },
       "id": 14,
       "panels": [],
-      "title": "Pod in-place resource updates within \"$vpa_namespace\" namespace",
+      "title": "Pod in-place resource updates",
       "type": "row"
     },
     {
@@ -887,7 +887,7 @@
       },
       "id": 22,
       "panels": [],
-      "title": "Pod evictions within \"$vpa_namespace\" namespace",
+      "title": "Pod evictions",
       "type": "row"
     },
     {
