@@ -25,7 +25,7 @@ import (
 const (
 	mediaTypeHelm = "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
 
-	localRegistry = "registry.local.gardener.cloud:5001"
+	localRegistryPattern = "registry.local.gardener.cloud:"
 )
 
 type pullSecretNamespace struct{}
@@ -122,7 +122,7 @@ func buildRef(oci *gardencorev1.OCIRepository) (name.Reference, error) {
 	}
 
 	// in the local setup we don't want to use TLS
-	if strings.Contains(ref, localRegistry) {
+	if strings.Contains(ref, localRegistryPattern) {
 		opts = append(opts, name.Insecure)
 	}
 
