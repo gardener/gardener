@@ -206,8 +206,8 @@ func validateKubernetesVersions(versions []core.ExpirableVersion, fldPath *field
 func validateExpirableVersion(version core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if len(version.Lifecycle) > 0 && !utilfeature.DefaultFeatureGate.Enabled(features.CloudProfileVersionClassificationLifecycles) {
-		allErrs = append(allErrs, field.Forbidden(fldPath, "lifecycles are not allowed with disabled CloudProfileVersionClassificationLifecycles feature gate"))
+	if len(version.Lifecycle) > 0 && !utilfeature.DefaultFeatureGate.Enabled(features.VersionClassificationLifecycle) {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "lifecycles are not allowed with disabled VersionClassificationLifecycle feature gate"))
 	}
 
 	if (version.Classification != nil || version.ExpirationDate != nil) && len(version.Lifecycle) > 0 {

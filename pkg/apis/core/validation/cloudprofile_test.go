@@ -375,13 +375,13 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.kubernetes.versions[0]"),
-						"Detail": Equal("lifecycles are not allowed with disabled CloudProfileVersionClassificationLifecycles feature gate"),
+						"Detail": Equal("lifecycles are not allowed with disabled VersionClassificationLifecycle feature gate"),
 					}))))
 				})
 
-				Describe("using versionClassificationLifecycles", func() {
+				Describe("using versionClassificationLifecycle", func() {
 					BeforeEach(func() {
-						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileVersionClassificationLifecycles, true))
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 					})
 
 					It("should forbid expired lifecycle stage on latest kubernetes version", func() {
@@ -744,13 +744,13 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.machineImages[0].versions[0]"),
-						"Detail": Equal("lifecycles are not allowed with disabled CloudProfileVersionClassificationLifecycles feature gate"),
+						"Detail": Equal("lifecycles are not allowed with disabled VersionClassificationLifecycle feature gate"),
 					}))))
 				})
 
 				Describe("using versionClassificationLifecycles", func() {
 					BeforeEach(func() {
-						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileVersionClassificationLifecycles, true))
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 					})
 
 					It("should forbid specifying lifecycle and classification at the same time", func() {
@@ -2448,7 +2448,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 		})
 		Describe("using versionClassificationLifecycles", func() {
 			BeforeEach(func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileVersionClassificationLifecycles, true))
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 			})
 
 			Context("Update version from supported to unavailable", func() {

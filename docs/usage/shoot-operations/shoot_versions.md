@@ -35,7 +35,67 @@ Moreover, this allows Gardener to "understand" the current state of a version an
 - I can determine the time when my Shoot clusters Machine image and Kubernetes version will be forcefully updated to the next patch or minor version (in case the cluster is running a deprecated version with an expiration date).
 - I can get this information via API from the `CloudProfile`.
 
-## Version Classification Lifecycles
+## Version Classifications
+
+Administrators can classify versions into four distinct "logical states": `preview`, `supported`, `deprecated`, and `expired`.
+The version classification serves as a "point-of-reference" for end-users and also has implications during shoot creation and the maintenance time.
+
+If a version is unclassified, Gardener cannot make those decision based on the "logical state".
+Nevertheless, Gardener can operate without version classifications and can be added at any time to the Kubernetes and machine image versions in the `CloudProfile`.
+
+As a best practice, versions usually start with the classification `preview`, then are promoted to `supported`, eventually `deprecated` and finally `expired`.
+This information is programmatically available in the `CloudProfiles` of the Garden cluster.
+
+- **preview:** A `preview` version is a new version that has not yet undergone thorough testing, possibly a new release, and needs time to be validated.
+Due to its short early age, there is a higher probability of undiscovered issues and is therefore not yet recommended for production usage.
+A Shoot does not update (neither `auto-update` or `force-update`) to a `preview` version during the maintenance time.
+Also, `preview` versions are not considered for the defaulting to the highest available version when deliberately omitting the patch version during Shoot creation.
+Typically, after a fresh release of a new Kubernetes (e.g., v1.25.0) or Machine image version (e.g., suse-chost 15.4.20220818), the operator tags it as `preview` until they have gained sufficient experience and regards this version to be reliable.
+After the operator has gained sufficient trust, the version can be manually promoted to `supported`.
+
+- **supported:** A `supported` version is the recommended version for new and existing Shoot clusters. This is the version that new Shoot clusters should use and existing clusters should update to.
+Typically for Kubernetes versions, the latest Kubernetes patch versions of the actual (if not still in `preview`) and the last 3 minor Kubernetes versions are maintained by the community. An operator could define these versions as being `supported` (e.g., v1.27.6, v1.26.10, and v1.25.12).
+
+- **deprecated:** A `deprecated` version is a version that approaches the end of its lifecycle and can contain issues which are probably resolved in a supported version.
+New Shoots should not use this version anymore.
+Existing Shoots will be updated to a newer version if `auto-update` is enabled (`.spec.maintenance.autoUpdate.kubernetesVersion` for Kubernetes version `auto-update`, or `.spec.maintenance.autoUpdate.machineImageVersion` for machine image version `auto-update`).
+Using automatic upgrades, however, does not guarantee that a Shoot runs a non-deprecated version, as the latest version (overall or of the minor version) can be deprecated as well.
+Deprecated versions **should** have an expiration date set for eventual expiration.
+
+- **expired:** An `expired` versions has an expiration date (based on the [Golang time package](https://golang.org/src/time/time.go)) in the past.
+New clusters with that version cannot be created and existing clusters are forcefully migrated to a higher version during the maintenance time.
+
+Below is an example how the relevant section of the `CloudProfile` might look like:
+
+``` yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: CloudProfile
+metadata:
+  name: alicloud
+spec:
+  kubernetes:
+    versions:
+      - classification: preview
+        version: 1.27.0
+      - classification: preview
+        version: 1.26.3
+      - classification: supported
+        version: 1.26.2
+      - classification: preview
+        version: 1.25.5
+      - classification: supported
+        version: 1.25.4
+      - classification: supported
+        version: 1.24.6
+      - classification: deprecated
+        expirationDate: "2022-11-30T23:59:59Z"
+        version: 1.24.5
+```
+
+
+## Version Classification Lifecycles (alpha)
+
+> This lifecycle is only available when the `VersionClassificationLifecycle` feature gate is enabled. The feature is Alpha and not fully implemented, enabling it may not provide the expected behavior.
 
 Kubernetes and machine image versions in the `CloudProfile` are classified into individual stages: `unavailable`, `preview`, `supported`, `deprecated`, and `expired`.
 
@@ -72,7 +132,7 @@ status:
 
 The classification stages must occur in a specific order and the start time must reflect this order. Here is a list of the available classification stages in the order they can appear:
 
-- **unavailable:** An `unavailable` version is planned to become available in the future. It is not possible to reference this version in this stage and can be used by administrators to schedule a new version release. Usually there is no need to explicitly declare this stage in the classification lifecycle because it can be automatically derived when the current time is before the first specified lifecycle stage.
+- **unavailable:** An `unavailable` version is planned to become available in the future. It is not possible to reference this version in this stage and can be used by administrators to schedule a new version release. It can't be explicitly declared at this stage, this classification is automatically derived when the current time is before the first specified lifecycle stage.
 
 - **preview:** A `preview` version is a new version that has not yet undergone thorough testing, possibly a new release, and needs time to be validated.
 Due to its short early age, there is a higher probability of undiscovered issues and is therefore not yet recommended for production usage.
@@ -94,6 +154,7 @@ Using automatic upgrades, however, does not guarantee that a Shoot runs a non-de
 Below is a more complex example illustrating different scenarios for lifecycle classifications:
 
 ```yaml
+# assume that the current date is 2024-12-03
 apiVersion: core.gardener.cloud/v1beta1
 kind: CloudProfile
 metadata:
