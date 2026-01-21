@@ -230,6 +230,14 @@ func (shootStrategy) Canonicalize(obj runtime.Object) {
 	if shoot.Spec.Kubernetes.ClusterAutoscaler != nil && shoot.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete != nil {
 		shoot.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete = nil
 	}
+	// Field was previously defaulted to false.
+	// We can safely set it to nil when user had explicitly set it to false,
+	// as we treat nil as false in the codebase.
+	if kubeAPIServer := shoot.Spec.Kubernetes.KubeAPIServer; kubeAPIServer != nil &&
+		kubeAPIServer.EnableAnonymousAuthentication != nil &&
+		!*kubeAPIServer.EnableAnonymousAuthentication {
+		kubeAPIServer.EnableAnonymousAuthentication = nil
+	}
 	gardenerutils.MaintainSeedNameLabels(shoot, shoot.Spec.SeedName, shoot.Status.SeedName)
 	maintainIsSelfHostedLabel(shoot)
 }
