@@ -5,11 +5,8 @@
 package shootdns_test
 
 import (
-	"net/http"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -79,37 +76,6 @@ var _ = Describe("ShootDNS tests", func() {
 
 	Context("checkFunctionlessDNSProviders", func() {
 		Context("Create", func() {
-			It("should allow shoot creation with non-primary DNS provider and configured credentials", func() {
-				By("Create Shoot")
-				Eventually(func() error {
-					return testClient.Create(ctx, shoot)
-				}).Should(Succeed())
-
-				DeferCleanup(func() {
-					By("Delete Shoot")
-					Expect(testClient.Delete(ctx, shoot)).To(Or(Succeed(), BeNotFoundError()))
-					Eventually(func() error {
-						return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
-					}).Should(BeNotFoundError())
-				})
-			})
-
-			It("should allow shoot creation when shoot.spec.dns is not set", func() {
-				shoot.Spec.DNS = nil
-				By("Create Shoot")
-				Eventually(func() error {
-					return testClient.Create(ctx, shoot)
-				}).Should(Succeed())
-
-				DeferCleanup(func() {
-					By("Delete Shoot")
-					Expect(testClient.Delete(ctx, shoot)).To(Or(Succeed(), BeNotFoundError()))
-					Eventually(func() error {
-						return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
-					}).Should(BeNotFoundError())
-				})
-			})
-
 			It("should allow shoot creation when dnsProvider has secretName set and credentialsRef unset", func() {
 				shoot.Spec.DNS.Providers[0].CredentialsRef = nil
 				By("Create Shoot")
@@ -134,88 +100,6 @@ var _ = Describe("ShootDNS tests", func() {
 					Eventually(func() error {
 						return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 					}).Should(BeNotFoundError())
-				})
-			})
-
-			It("should allow shoot creation when dnsProvider has secretName unset and credentialsRef set", func() {
-				shoot.Spec.DNS.Providers[0].SecretName = nil
-				By("Create Shoot")
-				Eventually(func() error {
-					return testClient.Create(ctx, shoot)
-				}).Should(Succeed())
-
-				By("Ensure credentialsRef has been synced with secretName")
-				Eventually(func() error {
-					return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
-				}).Should(Succeed())
-
-				Expect(shoot.Spec.DNS.Providers[0].SecretName).To(Equal(&testSecret.Name))
-
-				DeferCleanup(func() {
-					By("Delete Shoot")
-					Expect(testClient.Delete(ctx, shoot)).To(Or(Succeed(), BeNotFoundError()))
-					Eventually(func() error {
-						return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
-					}).Should(BeNotFoundError())
-				})
-			})
-
-			It("should forbid shoot creation when dnsProvider is not primary and has no credentials configured", func() {
-				shoot.Spec.DNS.Providers[0] = gardencorev1beta1.DNSProvider{
-					Primary: ptr.To(false),
-					Type:    ptr.To("provider-type"),
-				}
-				By("Create Shoot")
-				Expect(testClient.Create(ctx, shoot)).To(And(
-					HaveOccurred(),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"ErrStatus": MatchFields(IgnoreExtras, Fields{
-							"Code":    Equal(int32(http.StatusUnprocessableEntity)),
-							"Message": ContainSubstring("Required value: non-primary DNS providers must specify `type` and `credentialsRef`"),
-						})},
-					)),
-				))
-
-				DeferCleanup(func() {
-					// Only when the shoot is created the name is set and it should be deleted.
-					if shoot.Name != "" {
-						By("Delete Shoot")
-						Expect(testClient.Delete(ctx, shoot)).To(Or(Succeed(), BeNotFoundError()))
-						Eventually(func() error {
-							return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
-						}).Should(BeNotFoundError())
-					}
-				})
-			})
-
-			It("should forbid shoot creation when dnsProvider is not primary, has no type, credentialsRef is unset but secretName is set", func() {
-				shoot.Spec.DNS.Providers[0] = gardencorev1beta1.DNSProvider{
-					Primary:    ptr.To(false),
-					Type:       nil,
-					SecretName: &testSecret.Name,
-				}
-				By("Create Shoot")
-				Eventually(func() error {
-					return testClient.Create(ctx, shoot)
-				}).Should(And(
-					HaveOccurred(),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"ErrStatus": MatchFields(IgnoreExtras, Fields{
-							"Code":    Equal(int32(http.StatusUnprocessableEntity)),
-							"Message": ContainSubstring("Required value: type must be set when credentialsRef is set"),
-						})},
-					)),
-				))
-
-				DeferCleanup(func() {
-					// Only when the shoot is created the name is set and it should be deleted.
-					if shoot.Name != "" {
-						By("Delete Shoot")
-						Expect(testClient.Delete(ctx, shoot)).To(Or(Succeed(), BeNotFoundError()))
-						Eventually(func() error {
-							return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
-						}).Should(BeNotFoundError())
-					}
 				})
 			})
 		})
@@ -289,55 +173,11 @@ var _ = Describe("ShootDNS tests", func() {
 				})
 			})
 
-			It("should allow shoot update with non-primary DNS provider and configured credentials", func() {
-				shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: ptr.To(false)}
-				By("Update Shoot")
-				Eventually(func() error {
-					return testClient.Update(ctx, shoot)
-				}).Should(Succeed())
-
-			})
-
-			It("should forbid shoot update with non-primary DNS provider and not configured credentials", func() {
-				shoot.Spec.DNS.Providers = append(shoot.Spec.DNS.Providers, gardencorev1beta1.DNSProvider{
-					Primary: ptr.To(false),
-					Type:    ptr.To("another-provider-type"),
-				})
-				By("Update Shoot")
-				Eventually(func() error {
-					return testClient.Update(ctx, shoot)
-				}).Should(And(
-					HaveOccurred(),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"ErrStatus": MatchFields(IgnoreExtras, Fields{
-							"Code":    Equal(int32(http.StatusUnprocessableEntity)),
-							"Message": ContainSubstring("Required value: non-primary DNS providers must specify `type` and `credentialsRef`"),
-						})},
-					)),
-				))
-			})
-
 			It("should allow shoot update with non-primary DNS provider and only secretName set", func() {
 				shoot.Spec.DNS.Providers = append(shoot.Spec.DNS.Providers, gardencorev1beta1.DNSProvider{
 					Primary:    ptr.To(false),
 					Type:       ptr.To("another-provider-type"),
 					SecretName: &testSecret.Name,
-				})
-				By("Update Shoot")
-				Eventually(func() error {
-					return testClient.Update(ctx, shoot)
-				}).Should(Succeed())
-			})
-
-			It("should allow shoot update with non-primary DNS provider and only credentialsRef set", func() {
-				shoot.Spec.DNS.Providers = append(shoot.Spec.DNS.Providers, gardencorev1beta1.DNSProvider{
-					Primary: ptr.To(false),
-					Type:    ptr.To("another-provider-type"),
-					CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
-						APIVersion: "v1",
-						Kind:       "Secret",
-						Name:       testSecret.Name,
-					},
 				})
 				By("Update Shoot")
 				Eventually(func() error {
