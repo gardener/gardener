@@ -64,9 +64,9 @@ type Handler struct {
 	SkipValidationOnShootUpdate func(shoot, oldShoot *gardencore.Shoot) bool
 	AdmitConfig                 func(configRaw string, shootsReferencingConfigMap []*gardencore.Shoot) (int32, error)
 
-	GetNamespace               func() string
-	GetConfigMapNameFromGarden func(garden *operatorv1alpha1.Garden) map[string]string
-	AdmitGardenConfig          func(configRaw string) (int32, error)
+	GetNamespace                func() string
+	GetConfigMapNamesFromGarden func(garden *operatorv1alpha1.Garden) []string
+	AdmitGardenConfig           func(configRaw string) (int32, error)
 }
 
 // Handle validates configuration part of ConfigMaps which are referenced in Shoot or Garden resources.
@@ -99,7 +99,7 @@ func (h *Handler) admitGarden(ctx context.Context, request admission.Request) ad
 		return admissionwebhook.Allowed("garden is already marked for deletion")
 	}
 
-	configMapNames := h.GetConfigMapNameFromGarden(garden)
+	configMapNames := h.GetConfigMapNamesFromGarden(garden)
 	if len(configMapNames) == 0 {
 		return admissionwebhook.Allowed("no audit policy config map reference found in garden spec")
 	}
@@ -117,7 +117,7 @@ func (h *Handler) admitGarden(ctx context.Context, request admission.Request) ad
 	}
 
 	if oldGarden != nil {
-		oldConfigMapNames := h.GetConfigMapNameFromGarden(oldGarden)
+		oldConfigMapNames := h.GetConfigMapNamesFromGarden(oldGarden)
 		if apiequality.Semantic.DeepEqual(oldConfigMapNames, configMapNames) &&
 			oldGarden.Spec.VirtualCluster.Kubernetes.Version == garden.Spec.VirtualCluster.Kubernetes.Version {
 			return admissionwebhook.Allowed("audit policy config map reference and kubernetes version were not changed")
@@ -293,7 +293,7 @@ func (h *Handler) admitConfigMapForGardens(ctx context.Context, request admissio
 	// there can be atmost one garden resource
 	garden := gardenList.Items[0]
 
-	configMapNames := h.GetConfigMapNameFromGarden(&garden)
+	configMapNames := h.GetConfigMapNamesFromGarden(&garden)
 	if len(configMapNames) == 0 || h.GetNamespace() != request.Namespace {
 		return admissionwebhook.Allowed("config map is not referenced by garden resource, nothing to validate")
 	}
