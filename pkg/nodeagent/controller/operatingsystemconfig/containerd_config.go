@@ -184,7 +184,7 @@ func (r *Reconciler) ensureContainerdConfiguration(ctx context.Context, log logr
 	// and hence takes an array of strings
 	containerdGreaterThanEqual22, err := nodeagentcontainerd.VersionGreaterThanEqual22(ctx, r.ContainerdClient)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to determine containerd version: %w", err)
 	}
 
 	if configFileVersion >= 3 && containerdGreaterThanEqual22 {
