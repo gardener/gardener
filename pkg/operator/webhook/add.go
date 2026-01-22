@@ -20,6 +20,7 @@ import (
 	extensiondefaulting "github.com/gardener/gardener/pkg/operator/webhook/defaulting/extension"
 	gardendefaulting "github.com/gardener/gardener/pkg/operator/webhook/defaulting/garden"
 	"github.com/gardener/gardener/pkg/operator/webhook/validation"
+	auditpolicyvalidation "github.com/gardener/gardener/pkg/operator/webhook/validation/auditpolicy"
 	extensionvalidation "github.com/gardener/gardener/pkg/operator/webhook/validation/extension"
 	gardenvalidation "github.com/gardener/gardener/pkg/operator/webhook/validation/garden"
 	"github.com/gardener/gardener/pkg/operator/webhook/validation/namespace"
@@ -107,6 +108,36 @@ func GetValidatingWebhookConfiguration(mode, url string) *admissionregistrationv
 					},
 				}},
 				ObjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": v1beta1constants.GardenNamespace}},
+				SideEffects:    &sideEffects,
+				FailurePolicy:  &failurePolicy,
+				MatchPolicy:    &matchPolicy,
+				TimeoutSeconds: ptr.To[int32](10),
+			},
+			{
+				Name:                    "audit-policies.operator.gardener.cloud",
+				ClientConfig:            getClientConfig(auditpolicyvalidation.WebhookPath, mode, url),
+				AdmissionReviewVersions: []string{"v1", "v1beta1"},
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{
+							admissionregistrationv1.Create,
+							admissionregistrationv1.Update,
+						},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{operatorv1alpha1.SchemeGroupVersion.Group},
+							APIVersions: []string{operatorv1alpha1.SchemeGroupVersion.Version},
+							Resources:   []string{"gardens"},
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{corev1.GroupName},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"configmaps"},
+						},
+					},
+				},
 				SideEffects:    &sideEffects,
 				FailurePolicy:  &failurePolicy,
 				MatchPolicy:    &matchPolicy,
