@@ -39,7 +39,6 @@ config:
     DefaultSeccompProfile: true
     NewWorkerPoolHash: true
     IstioTLSTermination: true
-    OpenTelemetryCollector: true
     UseUnifiedHTTPProxyPort: true
     VPAInPlaceUpdates: true
     VPNBondingModeRoundRobin: true

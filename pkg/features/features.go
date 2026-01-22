@@ -62,6 +62,7 @@ const (
 	// All logs will be routed through the Collector before they reach the Vali instance.
 	// owner: @rrhubenov
 	// alpha: v1.124.0
+	// beta: v1.135.0
 	OpenTelemetryCollector featuregate.Feature = "OpenTelemetryCollector"
 
 	// UseUnifiedHTTPProxyPort enables the gardenlet to set up the unified HTTP proxy network infrastructure.
@@ -118,7 +119,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	IstioTLSTermination:           {Default: false, PreRelease: featuregate.Alpha},
 	CloudProfileCapabilities:      {Default: false, PreRelease: featuregate.Alpha},
 	DoNotCopyBackupCredentials:    {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	OpenTelemetryCollector:        {Default: false, PreRelease: featuregate.Alpha},
+	OpenTelemetryCollector:        {Default: true, PreRelease: featuregate.Beta},
 	UseUnifiedHTTPProxyPort:       {Default: false, PreRelease: featuregate.Alpha},
 	VPAInPlaceUpdates:             {Default: false, PreRelease: featuregate.Alpha},
 	CustomDNSServerInNodeLocalDNS: {Default: true, PreRelease: featuregate.Beta},
