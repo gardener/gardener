@@ -7,8 +7,6 @@ package resourcequota
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/controllerutils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
@@ -17,6 +15,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ControllerName is the name of this controller.
