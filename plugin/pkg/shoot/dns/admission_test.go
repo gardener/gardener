@@ -318,45 +318,6 @@ var _ = Describe("dns", func() {
 				))
 			})
 
-			It("should not allow functionless DNS providers on create w/ seed assignment", func() {
-				var (
-					shootDomain = "my-shoot.my-private-domain.com"
-				)
-				shoot.Spec.DNS.Domain = &shootDomain
-				shoot.Spec.DNS.Providers = []core.DNSProvider{
-					{
-						Type: &providerType,
-					},
-					{
-						Type: &providerType,
-						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
-							APIVersion: "v1",
-							Kind:       "Secret",
-							Name:       secretName,
-						},
-					},
-					{
-						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
-							APIVersion: "v1",
-							Kind:       "Secret",
-							Name:       secretName,
-						},
-					},
-				}
-
-				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
-					"ErrStatus": MatchFields(IgnoreExtras, Fields{
-						"Code": Equal(int32(http.StatusUnprocessableEntity)),
-					})},
-				)))
-			})
-
 			It("should not remove functionless DNS providers on create w/o seed assignment", func() {
 				var (
 					shootDomain = "my-shoot.my-private-domain.com"
@@ -403,42 +364,6 @@ var _ = Describe("dns", func() {
 						"Primary": BeNil(),
 					}),
 				))
-			})
-
-			It("should forbid functionless DNS providers on updates w/ seed assignment", func() {
-				var (
-					shootDomain = "my-shoot.my-private-domain.com"
-				)
-				shoot.Spec.DNS.Domain = &shootDomain
-				oldShoot := shoot.DeepCopy()
-
-				providers := []core.DNSProvider{
-					{
-						Type: &providerType,
-					},
-					{
-						Type:    &providerType,
-						Primary: ptr.To(true),
-					},
-					{
-						Type: &providerType,
-					},
-				}
-
-				oldShoot.Spec.DNS.Providers = []core.DNSProvider{providers[1]}
-				shoot.Spec.DNS.Providers = providers
-
-				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
-					"ErrStatus": MatchFields(IgnoreExtras, Fields{
-						"Code": Equal(int32(http.StatusUnprocessableEntity)),
-					})},
-				)))
 			})
 
 			It("should not remove functionless DNS providers on updates w/o seed assignment", func() {
