@@ -354,8 +354,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
 						return s.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey
 					},
-					EncryptionKey:  v1beta1constants.SecretNameETCDEncryptionKey,
-					RoleLabelValue: v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration,
+					EncryptionKey:             v1beta1constants.SecretNameETCDEncryptionKey,
+					RoleLabelValue:            v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration,
+					AutoCompleteAfterPrepared: true,
 				},
 				&rotationutils.ServiceAccountKeyVerifier{
 					GetServiceAccountKeySecretNamespace: func() string {
