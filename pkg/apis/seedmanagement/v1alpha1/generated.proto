@@ -99,6 +99,10 @@ message GardenletDeployment {
   // Env is the list of environment variables to set in the gardenlet container.
   // +optional
   repeated .k8s.io.api.core.v1.EnvVar env = 10;
+
+  // Tolerations are the tolerations to be applied to gardenlet pods.
+  // +optional
+  repeated .k8s.io.api.core.v1.Toleration tolerations = 11;
 }
 
 // GardenletHelm is the Helm deployment configuration for gardenlet.

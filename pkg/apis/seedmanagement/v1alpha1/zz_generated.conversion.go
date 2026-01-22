@@ -344,6 +344,7 @@ func autoConvert_v1alpha1_GardenletDeployment_To_seedmanagement_GardenletDeploym
 	out.AdditionalVolumes = *(*[]corev1.Volume)(unsafe.Pointer(&in.AdditionalVolumes))
 	out.AdditionalVolumeMounts = *(*[]corev1.VolumeMount)(unsafe.Pointer(&in.AdditionalVolumeMounts))
 	out.Env = *(*[]corev1.EnvVar)(unsafe.Pointer(&in.Env))
+	out.Tolerations = *(*[]corev1.Toleration)(unsafe.Pointer(&in.Tolerations))
 	return nil
 }
 
@@ -363,6 +364,7 @@ func autoConvert_seedmanagement_GardenletDeployment_To_v1alpha1_GardenletDeploym
 	out.AdditionalVolumes = *(*[]corev1.Volume)(unsafe.Pointer(&in.AdditionalVolumes))
 	out.AdditionalVolumeMounts = *(*[]corev1.VolumeMount)(unsafe.Pointer(&in.AdditionalVolumeMounts))
 	out.Env = *(*[]corev1.EnvVar)(unsafe.Pointer(&in.Env))
+	out.Tolerations = *(*[]corev1.Toleration)(unsafe.Pointer(&in.Tolerations))
 	return nil
 }
 
