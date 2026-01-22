@@ -153,7 +153,7 @@ add-license-headers: $(GO_ADD_LICENSE)
 	@./hack/add-license-header.sh
 
 .PHONY: check-generate
-check-generate:
+check-generate: tools-for-generate
 	@hack/check-generate.sh $(REPO_ROOT)
 
 .PHONY: check-plutono-dashboards
