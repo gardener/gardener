@@ -9618,6 +9618,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			},
 			Entry("utc location", "UTC", BeEmpty()),
 			Entry("empty location -> utc", "", BeEmpty()),
+			Entry("\"Asia/Calcutta\" location", "Asia/Calcutta", BeEmpty()),
 			Entry("invalid location", "should not exist", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type": Equal(field.ErrorTypeInvalid),
 			})))),

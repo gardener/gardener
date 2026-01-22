@@ -2800,7 +2800,9 @@ func ValidateHibernationCronSpec(seenSpecs sets.Set[string], spec string, fldPat
 func ValidateHibernationScheduleLocation(location string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if _, err := time.LoadLocation(location); err != nil {
+	// TODO(timuthy): Checking for "asia/calcutta" is a band-aid since the deprecated time zone was removed in Debian 13.
+	// Check for better ways to handle this incompatibility, e.g., deprecating the usage of this time zone in Gardener or importing time/tzdata.
+	if _, err := time.LoadLocation(location); err != nil && strings.ToLower(location) != "asia/calcutta" {
 		allErrs = append(allErrs, field.Invalid(fldPath, location, fmt.Sprintf("not a valid location: %v", err)))
 	}
 

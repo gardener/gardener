@@ -8,8 +8,10 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/robfig/cron"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -99,7 +101,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	parsedSchedules, err := parseHibernationSchedules(schedules)
+	parsedSchedules, err := parseHibernationSchedules(schedules, log)
 	if err != nil {
 		log.Error(err, "Invalid hibernation schedules, stopping reconciliation")
 		return reconcile.Result{}, nil
@@ -149,13 +151,20 @@ func (r *Reconciler) hibernateOrWakeUpShootBasedOnSchedule(ctx context.Context, 
 
 // parseHibernationSchedules parses the given HibernationSchedules and returns an array of ParsedHibernationSchedules
 // If the Location of a HibernationSchedule is `nil`, it is defaulted to UTC.
-func parseHibernationSchedules(schedules []gardencorev1beta1.HibernationSchedule) ([]parsedHibernationSchedule, error) {
+func parseHibernationSchedules(schedules []gardencorev1beta1.HibernationSchedule, log logr.Logger) ([]parsedHibernationSchedule, error) {
 	var parsedHibernationSchedules []parsedHibernationSchedule
 
 	for _, schedule := range schedules {
 		locationID := time.UTC.String()
 		if schedule.Location != nil {
-			locationID = *schedule.Location
+			// TODO(timuthy): Handling for "asia/calcutta" is a band-aid since the deprecated time zone was removed in Debian 13.
+			// Check for better ways to handle this incompatibility, e.g., deprecating the usage of this time zone in Gardener or importing time/tzdata.
+			if strings.ToLower(*schedule.Location) == "asia/calcutta" {
+				log.Info("Translating deprecated time zone 'Asia/Calcutta' to 'Asia/Kolkata'")
+				locationID = "Asia/Kolkata"
+			} else {
+				locationID = *schedule.Location
+			}
 		}
 
 		location, err := time.LoadLocation(locationID)
