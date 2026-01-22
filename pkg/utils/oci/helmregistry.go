@@ -6,9 +6,12 @@ package oci
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -30,8 +33,14 @@ const (
 
 type pullSecretNamespace struct{}
 
-// ContextKeyPullSecretNamespace is the key to use to pass the pull secret namespace in the context.
-var ContextKeyPullSecretNamespace = pullSecretNamespace{}
+type caBundleSecretNamespace struct{}
+
+var (
+	// ContextKeyPullSecretNamespace is the key to use to pass the pull secret namespace in the context.
+	ContextKeyPullSecretNamespace = pullSecretNamespace{}
+	// ContextKeyCABundleSecretNamespace is the key to use to pass the CA bundle secret namespace in the context.
+	ContextKeyCABundleSecretNamespace = caBundleSecretNamespace{}
+)
 
 // Interface represents an OCI compatible registry.
 type Interface interface {
@@ -63,6 +72,42 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 	}
 	remoteOpts := []remote.Option{
 		remote.WithContext(ctx),
+	}
+
+	// Configure custom transport with CA bundle if provided
+	if oci.CABundleSecretRef != nil {
+		namespace := v1beta1constants.GardenNamespace
+		if v := ctx.Value(ContextKeyCABundleSecretNamespace); v != nil {
+			s, ok := v.(string)
+			if !ok {
+				return nil, errors.New("pull secret namespace must be a string")
+			}
+			namespace = s
+		}
+
+		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: oci.CABundleSecretRef.Name}}
+		if err := r.client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+			return nil, fmt.Errorf("failed to get CA bundle secret %s: %w", client.ObjectKeyFromObject(secret), err)
+		}
+		caBundle, ok := secret.Data["bundle.crt"]
+		if !ok {
+			return nil, fmt.Errorf("CA bundle secret %s is missing the data key %s", client.ObjectKeyFromObject(secret), "bundle.crt")
+		}
+		if len(caBundle) == 0 {
+			return nil, fmt.Errorf("CA bundle secret %s has empty data for key %s", client.ObjectKeyFromObject(secret), "bundle.crt")
+		}
+
+		caCertPool := x509.NewCertPool()
+		if !caCertPool.AppendCertsFromPEM(caBundle) {
+			return nil, errors.New("failed to append CA certificates from bundle")
+		}
+
+		transport := remote.DefaultTransport.(*http.Transport).Clone()
+		transport.TLSClientConfig = &tls.Config{
+			RootCAs:    caCertPool,
+			MinVersion: tls.VersionTLS12,
+		}
+		remoteOpts = append(remoteOpts, remote.WithTransport(transport))
 	}
 
 	if oci.PullSecretRef != nil {
