@@ -83,4 +83,8 @@ type OCIRepository struct {
 	// The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace.
 	// +optional
 	PullSecretRef *corev1.LocalObjectReference `json:"pullSecretRef,omitempty" protobuf:"bytes,5,opt,name=pullSecretRef"`
+	// CABundle is a PEM-encoded certificate authority bundle used to verify the TLS certificate of the OCI registry.
+	// If not provided, the system's default certificate pool is used.
+	// +optional
+	CABundle []byte `json:"caBundle,omitempty" protobuf:"bytes,6,opt,name=caBundle"`
 }
