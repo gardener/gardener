@@ -107,7 +107,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *controllermanag
 		return fmt.Errorf("failed adding ManagedSeedSet controller: %w", err)
 	}
 
-	if err := project.AddToManager(mgr, *cfg); err != nil {
+	if err := project.AddToManager(ctx, mgr, *cfg); err != nil {
 		return fmt.Errorf("failed adding Project controller: %w", err)
 	}
 
