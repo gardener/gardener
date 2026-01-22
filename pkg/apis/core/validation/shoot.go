@@ -2277,29 +2277,7 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, shootNamespa
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("minimum"), worker.Minimum, "self-hosted shoots only support minimum=maximum=1 for the control plane worker pool (might change in the future)"))
 		}
 
-		if backup := worker.ControlPlane.Backup; backup != nil {
-			if len(backup.Provider) == 0 {
-				allErrs = append(allErrs, field.Required(fldPath.Child("controlPlane", "backup", "provider"), "must provide a backup cloud provider name"))
-			}
-
-			if shootProviderType != backup.Provider && ptr.Deref(backup.Region, "") == "" {
-				allErrs = append(allErrs, field.Required(fldPath.Child("controlPlane", "backup", "region"), "region must be specified for if backup provider is different from shoot provider used in `spec.provider.type`"))
-			}
-
-			if backup.CredentialsRef == nil {
-				allErrs = append(allErrs, field.Required(fldPath.Child("controlPlane", "backup", "credentialsRef"), "must be set to refer a Secret or WorkloadIdentity"))
-			} else {
-				allErrs = append(allErrs, ValidateCredentialsRef(*backup.CredentialsRef, fldPath.Child("controlPlane", "backup", "credentialsRef"))...)
-				if backup.CredentialsRef.Namespace != shootNamespace {
-					allErrs = append(allErrs, field.Forbidden(fldPath.Child("controlPlane", "backup", "credentialsRef", "namespace"), "must reference credentials in the same namespace as the Shoot"))
-				}
-
-				// TODO(vpnachev): Allow WorkloadIdentities once the support in the controllers and components is fully implemented.
-				if backup.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() && backup.CredentialsRef.Kind == "WorkloadIdentity" {
-					allErrs = append(allErrs, field.Forbidden(fldPath.Child("controlPlane", "backup", "credentialsRef"), "support for WorkloadIdentity as backup credentials is not yet implemented"))
-				}
-			}
-		}
+		allErrs = append(allErrs, ValidateWorkerControlPlane(worker.ControlPlane, shootNamespace, shootProviderType, fldPath.Child("controlPlane"))...)
 	}
 
 	if worker.Sysctls != nil {
@@ -2685,6 +2663,40 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 		}
 	}
 
+	return allErrs
+}
+
+func ValidateWorkerControlPlane(plane *core.WorkerControlPlane, shootNamespace, shootProviderType string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if backup := plane.Backup; backup != nil {
+		if len(backup.Provider) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("backup", "provider"), "must provide a backup cloud provider name"))
+		}
+
+		if shootProviderType != backup.Provider && ptr.Deref(backup.Region, "") == "" {
+			allErrs = append(allErrs, field.Required(fldPath.Child("backup", "region"), "region must be specified for if backup provider is different from shoot provider used in `spec.provider.type`"))
+		}
+
+		if backup.CredentialsRef == nil {
+			allErrs = append(allErrs, field.Required(fldPath.Child("backup", "credentialsRef"), "must be set to refer a Secret or WorkloadIdentity"))
+		} else {
+			allErrs = append(allErrs, ValidateCredentialsRef(*backup.CredentialsRef, fldPath.Child("backup", "credentialsRef"))...)
+			if backup.CredentialsRef.Namespace != shootNamespace {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("backup", "credentialsRef", "namespace"), "must reference credentials in the same namespace as the Shoot"))
+			}
+
+			// TODO(vpnachev): Allow WorkloadIdentities once the support in the controllers and components is fully implemented.
+			if backup.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() && backup.CredentialsRef.Kind == "WorkloadIdentity" {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("backup", "credentialsRef"), "support for WorkloadIdentity as backup credentials is not yet implemented"))
+			}
+		}
+	}
+	if plane.Exposure != nil {
+		if plane.Exposure.DNS != nil && plane.Exposure.Extension != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("exposure"), plane.Exposure, "cannot have dns and extension set at the same time"))
+		}
+	}
 	return allErrs
 }
 
