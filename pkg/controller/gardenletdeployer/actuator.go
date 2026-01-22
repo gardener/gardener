@@ -681,11 +681,19 @@ func PrepareGardenletChartValues(
 	}
 	gardenletChartImage.WithOptionalTag(version.Get().GitVersion)
 
-	return utils.SetToValuesMap(values, map[string]any{
+	values, err = utils.SetToValuesMap(values, map[string]any{
 		"name":       gardenletutils.ResourcePrefixSelfHostedShoot + shoot.Name,
 		"namespace":  shoot.Namespace,
 		"deployment": map[string]any{"helm": map[string]any{"ociRepository": map[string]any{"ref": gardenletChartImage.String()}}},
 	}, "selfUpgrade")
+	if err != nil {
+		return nil, fmt.Errorf("failed setting self-upgrade values for self-hosted shoot: %w", err)
+	}
+	return utils.SetToValuesMap(values, map[string]any{
+		"key":      "node-role.kubernetes.io/control-plane",
+		"operator": "Exists",
+		"effect":   "NoSchedule",
+	}, "tolerations", 0)
 }
 
 // ensureGardenletEnvironment sets the KUBERNETES_SERVICE_HOST to the provided domain.
