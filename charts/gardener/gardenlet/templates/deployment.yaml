@@ -167,9 +167,9 @@ spec:
 {{- end }}
 {{- if .Values.nodeToleration }}
       tolerations:
-      - key: "node-role.kubernetes.io/control-plane"
-        operator: Exists
-        effect: NoSchedule
+{{- if .Values.tolerations }}
+{{ toYaml .Values.tolerations | indent 6 }}
+{{- end }}
 {{- if .Values.nodeToleration.defaultNotReadyTolerationSeconds }}
       - effect: NoExecute
         key: node.kubernetes.io/not-ready

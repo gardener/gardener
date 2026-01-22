@@ -129,6 +129,9 @@ type GardenletDeployment struct {
 	// Env is the list of environment variables to set in the gardenlet container.
 	// +optional
 	Env []corev1.EnvVar `json:"env,omitempty" protobuf:"bytes,10,rep,name=env"`
+	// Tolerations are the tolerations to be applied to gardenlet pods.
+	// +optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty" protobuf:"bytes,11,rep,name=tolerations"`
 }
 
 // Image specifies container image parameters.

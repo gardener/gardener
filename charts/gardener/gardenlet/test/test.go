@@ -1016,11 +1016,6 @@ func ComputeExpectedGardenletDeploymentSpec(
 				},
 				Tolerations: []corev1.Toleration{
 					{
-						Key:      "node-role.kubernetes.io/control-plane",
-						Operator: "Exists",
-						Effect:   "NoSchedule",
-					},
-					{
 						Key:               "node.kubernetes.io/not-ready",
 						Operator:          "Exists",
 						TolerationSeconds: ptr.To[int64](60),
@@ -1119,6 +1114,10 @@ func ComputeExpectedGardenletDeploymentSpec(
 
 		if deploymentConfiguration.PodAnnotations != nil {
 			deployment.Template.Annotations = utils.MergeStringMaps(deployment.Template.Annotations, deploymentConfiguration.PodAnnotations)
+		}
+
+		if deploymentConfiguration.Tolerations != nil {
+			deployment.Template.Spec.Tolerations = append(deployment.Template.Spec.Tolerations, deploymentConfiguration.Tolerations...)
 		}
 
 		if deploymentConfiguration.Resources != nil {
