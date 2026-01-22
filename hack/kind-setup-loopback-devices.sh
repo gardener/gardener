@@ -56,6 +56,13 @@ if ${EXPOSURE_CLASS}; then
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
     LOOPBACK_IP_ADDRESSES+=(::31)
   fi
+
+  if [[ "$CLUSTER_NAME" == "gardener-local2" || "$CLUSTER_NAME" == "gardener-local-multi-node2" ]]; then
+    LOOPBACK_IP_ADDRESSES+=(172.18.255.32)
+    if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
+      LOOPBACK_IP_ADDRESSES+=(::32)
+    fi
+  fi
 fi
 
 if [[ "$CLUSTER_NAME" != "*local2*" ]] ; then
