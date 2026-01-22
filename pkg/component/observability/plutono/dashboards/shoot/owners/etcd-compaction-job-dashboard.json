@@ -19,375 +19,18 @@
     "panels": [
       {
         "datasource": null,
-        "description": "Number of succeeded compaction jobs initiated by compaction controller in the selected time range.",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": []
-        },
         "gridPos": {
-          "h": 8,
-          "w": 12,
+          "h": 6,
+          "w": 24,
           "x": 0,
           "y": 0
         },
-        "id": 2,
-        "options": {
-          "colorMode": "value",
-          "graphMode": "area",
-          "justifyMode": "auto",
-          "orientation": "auto",
-          "reduceOptions": {
-            "calcs": [
-              "lastNotNull"
-            ],
-            "fields": "",
-            "values": false
-          },
-          "text": {},
-          "textMode": "auto"
-        },
-        "pluginVersion": "7.5.22",
-        "targets": [
-          {
-            "exemplar": true,
-            "expr": "sum(floor(increase(etcddruid_compaction_jobs_total{succeeded=\"true\"}[${__range}])))",
-            "instant": true,
-            "interval": "",
-            "legendFormat": "",
-            "refId": "A"
-          }
-        ],
-        "timeFrom": null,
-        "timeShift": null,
-        "title": "Successful Jobs",
-        "type": "stat"
-      },
-      {
-        "datasource": null,
-        "description": "Number of failed compaction jobs initiated by compaction controller in the selected time range",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 0
-        },
-        "id": 23763571995,
-        "options": {
-          "colorMode": "value",
-          "graphMode": "area",
-          "justifyMode": "auto",
-          "orientation": "auto",
-          "reduceOptions": {
-            "calcs": [
-              "lastNotNull"
-            ],
-            "fields": "",
-            "values": false
-          },
-          "text": {},
-          "textMode": "auto"
-        },
-        "pluginVersion": "7.5.22",
-        "targets": [
-          {
-            "exemplar": true,
-            "expr": "sum(floor(increase(etcddruid_compaction_jobs_total{succeeded=\"false\", failureReason=~\"processFailure|unknown\"}[${__range}])))",
-            "instant": true,
-            "interval": "",
-            "legendFormat": "",
-            "refId": "A"
-          }
-        ],
-        "title": "Failed Jobs",
-        "type": "stat"
-      },
-      {
-        "datasource": null,
-        "description": "Number of compaction jobs that have exceeded their deadline before finishing up.",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
-          "y": 8
-        },
-        "id": 23763572001,
-        "options": {
-          "colorMode": "value",
-          "graphMode": "area",
-          "justifyMode": "auto",
-          "orientation": "auto",
-          "reduceOptions": {
-            "calcs": [
-              "lastNotNull"
-            ],
-            "fields": "",
-            "values": false
-          },
-          "text": {},
-          "textMode": "auto"
-        },
-        "pluginVersion": "7.5.22",
-        "targets": [
-          {
-            "exemplar": true,
-            "expr": "sum(floor(increase(etcddruid_compaction_jobs_total{succeeded=\"false\", failureReason=\"deadlineExceeded\"}[${__range}])))",
-            "instant": true,
-            "interval": "",
-            "legendFormat": "",
-            "refId": "A"
-          }
-        ],
-        "title": "Deadline Exceeded Jobs",
-        "type": "stat"
-      },
-      {
-        "datasource": null,
-        "description": "Number of compaction jobs initiated by compaction controller that have been disrupted in the form of either preemptions or evictions in the selected time range.",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 8
-        },
-        "id": 23763571999,
-        "options": {
-          "colorMode": "value",
-          "graphMode": "area",
-          "justifyMode": "auto",
-          "orientation": "auto",
-          "reduceOptions": {
-            "calcs": [
-              "lastNotNull"
-            ],
-            "fields": "",
-            "values": false
-          },
-          "text": {},
-          "textMode": "auto"
-        },
-        "pluginVersion": "7.5.22",
-        "targets": [
-          {
-            "exemplar": true,
-            "expr": "sum(floor(increase(etcddruid_compaction_jobs_total{succeeded=\"false\", failureReason=~\"preempted|evicted\"}[${__range}])))",
-            "instant": true,
-            "interval": "",
-            "legendFormat": "",
-            "refId": "A"
-          }
-        ],
-        "title": "Disrupted Jobs",
-        "type": "stat"
-      },
-      {
-        "datasource": null,
-        "description": "Number of succeeded full snapshots initiated by compaction controller in the selected time range.",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
-          "y": 16
-        },
-        "id": 23763572003,
-        "options": {
-          "colorMode": "value",
-          "graphMode": "area",
-          "justifyMode": "auto",
-          "orientation": "auto",
-          "reduceOptions": {
-            "calcs": [
-              "lastNotNull"
-            ],
-            "fields": "",
-            "values": false
-          },
-          "text": {},
-          "textMode": "auto"
-        },
-        "pluginVersion": "7.5.22",
-        "targets": [
-          {
-            "exemplar": true,
-            "expr": "sum(floor(increase(etcddruid_compaction_full_snapshot_triggered_total{succeeded=\"true\"}[${__range}])))",
-            "instant": true,
-            "interval": "",
-            "legendFormat": "",
-            "refId": "A"
-          }
-        ],
-        "timeFrom": null,
-        "timeShift": null,
-        "title": "Successful Full Snapshots",
-        "type": "stat"
-      },
-      {
-        "datasource": null,
-        "description": "Number of failed full snapshots initiated by compaction controller in the selected time range.",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 16
-        },
-        "id": 23763572005,
-        "options": {
-          "colorMode": "value",
-          "graphMode": "area",
-          "justifyMode": "auto",
-          "orientation": "auto",
-          "reduceOptions": {
-            "calcs": [
-              "lastNotNull"
-            ],
-            "fields": "",
-            "values": false
-          },
-          "text": {},
-          "textMode": "auto"
-        },
-        "pluginVersion": "7.5.22",
-        "targets": [
-          {
-            "exemplar": true,
-            "expr": "sum(floor(increase(etcddruid_compaction_full_snapshot_triggered_total{succeeded=\"false\"}[${__range}])))",
-            "instant": true,
-            "interval": "",
-            "legendFormat": "",
-            "refId": "A"
-          }
-        ],
-        "timeFrom": null,
-        "timeShift": null,
-        "title": "Failed Full Snapshots",
-        "type": "stat"
+        "id": 8,
+        "mode": "markdown",
+        "content": "## ETCD Compaction Job Dashboard\n\nThis dashboard monitors the compaction jobs managed by **etcd-druid's compaction controller**. Compaction jobs compact the etcd backups to make them lean which helps improve restoration performance.\n\n### Panel Descriptions:\n- **Current Running Jobs**: Shows the number of compaction jobs currently executing.\n- **Accumulated Delta Events**: Displays the total number of etcd database events that have accumulated since the last full snapshot. When this exceeds configured thresholds, compaction jobs are triggered automatically.\n- **Successful Jobs**: Total count of compaction jobs that completed successfully during the selected time range.\n- **Failed Jobs**: Count of compaction jobs that failed due to process failures or unknown errors during execution.\n- **Deadline Exceeded Jobs**: Number of compaction jobs that exceeded their configured time limit before completion.\n- **Disrupted Jobs**: Count of compaction jobs that were interrupted by Kubernetes preemptions or pod evictions.\n- **Successful Full Snapshots**: When the compaction controller determines a compaction job is unviable, it takes a full snapshot instead. This panel shows successful full snapshot operations.\n- **Failed Full Snapshots**: Count of failed full snapshot operations when compaction was deemed unviable.\n- **Job Duration**: Heatmap visualization showing the time distribution of compaction job execution duration in seconds.\n- **Memory**: Memory usage of compaction job pods.\n- **CPU**: CPU utilization of compaction job pods.\n\n### About \"No Data\":\n**\"No data\" on individual panels is normal** and indicates that the specific metric has not been recorded during the selected time range. Each panel tracks a different event or metric, so \"No data\" can appear independently:\n- A panel may show \"No data\" even when compaction jobs are running if that particular event (e.g., failures, deadline exceeded) hasn't occurred\n- Multiple panels showing \"No data\" together typically means no compaction activity during the time range\n- Compaction jobs are triggered automatically by etcd-druid when accumulated delta events exceed thresholds",
+        "title": "Dashboard Information",
+        "transparent": true,
+        "type": "text"
       },
       {
         "aliasColors": {},
@@ -406,7 +49,7 @@
           "h": 8,
           "w": 12,
           "x": 0,
-          "y": 24
+          "y": 6
         },
         "hiddenSeries": false,
         "id": 4,
@@ -504,7 +147,7 @@
           "h": 8,
           "w": 12,
           "x": 12,
-          "y": 24
+          "y": 6
         },
         "hiddenSeries": false,
         "id": 6,
@@ -598,6 +241,378 @@
         }
       },
       {
+        "datasource": null,
+        "description": "Number of succeeded compaction jobs initiated by compaction controller in the selected time range.",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 14
+        },
+        "id": 2,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "text": {},
+          "textMode": "auto"
+        },
+        "pluginVersion": "7.5.22",
+        "targets": [
+          {
+            "exemplar": true,
+            "expr": "sum(floor(increase(etcddruid_compaction_jobs_total{succeeded=\"true\"}[${__range}])))",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        ],
+        "timeFrom": null,
+        "timeShift": null,
+        "title": "Successful Jobs",
+        "type": "stat"
+      },
+      {
+        "datasource": null,
+        "description": "Number of failed compaction jobs initiated by compaction controller in the selected time range",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 14
+        },
+        "id": 23763571995,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "text": {},
+          "textMode": "auto"
+        },
+        "pluginVersion": "7.5.22",
+        "targets": [
+          {
+            "exemplar": true,
+            "expr": "sum(floor(increase(etcddruid_compaction_jobs_total{succeeded=\"false\", failureReason=~\"processFailure|unknown\"}[${__range}])))",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        ],
+        "title": "Failed Jobs",
+        "type": "stat"
+      },
+      {
+        "datasource": null,
+        "description": "Number of compaction jobs that have exceeded their deadline before finishing up.",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 22
+        },
+        "id": 23763572001,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "text": {},
+          "textMode": "auto"
+        },
+        "pluginVersion": "7.5.22",
+        "targets": [
+          {
+            "exemplar": true,
+            "expr": "sum(floor(increase(etcddruid_compaction_jobs_total{succeeded=\"false\", failureReason=\"deadlineExceeded\"}[${__range}])))",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        ],
+        "title": "Deadline Exceeded Jobs",
+        "type": "stat"
+      },
+      {
+        "datasource": null,
+        "description": "Number of compaction jobs initiated by compaction controller that have been disrupted in the form of either preemptions or evictions in the selected time range.",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 22
+        },
+        "id": 23763571999,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "text": {},
+          "textMode": "auto"
+        },
+        "pluginVersion": "7.5.22",
+        "targets": [
+          {
+            "exemplar": true,
+            "expr": "sum(floor(increase(etcddruid_compaction_jobs_total{succeeded=\"false\", failureReason=~\"preempted|evicted\"}[${__range}])))",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        ],
+        "title": "Disrupted Jobs",
+        "type": "stat"
+      },
+      {
+        "datasource": null,
+        "description": "Number of succeeded full snapshots initiated by compaction controller in the selected time range.",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 30
+        },
+        "id": 23763572003,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "text": {},
+          "textMode": "auto"
+        },
+        "pluginVersion": "7.5.22",
+        "targets": [
+          {
+            "exemplar": true,
+            "expr": "sum(floor(increase(etcddruid_compaction_full_snapshot_triggered_total{succeeded=\"true\"}[${__range}])))",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        ],
+        "timeFrom": null,
+        "timeShift": null,
+        "title": "Successful Full Snapshots",
+        "type": "stat"
+      },
+      {
+        "datasource": null,
+        "description": "Number of failed full snapshots initiated by compaction controller in the selected time range.",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 30
+        },
+        "id": 23763572005,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "text": {},
+          "textMode": "auto"
+        },
+        "pluginVersion": "7.5.22",
+        "targets": [
+          {
+            "exemplar": true,
+            "expr": "sum(floor(increase(etcddruid_compaction_full_snapshot_triggered_total{succeeded=\"false\"}[${__range}])))",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        ],
+        "timeFrom": null,
+        "timeShift": null,
+        "title": "Failed Full Snapshots",
+        "type": "stat"
+      },
+      {
         "cards": {
           "cardPadding": null,
           "cardRound": null
@@ -620,7 +635,7 @@
           "h": 9,
           "w": 24,
           "x": 0,
-          "y": 32
+          "y": 38
         },
         "heatmap": {},
         "hideZeroBuckets": true,
@@ -681,7 +696,7 @@
           "h": 8,
           "w": 12,
           "x": 0,
-          "y": 41
+          "y": 47
         },
         "hiddenSeries": false,
         "id": 10,
@@ -777,7 +792,7 @@
           "h": 8,
           "w": 12,
           "x": 12,
-          "y": 41
+          "y": 47
         },
         "hiddenSeries": false,
         "id": 12,
