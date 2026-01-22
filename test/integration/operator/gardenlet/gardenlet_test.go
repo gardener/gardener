@@ -134,16 +134,14 @@ var _ = Describe("Gardenlet controller test", func() {
 			Eventually(func() error {
 				return mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet)
 			}).Should(BeNotFoundError())
-			// Ensure in-flight reconciliation loops are done
-			Consistently(func() error {
-				return mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet)
-			}, 5*time.Second, 1*time.Second).Should(BeNotFoundError())
 
 			By("Delete and wait for Gardenlet deployment to be gone")
-			Eventually(func(g Gomega) {
+			// Ensure gardenletDeployment from in-flight reconciliation loop is gone
+			Consistently(func(g Gomega) {
 				g.Expect(testClient.Delete(ctx, gardenletDeployment)).To(Or(Succeed(), BeNotFoundError()))
-				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenletDeployment), gardenletDeployment)).Should(BeNotFoundError())
-			}).Should(Succeed())
+			}, 2*time.Second, 200*time.Millisecond).Should(Succeed())
+
+			Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenletDeployment), gardenletDeployment)).Should(BeNotFoundError())
 		})
 	})
 
