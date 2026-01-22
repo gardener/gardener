@@ -78,5 +78,13 @@ func (b *Botanist) DeployVPNShoot(ctx context.Context) error {
 		})
 	}
 
-	return nil
+	// in case the feature gate was previously enabled but now disabled, we need to remove the condition
+	if v1beta1helper.GetCondition(b.Shoot.GetInfo().Status.Constraints, gardencorev1beta1.ShootUsesUnifiedHTTPProxyPort) == nil {
+		return nil
+	}
+
+	return b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, false, func(shoot *gardencorev1beta1.Shoot) error {
+		shoot.Status.Constraints = v1beta1helper.RemoveConditions(shoot.Status.Constraints, gardencorev1beta1.ShootUsesUnifiedHTTPProxyPort)
+		return nil
+	})
 }
