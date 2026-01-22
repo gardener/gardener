@@ -85,6 +85,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSAutoscaling":                          schema_pkg_apis_core_v1beta1_CoreDNSAutoscaling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSRewriting":                            schema_pkg_apis_core_v1beta1_CoreDNSRewriting(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS":                                         schema_pkg_apis_core_v1beta1_DNS(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSExposure":                                 schema_pkg_apis_core_v1beta1_DNSExposure(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude":                           schema_pkg_apis_core_v1beta1_DNSIncludeExclude(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSProvider":                                 schema_pkg_apis_core_v1beta1_DNSProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume":                                  schema_pkg_apis_core_v1beta1_DataVolume(ref),
@@ -96,10 +97,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionAtRest":                            schema_pkg_apis_core_v1beta1_EncryptionAtRest(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig":                            schema_pkg_apis_core_v1beta1_EncryptionConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion":                            schema_pkg_apis_core_v1beta1_ExpirableVersion(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Exposure":                                    schema_pkg_apis_core_v1beta1_Exposure(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClass":                               schema_pkg_apis_core_v1beta1_ExposureClass(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClassList":                           schema_pkg_apis_core_v1beta1_ExposureClassList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClassScheduling":                     schema_pkg_apis_core_v1beta1_ExposureClassScheduling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension":                                   schema_pkg_apis_core_v1beta1_Extension(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExtensionExposure":                           schema_pkg_apis_core_v1beta1_ExtensionExposure(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExtensionResourceState":                      schema_pkg_apis_core_v1beta1_ExtensionResourceState(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.FailureTolerance":                            schema_pkg_apis_core_v1beta1_FailureTolerance(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener":                                    schema_pkg_apis_core_v1beta1_Gardener(ref),
@@ -3441,6 +3444,17 @@ func schema_pkg_apis_core_v1beta1_DNS(ref common.ReferenceCallback) common.OpenA
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_DNSExposure(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "DNSExposure specifies that this shoot will be exposed by DNS. There is no specific configuration currently, for future extendability.",
+				Type:        []string{"object"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_DNSIncludeExclude(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -3839,6 +3853,33 @@ func schema_pkg_apis_core_v1beta1_ExpirableVersion(ref common.ReferenceCallback)
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_Exposure(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or null) [GEP36].",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"extension": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Extension holds the type and provider config of the exposure extension. Mutually exclusive with DNS.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExtensionExposure"),
+						},
+					},
+					"dns": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DNS specifies that this shoot will be exposed by DNS. Mutually exclusive with Extension.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSExposure"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSExposure", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ExtensionExposure"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_ExposureClass(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -4012,6 +4053,34 @@ func schema_pkg_apis_core_v1beta1_Extension(ref common.ReferenceCallback) common
 					},
 				},
 				Required: []string{"type"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ExtensionExposure(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExtensionExposure holds the type and provider config of the exposure extension.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type defines the type of the extension exposure. Defaults to `.spec.provider.type`",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig holds the extension specific configuration.",
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
+						},
+					},
+				},
 			},
 		},
 		Dependencies: []string{
@@ -10874,11 +10943,17 @@ func schema_pkg_apis_core_v1beta1_WorkerControlPlane(ref common.ReferenceCallbac
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Backup"),
 						},
 					},
+					"exposure": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or null) [GEP36].",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Exposure"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Backup"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Backup", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Exposure"},
 	}
 }
 

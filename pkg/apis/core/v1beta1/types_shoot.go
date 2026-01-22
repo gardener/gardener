@@ -1809,7 +1809,37 @@ type WorkerControlPlane struct {
 	// If it is not specified, then there won't be any backups taken.
 	// +optional
 	Backup *Backup `json:"backup,omitempty" protobuf:"bytes,1,opt,name=backup"`
+	// Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or null) [GEP36].
+	// +optional
+	Exposure *Exposure `json:"exposure,omitempty" protobuf:"bytes,2,opt,name=exposure"`
 }
+
+// Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or null) [GEP36].
+type Exposure struct {
+	// Extension holds the type and provider config of the exposure extension.
+	// Mutually exclusive with DNS.
+	// +optional
+	Extension *ExtensionExposure `json:"extension,omitempty" protobuf:"bytes,1,opt,name=extension"`
+	// DNS specifies that this shoot will be exposed by DNS.
+	// Mutually exclusive with Extension.
+	// +optional
+	DNS *DNSExposure `json:"dns,omitempty" protobuf:"bytes,2,opt,name=dns"`
+}
+
+// ExtensionExposure holds the type and provider config of the exposure extension.
+type ExtensionExposure struct {
+	// Type defines the type of the extension exposure.
+	// Defaults to `.spec.provider.type`
+	// +optional
+	Type *string `json:"type,omitempty" protobuf:"bytes,1,opt,name=type"`
+	// ProviderConfig holds the extension specific configuration.
+	// +optional
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
+}
+
+// DNSExposure specifies that this shoot will be exposed by DNS.
+// There is no specific configuration currently, for future extendability.
+type DNSExposure struct{}
 
 // MachineUpdateStrategy specifies the machine update strategy for the worker pool.
 type MachineUpdateStrategy string
