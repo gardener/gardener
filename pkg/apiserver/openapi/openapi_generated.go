@@ -135,6 +135,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesConfig":                            schema_pkg_apis_core_v1beta1_KubernetesConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesDashboard":                         schema_pkg_apis_core_v1beta1_KubernetesDashboard(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings":                          schema_pkg_apis_core_v1beta1_KubernetesSettings(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesStatus":                            schema_pkg_apis_core_v1beta1_KubernetesStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError":                                   schema_pkg_apis_core_v1beta1_LastError(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastMaintenance":                             schema_pkg_apis_core_v1beta1_LastMaintenance(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation":                               schema_pkg_apis_core_v1beta1_LastOperation(ref),
@@ -2392,15 +2393,15 @@ func schema_pkg_apis_core_v1beta1_CloudProfileStatus(ref common.ReferenceCallbac
 				Description: "CloudProfileStatus contains the status of the cloud profile.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"kubernetesVersions": {
+					"kubernetes": {
 						SchemaProps: spec.SchemaProps{
-							Description: "KubernetesVersions contains the statuses of the kubernetes versions.",
+							Description: "Kubernetes contains the status information for kubernetes.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersionStatus"),
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesStatus"),
 									},
 								},
 							},
@@ -2424,7 +2425,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileStatus(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersionStatus", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageVersionStatus"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesStatus", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageVersionStatus"},
 	}
 }
 
@@ -3950,20 +3951,20 @@ func schema_pkg_apis_core_v1beta1_ExpirableVersion(ref common.ReferenceCallback)
 					},
 					"expirationDate": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ExpirationDate defines the time at which this version expires. Deprecated: Is replaced by Lifecycle.",
+							Description: "ExpirationDate defines the time at which this version expires. Deprecated: Is replaced by Lifecycle; mutually exclusive with it.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 					"classification": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Classification defines the state of a version (preview, supported, deprecated). Deprecated: Is replaced by Lifecycle.",
+							Description: "Classification defines the state of a version (preview, supported, deprecated). Deprecated: Is replaced by Lifecycle. mutually exclusive with it.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"lifecycle": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Lifecycle defines the lifecycle stages for this version. Cannot be used in combination with Classification and ExpirationDate.",
+							Description: "Lifecycle defines the lifecycle stages for this version. Mutually exclusive with Classification and ExpirationDate. This can only be used when the VersionClassificationLifecycle feature gate is enabled.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -5695,6 +5696,35 @@ func schema_pkg_apis_core_v1beta1_KubernetesSettings(ref common.ReferenceCallbac
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_KubernetesStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "KubernetesStatus contains the status information for kubernetes.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"versions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Versions contains the statuses of the kubernetes versions.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersionStatus"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersionStatus"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_LastError(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -5862,7 +5892,7 @@ func schema_pkg_apis_core_v1beta1_LifecycleStage(ref common.ReferenceCallback) c
 					},
 					"startTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "StartTime defines when this lifecycle stage becomes active.",
+							Description: "StartTime defines when this lifecycle stage becomes active. StartTime can be omitted for the first lifecycle stage, implying a start time in the past.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
@@ -6101,20 +6131,20 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 					},
 					"expirationDate": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ExpirationDate defines the time at which this version expires. Deprecated: Is replaced by Lifecycle.",
+							Description: "ExpirationDate defines the time at which this version expires. Deprecated: Is replaced by Lifecycle; mutually exclusive with it.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 					"classification": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Classification defines the state of a version (preview, supported, deprecated). Deprecated: Is replaced by Lifecycle.",
+							Description: "Classification defines the state of a version (preview, supported, deprecated). Deprecated: Is replaced by Lifecycle. mutually exclusive with it.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"lifecycle": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Lifecycle defines the lifecycle stages for this version. Cannot be used in combination with Classification and ExpirationDate.",
+							Description: "Lifecycle defines the lifecycle stages for this version. Mutually exclusive with Classification and ExpirationDate. This can only be used when the VersionClassificationLifecycle feature gate is enabled.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{

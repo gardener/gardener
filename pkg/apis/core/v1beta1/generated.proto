@@ -492,8 +492,8 @@ message CloudProfileSpec {
 
 // CloudProfileStatus contains the status of the cloud profile.
 message CloudProfileStatus {
-  // KubernetesVersions contains the statuses of the kubernetes versions.
-  repeated ExpirableVersionStatus kubernetesVersions = 1;
+  // Kubernetes contains the status information for kubernetes.
+  repeated KubernetesStatus kubernetes = 1;
 
   // MachineImageVersions contains the statuses of the machine image versions.
   repeated MachineImageVersionStatus machineImageVersions = 2;
@@ -1094,16 +1094,18 @@ message ExpirableVersion {
   optional string version = 1;
 
   // ExpirationDate defines the time at which this version expires.
-  // Deprecated: Is replaced by Lifecycle.
+  // Deprecated: Is replaced by Lifecycle; mutually exclusive with it.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationDate = 2;
 
   // Classification defines the state of a version (preview, supported, deprecated).
-  // Deprecated: Is replaced by Lifecycle.
+  // Deprecated: Is replaced by Lifecycle. mutually exclusive with it.
   // +optional
   optional string classification = 3;
 
-  // Lifecycle defines the lifecycle stages for this version. Cannot be used in combination with Classification and ExpirationDate.
+  // Lifecycle defines the lifecycle stages for this version.
+  // Mutually exclusive with Classification and ExpirationDate.
+  // This can only be used when the VersionClassificationLifecycle feature gate is enabled.
   // +optional
   repeated LifecycleStage lifecycle = 4;
 }
@@ -1901,6 +1903,12 @@ message KubernetesSettings {
   repeated ExpirableVersion versions = 1;
 }
 
+// KubernetesStatus contains the status information for kubernetes.
+message KubernetesStatus {
+  // Versions contains the statuses of the kubernetes versions.
+  repeated ExpirableVersionStatus versions = 1;
+}
+
 // LastError indicates the last occurred error for an operation on a resource.
 message LastError {
   // A human readable message indicating details about the last error.
@@ -1961,6 +1969,7 @@ message LifecycleStage {
   optional string classification = 1;
 
   // StartTime defines when this lifecycle stage becomes active.
+  // StartTime can be omitted for the first lifecycle stage, implying a start time in the past.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time startTime = 2;
 }

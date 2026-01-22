@@ -8,7 +8,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileSpec,MachineTypes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileSpec,Regions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileSpec,VolumeTypes
-API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileStatus,KubernetesVersions
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileStatus,Kubernetes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileStatus,MachineImageVersions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ClusterAutoscaler,IgnoreTaints
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ClusterAutoscaler,StartupTaints
@@ -32,6 +32,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeAPIServerConfig,APIAudiences
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeAPIServerConfig,AdmissionPlugins
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubernetesSettings,Versions
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubernetesStatus,Versions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,LastError,Codes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineControllerManagerSettings,NodeConditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImage,Versions

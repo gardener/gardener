@@ -166,14 +166,16 @@ type ExpirableVersion struct {
 	// Version is the version identifier.
 	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
 	// ExpirationDate defines the time at which this version expires.
-	// Deprecated: Is replaced by Lifecycle.
+	// Deprecated: Is replaced by Lifecycle; mutually exclusive with it.
 	// +optional
 	ExpirationDate *metav1.Time `json:"expirationDate,omitempty" protobuf:"bytes,2,opt,name=expirationDate"`
 	// Classification defines the state of a version (preview, supported, deprecated).
-	// Deprecated: Is replaced by Lifecycle.
+	// Deprecated: Is replaced by Lifecycle. mutually exclusive with it.
 	// +optional
 	Classification *VersionClassification `json:"classification,omitempty" protobuf:"bytes,3,opt,name=classification,casttype=VersionClassification"`
-	// Lifecycle defines the lifecycle stages for this version. Cannot be used in combination with Classification and ExpirationDate.
+	// Lifecycle defines the lifecycle stages for this version.
+	// Mutually exclusive with Classification and ExpirationDate.
+	// This can only be used when the VersionClassificationLifecycle feature gate is enabled.
 	// +optional
 	Lifecycle []LifecycleStage `json:"lifecycle,omitempty" protobuf:"bytes,4,opt,name=lifecycle"`
 }
@@ -184,6 +186,7 @@ type LifecycleStage struct {
 	// Classification is the category of this lifecycle stage (unavailable, preview, supported, deprecated, expired).
 	Classification VersionClassification `json:"classification" protobuf:"bytes,1,opt,name=classification,casttype=VersionClassification"`
 	// StartTime defines when this lifecycle stage becomes active.
+	// StartTime can be omitted for the first lifecycle stage, implying a start time in the past.
 	// +optional
 	StartTime *metav1.Time `json:"startTime,omitempty" protobuf:"bytes,2,opt,name=startTime"`
 }
@@ -307,10 +310,16 @@ type Limits struct {
 
 // CloudProfileStatus contains the status of the cloud profile.
 type CloudProfileStatus struct {
-	// KubernetesVersions contains the statuses of the kubernetes versions.
-	KubernetesVersions []ExpirableVersionStatus `json:"kubernetesVersions,omitempty" protobuf:"bytes,1,name=kubernetesVersions"`
+	// Kubernetes contains the status information for kubernetes.
+	Kubernetes []KubernetesStatus `json:"kubernetes,omitempty" protobuf:"bytes,1,name=kubernetes"`
 	// MachineImageVersions contains the statuses of the machine image versions.
 	MachineImageVersions []MachineImageVersionStatus `json:"machineImageVersions,omitempty" protobuf:"bytes,2,name=machineImageVersions"`
+}
+
+// KubernetesStatus contains the status information for kubernetes.
+type KubernetesStatus struct {
+	// Versions contains the statuses of the kubernetes versions.
+	Versions []ExpirableVersionStatus `json:"versions,omitempty" protobuf:"bytes,1,name=versions"`
 }
 
 // MachineImageVersionStatus contains the status of a machine image and its version classifications.

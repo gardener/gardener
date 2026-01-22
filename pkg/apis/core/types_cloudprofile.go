@@ -261,10 +261,16 @@ type BastionMachineType struct {
 
 // CloudProfileStatus contains the status of the cloud profile.
 type CloudProfileStatus struct {
-	// KubernetesVersions contains the statuses of the kubernetes versions.
-	KubernetesVersions []ExpirableVersionStatus
+	// Kubernetes contains the status information for kubernetes.
+	Kubernetes []KubernetesStatus
 	// MachineImageVersions contains the statuses of the machine image versions.
 	MachineImageVersions []MachineImageVersionStatus
+}
+
+// KubernetesStatus contains the status information for kubernetes.
+type KubernetesStatus struct {
+	// Versions contains the statuses of the kubernetes versions.
+	Versions []ExpirableVersionStatus
 }
 
 // MachineImageVersionStatus contains the status of a machine image and its version classifications.

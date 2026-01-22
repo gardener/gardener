@@ -3908,15 +3908,15 @@ During maintenance upgrades, the image that matches most capabilities will be se
 <tbody>
 <tr>
 <td>
-<code>kubernetesVersions</code></br>
+<code>kubernetes</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ExpirableVersionStatus">
-[]ExpirableVersionStatus
+<a href="#core.gardener.cloud/v1beta1.KubernetesStatus">
+[]KubernetesStatus
 </a>
 </em>
 </td>
 <td>
-<p>KubernetesVersions contains the statuses of the kubernetes versions.</p>
+<p>Kubernetes contains the status information for kubernetes.</p>
 </td>
 </tr>
 <tr>
@@ -5912,7 +5912,7 @@ Kubernetes meta/v1.Time
 <td>
 <em>(Optional)</em>
 <p>ExpirationDate defines the time at which this version expires.
-Deprecated: Is replaced by Lifecycle.</p>
+Deprecated: Is replaced by Lifecycle; mutually exclusive with it.</p>
 </td>
 </tr>
 <tr>
@@ -5927,7 +5927,7 @@ VersionClassification
 <td>
 <em>(Optional)</em>
 <p>Classification defines the state of a version (preview, supported, deprecated).
-Deprecated: Is replaced by Lifecycle.</p>
+Deprecated: Is replaced by Lifecycle. mutually exclusive with it.</p>
 </td>
 </tr>
 <tr>
@@ -5941,7 +5941,9 @@ Deprecated: Is replaced by Lifecycle.</p>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Lifecycle defines the lifecycle stages for this version. Cannot be used in combination with Classification and ExpirationDate.</p>
+<p>Lifecycle defines the lifecycle stages for this version.
+Mutually exclusive with Classification and ExpirationDate.
+This can only be used when the VersionClassificationLifecycle feature gate is enabled.</p>
 </td>
 </tr>
 </tbody>
@@ -5950,7 +5952,7 @@ Deprecated: Is replaced by Lifecycle.</p>
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileStatus">CloudProfileStatus</a>, 
+<a href="#core.gardener.cloud/v1beta1.KubernetesStatus">KubernetesStatus</a>, 
 <a href="#core.gardener.cloud/v1beta1.MachineImageVersionStatus">MachineImageVersionStatus</a>)
 </p>
 <p>
@@ -8421,6 +8423,38 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.KubernetesStatus">KubernetesStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileStatus">CloudProfileStatus</a>)
+</p>
+<p>
+<p>KubernetesStatus contains the status information for kubernetes.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>versions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ExpirableVersionStatus">
+[]ExpirableVersionStatus
+</a>
+</em>
+</td>
+<td>
+<p>Versions contains the statuses of the kubernetes versions.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.LastError">LastError
 </h3>
 <p>
@@ -8706,7 +8740,8 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <em>(Optional)</em>
-<p>StartTime defines when this lifecycle stage becomes active.</p>
+<p>StartTime defines when this lifecycle stage becomes active.
+StartTime can be omitted for the first lifecycle stage, implying a start time in the past.</p>
 </td>
 </tr>
 </tbody>
