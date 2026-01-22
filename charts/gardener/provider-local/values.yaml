@@ -41,6 +41,9 @@ controllers:
     zone2IP: "172.18.255.12"
     bastionIP: "172.18.255.22"
     exposureclassIP: "172.18.255.31"
+    exposureclassZone0IP: "172.18.255.40"
+    exposureclassZone1IP: "172.18.255.41"
+    exposureclassZone2IP: "172.18.255.42"
   backupbucket:
     localDir: "/dev/local-backupbuckets"
     containerMountPath: "/etc/gardener/local-backupbuckets"

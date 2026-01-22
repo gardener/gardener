@@ -4,6 +4,13 @@ gardener:
     kindIsGardenCluster: false
     customEtcdStatefulSet: false
   seed:
+    exposureClass:
+      # Add one 'global' address and one per zone
+      listenAddresses:
+      - 172.18.255.31
+      - 172.18.255.40
+      - 172.18.255.41
+      - 172.18.255.42
     istio:
       # Add one 'global' address and one per zone, see https://github.com/gardener/gardener/pull/6997
       listenAddresses:

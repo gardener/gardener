@@ -26,25 +26,36 @@ var (
 	keyIstioIngressGatewayZone1 = client.ObjectKey{Namespace: "istio-ingress--1", Name: "istio-ingressgateway"}
 	keyIstioIngressGatewayZone2 = client.ObjectKey{Namespace: "istio-ingress--2", Name: "istio-ingressgateway"}
 
-	keyIstioIngressGatewayExposureClass = client.ObjectKey{Namespace: "istio-ingress-exposureclass", Name: "istio-ingressgateway"}
+	keyIstioIngressGatewayExposureClass      = client.ObjectKey{Namespace: "istio-ingress-exposureclass", Name: "istio-ingressgateway"}
+	keyIstioIngressGatewayExposureClassZone0 = client.ObjectKey{Namespace: "istio-ingress-exposureclass--0", Name: "istio-ingressgateway"}
+	keyIstioIngressGatewayExposureClassZone1 = client.ObjectKey{Namespace: "istio-ingress-exposureclass--1", Name: "istio-ingressgateway"}
+	keyIstioIngressGatewayExposureClassZone2 = client.ObjectKey{Namespace: "istio-ingress-exposureclass--2", Name: "istio-ingressgateway"}
 
 	keyVirtualGardenIstioIngressGateway = client.ObjectKey{Namespace: "virtual-garden-istio-ingress", Name: "istio-ingressgateway"}
 )
 
 const (
-	nodePortIstioIngressGateway              int32 = 30443
-	nodePortIstioIngressGatewayZone0         int32 = 30444
-	nodePortIstioIngressGatewayZone1         int32 = 30445
-	nodePortIstioIngressGatewayZone2         int32 = 30446
-	nodePortIstioIngressGatewayExposureClass int32 = 32767
+	nodePortIstioIngressGateway      int32 = 30443
+	nodePortIstioIngressGatewayZone0 int32 = 30444
+	nodePortIstioIngressGatewayZone1 int32 = 30445
+	nodePortIstioIngressGatewayZone2 int32 = 30446
+
+	nodePortIstioIngressGatewayExposureClass      int32 = 32003
+	nodePortIstioIngressGatewayExposureClassZone0 int32 = 32004
+	nodePortIstioIngressGatewayExposureClassZone1 int32 = 32005
+	nodePortIstioIngressGatewayExposureClassZone2 int32 = 32006
 
 	nodePortVirtualGardenIstioIngressGateway int32 = 31443
 
-	nodePortHTTPProxyIstioIngressGateway              int32 = 32443
-	nodePortHTTPProxyIstioIngressGatewayZone0         int32 = 32444
-	nodePortHTTPProxyIstioIngressGatewayZone1         int32 = 32445
-	nodePortHTTPProxyIstioIngressGatewayZone2         int32 = 32446
-	nodePortHTTPProxyIstioIngressGatewayExposureClass int32 = 32766
+	nodePortHTTPProxyIstioIngressGateway      int32 = 32443
+	nodePortHTTPProxyIstioIngressGatewayZone0 int32 = 32444
+	nodePortHTTPProxyIstioIngressGatewayZone1 int32 = 32445
+	nodePortHTTPProxyIstioIngressGatewayZone2 int32 = 32446
+
+	nodePortHTTPProxyIstioIngressGatewayExposureClass      int32 = 32447
+	nodePortHTTPProxyIstioIngressGatewayExposureClassZone0 int32 = 32448
+	nodePortHTTPProxyIstioIngressGatewayExposureClassZone1 int32 = 32449
+	nodePortHTTPProxyIstioIngressGatewayExposureClassZone2 int32 = 32450
 
 	nodePortBastion int32 = 30022
 )
@@ -56,19 +67,25 @@ const (
 	nodePortTunnelIstioIngressGatewayZone1 int32 = 32134
 	nodePortTunnelIstioIngressGatewayZone2 int32 = 32135
 
-	nodePortTunnelIstioIngressGatewayExposureClass int32 = 32765
+	nodePortTunnelIstioIngressGatewayExposureClass      int32 = 31132
+	nodePortTunnelIstioIngressGatewayExposureClassZone0 int32 = 31133
+	nodePortTunnelIstioIngressGatewayExposureClassZone1 int32 = 31134
+	nodePortTunnelIstioIngressGatewayExposureClassZone2 int32 = 31135
 )
 
 // Reconciler is a reconciler for Service resources.
 type Reconciler struct {
-	Client          client.Client
-	HostIP          string
-	VirtualGardenIP string
-	Zone0IP         string
-	Zone1IP         string
-	Zone2IP         string
-	BastionIP       string
-	ExposureClassIP string
+	Client               client.Client
+	HostIP               string
+	VirtualGardenIP      string
+	Zone0IP              string
+	Zone1IP              string
+	Zone2IP              string
+	BastionIP            string
+	ExposureClassIP      string
+	ExposureClassIPZone0 string
+	ExposureClassIPZone1 string
+	ExposureClassIPZone2 string
 }
 
 // Reconcile reconciles Service resources.
@@ -132,6 +149,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		nodePortHTTPProxy = nodePortHTTPProxyIstioIngressGatewayExposureClass
 		nodePortTunnel = nodePortTunnelIstioIngressGatewayExposureClass
 		ips = append(ips, r.ExposureClassIP)
+	case keyIstioIngressGatewayExposureClassZone0:
+		nodePort = nodePortIstioIngressGatewayExposureClassZone0
+		nodePortHTTPProxy = nodePortHTTPProxyIstioIngressGatewayExposureClassZone0
+		nodePortTunnel = nodePortTunnelIstioIngressGatewayExposureClassZone0
+		ips = append(ips, r.ExposureClassIPZone0)
+	case keyIstioIngressGatewayExposureClassZone1:
+		nodePort = nodePortIstioIngressGatewayExposureClassZone1
+		nodePortHTTPProxy = nodePortHTTPProxyIstioIngressGatewayExposureClassZone1
+		nodePortTunnel = nodePortTunnelIstioIngressGatewayExposureClassZone1
+		ips = append(ips, r.ExposureClassIPZone1)
+	case keyIstioIngressGatewayExposureClassZone2:
+		nodePort = nodePortIstioIngressGatewayExposureClassZone2
+		nodePortHTTPProxy = nodePortHTTPProxyIstioIngressGatewayExposureClassZone2
+		nodePortTunnel = nodePortTunnelIstioIngressGatewayExposureClassZone2
+		ips = append(ips, r.ExposureClassIPZone2)
 	}
 
 	if isBastion {

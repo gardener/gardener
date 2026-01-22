@@ -101,15 +101,23 @@ func (r *Reconciler) exposureClassNetworkPolicyPeer(ctx context.Context, exposur
 		return nil, err
 	}
 
-	if len(namespaceList.Items) != 1 {
-		return nil, fmt.Errorf("namespace for exposure class %s not found", exposureClass)
+	exposureClassNamespaces := make([]string, 0, len(namespaceList.Items))
+	for _, namespace := range namespaceList.Items {
+		exposureClassNamespaces = append(exposureClassNamespaces, namespace.Name)
 	}
 
 	return &networkingv1.NetworkPolicyPeer{
-		NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": namespaceList.Items[0].Name}},
+		NamespaceSelector: &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{
+					Key:      "kubernetes.io/metadata.name",
+					Operator: metav1.LabelSelectorOpIn,
+					Values:   exposureClassNamespaces,
+				},
+			},
+		},
 		PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-			"app":                       "istio-ingressgateway",
-			v1beta1constants.GardenRole: v1beta1constants.GardenRoleExposureClassHandler,
+			"app": "istio-ingressgateway",
 			v1beta1constants.LabelExposureClassHandlerName: exposureClass,
 		}},
 	}, nil

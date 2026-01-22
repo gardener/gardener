@@ -42,6 +42,12 @@ type AddOptions struct {
 	BastionIP string
 	// ExposureClassIP is the IP address used for the istio ingress gateway of the ExposureClass "exposureclass".
 	ExposureClassIP string
+	// ExposureClassIPZone0 is the IP address used for the istio ingress gateway of the ExposureClass "exposureclass" for zone 0.
+	ExposureClassIPZone0 string
+	// ExposureClassIPZone1 is the IP address used for the istio ingress gateway of the ExposureClass "exposureclass" for zone 1.
+	ExposureClassIPZone1 string
+	// ExposureClassIPZone2 is the IP address used for the istio ingress gateway of the ExposureClass "exposureclass" for zone 2.
+	ExposureClassIPZone2 string
 }
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
@@ -65,6 +71,12 @@ func AddToManagerWithOptions(_ context.Context, mgr manager.Manager, opts AddOpt
 			}
 			return obj.GetNamespace() == namespace
 		})))
+
+		exposureclassPredicate, err := predicate.LabelSelectorPredicate(labelselectorExposureClassIstioIngressGateway(zone))
+		if err != nil {
+			return err
+		}
+		predicates = append(predicates, exposureclassPredicate)
 	}
 
 	bastionPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: map[string]string{"app": "bastion"}})
@@ -73,20 +85,17 @@ func AddToManagerWithOptions(_ context.Context, mgr manager.Manager, opts AddOpt
 	}
 	predicates = append(predicates, bastionPredicate)
 
-	exposureclassPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: map[string]string{"app": "istio-ingressgateway", v1beta1constants.GardenRole: v1beta1constants.GardenRoleExposureClassHandler}})
-	if err != nil {
-		return err
-	}
-	predicates = append(predicates, exposureclassPredicate)
-
 	return (&service.Reconciler{
-		HostIP:          opts.HostIP,
-		VirtualGardenIP: opts.VirtualGardenIP,
-		Zone0IP:         opts.Zone0IP,
-		Zone1IP:         opts.Zone1IP,
-		Zone2IP:         opts.Zone2IP,
-		BastionIP:       opts.BastionIP,
-		ExposureClassIP: opts.ExposureClassIP,
+		HostIP:               opts.HostIP,
+		VirtualGardenIP:      opts.VirtualGardenIP,
+		Zone0IP:              opts.Zone0IP,
+		Zone1IP:              opts.Zone1IP,
+		Zone2IP:              opts.Zone2IP,
+		BastionIP:            opts.BastionIP,
+		ExposureClassIP:      opts.ExposureClassIP,
+		ExposureClassIPZone0: opts.ExposureClassIPZone0,
+		ExposureClassIPZone1: opts.ExposureClassIPZone1,
+		ExposureClassIPZone2: opts.ExposureClassIPZone2,
 	}).AddToManager(mgr, predicate.Or(predicates...))
 }
 
@@ -111,6 +120,19 @@ func matchExpressionsIstioIngressGateway(zone *string) []metav1.LabelSelectorReq
 			Key:      "istio",
 			Operator: metav1.LabelSelectorOpIn,
 			Values:   []string{istioLabelValue},
+		},
+	}
+}
+
+func labelselectorExposureClassIstioIngressGateway(zone *string) metav1.LabelSelector {
+	roleLabelValue := v1beta1constants.GardenRoleExposureClassHandler
+	if zone != nil {
+		roleLabelValue += "--zone--" + *zone
+	}
+	return metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"app":                       "istio-ingressgateway",
+			v1beta1constants.GardenRole: roleLabelValue,
 		},
 	}
 }

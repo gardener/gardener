@@ -57,6 +57,13 @@ if ${EXPOSURE_CLASS}; then
     LOOPBACK_IP_ADDRESSES+=(::31)
   fi
 
+  if [[ "$MULTI_ZONAL" == "true" ]]; then
+    LOOPBACK_IP_ADDRESSES+=(172.18.255.40 172.18.255.41 172.18.255.42)
+    if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
+      LOOPBACK_IP_ADDRESSES+=(::40 ::41 ::42)
+    fi
+  fi
+
   if [[ "$CLUSTER_NAME" == "gardener-local2" || "$CLUSTER_NAME" == "gardener-local-multi-node2" ]]; then
     LOOPBACK_IP_ADDRESSES+=(172.18.255.32)
     if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then

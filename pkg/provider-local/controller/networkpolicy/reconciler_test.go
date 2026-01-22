@@ -163,14 +163,17 @@ var _ = Describe("Reconciler", func() {
 			[]networkingv1.NetworkPolicyPeer{
 				{
 					NamespaceSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"kubernetes.io/metadata.name": testExposureclass,
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "kubernetes.io/metadata.name",
+								Operator: metav1.LabelSelectorOpIn,
+								Values:   []string{testExposureclass},
+							},
 						},
 					},
 					PodSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"app":                 "istio-ingressgateway",
-							"gardener.cloud/role": "exposureclass-handler",
+							"app": "istio-ingressgateway",
 							"handler.exposureclass.gardener.cloud/name": testExposureclass,
 						},
 					},

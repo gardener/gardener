@@ -144,14 +144,18 @@ func (a *Actuator) configForDNSRecord(ctx context.Context, dnsRecord *extensions
 		if err != nil {
 			return "", err
 		}
-		istioNamespaceSuffix, _ = strings.CutPrefix(expClassNamespace, "istio-ingress")
+		expClassNamespace, _ = strings.CutPrefix(expClassNamespace, "istio-ingress")
+		istioNamespaceSuffix = expClassNamespace + istioNamespaceSuffix
 	}
 
 	return "rewrite stop name regex " + regexp.QuoteMeta(dnsRecord.Spec.Name) + " istio-ingressgateway.istio-ingress" + istioNamespaceSuffix + ".svc.cluster.local answer auto", nil
 }
 
 func (a *Actuator) exposureClassNamespaceName(ctx context.Context, exposureClass string) (string, error) {
-	exposureClassNamespaceLabels := client.MatchingLabels{v1beta1constants.LabelExposureClassHandlerName: exposureClass}
+	exposureClassNamespaceLabels := client.MatchingLabels{
+		v1beta1constants.LabelExposureClassHandlerName: exposureClass,
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleExposureClassHandler,
+	}
 	namespaceList := &corev1.NamespaceList{}
 
 	if err := a.RuntimeClient.List(ctx, namespaceList, exposureClassNamespaceLabels); err != nil {
