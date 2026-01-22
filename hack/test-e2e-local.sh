@@ -98,4 +98,7 @@ case $TYPE in
     ;;
 esac
 
-GO111MODULE=on ginkgo run --timeout=105m $ginkgo_flags --v --show-node-events "$@"
+# enable netdns debug log
+GODEBUG=netdns=2 \
+GO111MODULE=on \
+ginkgo run --timeout=105m $ginkgo_flags --v --show-node-events "$@"
