@@ -139,6 +139,10 @@ var _ = Describe("Logging", func() {
 	})
 
 	Describe("#DeployLogging", func() {
+		BeforeEach(func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, false))
+		})
+
 		It("should successfully delete the logging stack when shoot is with testing purpose", func() {
 			botanist.Shoot.Purpose = shootPurposeTesting
 			gomock.InOrder(
