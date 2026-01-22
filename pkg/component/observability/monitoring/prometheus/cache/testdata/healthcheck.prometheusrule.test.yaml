@@ -151,8 +151,12 @@ tests:
 
       - series: container_cpu_usage_seconds_total{pod="gardenlet-abc"}
         values: 1     1     stale 1     1     1     1     1     1     1     1
+      - series: container_cpu_usage_seconds_total{pod="foo"}
+        values: 1     1     1     stale 1     1     1     1     1     1     1
       - series: kube_pod_container_resource_requests{pod="gardenlet-abc"}
         values: 1     1     1     1     stale 1     1     1     1     1     1
+      - series: kube_pod_container_resource_requests{pod="foo"}
+        values: 1     1     1     1     1     stale 1     1     1     1     1
       - series: expected_healthcheck:up
         values: 0     1     0     1     0     1     1     1     1     1     1
 
