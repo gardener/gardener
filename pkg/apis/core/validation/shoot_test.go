@@ -1946,8 +1946,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.dns.domain"),
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("spec.dns.domain"),
+					"Detail": Equal("domain must be set when primary provider type is not set to \"unmanaged\""),
 				}))))
 			})
 
@@ -1972,8 +1973,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns.domain"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.dns.domain"),
+					"Detail": ContainSubstring("a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters"),
 				}))))
 			})
 
@@ -1989,8 +1991,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns.providers[0].credentialsRef"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.dns.providers[0].credentialsRef"),
+					"Detail": Equal("credentialsRef must not be set when type is \"unmanaged\""),
 				}))))
 			})
 
@@ -2005,8 +2008,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.dns.providers[0].type"),
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("spec.dns.providers[0].type"),
+					"Detail": Equal("type must be set when credentialsRef is set"),
 				}))))
 			})
 
@@ -2041,8 +2045,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.dns"),
+					"Detail": Equal("field is immutable"),
 				}))))
 			})
 
@@ -2053,8 +2058,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns.domain"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.dns.domain"),
+					"Detail": Equal("field is immutable"),
 				}))))
 			})
 
@@ -2069,8 +2075,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShootUpdate(newShoot, oldShoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.dns.providers"),
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.dns.providers"),
+					"Detail": Equal("removing a primary provider is not allowed"),
 				}))))
 			})
 
@@ -2082,8 +2089,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.dns.providers"),
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.dns.providers"),
+					"Detail": Equal("removing the primary provider type is not allowed"),
 				}))))
 			})
 
@@ -2094,9 +2102,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.dns.providers"),
+				Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.dns.providers"),
+					"Detail": Equal("removing a primary provider is not allowed"),
 				}))))
 			})
 
@@ -2110,8 +2119,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.dns.providers[1].primary"),
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.dns.providers[1].primary"),
+					"Detail": Equal("multiple primary DNS providers are not supported"),
 				}))))
 			})
 
@@ -2159,8 +2169,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns.providers[1]"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.dns.providers[1]"),
+					"Detail": Equal("combination of .credentialsRef and .type must be unique across dns providers"),
 				}))))
 			})
 
@@ -2183,8 +2194,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.dns.providers[1].primary"),
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.dns.providers[1].primary"),
+					"Detail": Equal("multiple primary DNS providers are not supported"),
 				}))))
 			})
 
@@ -2192,6 +2204,38 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.DNS.Providers[0].CredentialsRef = &dnsWorkloadIdentityRef
 
 				Expect(ValidateShoot(shoot)).To(BeEmpty())
+			})
+
+			It("should forbid functionless non-primary DNS providers", func() {
+				shoot.Spec.DNS.Providers = []core.DNSProvider{
+					{
+						Type: &providerType,
+					},
+					{
+						Type:           &providerType,
+						SecretName:     &dnsSecretName,
+						CredentialsRef: &dnsSecretRef,
+					},
+					{
+						SecretName:     &dnsSecretName,
+						CredentialsRef: &dnsSecretRef,
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeRequired),
+						"Field":  Equal("spec.dns.providers[0].credentialsRef"),
+						"Detail": Equal("non-primary DNS providers must specify `credentialsRef`"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeRequired),
+						"Field":  Equal("spec.dns.providers[2].type"),
+						"Detail": Equal("type must be set when credentialsRef is set"),
+					})),
+				))
 			})
 
 			Context("#validateDNSCredentialsRef", func() {

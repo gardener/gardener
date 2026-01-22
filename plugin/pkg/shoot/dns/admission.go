@@ -195,10 +195,6 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 		if shoot.Spec.SeedName == nil {
 			return nil
 		}
-
-		if oldShoot.Spec.SeedName != nil && shoot.Spec.DNS != nil {
-			return checkFunctionlessDNSProviders(a, shoot)
-		}
 	}
 
 	specPath := field.NewPath("spec")
@@ -218,22 +214,6 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 	if shoot.Spec.DNS != nil {
 		if err := setPrimaryDNSProvider(a, shoot, defaultDomains); err != nil {
 			return err
-		}
-		if err := checkFunctionlessDNSProviders(a, shoot); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// checkFunctionlessDNSProviders returns an error if a non-primary provider isn't configured correctly.
-func checkFunctionlessDNSProviders(a admission.Attributes, shoot *core.Shoot) error {
-	dns := shoot.Spec.DNS
-	fldPath := field.NewPath("spec", "dns", "providers")
-	for idx, provider := range dns.Providers {
-		if !ptr.Deref(provider.Primary, false) && (provider.Type == nil || provider.CredentialsRef == nil) {
-			fieldErr := field.Required(fldPath.Index(idx), "non-primary DNS providers must specify `type` and `credentialsRef`")
-			return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 		}
 	}
 	return nil
