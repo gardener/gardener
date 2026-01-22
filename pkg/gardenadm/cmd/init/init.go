@@ -336,16 +336,29 @@ func run(ctx context.Context, opts *Options) error {
 			SkipIf:       opts.UseBootstrapEtcd,
 			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneDeploymentsReady),
 		})
+		// A lot of health checks rely on the kube-controller-manager being active. It might take some time after the
+		// etcd migration for the kube-controller-manager to become active again, so we explicitly wait for that here.
+		waitUntilKubeControllerManagerIsActive = g.Add(flow.Task{
+			Name: "Waiting until kube-controller-manager is active",
+			Fn: func(ctx context.Context) error {
+				b.Shoot.Components.ControlPlane.KubeControllerManager.SetShootClient(b.SeedClientSet.Client())
+				return b.Shoot.Components.ControlPlane.KubeControllerManager.WaitForControllerToBeActive(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneDeploymentsReady),
+		})
 		// During the migration from the bootstrap etcds to the druid-managed etcds, components serving webhooks might be
 		// crash-looping while retrying to connect to the API server. Therefore, we explicitly wait for them to be healthy
 		// again before deploying other components.
 		waitUntilWebhookComponentsReady = g.Add(flow.Task{
 			Name: "Waiting until components with webhooks are ready",
 			Fn: flow.Sequential(
-				b.Shoot.Components.ControlPlane.ResourceManager.Wait,
+				flow.Parallel(
+					b.Components.RuntimeResourceManager.Wait,
+					b.Shoot.Components.ControlPlane.ResourceManager.Wait,
+				),
 				b.WaitUntilExtensionControllerInstallationsHealthy,
 			),
-			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneDeploymentsReady),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeControllerManagerIsActive),
 		})
 		deployMachineControllerManager = g.Add(flow.Task{
 			Name:         "Deploying machine-controller-manager",
