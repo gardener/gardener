@@ -99,21 +99,13 @@ function kind_down() {
 function install_previous_release() {
   pushd $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_PREVIOUS_RELEASE >/dev/null
   copy_kubeconfig_from_kubeconfig_env_var
-  migrate_kind_network_range
   configure_node_mirror_new_local_registry
   patch_helmregistry_registry_url_port
   gardener_up
   popd >/dev/null
 }
 
-# TODO(timebertt): Remove this after v1.134 has been released.
-# See https://prow.gardener.cloud/view/gs/gardener-prow/pr-logs/pull/gardener_gardener/13549/pull-gardener-e2e-kind-upgrade/1993723553601556480
-# and https://gcsweb.prow.gardener.cloud/gcs/gardener-prow/pr-logs/pull/gardener_gardener/13549/pull-gardener-e2e-kind-upgrade/1993723553601556480/artifacts/gardener-local/gardener-local-control-plane/pods/garden_gardenlet-6c9469b889-68grv_ecd815cd-f5fb-4f8a-93e5-f07b97809d95/gardenlet/6.log
-function migrate_kind_network_range() {
-  sed -i 's|172.18.0.0/16|172.18.0.0/24|g' dev-setup/garden/base/garden.yaml dev-setup/gardenlet/base/gardenlet.yaml example/gardener-local/gardenlet/values.yaml
-}
-
-# TODO(timebertt): Remove this after v1.134 has been released.
+# TODO(LucaBernstein,timebertt): Remove this after v1.135 has been released.
 # See https://prow.gardener.cloud/view/gs/gardener-prow/pr-logs/pull/gardener_gardener/13551/pull-gardener-e2e-kind-upgrade/1994379234188988416
 # and https://gcsweb.prow.gardener.cloud/gcs/gardener-prow/pr-logs/pull/gardener_gardener/13551/pull-gardener-e2e-kind-upgrade/1994379234188988416/artifacts/shoot--local--e2e-upgrade/machine-shoot--local--e2e-upgrade-local-68bbd-8wwvp/journal.log
 function configure_node_mirror_new_local_registry() {
