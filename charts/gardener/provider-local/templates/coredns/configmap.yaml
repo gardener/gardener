@@ -22,10 +22,10 @@ data:
           {{ .Values.controllers.service.zone0IP }} istio-ingressgateway.istio-ingress--0.svc.cluster.local
           {{ .Values.controllers.service.zone1IP }} istio-ingressgateway.istio-ingress--1.svc.cluster.local
           {{ .Values.controllers.service.zone2IP }} istio-ingressgateway.istio-ingress--2.svc.cluster.local
-          {{ .Values.controllers.service.exposureclassIP }} istio-ingressgateway.istio-ingress-exposureclass.svc.cluster.local
-          {{ .Values.controllers.service.exposureclassZone0IP }} istio-ingressgateway.istio-ingress-exposureclass--0.svc.cluster.local
-          {{ .Values.controllers.service.exposureclassZone1IP }} istio-ingressgateway.istio-ingress-exposureclass--1.svc.cluster.local
-          {{ .Values.controllers.service.exposureclassZone2IP }} istio-ingressgateway.istio-ingress-exposureclass--2.svc.cluster.local
+          {{ .Values.controllers.service.exposureclassIP }} istio-ingressgateway.istio-ingress-local.svc.cluster.local
+          {{ .Values.controllers.service.exposureclassZone0IP }} istio-ingressgateway.istio-ingress-local--0.svc.cluster.local
+          {{ .Values.controllers.service.exposureclassZone1IP }} istio-ingressgateway.istio-ingress-local--1.svc.cluster.local
+          {{ .Values.controllers.service.exposureclassZone2IP }} istio-ingressgateway.istio-ingress-local--2.svc.cluster.local
           fallthrough
         }
         forward . /etc/resolv.conf {

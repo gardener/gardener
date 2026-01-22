@@ -26,10 +26,10 @@ var (
 	keyIstioIngressGatewayZone1 = client.ObjectKey{Namespace: "istio-ingress--1", Name: "istio-ingressgateway"}
 	keyIstioIngressGatewayZone2 = client.ObjectKey{Namespace: "istio-ingress--2", Name: "istio-ingressgateway"}
 
-	keyIstioIngressGatewayExposureClass      = client.ObjectKey{Namespace: "istio-ingress-exposureclass", Name: "istio-ingressgateway"}
-	keyIstioIngressGatewayExposureClassZone0 = client.ObjectKey{Namespace: "istio-ingress-exposureclass--0", Name: "istio-ingressgateway"}
-	keyIstioIngressGatewayExposureClassZone1 = client.ObjectKey{Namespace: "istio-ingress-exposureclass--1", Name: "istio-ingressgateway"}
-	keyIstioIngressGatewayExposureClassZone2 = client.ObjectKey{Namespace: "istio-ingress-exposureclass--2", Name: "istio-ingressgateway"}
+	keyIstioIngressGatewayExposureClass      = client.ObjectKey{Namespace: "istio-ingress-local", Name: "istio-ingressgateway"}
+	keyIstioIngressGatewayExposureClassZone0 = client.ObjectKey{Namespace: "istio-ingress-local--0", Name: "istio-ingressgateway"}
+	keyIstioIngressGatewayExposureClassZone1 = client.ObjectKey{Namespace: "istio-ingress-local--1", Name: "istio-ingressgateway"}
+	keyIstioIngressGatewayExposureClassZone2 = client.ObjectKey{Namespace: "istio-ingress-local--2", Name: "istio-ingressgateway"}
 
 	keyVirtualGardenIstioIngressGateway = client.ObjectKey{Namespace: "virtual-garden-istio-ingress", Name: "istio-ingressgateway"}
 )

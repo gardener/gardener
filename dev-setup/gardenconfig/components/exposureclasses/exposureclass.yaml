@@ -1,5 +1,5 @@
 apiVersion: core.gardener.cloud/v1beta1
 kind: ExposureClass
 metadata:
-  name: exposureclass
-handler: exposureclass
+  name: local
+handler: local
