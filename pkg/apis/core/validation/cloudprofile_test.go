@@ -335,7 +335,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					}))))
 				})
 
-				It("should forbid (deprecated) expiration date on latest kubernetes version", func() {
+				It("should forbid expiration date on latest kubernetes version", func() {
 					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
 					cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
 						{
@@ -357,6 +357,22 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					}))))
 				})
 
+				It("should forbid specifying classification expired", func() {
+					cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
+						{
+							Version:        "1.1.0",
+							Classification: &expiredClassification,
+						},
+					}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.kubernetes.versions[0].classification"),
+					}))))
+				})
+
 				It("should forbid using versionClassificationLifecycles for kubernetes", func() {
 					cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
 						{
@@ -374,7 +390,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.kubernetes.versions[0]"),
+						"Field":  Equal("spec.kubernetes.versions[0].lifecycle"),
 						"Detail": Equal("lifecycles are not allowed with disabled VersionClassificationLifecycle feature gate"),
 					}))))
 				})
