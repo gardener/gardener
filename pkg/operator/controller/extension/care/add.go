@@ -56,7 +56,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, virtualCluster cluster.Cl
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.ExtensionCare.ConcurrentSyncs, 0),
 			// if going into exponential backoff, wait at most the configured sync period
-			RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter[reconcile.Request](
+			RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(
 				workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](),
 				r.Config.Controllers.ExtensionCare.SyncPeriod.Duration,
 			),
