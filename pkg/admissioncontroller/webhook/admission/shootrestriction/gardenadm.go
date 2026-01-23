@@ -55,7 +55,7 @@ func (h *Handler) admitGardenadmRequests(_ context.Context, gardenletShootInfo t
 
 		return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to shoot %s", gardenletShootInfo))
 
-	case configMapResource, secretResource:
+	case configMapResource, secretResource, workloadIdentityResource:
 		if request.Operation != admissionv1.Create {
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 		}

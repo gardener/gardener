@@ -237,6 +237,13 @@ func prepareGardenerResources(ctx context.Context, b *botanist.GardenadmBotanist
 	}
 	b.Logger.Info("Secret resources ensured in garden cluster")
 
+	for _, workloadIdentity := range b.Resources.WorkloadIdentities {
+		if err := b.GardenClient.Create(ctx, workloadIdentity.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf("failed creating WorkloadIdentity resource %s in garden cluster: %w", client.ObjectKeyFromObject(workloadIdentity), err)
+		}
+	}
+	b.Logger.Info("WorkloadIdentity resources ensured in garden cluster")
+
 	if b.Resources.SecretBinding != nil {
 		if err := b.GardenClient.Create(ctx, b.Resources.SecretBinding.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
 			return fmt.Errorf("failed creating SecretBinding resource %s in garden cluster: %w", client.ObjectKeyFromObject(b.Resources.SecretBinding), err)

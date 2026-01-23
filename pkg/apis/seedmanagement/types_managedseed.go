@@ -104,6 +104,8 @@ type GardenletDeployment struct {
 	AdditionalVolumeMounts []corev1.VolumeMount
 	// Env is the list of environment variables to set in the gardenlet container.
 	Env []corev1.EnvVar
+	// Tolerations are the tolerations to be applied to gardenlet pods.
+	Tolerations []corev1.Toleration
 }
 
 // Image specifies container image parameters.

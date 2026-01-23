@@ -11894,11 +11894,25 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref common.Refe
 							},
 						},
 					},
+					"tolerations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Tolerations are the tolerations to be applied to gardenlet pods.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("k8s.io/api/core/v1.Toleration"),
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
+			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Toleration", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
 	}
 }
 
@@ -12090,6 +12104,20 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletSelfDeployment(ref common.
 							},
 						},
 					},
+					"tolerations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Tolerations are the tolerations to be applied to gardenlet pods.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("k8s.io/api/core/v1.Toleration"),
+									},
+								},
+							},
+						},
+					},
 					"helm": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Helm is the Helm deployment configuration.",
@@ -12116,7 +12144,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletSelfDeployment(ref common.
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletHelm", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
+			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletHelm", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Toleration", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
 	}
 }
 

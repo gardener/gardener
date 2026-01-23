@@ -26,7 +26,7 @@ func (a *authorizer) authorizeGardenadmRequests(requestLog logr.Logger, shootNam
 				return auth.DecisionAllow, "", nil
 			}
 
-		case configMapResource, secretResource, secretBindingResource, credentialsBindingResource:
+		case configMapResource, secretResource, secretBindingResource, credentialsBindingResource, workloadIdentityResource:
 			if isGardenadmRequestAllowed(attrs, &shootNamespace, "create") {
 				return auth.DecisionAllow, "", nil
 			}

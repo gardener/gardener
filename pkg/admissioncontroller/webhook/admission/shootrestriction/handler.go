@@ -27,6 +27,7 @@ import (
 	admissionwebhook "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -46,6 +47,7 @@ var (
 	secretResource                    = corev1.Resource("secrets")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
 	shootStateResource                = gardencorev1beta1.Resource("shootstates")
+	workloadIdentityResource          = securityv1alpha1.Resource("workloadidentities")
 )
 
 // Handler restricts requests made by shoot gardenlets.

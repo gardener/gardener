@@ -649,6 +649,20 @@ map[string]string
 <p>Env is the list of environment variables to set in the gardenlet container.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>tolerations</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#toleration-v1-core">
+[]Kubernetes core/v1.Toleration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Tolerations are the tolerations to be applied to gardenlet pods.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="seedmanagement.gardener.cloud/v1alpha1.GardenletHelm">GardenletHelm

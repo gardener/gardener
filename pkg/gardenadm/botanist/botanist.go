@@ -273,6 +273,9 @@ func initializeFakeGardenResources(
 	for _, secret := range resources.Secrets {
 		objects = append(objects, secret.DeepCopy())
 	}
+	for _, workloadIdentity := range resources.WorkloadIdentities {
+		objects = append(objects, workloadIdentity.DeepCopy())
+	}
 
 	if resources.SecretBinding != nil {
 		objects = append(objects, resources.SecretBinding.DeepCopy())

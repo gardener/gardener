@@ -215,6 +215,7 @@ config:
 nodeToleration:
   defaultNotReadyTolerationSeconds: 60
   defaultUnreachableTolerationSeconds: 60
+tolerations: []
 
 #selfUpgrade:
 #  deployment:

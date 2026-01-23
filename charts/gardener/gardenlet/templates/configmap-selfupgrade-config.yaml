@@ -51,6 +51,10 @@ data:
         env:
         {{- .Values.env | toYaml | nindent 8 }}
         {{- end }}
+        {{- if .Values.tolerations }}
+        tolerations:
+        {{- .Values.tolerations | toYaml | nindent 8 }}
+        {{- end }}
       config:
 {{- $config := include "gardenlet.config" . | fromYaml }}
 {{- if $config.seedConfig }}

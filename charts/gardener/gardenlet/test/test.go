@@ -1117,6 +1117,10 @@ func ComputeExpectedGardenletDeploymentSpec(
 			deployment.Template.Annotations = utils.MergeStringMaps(deployment.Template.Annotations, deploymentConfiguration.PodAnnotations)
 		}
 
+		if deploymentConfiguration.Tolerations != nil {
+			deployment.Template.Spec.Tolerations = append(deployment.Template.Spec.Tolerations, deploymentConfiguration.Tolerations...)
+		}
+
 		if deploymentConfiguration.Resources != nil {
 			if value, ok := deploymentConfiguration.Resources.Requests[corev1.ResourceCPU]; ok {
 				deployment.Template.Spec.Containers[0].Resources.Requests[corev1.ResourceCPU] = value
