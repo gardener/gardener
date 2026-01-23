@@ -213,7 +213,7 @@ spec:
     type: openstack-designate
 ```
 
-If needed, a pull secret can be referenced for the Helm charts.
+If your OCI registry uses a custom or self-signed TLS certificate, you can provide a CA bundle. For registries requiring authentication, you can reference a pull secret.
 
 ```yaml
 apiVersion: operator.gardener.cloud/v1alpha1
@@ -227,8 +227,21 @@ spec:
           ociRepository:
             repository: ...
             tag: ...
+            caBundleSecretRef:
+              name: my-ca-bundle
             pullSecretRef:
               name: my-pull-secret
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-ca-bundle
+  namespace: garden
+  labels:
+    gardener.cloud/role: oci-ca-bundle
+type: Opaque
+data:
+  bundle.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMrekNDQWVPZ0F3SUJBZ0lKQUxETk...
 ---
 apiVersion: v1
 kind: Secret
