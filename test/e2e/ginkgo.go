@@ -4,6 +4,10 @@
 
 package e2e
 
+import (
+	. "github.com/onsi/ginkgo/v2"
+)
+
 // BeforeTestSetup looks like a ginkgo setup node but runs the given function right away, i.e., during ginkgo's tree
 // construction. It's sole purpose is to structure test setup code similar to BeforeEach and friends, while allowing to
 // use the side effects when constructing further test nodes.
@@ -24,5 +28,7 @@ package e2e
 // variable in multiple containers (i.e., test cases) would require zeroing the context before the initialization, which
 // is easy to forget and might lead to surprises.
 func BeforeTestSetup(f func()) {
+	// Recover from panics that might happen by calling Fail() during the test setup.
+	defer GinkgoRecover()
 	f()
 }
