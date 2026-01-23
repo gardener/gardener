@@ -192,10 +192,6 @@ func validateKubernetesVersions(versions []core.ExpirableVersion, fldPath *field
 			versionsFound.Insert(version.Version)
 		}
 
-		if version.Classification != nil && !supportedVersionClassifications.Has(string(*version.Classification)) {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("classification"), *version.Classification, sets.List(supportedVersionClassifications)))
-		}
-
 		allErrs = append(allErrs, validateExpirableVersion(version, idxPath)...)
 	}
 
@@ -205,6 +201,11 @@ func validateKubernetesVersions(versions []core.ExpirableVersion, fldPath *field
 // validateExpirableVersion validates the ExpirableVersions.
 func validateExpirableVersion(version core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	// Validate for supportedVersionClassifications
+	if version.Classification != nil && !supportedVersionClassifications.Has(string(*version.Classification)) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("classification"), *version.Classification, sets.List(supportedVersionClassifications)))
+	}
 
 	// Forbid using classification lifecycle when the feature gate is not enabled.
 	if len(version.Lifecycle) > 0 && !utilfeature.DefaultFeatureGate.Enabled(features.VersionClassificationLifecycle) {
@@ -405,10 +406,6 @@ func ValidateMachineImageVersion(image core.MachineImage, machineVersion core.Ma
 		if _, err = semver.NewVersion(*machineVersion.InPlaceUpdates.MinVersionForUpdate); err != nil {
 			allErrs = append(allErrs, field.Invalid(versionsPath.Child("minVersionForInPlaceUpdate"), *machineVersion.InPlaceUpdates.MinVersionForUpdate, "could not parse version. Use a semantic version."))
 		}
-	}
-
-	if machineVersion.Classification != nil && !supportedVersionClassifications.Has(string(*machineVersion.Classification)) {
-		allErrs = append(allErrs, field.NotSupported(versionsPath.Child("classification"), *machineVersion.Classification, sets.List(supportedVersionClassifications)))
 	}
 
 	allErrs = append(allErrs, validateMachineImageVersionFlavors(machineVersion, capabilities, versionsPath)...)
