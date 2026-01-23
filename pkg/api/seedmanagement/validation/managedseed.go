@@ -22,7 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 )
 
-var availableManagedSeedOperations = sets.New[string](
+var availableManagedSeedOperations = sets.New(
 	v1beta1constants.GardenerOperationReconcile,
 	v1beta1constants.GardenerOperationRenewKubeconfig,
 )
