@@ -1044,6 +1044,13 @@ func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
 		if provider.CredentialsRef != nil && provider.Type == nil {
 			allErrs = append(allErrs, field.Required(idxPath.Child("type"), "type must be set when credentialsRef is set"))
 		}
+
+		// Check for functionless DNS providers
+		if !ptr.Deref(provider.Primary, false) {
+			if provider.CredentialsRef == nil {
+				allErrs = append(allErrs, field.Required(idxPath.Child("credentialsRef"), "non-primary DNS providers must specify `credentialsRef`"))
+			}
+		}
 	}
 
 	return allErrs
