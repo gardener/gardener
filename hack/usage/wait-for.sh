@@ -72,7 +72,7 @@ while [ "${retries}" -lt "${TIMEOUT}" ]; do
     break
   fi
 
-  echo ":debug: $(RELATIVE_TIME): Last operation state: ${LAST_OPERATION_STATE}, Conditions: $(echo "${CONDITION_STATES}" | yq -o json | jq 'map(select(.status != "True") | pick(.type, .status, .reason, .message))' -c)"
+  echo ":debug: $(RELATIVE_TIME): Last operation state: ${LAST_OPERATION_STATE}, Conditions: $(echo "${CONDITION_STATES}" | yq -o json | jq 'map(select(.status != "True") | {type, status, reason, message})' -c)"
 
   retries=$((retries + SLEEP_INTERVAL))
   sleep "${SLEEP_INTERVAL}"
