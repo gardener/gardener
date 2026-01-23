@@ -9,3 +9,8 @@ secretGenerator:
   - kubeconfig
   name: seed-local
   namespace: garden
+# enables gardenctl to work
+- files:
+  - kubeconfig
+  name: local.login
+  namespace: garden
