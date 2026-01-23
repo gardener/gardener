@@ -336,12 +336,9 @@ func FindVersionsWithSameMajorMinor(versions []core.ExpirableVersion, version se
 
 // HasCapability returns true of the passed capabilities contain the capability with the given name.
 func HasCapability(capabilities []core.CapabilityDefinition, capabilityName string) bool {
-	for _, capability := range capabilities {
-		if capability.Name == capabilityName {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(capabilities, func(capability core.CapabilityDefinition) bool {
+		return capability.Name == capabilityName
+	})
 }
 
 // ExtractArchitecturesFromImageFlavors extracts all architectures from a list of MachineImageFlavor.
