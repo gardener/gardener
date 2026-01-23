@@ -21,9 +21,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	collectorconstants "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/constants"
@@ -68,6 +70,8 @@ type Values struct {
 	PriorityClassName string
 	// ValiHost is the name for the ingress to access the Vali instance.
 	ValiHost string
+	// ClusterType is the type of the cluster where the collector is deployed.
+	ClusterType component.ClusterType
 }
 
 type otelCollector struct {
@@ -286,7 +290,7 @@ func (o *otelCollector) serviceMonitor() *monitoringv1.ServiceMonitor {
 	}
 
 	return &monitoringv1.ServiceMonitor{
-		ObjectMeta: monitoringutils.ConfigObjectMeta(serviceMonitorName, o.namespace, shoot.Label),
+		ObjectMeta: monitoringutils.ConfigObjectMeta(serviceMonitorName, o.namespace, o.getPrometheusLabel()),
 		Spec: monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 			Endpoints: []monitoringv1.Endpoint{{
@@ -322,12 +326,18 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 			// Currently, there is no other way to define the annotations on the service other than adding them to the OpenTelemetryCollector resource.
 			// All annotations that exist here will be passed down to every resource that gets created by the OpenTelemetry Operator.
 			Annotations: map[string]string{
-				"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort),
+				"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports":                                                                                                  fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort),
+				resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicySeedScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"port":8888,"protocol":"TCP"},{"port":2021,"protocol":"TCP"}]`,
 			},
 		},
 		Spec: otelv1beta1.OpenTelemetryCollectorSpec{
 			Mode:            "deployment",
 			UpgradeStrategy: "none",
+			Observability: otelv1beta1.ObservabilitySpec{
+				Metrics: otelv1beta1.MetricsConfigSpec{
+					DisablePrometheusAnnotations: true,
+				},
+			},
 			OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
 				Image:             o.values.Image,
 				Replicas:          ptr.To(o.values.Replicas),
@@ -546,6 +556,17 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 		obj.Spec.AdditionalContainers[1].VolumeMounts = []corev1.VolumeMount{gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)}
 	}
 
+	switch o.values.ClusterType {
+	case component.ClusterTypeSeed:
+		obj.Annotations = map[string]string{
+			"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort),
+		}
+	case component.ClusterTypeShoot:
+		obj.Annotations = map[string]string{
+			"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort),
+		}
+	}
+
 	return obj
 }
 
@@ -660,6 +681,13 @@ func (o *otelCollector) getLoggingAgentClusterRoleBinding(serviceAccountName, cl
 			Namespace: metav1.NamespaceSystem,
 		}},
 	}
+}
+
+func (o *otelCollector) getPrometheusLabel() string {
+	if o.values.ClusterType == component.ClusterTypeShoot {
+		return shoot.Label
+	}
+	return aggregate.Label
 }
 
 func getLabels() map[string]string {

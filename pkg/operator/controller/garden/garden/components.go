@@ -1573,6 +1573,7 @@ func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Int
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		secretsManager,
 		operatorv1alpha1.SecretNameCARuntime,
+		component.ClusterTypeSeed,
 	)
 }
 

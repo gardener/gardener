@@ -866,6 +866,7 @@ func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Int
 		v1beta1constants.PriorityClassNameSeedSystem600,
 		secretsManager,
 		v1beta1constants.SecretNameCASeed,
+		component.ClusterTypeSeed,
 	)
 }
 

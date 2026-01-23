@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
+	"github.com/gardener/gardener/pkg/component"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -22,6 +23,7 @@ func NewOpenTelemetryCollector(
 	priorityClassName string,
 	secretsManager secretsmanager.Interface,
 	secretNameServerCA string,
+	clusterType component.ClusterType,
 ) (
 	deployer collector.Interface,
 	err error,
@@ -47,6 +49,7 @@ func NewOpenTelemetryCollector(
 			ShootNodeLoggingEnabled: false,
 			SecretNameServerCA:      secretNameServerCA,
 			PriorityClassName:       priorityClassName,
+			ClusterType:             clusterType,
 		},
 		secretsManager,
 	), nil

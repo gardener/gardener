@@ -70,6 +70,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			ValiHost:                valiHost,
 			SecretNameServerCA:      v1beta1constants.SecretNameCACluster,
 			PriorityClassName:       "gardener-system-100",
+			ClusterType:             "shoot",
 		}
 
 		c         client.Client
@@ -326,6 +327,11 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				},
 			},
 			Spec: otelv1beta1.OpenTelemetryCollectorSpec{
+				Observability: otelv1beta1.ObservabilitySpec{
+					Metrics: otelv1beta1.MetricsConfigSpec{
+						DisablePrometheusAnnotations: true,
+					},
+				},
 				Mode:            "deployment",
 				UpgradeStrategy: "none",
 				OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
