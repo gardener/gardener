@@ -4107,6 +4107,11 @@ func (in *OCIRepository) DeepCopyInto(out *OCIRepository) {
 		*out = new(v1.LocalObjectReference)
 		**out = **in
 	}
+	if in.CABundleSecretRef != nil {
+		in, out := &in.CABundleSecretRef, &out.CABundleSecretRef
+		*out = new(v1.LocalObjectReference)
+		**out = **in
+	}
 	return
 }
 
