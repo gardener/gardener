@@ -373,16 +373,16 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.FinalizeGardenerNodeAgentBootstrapping,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
 		})
+		waitUntilGardenerNodeAgentLeaseIsRenewed = g.Add(flow.Task{
+			Name:         "Waiting until gardener-node-agent lease is renewed",
+			Fn:           b.WaitUntilGardenerNodeAgentLeaseIsRenewed,
+			Dependencies: flow.NewTaskIDs(finalizeGardenerNodeAgentBootstrapping),
+		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying cluster-autoscaler",
 			Fn:           b.DeployClusterAutoscaler,
 			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
-			Dependencies: flow.NewTaskIDs(finalizeGardenerNodeAgentBootstrapping),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Waiting until gardener-node-agent lease is renewed",
-			Fn:           b.WaitUntilGardenerNodeAgentLeaseIsRenewed,
-			Dependencies: flow.NewTaskIDs(finalizeGardenerNodeAgentBootstrapping),
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerNodeAgentLeaseIsRenewed),
 		})
 	)
 
