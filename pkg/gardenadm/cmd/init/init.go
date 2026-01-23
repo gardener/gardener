@@ -357,7 +357,7 @@ func run(ctx context.Context, opts *Options) error {
 					b.Shoot.Components.ControlPlane.ResourceManager.Wait,
 				),
 				b.WaitUntilExtensionControllerInstallationsHealthy,
-			),
+			).Timeout(5 * time.Minute),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeControllerManagerIsActive),
 		})
 		deployMachineControllerManager = g.Add(flow.Task{
