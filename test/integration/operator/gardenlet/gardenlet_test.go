@@ -134,10 +134,12 @@ var _ = Describe("Gardenlet controller test", func() {
 			}).Should(BeNotFoundError())
 
 			By("Delete and wait for Gardenlet deployment to be gone")
-			Eventually(func(g Gomega) {
+			// Ensure gardenletDeployment from in-flight reconciliation loop is gone
+			Consistently(func(g Gomega) {
 				g.Expect(testClient.Delete(ctx, gardenletDeployment)).To(Or(Succeed(), BeNotFoundError()))
-				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenletDeployment), gardenletDeployment)).Should(BeNotFoundError())
 			}).Should(Succeed())
+
+			Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenletDeployment), gardenletDeployment)).Should(BeNotFoundError())
 		})
 	})
 
