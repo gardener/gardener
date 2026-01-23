@@ -79,7 +79,7 @@ func (n *namespaces) computeResourcesData() (map[string][]byte, error) {
 	zones := sets.New[string]()
 
 	for _, pool := range n.workerPools {
-		if v1beta1helper.SystemComponentsAllowed(&pool) {
+		if v1beta1helper.SystemComponentsAllowed(&pool) && pool.Maximum > 0 {
 			zones.Insert(pool.Zones...)
 		}
 	}

@@ -37,15 +37,23 @@ var _ = Describe("Namespaces", func() {
 		namespace   = "shoot--foo--bar"
 		workerPools = []gardencorev1beta1.Worker{
 			{
-				Zones: []string{"b", "c"},
+				Maximum: 1,
+				Zones:   []string{"b", "c"},
 			},
 			{
 				SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: false},
+				Maximum:          1,
 				Zones:            []string{"a", "d"},
 			},
 			{
 				SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true},
+				Maximum:          1,
 				Zones:            []string{"f", "e"},
+			},
+			{
+				SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true},
+				Maximum:          0,
+				Zones:            []string{"g", "h"},
 			},
 		}
 
