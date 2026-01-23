@@ -27,6 +27,12 @@ SKIP_LAST_OPERATION_CHECK=${SKIP_LAST_OPERATION_CHECK:-false}
 # The number of retries before failing
 TIMEOUT=${TIMEOUT:-600}
 
+START_TIME=$(date +%s)
+RELATIVE_TIME() {
+  current_time=$(date +%s)
+  echo $((current_time - START_TIME))s
+}
+
 # The interval between each retry in seconds
 SLEEP_INTERVAL=${SLEEP_INTERVAL:-5}
 
@@ -65,6 +71,8 @@ while [ "${retries}" -lt "${TIMEOUT}" ]; do
     echo -e "${GREEN}✅ Last operation state is 'Succeeded' and all conditions passed for ${RESOURCE_TYPE}/${OBJECT_NAME}.${NO_COLOR}"
     break
   fi
+
+  echo ":debug: $(RELATIVE_TIME): Last operation state: ${LAST_OPERATION_STATE}, Conditions: $(echo "${CONDITION_STATES}" | yq -o json | jq 'map(select(.status != "True") | pick(.type, .status, .reason, .message))' -c)"
 
   retries=$((retries + SLEEP_INTERVAL))
   sleep "${SLEEP_INTERVAL}"
