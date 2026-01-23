@@ -340,10 +340,10 @@ func run(ctx context.Context, opts *Options) error {
 		// etcd migration for the kube-controller-manager to become active again, so we explicitly wait for that here.
 		waitUntilKubeControllerManagerIsActive = g.Add(flow.Task{
 			Name: "Waiting until kube-controller-manager is active",
-			Fn: func(ctx context.Context) error {
+			Fn: flow.TaskFn(func(ctx context.Context) error {
 				b.Shoot.Components.ControlPlane.KubeControllerManager.SetShootClient(b.SeedClientSet.Client())
 				return b.Shoot.Components.ControlPlane.KubeControllerManager.WaitForControllerToBeActive(ctx)
-			},
+			}).RetryUntilTimeout(time.Second, 5*time.Minute),
 			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneDeploymentsReady),
 		})
 		// During the migration from the bootstrap etcds to the druid-managed etcds, components serving webhooks might be
@@ -357,7 +357,7 @@ func run(ctx context.Context, opts *Options) error {
 					b.Shoot.Components.ControlPlane.ResourceManager.Wait,
 				),
 				b.WaitUntilExtensionControllerInstallationsHealthy,
-			).Timeout(5 * time.Minute),
+			).RetryUntilTimeout(time.Second, 5*time.Minute),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeControllerManagerIsActive),
 		})
 		deployMachineControllerManager = g.Add(flow.Task{
