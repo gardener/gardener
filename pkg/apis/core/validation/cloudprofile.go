@@ -150,17 +150,20 @@ func validateCloudProfileKubernetesSettings(kubernetes core.KubernetesSettings, 
 	if len(kubernetes.Versions) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("versions"), "must provide at least one Kubernetes version"))
 	}
+
 	latestKubernetesVersion, _, err := helper.DetermineLatestExpirableVersion(kubernetes.Versions, false)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("versions"), latestKubernetesVersion.Version, "failed to determine the latest kubernetes version from the cloud profile"))
 	}
+
 	if latestKubernetesVersion.ExpirationDate != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("versions[]").Child("expirationDate"), latestKubernetesVersion.ExpirationDate, fmt.Sprintf("expiration date of latest kubernetes version ('%s') must not be set", latestKubernetesVersion.Version)))
 	}
 
 	if len(latestKubernetesVersion.Lifecycle) > 0 {
-		if latestKubernetesVersion.Lifecycle[len(latestKubernetesVersion.Lifecycle)-1].Classification == core.ClassificationExpired {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("versions[]").Child("lifecycle"), latestKubernetesVersion.ExpirationDate, fmt.Sprintf("expiration date of latest kubernetes version ('%s') must not be set", latestKubernetesVersion.Version)))
+		lastLifecycle := latestKubernetesVersion.Lifecycle[len(latestKubernetesVersion.Lifecycle)-1].Classification
+		if lastLifecycle == core.ClassificationExpired {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("versions[]").Child("lifecycle"), latestKubernetesVersion.ExpirationDate, fmt.Sprintf("classification %s of latest kubernetes version ('%s') must not be set", core.ClassificationExpired, latestKubernetesVersion.Version)))
 		}
 	}
 
