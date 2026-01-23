@@ -24,5 +24,12 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger) error {
 			return fmt.Errorf("failed to migrate VerticalPodAutoscaler with 'MigrateVPAUpdateModeToRecreate' migration: %w", err)
 		}
 	}
+
+	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		if err := migration.MigrateOTelCollectorAnnotations(ctx, g.mgr.GetClient(), log); err != nil {
+			return fmt.Errorf("failed to migrate OpenTelemetry Collector annotations: %w", err)
+		}
+	}
+
 	return nil
 }
