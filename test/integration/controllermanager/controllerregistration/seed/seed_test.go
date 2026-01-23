@@ -7,6 +7,7 @@ package seed_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -70,7 +71,8 @@ var _ = Describe("ControllerRegistration controller test", func() {
 				}},
 				DNS: &gardencorev1beta1.DNS{
 					Providers: []gardencorev1beta1.DNSProvider{{
-						Type: &shootProviderType,
+						Type:           &shootProviderType,
+						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"},
 					}},
 				},
 				SeedName: &seed.Name,
