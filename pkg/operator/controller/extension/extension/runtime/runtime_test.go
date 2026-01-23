@@ -37,7 +37,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Deployment", func() {
+var _ = Describe("Runtime", func() {
 	var (
 		ctx  context.Context
 		log  logr.Logger

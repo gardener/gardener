@@ -36,7 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
-var _ = Describe("Deployment", func() {
+var _ = Describe("Admission", func() {
 	var (
 		ctx  context.Context
 		log  logr.Logger
