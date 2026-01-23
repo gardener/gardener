@@ -206,10 +206,17 @@ func validateKubernetesVersions(versions []core.ExpirableVersion, fldPath *field
 func validateExpirableVersion(version core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	// Forbid using classification lifecycle when the feature gate is not enabled.
 	if len(version.Lifecycle) > 0 && !utilfeature.DefaultFeatureGate.Enabled(features.VersionClassificationLifecycle) {
-		allErrs = append(allErrs, field.Forbidden(fldPath, "lifecycles are not allowed with disabled VersionClassificationLifecycle feature gate"))
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("lifecycle"), "lifecycles are not allowed with disabled VersionClassificationLifecycle feature gate"))
 	}
 
+	// Forbid setting classification to "expired" if its not a classification lifecycle.
+	if version.Lifecycle == nil && version.Classification != nil && *version.Classification == core.ClassificationExpired {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("classification"), "cannot specify `classification` expired"))
+	}
+
+	// Forbid using normal classifications with classification lifecycle.
 	if (version.Classification != nil || version.ExpirationDate != nil) && len(version.Lifecycle) > 0 {
 		allErrs = append(allErrs, field.Forbidden(fldPath, "cannot specify `classification` or `expirationDate` in combination with `lifecycle`"))
 	}
