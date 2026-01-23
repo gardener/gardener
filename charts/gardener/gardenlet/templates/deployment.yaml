@@ -165,7 +165,7 @@ spec:
 {{- if .Values.additionalVolumeMounts }}
 {{ toYaml .Values.additionalVolumeMounts | indent 8 }}
 {{- end }}
-{{- if .Values.nodeToleration }}
+{{- if or .Values.tolerations .Values.nodeToleration }}
       tolerations:
 {{- if .Values.tolerations }}
 {{ toYaml .Values.tolerations | indent 6 }}
