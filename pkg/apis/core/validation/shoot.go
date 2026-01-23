@@ -1311,7 +1311,7 @@ func ValidateAPIServerRequests(requests *core.APIServerRequests, fldPath *field.
 	allErrs := field.ErrorList{}
 
 	if requests != nil {
-		const maxNonMutatingRequestsInflight = 800
+		const maxNonMutatingRequestsInflight = 5000
 		if v := requests.MaxNonMutatingInflight; v != nil {
 			path := fldPath.Child("maxNonMutatingInflight")
 
@@ -1321,7 +1321,7 @@ func ValidateAPIServerRequests(requests *core.APIServerRequests, fldPath *field.
 			}
 		}
 
-		const maxMutatingRequestsInflight = 400
+		const maxMutatingRequestsInflight = 2500
 		if v := requests.MaxMutatingInflight; v != nil {
 			path := fldPath.Child("maxMutatingInflight")
 
