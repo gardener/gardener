@@ -578,14 +578,14 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						}))))
 					})
 
-					It("should allow multiple missing start times for leading lifecycle stages", func() {
+					It("should forbid multiple lifecycle elements without StartTime", func() {
 						cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
 							{
 								Version: "1.1.0",
 								Lifecycle: []core.LifecycleStage{
-									{Classification: previewClassification},
 									{Classification: supportedClassification},
 									{Classification: deprecatedClassification},
+									{Classification: expiredClassification},
 								},
 							},
 							{
@@ -598,7 +598,15 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 						errorList := ValidateCloudProfile(cloudProfile)
 
-						Expect(errorList).To(BeEmpty())
+						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.versions[0].lifecycle[1]"),
+							"Detail": Equal("only the leading lifecycle elements can have the start time optional"),
+						})), PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.versions[0].lifecycle[2]"),
+							"Detail": Equal("only the leading lifecycle elements can have the start time optional"),
+						}))))
 					})
 
 					It("should allow missing start time for first lifecycle stage", func() {
@@ -759,7 +767,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.machineImages[0].versions[0]"),
+						"Field":  Equal("spec.machineImages[0].versions[0].lifecycle"),
 						"Detail": Equal("lifecycles are not allowed with disabled VersionClassificationLifecycle feature gate"),
 					}))))
 				})

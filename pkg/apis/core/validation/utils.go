@@ -306,9 +306,8 @@ func validateLifecycleStartTimes(lifecycle []core.LifecycleStage, fldPath *field
 		if previousStartTime == nil {
 			if l.StartTime == nil {
 				l.StartTime = &metav1.Time{}
-			} else {
-				previousStartTime = &l.StartTime.Time
 			}
+			previousStartTime = &l.StartTime.Time
 			continue
 		}
 
