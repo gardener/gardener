@@ -42,6 +42,8 @@ tests:
         values: 100x10
       - series: kube_pod_container_resource_requests{pod="gardenlet-abc"}
         values: 100x10
+      - series: kubelet_volume_stats_capacity_bytes{persistentvolumeclaim="prometheus-db-prometheus-cache-0"}
+        values: 100x10
     promql_expr_test: &promql_expr_test
       - expr: &expr |2
             healthcheck:up          !=     expected_healthcheck:up
@@ -89,6 +91,8 @@ tests:
         values: 100x10
       - series: kube_pod_container_resource_requests{pod="gardenlet-abc"}
         values: 100x10
+      - series: kubelet_volume_stats_capacity_bytes{persistentvolumeclaim="prometheus-db-prometheus-cache-0"}
+        values: 100x10
       - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
         values: 0+1x10
     promql_expr_test: *promql_expr_test
@@ -110,6 +114,8 @@ tests:
       - series: container_cpu_usage_seconds_total{pod="gardenlet-abc"}
         values: 100x10
       - series: kube_pod_container_resource_requests{pod="gardenlet-abc"}
+        values: 100x10
+      - series: kubelet_volume_stats_capacity_bytes{persistentvolumeclaim="prometheus-db-prometheus-cache-0"}
         values: 100x10
       - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
         values: 0+1x10
@@ -135,14 +141,16 @@ tests:
         values: 100x10
       - series: kube_pod_container_resource_requests{pod="gardenlet-abc"}
         values: 100x10
+      - series: kubelet_volume_stats_capacity_bytes{persistentvolumeclaim="prometheus-db-prometheus-cache-0"}
+        values: 100x10
       - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
         values: 0+1x10
     promql_expr_test: *promql_expr_test
 
-  # The focus of this test are the cAdvisor and kube-state-metrics time series.
+  # The focus of this test are the cAdvisor, kube-state-metrics and kubelet volume stats time series.
   #
   # This test shows that healthcheck:up will report an unhealthy state
-  # if the cAdvisor or kube-state-metrics metrics are missing.
+  # if the cAdvisor, kube-state-metrics or kubelet volume stats metrics are missing.
   - input_series:
       - series: indentation
         values: stale stale stale stale stale stale stale stale stale stale stale
@@ -151,10 +159,18 @@ tests:
 
       - series: container_cpu_usage_seconds_total{pod="gardenlet-abc"}
         values: 1     1     stale 1     1     1     1     1     1     1     1
+      - series: container_cpu_usage_seconds_total{pod="foo"}
+        values: 1     1     1     stale 1     1     1     1     1     1     1
       - series: kube_pod_container_resource_requests{pod="gardenlet-abc"}
         values: 1     1     1     1     stale 1     1     1     1     1     1
+      - series: kube_pod_container_resource_requests{pod="foo"}
+        values: 1     1     1     1     1     stale 1     1     1     1     1
+      - series: kubelet_volume_stats_capacity_bytes{persistentvolumeclaim="prometheus-db-prometheus-cache-0"}
+        values: 1     1     1     1     1     1     stale 1     1     1     1
+      - series: kubelet_volume_stats_capacity_bytes{persistentvolumeclaim="foo"}
+        values: 1     1     1     1     1     1     1     stale 1     1     1
       - series: expected_healthcheck:up
-        values: 0     1     0     1     0     1     1     1     1     1     1
+        values: 0     1     0     1     0     1     0     1     1     1     1
 
       - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
         values: 0+1x10

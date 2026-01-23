@@ -60,6 +60,11 @@ spec:
           labels:
             task: kube_state_metrics:absent
 
+        - record: healthcheck
+          expr: absent(kubelet_volume_stats_capacity_bytes{persistentvolumeclaim="prometheus-db-prometheus-cache-0"})
+          labels:
+            task: kubelet:volume_metrics:absent
+
         # healthcheck:up indicates the overall health status.
         #
         # A query for `healthcheck:up` can return
