@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -254,6 +255,17 @@ func (v *ManagedSeed) fetchManagedSeedShoot(ctx context.Context, managedSeed *se
 	return shoot, nil
 }
 
+func (v *ManagedSeed) getShoot(ctx context.Context, namespace, name string) (*gardencorev1beta1.Shoot, error) {
+	shoot, err := v.shootLister.Shoots(namespace).Get(name)
+	if err != nil && apierrors.IsNotFound(err) {
+		// Read from the client to ensure that if the managed seed has been created shortly after the shoot
+		// and the shoot is not yet present in the lister cache, it could still be found
+		shoot, err = v.coreClient.CoreV1beta1().Shoots(namespace).Get(ctx, name, kubernetesclient.DefaultGetOptions())
+	}
+
+	return shoot, err
+}
+
 func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.GardenletConfig, shoot *gardencorev1beta1.Shoot, fldPath *field.Path) (field.ErrorList, error) {
 	var allErrs field.ErrorList
 
@@ -297,12 +309,12 @@ func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.GardenletConfig, 
 func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencorev1beta1.Shoot, fldPath *field.Path) (field.ErrorList, error) {
 	var allErrs field.ErrorList
 
-	// Initialize backup provider
+	// Default backup provider
 	if spec.Backup != nil && spec.Backup.Provider == "" {
 		spec.Backup.Provider = shoot.Spec.Provider.Type
 	}
 
-	// Initialize and validate DNS and ingress
+	// Default and validate DNS and ingress
 	if spec.Ingress == nil {
 		spec.Ingress = &gardencore.Ingress{
 			Controller: gardencore.IngressController{
@@ -325,65 +337,40 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 	ingressDomain := fmt.Sprintf("%s.%s", gardenerutils.IngressPrefix, *(shoot.Spec.DNS.Domain))
 	if spec.Ingress.Domain == "" {
 		spec.Ingress.Domain = ingressDomain
-	} else if spec.Ingress.Domain != ingressDomain {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("ingress", "domain"), spec.Ingress.Domain, "seed ingress domain must be equal to shoot DNS domain "+ingressDomain))
 	}
 
-	// Initialize and validate networks
+	// Default networks
 	if spec.Networks.Nodes == nil {
 		spec.Networks.Nodes = shoot.Spec.Networking.Nodes
-	} else if shoot.Spec.Networking.Nodes != nil && *spec.Networks.Nodes != *shoot.Spec.Networking.Nodes {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("networks", "nodes"), spec.Networks.Nodes, "seed nodes CIDR must be equal to shoot nodes CIDR "+*shoot.Spec.Networking.Nodes))
 	}
 	if spec.Networks.Pods == "" && shoot.Spec.Networking.Pods != nil {
 		spec.Networks.Pods = *shoot.Spec.Networking.Pods
-	} else if shoot.Spec.Networking.Pods != nil && spec.Networks.Pods != *shoot.Spec.Networking.Pods {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("networks", "pods"), spec.Networks.Pods, "seed pods CIDR must be equal to shoot pods CIDR "+*shoot.Spec.Networking.Pods))
 	}
 	if spec.Networks.Services == "" && shoot.Spec.Networking.Services != nil {
 		spec.Networks.Services = *shoot.Spec.Networking.Services
-	} else if shoot.Spec.Networking.Services != nil && spec.Networks.Services != *shoot.Spec.Networking.Services {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("networks", "services"), spec.Networks.Pods, "seed services CIDR must be equal to shoot services CIDR "+*shoot.Spec.Networking.Services))
 	}
 
-	// Initialize and validate provider
+	// Default provider
 	if spec.Provider.Type == "" {
 		spec.Provider.Type = shoot.Spec.Provider.Type
-	} else if spec.Provider.Type != shoot.Spec.Provider.Type {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "type"), spec.Provider.Type, "seed provider type must be equal to shoot provider type "+shoot.Spec.Provider.Type))
 	}
 	if spec.Provider.Region == "" {
 		spec.Provider.Region = shoot.Spec.Region
-	} else if spec.Provider.Region != shoot.Spec.Region {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "region"), spec.Provider.Region, "seed provider region must be equal to shoot region "+shoot.Spec.Region))
 	}
 	if shootZones := v1beta1helper.GetAllZonesFromShoot(shoot); len(spec.Provider.Zones) == 0 && shootZones.Len() > 0 {
 		spec.Provider.Zones = sets.List(shootZones)
 	}
 
-	// At this point the Shoot VPA should be already enabled (validated earlier). If the Seed does not specify VPA settings,
-	// disable the Seed VPA. If the Seed VPA is enabled, fail the validation.
-	if spec.Settings == nil || spec.Settings.VerticalPodAutoscaler == nil {
-		if spec.Settings == nil {
-			spec.Settings = &gardencore.SeedSettings{}
-		}
+	// Default VPA.
+	//
+	// At this point the Shoot VPA should be already enabled (validated earlier).
+	// If the Seed does not specify VPA settings, disable the Seed VPA.
+	if spec.Settings == nil {
+		spec.Settings = &gardencore.SeedSettings{}
+	}
+	if spec.Settings.VerticalPodAutoscaler == nil {
 		spec.Settings.VerticalPodAutoscaler = &gardencore.SeedSettingVerticalPodAutoscaler{
 			Enabled: false,
-		}
-	} else if spec.Settings.VerticalPodAutoscaler.Enabled {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "verticalPodAutoscaler", "enabled"), spec.Settings.VerticalPodAutoscaler.Enabled, "seed VPA is not supported for managed seeds - use the shoot VPA"))
-	}
-
-	topologyAwareRoutingEnabled := gardencorehelper.SeedSettingTopologyAwareRoutingEnabled(spec.Settings)
-	if topologyAwareRoutingEnabled {
-		if v1beta1helper.KubeAPIServerFeatureGateDisabled(shoot, "TopologyAwareHints") {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "topologyAwareRouting", "enabled"), spec.Settings.TopologyAwareRouting.Enabled, "the topology-aware routing seed setting cannot be enabled when the TopologyAwareHints feature gate is disabled for kube-apiserver"))
-		}
-		if v1beta1helper.KubeControllerManagerFeatureGateDisabled(shoot, "TopologyAwareHints") {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "topologyAwareRouting", "enabled"), spec.Settings.TopologyAwareRouting.Enabled, "the topology-aware routing seed setting cannot be enabled when the TopologyAwareHints feature gate is disabled for kube-controller-manager"))
-		}
-		if v1beta1helper.KubeProxyFeatureGateDisabled(shoot, "TopologyAwareHints") {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "topologyAwareRouting", "enabled"), spec.Settings.TopologyAwareRouting.Enabled, "the topology-aware routing seed setting cannot be enabled when the TopologyAwareHints feature gate is disabled for kube-proxy"))
 		}
 	}
 
@@ -515,17 +502,6 @@ func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencorev1beta
 	return nil, nil
 }
 
-func (v *ManagedSeed) getShoot(ctx context.Context, namespace, name string) (*gardencorev1beta1.Shoot, error) {
-	shoot, err := v.shootLister.Shoots(namespace).Get(name)
-	if err != nil && apierrors.IsNotFound(err) {
-		// Read from the client to ensure that if the managed seed has been created shortly after the shoot
-		// and the shoot is not yet present in the lister cache, it could still be found
-		shoot, err = v.coreClient.CoreV1beta1().Shoots(namespace).Get(ctx, name, kubernetesclient.DefaultGetOptions())
-	}
-
-	return shoot, err
-}
-
 // Validate validates the given managed seed against the shoot that it references.
 func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	if err := v.waitUntilReady(a); err != nil {
@@ -612,17 +588,21 @@ func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ ad
 }
 
 func (v *ManagedSeed) validateManagedSeedCreate(managedSeed *seedmanagement.ManagedSeed, shoot *gardencorev1beta1.Shoot) (field.ErrorList, error) {
-	allErrs := field.ErrorList{}
+	var (
+		allErrs                = field.ErrorList{}
+		seedConfigSpecBasePath = field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec")
+	)
 
 	seedSpec, err := seedmanagementhelper.ExtractSeedSpec(managedSeed)
 	if err != nil {
 		return nil, err
 	}
 
-	shootZones := v1beta1helper.GetAllZonesFromShoot(shoot)
+	allErrs = append(allErrs, validateSeedSpec(seedSpec, shoot, seedConfigSpecBasePath)...)
 
+	shootZones := v1beta1helper.GetAllZonesFromShoot(shoot)
 	if !shootZones.HasAll(seedSpec.Provider.Zones...) {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec", "provider", "zones"), seedSpec.Provider.Zones, "cannot use zone in seed provider that is not available in referenced shoot"))
+		allErrs = append(allErrs, field.Invalid(seedConfigSpecBasePath.Child("provider", "zones"), seedSpec.Provider.Zones, "cannot use zone in seed provider that is not available in referenced shoot"))
 	}
 
 	return allErrs, nil
@@ -645,6 +625,8 @@ func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *
 	if err != nil {
 		return nil, err
 	}
+
+	allErrs = append(allErrs, validateSeedSpec(newSeedSpec, shoot, seedConfigSpecBasePath)...)
 
 	if err := admissionutils.ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, "ManagedSeed"); err != nil {
 		allErrs = append(allErrs, field.Forbidden(zonesFieldPath, "zones must not be removed while shoots are still scheduled onto seed"))
@@ -669,4 +651,59 @@ func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *
 	}
 
 	return allErrs, nil
+}
+
+func validateSeedSpec(spec *gardencore.SeedSpec, shoot *gardencorev1beta1.Shoot, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	// Validate ingress
+	if shoot.Spec.DNS != nil && shoot.Spec.DNS.Domain != nil {
+		ingressDomain := fmt.Sprintf("%s.%s", gardenerutils.IngressPrefix, *(shoot.Spec.DNS.Domain))
+		if spec.Ingress != nil && spec.Ingress.Domain != ingressDomain {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("ingress", "domain"), spec.Ingress.Domain, "seed ingress domain must be equal to shoot DNS domain "+ingressDomain))
+		}
+	}
+
+	// Validate networks
+	if shoot.Spec.Networking.Nodes != nil && !reflect.DeepEqual(spec.Networks.Nodes, shoot.Spec.Networking.Nodes) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("networks", "nodes"), spec.Networks.Nodes, "seed nodes CIDR must be equal to shoot nodes CIDR "+*shoot.Spec.Networking.Nodes))
+	}
+	if shoot.Spec.Networking.Pods != nil && spec.Networks.Pods != *shoot.Spec.Networking.Pods {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("networks", "pods"), spec.Networks.Pods, "seed pods CIDR must be equal to shoot pods CIDR "+*shoot.Spec.Networking.Pods))
+	}
+	if shoot.Spec.Networking.Services != nil && spec.Networks.Services != *shoot.Spec.Networking.Services {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("networks", "services"), spec.Networks.Pods, "seed services CIDR must be equal to shoot services CIDR "+*shoot.Spec.Networking.Services))
+	}
+
+	// Validate provider
+	if spec.Provider.Type != shoot.Spec.Provider.Type {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "type"), spec.Provider.Type, "seed provider type must be equal to shoot provider type "+shoot.Spec.Provider.Type))
+	}
+	if spec.Provider.Region != shoot.Spec.Region {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "region"), spec.Provider.Region, "seed provider region must be equal to shoot region "+shoot.Spec.Region))
+	}
+
+	// Validate VPA.
+	//
+	// At this point the Shoot VPA should be already enabled (validated earlier).
+	// If the Seed VPA is enabled, fail the validation.
+	if spec.Settings != nil && spec.Settings.VerticalPodAutoscaler != nil && spec.Settings.VerticalPodAutoscaler.Enabled {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "verticalPodAutoscaler", "enabled"), spec.Settings.VerticalPodAutoscaler.Enabled, "seed VPA is not supported for managed seeds - use the shoot VPA"))
+	}
+
+	// Validate feature gates
+	topologyAwareRoutingEnabled := gardencorehelper.SeedSettingTopologyAwareRoutingEnabled(spec.Settings)
+	if topologyAwareRoutingEnabled {
+		if v1beta1helper.KubeAPIServerFeatureGateDisabled(shoot, "TopologyAwareHints") {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "topologyAwareRouting", "enabled"), spec.Settings.TopologyAwareRouting.Enabled, "the topology-aware routing seed setting cannot be enabled when the TopologyAwareHints feature gate is disabled for kube-apiserver"))
+		}
+		if v1beta1helper.KubeControllerManagerFeatureGateDisabled(shoot, "TopologyAwareHints") {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "topologyAwareRouting", "enabled"), spec.Settings.TopologyAwareRouting.Enabled, "the topology-aware routing seed setting cannot be enabled when the TopologyAwareHints feature gate is disabled for kube-controller-manager"))
+		}
+		if v1beta1helper.KubeProxyFeatureGateDisabled(shoot, "TopologyAwareHints") {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "topologyAwareRouting", "enabled"), spec.Settings.TopologyAwareRouting.Enabled, "the topology-aware routing seed setting cannot be enabled when the TopologyAwareHints feature gate is disabled for kube-proxy"))
+		}
+	}
+
+	return allErrs
 }
