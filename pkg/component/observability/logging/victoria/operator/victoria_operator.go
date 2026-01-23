@@ -277,17 +277,16 @@ func (v *victoriaOperator) clusterRole() *rbacv1.ClusterRole {
 				APIGroups: []string{corev1.GroupName},
 				Resources: []string{
 					"persistentvolumeclaims", "persistentvolumeclaims/finalizers",
-					"services", "services/finalizers", "deployments", "deployments/finalizers",
-					"serviceaccounts", "serviceaccounts/finalizers",
+					"services", "services/finalizers", "serviceaccounts", "serviceaccounts/finalizers",
 				},
-				Verbs: []string{"create", "watch", "list", "get", "delete", "patch"},
+				Verbs: []string{"create", "watch", "list", "get", "delete", "patch", "update"},
 			},
 			{
 				APIGroups: []string{appsv1.GroupName},
 				Resources: []string{
 					"deployments", "deployments/finalizers",
 				},
-				Verbs: []string{"list", "watch", "create", "get", "delete", "patch"},
+				Verbs: []string{"list", "watch", "create", "get", "delete", "patch", "update"},
 			},
 			{
 				APIGroups: []string{corev1.GroupName},
