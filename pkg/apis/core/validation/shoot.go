@@ -2666,6 +2666,7 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 	return allErrs
 }
 
+// ValidateWorkerControlPlane validates worker control plane
 func ValidateWorkerControlPlane(plane *core.WorkerControlPlane, shootNamespace, shootProviderType string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
