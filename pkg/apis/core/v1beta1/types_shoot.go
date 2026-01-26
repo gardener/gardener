@@ -542,10 +542,8 @@ type DNS struct {
 	//
 	// Deprecated: Configuring multiple DNS providers is deprecated and will be forbidden in a future release.
 	// Please use the DNS extension provider config (e.g. shoot-dns-service) for additional providers.
-	// +patchMergeKey=type
-	// +patchStrategy=merge
 	// +optional
-	Providers []DNSProvider `json:"providers,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,2,rep,name=providers"`
+	Providers []DNSProvider `json:"providers,omitempty" protobuf:"bytes,2,rep,name=providers"`
 }
 
 // TODO(timuthy): Rework the 'DNSProvider' struct and deprecated fields in the scope of https://github.com/gardener/gardener/issues/9176.
