@@ -62,7 +62,7 @@ const (
 	// All logs will be routed through the Collector before they reach the Vali instance.
 	// owner: @rrhubenov
 	// alpha: v1.124.0
-	// beta: v1.135.0
+	// beta: v1.136.0
 	OpenTelemetryCollector featuregate.Feature = "OpenTelemetryCollector"
 
 	// UseUnifiedHTTPProxyPort enables the gardenlet to set up the unified HTTP proxy network infrastructure.
