@@ -98,6 +98,10 @@ var _ = Describe("Original", func() {
 	})
 
 	Describe("#Components", func() {
+		BeforeEach(func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, false))
+		})
+
 		It("should compute the units and files", func() {
 			var order []string
 			for _, component := range Components(true) {
@@ -139,10 +143,6 @@ var _ = Describe("Original", func() {
 	})
 
 	Describe("#Components with OpenTelemetryCollector feature gate enabled", func() {
-		BeforeEach(func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, true))
-		})
-
 		It("should compute the units and files", func() {
 			var order []string
 			for _, component := range Components(true) {

@@ -13,7 +13,6 @@ spec:
     featureGates:
       DefaultSeccompProfile: true
       IstioTLSTermination: true
-      OpenTelemetryCollector: true
       VPAInPlaceUpdates: true
       VPNBondingModeRoundRobin: true
       PrometheusHealthChecks: true

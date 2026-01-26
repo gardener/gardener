@@ -26,7 +26,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | InPlaceNodeUpdates            | `false` | `Alpha` | `1.113` |         |
 | IstioTLSTermination           | `false` | `Alpha` | `1.114` |         |
 | CloudProfileCapabilities      | `false` | `Alpha` | `1.117` |         |
-| OpenTelemetryCollector        | `false` | `Alpha` | `1.124` |         |
+| OpenTelemetryCollector        | `false` | `Alpha` | `1.124` | `1.135` |
+| OpenTelemetryCollector        | `true`  | `Beta`  | `1.136` |         |
 | UseUnifiedHTTPProxyPort       | `false` | `Alpha` | `1.130` |         |
 | VPAInPlaceUpdates             | `false` | `Alpha` | `1.133` |         |
 | CustomDNSServerInNodeLocalDNS | `true`  | `Beta`  | `1.133` |         |
