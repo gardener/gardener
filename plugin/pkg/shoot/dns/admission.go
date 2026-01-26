@@ -104,7 +104,10 @@ func (d *DNS) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.MutationInterface = (*DNS)(nil)
+var (
+	_ admission.MutationInterface   = (*DNS)(nil)
+	_ admission.ValidationInterface = (*DNS)(nil)
+)
 
 // Admit tries to determine a DNS hosted zone for the Shoot's external domain.
 func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
@@ -393,4 +396,9 @@ func getDefaultDomains(secretLister kubecorev1listers.SecretLister, seedLister g
 		defaultDomains = append(defaultDomains, domain)
 	}
 	return defaultDomains, nil
+}
+
+// Validate validates the Shoot DNS specification.
+func (d *DNS) Validate(_ context.Context, _ admission.Attributes, _ admission.ObjectInterfaces) error {
+	return nil
 }

@@ -817,4 +817,8 @@ var _ = Describe("dns", func() {
 			})
 		})
 	})
+
+	Describe("#Validate", func() {
+
+	})
 })
