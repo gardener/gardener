@@ -59,6 +59,10 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 		warnings = append(warnings, "you are setting the spec.cloudProfileName field. The field is deprecated and will be forcefully set empty starting with Kubernetes 1.34. Use the new spec.cloudProfile.name field instead.")
 	}
 
+	if shoot.Spec.Addons != nil {
+		warnings = append(warnings, "you are setting the spec.addons field. The field is deprecated and will be forbidden starting with Kubernetes 1.35.")
+	}
+
 	if helper.IsKubeProxyIPVSMode(shoot.Spec.Kubernetes.KubeProxy) {
 		if err == nil && versionutils.ConstraintK8sGreaterEqual135.Check(kubernetesVersion) {
 			warnings = append(warnings, "you are using IPVS mode for kube-proxy. The IPVS mode is deprecated starting with Kubernetes 1.35. Please switch to iptables or nftables mode.")

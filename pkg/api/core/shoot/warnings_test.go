@@ -305,6 +305,14 @@ var _ = Describe("Warnings", func() {
 			})
 		})
 
+		Describe("shoot.spec.addons", func() {
+			It("should print a warning when addons are set", func() {
+				shoot.Spec.Addons = &core.Addons{}
+
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are setting the spec.addons field. The field is deprecated and will be forbidden starting with Kubernetes 1.35.")))
+			})
+		})
+
 		Describe("shoot.spec.kubernetes.kubeProxy.mode", func() {
 			It("should print a warning when kube-proxy mode is set to 'IPVS' and the Kubernetes version is >= v1.35", func() {
 				shoot.Spec.Kubernetes.Version = "1.35.0"

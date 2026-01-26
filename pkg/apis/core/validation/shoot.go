@@ -617,8 +617,17 @@ func validateAdvertisedURL(URL string, fldPath *field.Path) field.ErrorList {
 func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless bool, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if workerless && addons != nil {
+	if addons == nil {
+		return allErrs
+	}
+
+	if workerless {
 		allErrs = append(allErrs, field.Forbidden(fldPath, "addons cannot be enabled for Workerless Shoot clusters"))
+		return allErrs
+	}
+
+	if versionutils.ConstraintK8sGreaterEqual135.CheckVersion(kubernetesVersion) {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "for Kubernetes versions >= 1.35, addons field is no longer supported"))
 		return allErrs
 	}
 
@@ -652,9 +661,7 @@ func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless 
 	}
 
 	if helper.KubernetesDashboardEnabled(addons) {
-		if versionutils.ConstraintK8sGreaterEqual135.CheckVersion(kubernetesVersion) {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubernetesDashboard"), "for Kubernetes versions >= 1.35, kubernetesDashboard field is no longer supported"))
-		} else if authMode := addons.KubernetesDashboard.AuthenticationMode; authMode != nil {
+		if authMode := addons.KubernetesDashboard.AuthenticationMode; authMode != nil {
 			if !availableKubernetesDashboardAuthenticationModes.Has(*authMode) {
 				allErrs = append(allErrs, field.NotSupported(fldPath.Child("kubernetesDashboard", "authenticationMode"), *authMode, sets.List(availableKubernetesDashboardAuthenticationModes)))
 			}

@@ -493,16 +493,14 @@ var _ = Describe("Shoot defaulting", func() {
 	})
 
 	Describe("Addons defaulting", func() {
-		It("should default the addons field for shoot with workers", func() {
-			obj.Spec.Addons = nil
-
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Addons).NotTo(BeNil())
-		})
-
-		It("should default the kubernetesDashboard field for shoot with workers", func() {
-			obj.Spec.Addons = nil
+		It("should default the kubernetesDashboard field for shoot with workers when dashboard is enabled", func() {
+			obj.Spec.Addons = &Addons{
+				KubernetesDashboard: &KubernetesDashboard{
+					Addon: Addon{
+						Enabled: true,
+					},
+				},
+			}
 
 			SetObjectDefaults_Shoot(obj)
 
@@ -511,9 +509,24 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Addons.KubernetesDashboard.AuthenticationMode).To(PointTo(Equal(KubernetesDashboardAuthModeToken)))
 		})
 
-		It("should not default the kubernetesDashboard field for shoots with kubernetes >= 1.35", func() {
-			obj.Spec.Addons = nil
-			obj.Spec.Kubernetes.Version = "1.35"
+		It("should not default the kubernetesDashboard field for shoot with workers when dashboard is disabled", func() {
+			obj.Spec.Addons = &Addons{
+				KubernetesDashboard: &KubernetesDashboard{
+					Addon: Addon{
+						Enabled: false,
+					},
+				},
+			}
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Addons).NotTo(BeNil())
+			Expect(obj.Spec.Addons.KubernetesDashboard).NotTo(BeNil())
+			Expect(obj.Spec.Addons.KubernetesDashboard.AuthenticationMode).To(BeNil())
+		})
+
+		It("should default the kubernetesDashboard field for shoot with workers when dashboard is not specified", func() {
+			obj.Spec.Addons = &Addons{}
 
 			SetObjectDefaults_Shoot(obj)
 
@@ -521,14 +534,22 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Addons.KubernetesDashboard).To(BeNil())
 		})
 
-		It("should not default the kubernetesDashboard field when version is invalid", func() {
+		It("should not default the addons for shoots with kubernetes >= 1.35", func() {
+			obj.Spec.Addons = nil
+			obj.Spec.Kubernetes.Version = "1.35"
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Addons).To(BeNil())
+		})
+
+		It("should not default the addons when version is invalid", func() {
 			obj.Spec.Addons = nil
 			obj.Spec.Kubernetes.Version = "123"
 
 			SetObjectDefaults_Shoot(obj)
 
-			Expect(obj.Spec.Addons).NotTo(BeNil())
-			Expect(obj.Spec.Addons.KubernetesDashboard).To(BeNil())
+			Expect(obj.Spec.Addons).To(BeNil())
 		})
 
 		It("should not overwrite the already set values for kubernetesDashboard field", func() {

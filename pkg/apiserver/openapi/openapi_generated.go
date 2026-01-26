@@ -1201,7 +1201,7 @@ func schema_pkg_apis_core_v1beta1_Addons(ref common.ReferenceCallback) common.Op
 				Properties: map[string]spec.Schema{
 					"kubernetesDashboard": {
 						SchemaProps: spec.SchemaProps{
-							Description: "KubernetesDashboard holds configuration settings for the kubernetes dashboard addon. Deprecated: This field is deprecated. Enabling the kubernetes dashboard will be forbidden starting from Kubernetes 1.35.",
+							Description: "KubernetesDashboard holds configuration settings for the kubernetes dashboard addon.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesDashboard"),
 						},
 					},
@@ -9624,7 +9624,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 				Properties: map[string]spec.Schema{
 					"addons": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Addons contains information about enabled/disabled addons and their configuration.",
+							Description: "Addons contains information about enabled/disabled addons and their configuration. Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons"),
 						},
 					},

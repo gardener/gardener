@@ -238,6 +238,15 @@ func (shootStrategy) Canonicalize(obj runtime.Object) {
 		!*kubeAPIServer.EnableAnonymousAuthentication {
 		kubeAPIServer.EnableAnonymousAuthentication = nil
 	}
+
+	// Addons were previously defaulted to set the Kubernetes dashboard authentication mode.
+	// We can safely set it to nil when user has not explicitly enabled addons.
+	if addons := shoot.Spec.Addons; addons != nil &&
+		addons.KubernetesDashboard != nil && !addons.KubernetesDashboard.Enabled &&
+		addons.NginxIngress == nil {
+		shoot.Spec.Addons = nil
+	}
+
 	gardenerutils.MaintainSeedNameLabels(shoot, shoot.Spec.SeedName, shoot.Status.SeedName)
 	maintainIsSelfHostedLabel(shoot)
 }

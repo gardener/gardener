@@ -271,6 +271,17 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 	}
 
+	// Remove addons when Shoot cluster is being forcefully updated to K8s >= 1.35..
+	{
+		oldK8sLess135 := versionutils.ConstraintK8sLess135.Check(oldShootKubernetesVersion)
+		newK8sGreaterEqual135 := versionutils.ConstraintK8sGreaterEqual135.Check(shootKubernetesVersion)
+		if oldK8sLess135 && newK8sGreaterEqual135 && shoot.Spec.Addons != nil {
+			maintainedShoot.Spec.Addons = nil
+			reason := ".spec.addons was removed. Reason: addons are not supported anymore for Kubernetes versions 1.35+"
+			operations = append(operations, reason)
+		}
+	}
+
 	// Now it's time to update worker pool kubernetes version if specified
 	for i, pool := range maintainedShoot.Spec.Provider.Workers {
 		if pool.Kubernetes == nil || pool.Kubernetes.Version == nil {

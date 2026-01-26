@@ -1908,7 +1908,9 @@ Addons
 </td>
 <td>
 <em>(Optional)</em>
-<p>Addons contains information about enabled/disabled addons and their configuration.</p>
+<p>Addons contains information about enabled/disabled addons and their configuration.
+Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.
+TODO(timuthy): Drop this field after support for Kubernetes 1.34 is dropped.</p>
 </td>
 </tr>
 <tr>
@@ -2582,9 +2584,7 @@ KubernetesDashboard
 </td>
 <td>
 <em>(Optional)</em>
-<p>KubernetesDashboard holds configuration settings for the kubernetes dashboard addon.
-Deprecated: This field is deprecated. Enabling the kubernetes dashboard will be forbidden starting from Kubernetes 1.35.
-TODO(timuthy): Drop this field after support for Kubernetes 1.34 is dropped.</p>
+<p>KubernetesDashboard holds configuration settings for the kubernetes dashboard addon.</p>
 </td>
 </tr>
 <tr>
@@ -13359,7 +13359,9 @@ Addons
 </td>
 <td>
 <em>(Optional)</em>
-<p>Addons contains information about enabled/disabled addons and their configuration.</p>
+<p>Addons contains information about enabled/disabled addons and their configuration.
+Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.
+TODO(timuthy): Drop this field after support for Kubernetes 1.34 is dropped.</p>
 </td>
 </tr>
 <tr>
@@ -14106,7 +14108,9 @@ Addons
 </td>
 <td>
 <em>(Optional)</em>
-<p>Addons contains information about enabled/disabled addons and their configuration.</p>
+<p>Addons contains information about enabled/disabled addons and their configuration.
+Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.
+TODO(timuthy): Drop this field after support for Kubernetes 1.34 is dropped.</p>
 </td>
 </tr>
 <tr>

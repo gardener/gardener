@@ -421,13 +421,6 @@ spec:
 #   - start: "0 20 * * *" # Start hibernation every day at 8PM
 #     end: "0 6 * * *"    # Stop hibernation every day at 6AM
 #     location: "America/Los_Angeles" # Specify a location for the cron to run in
-  addons:
-    nginxIngress:
-      enabled: false
-    # loadBalancerSourceRanges: []
-    # externalTrafficPolicy: Cluster
-    # config:
-    #   enable-access-log-for-default-backend: "false"
 # tolerations:
 # - key: <some-key>
 # Explicitly specify the seed that will run the shoot control plane. Only possible for users having RBAC for

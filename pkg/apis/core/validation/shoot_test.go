@@ -668,25 +668,28 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Context("Addons validation", func() {
 			DescribeTable("addons validation",
-				func(purpose core.ShootPurpose, allowed bool) {
+				func(purpose core.ShootPurpose, kubernetesVersion string, allowed bool) {
 					shootCopy := shoot.DeepCopy()
 					shootCopy.Spec.Purpose = &purpose
+					shootCopy.Spec.Kubernetes.Version = kubernetesVersion
 
 					errorList := ValidateShoot(shootCopy)
 
+					expect := Expect(errorList).To
 					if allowed {
-						Expect(errorList).To(BeEmpty())
-					} else {
-						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("spec.addons"),
-						}))))
+						expect = Expect(errorList).NotTo
 					}
+
+					expect(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.addons"),
+					}))))
 				},
-				Entry("should allow addons on evaluation shoots", core.ShootPurposeEvaluation, true),
-				Entry("should forbid addons on testing shoots", core.ShootPurposeTesting, false),
-				Entry("should forbid addons on development shoots", core.ShootPurposeDevelopment, false),
-				Entry("should forbid addons on production shoots", core.ShootPurposeProduction, false),
+				Entry("should allow addons on evaluation shoots", core.ShootPurposeEvaluation, "1.34.0", true),
+				Entry("should forbid addons on testing shoots", core.ShootPurposeTesting, "1.34.0", false),
+				Entry("should forbid addons on development shoots", core.ShootPurposeDevelopment, "1.34.0", false),
+				Entry("should forbid addons on production shoots", core.ShootPurposeProduction, "1.34.0", false),
+				Entry("should forbid addons starting with Kubernetes 1.35", core.ShootPurposeEvaluation, "1.35.0", false),
 			)
 
 			It("should forbid addon configuration if the shoot is workerless", func() {
@@ -715,20 +718,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("spec.addons.kubernetesDashboard.authenticationMode"),
-				}))))
-			})
-
-			It("should forbid kubernetes dashboard for k8s versions >= 1.35", func() {
-				shoot.Spec.Kubernetes.Version = "1.35.0"
-				shoot.Spec.Addons.KubernetesDashboard = &core.KubernetesDashboard{
-					Addon: addon,
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.addons.kubernetesDashboard"),
 				}))))
 			})
 
@@ -2538,15 +2527,16 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					errorList := ValidateShoot(shoot)
 
+					expect := Expect(errorList).NotTo
 					if expectError {
-						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeForbidden),
-							"Field":  Equal("spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication"),
-							"Detail": Equal("for Kubernetes versions >= 1.35, enableAnonymousAuthentication field is no longer supported"),
-						}))))
-					} else {
-						Expect(errorList).To(BeEmpty())
+						expect = Expect(errorList).To
 					}
+
+					expect(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication"),
+						"Detail": Equal("for Kubernetes versions >= 1.35, enableAnonymousAuthentication field is no longer supported"),
+					}))))
 				},
 				Entry("should allow setting enableAnonymousAuthentication for Kubernetes version < 1.35", "1.34.0", ptr.To(true), false),
 				Entry("should forbid setting enableAnonymousAuthentication to true for Kubernetes version >= 1.35", "1.35.0", ptr.To(true), true),
