@@ -111,8 +111,10 @@ tests:
       - series: eval_time
         values: 0     1     2     3     4     5     6     7     8     9     10
 
-      - series: scrape_samples_post_metric_relabeling
-        values: 100   100   0     100   100   0     0     0     0     0     100
+      - series: scrape_samples_post_metric_relabeling{job="foo", instance="1"}
+        values: 100   100   0     100   0     0     0     0     0     0     100
+      - series: scrape_samples_post_metric_relabeling{job="foo", instance="2"}
+        values: 0     0     0     0     100   0     0     0     0     0     0
       - series: expected_healthcheck:up
         values: 0     1     0     1     1     0     0     0     0     0     1
 
