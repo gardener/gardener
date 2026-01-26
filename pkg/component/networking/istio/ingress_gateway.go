@@ -85,18 +85,31 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 
 		vpnValues := map[string]any{
 			"enabled": istioIngressGateway.VPNEnabled,
+			// TODO: remove ports, I only keep this to migrate the helm chart one-by-one
 			"ports": map[string]any{
 				"tls-tunnel": map[string]any{
 					"port":   vpnseedserver.GatewayPort,
 					"header": "Reversed-VPN",
 				},
 			},
+			"legacyPort": map[string]any{
+				"enabled": true,
+				"port":    vpnseedserver.GatewayPort,
+				"header":  "Reversed-VPN",
+			},
 		}
+
 		if features.DefaultFeatureGate.Enabled(features.UseUnifiedHTTPProxyPort) {
+			// TODO: remove ports, I only keep this to migrate the helm chart one-by-one
 			ports := vpnValues["ports"].(map[string]any)
 			ports["http-proxy"] = map[string]any{
 				"port":   vpnseedserver.HTTPProxyGatewayPort,
 				"header": "X-Gardener-Destination",
+			}
+			vpnValues["unifiedPort"] = map[string]any{
+				"enabled": true,
+				"port":    vpnseedserver.HTTPProxyGatewayPort,
+				"header":  "X-Gardener-Destination",
 			}
 		}
 
