@@ -352,6 +352,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*CloudProfileStatus)(nil), (*core.CloudProfileStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_CloudProfileStatus_To_core_CloudProfileStatus(a.(*CloudProfileStatus), b.(*core.CloudProfileStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.CloudProfileStatus)(nil), (*CloudProfileStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_CloudProfileStatus_To_v1beta1_CloudProfileStatus(a.(*core.CloudProfileStatus), b.(*CloudProfileStatus), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*ClusterAutoscaler)(nil), (*core.ClusterAutoscaler)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_ClusterAutoscaler_To_core_ClusterAutoscaler(a.(*ClusterAutoscaler), b.(*core.ClusterAutoscaler), scope)
 	}); err != nil {
@@ -672,6 +682,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*ExpirableVersionStatus)(nil), (*core.ExpirableVersionStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ExpirableVersionStatus_To_core_ExpirableVersionStatus(a.(*ExpirableVersionStatus), b.(*core.ExpirableVersionStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ExpirableVersionStatus)(nil), (*ExpirableVersionStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ExpirableVersionStatus_To_v1beta1_ExpirableVersionStatus(a.(*core.ExpirableVersionStatus), b.(*ExpirableVersionStatus), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*ExposureClass)(nil), (*core.ExposureClass)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_ExposureClass_To_core_ExposureClass(a.(*ExposureClass), b.(*core.ExposureClass), scope)
 	}); err != nil {
@@ -977,6 +997,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*KubernetesStatus)(nil), (*core.KubernetesStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_KubernetesStatus_To_core_KubernetesStatus(a.(*KubernetesStatus), b.(*core.KubernetesStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.KubernetesStatus)(nil), (*KubernetesStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_KubernetesStatus_To_v1beta1_KubernetesStatus(a.(*core.KubernetesStatus), b.(*KubernetesStatus), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*LastError)(nil), (*core.LastError)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_LastError_To_core_LastError(a.(*LastError), b.(*core.LastError), scope)
 	}); err != nil {
@@ -1004,6 +1034,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*core.LastOperation)(nil), (*LastOperation)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_core_LastOperation_To_v1beta1_LastOperation(a.(*core.LastOperation), b.(*LastOperation), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*LifecycleStage)(nil), (*core.LifecycleStage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_LifecycleStage_To_core_LifecycleStage(a.(*LifecycleStage), b.(*core.LifecycleStage), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.LifecycleStage)(nil), (*LifecycleStage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_LifecycleStage_To_v1beta1_LifecycleStage(a.(*core.LifecycleStage), b.(*LifecycleStage), scope)
 	}); err != nil {
 		return err
 	}
@@ -1074,6 +1114,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*core.MachineImageVersion)(nil), (*MachineImageVersion)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_core_MachineImageVersion_To_v1beta1_MachineImageVersion(a.(*core.MachineImageVersion), b.(*MachineImageVersion), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*MachineImageVersionStatus)(nil), (*core.MachineImageVersionStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_MachineImageVersionStatus_To_core_MachineImageVersionStatus(a.(*MachineImageVersionStatus), b.(*core.MachineImageVersionStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.MachineImageVersionStatus)(nil), (*MachineImageVersionStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_MachineImageVersionStatus_To_v1beta1_MachineImageVersionStatus(a.(*core.MachineImageVersionStatus), b.(*MachineImageVersionStatus), scope)
 	}); err != nil {
 		return err
 	}
@@ -2770,6 +2820,9 @@ func autoConvert_v1beta1_CloudProfile_To_core_CloudProfile(in *CloudProfile, out
 	if err := Convert_v1beta1_CloudProfileSpec_To_core_CloudProfileSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
+	if err := Convert_v1beta1_CloudProfileStatus_To_core_CloudProfileStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -2781,6 +2834,9 @@ func Convert_v1beta1_CloudProfile_To_core_CloudProfile(in *CloudProfile, out *co
 func autoConvert_core_CloudProfile_To_v1beta1_CloudProfile(in *core.CloudProfile, out *CloudProfile, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	if err := Convert_core_CloudProfileSpec_To_v1beta1_CloudProfileSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := Convert_core_CloudProfileStatus_To_v1beta1_CloudProfileStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
@@ -2879,6 +2935,28 @@ func autoConvert_core_CloudProfileSpec_To_v1beta1_CloudProfileSpec(in *core.Clou
 // Convert_core_CloudProfileSpec_To_v1beta1_CloudProfileSpec is an autogenerated conversion function.
 func Convert_core_CloudProfileSpec_To_v1beta1_CloudProfileSpec(in *core.CloudProfileSpec, out *CloudProfileSpec, s conversion.Scope) error {
 	return autoConvert_core_CloudProfileSpec_To_v1beta1_CloudProfileSpec(in, out, s)
+}
+
+func autoConvert_v1beta1_CloudProfileStatus_To_core_CloudProfileStatus(in *CloudProfileStatus, out *core.CloudProfileStatus, s conversion.Scope) error {
+	out.Kubernetes = *(*[]core.KubernetesStatus)(unsafe.Pointer(&in.Kubernetes))
+	out.MachineImageVersions = *(*[]core.MachineImageVersionStatus)(unsafe.Pointer(&in.MachineImageVersions))
+	return nil
+}
+
+// Convert_v1beta1_CloudProfileStatus_To_core_CloudProfileStatus is an autogenerated conversion function.
+func Convert_v1beta1_CloudProfileStatus_To_core_CloudProfileStatus(in *CloudProfileStatus, out *core.CloudProfileStatus, s conversion.Scope) error {
+	return autoConvert_v1beta1_CloudProfileStatus_To_core_CloudProfileStatus(in, out, s)
+}
+
+func autoConvert_core_CloudProfileStatus_To_v1beta1_CloudProfileStatus(in *core.CloudProfileStatus, out *CloudProfileStatus, s conversion.Scope) error {
+	out.Kubernetes = *(*[]KubernetesStatus)(unsafe.Pointer(&in.Kubernetes))
+	out.MachineImageVersions = *(*[]MachineImageVersionStatus)(unsafe.Pointer(&in.MachineImageVersions))
+	return nil
+}
+
+// Convert_core_CloudProfileStatus_To_v1beta1_CloudProfileStatus is an autogenerated conversion function.
+func Convert_core_CloudProfileStatus_To_v1beta1_CloudProfileStatus(in *core.CloudProfileStatus, out *CloudProfileStatus, s conversion.Scope) error {
+	return autoConvert_core_CloudProfileStatus_To_v1beta1_CloudProfileStatus(in, out, s)
 }
 
 func autoConvert_v1beta1_ClusterAutoscaler_To_core_ClusterAutoscaler(in *ClusterAutoscaler, out *core.ClusterAutoscaler, s conversion.Scope) error {
@@ -3700,6 +3778,7 @@ func autoConvert_v1beta1_ExpirableVersion_To_core_ExpirableVersion(in *Expirable
 	out.Version = in.Version
 	out.ExpirationDate = (*metav1.Time)(unsafe.Pointer(in.ExpirationDate))
 	out.Classification = (*core.VersionClassification)(unsafe.Pointer(in.Classification))
+	out.Lifecycle = *(*[]core.LifecycleStage)(unsafe.Pointer(&in.Lifecycle))
 	return nil
 }
 
@@ -3712,12 +3791,35 @@ func autoConvert_core_ExpirableVersion_To_v1beta1_ExpirableVersion(in *core.Expi
 	out.Version = in.Version
 	out.ExpirationDate = (*metav1.Time)(unsafe.Pointer(in.ExpirationDate))
 	out.Classification = (*VersionClassification)(unsafe.Pointer(in.Classification))
+	out.Lifecycle = *(*[]LifecycleStage)(unsafe.Pointer(&in.Lifecycle))
 	return nil
 }
 
 // Convert_core_ExpirableVersion_To_v1beta1_ExpirableVersion is an autogenerated conversion function.
 func Convert_core_ExpirableVersion_To_v1beta1_ExpirableVersion(in *core.ExpirableVersion, out *ExpirableVersion, s conversion.Scope) error {
 	return autoConvert_core_ExpirableVersion_To_v1beta1_ExpirableVersion(in, out, s)
+}
+
+func autoConvert_v1beta1_ExpirableVersionStatus_To_core_ExpirableVersionStatus(in *ExpirableVersionStatus, out *core.ExpirableVersionStatus, s conversion.Scope) error {
+	out.Version = in.Version
+	out.Classification = core.VersionClassification(in.Classification)
+	return nil
+}
+
+// Convert_v1beta1_ExpirableVersionStatus_To_core_ExpirableVersionStatus is an autogenerated conversion function.
+func Convert_v1beta1_ExpirableVersionStatus_To_core_ExpirableVersionStatus(in *ExpirableVersionStatus, out *core.ExpirableVersionStatus, s conversion.Scope) error {
+	return autoConvert_v1beta1_ExpirableVersionStatus_To_core_ExpirableVersionStatus(in, out, s)
+}
+
+func autoConvert_core_ExpirableVersionStatus_To_v1beta1_ExpirableVersionStatus(in *core.ExpirableVersionStatus, out *ExpirableVersionStatus, s conversion.Scope) error {
+	out.Version = in.Version
+	out.Classification = VersionClassification(in.Classification)
+	return nil
+}
+
+// Convert_core_ExpirableVersionStatus_To_v1beta1_ExpirableVersionStatus is an autogenerated conversion function.
+func Convert_core_ExpirableVersionStatus_To_v1beta1_ExpirableVersionStatus(in *core.ExpirableVersionStatus, out *ExpirableVersionStatus, s conversion.Scope) error {
+	return autoConvert_core_ExpirableVersionStatus_To_v1beta1_ExpirableVersionStatus(in, out, s)
 }
 
 func autoConvert_v1beta1_ExposureClass_To_core_ExposureClass(in *ExposureClass, out *core.ExposureClass, s conversion.Scope) error {
@@ -4680,6 +4782,26 @@ func Convert_core_KubernetesSettings_To_v1beta1_KubernetesSettings(in *core.Kube
 	return autoConvert_core_KubernetesSettings_To_v1beta1_KubernetesSettings(in, out, s)
 }
 
+func autoConvert_v1beta1_KubernetesStatus_To_core_KubernetesStatus(in *KubernetesStatus, out *core.KubernetesStatus, s conversion.Scope) error {
+	out.Versions = *(*[]core.ExpirableVersionStatus)(unsafe.Pointer(&in.Versions))
+	return nil
+}
+
+// Convert_v1beta1_KubernetesStatus_To_core_KubernetesStatus is an autogenerated conversion function.
+func Convert_v1beta1_KubernetesStatus_To_core_KubernetesStatus(in *KubernetesStatus, out *core.KubernetesStatus, s conversion.Scope) error {
+	return autoConvert_v1beta1_KubernetesStatus_To_core_KubernetesStatus(in, out, s)
+}
+
+func autoConvert_core_KubernetesStatus_To_v1beta1_KubernetesStatus(in *core.KubernetesStatus, out *KubernetesStatus, s conversion.Scope) error {
+	out.Versions = *(*[]ExpirableVersionStatus)(unsafe.Pointer(&in.Versions))
+	return nil
+}
+
+// Convert_core_KubernetesStatus_To_v1beta1_KubernetesStatus is an autogenerated conversion function.
+func Convert_core_KubernetesStatus_To_v1beta1_KubernetesStatus(in *core.KubernetesStatus, out *KubernetesStatus, s conversion.Scope) error {
+	return autoConvert_core_KubernetesStatus_To_v1beta1_KubernetesStatus(in, out, s)
+}
+
 func autoConvert_v1beta1_LastError_To_core_LastError(in *LastError, out *core.LastError, s conversion.Scope) error {
 	out.Description = in.Description
 	out.TaskID = (*string)(unsafe.Pointer(in.TaskID))
@@ -4758,6 +4880,28 @@ func autoConvert_core_LastOperation_To_v1beta1_LastOperation(in *core.LastOperat
 // Convert_core_LastOperation_To_v1beta1_LastOperation is an autogenerated conversion function.
 func Convert_core_LastOperation_To_v1beta1_LastOperation(in *core.LastOperation, out *LastOperation, s conversion.Scope) error {
 	return autoConvert_core_LastOperation_To_v1beta1_LastOperation(in, out, s)
+}
+
+func autoConvert_v1beta1_LifecycleStage_To_core_LifecycleStage(in *LifecycleStage, out *core.LifecycleStage, s conversion.Scope) error {
+	out.Classification = core.VersionClassification(in.Classification)
+	out.StartTime = (*metav1.Time)(unsafe.Pointer(in.StartTime))
+	return nil
+}
+
+// Convert_v1beta1_LifecycleStage_To_core_LifecycleStage is an autogenerated conversion function.
+func Convert_v1beta1_LifecycleStage_To_core_LifecycleStage(in *LifecycleStage, out *core.LifecycleStage, s conversion.Scope) error {
+	return autoConvert_v1beta1_LifecycleStage_To_core_LifecycleStage(in, out, s)
+}
+
+func autoConvert_core_LifecycleStage_To_v1beta1_LifecycleStage(in *core.LifecycleStage, out *LifecycleStage, s conversion.Scope) error {
+	out.Classification = VersionClassification(in.Classification)
+	out.StartTime = (*metav1.Time)(unsafe.Pointer(in.StartTime))
+	return nil
+}
+
+// Convert_core_LifecycleStage_To_v1beta1_LifecycleStage is an autogenerated conversion function.
+func Convert_core_LifecycleStage_To_v1beta1_LifecycleStage(in *core.LifecycleStage, out *LifecycleStage, s conversion.Scope) error {
+	return autoConvert_core_LifecycleStage_To_v1beta1_LifecycleStage(in, out, s)
 }
 
 func autoConvert_v1beta1_Limits_To_core_Limits(in *Limits, out *core.Limits, s conversion.Scope) error {
@@ -4948,6 +5092,28 @@ func autoConvert_core_MachineImageVersion_To_v1beta1_MachineImageVersion(in *cor
 // Convert_core_MachineImageVersion_To_v1beta1_MachineImageVersion is an autogenerated conversion function.
 func Convert_core_MachineImageVersion_To_v1beta1_MachineImageVersion(in *core.MachineImageVersion, out *MachineImageVersion, s conversion.Scope) error {
 	return autoConvert_core_MachineImageVersion_To_v1beta1_MachineImageVersion(in, out, s)
+}
+
+func autoConvert_v1beta1_MachineImageVersionStatus_To_core_MachineImageVersionStatus(in *MachineImageVersionStatus, out *core.MachineImageVersionStatus, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Versions = *(*[]core.ExpirableVersionStatus)(unsafe.Pointer(&in.Versions))
+	return nil
+}
+
+// Convert_v1beta1_MachineImageVersionStatus_To_core_MachineImageVersionStatus is an autogenerated conversion function.
+func Convert_v1beta1_MachineImageVersionStatus_To_core_MachineImageVersionStatus(in *MachineImageVersionStatus, out *core.MachineImageVersionStatus, s conversion.Scope) error {
+	return autoConvert_v1beta1_MachineImageVersionStatus_To_core_MachineImageVersionStatus(in, out, s)
+}
+
+func autoConvert_core_MachineImageVersionStatus_To_v1beta1_MachineImageVersionStatus(in *core.MachineImageVersionStatus, out *MachineImageVersionStatus, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Versions = *(*[]ExpirableVersionStatus)(unsafe.Pointer(&in.Versions))
+	return nil
+}
+
+// Convert_core_MachineImageVersionStatus_To_v1beta1_MachineImageVersionStatus is an autogenerated conversion function.
+func Convert_core_MachineImageVersionStatus_To_v1beta1_MachineImageVersionStatus(in *core.MachineImageVersionStatus, out *MachineImageVersionStatus, s conversion.Scope) error {
+	return autoConvert_core_MachineImageVersionStatus_To_v1beta1_MachineImageVersionStatus(in, out, s)
 }
 
 func autoConvert_v1beta1_MachineType_To_core_MachineType(in *MachineType, out *core.MachineType, s conversion.Scope) error {

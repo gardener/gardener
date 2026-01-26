@@ -92,7 +92,116 @@ spec:
         version: 1.24.5
 ```
 
-## Automatic Version Upgrades 
+
+## Version Classification Lifecycles (alpha)
+
+> This lifecycle is only available when the `VersionClassificationLifecycle` feature gate is enabled. The feature is Alpha and not fully implemented, enabling it may not provide the expected behavior.
+
+Kubernetes and machine image versions in the `CloudProfile` are classified into individual stages: `unavailable`, `preview`, `supported`, `deprecated`, and `expired`.
+
+Administrators may define a classification lifecycle, promoting versions through these lifecycle stages depending on time. The current classification stage is evaluated by the cloud profile reconciler and patched into the `status` subresource of the `CloudProfile`. If an administrator does not specify a classification lifecycle, the version defaults to `supported`.
+
+The version classification serves as a "point-of-reference" for end-users and also has implications during shoot creation and the maintenance time.
+
+As a best practice, versions usually start with the classification `preview`, then are promoted to `supported`, eventually `deprecated` and finally `expired`. Here is an example:
+
+```yaml
+# assume that the current date is 2024-12-03
+apiVersion: core.gardener.cloud/v1beta1
+kind: CloudProfile
+metadata:
+  name: local
+spec:
+  kubernetes:
+    versions:
+      - version: 1.30.6
+        lifecycle:
+          - classification: preview # starts in preview because no start time is defined
+          - classification: supported
+            startTime: "2024-12-01T00:00:00Z"
+          - classification: deprecated
+            startTime: "2025-03-01T00:00:00Z"
+          - classification: expired
+            startTime: "2025-04-01T00:00:00Z"
+status:
+  kubernetes:
+    versions:
+      - version: 1.30.6
+        classification: supported
+```
+
+The classification stages must occur in a specific order and the start time must reflect this order. Here is a list of the available classification stages in the order they can appear:
+
+- **unavailable:** An `unavailable` version is planned to become available in the future. It is not possible to reference this version in this stage and can be used by administrators to schedule a new version release. It can't be explicitly declared at this stage, this classification is automatically derived when the current time is before the first specified lifecycle stage.
+
+- **preview:** A `preview` version is a new version that has not yet undergone thorough testing, possibly a new release, and needs time to be validated.
+Due to its short early age, there is a higher probability of undiscovered issues and is therefore not yet recommended for production usage.
+A Shoot does not update (neither `auto-update` or `force-update`) to a `preview` version during the maintenance time.
+Also, `preview` versions are not considered for the defaulting to the highest available version when deliberately omitting the patch version during Shoot creation.
+Typically, after a fresh release of a new Kubernetes (e.g., v1.25.0) or Machine image version (e.g., suse-chost 15.4.20220818), the operator tags it as `preview` until they have gained sufficient experience and regards this version to be reliable.
+After the operator has gained sufficient trust, the version can be manually promoted to `supported`.
+
+- **supported:** A `supported` version is the recommended version for new and existing Shoot clusters. This is the version that new Shoot clusters should use and existing clusters should update to.
+Typically for Kubernetes versions, the latest Kubernetes patch versions of the actual (if not still in `preview`) and the last 3 minor Kubernetes versions are maintained by the community. An operator could define these versions as being `supported` (e.g., v1.27.6, v1.26.10, and v1.25.12).
+
+- **deprecated:** A `deprecated` version is a version that approaches the end of its lifecycle and can contain issues which are probably resolved in a supported version.
+New Shoots should not use this version anymore.
+Existing Shoots will be updated to a newer version if `auto-update` is enabled (`.spec.maintenance.autoUpdate.kubernetesVersion` for Kubernetes version `auto-update`, or `.spec.maintenance.autoUpdate.machineImageVersion` for machine image version `auto-update`).
+Using automatic upgrades, however, does not guarantee that a Shoot runs a non-deprecated version, as the latest version (overall or of the minor version) can be deprecated as well.
+
+- **expired:** An `expired` version cannot be used to create a new cluster and existing clusters are forcefully migrated to a higher version during the maintenance time.
+
+Below is a more complex example illustrating different scenarios for lifecycle classifications:
+
+```yaml
+# assume that the current date is 2024-12-03
+apiVersion: core.gardener.cloud/v1beta1
+kind: CloudProfile
+metadata:
+  name: local
+spec:
+  kubernetes:
+    versions:
+      # if an administrator deploys just the version without any lifecycle,
+      # the reconciler will evaluate the classification status to supported
+      - version: 1.27.0
+
+      # when introducing a new version it may not contain any deprecation or expiration date yet
+      - version: 1.28.0
+        lifecycle:
+          - classification: preview
+          - classification: supported
+            startTime: 2024-12-01T00:00:00Z"
+
+      # it is not strictly required that every lifecycle stage must occur,
+      # they can also be dropped as long as their general order is maintained
+      - version: 1.18.0
+        lifecycle:
+          - classification: supported
+          - classification: expired
+            startTime: 2022-06-01T00:00:00Z"
+
+      # to schedule a new version release, the administrator can define the start times
+      # of all lifecycle events in the future, such that the classification status will
+      # be evaluated to unavailable
+      - version: 2.0.0
+        lifecycle:
+          - classification: preview
+            startTime: 2036-02-07T06:28:16Z"
+status:
+  kubernetes:
+    versions:
+      - version: 1.27.0
+        classification: supported
+      - version: 1.28.0
+        classification: supported
+      - version: 1.18.0
+        classification: expired
+      - version: 2.0.0
+        classification: unavailable
+```
+
+## Automatic Version Upgrades
 
 There are two ways, the Kubernetes version of the control plane as well as the Kubernetes and machine image version of a worker pool can be upgraded: `auto update` and `forceful` update.
 See [Automatic Version Updates](../shoot/shoot_maintenance.md#automatic-version-updates) for how to enable `auto updates` for Kubernetes or machine image versions on the Shoot cluster.
@@ -104,7 +213,7 @@ This happens **even if the owner has opted out of automatic cluster updates!**
 - The `Shoot` has auto-update enabled and the version is not the *latest eligible version* for the auto-update. Please note that this *latest version* that qualifies for an auto-update is not necessarily the overall latest version in the CloudProfile:
    - For Kubernetes version, the latest eligible version for auto-updates is the latest patch version of the current minor.
    - For machine image version, the latest eligible version for auto-updates is controlled by the `updateStrategy` field of the machine image in the CloudProfile.
-- The `Shoot` has auto-update disabled and the version is either expired or does not exist. 
+- The `Shoot` has auto-update disabled and the version is either expired or does not exist.
 
 The auto update can fail if the version is already on the *latest eligible version* for the auto-update. A failed auto update triggers a **force update**.
 The force and auto update path for Kubernetes and machine image versions differ slightly and are described in more detail below.
@@ -135,7 +244,7 @@ machineImages:
   - name: suse-chost
     updateStrategy: patch
     versions:
-    - version: 15.3.20220818 
+    - version: 15.3.20220818
     - version: 15.3.20221118
 ```
 
