@@ -94,20 +94,8 @@ func (namespacedCloudProfileStrategy) WarningsOnCreate(_ context.Context, _ runt
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (namespacedCloudProfileStrategy) WarningsOnUpdate(_ context.Context, obj, old runtime.Object) []string {
-	if obj == nil || old == nil {
-		return nil
-	}
-	var (
-		warnings               []string
-		newProfile, oldProfile = obj.(*core.NamespacedCloudProfile), old.(*core.NamespacedCloudProfile)
-		newLimits, oldLimits   = newProfile.Spec.Limits, oldProfile.Spec.Limits
-	)
-	if newLimits != nil && oldLimits != nil && validation.HasDecreasedMaxNodesTotal(newLimits.MaxNodesTotal, oldLimits.MaxNodesTotal) {
-		warnings = append(warnings, "Reducing `spec.limits.maxNodesTotal` may lead to unintended consequences, such as the termination of currently running nodes that exceed the new limit.")
-	}
-
-	return warnings
+func (namespacedCloudProfileStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
+	return nil
 }
 
 // dropInactiveVersions drops expired versions that are not already present in the NamespacedCloudProfile.
