@@ -143,7 +143,7 @@ tests:
         values: 0+1x10
     promql_expr_test: *promql_expr_test
 
-  # The focus of this test is the scrape_samples_scraped_scrape_samples_post_metric_relabeling time series.
+  # The focus of this test is the scrape_samples_post_metric_relabeling time series.
   #
   # This test shows that healthcheck:up will report an unhealthy state if a scrape job yields zero samples.
   - input_series:
