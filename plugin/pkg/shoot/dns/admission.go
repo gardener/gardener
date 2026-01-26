@@ -111,19 +111,8 @@ var (
 
 // Admit tries to determine a DNS hosted zone for the Shoot's external domain.
 func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
-	// Wait until the caches have been synced
-	if d.readyFunc == nil {
-		d.AssignReadyFunc(func() bool {
-			for _, readyFunc := range readyFuncs {
-				if !readyFunc() {
-					return false
-				}
-			}
-			return true
-		})
-	}
-	if !d.WaitForReady() {
-		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
+	if err := d.waitUntilReady(a); err != nil {
+		return fmt.Errorf("err while waiting for ready: %w", err)
 	}
 
 	// Ignore all kinds other than Shoot
@@ -219,6 +208,25 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 			return err
 		}
 	}
+	return nil
+}
+
+func (d *DNS) waitUntilReady(a admission.Attributes) error {
+	// Wait until the caches have been synced
+	if d.readyFunc == nil {
+		d.AssignReadyFunc(func() bool {
+			for _, readyFunc := range readyFuncs {
+				if !readyFunc() {
+					return false
+				}
+			}
+			return true
+		})
+	}
+	if !d.WaitForReady() {
+		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
+	}
+
 	return nil
 }
 
@@ -399,6 +407,10 @@ func getDefaultDomains(secretLister kubecorev1listers.SecretLister, seedLister g
 }
 
 // Validate validates the Shoot DNS specification.
-func (d *DNS) Validate(_ context.Context, _ admission.Attributes, _ admission.ObjectInterfaces) error {
+func (d *DNS) Validate(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
+	if err := d.waitUntilReady(a); err != nil {
+		return fmt.Errorf("err while waiting for ready: %w", err)
+	}
+
 	return nil
 }
