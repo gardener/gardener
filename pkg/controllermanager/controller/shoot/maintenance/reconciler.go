@@ -214,7 +214,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			if maintainedShoot.Spec.Kubernetes.KubeAPIServer != nil && maintainedShoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication != nil {
 				maintainedShoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = nil
 
-				reason := ".spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication is set to nil. Reason: The field is no longer supported for Shoot clusters using Kubernetes version 1.35+"
+				reason := ".spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication was removed. Reason: The field is no longer supported for Shoot clusters using Kubernetes version 1.35+"
 				operations = append(operations, reason)
 			}
 		}
