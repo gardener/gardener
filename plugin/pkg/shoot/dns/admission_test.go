@@ -42,6 +42,49 @@ const (
 
 var _ = Describe("dns", func() {
 
+	Describe("#Register", func() {
+		It("should register the plugin", func() {
+			plugins := admission.NewPlugins()
+			Register(plugins)
+
+			registered := plugins.Registered()
+			Expect(registered).To(HaveLen(1))
+			Expect(registered).To(ContainElement("ShootDNS"))
+		})
+	})
+
+	Describe("#New", func() {
+		It("should handle CREATE and UPDATE operations", func() {
+			admissionHandler, err := New()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(admissionHandler.Handles(admission.Create)).To(BeTrue())
+			Expect(admissionHandler.Handles(admission.Update)).To(BeTrue())
+			Expect(admissionHandler.Handles(admission.Connect)).To(BeFalse())
+			Expect(admissionHandler.Handles(admission.Delete)).To(BeFalse())
+		})
+	})
+
+	Describe("#ValidateInitialization", func() {
+		It("should return error if a lister is missing", func() {
+			admissionHandler, err := New()
+			Expect(err).NotTo(HaveOccurred())
+
+			err = admissionHandler.ValidateInitialization()
+			Expect(err).To(MatchError("missing secret lister"))
+		})
+
+		It("should not return error if all listers are set", func() {
+			admissionHandler, err := New()
+			Expect(err).NotTo(HaveOccurred())
+			kubeInformerFactory := kubeinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
+			coreInformerFactory := gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
+
+			Expect(admissionHandler.ValidateInitialization()).To(Succeed())
+		})
+	})
+
 	Describe("#Admit", func() {
 		var (
 			admissionHandler    *DNS
