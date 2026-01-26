@@ -1,7 +1,7 @@
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
-  name: reversed-vpn
+  name: http-proxy
   namespace: test-ingress
 spec:
   configPatches:
@@ -23,7 +23,7 @@ spec:
             virtual_hosts:
             - domains:
               - "*"
-              name: reversed-vpn-http-proxy
+              name: http-proxy
               routes:
               - match:
                   connect_matcher: {}
@@ -52,53 +52,6 @@ spec:
                 redirect:
                   https_redirect: true
                   port_redirect: 443
-  - applyTo: NETWORK_FILTER
-    match:
-      context: GATEWAY
-      listener:
-        filterChain:
-          filter:
-            name: envoy.filters.network.http_connection_manager
-        portNumber: 8132
-    patch:
-      operation: MERGE
-      value:
-        name: envoy.filters.network.http_connection_manager
-        typed_config:
-          '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-          route_config:
-            virtual_hosts:
-            - domains:
-              - "*"
-              name: reversed-vpn-tls-tunnel
-              routes:
-              - match:
-                  connect_matcher: {}
-                  headers:
-                    - name: Reversed-VPN
-                      string_match:
-                        safe_regex:
-                          regex: '^(outbound\|(1194\|\|vpn-seed-server(-[0-4])?|443\|\|kube-apiserver)\..*\.svc\.cluster\.local|shoot--.*--.*--kube-apiserver-socket)$'
-                route:
-                  cluster_header: Reversed-VPN
-                  upgrade_configs:
-                  - connect_config: {}
-                    upgrade_type: CONNECT
-              # need to have two catch-all rules here
-              # one for CONNECT requests as they don't have a path in HTTP 1.1
-              #   see: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-routematch -> connect_matcher
-              # the other is for all non-CONNECT requests
-              - match:
-                  connect_matcher: {}
-                redirect:
-                  https_redirect: true
-                  port_redirect: 443
-              # Redirect requests to the https port to make probing more painful/cost intensive
-              - match:
-                  prefix: "/"
-                redirect:
-                  https_redirect: true
-                  port_redirect: 443
   workloadSelector:
     labels:
       app: istio-ingressgateway
@@ -107,7 +60,7 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
-  name: http-connect-listener
+  name: http-proxy-listener
   namespace: test-ingress
 spec:
   configPatches:
@@ -116,24 +69,6 @@ spec:
       context: GATEWAY
       listener:
         portNumber: 8443
-        filterChain:
-          filter:
-            name: envoy.filters.network.http_connection_manager
-    patch:
-      operation: MERGE
-      value:
-        name: envoy.filters.network.http_connection_manager
-        typed_config:
-          "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
-          http_protocol_options:
-            accept_http_10: true
-          upgrade_configs:
-          - upgrade_type: CONNECT
-  - applyTo: NETWORK_FILTER
-    match:
-      context: GATEWAY
-      listener:
-        portNumber: 8132
         filterChain:
           filter:
             name: envoy.filters.network.http_connection_manager

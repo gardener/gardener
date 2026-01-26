@@ -1,8 +1,8 @@
-{{- if and .Values.vpn.enabled .Values.vpn.legacyPort.enabled -}}
+{{- if and .Values.vpn.enabled .Values.vpn.unifiedPort.enabled -}}
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
-  name: reversed-vpn
+  name: http-proxy
   namespace: {{ .Release.Namespace }}
 spec:
   configPatches:
@@ -13,7 +13,7 @@ spec:
         filterChain:
           filter:
             name: envoy.filters.network.http_connection_manager
-        portNumber: {{ .Values.vpn.legacyPort.port }}
+        portNumber: {{ .Values.vpn.unifiedPort.port }}
     patch:
       operation: MERGE
       value:
@@ -24,17 +24,17 @@ spec:
             virtual_hosts:
             - domains:
               - "*"
-              name: reversed-vpn-tls-tunnel
+              name: http-proxy
               routes:
               - match:
                   connect_matcher: {}
                   headers:
-                    - name: {{ .Values.vpn.legacyPort.header }}
+                    - name: {{ .Values.vpn.unifiedPort.header }}
                       string_match:
                         safe_regex:
                           regex: '^(outbound\|(1194\|\|vpn-seed-server(-[0-4])?|443\|\|kube-apiserver)\..*\.svc\.cluster\.local|shoot--.*--.*--kube-apiserver-socket)$'
                 route:
-                  cluster_header: {{ .Values.vpn.legacyPort.header }}
+                  cluster_header: {{ .Values.vpn.unifiedPort.header }}
                   upgrade_configs:
                   - connect_config: {}
                     upgrade_type: CONNECT
@@ -60,7 +60,7 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
-  name: http-connect-listener
+  name: http-proxy-listener
   namespace: {{ .Release.Namespace }}
 spec:
   configPatches:
@@ -68,7 +68,7 @@ spec:
     match:
       context: GATEWAY
       listener:
-        portNumber: {{ .Values.vpn.legacyPort.port }}
+        portNumber: {{ .Values.vpn.unifiedPort.port }}
         filterChain:
           filter:
             name: envoy.filters.network.http_connection_manager
