@@ -29,6 +29,17 @@ import (
 	. "github.com/gardener/gardener/plugin/pkg/shoot/dns"
 )
 
+const (
+	namespace   = "my-namespace"
+	projectName = "my-project"
+	seedName    = "my-seed"
+	shootName   = "shoot"
+
+	domain               = "example.com"
+	domainHigherPriority = "higher.example.com"
+	domainLowerPriority  = "lower.example.com"
+)
+
 var _ = Describe("dns", func() {
 
 	Describe("#Admit", func() {
@@ -40,15 +51,6 @@ var _ = Describe("dns", func() {
 			seed  gardencorev1beta1.Seed
 			shoot core.Shoot
 
-			namespace   = "my-namespace"
-			projectName = "my-project"
-			seedName    = "my-seed"
-			shootName   = "shoot"
-
-			domain               = "example.com"
-			domainHigherPriority = "higher.example.com"
-			domainLowerPriority  = "lower.example.com"
-
 			provider = core.DNSUnmanaged
 
 			project = gardencorev1beta1.Project{
@@ -56,7 +58,7 @@ var _ = Describe("dns", func() {
 					Name: projectName,
 				},
 				Spec: gardencorev1beta1.ProjectSpec{
-					Namespace: &namespace,
+					Namespace: ptr.To(namespace),
 				},
 			}
 
@@ -118,7 +120,7 @@ var _ = Describe("dns", func() {
 				},
 				Spec: core.ShootSpec{
 					DNS:      &core.DNS{},
-					SeedName: &seedName,
+					SeedName: ptr.To(seedName),
 				},
 			}
 		)
