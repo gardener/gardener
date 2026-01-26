@@ -186,16 +186,20 @@ var _ = Describe("dns", func() {
 			seed = seedBase
 		})
 
+		It("should do nothing if the resource is not a Shoot", func() {
+			attrs := admission.NewAttributesRecord(nil, nil, core.Kind("foo").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("foos").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+			Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+		})
+
 		It("should do nothing because the shoot status is updated", func() {
 			shootCopy := shoot.DeepCopy()
 			shootCopy.Spec.SeedName = nil
 			shootBefore := shootCopy.DeepCopy()
 
-			attrs := admission.NewAttributesRecord(shootCopy, nil, core.Kind("Shoot").WithVersion("version"), shootCopy.Namespace, shootCopy.Name, core.Resource("shoots").WithVersion("version"), "status", admission.Create, &metav1.CreateOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(shootCopy, nil, core.Kind("Shoot").WithVersion("version"), shootCopy.Namespace, shootCopy.Name, core.Resource("shoots").WithVersion("version"), "status", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-			err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-			Expect(err).NotTo(HaveOccurred())
+			Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 			Expect(*shootCopy).To(Equal(*shootBefore))
 		})
 
@@ -864,6 +868,37 @@ var _ = Describe("dns", func() {
 	})
 
 	Describe("#Validate", func() {
+		var (
+			ctx              context.Context
+			shoot            *core.Shoot
+			admissionHandler *DNS
+		)
 
+		BeforeEach(func() {
+			ctx = context.Background()
+			shoot = &core.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      shootName,
+					Namespace: namespace,
+				},
+			}
+
+			var err error
+			admissionHandler, err = New()
+			Expect(err).ToNot(HaveOccurred())
+			admissionHandler.AssignReadyFunc(func() bool { return true })
+		})
+
+		It("should do nothing if the resource is not a Shoot", func() {
+			attrs := admission.NewAttributesRecord(nil, nil, core.Kind("foo").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("foos").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+			Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+		})
+
+		It("should do nothing because the shoot status is updated", func() {
+			attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "status", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+			Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+		})
 	})
 })

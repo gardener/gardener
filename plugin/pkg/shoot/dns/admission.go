@@ -115,16 +115,10 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 		return fmt.Errorf("err while waiting for ready: %w", err)
 	}
 
-	// Ignore all kinds other than Shoot
-	if a.GetKind().GroupKind() != core.Kind("Shoot") {
+	if shouldIgnore(a) {
 		return nil
 	}
-	// Ignore updates to all subresources, except for binding
-	// Binding subresource is required because there are fields being set in the shoot
-	// when it is scheduled and we want this plugin to be triggered.
-	if a.GetSubresource() != "" && a.GetSubresource() != "binding" {
-		return nil
-	}
+
 	shoot, ok := a.GetObject().(*core.Shoot)
 	if !ok {
 		return apierrors.NewBadRequest("could not convert resource into Shoot object")
@@ -228,6 +222,21 @@ func (d *DNS) waitUntilReady(a admission.Attributes) error {
 	}
 
 	return nil
+}
+
+func shouldIgnore(a admission.Attributes) bool {
+	// Ignore all kinds other than Shoot
+	if a.GetKind().GroupKind() != core.Kind("Shoot") {
+		return true
+	}
+	// Ignore updates to all subresources, except for binding.
+	// Binding subresource is required because there are fields being set in the shoot
+	// when it is scheduled and we want this plugin to be triggered.
+	if a.GetSubresource() != "" && a.GetSubresource() != "binding" {
+		return true
+	}
+
+	return false
 }
 
 // checkPrimaryDNSProvider checks if the shoot uses a default domain and returns an error
@@ -410,6 +419,10 @@ func getDefaultDomains(secretLister kubecorev1listers.SecretLister, seedLister g
 func (d *DNS) Validate(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	if err := d.waitUntilReady(a); err != nil {
 		return fmt.Errorf("err while waiting for ready: %w", err)
+	}
+
+	if shouldIgnore(a) {
+		return nil
 	}
 
 	return nil
