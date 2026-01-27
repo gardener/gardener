@@ -722,7 +722,7 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 		}
 	}
 
-	if internalDomain != nil && internalDomain.Provider != core.DNSUnmanaged && internalDomain.Provider != "" {
+	if internalDomain != nil && internalDomain.Provider != core.DNSUnmanaged {
 		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.DNSRecordResource, internalDomain.Provider))
 	}
 
