@@ -36,6 +36,13 @@ func HasName(name string) predicate.Predicate {
 	})
 }
 
+// HasNamespace returns a predicate which returns true when the object has the provided namespace.
+func HasNamespace(namespace string) predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return obj.GetNamespace() == namespace
+	})
+}
+
 // EventType is an alias for byte.
 type EventType byte
 
