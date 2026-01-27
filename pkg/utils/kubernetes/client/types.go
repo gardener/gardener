@@ -32,11 +32,11 @@ type Cleaner interface {
 type GoneEnsurer interface {
 	// EnsureGone ensures that the given resource is gone. If the resource is not gone, it will throw
 	// a NewObjectsRemaining error.
-	EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...client.ListOption) error
+	EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...CleanOption) error
 }
 
 // GoneEnsurerFunc is a function that implements GoneEnsurer.
-type GoneEnsurerFunc func(ctx context.Context, c client.Client, obj runtime.Object, opts ...client.ListOption) error
+type GoneEnsurerFunc func(ctx context.Context, c client.Client, obj runtime.Object, opts ...CleanOption) error
 
 // CleanOps are ops to clean.
 type CleanOps interface {

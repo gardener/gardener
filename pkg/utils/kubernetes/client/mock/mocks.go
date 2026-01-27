@@ -87,7 +87,7 @@ func (m *MockGoneEnsurer) EXPECT() *MockGoneEnsurerMockRecorder {
 }
 
 // EnsureGone mocks base method.
-func (m *MockGoneEnsurer) EnsureGone(ctx context.Context, c client0.Client, obj runtime.Object, opts ...client0.ListOption) error {
+func (m *MockGoneEnsurer) EnsureGone(ctx context.Context, c client0.Client, obj runtime.Object, opts ...client.CleanOption) error {
 	m.ctrl.T.Helper()
 	varargs := []any{ctx, c, obj}
 	for _, a := range opts {

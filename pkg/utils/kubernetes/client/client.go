@@ -273,7 +273,7 @@ func DefaultVolumeSnapshotContentCleaner() Cleaner {
 var defaultGoneEnsurer = GoneEnsurerFunc(EnsureGone)
 
 // EnsureGone implements GoneEnsurer.
-func (f GoneEnsurerFunc) EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...client.ListOption) error {
+func (f GoneEnsurerFunc) EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...CleanOption) error {
 	return f(ctx, c, obj, opts...)
 }
 
@@ -283,10 +283,13 @@ func DefaultGoneEnsurer() GoneEnsurer {
 }
 
 // EnsureGone ensures that the given object or list is gone.
-func EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...client.ListOption) error {
+func EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...CleanOption) error {
+	cleanOptions := &CleanOptions{}
+	cleanOptions.ApplyOptions(opts)
+
 	switch o := obj.(type) {
 	case client.ObjectList:
-		return ensureCollectionGone(ctx, c, o, opts...)
+		return ensureCollectionGone(ctx, c, o, cleanOptions.ListOptions...)
 	case client.Object:
 		return ensureGone(ctx, c, o)
 	}
@@ -372,16 +375,13 @@ type cleanerOps struct {
 // CleanAndEnsureGone cleans the target resources. Afterwards, it checks, whether the target resource is still
 // present. If yes, it errors with a NewObjectsRemaining error.
 func (o *cleanerOps) CleanAndEnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...CleanOption) error {
-	cleanOptions := &CleanOptions{}
-	cleanOptions.ApplyOptions(opts)
-
 	for _, cle := range o.cleaners {
 		if err := cle.Clean(ctx, c, obj, opts...); err != nil {
 			return err
 		}
 	}
 
-	return o.EnsureGone(ctx, c, obj, cleanOptions.ListOptions...)
+	return o.EnsureGone(ctx, c, obj, opts...)
 }
 
 // NewCleanOps instantiates new CleanOps with the given Cleaner and GoneEnsurer.
