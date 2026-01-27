@@ -163,7 +163,8 @@ func (cl *cleaner) doClean(ctx context.Context, c client.Client, obj client.Obje
 		}
 
 		if hasFinalizers {
-			return cl.finalizer.Finalize(ctx, c, obj)
+			// Ignore NotFound errors which might happen if the object or its namespace got deleted in the meantime.
+			return client.IgnoreNotFound(cl.finalizer.Finalize(ctx, c, obj))
 		}
 	}
 

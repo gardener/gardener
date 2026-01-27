@@ -263,6 +263,27 @@ var _ = Describe("Cleaner", func() {
 				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(20))).To(Succeed())
 			})
 
+			It("should ignore not found errors when finalizing objects", func() {
+				var (
+					ctx               = context.TODO()
+					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
+					now               = time.Unix(60, 0)
+					list              = &corev1.ConfigMapList{}
+					cleaner           = NewCleaner(timeOps, NewFinalizer())
+				)
+
+				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
+				cm2.DeletionTimestamp = &deletionTimestamp
+
+				gomock.InOrder(
+					c.EXPECT().List(ctx, list).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2WithFinalizer}}),
+					timeOps.EXPECT().Now().Return(now),
+					test.EXPECTPatch(ctx, c, &cm2, &cm2WithFinalizer, types.MergePatchType).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+				)
+
+				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(20))).To(Succeed())
+			})
+
 			It("should not delete the list if the object's deletion timestamp is not over the finalize grace period", func() {
 				var (
 					ctx               = context.TODO()
