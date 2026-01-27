@@ -338,6 +338,11 @@
       },
       {
         "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "30m",
+          "value": "30"
+        },
         "description": "",
         "error": null,
         "hide": 0,
@@ -404,6 +409,11 @@
       },
       {
         "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "0.2",
+          "value": "0.2"
+        },
         "description": null,
         "error": null,
         "hide": 0,
