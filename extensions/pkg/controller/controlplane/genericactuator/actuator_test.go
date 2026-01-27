@@ -143,13 +143,13 @@ var _ = Describe("Actuator", func() {
 		checksums = map[string]string{
 			v1beta1constants.SecretNameCloudProvider: "8bafb35ff1ac60275d62e1cbd495aceb511fb354f74a20f7d06ecb48b3a68432",
 			cloudProviderConfigName:                  "08a7bc7fe8f59b055f173145e211760a83f02cf89635cef26ebb351378635606",
-			caNameControlPlane:                       "3e6425b85bb75f33df7c16387b6999eb0f2d3c3e0a81afb4739626c69a79887b",
-			"cloud-controller-manager":               "47448ddc1d8c7b02d20125b4f0914acf8402ee9d763d5bdd48634fcbf8d75b1d",
+			caNameControlPlane:                       "4eaacd526bec01da8f0fbf602077712294caffe81f9fb366bb7d5dea91204246",
+			"cloud-controller-manager":               "1dac327f1cd4dd1c108446bb8b414e7a0551f792ad9ff1139b743a0046a1d659",
 		}
 		checksumsNoConfig = map[string]string{
 			v1beta1constants.SecretNameCloudProvider: "8bafb35ff1ac60275d62e1cbd495aceb511fb354f74a20f7d06ecb48b3a68432",
-			caNameControlPlane:                       "3e6425b85bb75f33df7c16387b6999eb0f2d3c3e0a81afb4739626c69a79887b",
-			"cloud-controller-manager":               "47448ddc1d8c7b02d20125b4f0914acf8402ee9d763d5bdd48634fcbf8d75b1d",
+			caNameControlPlane:                       "4eaacd526bec01da8f0fbf602077712294caffe81f9fb366bb7d5dea91204246",
+			"cloud-controller-manager":               "1dac327f1cd4dd1c108446bb8b414e7a0551f792ad9ff1139b743a0046a1d659",
 		}
 
 		configChartValues = map[string]any{
@@ -504,8 +504,8 @@ webhooks:
 			Expect(err).NotTo(HaveOccurred())
 
 			expectSecretsManagedBySecretsManager(fakeClient, "wanted secrets should get created",
-				"ca-provider-test-controlplane-05334c48", "ca-provider-test-controlplane-bundle-bdc12448",
-				"cloud-controller-manager-bc446deb",
+				"ca-provider-test-controlplane-05334c48", "ca-provider-test-controlplane-bundle-67817cb3",
+				"cloud-controller-manager-c249bd1b",
 			)
 		},
 		Entry("should deploy secrets and apply charts with correct parameters", cloudProviderConfigName, checksums, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true),
