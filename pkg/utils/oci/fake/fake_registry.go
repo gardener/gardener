@@ -22,7 +22,8 @@ type Registry struct {
 	mu        sync.Mutex
 	artifacts map[string][]byte
 
-	expectedPullSecretNamespace string
+	expectedPullSecretNamespace     string
+	expectedCABundleSecretNamespace string
 }
 
 // NewRegistry returns a new registry
@@ -47,6 +48,19 @@ func (r *Registry) Pull(ctx context.Context, ociRepo *gardencorev1.OCIRepository
 			return nil, fmt.Errorf("expected pull secret namespace %q, but got %q", r.expectedPullSecretNamespace, vs)
 		}
 	}
+	if r.expectedCABundleSecretNamespace != "" {
+		v := ctx.Value(oci.ContextKeyCABundleSecretNamespace)
+		if v == nil {
+			return nil, fmt.Errorf("expected CA bundle secret namespace %q, but not found in context", r.expectedCABundleSecretNamespace)
+		}
+		vs, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("expected CA bundle secret namespace %q, but got %v", r.expectedCABundleSecretNamespace, v)
+		}
+		if vs != r.expectedCABundleSecretNamespace {
+			return nil, fmt.Errorf("expected CA bundle secret namespace %q, but got %q", r.expectedCABundleSecretNamespace, vs)
+		}
+	}
 	data, ok := r.artifacts[artifactKey(ociRepo)]
 	if !ok {
 		return nil, fmt.Errorf("not found")
@@ -64,6 +78,11 @@ func (r *Registry) AddArtifact(oci *gardencorev1.OCIRepository, data []byte) {
 // SetExpectedPullSecretNamespace sets the expected pull secret namespace.
 func (r *Registry) SetExpectedPullSecretNamespace(namespace string) {
 	r.expectedPullSecretNamespace = namespace
+}
+
+// SetExpectedCABundleSecretNamespace sets the expected CA bundle secret namespace.
+func (r *Registry) SetExpectedCABundleSecretNamespace(namespace string) {
+	r.expectedCABundleSecretNamespace = namespace
 }
 
 func artifactKey(oci *gardencorev1.OCIRepository) string {
