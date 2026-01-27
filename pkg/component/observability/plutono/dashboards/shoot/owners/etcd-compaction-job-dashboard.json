@@ -249,6 +249,7 @@
               "mode": "thresholds"
             },
             "mappings": [],
+            "noValue": "No succeeded compaction jobs",
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -312,6 +313,7 @@
               "mode": "thresholds"
             },
             "mappings": [],
+            "noValue": "No failed compaction jobs",
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -373,6 +375,7 @@
               "mode": "thresholds"
             },
             "mappings": [],
+            "noValue": "No jobs exceeded deadline",
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -434,6 +437,7 @@
               "mode": "thresholds"
             },
             "mappings": [],
+            "noValue": "No disrupted jobs",
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -495,6 +499,7 @@
               "mode": "thresholds"
             },
             "mappings": [],
+            "noValue": "No successful full snapshots",
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -558,6 +563,7 @@
               "mode": "thresholds"
             },
             "mappings": [],
+            "noValue": "No failed full snapshots",
             "thresholds": {
               "mode": "absolute",
               "steps": [
