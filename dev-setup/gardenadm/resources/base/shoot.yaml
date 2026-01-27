@@ -34,7 +34,8 @@ spec:
         image:
           name: local
       minimum: 1
-      maximum: 1
+      # Setting max > min triggers the deployment of the cluster-autoscaler
+      maximum: 2
   kubernetes:
     version: 1.33.0
     kubelet:

@@ -284,6 +284,11 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			))
 		}, SpecTimeout(time.Minute))
 
+		It("should deploy the cluster-autoscaler in the shoot", func(ctx SpecContext) {
+			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameClusterAutoscaler, Namespace: "kube-system"}}
+			Eventually(ctx, shootKomega.Object(deployment)).Should(BeHealthy(health.CheckDeployment))
+		}, SpecTimeout(time.Minute))
+
 		It("should adopt and keep the initial control plane machine", func(ctx SpecContext) {
 			// This check verifies that the control plane machine that was created in the bootstrap cluster is adopted by
 			// gardenadm init and the machine-controller-manager running in the self-hosted shoot.
