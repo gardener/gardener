@@ -1,8 +1,6 @@
 module github.com/gardener/gardener
 
-go 1.24.6
-
-toolchain go1.24.11
+go 1.25.3
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
@@ -21,7 +19,7 @@ require (
 	github.com/gardener/dependency-watchdog v1.6.0
 	github.com/gardener/etcd-druid/api v0.34.0
 	github.com/gardener/machine-controller-manager v0.60.2
-	github.com/gardener/terminal-controller-manager v0.34.0
+	github.com/gardener/terminal-controller-manager v0.35.0
 	github.com/go-jose/go-jose/v4 v4.1.3
 	github.com/go-logr/logr v1.4.3
 	github.com/go-test/deep v1.1.0
@@ -33,7 +31,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0
 	github.com/mitchellh/hashstructure/v2 v2.0.2
-	github.com/onsi/ginkgo/v2 v2.27.1
+	github.com/onsi/ginkgo/v2 v2.27.3
 	github.com/onsi/gomega v1.39.0
 	github.com/open-telemetry/opentelemetry-operator v0.142.0
 	github.com/opencontainers/image-spec v1.1.1
@@ -246,7 +244,7 @@ require (
 	go.opentelemetry.io/collector/featuregate v1.45.0 // indirect
 	go.opentelemetry.io/contrib/bridges/prometheus v0.57.0 // indirect
 	go.opentelemetry.io/contrib/exporters/autoexport v0.57.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.60.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.61.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.63.0 // indirect
 	go.opentelemetry.io/contrib/otelconf v0.18.0 // indirect
 	go.opentelemetry.io/otel v1.38.0 // indirect
@@ -268,7 +266,6 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.7.1 // indirect
-	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/mod v0.32.0 // indirect
