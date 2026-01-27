@@ -18,9 +18,9 @@ spec:
           labels:
             task: scrape_pool:empty
 
-        # healthcheck{task="scrape:empty"} is present for each scrape job target that yields no samples after metric relabeling.
+        # healthcheck{task="scrape:empty"} is present for each scrape job that yields no samples after metric relabeling.
         - record: healthcheck
-          expr: scrape_samples_post_metric_relabeling{job!="etcd-druid"} == 0
+          expr: sum by (job) (scrape_samples_post_metric_relabeling{job!="etcd-druid"}) == 0
           labels:
             task: scrape:empty
 

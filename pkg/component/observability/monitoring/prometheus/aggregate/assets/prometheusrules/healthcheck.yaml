@@ -22,11 +22,11 @@ spec:
           labels:
             task: scrape_pool:empty
 
-        # healthcheck{task="scrape:empty"} is present for each scrape job target that yields no samples after metric relabeling.
+        # healthcheck{task="scrape:empty"} is present for each scrape job that yields no samples after metric relabeling.
         # The scrape job for the shoot prometheus is excluded,
         # because it might yield no samples when a shoot control plane is being deleted.
         - record: healthcheck
-          expr: scrape_samples_post_metric_relabeling{job!="shoot-prometheus"} == 0
+          expr: sum by (job) (scrape_samples_post_metric_relabeling{job!="shoot-prometheus"}) == 0
           labels:
             task: scrape:empty
 
