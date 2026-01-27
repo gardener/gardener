@@ -154,7 +154,7 @@ func (a *Actuator) configForDNSRecord(ctx context.Context, dnsRecord *extensions
 func (a *Actuator) exposureClassNamespaceName(ctx context.Context, exposureClass string) (string, error) {
 	exposureClassNamespaceLabels := client.MatchingLabels{
 		v1beta1constants.LabelExposureClassHandlerName: exposureClass,
-		v1beta1constants.GardenRole: v1beta1constants.GardenRoleExposureClassHandler,
+		v1beta1constants.GardenRole:                    v1beta1constants.GardenRoleExposureClassHandler,
 	}
 	namespaceList := &corev1.NamespaceList{}
 
