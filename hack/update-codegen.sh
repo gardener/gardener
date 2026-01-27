@@ -37,8 +37,6 @@ AVAILABLE_CODEGEN_OPTIONS=(
 CODE_GEN_DIR=$(go list -m -f '{{.Dir}}' k8s.io/code-generator)
 source "${CODE_GEN_DIR}/kube_codegen.sh"
 
-rm -f ${GOPATH}/bin/*-gen
-
 CURRENT_DIR=$(dirname $0)
 PROJECT_ROOT="${CURRENT_DIR}"/..
 export PROJECT_ROOT
@@ -387,12 +385,7 @@ openapi_definitions() {
   echo "> Generating openapi definitions"
   rm -Rf ./${PROJECT_ROOT}/openapi/openapi_generated.go
 
-  GO111MODULE=on go install k8s.io/kube-openapi/cmd/openapi-gen
-
-  # Go installs in $GOBIN if defined, and $GOPATH/bin otherwise
-  gobin="${GOBIN:-$(go env GOPATH)/bin}"
-
-  "${gobin}/openapi-gen" \
+  "openapi-gen" \
     -v 1 \
     --output-file openapi_generated.go \
     --go-header-file "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
