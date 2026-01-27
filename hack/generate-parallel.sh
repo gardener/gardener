@@ -286,4 +286,4 @@ echo "$ROOTS" | while IFS= read -r dir; do
     # Directory has non-skippable directives, always generate
     echo "github.com/gardener/gardener/$dir"
   fi
-done | parallel --will-cite 'echo "Generate {}"; go generate {}'
+done | parallel --will-cite $([ "${MAX_PARALLEL_WORKERS}" != "" ] && echo "-j ${MAX_PARALLEL_WORKERS}") 'echo "Generate {}"; go generate {}'

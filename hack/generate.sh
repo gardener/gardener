@@ -10,6 +10,7 @@ WHAT="protobuf codegen manifests logcheck"
 CODEGEN_GROUPS=""
 MANIFESTS_DIRS=""
 MODE=""
+MAX_PARALLEL_WORKERS=""
 DEFAULT_MANIFESTS_DIRS=(
   "charts"
   "cmd"
@@ -42,6 +43,10 @@ parse_flags() {
       --manifests-dirs)
         shift
         MANIFESTS_DIRS="${1:-$MANIFESTS_DIRS}"
+        ;;
+      --max-parallel-workers)
+        shift
+        export MAX_PARALLEL_WORKERS=${1:-$MAX_PARALLEL_WORKERS}
         ;;
       *)
         echo "Unknown argument: $1"
