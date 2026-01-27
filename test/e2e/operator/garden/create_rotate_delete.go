@@ -262,9 +262,8 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
 					return s.Garden.Status.Credentials.Rotation.ETCDEncryptionKey
 				},
-				EncryptionKey:             v1beta1constants.SecretNameETCDEncryptionKey,
-				RoleLabelValue:            v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration,
-				AutoCompleteAfterPrepared: true,
+				EncryptionKey:  v1beta1constants.SecretNameETCDEncryptionKey,
+				RoleLabelValue: v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration,
 			},
 
 			// advanced verifiers testing things from the user's perspective
