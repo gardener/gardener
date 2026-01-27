@@ -289,32 +289,53 @@ func EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts .
 
 	switch o := obj.(type) {
 	case client.ObjectList:
-		return ensureCollectionGone(ctx, c, o, cleanOptions.ListOptions...)
+		return ensureCollectionGone(ctx, c, o, cleanOptions.ListOptions, cleanOptions.IgnoreLeftovers)
 	case client.Object:
-		return ensureGone(ctx, c, o)
+		return ensureGone(ctx, c, o, cleanOptions.IgnoreLeftovers)
 	}
 	return fmt.Errorf("type %T does neither implement client.Object nor client.ObjectList", obj)
 }
 
-func ensureGone(ctx context.Context, c client.Client, obj client.Object) error {
+func ensureGone(ctx context.Context, c client.Client, obj client.Object, ignoreFns []IgnoreLeftoverFunc) error {
 	if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 		if meta.IsNoMatchError(err) || apierrors.IsNotFound(err) {
 			return nil
 		}
 		return err
 	}
-	return NewObjectsRemaining(obj)
+
+	for _, ignore := range ignoreFns {
+		if !ignore(obj) {
+			return NewObjectsRemaining(obj)
+		}
+	}
+
+	return nil
 }
 
-func ensureCollectionGone(ctx context.Context, c client.Client, list client.ObjectList, opts ...client.ListOption) error {
-	if err := c.List(ctx, list, opts...); err != nil {
+func ensureCollectionGone(ctx context.Context, c client.Client, list client.ObjectList, listOpts []client.ListOption, ignoreFns []IgnoreLeftoverFunc) error {
+	if err := c.List(ctx, list, listOpts...); err != nil {
 		if meta.IsNoMatchError(err) || apierrors.IsNotFound(err) {
 			return nil
 		}
 		return err
 	}
 
-	if meta.LenList(list) > 0 {
+	var relevantObjectFound bool
+	if err := meta.EachListItem(list, func(object runtime.Object) error {
+		for _, ignore := range ignoreFns {
+			// Iterate over all objects to report them later.
+			// TODO(timuthy): Remove this comment later, when the logger is passed down
+			if !ignore(object.(client.Object)) {
+				relevantObjectFound = true
+			}
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to iterate over list: %w", err)
+	}
+
+	if relevantObjectFound {
 		return NewObjectsRemaining(list)
 	}
 	return nil

@@ -47,12 +47,14 @@ var _ = Describe("CleanOptions", func() {
 			DeleteOptions:              []client.DeleteOption{client.GracePeriodSeconds(42), client.DryRunAll},
 			FinalizeGracePeriodSeconds: ptr.To[int64](42),
 			ErrorToleration:            []TolerateErrorFunc{apierrors.IsConflict},
+			IgnoreLeftovers:            []IgnoreLeftoverFunc{func(obj client.Object) bool { return false }},
 		}).ApplyToClean(co)
 		Expect(co.ListOptions).To(Equal([]client.ListOption{client.InNamespace("ns"), client.MatchingLabels{"key": "value"}}))
 		Expect(co.DeleteOptions).To(Equal([]client.DeleteOption{client.GracePeriodSeconds(42), client.DryRunAll}))
 		gp := int64(42)
 		Expect(co.FinalizeGracePeriodSeconds).To(Equal(&gp))
 		Expect(co.ErrorToleration).To(HaveLen(1))
+		Expect(co.IgnoreLeftovers).To(HaveLen(1))
 	})
 
 	It("should merge multiple options together", func() {

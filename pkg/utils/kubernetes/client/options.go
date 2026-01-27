@@ -13,8 +13,11 @@ type CleanOption interface {
 	ApplyToClean(*CleanOptions)
 }
 
-// TolerateErrorFunc is a function for tolerating errors.
+// TolerateErrorFunc is a function type for tolerating errors.
 type TolerateErrorFunc func(err error) bool
+
+// IgnoreLeftoverFunc is a function type for ignoring objects that remain in the cluster.
+type IgnoreLeftoverFunc func(obj client.Object) bool
 
 // CleanOptions are options to clean certain resources.
 // If FinalizeGracePeriodSeconds is set, the finalizers of the resources are removed if the resources still
@@ -24,6 +27,7 @@ type CleanOptions struct {
 	DeleteOptions              []client.DeleteOption
 	FinalizeGracePeriodSeconds *int64
 	ErrorToleration            []TolerateErrorFunc
+	IgnoreLeftovers            []IgnoreLeftoverFunc
 }
 
 var _ CleanOption = &CleanOptions{}
@@ -41,6 +45,9 @@ func (o *CleanOptions) ApplyToClean(co *CleanOptions) {
 	}
 	if o.ErrorToleration != nil {
 		co.ErrorToleration = o.ErrorToleration
+	}
+	if o.IgnoreLeftovers != nil {
+		co.IgnoreLeftovers = o.IgnoreLeftovers
 	}
 }
 
