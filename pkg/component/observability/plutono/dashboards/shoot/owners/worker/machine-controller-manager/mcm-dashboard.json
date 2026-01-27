@@ -1,6 +1,6 @@
 {
   "description": "Information about the operations of the Machine Controller Manager",
-  "editable": false,
+  "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
   "id": 16,
@@ -446,14 +446,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(mcm_cloud_api_requests_total[1m])",
+          "expr": "rate(mcm_cloud_api_requests_total{name=\"${controlloop}\"}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{provider}} / {{service}} ({{pod}})",
           "refId": "A"
         },
         {
-          "expr": "rate(mcm_cloud_api_requests_failed_total[1m])",
+          "expr": "rate(mcm_cloud_api_requests_failed_total{name=\"${controlloop}\"}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Error: {{provider}} / {{service}} ({{pod}})",
@@ -653,25 +653,11 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "${controlloop}_work_duration{quantile=\"0.5\"}",
+          "expr": "mcm_workqueue_queue_duration_seconds_sum{name=\"${controlloop}\"} / mcm_workqueue_queue_duration_seconds_count{name=\"${controlloop}\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "p50 ({{pod}})",
+          "legendFormat": "{{pod}}",
           "refId": "A"
-        },
-        {
-          "expr": "${controlloop}_work_duration{quantile=\"0.9\"}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "p90 ({{pod}})",
-          "refId": "B"
-        },
-        {
-          "expr": "${controlloop}_work_duration{quantile=\"0.99\"}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "p99 ({{pod}})",
-          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -752,25 +738,11 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "${controlloop}_queue_latency{quantile=\"0.5\"}",
+          "expr": "mcm_workqueue_queue_duration_seconds_sum{name=\"${controlloop}\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "p50 ({{pod}})",
+          "legendFormat": "{{pod}}",
           "refId": "A"
-        },
-        {
-          "expr": "${controlloop}_queue_latency{quantile=\"0.9\"}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "p90 ({{pod}})",
-          "refId": "B"
-        },
-        {
-          "expr": "${controlloop}_queue_latency{quantile=\"0.99\"}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "p99 ({{pod}})",
-          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -851,7 +823,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "${controlloop}_depth",
+          "expr": "mcm_workqueue_depth{name=\"${controlloop}\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "${controlloop} ({{pod}})",
@@ -936,7 +908,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(${controlloop}_adds[5m])",
+          "expr": "rate(mcm_workqueue_adds_total{name=\"${controlloop}\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "${controlloop} ({{pod}})",
@@ -1021,7 +993,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(${controlloop}_retries[5m])",
+          "expr": "rate(mcm_workqueue_retries_total{name=\"${controlloop}\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "${controlloop} ({{pod}})",
