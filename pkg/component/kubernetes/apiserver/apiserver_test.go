@@ -504,11 +504,17 @@ var _ = Describe("KubeAPIServer", func() {
 						Endpoints: []monitoringv1.Endpoint{{
 							TargetPort: ptr.To(intstr.FromInt32(443)),
 							Scheme:     ptr.To(monitoringv1.SchemeHTTPS),
-							TLSConfig:  &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
-							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-" + prometheusName},
-								Key:                  "token",
-							}},
+							HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+								HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+									TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+									HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
+										Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-" + prometheusName},
+											Key:                  "token",
+										}},
+									},
+								},
+							},
 							RelabelConfigs: []monitoringv1.RelabelConfig{{
 								Action: "labelmap",
 								Regex:  `__meta_kubernetes_service_label_(.+)`,

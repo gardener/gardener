@@ -81,8 +81,10 @@ func CentralPodMonitors() []*monitoringv1.PodMonitor {
 				// 	{Key: "prometheus.io/port", Operator: metav1.LabelSelectorOpExists},
 				// }},
 				PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{{
-					Scheme:     ptr.To(monitoringv1.SchemeHTTPS),
-					HTTPConfig: monitoringv1.HTTPConfig{TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+					Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+					HTTPConfigWithProxy: monitoringv1.HTTPConfigWithProxy{
+						HTTPConfig: monitoringv1.HTTPConfig{TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+					},
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						// TODO: These annotations should actually be labels so that PodMonitorSpec.Selector can be used
 						//  instead of manually crafting this relabel config.
