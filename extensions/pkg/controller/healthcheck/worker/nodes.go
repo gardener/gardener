@@ -77,7 +77,7 @@ func (h *DefaultHealthChecker) InjectSourceClient(sourceClient client.Client) {
 	h.sourceClient = sourceClient
 }
 
-// InjectTargetClient injects the target/shoot client.
+// InjectTargetClient injects the shoot client.
 func (h *DefaultHealthChecker) InjectTargetClient(targetClient client.Client) {
 	h.targetClient = targetClient
 }

@@ -80,7 +80,7 @@ For shoot extensions (extension class `shoot`):
 - `TargetClient` refers to the shoot cluster client
 
 For garden extensions (extension class `garden`):
-- `SourceClient` refers to the garden cluster client
+- `SourceClient` refers to the garden runtime cluster client
 
 For example, a health check that needs to verify resources in the shoot cluster would implement the `TargetClient` interface:
 ```go

@@ -142,7 +142,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, log logr.Log
 					return
 				}
 
-				if !preCheckFunc(preCheckObj) {
+				if !preCheckFunc(ctx, a.sourceClient, obj, preCheckObj) {
 					log.V(1).Info("Skipping health check as pre check function returned false", "conditionType", healthConditionType)
 					channel <- channelResult{
 						healthCheckResult: &SingleCheckResult{
