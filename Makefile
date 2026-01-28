@@ -213,7 +213,7 @@ generate:
 else
 generate: tools-for-generate
 	@printf "\nFor more info on the generate command, Run 'make generate PRINT_HELP=y'\n"
-	@REPO_ROOT=$(REPO_ROOT) LOGCHECK_DIR=$(LOGCHECK_DIR) hack/generate.sh --what "$(WHAT)" --codegen-groups "$(CODEGEN_GROUPS)" --manifests-dirs "$(MANIFESTS_DIRS)" --mode "$(MODE)"
+	@REPO_ROOT=$(REPO_ROOT) LOGCHECK_DIR=$(LOGCHECK_DIR) MAX_PARALLEL_WORKERS= hack/generate.sh --what "$(WHAT)" --codegen-groups "$(CODEGEN_GROUPS)" --manifests-dirs "$(MANIFESTS_DIRS)" --mode "$(MODE)"
 	$(MAKE) format
 endif
 
