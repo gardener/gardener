@@ -310,7 +310,7 @@ func validateLifecycleStartTimes(lifecycle []core.LifecycleStage, fldPath *field
 		}
 
 		if l.StartTime == nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Index(i), l.Classification, "only the leading lifecycle elements can have the start time optional"))
+			allErrs = append(allErrs, field.Required(fldPath.Index(i), "only the leading lifecycle elements can have the start time optional"))
 			continue
 		}
 
