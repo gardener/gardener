@@ -31,6 +31,7 @@ const (
 
 	// deploymentName is the name of the Gardener Discovery Server deployment.
 	deploymentName = "gardener-discovery-server"
+	containerName  = "gardener-discovery-server"
 	// ServiceName is the name of the service used to expose the Gardener Discovery Server.
 	ServiceName = deploymentName
 

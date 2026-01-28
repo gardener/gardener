@@ -24,6 +24,7 @@ import (
 const (
 	// DeploymentName is the name of the deployment.
 	DeploymentName = "gardener-scheduler"
+	containerName  = "gardener-scheduler"
 
 	probePort   = 10251
 	metricsPort = 19251

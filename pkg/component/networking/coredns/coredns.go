@@ -55,6 +55,8 @@ const (
 	containerName = "coredns"
 	serviceName   = "kube-dns" // this is due to legacy reasons
 
+	autoscalerContainerName = "autoscaler"
+
 	// CustomConfigMapName is the name of the custom CoreDNS ConfigMap.
 	CustomConfigMapName = "coredns-custom"
 
@@ -643,7 +645,7 @@ import custom/*.server
 							},
 						},
 						Containers: []corev1.Container{{
-							Name:            "autoscaler",
+							Name:            autoscalerContainerName,
 							Image:           c.values.ClusterProportionalAutoscalerImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command: []string{
@@ -691,11 +693,15 @@ import custom/*.server
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							ContainerName: autoscalerContainerName,
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("10Mi"),
 							},
 							ControlledValues: &controlledValues,
+						},
+						{
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},

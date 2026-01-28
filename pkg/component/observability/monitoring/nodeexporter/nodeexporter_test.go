@@ -412,12 +412,14 @@ metadata:
 spec:
   resourcePolicy:
     containerPolicies:
-    - containerName: '*'
+    - containerName: node-exporter
       controlledResources:
       - memory
       controlledValues: RequestsOnly
       minAllowed:
         memory: 50Mi
+    - containerName: '*'
+      mode: "Off"
   targetRef:
     apiVersion: apps/v1
     kind: DaemonSet

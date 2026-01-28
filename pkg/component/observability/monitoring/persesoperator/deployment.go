@@ -20,6 +20,7 @@ import (
 
 const (
 	deploymentName  = "perses-operator"
+	containerName   = "perses-operator"
 	healthProbePort = 8081
 	metricsPort     = 8082
 )
@@ -52,7 +53,7 @@ func (p *persesOperator) deployment() *appsv1.Deployment {
 					},
 					Containers: []corev1.Container{
 						{
-							Name:            "perses-operator",
+							Name:            containerName,
 							Image:           p.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{

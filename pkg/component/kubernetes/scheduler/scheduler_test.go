@@ -73,6 +73,7 @@ var _ = Describe("KubeScheduler", func() {
 		serviceName                      = "kube-scheduler"
 		secretName                       = "shoot-access-kube-scheduler"
 		deploymentName                   = "kube-scheduler"
+		containerName                    = "kube-scheduler"
 		managedResourceName              = "shoot-core-kube-scheduler"
 		managedResourceSecretName        = "managedresource-shoot-core-kube-scheduler"
 
@@ -144,10 +145,15 @@ var _ = Describe("KubeScheduler", func() {
 					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-						ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
-						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-					}},
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName:    containerName,
+							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+						},
+						{
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff)},
+					},
 				},
 			},
 		}
@@ -233,7 +239,7 @@ var _ = Describe("KubeScheduler", func() {
 							},
 							Containers: []corev1.Container{
 								{
-									Name:            "kube-scheduler",
+									Name:            containerName,
 									Image:           image,
 									ImagePullPolicy: corev1.PullIfNotPresent,
 									Command:         commandForKubernetesVersion(10259, featureGateFlags(config)...),

@@ -26,6 +26,8 @@ import (
 const (
 	// DeploymentName is the name of the deployment.
 	DeploymentName = "gardener-admission-controller"
+	// ContainerName is the name of the container.
+	ContainerName = "gardener-admission-controller"
 	// ServiceName is the name of the service.
 	ServiceName = DeploymentName
 

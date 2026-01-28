@@ -566,10 +566,12 @@ metadata:
 spec:
   resourcePolicy:
     containerPolicies:
-    - containerName: '*'
+    - containerName: autoscaler
       controlledValues: RequestsOnly
       minAllowed:
         memory: 10Mi
+    - containerName: '*'
+      mode: "Off"
   targetRef:
     apiVersion: apps/v1
     kind: Deployment

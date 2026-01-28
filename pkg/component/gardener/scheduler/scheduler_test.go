@@ -200,10 +200,14 @@ var _ = Describe("GardenerScheduler", func() {
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName: "*",
+							ContainerName: "gardener-scheduler",
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("25Mi"),
 							},
+						},
+						{
+							ContainerName: "*",
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},

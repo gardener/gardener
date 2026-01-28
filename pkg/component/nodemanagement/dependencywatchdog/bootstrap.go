@@ -483,12 +483,18 @@ func (b *bootstrapper) getVPA(deploymentName string) *vpaautoscalingv1.VerticalP
 				UpdateMode: &updateMode,
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-					MinAllowed: corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse(vpaMinAllowedMemory),
+				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+					{
+						ContainerName: prefixDependencyWatchdog,
+						MinAllowed: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse(vpaMinAllowedMemory),
+						},
 					},
-				}},
+					{
+						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+					},
+				},
 			},
 		},
 	}

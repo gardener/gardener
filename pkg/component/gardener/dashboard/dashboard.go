@@ -28,7 +28,9 @@ const (
 	ManagedResourceNameVirtual = "gardener-dashboard-virtual"
 
 	deploymentName = "gardener-dashboard"
-	roleName       = "dashboard"
+	// ContainerName is the name of the container.
+	ContainerName = "gardener-dashboard"
+	roleName      = "dashboard"
 )
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy or

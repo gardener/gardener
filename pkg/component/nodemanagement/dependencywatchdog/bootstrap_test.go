@@ -372,7 +372,7 @@ metadata:
 spec:
   resourcePolicy:
     containerPolicies:
-    - containerName: '*'
+    - containerName: dependency-watchdog
       minAllowed:
 `
 
@@ -385,6 +385,8 @@ spec:
 					}
 
 					out += `
+    - containerName: '*'
+      mode: "Off"
   targetRef:
     apiVersion: apps/v1
     kind: Deployment

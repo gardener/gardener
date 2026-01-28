@@ -299,11 +299,15 @@ func (l *eventLogger) reconcileVPA(ctx context.Context) error {
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
-						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						ContainerName: name,
 						MinAllowed: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("20Mi"),
 						},
 						ControlledValues: &controlledValues,
+					},
+					{
+						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},
