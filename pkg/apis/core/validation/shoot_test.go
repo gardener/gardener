@@ -1890,6 +1890,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(BeEmpty())
 				})
 
+				It("should work with an empty exposure", func() {
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
+						Exposure: &core.Exposure{},
+					}
+
+					Expect(ValidateShoot(shoot)).To(BeEmpty())
+				})
+
 				It("should work with extension set", func() {
 					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
 						Exposure: &core.Exposure{

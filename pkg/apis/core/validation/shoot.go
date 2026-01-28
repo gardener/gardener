@@ -2667,10 +2667,10 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 }
 
 // ValidateWorkerControlPlane validates worker control plane
-func ValidateWorkerControlPlane(plane *core.WorkerControlPlane, shootNamespace, shootProviderType string, fldPath *field.Path) field.ErrorList {
+func ValidateWorkerControlPlane(controlPlane *core.WorkerControlPlane, shootNamespace, shootProviderType string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if backup := plane.Backup; backup != nil {
+	if backup := controlPlane.Backup; backup != nil {
 		if len(backup.Provider) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("backup", "provider"), "must provide a backup cloud provider name"))
 		}
@@ -2693,11 +2693,13 @@ func ValidateWorkerControlPlane(plane *core.WorkerControlPlane, shootNamespace, 
 			}
 		}
 	}
-	if plane.Exposure != nil {
-		if plane.Exposure.DNS != nil && plane.Exposure.Extension != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("exposure"), plane.Exposure, "cannot have dns and extension set at the same time"))
+
+	if controlPlane.Exposure != nil {
+		if controlPlane.Exposure.DNS != nil && controlPlane.Exposure.Extension != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("exposure"), controlPlane.Exposure, "cannot have dns and extension set at the same time"))
 		}
 	}
+
 	return allErrs
 }
 
