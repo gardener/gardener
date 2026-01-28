@@ -129,35 +129,10 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 		return fmt.Errorf("error retrieving default domains: %s", err)
 	}
 
-	switch a.GetOperation() {
-	case admission.Create:
-		// If shoot uses default domain, validate domain even though shoot can be assigned to seed
-		// having dns disabled later on
-		if isShootDomainSet(shoot) && !helper.ShootUsesUnmanagedDNS(shoot) {
-			if err := checkDefaultDomainFormat(a, shoot, d.projectLister, defaultDomains); err != nil {
-				return err
-			}
-		}
-
-		if shoot.Spec.SeedName == nil {
-			return nil
-		}
-
-	case admission.Update:
+	if a.GetOperation() == admission.Update {
 		oldShoot, ok := a.GetOldObject().(*core.Shoot)
 		if !ok {
 			return apierrors.NewBadRequest("could not convert old resource into Shoot object")
-		}
-
-		// Only validate domain on updates if the shoot's domain was not set previously and is being currently set.
-		// This is necessary to avoid reconciliation errors for older shoots that already use a domain with an incorrect format.
-		// There is also a possibility that an old shoot had an invalid domain, but was never assigned to a seed. This is why we check
-		// if the shoot was previously not assigned to a seed and if the shoot's domain is invalid, the update is denied so that the invalid
-		// domain does not get created.
-		if (oldShoot.Spec.SeedName == nil || !isShootDomainSet(oldShoot)) && isShootDomainSet(shoot) && !helper.ShootUsesUnmanagedDNS(shoot) {
-			if err := checkDefaultDomainFormat(a, shoot, d.projectLister, defaultDomains); err != nil {
-				return err
-			}
 		}
 
 		if oldShoot.Spec.DNS != nil && shoot.Spec.DNS != nil {
@@ -173,10 +148,10 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 				}
 			}
 		}
+	}
 
-		if shoot.Spec.SeedName == nil {
-			return nil
-		}
+	if shoot.Spec.SeedName == nil {
+		return nil
 	}
 
 	specPath := field.NewPath("spec")
@@ -296,38 +271,6 @@ func assignDefaultDomainIfNeeded(shoot *core.Shoot, projectLister gardencorev1be
 	return nil
 }
 
-func checkDefaultDomainFormat(a admission.Attributes, shoot *core.Shoot, projectLister gardencorev1beta1listers.ProjectLister, defaultDomains []string) error {
-	project, err := admissionutils.ProjectForNamespaceFromLister(projectLister, shoot.Namespace)
-	if err != nil {
-		return apierrors.NewInternalError(err)
-	}
-
-	shootDomain := shoot.Spec.DNS.Domain
-
-	for _, domain := range defaultDomains {
-		if strings.HasSuffix(*shootDomain, "."+domain) {
-			// Check that the specified domain matches the pattern for default domains, especially in order
-			// to prevent shoots from "stealing" domain names for shoots in other projects
-			if len(shoot.GenerateName) > 0 && (len(shoot.Name) == 0 || strings.HasPrefix(shoot.Name, shoot.GenerateName)) {
-				// Case where shoot name is generated or to be generated
-				if !strings.HasSuffix(*shootDomain, fmt.Sprintf(".%s.%s", project.Name, domain)) {
-					fieldErr := field.Invalid(field.NewPath("spec", "dns"), shoot.Name, fmt.Sprintf("shoot with 'metadata.generateName' uses a default domain but does not match expected scheme: <random-subdomain>.<project-name>.<default-domain> (expected '.%s.%s' to be a suffix of '%s')", project.Name, domain, *shootDomain))
-					return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
-				}
-				return nil
-			}
-			if *shootDomain != fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, domain) {
-				fieldErr := field.Invalid(field.NewPath("spec", "dns"), shoot.Name, fmt.Sprintf("shoot uses a default domain but does not match expected scheme: <shoot-name>.<project-name>.<default-domain> (expected '%s.%s.%s', but got '%s')", shoot.Name, project.Name, domain, *shootDomain))
-				return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
-			}
-
-			return nil
-		}
-	}
-
-	return nil
-}
-
 func getDefaultDomains(secretLister kubecorev1listers.SecretLister, seedLister gardencorev1beta1listers.SeedLister, shoot *core.Shoot) ([]string, error) {
 	var defaultDomains []string
 
@@ -412,6 +355,40 @@ func (d *DNS) Validate(_ context.Context, a admission.Attributes, _ admission.Ob
 	var allErrs field.ErrorList
 	allErrs = append(allErrs, checkPrimaryDNSProvider(shoot, defaultDomains)...)
 
+	switch a.GetOperation() {
+	case admission.Create:
+		// If shoot uses default domain, validate domain even though shoot can be assigned to seed
+		// having dns disabled later on
+		if isShootDomainSet(shoot) && !helper.ShootUsesUnmanagedDNS(shoot) {
+			errs, err := checkDefaultDomainFormat(shoot, d.projectLister, defaultDomains)
+			if err != nil {
+				return err
+			}
+
+			allErrs = append(allErrs, errs...)
+		}
+
+	case admission.Update:
+		oldShoot, ok := a.GetOldObject().(*core.Shoot)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert old resource into Shoot object")
+		}
+
+		// Only validate domain on updates if the shoot's domain was not set previously and is being currently set.
+		// This is necessary to avoid reconciliation errors for older shoots that already use a domain with an incorrect format.
+		// There is also a possibility that an old shoot had an invalid domain, but was never assigned to a seed. This is why we check
+		// if the shoot was previously not assigned to a seed and if the shoot's domain is invalid, the update is denied so that the invalid
+		// domain does not get created.
+		if (oldShoot.Spec.SeedName == nil || !isShootDomainSet(oldShoot)) && isShootDomainSet(shoot) && !helper.ShootUsesUnmanagedDNS(shoot) {
+			errs, err := checkDefaultDomainFormat(shoot, d.projectLister, defaultDomains)
+			if err != nil {
+				return err
+			}
+
+			allErrs = append(allErrs, errs...)
+		}
+	}
+
 	if len(allErrs) > 0 {
 		return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, allErrs)
 	}
@@ -437,4 +414,40 @@ func checkPrimaryDNSProvider(shoot *core.Shoot, defaultDomains []string) field.E
 	}
 
 	return allErrs
+}
+
+func checkDefaultDomainFormat(shoot *core.Shoot, projectLister gardencorev1beta1listers.ProjectLister, defaultDomains []string) (field.ErrorList, error) {
+	var allErrs field.ErrorList
+
+	project, err := admissionutils.ProjectForNamespaceFromLister(projectLister, shoot.Namespace)
+	if err != nil {
+		return allErrs, apierrors.NewInternalError(err)
+	}
+
+	shootDomain := shoot.Spec.DNS.Domain
+
+	for _, domain := range defaultDomains {
+		if strings.HasSuffix(*shootDomain, "."+domain) {
+			// Check that the specified domain matches the pattern for default domains, especially in order
+			// to prevent shoots from "stealing" domain names for shoots in other projects
+			if len(shoot.GenerateName) > 0 && (len(shoot.Name) == 0 || strings.HasPrefix(shoot.Name, shoot.GenerateName)) {
+				// Case where shoot name is generated or to be generated
+				if !strings.HasSuffix(*shootDomain, fmt.Sprintf(".%s.%s", project.Name, domain)) {
+					detail := fmt.Sprintf("shoot with 'metadata.generateName' uses a default domain but does not match expected scheme: <random-subdomain>.<project-name>.<default-domain> (expected '.%s.%s' to be a suffix of '%s')", project.Name, domain, *shootDomain)
+					allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "dns", "domain"), shoot.Spec.DNS.Domain, detail))
+					return allErrs, nil
+				}
+				return nil, nil
+			}
+			if *shootDomain != fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, domain) {
+				detail := fmt.Sprintf("shoot uses a default domain but does not match expected scheme: <shoot-name>.<project-name>.<default-domain> (expected '%s.%s.%s', but got '%s')", shoot.Name, project.Name, domain, *shootDomain)
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "dns", "domain"), shoot.Spec.DNS.Domain, detail))
+				return allErrs, nil
+			}
+
+			return nil, nil
+		}
+	}
+
+	return nil, nil
 }
