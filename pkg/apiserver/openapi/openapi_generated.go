@@ -9764,7 +9764,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					},
 					"exposureClassName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy. This field is immutable.",
+							Description: "ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

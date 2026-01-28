@@ -2,6 +2,9 @@ gardener:
   controlPlane:
     deployed: false
   seed:
+    exposureClass:
+      listenAddresses:
+      - 172.18.255.32
     istio:
       listenAddresses:
       - 172.18.255.2

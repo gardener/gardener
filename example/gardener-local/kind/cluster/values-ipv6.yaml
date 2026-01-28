@@ -9,7 +9,9 @@ gardener:
     bastion:
       listenAddresses:
       - ::22
-
+    exposureClass:
+      listenAddresses:
+      - ::31
 networking:
   ipFamily: ipv6
   podSubnet: "fd00:10:1::/48"

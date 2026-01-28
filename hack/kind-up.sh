@@ -279,7 +279,7 @@ additional_params=""
 if [[ ${MULTI_ZONAL} == "true" ]]; then
   additional_params="--multi-zonal"
 fi
-./hack/kind-setup-loopback-devices.sh --cluster-name "${CLUSTER_NAME}" --ip-family "${IPFAMILY}" "${additional_params}"
+./hack/kind-setup-loopback-devices.sh --cluster-name "${CLUSTER_NAME}" --ip-family "${IPFAMILY}" "${additional_params}" --exposure-class
 
 setup_kind_network
 

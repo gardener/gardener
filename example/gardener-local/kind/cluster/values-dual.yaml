@@ -7,6 +7,10 @@ gardener:
       listenAddresses:
       - "::1"
       - "172.18.255.1"
+    exposureClass:
+      listenAddresses:
+      - ::31
+      - "172.18.255.31"
     bastion:
       listenAddresses:
       - "::22"

@@ -6,11 +6,14 @@ package shoot
 
 import (
 	. "github.com/onsi/ginkgo/v2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/seed"
+	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/exposureclass"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/highavailability"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 )
@@ -38,12 +41,20 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability"), func() {
 				inclusterclient.VerifyInClusterAccessToAPIServer(s)
 			}
 
+			exposureclass.VerifyExposureClassSwitch(s, ItShouldWaitForShootToBeReconciledAndHealthy)
+
 			ItShouldDeleteShoot(s)
 			ItShouldWaitForShootToBeDeleted(s)
 		}
 
 		Context("Shoot with workers", Ordered, func() {
 			test(NewTestContext().ForShoot(DefaultShoot(shootName)))
+		})
+
+		Context("Shoot with workers and layer 4 load balancing", Ordered, func() {
+			shoot := DefaultShoot(shootName)
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootDisableIstioTLSTermination, "true")
+			test(NewTestContext().ForShoot(shoot))
 		})
 
 		Context("Shoot with workers and overlapping CIDR ranges", Ordered, func() {

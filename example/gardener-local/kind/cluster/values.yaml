@@ -11,6 +11,9 @@ gardener:
     deployed: true
   seed:
     deployed: true
+    exposureClass:
+      listenAddresses:
+      - 172.18.255.31
     istio:
       listenAddresses:
       - 172.18.255.1

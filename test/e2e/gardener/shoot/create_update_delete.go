@@ -27,6 +27,7 @@ import (
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/seed"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/bastion"
+	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/exposureclass"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/zerodowntimevalidator"
 	"github.com/gardener/gardener/test/utils/access"
@@ -149,6 +150,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 			ItShouldInitializeShootClient(s)
 			verifyNodeKubernetesVersions(s)
+
+			exposureclass.VerifyExposureClassSwitch(s, ItShouldWaitForShootToBeReconciledAndHealthy)
 
 			if v1beta1helper.IsHAControlPlaneConfigured(s.Shoot) {
 				zeroDowntimeValidatorJob.ItShouldEnsureThereWasNoDowntime(s)

@@ -31,9 +31,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestE2E(t *testing.T) {
-	if os.Getenv("USE_PROVIDER_LOCAL_COREDNS_SERVER") == "true" {
-		e2e.UseProviderLocalCoreDNSServer()
-	}
+	e2e.UseProviderLocalCoreDNSServer()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Test E2E Gardener Suite")
 }
