@@ -122,7 +122,7 @@ type components struct {
 	alertManager                  component.DeployWaiter
 	persesOperator                component.DeployWaiter
 	openTelemetryOperator         component.DeployWaiter
-	openTelemetryCollector        collector.Interface
+	openTelemetryCollector        component.Deployer
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -859,8 +859,8 @@ func (r *Reconciler) newOpenTelemetryOperator() (component.DeployWaiter, error) 
 	)
 }
 
-func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Interface) (collector.Interface, error) {
-	return sharedcomponent.NewOpenTelemetryCollector(
+func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Interface) (component.Deployer, error) {
+	deployer, err := sharedcomponent.NewOpenTelemetryCollector(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
 		v1beta1constants.PriorityClassNameSeedSystem600,
@@ -868,6 +868,15 @@ func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Int
 		v1beta1constants.SecretNameCASeed,
 		component.ClusterTypeSeed,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	if !gardenlethelper.IsLoggingEnabled(&r.Config) {
+		return component.OpDestroy(deployer), err
+	}
+
+	return deployer, err
 }
 
 func (r *Reconciler) newClusterAutoscaler() component.DeployWaiter {
