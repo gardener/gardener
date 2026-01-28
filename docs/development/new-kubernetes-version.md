@@ -13,10 +13,6 @@ This document describes the steps needed to perform in order to confidently add 
 
 Version | Expected Release Date | Release Responsibles                                                                         |
 --------|-----------------------|----------------------------------------------------------------------------------------------|
-v1.32   | December 11, 2024     | [@marc1404](https://github.com/marc1404), [@LucaBernstein](https://github.com/LucaBernstein) |
-v1.33   | April 23, 2025        | [@Kostov6](https://github.com/Kostov6), [@plkokanov](https://github.com/plkokanov)           |
-v1.34   | August 27, 2025       | [@tobschli](https://github.com/tobschli), [@ScheererJ](https://github.com/ScheererJ)         |
-v1.35   | December ?, 2025      | [@timuthy](https://github.com/timuthy), [@rfranzke](https://github.com/rfranzke)             |
 v1.36   | April ?, 2026         | [@oliver-goetz](https://github.com/oliver-goetz), [@ary1992](https://github.com/ary1992)     |
 v1.37   | August ?, 2026        | [@acumino](https://github.com/acumino), [@shafeeqes](https://github.com/shafeeqes)           |
 v1.38   | December ?, 2026      | [@ialidzhikov](https://github.com/ialidzhikov), TBD                                          |
@@ -40,6 +36,10 @@ v1.38   | December ?, 2026      | [@ialidzhikov](https://github.com/ialidzhikov)
   v1.29   | December 13, 2023     | [@acumino](https://github.com/acumino)                                                       |
   v1.30   | April 17, 2024        | [@shafeeqes](https://github.com/shafeeqes)                                                   |
   v1.31   | August 13, 2024       | [@ialidzhikov](https://github.com/ialidzhikov)                                               |
+  v1.32   | December 11, 2024     | [@marc1404](https://github.com/marc1404), [@LucaBernstein](https://github.com/LucaBernstein) |
+  v1.33   | April 23, 2025        | [@Kostov6](https://github.com/Kostov6), [@plkokanov](https://github.com/plkokanov)           |
+  v1.34   | August 27, 2025       | [@tobschli](https://github.com/tobschli), [@ScheererJ](https://github.com/ScheererJ)         |
+  v1.35   | December 17, 2025     | [@timuthy](https://github.com/timuthy), [@rfranzke](https://github.com/rfranzke)             |
 </details>
 
 ## Introduction
@@ -123,7 +123,7 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
 - Maintain the Kubernetes `kube-apiserver` API groups used for validation of `Shoot` resources:
   - The API groups are maintained in [this](../../pkg/utils/validation/apigroups/apigroups.go) file.
   - See [this](https://github.com/gardener/gardener/pull/11197/commits/73b655475ac2565a9fdf098f10bab9cfdbed961a) example commit.
-  - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-api-groups.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-api-groups.sh 1.26 1.27`).
+  - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-api-groups.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-api-groups.sh 1.34 1.35`).
   - It will present 2 lists of API GroupVersions and 2 lists of API GroupVersionResources: those added and those removed in `<new-version>` compared to `<old-version>`.
   - Add all added group versions to the `apiGroupVersionRanges` map and group version resources to the `apiGVRVersionRanges` map with `<new-version>` as `AddedInVersion` and no `RemovedInVersion`.
   - For any removed APIs, add `<new-version>` as `RemovedInVersion` to the already existing API in the corresponding map.
@@ -131,7 +131,7 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
 - Maintain the Kubernetes `kube-controller-manager` controllers for each API group used in deploying required KCM controllers based on active APIs:
   - The API groups are maintained in [this](../../pkg/utils/kubernetes/controllers.go) file.
   - See [this](https://github.com/gardener/gardener/pull/11197/commits/15f8ad3486edc629ecaaa5e30f10619737d01316) example commit.
-  - To maintain this list for new Kubernetes versions, run `hack/compute-k8s-controllers.sh <old-version> <new-version>` (e.g. `hack/compute-k8s-controllers.sh 1.33 1.34`).
+  - To maintain this list for new Kubernetes versions, run `hack/compute-k8s-controllers.sh <old-version> <new-version>` (e.g. `hack/compute-k8s-controllers.sh 1.34 1.35`).
   - If it complains that the path for the controller is not present in the map, check the release branch of the new Kubernetes version and find the correct path for the missing/wrong controller. You can do so by checking the file `cmd/kube-controller-manager/app/controllermanager.go` and where the controller is initialized from. As of now, there is no straight-forward way to map each controller to its file. If this has improved, please enhance the script.
   - If the paths are correct, it will present 2 lists of controllers: those added and those removed for each API group in `<new-version>` compared to `<old-version>`.
   - Add all added controllers to the `APIGroupControllerMap` map and under the corresponding API group with `<new-version>` as `AddedInVersion` and no `RemovedInVersion`.

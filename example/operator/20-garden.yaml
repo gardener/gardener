@@ -159,7 +159,6 @@ spec:
     #     batchMaxSize: 1337
     #     version: audit.k8s.io/v1
     #   watchCacheSizes: # See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
-    #     default: 100
     #     resources:
     #     - resource: secrets
     #       size: 500

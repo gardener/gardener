@@ -10,7 +10,7 @@ usage() {
   echo "Usage:"
   echo "> compare-k8s-feature-gates.sh [ -h | <old version> <new version> ]"
   echo
-  echo ">> For example: compare-k8s-feature-gates.sh 1.33 1.34"
+  echo ">> For example: compare-k8s-feature-gates.sh 1.34 1.35"
   echo
   echo ">> Note: The script only works for Kubernetes versions 1.33+"
 
@@ -40,10 +40,10 @@ function cleanup_output {
 trap cleanup_output EXIT
 
 for version in "${versions[@]}"; do
-  if [ "$version" \< "1.33" ]; then 
-    echo "Versions less than 1.33 are not supported." 
-    exit 1 
-  fi 
+  if [ "$version" \< "1.33" ]; then
+    echo "Versions less than 1.33 are not supported."
+    exit 1
+  fi
   wget -q -O - "https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/test/compatibility_lifecycle/reference/versioned_feature_list.yaml" > "${out_dir}/versioned_featuregates_${version}.yaml"
   yq '.[] | .name' "${out_dir}/versioned_featuregates_${version}.yaml" > "${out_dir}/featuregates_list_${version}.yaml"
   # Sort feature gate list for the diff to function correctly

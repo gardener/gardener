@@ -7,14 +7,17 @@ spec:
   regions:
   - name: local
   kubernetes:
+    # We typically don't update the patch versions in the local cloud profile because this leads to failing upgrade tests.
+    # When a specific patch version is needed for a bug fix or similar reason, keep the previous patch version for at least one more release.
     versions:
+    - version: 1.35.0
     - version: 1.34.3
     - version: 1.33.0
     - version: 1.32.0
     - version: 1.31.1
     - version: 1.30.0
   # These values do not represent the actual machine capacity. The actual
-  # capacity of the machine depends on your docker resource allocation. 
+  # capacity of the machine depends on your docker resource allocation.
   machineTypes:
   - cpu: "1"
     gpu: "0"

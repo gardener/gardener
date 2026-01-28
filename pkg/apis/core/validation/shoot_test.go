@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -156,9 +155,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				},
 				Spec: core.ShootSpec{
 					Addons: &core.Addons{
-						KubernetesDashboard: &core.KubernetesDashboard{
-							Addon: addon,
-						},
 						NginxIngress: &core.NginxIngress{
 							Addon: addon,
 						},
@@ -672,25 +668,28 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Context("Addons validation", func() {
 			DescribeTable("addons validation",
-				func(purpose core.ShootPurpose, allowed bool) {
+				func(purpose core.ShootPurpose, kubernetesVersion string, allowed bool) {
 					shootCopy := shoot.DeepCopy()
 					shootCopy.Spec.Purpose = &purpose
+					shootCopy.Spec.Kubernetes.Version = kubernetesVersion
 
 					errorList := ValidateShoot(shootCopy)
 
+					expect := Expect(errorList).To
 					if allowed {
-						Expect(errorList).To(BeEmpty())
-					} else {
-						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("spec.addons"),
-						}))))
+						expect = Expect(errorList).NotTo
 					}
+
+					expect(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.addons"),
+					}))))
 				},
-				Entry("should allow addons on evaluation shoots", core.ShootPurposeEvaluation, true),
-				Entry("should forbid addons on testing shoots", core.ShootPurposeTesting, false),
-				Entry("should forbid addons on development shoots", core.ShootPurposeDevelopment, false),
-				Entry("should forbid addons on production shoots", core.ShootPurposeProduction, false),
+				Entry("should allow addons on evaluation shoots", core.ShootPurposeEvaluation, "1.34.0", true),
+				Entry("should forbid addons on testing shoots", core.ShootPurposeTesting, "1.34.0", false),
+				Entry("should forbid addons on development shoots", core.ShootPurposeDevelopment, "1.34.0", false),
+				Entry("should forbid addons on production shoots", core.ShootPurposeProduction, "1.34.0", false),
+				Entry("should forbid addons starting with Kubernetes 1.35", core.ShootPurposeEvaluation, "1.35.0", false),
 			)
 
 			It("should forbid addon configuration if the shoot is workerless", func() {
@@ -708,11 +707,15 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid unsupported addon configuration", func() {
-				shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = ptr.To("does-not-exist")
+				shoot.Spec.Kubernetes.Version = "1.34.0"
+				shoot.Spec.Addons.KubernetesDashboard = &core.KubernetesDashboard{
+					Addon:              addon,
+					AuthenticationMode: ptr.To("does-not-exist"),
+				}
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("spec.addons.kubernetesDashboard.authenticationMode"),
 				}))))
@@ -995,7 +998,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.secretBindingName"),
-						"Detail": Equal("is no longer supported for Kubernetes >= 1.34, use spec.credentialsBindingName instead"),
+						"Detail": Equal("for Kubernetes versions >= 1.34, secretBindingName field is no longer supported, use spec.credentialsBindingName instead"),
 					}))))
 				},
 				Entry("should forbid secretBindingName for Kubernetes = 1.34", "1.34.0"),
@@ -2503,7 +2506,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
+						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.clientAuthentication"),
 					}))
 				})
@@ -2524,15 +2527,16 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					errorList := ValidateShoot(shoot)
 
+					expect := Expect(errorList).NotTo
 					if expectError {
-						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeForbidden),
-							"Field":  Equal("spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication"),
-							"Detail": Equal("for Kubernetes versions >= 1.35, enableAnonymousAuthentication field is no longer supported"),
-						}))))
-					} else {
-						Expect(errorList).To(BeEmpty())
+						expect = Expect(errorList).To
 					}
+
+					expect(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication"),
+						"Detail": Equal("for Kubernetes versions >= 1.35, enableAnonymousAuthentication field is no longer supported"),
+					}))))
 				},
 				Entry("should allow setting enableAnonymousAuthentication for Kubernetes version < 1.35", "1.34.0", ptr.To(true), false),
 				Entry("should forbid setting enableAnonymousAuthentication to true for Kubernetes version >= 1.35", "1.35.0", ptr.To(true), true),
@@ -2859,45 +2863,50 @@ var _ = Describe("Shoot Validation Tests", func() {
 				var negativeSize int32 = -1
 
 				DescribeTable("watch cache size validation",
-					func(sizes *core.WatchCacheSizes, matcher gomegatypes.GomegaMatcher) {
-						Expect(ValidateWatchCacheSizes(sizes, nil)).To(matcher)
+					func(version string, sizes *core.WatchCacheSizes, matcher gomegatypes.GomegaMatcher) {
+						Expect(ValidateWatchCacheSizes(sizes, version, nil)).To(matcher)
 					},
 
-					Entry("valid (unset)", nil, BeEmpty()),
-					Entry("valid (fields unset)", &core.WatchCacheSizes{}, BeEmpty()),
-					Entry("valid (default=0)", &core.WatchCacheSizes{
+					Entry("valid (unset)", "1.34.0", nil, BeEmpty()),
+					Entry("valid (fields unset)", "1.34.0", &core.WatchCacheSizes{}, BeEmpty()),
+					Entry("valid (default=0)", "1.34.0", &core.WatchCacheSizes{
 						Default: ptr.To[int32](0),
 					}, BeEmpty()),
-					Entry("valid (default>0)", &core.WatchCacheSizes{
+					Entry("valid (default>0)", "1.34.0", &core.WatchCacheSizes{
 						Default: ptr.To[int32](42),
 					}, BeEmpty()),
-					Entry("invalid (default<0)", &core.WatchCacheSizes{
+					Entry("invalid (default<0)", "1.34.0", &core.WatchCacheSizes{
 						Default: ptr.To(negativeSize),
 					}, ConsistOf(
 						field.Invalid(field.NewPath("default"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 					)),
+					Entry("invalid (default for k8s >= 1.35)", "1.35.0", &core.WatchCacheSizes{
+						Default: ptr.To[int32](50),
+					}, ConsistOf(
+						field.Forbidden(field.NewPath("default"), `for Kubernetes versions >= 1.35, configuring the default watch cache size is no longer supported`),
+					)),
 
 					// APIGroup unset (core group)
-					Entry("valid (core/secrets=0)", &core.WatchCacheSizes{
+					Entry("valid (core/secrets=0)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "secrets",
 							CacheSize: 0,
 						}},
 					}, BeEmpty()),
-					Entry("valid (API group empty)", &core.WatchCacheSizes{
+					Entry("valid (API group empty)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To(""),
 							Resource:  "secrets",
 							CacheSize: 0,
 						}},
 					}, BeEmpty()),
-					Entry("valid (core/secrets=>0)", &core.WatchCacheSizes{
+					Entry("valid (core/secrets=>0)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "secrets",
 							CacheSize: 42,
 						}},
 					}, BeEmpty()),
-					Entry("invalid (core/secrets=<0)", &core.WatchCacheSizes{
+					Entry("invalid (core/secrets=<0)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "secrets",
 							CacheSize: negativeSize,
@@ -2905,7 +2914,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Invalid(field.NewPath("resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 					)),
-					Entry("invalid (core resource empty)", &core.WatchCacheSizes{
+					Entry("invalid (core resource empty)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "",
 							CacheSize: 42,
@@ -2913,7 +2922,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Required(field.NewPath("resources[0].resource"), "must not be empty"),
 					)),
-					Entry("invalid (core resource with casing)", &core.WatchCacheSizes{
+					Entry("invalid (core resource with casing)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "Secrets",
 							CacheSize: 42,
@@ -2921,7 +2930,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Invalid(field.NewPath("resources[0].resource"), "Secrets", "must be lower case"),
 					)),
-					Entry("invalid (core resource with illegal character)", &core.WatchCacheSizes{
+					Entry("invalid (core resource with illegal character)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "secrets#",
 							CacheSize: 42,
@@ -2931,28 +2940,28 @@ var _ = Describe("Shoot Validation Tests", func() {
 					)),
 
 					// APIGroup set
-					Entry("valid (apps/deployments=0)", &core.WatchCacheSizes{
+					Entry("valid (apps/deployments=0)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To("apps"),
 							Resource:  "deployments",
 							CacheSize: 0,
 						}},
 					}, BeEmpty()),
-					Entry("valid (apps/deployments=>0)", &core.WatchCacheSizes{
+					Entry("valid (apps/deployments=>0)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To("apps"),
 							Resource:  "deployments",
 							CacheSize: 42,
 						}},
 					}, BeEmpty()),
-					Entry("valid (coordination.k8s.io/leases=0)", &core.WatchCacheSizes{
+					Entry("valid (coordination.k8s.io/leases=0)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To("coordination.k8s.io"),
 							Resource:  "leases",
 							CacheSize: 0,
 						}},
 					}, BeEmpty()),
-					Entry("invalid (apps/deployments=<0)", &core.WatchCacheSizes{
+					Entry("invalid (apps/deployments=<0)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To("apps"),
 							Resource:  "deployments",
@@ -2961,7 +2970,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Invalid(field.NewPath("resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 					)),
-					Entry("invalid (apps resource empty)", &core.WatchCacheSizes{
+					Entry("invalid (apps resource empty)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To("apps"),
 							Resource:  "",
@@ -2970,7 +2979,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Required(field.NewPath("resources[0].resource"), "must not be empty"),
 					)),
-					Entry("invalid (apps API group with casing)", &core.WatchCacheSizes{
+					Entry("invalid (apps API group with casing)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To("Apps"),
 							Resource:  "deployments",
@@ -2979,7 +2988,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Invalid(field.NewPath("resources[0].apiGroup"), "Apps", "must be lower case"),
 					)),
-					Entry("invalid (apps API group with illegal character)", &core.WatchCacheSizes{
+					Entry("invalid (apps API group with illegal character)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To("apps#"),
 							Resource:  "deployments",
@@ -3540,9 +3549,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
+					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.kubernetes.kubeControllerManager.podEvictionTimeout"),
-					"Detail": ContainSubstring("podEvictionTimeout is no longer supported by Gardener starting from Kubernetes 1.33"),
+					"Detail": ContainSubstring("for Kubernetes versions >= 1.33, podEvictionTimeout field is no longer supported"),
 				}))))
 			})
 
@@ -3650,6 +3659,17 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field":    Equal("spec.kubernetes.kubeScheduler.kubeMaxPDVols"),
 					"BadValue": Equal("foo"),
 					"Detail":   Equal("conversion error: strconv.Atoi: parsing \"foo\": invalid syntax"),
+				}))))
+			})
+
+			It("should fail when setting kubeMaxPDVols for kubernetes >= 1.35", func() {
+				shoot.Spec.Kubernetes.Version = "1.35.0"
+				shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = ptr.To("foo")
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.kubernetes.kubeScheduler.kubeMaxPDVols"),
 				}))))
 			})
 
@@ -3920,7 +3940,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("maxEmptyBulkDelete"),
-						"Detail": Equal("is not supported for kubernetes v1.33 and above, use maxScaleDownParallelism instead"),
+						"Detail": Equal("for Kubernetes versions >= 1.33, maxEmptyBulkDelete field is no longer supported, use maxScaleDownParallelism instead"),
 					}))),
 				),
 				Entry("valid with maxScaleDownParallelism", core.ClusterAutoscaler{
@@ -8399,7 +8419,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should not allow using no cloudProfile reference", func() {
-				errList := ValidateCloudProfileReference(nil, nil, nil, fldPath)
+				errList := ValidateCloudProfileReference(nil, nil, "", fldPath)
 
 				Expect(errList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -8415,7 +8435,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "",
 				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, nil, nil, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, nil, "", fldPath)
 
 				Expect(errList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -8431,7 +8451,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "my-profile",
 				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, nil, nil, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, nil, "", fldPath)
 
 				Expect(errList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -8447,7 +8467,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "my-profile",
 				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, nil, nil, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, nil, "", fldPath)
 
 				Expect(errList).To(BeEmpty())
 			})
@@ -8458,41 +8478,35 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "my-profile",
 				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, nil, nil, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, nil, "", fldPath)
 
 				Expect(errList).To(BeEmpty())
 			})
 
 			It("should still allow creation using the cloudProfileName for k8s < v1.34", func() {
-				var (
-					k8sVersion            = semver.MustParse("v1.33.0")
-					cloudProfileReference = &core.CloudProfileReference{
-						Kind: "CloudProfile",
-						Name: "my-profile",
-					}
-				)
+				cloudProfileReference := &core.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: "my-profile",
+				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, ptr.To(cloudProfileReference.Name), k8sVersion, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, ptr.To(cloudProfileReference.Name), "v1.33.0", fldPath)
 
 				Expect(errList).To(BeEmpty())
 			})
 
 			It("should not allow creation using the cloudProfileName for k8s >= v1.34", func() {
-				var (
-					k8sVersion            = semver.MustParse("v1.34.0")
-					cloudProfileReference = &core.CloudProfileReference{
-						Kind: "CloudProfile",
-						Name: "my-profile",
-					}
-				)
+				cloudProfileReference := &core.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: "my-profile",
+				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, ptr.To(cloudProfileReference.Name), k8sVersion, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, ptr.To(cloudProfileReference.Name), "v1.34.0", fldPath)
 
 				Expect(errList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.cloudProfileName"),
-						"Detail": ContainSubstring("cloudProfileName must not be set"),
+						"Detail": ContainSubstring("cloudProfileName field is no longer supported"),
 					}))))
 			})
 		})

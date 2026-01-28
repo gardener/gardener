@@ -832,6 +832,55 @@ var _ = Describe("Strategy", func() {
 			})
 		})
 
+		Context("addons", func() {
+			It("should set spec.addons to nil when no addons are configured", func() {
+				shoot.Spec.Addons = &core.Addons{
+					KubernetesDashboard: &core.KubernetesDashboard{
+						Addon: core.Addon{
+							Enabled: false,
+						},
+						AuthenticationMode: ptr.To("foo"),
+					},
+				}
+
+				Expect(func() { strategy.Canonicalize(shoot) }).NotTo(Panic())
+				Expect(shoot.Spec.Addons).To(BeNil())
+			})
+
+			It("should not set spec.addons to nil because Nginx is configured", func() {
+				shoot.Spec.Addons = &core.Addons{
+					KubernetesDashboard: &core.KubernetesDashboard{
+						Addon: core.Addon{
+							Enabled: false,
+						},
+						AuthenticationMode: ptr.To("foo"),
+					},
+					NginxIngress: &core.NginxIngress{
+						Addon: core.Addon{
+							Enabled: true,
+						},
+					},
+				}
+
+				Expect(func() { strategy.Canonicalize(shoot) }).NotTo(Panic())
+				Expect(shoot.Spec.Addons).NotTo(BeNil())
+			})
+
+			It("should not set spec.addons to nil because the Kubernetes dashboard is configured", func() {
+				shoot.Spec.Addons = &core.Addons{
+					KubernetesDashboard: &core.KubernetesDashboard{
+						Addon: core.Addon{
+							Enabled: true,
+						},
+						AuthenticationMode: ptr.To("foo"),
+					},
+				}
+
+				Expect(func() { strategy.Canonicalize(shoot) }).NotTo(Panic())
+				Expect(shoot.Spec.Addons).NotTo(BeNil())
+			})
+		})
+
 		Context("self-hosted shoots", func() {
 			It("should correctly add the self-hosted label", func() {
 				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, core.Worker{ControlPlane: &core.WorkerControlPlane{}})

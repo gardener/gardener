@@ -57,6 +57,7 @@ var (
 		"NamespaceAutoProvision":               {},
 		"NamespaceExists":                      {},
 		"NamespaceLifecycle":                   {Required: true},
+		"NodeDeclaredFeatureValidator":         {VersionRange: versionutils.VersionRange{AddedInVersion: "1.35"}},
 		"NodeRestriction":                      {Required: true},
 		"OwnerReferencesPermissionEnforcement": {},
 		"PersistentVolumeClaimResize":          {},

@@ -21,6 +21,7 @@ var SupportedVersions = []string{
 	"1.32",
 	"1.33",
 	"1.34",
+	"1.35",
 }
 
 // envExperimentalDisableKubernetesVersionCheck holds the name of the environment variable to prevent a crash

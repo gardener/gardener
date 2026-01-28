@@ -166,7 +166,6 @@ global:
  #    minTimeout: 1m0s
  #    timeout: 1m0s
  #  watchCacheSizes:
- #    default: 100
  #    resources:
  #    - apiGroup: core.gardener.cloud
  #      resource: shoots

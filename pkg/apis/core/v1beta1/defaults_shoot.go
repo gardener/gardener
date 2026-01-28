@@ -115,15 +115,11 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Kubernetes.KubeProxy.Enabled = ptr.To(true)
 		}
 
-		if obj.Spec.Addons == nil {
-			obj.Spec.Addons = &Addons{}
-		}
-		if obj.Spec.Addons.KubernetesDashboard == nil {
-			obj.Spec.Addons.KubernetesDashboard = &KubernetesDashboard{}
-		}
-		if obj.Spec.Addons.KubernetesDashboard.AuthenticationMode == nil {
-			defaultAuthMode := KubernetesDashboardAuthModeToken
-			obj.Spec.Addons.KubernetesDashboard.AuthenticationMode = &defaultAuthMode
+		if obj.Spec.Addons != nil && obj.Spec.Addons.KubernetesDashboard != nil && obj.Spec.Addons.KubernetesDashboard.Enabled {
+			if obj.Spec.Addons.KubernetesDashboard.AuthenticationMode == nil {
+				defaultAuthMode := KubernetesDashboardAuthModeToken
+				obj.Spec.Addons.KubernetesDashboard.AuthenticationMode = &defaultAuthMode
+			}
 		}
 
 		if obj.Spec.Kubernetes.Kubelet == nil {

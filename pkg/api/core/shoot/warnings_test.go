@@ -304,5 +304,70 @@ var _ = Describe("Warnings", func() {
 				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(BeEmpty())
 			})
 		})
+
+		Describe("shoot.spec.addons", func() {
+			It("should print a warning when addons are set", func() {
+				shoot.Spec.Addons = &core.Addons{}
+
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are setting the spec.addons field. The field is deprecated and will be forbidden starting with Kubernetes 1.35.")))
+			})
+		})
+
+		Describe("shoot.spec.kubernetes.kubeProxy.mode", func() {
+			It("should print a warning when kube-proxy mode is set to 'IPVS' and the Kubernetes version is >= v1.35", func() {
+				shoot.Spec.Kubernetes.Version = "1.35.0"
+				shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
+					Enabled: ptr.To(true),
+					Mode:    ptr.To(core.ProxyModeIPVS),
+				}
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are using IPVS mode for kube-proxy")))
+			})
+
+			It("should not print a warning when kube-proxy mode is set to 'IPVS' and the Kubernetes version is < v1.35", func() {
+				shoot.Spec.Kubernetes.Version = "1.34.0"
+				shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
+					Enabled: ptr.To(true),
+					Mode:    ptr.To(core.ProxyModeIPVS),
+				}
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(BeEmpty())
+			})
+
+			It("should print a warning when kube-proxy mode is switched to 'IPVS' for Kubernetes versions < 1.35", func() {
+				shoot.Spec.Kubernetes.Version = "1.34.0"
+				shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
+					Enabled: ptr.To(true),
+					Mode:    ptr.To(core.ProxyModeIPVS),
+				}
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
+					Enabled: ptr.To(true),
+					Mode:    ptr.To(core.ProxyModeIPTables),
+				}
+
+				Expect(GetWarnings(ctx, shoot, oldShoot, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you have switched to IPVS mode for kube-proxy")))
+			})
+		})
+
+		Describe("shoot.spec.kubernetes.kubeScheduler.kubeMaxPDVols", func() {
+			It("should print a warning when kubeMaxPDVols is set", func() {
+				shoot.Spec.Kubernetes.KubeScheduler = &core.KubeSchedulerConfig{
+					KubeMaxPDVols: ptr.To("20"),
+				}
+
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are setting the spec.kubernetes.kubeScheduler.kubeMaxPDVols field")))
+			})
+		})
+
+		Describe("shoot.spec.kubernetes.kubeAPIServer.watchCacheSizes.default", func() {
+			It("should print a warning when default is set", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+					WatchCacheSizes: &core.WatchCacheSizes{
+						Default: ptr.To[int32](50),
+					},
+				}
+
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are setting the spec.kubernetes.kubeAPIServer.watchCacheSizes.default field")))
+			})
+		})
 	})
 })

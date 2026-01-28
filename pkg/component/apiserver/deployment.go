@@ -78,10 +78,6 @@ func InjectDefaultSettings(
 	}
 
 	if values.WatchCacheSizes != nil && len(values.WatchCacheSizes.Resources) > 0 {
-		if values.WatchCacheSizes != nil && values.WatchCacheSizes.Default != nil {
-			deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--default-watch-cache-size=%d", *values.WatchCacheSizes.Default))
-		}
-
 		var sizes []string
 		for _, resource := range values.WatchCacheSizes.Resources {
 			size := resource.Resource

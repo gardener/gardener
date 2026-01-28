@@ -37,6 +37,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 		shoot131     *gardencorev1beta1.Shoot
 		shoot132     *gardencorev1beta1.Shoot
 		shoot133     *gardencorev1beta1.Shoot
+		shoot134     *gardencorev1beta1.Shoot
 
 		// Test Machine Image
 		machineImageName             = "foo-image"
@@ -376,9 +377,9 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: testNamespace.Name},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: ptr.To("my-provider-account"),
-				CloudProfile:      &gardencorev1beta1.CloudProfileReference{Name: cloudProfile.Name},
-				Region:            "foo-region",
+				CredentialsBindingName: ptr.To("my-provider-account"),
+				CloudProfile:           &gardencorev1beta1.CloudProfileReference{Name: cloudProfile.Name},
+				Region:                 "foo-region",
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo-provider",
 					Workers: []gardencorev1beta1.Worker{
@@ -426,6 +427,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 		shoot131 = shoot.DeepCopy()
 		shoot132 = shoot.DeepCopy()
 		shoot133 = shoot.DeepCopy()
+		shoot134 = shoot.DeepCopy()
 		// set dummy kubernetes version to shoot
 		shoot.Spec.Kubernetes.Version = testKubernetesVersionLowPatchLowMinor.Version
 
@@ -1140,43 +1142,6 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 				}).Should(Equal("1.32.0"))
 			})
 
-			It("Kubernetes version should be updated: force update minor version(>= v1.35) and set spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication to nil", func() {
-				shoot134 := shoot133.DeepCopy()
-				shoot134.Spec.Kubernetes.Version = "1.34.0"
-				shoot134.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
-					EnableAnonymousAuthentication: ptr.To(true),
-				}
-				shoot134.Spec.SecretBindingName = nil
-				shoot134.Spec.CredentialsBindingName = ptr.To("credentials-binding")
-
-				By("Create k8s v1.34 Shoot")
-				Expect(testClient.Create(ctx, shoot134)).To(Succeed())
-				log.Info("Created shoot with k8s v1.34 for test", "shoot", client.ObjectKeyFromObject(shoot134))
-
-				DeferCleanup(func() {
-					By("Delete Shoot with k8s v1.34")
-					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot134))).To(Succeed())
-				})
-
-				By("Expire Shoot's kubernetes version in the CloudProfile")
-				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, shoot134.Spec.CloudProfile.Name, "1.34.0", &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
-
-				By("Wait until manager has observed the CloudProfile update")
-				waitKubernetesVersionToBeExpiredInCloudProfile(shoot134.Spec.CloudProfile.Name, "1.34.0", &expirationDateInThePast)
-
-				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot134, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
-
-				Eventually(func(g Gomega) string {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot134), shoot134)).To(Succeed())
-					g.Expect(shoot134.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(shoot134.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.34.0\" to \"1.35.0\". Reason: Kubernetes version expired - force update required, .spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication is set to nil. Reason: The field is no longer supported for Shoot clusters using Kubernetes version 1.35+"))
-					g.Expect(shoot134.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
-					g.Expect(shoot134.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
-					g.Expect(shoot134.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(BeNil())
-					return shoot134.Spec.Kubernetes.Version
-				}).Should(Equal("1.35.0"))
-			})
-
 			It("Kubernetes version should be updated: force update minor version", func() {
 				// set the shoots Kubernetes version to be the highest patch version of the minor version
 				patch := client.MergeFrom(shoot.DeepCopy())
@@ -1868,6 +1833,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 
 				shoot133.Spec.Kubernetes.Version = "1.33.0"
 				shoot133.Spec.SecretBindingName = &secretBindingName
+				shoot133.Spec.CredentialsBindingName = nil
 
 				secret = &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1972,6 +1938,67 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 					Expect(client.IgnoreNotFound(testClient.Delete(ctx, credentialsBinding))).To(Succeed())
 				})
 			})
+
+			It("should remove forbidden fields when force updating to Kubernetes 1.35", func() {
+				shoot134.Spec.Kubernetes.Version = "1.34.0"
+				shoot134.Spec.Addons = &gardencorev1beta1.Addons{
+					KubernetesDashboard: &gardencorev1beta1.KubernetesDashboard{
+						Addon: gardencorev1beta1.Addon{
+							Enabled: true,
+						},
+					},
+				}
+				shoot134.Spec.Kubernetes.KubeScheduler = &gardencorev1beta1.KubeSchedulerConfig{
+					KubeMaxPDVols: ptr.To("20"),
+				}
+				shoot134.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+					EnableAnonymousAuthentication: ptr.To(true),
+					WatchCacheSizes: &gardencorev1beta1.WatchCacheSizes{
+						Default: ptr.To[int32](50),
+					},
+				}
+
+				By("Create Shoot with k8s v1.34")
+				Expect(testClient.Create(ctx, shoot134)).To(Succeed())
+				log.Info("Created shoot with k8s v1.34", "shoot", client.ObjectKeyFromObject(shoot133))
+
+				DeferCleanup(func() {
+					By("Delete Shoot with k8s v1.34")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot134))).To(Succeed())
+				})
+
+				Expect(shoot134.Spec.Addons.KubernetesDashboard).NotTo(BeNil())
+
+				By("Expire Shoot's kubernetes version in the CloudProfile to force update to 1.35")
+				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, shoot134.Spec.CloudProfile.Name, "1.34.0", &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+
+				By("Wait until manager has observed the CloudProfile update")
+				waitKubernetesVersionToBeExpiredInCloudProfile(shoot134.Spec.CloudProfile.Name, "1.34.0", &expirationDateInThePast)
+
+				By("Trigger maintenance")
+				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot134, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+
+				By("Wait for maintenance to complete and verify migration")
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot134), shoot134)).To(Succeed())
+					g.Expect(shoot134.Status.LastMaintenance).NotTo(BeNil())
+
+					g.Expect(shoot134.Spec.Kubernetes.Version).To(Equal("1.35.0"))
+
+					g.Expect(shoot134.Spec.Addons).To(BeNil(), "Addons should be unset after migration")
+					g.Expect(shoot134.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols).To(BeNil(), "KubeMaxPDVols should be unset after migration")
+					g.Expect(shoot134.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(BeNil(), "Default watch cache size should be unset after migration")
+					g.Expect(shoot134.Spec.Kubernetes.KubeAPIServer.WatchCacheSizes.Default).To(BeNil(), "Default watch cache size should be unset after migration")
+
+					g.Expect(shoot134.Status.LastMaintenance.Description).To(ContainSubstring(".spec.addons was removed"))
+					g.Expect(shoot134.Status.LastMaintenance.Description).To(ContainSubstring(".spec.kubernetes.kubeAPIServer.watchCacheSizes.default was removed"))
+					g.Expect(shoot134.Status.LastMaintenance.Description).To(ContainSubstring(".spec.kubernetes.kubeScheduler.kubeMaxPDVols was removed"))
+					g.Expect(shoot134.Status.LastMaintenance.Description).To(ContainSubstring(".spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication was removed"))
+					g.Expect(shoot134.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot134.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
+				}).Should(Succeed())
+			})
+
 		})
 	})
 

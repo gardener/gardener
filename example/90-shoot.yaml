@@ -165,7 +165,7 @@ spec:
   #   sshAccess:
   #     enabled: false
   kubernetes:
-  # version: 1.33.3
+  # version: 1.35.0
   # etcd:
   #   main:
   #     autoscaling:
@@ -219,7 +219,6 @@ spec:
   #       configMapRef:
   #         name: auditpolicy
   #   watchCacheSizes: # See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
-  #     default: 100
   #     resources:
   #     - resource: secrets
   #       size: 500
@@ -267,12 +266,11 @@ spec:
   # kubeScheduler:
   #   featureGates:
   #     SomeKubernetesFeature: true
-  #   kubeMaxPDVols: "30" # https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits
   #   profile: "balanced"
   # kubeProxy:
   #   featureGates:
   #     SomeKubernetesFeature: true
-  #   mode: IPVS # {IPTables,NFTables,IPVS}
+  #   mode: IPTables # {IPTables,NFTables}
   #   enabled: true
   # kubelet:
   #   cpuCFSQuota: true
@@ -423,16 +421,6 @@ spec:
 #   - start: "0 20 * * *" # Start hibernation every day at 8PM
 #     end: "0 6 * * *"    # Stop hibernation every day at 6AM
 #     location: "America/Los_Angeles" # Specify a location for the cron to run in
-  addons:
-    nginxIngress:
-      enabled: false
-    # loadBalancerSourceRanges: []
-    # externalTrafficPolicy: Cluster
-    # config:
-    #   enable-access-log-for-default-backend: "false"
-    kubernetesDashboard:
-      enabled: true
-    # authenticationMode: token # allowed values: token
 # tolerations:
 # - key: <some-key>
 # Explicitly specify the seed that will run the shoot control plane. Only possible for users having RBAC for
