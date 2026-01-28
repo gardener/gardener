@@ -139,3 +139,25 @@ monitoring:
   shoot:
     enabled: false
 ```
+
+## Prometheus health checks
+
+The care controllers for the `Garden`, `Seed` and `Shoot` resources can run queries against the Prometheus instances to check for specific health aspects. This feature works as depicted in the following diagrams.
+
+1. The `Garden` care controller.
+
+<p align="center">
+    <img src="./images/prometheus-health-checks-garden.excalidraw.png" width="80%" height="80%" />
+</p>
+
+2. The `Seed` care controller.
+
+<p align="center">
+    <img src="./images/prometheus-health-checks-seed.excalidraw.png" width="80%" height="80%" />
+</p>
+
+3. The `Shoot` care controller.
+
+<p align="center">
+    <img src="./images/prometheus-health-checks-shoot.excalidraw.png" width="80%" height="80%" />
+</p>
