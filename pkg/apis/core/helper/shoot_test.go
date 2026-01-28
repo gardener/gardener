@@ -588,6 +588,51 @@ var _ = Describe("Helper", func() {
 		),
 	)
 
+	Describe("#EncryptionProvider", func() {
+		const EncryptionProviderType core.EncryptionProviderType = "foo"
+
+		DescribeTable("#GetEncryptionProviderType",
+			func(kubeAPIServerConfig *core.KubeAPIServerConfig, expectedProvider string) {
+				Expect(string(GetEncryptionProviderType(kubeAPIServerConfig))).To(Equal(expectedProvider))
+			},
+
+			Entry("kubeAPIServerConfig is nil", nil, ""),
+			Entry("encryptionConfig is nil", &core.KubeAPIServerConfig{}, ""),
+			Entry("Provider is empty", &core.KubeAPIServerConfig{EncryptionConfig: &core.EncryptionConfig{}}, ""),
+			Entry("Type is nil", &core.KubeAPIServerConfig{
+				EncryptionConfig: &core.EncryptionConfig{
+					Provider: core.EncryptionProvider{
+						Type: nil,
+					},
+				},
+			}, ""),
+			Entry("Type is set", &core.KubeAPIServerConfig{
+				EncryptionConfig: &core.EncryptionConfig{
+					Provider: core.EncryptionProvider{
+						Type: ptr.To(EncryptionProviderType),
+					},
+				},
+			}, "foo"),
+		)
+
+		DescribeTable("#GetEncryptionProviderInStatus",
+			func(status core.ShootStatus, expected string) {
+				Expect(string(GetEncryptionProviderTypeInStatus(status))).To(Equal(expected))
+			},
+			Entry("no credentials field", core.ShootStatus{}, ""),
+			Entry("without provider", core.ShootStatus{Credentials: &core.ShootCredentials{}}, ""),
+			Entry("with provider", core.ShootStatus{
+				Credentials: &core.ShootCredentials{
+					EncryptionAtRest: &core.EncryptionAtRest{
+						Provider: core.EncryptionProviderStatus{
+							Type: EncryptionProviderType,
+						},
+					},
+				},
+			}, "foo"),
+		)
+	})
+
 	DescribeTable("#FindWorkerByName",
 		func(workers []core.Worker, name string, expectedWorker *core.Worker) {
 			Expect(FindWorkerByName(workers, name)).To(Equal(expectedWorker))

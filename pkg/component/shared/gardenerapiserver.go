@@ -121,6 +121,7 @@ func DeployGardenerAPIServer(
 	gardenerAPIServer gardenerapiserver.Interface,
 	resourcesToEncrypt []string,
 	encryptedResources []string,
+	encryptionProviderType gardencorev1beta1.EncryptionProviderType,
 	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
 	workloadIdentityKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
 ) error {
@@ -132,6 +133,7 @@ func DeployGardenerAPIServer(
 		etcdEncryptionKeyRotationPhase,
 		append(resourcesToEncrypt, sets.List(gardenerutils.DefaultGardenerResourcesForEncryption())...),
 		append(encryptedResources, sets.List(gardenerutils.DefaultGardenerResourcesForEncryption())...),
+		encryptionProviderType,
 	)
 	if err != nil {
 		return err

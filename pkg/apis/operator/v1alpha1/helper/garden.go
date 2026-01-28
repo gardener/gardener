@@ -258,3 +258,35 @@ func GetEncryptedResourcesInStatus(gardenStatus operatorv1alpha1.GardenStatus) [
 func GetGardenerOperations(annotations map[string]string) []string {
 	return utils.SplitAndTrimString(annotations[v1beta1constants.GardenerOperation], v1beta1constants.GardenerOperationsSeparator)
 }
+
+// GetGardenAPIServerEncryptionProviderType returns the Garden's encryption provider type from the garden-apiserver config.
+func GetGardenAPIServerEncryptionProviderType(apiServerConfig *operatorv1alpha1.GardenerAPIServerConfig) gardencorev1beta1.EncryptionProviderType {
+	if apiServerConfig != nil &&
+		apiServerConfig.EncryptionConfig != nil &&
+		apiServerConfig.EncryptionConfig.Provider.Type != nil {
+		return *apiServerConfig.EncryptionConfig.Provider.Type
+	}
+
+	return ""
+}
+
+// GetKubeAPIServerEncryptionProviderType returns the Garden's encryption provider type from the kube-apiserver config.
+func GetKubeAPIServerEncryptionProviderType(apiServerConfig *operatorv1alpha1.KubeAPIServerConfig) gardencorev1beta1.EncryptionProviderType {
+	if apiServerConfig != nil &&
+		apiServerConfig.KubeAPIServerConfig != nil &&
+		apiServerConfig.EncryptionConfig != nil &&
+		apiServerConfig.EncryptionConfig.Provider.Type != nil {
+		return *apiServerConfig.EncryptionConfig.Provider.Type
+	}
+
+	return ""
+}
+
+// GetEncryptionProviderTypeInStatus returns the encryption provider from the garden status.
+func GetEncryptionProviderTypeInStatus(gardenStatus operatorv1alpha1.GardenStatus) gardencorev1beta1.EncryptionProviderType {
+	if gardenStatus.Credentials != nil && gardenStatus.Credentials.EncryptionAtRest != nil {
+		return gardenStatus.Credentials.EncryptionAtRest.Provider.Type
+	}
+
+	return ""
+}

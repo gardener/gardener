@@ -820,6 +820,14 @@ type EncryptionAtRest struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config for more details.
 	// +optional
 	Resources []string `json:"resources,omitempty"`
+	// Provider contains information about virtual garden encryption provider.
+	Provider EncryptionProviderStatus `json:"provider"`
+}
+
+// EncryptionProviderStatus contains information about virtual garden encryption provider.
+type EncryptionProviderStatus struct {
+	// Type is the used encryption provider type.
+	Type gardencorev1beta1.EncryptionProviderType `json:"type"`
 }
 
 // WorkloadIdentityKeyRotation contains information about the workload identity key credential rotation.
