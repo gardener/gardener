@@ -202,14 +202,14 @@ func validateKubernetesVersions(versions []core.ExpirableVersion, fldPath *field
 func validateExpirableVersion(version core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	// Forbid using classification lifecycle when the feature gate is not enabled.
+	if len(version.Lifecycle) > 0 && !utilfeature.DefaultFeatureGate.Enabled(features.VersionClassificationLifecycle) {
+		return append(allErrs, field.Forbidden(fldPath.Child("lifecycle"), "lifecycles are not allowed with disabled VersionClassificationLifecycle feature gate"))
+	}
+
 	// Validate for supportedVersionClassifications
 	if version.Classification != nil && !supportedVersionClassifications.Has(string(*version.Classification)) {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("classification"), *version.Classification, sets.List(supportedVersionClassifications)))
-	}
-
-	// Forbid using classification lifecycle when the feature gate is not enabled.
-	if len(version.Lifecycle) > 0 && !utilfeature.DefaultFeatureGate.Enabled(features.VersionClassificationLifecycle) {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("lifecycle"), "lifecycles are not allowed with disabled VersionClassificationLifecycle feature gate"))
 	}
 
 	// Forbid setting classification to "expired" if its not a classification lifecycle.
@@ -248,25 +248,20 @@ func validateLifecycleClassificationsValid(lifecycle []core.LifecycleStage, fldP
 }
 
 // validateLifecycleNoDuplicates checks if there are any duplicate entries in the provided lifecycle slice
-func validateLifecycleNoDuplicates(lifecycle []core.LifecycleStage, fldPath *field.Path) field.ErrorList {
-	var (
-		allErrs    = field.ErrorList{}
-		duplicates = sets.NewString()
-		seen       = make(map[core.VersionClassification]bool)
-	)
-
-	for _, value := range lifecycle {
-		classification := value.Classification
-
-		if seen[classification] {
-			duplicates.Insert(string(classification))
-		}
-
-		seen[classification] = true
+func validateLifecycleNoDuplicates(lifecycles []core.LifecycleStage, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if len(lifecycles) == 0 {
+		return allErrs
 	}
 
-	for _, duplicate := range duplicates.List() {
-		allErrs = append(allErrs, field.Invalid(fldPath, duplicate, "duplicate classification stage in lifecycle"))
+	lifecyclesFound := sets.New[string]()
+	for i, lifecycle := range lifecycles {
+		idxPath := fldPath.Index(i)
+		if lifecyclesFound.Has(string(lifecycle.Classification)) {
+			allErrs = append(allErrs, field.Duplicate(idxPath.Child("classification"), lifecycle.Classification))
+		} else {
+			lifecyclesFound.Insert(string(lifecycle.Classification))
+		}
 	}
 
 	return allErrs
@@ -274,19 +269,21 @@ func validateLifecycleNoDuplicates(lifecycle []core.LifecycleStage, fldPath *fie
 
 // validateLifecycleInOrder checks if the provided lifecycle slice is in  the expected order.
 // The order is not required for functionality but should ensure better readability.
-func validateLifecycleInOrder(lifecycle []core.LifecycleStage, fldPath *field.Path) field.ErrorList {
+func validateLifecycleInOrder(lifecycles []core.LifecycleStage, fldPath *field.Path) field.ErrorList {
 	var allErrs = field.ErrorList{}
 
-	var misplacedElement core.VersionClassification
-	isSorted := slices.IsSortedFunc(lifecycle, func(a, b core.LifecycleStage) int {
-		orderResult := a.Classification.Compare(b.Classification)
-		if orderResult > 0 {
-			misplacedElement = a.Classification
+	for i := 1; i < len(lifecycles); i++ {
+		previous := lifecycles[i-1].Classification
+		current := lifecycles[i].Classification
+
+		if previous.Compare(current) > 0 {
+			allErrs = append(allErrs, field.Invalid(
+				fldPath.Index(i).Child("classification"),
+				current,
+				fmt.Sprintf("lifecycle classifications not in order: %s cannot come after %s", current, previous),
+			))
+			break
 		}
-		return orderResult
-	})
-	if !isSorted {
-		allErrs = append(allErrs, field.Invalid(fldPath, misplacedElement, "lifecycle classifications not in order, must be preview -> supported -> deprecated -> expired"))
 	}
 
 	return allErrs

@@ -491,15 +491,14 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						errorList := ValidateCloudProfile(cloudProfile)
 
 						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.kubernetes.versions[0].lifecycle"),
-							"Detail": Equal("duplicate classification stage in lifecycle"),
+							"Type":     Equal(field.ErrorTypeDuplicate),
+							"Field":    Equal("spec.kubernetes.versions[0].lifecycle[1].classification"),
+							"BadValue": Equal(supportedClassification),
 						}))))
 					})
 
 					It("should forbid unordered lifecycle stages", func() {
 						now := time.Now()
-
 						cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
 							{
 								Version: "1.1.0",
@@ -512,6 +511,15 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 							{
 								Version: "1.2.0",
 								Lifecycle: []core.LifecycleStage{
+									{Classification: previewClassification},
+									{Classification: expiredClassification, StartTime: ptr.To(metav1.NewTime(now.Add(1 * time.Hour)))},
+									{Classification: deprecatedClassification, StartTime: ptr.To(metav1.NewTime(now.Add(2 * time.Hour)))},
+									{Classification: supportedClassification, StartTime: ptr.To(metav1.NewTime(now.Add(3 * time.Hour)))},
+								},
+							},
+							{
+								Version: "1.3.0",
+								Lifecycle: []core.LifecycleStage{
 									{Classification: supportedClassification},
 								},
 							},
@@ -521,8 +529,12 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.kubernetes.versions[0].lifecycle"),
-							"Detail": Equal("lifecycle classifications not in order, must be preview -> supported -> deprecated -> expired"),
+							"Field":  Equal("spec.kubernetes.versions[0].lifecycle[2].classification"),
+							"Detail": Equal("lifecycle classifications not in order: supported cannot come after deprecated"),
+						})), PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.versions[1].lifecycle[2].classification"),
+							"Detail": Equal("lifecycle classifications not in order: deprecated cannot come after expired"),
 						}))))
 					})
 
@@ -844,9 +856,9 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						errorList := ValidateCloudProfile(cloudProfile)
 
 						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.machineImages[0].versions[1].lifecycle"),
-							"Detail": Equal("duplicate classification stage in lifecycle"),
+							"Type":     Equal(field.ErrorTypeDuplicate),
+							"Field":    Equal("spec.machineImages[0].versions[1].lifecycle[1].classification"),
+							"BadValue": Equal(supportedClassification),
 						}))))
 					})
 
@@ -888,8 +900,8 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.machineImages[0].versions[0].lifecycle"),
-							"Detail": Equal("lifecycle classifications not in order, must be preview -> supported -> deprecated -> expired"),
+							"Field":  Equal("spec.machineImages[0].versions[0].lifecycle[2].classification"),
+							"Detail": Equal("lifecycle classifications not in order: supported cannot come after deprecated"),
 						}))))
 					})
 
