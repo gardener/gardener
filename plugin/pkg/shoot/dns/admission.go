@@ -129,10 +129,6 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 		return fmt.Errorf("error retrieving default domains: %s", err)
 	}
 
-	if err := checkPrimaryDNSProvider(a, shoot, defaultDomains); err != nil {
-		return err
-	}
-
 	switch a.GetOperation() {
 	case admission.Create:
 		// If shoot uses default domain, validate domain even though shoot can be assigned to seed
@@ -198,7 +194,7 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 	}
 
 	if shoot.Spec.DNS != nil {
-		if err := setPrimaryDNSProvider(a, shoot, defaultDomains); err != nil {
+		if err := setPrimaryDNSProvider(shoot, defaultDomains); err != nil {
 			return err
 		}
 	}
@@ -239,25 +235,6 @@ func shouldIgnore(a admission.Attributes) bool {
 	return false
 }
 
-// checkPrimaryDNSProvider checks if the shoot uses a default domain and returns an error
-// if a primary provider is used at the same time.
-func checkPrimaryDNSProvider(a admission.Attributes, shoot *core.Shoot, defaultDomains []string) error {
-	dns := shoot.Spec.DNS
-	if dns == nil || dns.Domain == nil || len(dns.Providers) == 0 {
-		return nil
-	}
-
-	var defaultDomain = isDefaultDomain(*dns.Domain, defaultDomains)
-	if defaultDomain {
-		primary := helper.FindPrimaryDNSProvider(dns.Providers)
-		if primary != nil {
-			fieldErr := field.Invalid(field.NewPath("spec", "dns"), shoot.Name, "primary dns provider must not be set when default domain is used")
-			return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
-		}
-	}
-	return nil
-}
-
 func isShootDomainSet(shoot *core.Shoot) bool {
 	return shoot.Spec.DNS != nil && shoot.Spec.DNS.Domain != nil
 }
@@ -271,13 +248,10 @@ func isDefaultDomain(domain string, defaultDomains []string) bool {
 	return false
 }
 
-func setPrimaryDNSProvider(a admission.Attributes, shoot *core.Shoot, defaultDomains []string) error {
+func setPrimaryDNSProvider(shoot *core.Shoot, defaultDomains []string) error {
 	dns := shoot.Spec.DNS
 	if dns == nil {
 		return nil
-	}
-	if err := checkPrimaryDNSProvider(a, shoot, defaultDomains); err != nil {
-		return err
 	}
 
 	if dns.Domain != nil && isDefaultDomain(*dns.Domain, defaultDomains) {
@@ -425,5 +399,42 @@ func (d *DNS) Validate(_ context.Context, a admission.Attributes, _ admission.Ob
 		return nil
 	}
 
+	shoot, ok := a.GetObject().(*core.Shoot)
+	if !ok {
+		return apierrors.NewBadRequest("could not convert resource into Shoot object")
+	}
+
+	defaultDomains, err := getDefaultDomains(d.secretLister, d.seedLister, shoot)
+	if err != nil {
+		return fmt.Errorf("error retrieving default domains: %s", err)
+	}
+
+	var allErrs field.ErrorList
+	allErrs = append(allErrs, checkPrimaryDNSProvider(shoot, defaultDomains)...)
+
+	if len(allErrs) > 0 {
+		return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, allErrs)
+	}
+
 	return nil
+}
+
+// checkPrimaryDNSProvider checks if the shoot uses a default domain and returns an error
+// if a primary provider is used at the same time.
+func checkPrimaryDNSProvider(shoot *core.Shoot, defaultDomains []string) field.ErrorList {
+	dns := shoot.Spec.DNS
+	if dns == nil || dns.Domain == nil || len(dns.Providers) == 0 {
+		return nil
+	}
+
+	var allErrs field.ErrorList
+	if isDefaultDomain(*dns.Domain, defaultDomains) {
+		for i, provider := range dns.Providers {
+			if ptr.Deref(provider.Primary, false) {
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "dns", "providers").Index(i).Child("primary"), provider.Primary, "primary dns provider must not be set when default domain is used"))
+			}
+		}
+	}
+
+	return allErrs
 }

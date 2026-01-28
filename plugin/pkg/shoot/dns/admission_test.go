@@ -7,7 +7,6 @@ package dns_test
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -16,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/utils/ptr"
@@ -35,9 +35,13 @@ const (
 	seedName    = "my-seed"
 	shootName   = "shoot"
 
-	domain               = "example.com"
-	domainHigherPriority = "higher.example.com"
-	domainLowerPriority  = "lower.example.com"
+	domain                = "example.com"
+	domainHigherPriority  = "higher.example.com"
+	domainLowerPriority   = "lower.example.com"
+	defaultDomainProvider = "my-dns-provider"
+
+	providerType = "provider"
+	secretName   = "secret"
 )
 
 var _ = Describe("dns", func() {
@@ -105,8 +109,7 @@ var _ = Describe("dns", func() {
 				},
 			}
 
-			defaultDomainProvider = "my-dns-provider"
-			defaultDomainSecret   = corev1.Secret{
+			defaultDomainSecret = corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "secret-1",
 					Namespace: v1beta1constants.GardenNamespace,
@@ -243,11 +246,6 @@ var _ = Describe("dns", func() {
 		})
 
 		Context("provider is not 'unmanaged'", func() {
-			var (
-				providerType = "provider"
-				secretName   = "secret"
-			)
-
 			BeforeEach(func() {
 				shoot.Spec.DNS.Domain = nil
 				shoot.Spec.DNS.Providers = nil
@@ -255,13 +253,12 @@ var _ = Describe("dns", func() {
 
 			It("should pass because no default domain was generated for the shoot (with domain)", func() {
 				var (
-					shootDomain  = "my-shoot.my-private-domain.com"
-					providerType = "provider"
+					shootDomain = "my-shoot.my-private-domain.com"
 				)
 				shoot.Spec.DNS.Domain = &shootDomain
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type: &providerType,
+						Type: ptr.To(providerType),
 					},
 				}
 
@@ -286,10 +283,10 @@ var _ = Describe("dns", func() {
 				shoot.Spec.DNS.Domain = &shootDomain
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type: &providerType,
+						Type: ptr.To(providerType),
 					},
 					{
-						Type: &providerType,
+						Type: ptr.To(providerType),
 						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
@@ -327,7 +324,7 @@ var _ = Describe("dns", func() {
 				shoot.Spec.DNS.Domain = &shootDomain
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type: &providerType,
+						Type: ptr.To(providerType),
 						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
@@ -335,7 +332,7 @@ var _ = Describe("dns", func() {
 						},
 					},
 					{
-						Type: &providerType,
+						Type: ptr.To(providerType),
 						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
@@ -375,10 +372,10 @@ var _ = Describe("dns", func() {
 				shoot.Spec.DNS.Domain = &shootDomain
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type: &providerType,
+						Type: ptr.To(providerType),
 					},
 					{
-						Type: &providerType,
+						Type: ptr.To(providerType),
 						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
@@ -386,7 +383,7 @@ var _ = Describe("dns", func() {
 						},
 					},
 					{
-						Type: &providerType,
+						Type: ptr.To(providerType),
 					},
 				}
 
@@ -425,14 +422,14 @@ var _ = Describe("dns", func() {
 
 				providers := []core.DNSProvider{
 					{
-						Type: &providerType,
+						Type: ptr.To(providerType),
 					},
 					{
-						Type:    &providerType,
+						Type:    ptr.To(providerType),
 						Primary: ptr.To(true),
 					},
 					{
-						Type: &providerType,
+						Type: ptr.To(providerType),
 					},
 				}
 
@@ -539,7 +536,7 @@ var _ = Describe("dns", func() {
 			It("should not set a primary provider because a default domain was generated for the shoot (no domain)", func() {
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type: &providerType,
+						Type: ptr.To(providerType),
 						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
@@ -564,62 +561,7 @@ var _ = Describe("dns", func() {
 				})))
 			})
 
-			It("should forbid setting a primary provider because a default domain was generated for the shoot (no domain)", func() {
-				shoot.Spec.DNS.Providers = []core.DNSProvider{
-					{
-						Type: &providerType,
-						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
-							APIVersion: "v1",
-							Kind:       "Secret",
-							Name:       secretName,
-						},
-						Primary: ptr.To(true),
-					},
-				}
-
-				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
-					"ErrStatus": MatchFields(IgnoreExtras, Fields{
-						"Code": Equal(int32(http.StatusUnprocessableEntity)),
-					}),
-				})))
-			})
-
-			It("should forbid setting a primary provider because a default domain was manually configured for the shoot", func() {
-				shootDomain := fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, domain)
-				shoot.Spec.DNS.Domain = &shootDomain
-				shoot.Spec.DNS.Providers = []core.DNSProvider{
-					{
-						Type: &providerType,
-						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
-							APIVersion: "v1",
-							Kind:       "Secret",
-							Name:       secretName,
-						},
-						Primary: ptr.To(true),
-					},
-				}
-
-				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
-					"ErrStatus": MatchFields(IgnoreExtras, Fields{
-						"Code": Equal(int32(http.StatusUnprocessableEntity)),
-					}),
-				})))
-			})
-
+			// TODO: Rework/remove this unit test in the next commits.
 			It("should pass because the default domain was allowed for the shoot (with domain)", func() {
 				shootDomain := fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, domain)
 				shoot.Spec.DNS.Domain = &shootDomain
@@ -869,13 +811,38 @@ var _ = Describe("dns", func() {
 
 	Describe("#Validate", func() {
 		var (
-			ctx              context.Context
-			shoot            *core.Shoot
-			admissionHandler *DNS
+			ctx                 context.Context
+			defaultDomainSecret *corev1.Secret
+			project             *gardencorev1beta1.Project
+			shoot               *core.Shoot
+			kubeInformerFactory kubeinformers.SharedInformerFactory
+			coreInformerFactory gardencoreinformers.SharedInformerFactory
+			admissionHandler    *DNS
 		)
 
 		BeforeEach(func() {
 			ctx = context.Background()
+			defaultDomainSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret-1",
+					Namespace: v1beta1constants.GardenNamespace,
+					Labels: map[string]string{
+						v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
+					},
+					Annotations: map[string]string{
+						gardenerutils.DNSDomain:   domain,
+						gardenerutils.DNSProvider: defaultDomainProvider,
+					},
+				},
+			}
+			project = &gardencorev1beta1.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: projectName,
+				},
+				Spec: gardencorev1beta1.ProjectSpec{
+					Namespace: ptr.To(namespace),
+				},
+			}
 			shoot = &core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      shootName,
@@ -887,6 +854,10 @@ var _ = Describe("dns", func() {
 			admissionHandler, err = New()
 			Expect(err).ToNot(HaveOccurred())
 			admissionHandler.AssignReadyFunc(func() bool { return true })
+			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
+			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 		})
 
 		It("should do nothing if the resource is not a Shoot", func() {
@@ -900,5 +871,83 @@ var _ = Describe("dns", func() {
 
 			Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 		})
+
+		It("should forbid when object is not Shoot", func() {
+			project := core.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-project",
+				},
+			}
+			attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+			err := admissionHandler.Validate(ctx, attrs, nil)
+			Expect(err).To(BeBadRequestError())
+			Expect(err).To(MatchError("could not convert resource into Shoot object"))
+		})
+
+		Context("provider is not 'unmanaged'", func() {
+			It("should forbid setting a primary provider because a default domain was manually configured for the shoot", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(defaultDomainSecret)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
+
+				shootDomain := fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, domain)
+				shoot.Spec.DNS = &core.DNS{
+					Domain: &shootDomain,
+					Providers: []core.DNSProvider{
+						{
+							Type: ptr.To(providerType),
+							CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+								APIVersion: "v1",
+								Kind:       "Secret",
+								Name:       secretName,
+							},
+							Primary: ptr.To(true),
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Validate(ctx, attrs, nil)
+				Expect(err).To(BeInvalidError())
+				Expect(getErrorList(err)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.dns.providers[0].primary"),
+						"Detail": ContainSubstring("primary dns provider must not be set when default domain is used"),
+					})),
+				))
+			})
+
+			It("should allow because the default domain was allowed for the shoot", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(defaultDomainSecret)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
+
+				shootDomain := fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, domain)
+				shoot.Spec.DNS = &core.DNS{
+					Domain: &shootDomain,
+				}
+
+				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+		})
 	})
 })
+
+func getErrorList(err error) field.ErrorList {
+	statusError, ok := err.(*apierrors.StatusError)
+	if !ok {
+		return field.ErrorList{}
+	}
+	var errs field.ErrorList
+	for _, cause := range statusError.ErrStatus.Details.Causes {
+		errs = append(errs, &field.Error{
+			Type:   field.ErrorType(cause.Type),
+			Field:  cause.Field,
+			Detail: cause.Message,
+		})
+	}
+	return errs
+}
