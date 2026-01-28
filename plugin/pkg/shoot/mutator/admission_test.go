@@ -1205,6 +1205,126 @@ var _ = Describe("mutator", func() {
 
 						Expect(err).To(MatchError(ContainSubstring("failed to determine latest machine image from cloud profile")))
 					})
+
+					It("should not default a machine image if shorthand version is explicitly contained in the cloud profile", func() {
+						cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+							{
+								Name: validMachineImageName,
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version: "24.0",
+										},
+										Architectures: []string{"amd64"},
+									},
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version: "24.0.20260101",
+										},
+										Architectures: []string{"amd64"},
+									},
+								},
+							},
+						}
+
+						shoot.Spec.Provider.Workers = []core.Worker{
+							{
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name:    validMachineImageName,
+										Version: "24.0",
+									},
+									Architecture: ptr.To("amd64"),
+								},
+							},
+						}
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(Not(HaveOccurred()))
+						Expect(shoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal("24.0"))
+					})
+
+					It("should default a machine image to the longer version if also a shorthand version is defined in the cloud profile", func() {
+						cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+							{
+								Name: validMachineImageName,
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version: "24.0",
+										},
+										Architectures: []string{"amd64"},
+									},
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version: "24.0.20260101",
+										},
+										Architectures: []string{"amd64"},
+									},
+								},
+							},
+						}
+						shoot.Spec.Provider.Workers = []core.Worker{
+							{
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name:    validMachineImageName,
+										Version: "24",
+									},
+									Architecture: ptr.To("amd64"),
+								},
+							},
+						}
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+						Expect(err).To(Not(HaveOccurred()))
+						Expect(shoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal("24.0.20260101"))
+					})
+
+					It("should default a machine image to the longer version if also a shorthand version is defined in the cloud profile", func() {
+						cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+							{
+								Name: validMachineImageName,
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version: "24.0",
+										},
+										Architectures: []string{"amd64"},
+									},
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version: "24.1",
+										},
+										Architectures: []string{"amd64"},
+									},
+								},
+							},
+						}
+
+						shoot.Spec.Provider.Workers = []core.Worker{
+							{
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name:    validMachineImageName,
+										Version: "24",
+									},
+									Architecture: ptr.To("amd64"),
+								},
+							},
+						}
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(Not(HaveOccurred()))
+						Expect(shoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal("24.1"))
+					})
 				})
 			})
 
@@ -1442,8 +1562,97 @@ var _ = Describe("mutator", func() {
 						Version: latestNonExpiredVersionThatSupportsCapabilities,
 					}))
 				})
-			})
 
+				It("should not change the machine image if shorthand version is explicitly contained in the cloud profile", func() {
+					cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+						{
+							Name: validMachineImageName,
+							Versions: []gardencorev1beta1.MachineImageVersion{
+								{
+									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+										Version: "24.0",
+									},
+									Architectures: []string{"amd64"},
+								},
+								{
+									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+										Version: "24.0.20260101",
+									},
+									Architectures: []string{"amd64"},
+								},
+							},
+						},
+					}
+
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Machine: core.Machine{
+								Type: "machine-type-1",
+								Image: &core.ShootMachineImage{
+									Name:    validMachineImageName,
+									Version: "24.0",
+								},
+								Architecture: ptr.To("amd64"),
+							},
+						},
+					}
+
+					newShoot := shoot.DeepCopy()
+					newShoot.Annotations = map[string]string{ // it requires at least some change in the shoot spec to run through the whole validator code
+						"a": "b",
+					}
+
+					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(newShoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal("24.0"))
+				})
+
+				It("should allow updating to a machine image with shorthand version if it is explicitly contained in the cloud profile", func() {
+					cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+						{
+							Name: validMachineImageName,
+							Versions: []gardencorev1beta1.MachineImageVersion{
+								{
+									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+										Version: "24.0",
+									},
+									Architectures: []string{"amd64"},
+								},
+								{
+									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+										Version: "24.0.20260101",
+									},
+									Architectures: []string{"amd64"},
+								},
+							},
+						},
+					}
+
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Machine: core.Machine{
+								Type: "machine-type-1",
+								Image: &core.ShootMachineImage{
+									Name:    validMachineImageName,
+									Version: "24.0.20260101",
+								},
+								Architecture: ptr.To("amd64"),
+							},
+						},
+					}
+
+					newShoot := shoot.DeepCopy()
+					newShoot.Spec.Provider.Workers[0].Machine.Image.Version = "24.0"
+
+					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(newShoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal("24.0"))
+				})
+			})
 		},
 			Entry("Cloudprofile is using Capabilities", true),
 			Entry("Cloudprofile is NOT using Capabilities", false),

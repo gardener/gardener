@@ -535,8 +535,16 @@ func getDefaultMachineImage(
 				break
 			}
 		}
+
 		if defaultImage == nil {
 			return nil, field.Invalid(fldPath, image.Name, "image is not supported")
+		}
+
+		// check for an exact image version match. In that case, do no apply version defaulting.
+		if slices.ContainsFunc(defaultImage.Versions, func(version gardencorev1beta1.MachineImageVersion) bool {
+			return version.Version == image.Version
+		}) {
+			return image, nil
 		}
 	} else {
 		// select the first image which supports the required architecture type
