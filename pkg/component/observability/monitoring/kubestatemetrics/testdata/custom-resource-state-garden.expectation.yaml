@@ -36,24 +36,27 @@ spec:
           labelsFromPath: {}
           errorLogV: 0
         - name: garden_last_operation
-          help: denotes the last operation performed on a Garden object
+          help: state of the last operation performed on a Garden object
           each:
             type: stateset
             gauge: null
             stateSet:
-              labelsFromPath: {}
+              labelsFromPath:
+                type:
+                  - type
               path:
                 - status
                 - lastOperation
               list:
-                - Create
-                - Reconcile
-                - Delete
-                - Migrate
-                - Restore
-              labelName: last_operation
+                - Processing
+                - Succeeded
+                - Error
+                - Failed
+                - Pending
+                - Aborted
+              labelName: state
               valueFrom:
-                - type
+                - state
             info: null
           commonLabels: {}
           labelsFromPath: {}
