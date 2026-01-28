@@ -238,6 +238,7 @@ sast-report: $(GOSEC)
 .PHONY: test
 test: $(REPORT_COLLECTOR) $(PROMTOOL) $(HELM) logcheck-symlinks
 	@./hack/test.sh ./charts/... ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/...
+	@cd $(PKG_APIS_DIR); ../../hack/test.sh ./...
 	@cd $(LOGCHECK_DIR); go test -race -timeout=2m ./... | grep -v 'no test files'
 
 .PHONY: test-integration
