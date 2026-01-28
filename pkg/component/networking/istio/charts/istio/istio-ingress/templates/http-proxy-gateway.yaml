@@ -1,8 +1,8 @@
-{{- if and .Values.vpn.enabled .Values.vpn.legacyPort.enabled -}}
+{{- if and .Values.vpn.enabled .Values.vpn.unifiedPort.enabled }}
 apiVersion: networking.istio.io/v1beta1
 kind: Gateway
 metadata:
-  name: http-connect
+  name: http-proxy
   namespace: {{ .Release.Namespace }}
 spec:
   selector:
@@ -12,7 +12,7 @@ spec:
     # This service FQDN does not exist, the gateway just needs to be present so that istio opens the port
     - non-existing-blackhole.garden.svc.cluster.local
     port:
-      name: tls-tunnel
-      number: {{ .Values.vpn.legacyPort.port }}
+      name: http-proxy
+      number: {{ .Values.vpn.unifiedPort.port }}
       protocol: HTTP
 {{- end }}
