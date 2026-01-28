@@ -3414,12 +3414,6 @@ func schema_pkg_apis_core_v1beta1_DNS(ref common.ReferenceCallback) common.OpenA
 						},
 					},
 					"providers": {
-						VendorExtensible: spec.VendorExtensible{
-							Extensions: spec.Extensions{
-								"x-kubernetes-patch-merge-key": "type",
-								"x-kubernetes-patch-strategy":  "merge",
-							},
-						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if not a default domain is used.\n\nDeprecated: Configuring multiple DNS providers is deprecated and will be forbidden in a future release. Please use the DNS extension provider config (e.g. shoot-dns-service) for additional providers.",
 							Type:        []string{"array"},

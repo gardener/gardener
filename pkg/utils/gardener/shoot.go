@@ -726,7 +726,7 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.DNSRecordResource, internalDomain.Provider))
 	}
 
-	if externalDomain != nil && externalDomain.Provider != core.DNSUnmanaged {
+	if externalDomain != nil && externalDomain.Provider != core.DNSUnmanaged && externalDomain.Provider != "" {
 		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.DNSRecordResource, externalDomain.Provider))
 	}
 
