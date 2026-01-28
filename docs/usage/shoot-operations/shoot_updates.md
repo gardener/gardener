@@ -154,6 +154,11 @@ machineImages:
 
 The `inPlaceUpdates` field in the Shoot status provides details about in-place updates for the Shoot workers. It includes the `pendingWorkerUpdates` field, which lists the worker pools that are awaiting in-place updates.
 
+For worker pools using the `AutoInPlaceUpdate` or `ManualInPlaceUpdate` strategy, the following actions are not allowed (they are allowed with `AutoRollingUpdate`):
+
+- Skipping a minor version when upgrading the worker pool Kubernetes version (`.spec.provider.workers[].kubernetes.version`).
+- Downgrading the machine image version (`.spec.provider.workers[].machine.image.version`).
+
 #### Customize In-Place Update Behaviour of Shoot Worker Nodes
 
 In addition to customisable fields mentioned in [](#customize-rolling-update-behaviour-of-shoot-worker-nodes) section, you can configure the following fields in `.spec.provider.worker[].machineControllerManager`:
@@ -171,7 +176,7 @@ An in-place update of the shoot worker nodes is triggered for rolling update tri
 * `.spec.provider.workers[].cri.name`
 * `.spec.systemComponents.nodeLocalDNS.enabled` (for Kubernetes version < 1.34 or if `kube-proxy` runs in `IPVS` mode)
 
-> There are validations which restricts changing the above mentioned exception fields when `in-place` updates strategy is configured.
+> There are validations which restricts changing the above mentioned exception fields when an `in-place` update strategy is configured.
 
 When a worker pool is undergoing an in-place update, applying subsequent updates to the same worker pool is restricted.
 If an in-place update fails and nodes are left in a problematic state, user intervention is required to manually fix the nodes. In cases where a subsequent update is necessary to resolve the issue, users can update the worker pool after adding the force update annotation `gardener.cloud/operation=force-in-place-update` on the Shoot. Refer to [Force-update a worker pool with InPlace update strategy](shoot_operations.md#force-update-a-worker-pool-with-inplace-update-strategy) for more details.
