@@ -49,7 +49,8 @@ func (r *Reconciler) ObjectInProjectNamespace(ctx context.Context, log logr.Logg
 		project, err := gardenerutils.ProjectForNamespaceFromReader(ctx, r.Client, namespace)
 		if err != nil {
 			log.Error(err, "Unable to find gardener project", "namespace", namespace)
+			return false
 		}
-		return err == nil && project != nil
+		return project != nil
 	})
 }
