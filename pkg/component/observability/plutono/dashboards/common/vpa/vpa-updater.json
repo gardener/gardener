@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1764935817718,
+  "iteration": 1769074974769,
   "links": [],
   "panels": [
     {
@@ -26,6 +26,182 @@
         "w": 24,
         "x": 0,
         "y": 0
+      },
+      "id": 34,
+      "title": "Aggregation",
+      "type": "row"
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "id": 30,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "7.5.45",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(increase(vpa_updater_in_place_updated_pods_total{pod=~\"$pod\"}[$__range]))",
+          "interval": "",
+          "legendFormat": "Successful ",
+          "refId": "Successful updates"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum(increase(vpa_updater_failed_in_place_update_attempts_total{pod=~\"$pod\"}[$__range]))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Failed",
+          "refId": "Failed updates"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "In-place Pod resource updates",
+      "type": "stat"
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "id": 32,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.5.45",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(increase(vpa_updater_evicted_pods_total{pod=~\"$pod\"}[$__range]))",
+          "interval": "",
+          "legendFormat": "Successful ",
+          "refId": "Successful evictions"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum(increase(vpa_updater_failed_eviction_attempts_total{pod=~\"$pod\"}[$__range]))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Failed",
+          "refId": "Failed evictions"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Pod evictions",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 7
       },
       "id": 2,
       "panels": [],
@@ -51,7 +227,7 @@
         "h": 11,
         "w": 17,
         "x": 0,
-        "y": 1
+        "y": 8
       },
       "hiddenSeries": false,
       "id": 4,
@@ -73,7 +249,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.44",
+      "pluginVersion": "7.5.45",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -172,7 +348,7 @@
         "h": 11,
         "w": 7,
         "x": 17,
-        "y": 1
+        "y": 8
       },
       "id": 6,
       "options": {
@@ -226,7 +402,7 @@
         "h": 11,
         "w": 12,
         "x": 0,
-        "y": 12
+        "y": 19
       },
       "hiddenSeries": false,
       "id": 10,
@@ -247,7 +423,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.44",
+      "pluginVersion": "7.5.45",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -334,7 +510,7 @@
         "h": 11,
         "w": 12,
         "x": 12,
-        "y": 12
+        "y": 19
       },
       "hiddenSeries": false,
       "id": 18,
@@ -355,7 +531,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.44",
+      "pluginVersion": "7.5.45",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -443,7 +619,7 @@
         "h": 11,
         "w": 12,
         "x": 0,
-        "y": 23
+        "y": 30
       },
       "hiddenSeries": false,
       "id": 19,
@@ -464,7 +640,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.44",
+      "pluginVersion": "7.5.45",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -551,7 +727,7 @@
         "h": 11,
         "w": 12,
         "x": 12,
-        "y": 23
+        "y": 30
       },
       "hiddenSeries": false,
       "id": 20,
@@ -573,7 +749,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.44",
+      "pluginVersion": "7.5.45",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -649,7 +825,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 34
+        "y": 41
       },
       "id": 14,
       "panels": [],
@@ -663,6 +839,7 @@
       "dashes": false,
       "datasource": "${datasource}",
       "decimals": 0,
+      "description": "Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -673,7 +850,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 42
       },
       "hiddenSeries": false,
       "id": 12,
@@ -695,7 +872,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.44",
+      "pluginVersion": "7.5.45",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -726,7 +903,6 @@
       "timeRegions": [],
       "timeShift": null,
       "title": "Successful Pod in-place updates by VPA",
-      "description": "Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -773,6 +949,7 @@
       "dashes": false,
       "datasource": "${datasource}",
       "decimals": 0,
+      "description": "Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -783,7 +960,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 50
       },
       "hiddenSeries": false,
       "id": 28,
@@ -805,7 +982,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.44",
+      "pluginVersion": "7.5.45",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -836,7 +1013,6 @@
       "timeRegions": [],
       "timeShift": null,
       "title": "Failed Pod in-place updates by VPA",
-      "description": "Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -883,7 +1059,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 51
+        "y": 58
       },
       "id": 22,
       "panels": [],
@@ -897,6 +1073,7 @@
       "dashes": false,
       "datasource": "${datasource}",
       "decimals": 0,
+      "description": "Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -907,7 +1084,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 59
       },
       "hiddenSeries": false,
       "id": 24,
@@ -929,7 +1106,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.44",
+      "pluginVersion": "7.5.45",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -960,7 +1137,6 @@
       "timeRegions": [],
       "timeShift": null,
       "title": "Successful Pod evictions by VPA",
-      "description": "Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1007,6 +1183,7 @@
       "dashes": false,
       "datasource": "${datasource}",
       "decimals": 0,
+      "description": "Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1017,7 +1194,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 60
+        "y": 67
       },
       "hiddenSeries": false,
       "id": 26,
@@ -1039,7 +1216,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.44",
+      "pluginVersion": "7.5.45",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1070,7 +1247,6 @@
       "timeRegions": [],
       "timeShift": null,
       "title": "Failed Pod evictions by VPA",
-      "description": "Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.",
       "tooltip": {
         "shared": true,
         "sort": 0,
