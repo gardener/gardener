@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	containerd "github.com/containerd/containerd/v2/client"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
@@ -17,18 +16,14 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/nodeagent/containerd"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 )
-
-// ContainerdClient defines the containerd client Interface exported for testing.
-type ContainerdClient interface {
-	Version(context.Context) (containerd.Version, error)
-}
 
 type containerdHealthChecker struct {
 	client client.Client
 
-	containerdClient ContainerdClient
+	containerdClient containerd.ContainerdClient
 	firstFailure     *time.Time
 	clock            clock.Clock
 	dbus             dbus.DBus
@@ -36,7 +31,7 @@ type containerdHealthChecker struct {
 }
 
 // NewContainerdHealthChecker creates a new instance of a containerd health check.
-func NewContainerdHealthChecker(client client.Client, containerdClient ContainerdClient, clock clock.Clock, dbus dbus.DBus, recorder record.EventRecorder) HealthChecker {
+func NewContainerdHealthChecker(client client.Client, containerdClient containerd.ContainerdClient, clock clock.Clock, dbus dbus.DBus, recorder record.EventRecorder) HealthChecker {
 	return &containerdHealthChecker{
 		client:           client,
 		containerdClient: containerdClient,

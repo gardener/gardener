@@ -32,6 +32,7 @@ import (
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentcontainerd "github.com/gardener/gardener/pkg/nodeagent/containerd"
 	operatingsystemconfigcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
 	"github.com/gardener/gardener/pkg/utils"
@@ -129,6 +130,11 @@ func (b *GardenadmBotanist) ApplyOperatingSystemConfig(ctx context.Context) erro
 		return fmt.Errorf("failed fetching node object by hostname %q: %w", b.HostName, err)
 	}
 
+	containerdclient, err := nodeagentcontainerd.NewContainerdClient()
+	if err != nil {
+		return fmt.Errorf("failed connecting to containerd: %w", err)
+	}
+
 	reconcilerCtx, cancelFunc := context.WithCancel(ctx)
 	reconcilerCtx = log.IntoContext(reconcilerCtx, b.Logger.WithName("operatingsystemconfig-reconciler").WithValues("secret", client.ObjectKeyFromObject(b.operatingSystemConfigSecret)))
 
@@ -148,6 +154,7 @@ func (b *GardenadmBotanist) ApplyOperatingSystemConfig(ctx context.Context) erro
 		DBus:                  b.DBus,
 		FS:                    b.FS,
 		SkipWritingStateFiles: true,
+		ContainerdClient:      containerdclient,
 	}).Reconcile(reconcilerCtx, reconcile.Request{NamespacedName: types.NamespacedName{Name: b.operatingSystemConfigSecret.Name, Namespace: b.operatingSystemConfigSecret.Namespace}})
 	return err
 }
