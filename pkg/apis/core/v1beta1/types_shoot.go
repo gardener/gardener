@@ -1809,12 +1809,12 @@ type WorkerControlPlane struct {
 	// If it is not specified, then there won't be any backups taken.
 	// +optional
 	Backup *Backup `json:"backup,omitempty" protobuf:"bytes,1,opt,name=backup"`
-	// Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or null) [GEP36].
+	// Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).
 	// +optional
 	Exposure *Exposure `json:"exposure,omitempty" protobuf:"bytes,2,opt,name=exposure"`
 }
 
-// Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or null) [GEP36].
+// Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).
 type Exposure struct {
 	// Extension holds the type and provider config of the exposure extension.
 	// Mutually exclusive with DNS.

@@ -1069,7 +1069,7 @@ message ExpirableVersion {
   optional string classification = 3;
 }
 
-// Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or null) [GEP36].
+// Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).
 message Exposure {
   // Extension holds the type and provider config of the exposure extension.
   // Mutually exclusive with DNS.
@@ -3947,7 +3947,7 @@ message WorkerControlPlane {
   // +optional
   optional Backup backup = 1;
 
-  // Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or null) [GEP36].
+  // Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).
   // +optional
   optional Exposure exposure = 2;
 }

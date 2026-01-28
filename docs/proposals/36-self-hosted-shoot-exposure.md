@@ -87,7 +87,7 @@ spec:
     workers:
     - name: control-plane
       controlPlane:
-        exposure: # either `extension` or `dns` or null
+        exposure: # either `extension` or `dns` or omitted/empty
           extension:
             type: local # defaults to `.spec.provider.type`, but could also be different
             providerConfig: {} # *runtime.RawExtension

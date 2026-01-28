@@ -1386,11 +1386,11 @@ type WorkerControlPlane struct {
 	// Backup holds the object store configuration for the backups of shoot (currently only etcd).
 	// If it is not specified, then there won't be any backups taken.
 	Backup *Backup
-	// Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or null) [GEP36].
+	// Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).
 	Exposure *Exposure
 }
 
-// Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or null) [GEP36].
+// Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).
 type Exposure struct {
 	// Extension holds the type and provider config of the exposure extension.
 	// Mutually exclusive with DNS.

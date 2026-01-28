@@ -5772,7 +5772,7 @@ To get the currently valid classification, use CurrentLifecycleClassification().
 <a href="#core.gardener.cloud/v1beta1.WorkerControlPlane">WorkerControlPlane</a>)
 </p>
 <p>
-<p>Exposure holds the exposure configuration for the shoot (either <code>extension</code> or <code>dns</code> or null) [GEP36].</p>
+<p>Exposure holds the exposure configuration for the shoot (either <code>extension</code> or <code>dns</code> or omitted/empty).</p>
 </p>
 <table>
 <thead>
@@ -15592,7 +15592,7 @@ Exposure
 </td>
 <td>
 <em>(Optional)</em>
-<p>Exposure holds the exposure configuration for the shoot (either <code>extension</code> or <code>dns</code> or null) [GEP36].</p>
+<p>Exposure holds the exposure configuration for the shoot (either <code>extension</code> or <code>dns</code> or omitted/empty).</p>
 </td>
 </tr>
 </tbody>

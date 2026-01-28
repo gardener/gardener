@@ -3857,7 +3857,7 @@ func schema_pkg_apis_core_v1beta1_Exposure(ref common.ReferenceCallback) common.
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or null) [GEP36].",
+				Description: "Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"extension": {
@@ -10945,7 +10945,7 @@ func schema_pkg_apis_core_v1beta1_WorkerControlPlane(ref common.ReferenceCallbac
 					},
 					"exposure": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or null) [GEP36].",
+							Description: "Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Exposure"),
 						},
 					},
