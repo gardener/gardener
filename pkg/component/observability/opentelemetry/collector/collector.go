@@ -447,7 +447,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 										"pull": map[string]any{
 											"exporter": map[string]any{
 												"prometheus": map[string]any{
-													"host": "0.0.0.0",
+													"host": "[::]",
 													"port": metricsPort,
 												},
 											},
@@ -500,7 +500,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 				Name:  kubeRBACProxyName + "-vali",
 				Image: o.values.KubeRBACProxyImage,
 				Args: []string{
-					fmt.Sprintf("--insecure-listen-address=0.0.0.0:%d", collectorconstants.KubeRBACProxyValiPort),
+					fmt.Sprintf("--insecure-listen-address=[::]:%d", collectorconstants.KubeRBACProxyValiPort),
 					fmt.Sprintf("--upstream=http://logging:%d/", valiconstants.ValiPort),
 					"--kubeconfig=" + gardenerutils.VolumeMountPathGenericKubeconfig + "/kubeconfig",
 					"--logtostderr=true",
@@ -524,7 +524,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 				Name:  kubeRBACProxyName + "-otlp",
 				Image: o.values.KubeRBACProxyImage,
 				Args: []string{
-					fmt.Sprintf("--insecure-listen-address=0.0.0.0:%d", collectorconstants.KubeRBACProxyOTLPReceiverPort),
+					fmt.Sprintf("--insecure-listen-address=[::]:%d", collectorconstants.KubeRBACProxyOTLPReceiverPort),
 					fmt.Sprintf("--upstream=http://127.0.0.1:%d/", collectorconstants.PushPort),
 					"--kubeconfig=" + gardenerutils.VolumeMountPathGenericKubeconfig + "/kubeconfig",
 					"--logtostderr=true",

@@ -188,7 +188,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Name:  "rbac-proxy-vali",
 			Image: kubeRBACProxyImage,
 			Args: []string{
-				"--insecure-listen-address=0.0.0.0:8081",
+				"--insecure-listen-address=[::]:8081",
 				"--upstream=http://logging:3100/",
 				"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 				"--logtostderr=true",
@@ -216,7 +216,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Name:  "rbac-proxy-otlp",
 			Image: kubeRBACProxyImage,
 			Args: []string{
-				"--insecure-listen-address=0.0.0.0:8080",
+				"--insecure-listen-address=[::]:8080",
 				"--upstream=http://127.0.0.1:4317/",
 				"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 				"--logtostderr=true",
@@ -443,7 +443,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 											"pull": map[string]any{
 												"exporter": map[string]any{
 													"prometheus": map[string]any{
-														"host": "0.0.0.0",
+														"host": "[::]",
 														// Field needs to be cast to `float64` due to an issue with serialization during tests.
 														// When fetching the object from the apiserver, since there's no type information regarding this field.
 														// the deserializer will interpret it as a `float64`. By setting the value to `float64` here, we ensure that
