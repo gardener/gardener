@@ -21,26 +21,26 @@ Hotfixes are usually maintained for the latest three minor releases, though, the
 
 ### Release Responsible Plan
 
-Version | Week No    | Begin Validation Phase | Due Date           | Release Responsible                                          |
-------- |------------| ---------------------- | -------------------|--------------------------------------------------------------|
-v1.130  | Week 41-42 | October 6, 2025        | October 19, 2025   | [@vitanovs](https://github.com/vitanovs)                     |
-v1.131  | Week 43-44 | October 20, 2025       | November 2, 2025   | [@dimitar-kostadinov](https://github.com/dimitar-kostadinov) |
-v1.132  | Week 45-46 | November 3, 2025       | November 16, 2025  | [@LucaBernstein](https://github.com/LucaBernstein)           |
-v1.133  | Week 47-48 | November 17, 2025      | November 30, 2025  | [@ialidzhikov](https://github.com/ialidzhikov)               |
-v1.134  | Week 49-50 | December 1, 2025       | December 14, 2025  | [@marc1404](https://github.com/marc1404)                     |
-v1.135  | Week 01-04 | December 29, 2025      | January 25, 2026   | [@timuthy](https://github.com/timuthy)                       |
-v1.136  | Week 05-06 | January 26, 2026       | February 8, 2026   | [@ary1992](https://github.com/ary1992)                       |
-v1.137  | Week 07-08 | February 9, 2026       | February 22, 2026  | [@acumino](https://github.com/acumino)                       |
-v1.138  | Week 09-10 | February 23, 2026      | March 8, 2026      | [@ScheererJ](https://github.com/ScheererJ)                   |
-v1.139  | Week 11-12 | March 9, 2026          | March 22, 2026     | [@oliver-goetz](https://github.com/oliver-goetz)             |
-v1.140  | Week 13-14 | March 23, 2026         | April 5, 2026      | [@tobschli](https://github.com/tobschli)                     |
-v1.141  | Week 15-16 | April 6, 2026          | April 19, 2026     | [@plkokanov](https://github.com/plkokanov)                   |
-v1.142  | Week 17-18 | April 20, 2026         | May 3, 2026        | [@rfranzke](https://github.com/rfranzke)                     |
-v1.143  | Week 19-20 | May 4, 2026            | May 17, 2026       | [@shafeeqes](https://github.com/shafeeqes)                   |
-v1.144  | Week 21-22 | May 18, 2026           | May 31, 2026       | [@Kostov6](https://github.com/Kostov6)                       |
-v1.145  | Week 23-24 | June 1, 2026           | June 14, 2026      | [@vitanovs](https://github.com/vitanovs)                     |
-v1.146  | Week 25-26 | June 15, 2026          | June 28, 2026      | [@dimitar-kostadinov](https://github.com/dimitar-kostadinov) |
-v1.147  | Week 27-28 | June 29, 2026          | July 12, 2026      | [@RadaBDimitrova](https://github.com/RadaBDimitrova)         |
+Version | Week No    | Begin Validation Phase | Due Date          | Release Responsible                                          |
+------- | ---------- | ---------------------- | ----------------- | ------------------------------------------------------------ |
+v1.130  | Week 41-42 | October 6, 2025        | October 19, 2025  | [@vitanovs](https://github.com/vitanovs)                     |
+v1.131  | Week 43-44 | October 20, 2025       | November 2, 2025  | [@dimitar-kostadinov](https://github.com/dimitar-kostadinov) |
+v1.132  | Week 45-46 | November 3, 2025       | November 16, 2025 | [@LucaBernstein](https://github.com/LucaBernstein)           |
+v1.133  | Week 47-48 | November 17, 2025      | November 30, 2025 | [@ialidzhikov](https://github.com/ialidzhikov)               |
+v1.134  | Week 49-50 | December 1, 2025       | December 14, 2025 | [@marc1404](https://github.com/marc1404)                     |
+v1.135  | Week 01-04 | December 29, 2025      | January 25, 2026  | [@timuthy](https://github.com/timuthy)                       |
+v1.136  | Week 05-06 | January 26, 2026       | February 15, 2026 | [@ary1992](https://github.com/ary1992)                       |
+v1.137  | Week 07-09 | February 16, 2026      | March 1, 2026     | [@acumino](https://github.com/acumino)                       |
+v1.138  | Week 10-11 | March 2, 2026          | March 15, 2026    | [@ScheererJ](https://github.com/ScheererJ)                   |
+v1.139  | Week 12-13 | March 16, 2026         | March 29, 2026    | [@oliver-goetz](https://github.com/oliver-goetz)             |
+v1.140  | Week 14-15 | March 30, 2026         | April 12, 2026    | [@tobschli](https://github.com/tobschli)                     |
+v1.141  | Week 16-17 | April 13, 2026         | April 26, 2026    | [@plkokanov](https://github.com/plkokanov)                   |
+v1.142  | Week 18-19 | April 27, 2026         | May 10, 2026      | [@rfranzke](https://github.com/rfranzke)                     |
+v1.143  | Week 20-21 | May 11, 2026           | May 24, 2026      | [@shafeeqes](https://github.com/shafeeqes)                   |
+v1.144  | Week 22-23 | May 25, 2026           | June 7, 2026      | [@Kostov6](https://github.com/Kostov6)                       |
+v1.145  | Week 24-25 | June 8, 2026           | June 21, 2026     | [@vitanovs](https://github.com/vitanovs)                     |
+v1.146  | Week 26-27 | June 22, 2026          | July 5, 2026      | [@dimitar-kostadinov](https://github.com/dimitar-kostadinov) |
+v1.147  | Week 28-29 | July 6, 2026           | July 19, 2026     | [@RadaBDimitrova](https://github.com/RadaBDimitrova)         |
 
 Apart from the release of the next version, the release responsible is also taking care of potential hotfix releases of the last three minor versions.
 The release responsible is the main contact person for coordinating new feature PRs for the next minor versions or cherry-pick PRs for the last three minor versions.
