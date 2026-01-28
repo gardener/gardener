@@ -5,6 +5,7 @@
 package client
 
 import (
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -18,7 +19,7 @@ type CleanOption interface {
 type TolerateErrorFunc func(err error) bool
 
 // IgnoreLeftoverFunc is a function type for ignoring objects that remain in the cluster.
-type IgnoreLeftoverFunc func(obj client.Object) bool
+type IgnoreLeftoverFunc func(log logr.Logger, obj client.Object) bool
 
 // CleanOptions are options to clean certain resources.
 // If FinalizeGracePeriodSeconds is set, the finalizers of the resources are removed if the resources still
@@ -97,7 +98,11 @@ func (m TolerateErrors) ApplyToClean(opts *CleanOptions) {
 // IgnoreUnknownNamespaces returns an IgnoreLeftoverFunc that ignores objects in unknown namespaces.
 func IgnoreUnknownNamespaces(namespaces []string) IgnoreLeftoverFunc {
 	namespaceSet := sets.New(namespaces...)
-	return func(obj client.Object) bool {
-		return obj.GetNamespace() != "" && !namespaceSet.Has(obj.GetNamespace())
+	return func(log logr.Logger, obj client.Object) bool {
+		ignore := obj.GetNamespace() != "" && !namespaceSet.Has(obj.GetNamespace())
+		if ignore {
+			log.Info("Ignoring leftover object in unknown namespace", "namespace", obj.GetNamespace(), "name", obj.GetName(), "kind", obj.GetObjectKind().GroupVersionKind().Kind)
+		}
+		return ignore
 	}
 }

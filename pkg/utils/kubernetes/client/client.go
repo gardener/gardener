@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -273,8 +274,8 @@ func DefaultVolumeSnapshotContentCleaner() Cleaner {
 var defaultGoneEnsurer = GoneEnsurerFunc(EnsureGone)
 
 // EnsureGone implements GoneEnsurer.
-func (f GoneEnsurerFunc) EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...CleanOption) error {
-	return f(ctx, c, obj, opts...)
+func (f GoneEnsurerFunc) EnsureGone(ctx context.Context, log logr.Logger, c client.Client, obj runtime.Object, opts ...CleanOption) error {
+	return f(ctx, log, c, obj, opts...)
 }
 
 // DefaultGoneEnsurer is the default GoneEnsurer.
@@ -283,20 +284,20 @@ func DefaultGoneEnsurer() GoneEnsurer {
 }
 
 // EnsureGone ensures that the given object or list is gone.
-func EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...CleanOption) error {
+func EnsureGone(ctx context.Context, log logr.Logger, c client.Client, obj runtime.Object, opts ...CleanOption) error {
 	cleanOptions := &CleanOptions{}
 	cleanOptions.ApplyOptions(opts)
 
 	switch o := obj.(type) {
 	case client.ObjectList:
-		return ensureCollectionGone(ctx, c, o, cleanOptions.ListOptions, cleanOptions.IgnoreLeftovers)
+		return ensureCollectionGone(ctx, c, log, o, cleanOptions.ListOptions, cleanOptions.IgnoreLeftovers)
 	case client.Object:
-		return ensureGone(ctx, c, o, cleanOptions.IgnoreLeftovers)
+		return ensureGone(ctx, c, log, o, cleanOptions.IgnoreLeftovers)
 	}
 	return fmt.Errorf("type %T does neither implement client.Object nor client.ObjectList", obj)
 }
 
-func ensureGone(ctx context.Context, c client.Client, obj client.Object, ignoreFns []IgnoreLeftoverFunc) error {
+func ensureGone(ctx context.Context, c client.Client, log logr.Logger, obj client.Object, ignoreFns []IgnoreLeftoverFunc) error {
 	if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 		if meta.IsNoMatchError(err) || apierrors.IsNotFound(err) {
 			return nil
@@ -305,7 +306,7 @@ func ensureGone(ctx context.Context, c client.Client, obj client.Object, ignoreF
 	}
 
 	for _, ignore := range ignoreFns {
-		if ignore(obj) {
+		if ignore(log, obj) {
 			return nil
 		}
 	}
@@ -313,7 +314,7 @@ func ensureGone(ctx context.Context, c client.Client, obj client.Object, ignoreF
 	return NewObjectsRemaining(obj)
 }
 
-func ensureCollectionGone(ctx context.Context, c client.Client, list client.ObjectList, listOpts []client.ListOption, ignoreFns []IgnoreLeftoverFunc) error {
+func ensureCollectionGone(ctx context.Context, c client.Client, log logr.Logger, list client.ObjectList, listOpts []client.ListOption, ignoreFns []IgnoreLeftoverFunc) error {
 	if err := c.List(ctx, list, listOpts...); err != nil {
 		if meta.IsNoMatchError(err) || apierrors.IsNotFound(err) {
 			return nil
@@ -326,9 +327,8 @@ func ensureCollectionGone(ctx context.Context, c client.Client, list client.Obje
 
 	if err := meta.EachListItem(list, func(object runtime.Object) error {
 		for _, ignore := range ignoreFns {
-			// Iterate over all objects to report them later.
-			// TODO(timuthy): Remove this comment later, when the logger is passed down
-			if ignore(object.(client.Object)) {
+			// Iterate over all objects to log them.
+			if ignore(log, object.(client.Object)) {
 				ignoredObjects += 1
 			}
 		}
@@ -397,14 +397,14 @@ type cleanerOps struct {
 
 // CleanAndEnsureGone cleans the target resources. Afterwards, it checks, whether the target resource is still
 // present. If yes, it errors with a NewObjectsRemaining error.
-func (o *cleanerOps) CleanAndEnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...CleanOption) error {
+func (o *cleanerOps) CleanAndEnsureGone(ctx context.Context, log logr.Logger, c client.Client, obj runtime.Object, opts ...CleanOption) error {
 	for _, cle := range o.cleaners {
 		if err := cle.Clean(ctx, c, obj, opts...); err != nil {
 			return err
 		}
 	}
 
-	return o.EnsureGone(ctx, c, obj, opts...)
+	return o.EnsureGone(ctx, log, c, obj, opts...)
 }
 
 // NewCleanOps instantiates new CleanOps with the given Cleaner and GoneEnsurer.

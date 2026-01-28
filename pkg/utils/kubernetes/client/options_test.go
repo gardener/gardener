@@ -5,6 +5,7 @@
 package client_test
 
 import (
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -50,7 +51,7 @@ var _ = Describe("Options", func() {
 				DeleteOptions:              []client.DeleteOption{client.GracePeriodSeconds(42), client.DryRunAll},
 				FinalizeGracePeriodSeconds: ptr.To[int64](42),
 				ErrorToleration:            []TolerateErrorFunc{apierrors.IsConflict},
-				IgnoreLeftovers:            []IgnoreLeftoverFunc{func(obj client.Object) bool { return false }},
+				IgnoreLeftovers:            []IgnoreLeftoverFunc{func(_ logr.Logger, _ client.Object) bool { return false }},
 			}).ApplyToClean(co)
 			Expect(co.ListOptions).To(Equal([]client.ListOption{client.InNamespace("ns"), client.MatchingLabels{"key": "value"}}))
 			Expect(co.DeleteOptions).To(Equal([]client.DeleteOption{client.GracePeriodSeconds(42), client.DryRunAll}))
@@ -78,10 +79,10 @@ var _ = Describe("Options", func() {
 
 			ignore := IgnoreUnknownNamespaces(namespaces)
 
-			Expect(ignore(&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "test1"}})).To(BeFalse())
-			Expect(ignore(&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "test2"}})).To(BeFalse())
-			Expect(ignore(&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: ""}})).To(BeFalse())
-			Expect(ignore(&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "test3"}})).To(BeTrue())
+			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "test1"}})).To(BeFalse())
+			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "test2"}})).To(BeFalse())
+			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: ""}})).To(BeFalse())
+			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "test3"}})).To(BeTrue())
 		})
 	})
 })

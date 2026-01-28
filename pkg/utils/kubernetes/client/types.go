@@ -7,6 +7,7 @@ package client
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -32,14 +33,14 @@ type Cleaner interface {
 type GoneEnsurer interface {
 	// EnsureGone ensures that the given resource is gone. If the resource is not gone, it will throw
 	// a NewObjectsRemaining error.
-	EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...CleanOption) error
+	EnsureGone(ctx context.Context, log logr.Logger, c client.Client, obj runtime.Object, opts ...CleanOption) error
 }
 
 // GoneEnsurerFunc is a function that implements GoneEnsurer.
-type GoneEnsurerFunc func(ctx context.Context, c client.Client, obj runtime.Object, opts ...CleanOption) error
+type GoneEnsurerFunc func(ctx context.Context, log logr.Logger, c client.Client, obj runtime.Object, opts ...CleanOption) error
 
 // CleanOps are ops to clean.
 type CleanOps interface {
 	// CleanAndEnsureGone cleans the resource(s) and ensures that it/they are gone afterwards.
-	CleanAndEnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...CleanOption) error
+	CleanAndEnsureGone(ctx context.Context, log logr.Logger, c client.Client, obj runtime.Object, opts ...CleanOption) error
 }

@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -492,7 +493,7 @@ var _ = Describe("Cleaner", func() {
 
 			c.EXPECT().Get(ctx, cm1Key, &cm1).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
-			Expect(EnsureGone(ctx, c, &cm1)).To(Succeed())
+			Expect(EnsureGone(ctx, logr.Discard(), c, &cm1)).To(Succeed())
 		})
 
 		It("should ensure that the object is gone when no match error occurs", func() {
@@ -500,7 +501,7 @@ var _ = Describe("Cleaner", func() {
 
 			c.EXPECT().Get(ctx, cm1Key, &cm1).Return(&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}})
 
-			Expect(EnsureGone(ctx, c, &cm1)).To(Succeed())
+			Expect(EnsureGone(ctx, logr.Discard(), c, &cm1)).To(Succeed())
 		})
 
 		It("should ensure that the list is gone", func() {
@@ -511,7 +512,7 @@ var _ = Describe("Cleaner", func() {
 
 			c.EXPECT().List(ctx, &list)
 
-			Expect(EnsureGone(ctx, c, &list)).To(Succeed())
+			Expect(EnsureGone(ctx, logr.Discard(), c, &list)).To(Succeed())
 		})
 
 		It("should ensure that the list is gone when not found error occurs", func() {
@@ -522,7 +523,7 @@ var _ = Describe("Cleaner", func() {
 
 			c.EXPECT().List(ctx, &list).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
-			Expect(EnsureGone(ctx, c, &list)).To(Succeed())
+			Expect(EnsureGone(ctx, logr.Discard(), c, &list)).To(Succeed())
 		})
 
 		It("should ensure that the list is gone when no match error occurs", func() {
@@ -533,7 +534,7 @@ var _ = Describe("Cleaner", func() {
 
 			c.EXPECT().List(ctx, &list).Return(&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}})
 
-			Expect(EnsureGone(ctx, c, &list)).To(Succeed())
+			Expect(EnsureGone(ctx, logr.Discard(), c, &list)).To(Succeed())
 		})
 
 		It("should error that the object is still present", func() {
@@ -541,7 +542,7 @@ var _ = Describe("Cleaner", func() {
 
 			c.EXPECT().Get(ctx, cm1Key, &cm1)
 
-			Expect(EnsureGone(ctx, c, &cm1)).To(Equal(NewObjectsRemaining(&cm1)))
+			Expect(EnsureGone(ctx, logr.Discard(), c, &cm1)).To(Equal(NewObjectsRemaining(&cm1)))
 		})
 
 		It("should ensure that the object is ignored", func() {
@@ -549,9 +550,9 @@ var _ = Describe("Cleaner", func() {
 
 			c.EXPECT().Get(ctx, cm1Key, &cm1)
 
-			Expect(EnsureGone(ctx, c, &cm1, &CleanOptions{
+			Expect(EnsureGone(ctx, logr.Discard(), c, &cm1, &CleanOptions{
 				IgnoreLeftovers: []IgnoreLeftoverFunc{
-					func(obj client.Object) bool {
+					func(_ logr.Logger, _ client.Object) bool {
 						return true
 					},
 				},
@@ -566,7 +567,7 @@ var _ = Describe("Cleaner", func() {
 
 			c.EXPECT().List(ctx, &list).SetArg(1, cmList)
 
-			Expect(EnsureGone(ctx, c, &list)).To(Equal(NewObjectsRemaining(&cmList)))
+			Expect(EnsureGone(ctx, logr.Discard(), c, &list)).To(Equal(NewObjectsRemaining(&cmList)))
 		})
 
 		It("should ensure objects in list are ignored", func() {
@@ -577,9 +578,9 @@ var _ = Describe("Cleaner", func() {
 
 			c.EXPECT().List(ctx, &list).SetArg(1, cmList)
 
-			Expect(EnsureGone(ctx, c, &list, &CleanOptions{
+			Expect(EnsureGone(ctx, logr.Discard(), c, &list, &CleanOptions{
 				IgnoreLeftovers: []IgnoreLeftoverFunc{
-					func(obj client.Object) bool {
+					func(_ logr.Logger, _ client.Object) bool {
 						return true
 					},
 				},
@@ -605,10 +606,10 @@ var _ = Describe("Cleaner", func() {
 
 				gomock.InOrder(
 					cleaner.EXPECT().Clean(ctx, c, &cm1),
-					ensurer.EXPECT().EnsureGone(ctx, c, &cm1),
+					ensurer.EXPECT().EnsureGone(ctx, logr.Discard(), c, &cm1),
 				)
 
-				Expect(o.CleanAndEnsureGone(ctx, c, &cm1)).To(Succeed())
+				Expect(o.CleanAndEnsureGone(ctx, logr.Discard(), c, &cm1)).To(Succeed())
 			})
 		})
 	})
