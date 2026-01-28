@@ -62,33 +62,38 @@ type HealthCheck interface {
 Health check implementations can optionally implement one or both of the following interfaces to receive the appropriate Kubernetes clients:
 
 ```go
-type ShootClient interface {
-    // InjectShootClient injects the shoot client
-    InjectShootClient(client.Client)
+type TargetClient interface {
+    // InjectTargetClient injects the target client
+    InjectTargetClient(client.Client)
 }
 
-type SeedClient interface {
-    // InjectSeedClient injects the seed client
-    InjectSeedClient(client.Client)
+type SourceClient interface {
+    // InjectSourceClient injects the source client
+    InjectSourceClient(client.Client)
 }
 ```
 
 The health check controller automatically detects if a health checker implements these interfaces and injects the corresponding clients before executing the health checks.
-This allows health checks to interact with resources in the shoot cluster (via `ShootClient`) or the seed cluster (via `SeedClient`) as needed.
 
-For example, a health check that needs to verify resources in the shoot cluster would implement the `ShootClient` interface:
+For shoot extensions (extension class `shoot`):
+- `SourceClient` refers to the seed cluster client
+- `TargetClient` refers to the shoot cluster client
 
+For garden extensions (extension class `garden`):
+- `SourceClient` refers to the garden runtime cluster client
+
+For example, a health check that needs to verify resources in the shoot cluster would implement the `TargetClient` interface:
 ```go
 type MyShootHealthCheck struct {
-    shootClient client.Client
+    targetClient client.Client
 }
 
-func (h *MyShootHealthCheck) InjectShootClient(c client.Client) {
-    h.shootClient = c
+func (h *MyShootHealthCheck) InjectTargetClient(c client.Client) {
+    h.targetClient = c
 }
 
 func (h *MyShootHealthCheck) Check(ctx context.Context, request types.NamespacedName) (*SingleCheckResult, error) {
-    // Use h.shootClient to check resources in the shoot cluster
+    // Use h.targetClient to check resources in the shoot cluster
     // ...
 }
 ```

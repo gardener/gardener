@@ -38,10 +38,10 @@ type ShootStatefulSetHealthChecker struct {
 }
 
 var (
-	_ healthcheck.HealthCheck = (*SeedStatefulSetHealthChecker)(nil)
-	_ healthcheck.SeedClient  = (*SeedStatefulSetHealthChecker)(nil)
-	_ healthcheck.HealthCheck = (*ShootStatefulSetHealthChecker)(nil)
-	_ healthcheck.ShootClient = (*ShootStatefulSetHealthChecker)(nil)
+	_ healthcheck.HealthCheck  = (*SeedStatefulSetHealthChecker)(nil)
+	_ healthcheck.SourceClient = (*SeedStatefulSetHealthChecker)(nil)
+	_ healthcheck.HealthCheck  = (*ShootStatefulSetHealthChecker)(nil)
+	_ healthcheck.TargetClient = (*ShootStatefulSetHealthChecker)(nil)
 )
 
 // NewSeedStatefulSetChecker is a healthCheck function to check StatefulSets in the Seed cluster
@@ -62,14 +62,14 @@ func NewShootStatefulSetChecker(name string) *ShootStatefulSetHealthChecker {
 	}
 }
 
-// InjectSeedClient injects the seed client
-func (h *SeedStatefulSetHealthChecker) InjectSeedClient(seedClient client.Client) {
-	h.client = seedClient
+// InjectSourceClient injects the seed client
+func (h *SeedStatefulSetHealthChecker) InjectSourceClient(sourceClient client.Client) {
+	h.client = sourceClient
 }
 
-// InjectShootClient injects the shoot client
-func (h *ShootStatefulSetHealthChecker) InjectShootClient(shootClient client.Client) {
-	h.client = shootClient
+// InjectTargetClient injects the shoot client
+func (h *ShootStatefulSetHealthChecker) InjectTargetClient(targetClient client.Client) {
+	h.client = targetClient
 }
 
 // SetLoggerSuffix injects the logger

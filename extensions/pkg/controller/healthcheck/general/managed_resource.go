@@ -24,25 +24,25 @@ import (
 // ManagedResourceHealthChecker contains all the information for the ManagedResource HealthCheck
 type ManagedResourceHealthChecker struct {
 	logger              logr.Logger
-	seedClient          client.Client
+	client              client.Client
 	managedResourceName string
 }
 
 var (
-	_ healthcheck.HealthCheck = (*ManagedResourceHealthChecker)(nil)
-	_ healthcheck.SeedClient  = (*ManagedResourceHealthChecker)(nil)
+	_ healthcheck.HealthCheck  = (*ManagedResourceHealthChecker)(nil)
+	_ healthcheck.SourceClient = (*ManagedResourceHealthChecker)(nil)
 )
 
-// CheckManagedResource is a healthCheck function to check ManagedResources
+// CheckManagedResource is a healthCheck function to check ManagedResources in the Seed/Source cluster
 func CheckManagedResource(managedResourceName string) *ManagedResourceHealthChecker {
 	return &ManagedResourceHealthChecker{
 		managedResourceName: managedResourceName,
 	}
 }
 
-// InjectSeedClient injects the seed client
-func (healthChecker *ManagedResourceHealthChecker) InjectSeedClient(seedClient client.Client) {
-	healthChecker.seedClient = seedClient
+// InjectSourceClient injects the seed/source client
+func (healthChecker *ManagedResourceHealthChecker) InjectSourceClient(client client.Client) {
+	healthChecker.client = client
 }
 
 // SetLoggerSuffix injects the logger
@@ -55,9 +55,9 @@ var configurationProblemRegex = regexp.MustCompile(`(?i)(error during apply of o
 
 // Check executes the health check
 func (healthChecker *ManagedResourceHealthChecker) Check(ctx context.Context, request types.NamespacedName) (*healthcheck.SingleCheckResult, error) {
-	mcmDeployment := &resourcesv1alpha1.ManagedResource{}
+	managedResource := &resourcesv1alpha1.ManagedResource{}
 
-	if err := healthChecker.seedClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.managedResourceName}, mcmDeployment); err != nil {
+	if err := healthChecker.client.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.managedResourceName}, managedResource); err != nil {
 		if apierrors.IsNotFound(err) {
 			return &healthcheck.SingleCheckResult{
 				Status: gardencorev1beta1.ConditionFalse,
@@ -69,7 +69,7 @@ func (healthChecker *ManagedResourceHealthChecker) Check(ctx context.Context, re
 		healthChecker.logger.Error(err, "Health check failed")
 		return nil, err
 	}
-	if isHealthy, err := managedResourceIsHealthy(mcmDeployment); !isHealthy {
+	if isHealthy, err := managedResourceIsHealthy(managedResource); !isHealthy {
 		healthChecker.logger.Error(err, "Health check failed")
 
 		var errorCodes []gardencorev1beta1.ErrorCode

@@ -38,10 +38,10 @@ type ShootDeploymentHealthChecker struct {
 }
 
 var (
-	_ healthcheck.HealthCheck = (*SeedDeploymentHealthChecker)(nil)
-	_ healthcheck.SeedClient  = (*SeedDeploymentHealthChecker)(nil)
-	_ healthcheck.HealthCheck = (*ShootDeploymentHealthChecker)(nil)
-	_ healthcheck.ShootClient = (*ShootDeploymentHealthChecker)(nil)
+	_ healthcheck.HealthCheck  = (*SeedDeploymentHealthChecker)(nil)
+	_ healthcheck.SourceClient = (*SeedDeploymentHealthChecker)(nil)
+	_ healthcheck.HealthCheck  = (*ShootDeploymentHealthChecker)(nil)
+	_ healthcheck.TargetClient = (*ShootDeploymentHealthChecker)(nil)
 )
 
 // NewSeedDeploymentHealthChecker is a healthCheck function to check Deployments in the Seed cluster
@@ -62,14 +62,14 @@ func NewShootDeploymentHealthChecker(deploymentName string) *ShootDeploymentHeal
 	}
 }
 
-// InjectSeedClient injects the seed client
-func (h *SeedDeploymentHealthChecker) InjectSeedClient(seedClient client.Client) {
-	h.client = seedClient
+// InjectSourceClient injects the seed client
+func (h *SeedDeploymentHealthChecker) InjectSourceClient(sourceClient client.Client) {
+	h.client = sourceClient
 }
 
-// InjectShootClient injects the shoot client
-func (h *ShootDeploymentHealthChecker) InjectShootClient(shootClient client.Client) {
-	h.client = shootClient
+// InjectTargetClient injects the shoot client
+func (h *ShootDeploymentHealthChecker) InjectTargetClient(targetClient client.Client) {
+	h.client = targetClient
 }
 
 // SetLoggerSuffix injects the logger

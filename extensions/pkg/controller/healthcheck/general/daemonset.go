@@ -38,10 +38,10 @@ type ShootDaemonSetHealthChecker struct {
 }
 
 var (
-	_ healthcheck.HealthCheck = (*SeedDaemonSetHealthChecker)(nil)
-	_ healthcheck.SeedClient  = (*SeedDaemonSetHealthChecker)(nil)
-	_ healthcheck.HealthCheck = (*ShootDaemonSetHealthChecker)(nil)
-	_ healthcheck.ShootClient = (*ShootDaemonSetHealthChecker)(nil)
+	_ healthcheck.HealthCheck  = (*SeedDaemonSetHealthChecker)(nil)
+	_ healthcheck.SourceClient = (*SeedDaemonSetHealthChecker)(nil)
+	_ healthcheck.HealthCheck  = (*ShootDaemonSetHealthChecker)(nil)
+	_ healthcheck.TargetClient = (*ShootDaemonSetHealthChecker)(nil)
 )
 
 // NewSeedDaemonSetHealthChecker is a healthCheck function to check DaemonSets in the Seed cluster
@@ -62,14 +62,14 @@ func NewShootDaemonSetHealthChecker(name string) *ShootDaemonSetHealthChecker {
 	}
 }
 
-// InjectSeedClient injects the seed client
-func (h *SeedDaemonSetHealthChecker) InjectSeedClient(seedClient client.Client) {
-	h.client = seedClient
+// InjectSourceClient injects the seed client
+func (h *SeedDaemonSetHealthChecker) InjectSourceClient(sourceClient client.Client) {
+	h.client = sourceClient
 }
 
-// InjectShootClient injects the shoot client
-func (h *ShootDaemonSetHealthChecker) InjectShootClient(shootClient client.Client) {
-	h.client = shootClient
+// InjectTargetClient injects the shoot client
+func (h *ShootDaemonSetHealthChecker) InjectTargetClient(targetClient client.Client) {
+	h.client = targetClient
 }
 
 // SetLoggerSuffix injects the logger

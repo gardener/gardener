@@ -33,6 +33,7 @@ type reconciler struct {
 	actuator            HealthCheckActuator
 	registeredExtension RegisteredExtension
 	syncPeriod          metav1.Duration
+	extensionClasses    []extensionsv1alpha1.ExtensionClass
 }
 
 const (
@@ -46,12 +47,13 @@ const (
 
 // NewReconciler creates a new performHealthCheck.Reconciler that reconciles
 // the registered extension resources (Gardener's `extensions.gardener.cloud` API group).
-func NewReconciler(mgr manager.Manager, actuator HealthCheckActuator, registeredExtension RegisteredExtension, syncPeriod metav1.Duration) reconcile.Reconciler {
+func NewReconciler(mgr manager.Manager, actuator HealthCheckActuator, registeredExtension RegisteredExtension, syncPeriod metav1.Duration, extensionClasses []extensionsv1alpha1.ExtensionClass) reconcile.Reconciler {
 	return &reconciler{
 		actuator:            actuator,
 		client:              mgr.GetClient(),
 		registeredExtension: registeredExtension,
 		syncPeriod:          syncPeriod,
+		extensionClasses:    extensionClasses,
 	}
 }
 
@@ -89,11 +91,6 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	cluster, err := extensionscontroller.GetCluster(ctx, r.client, acc.GetNamespace())
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
 	// cleanup conditions from extension status
 	if len(r.registeredExtension.conditionTypesToRemove) > 0 {
 		var newConditions []gardencorev1beta1.Condition
@@ -105,22 +102,29 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		extension.GetExtensionStatus().SetConditions(newConditions)
 	}
 
-	if extensionscontroller.IsHibernationEnabled(cluster) {
-		var conditions []condition
-		for _, healthConditionType := range r.registeredExtension.healthConditionTypes {
-			conditionBuilder, err := v1beta1helper.NewConditionBuilder(gardencorev1beta1.ConditionType(healthConditionType))
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-
-			conditions = append(conditions, extensionConditionHibernated(conditionBuilder, healthConditionType))
-		}
-		if err := r.updateExtensionConditions(ctx, extension, conditions...); err != nil {
+	if !isGardenExtensionClass(r.extensionClasses) {
+		cluster, err := extensionscontroller.GetCluster(ctx, r.client, acc.GetNamespace())
+		if err != nil {
 			return reconcile.Result{}, err
 		}
 
-		log.V(1).Info("Do not perform HealthCheck for extension resource, Shoot is hibernated", "groupVersionKind", r.registeredExtension.groupVersionKind)
-		return reconcile.Result{}, nil
+		if extensionscontroller.IsHibernationEnabled(cluster) {
+			var conditions []condition
+			for _, healthConditionType := range r.registeredExtension.healthConditionTypes {
+				conditionBuilder, err := v1beta1helper.NewConditionBuilder(gardencorev1beta1.ConditionType(healthConditionType))
+				if err != nil {
+					return reconcile.Result{}, err
+				}
+
+				conditions = append(conditions, extensionConditionHibernated(conditionBuilder, healthConditionType))
+			}
+			if err := r.updateExtensionConditions(ctx, extension, conditions...); err != nil {
+				return reconcile.Result{}, err
+			}
+
+			log.V(1).Info("Do not perform HealthCheck for extension resource, Shoot is hibernated", "groupVersionKind", r.registeredExtension.groupVersionKind)
+			return reconcile.Result{}, nil
+		}
 	}
 
 	log.V(1).Info("Performing healthcheck", "groupVersionKind", r.registeredExtension.groupVersionKind)
