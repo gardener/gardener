@@ -493,16 +493,6 @@ var _ = Describe("dns", func() {
 				Expect(err).To(MatchError(error(apierrors.NewInternalError(fmt.Errorf("Project.core.gardener.cloud %q not found", "<unknown>")))))
 			})
 
-			It("should reject because no domain was configured for the shoot and default domain secret is missing", func() {
-				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).To(BeInvalidError())
-			})
-
 			Context("#Shoot GenerateName used", func() {
 				BeforeEach(func() {
 					shoot.Name = ""

@@ -154,17 +154,10 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 		return nil
 	}
 
-	specPath := field.NewPath("spec")
-
 	// Generate a Shoot domain if none is configured.
 	if !helper.ShootUsesUnmanagedDNS(shoot) {
 		if err := assignDefaultDomainIfNeeded(shoot, d.projectLister, defaultDomains); err != nil {
 			return err
-		}
-
-		if !isShootDomainSet(shoot) {
-			fieldErr := field.Required(specPath.Child("DNS"), fmt.Sprintf("shoot domain field .spec.dns.domain must be set if provider != %s", core.DNSUnmanaged))
-			return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 		}
 	}
 
