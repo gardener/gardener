@@ -115,24 +115,30 @@ linters:
         # Gardener other packages
         - pkg: github.com/gardener/gardener/pkg/api/extensions
           alias: apiextensions
+        - pkg: github.com/gardener/gardener/pkg/apis/utils/(\w+)
+          alias: ${1}utils
         - pkg: github.com/gardener/gardener/pkg/apis/core
           alias: gardencore
         - pkg: github.com/gardener/gardener/pkg/apis/core/([\w\d]+)
           alias: gardencore${1}
-        - pkg: github.com/gardener/gardener/pkg/apis/core/([\w\d]+)/helper
-          alias: ${1}helper
         - pkg: github.com/gardener/gardener/pkg/apis/core/([\w\d]+)/constants
           alias: ${1}constants
+        - pkg: github.com/gardener/gardener/pkg/apis/config/(\w+)/([a-z]+)
+          alias: $1$2
+        - pkg: github.com/gardener/gardener/pkg/apis/config/(\w+)/(v\d[\w\d]*)
+          alias: ${1}config${2}
         - pkg: github.com/gardener/gardener/pkg/apis/([^c]\w+)/([\w\d]+)
           alias: $1$2
         - pkg: github.com/gardener/gardener/pkg/apis/([^c]\w+)/([\w\d]+)/([\w\d]+)
           alias: $1$2$3
-        - pkg: github.com/gardener/gardener/pkg/(\w+)/apis/config/([a-z]+)
-          alias: $1$2
-        - pkg: github.com/gardener/gardener/pkg/(\w+)/apis/config/(v\d[\w\d]*)
-          alias: ${1}config${2}
-        - pkg: github.com/gardener/gardener/pkg/(\w+)/apis/config/(v\d[\w\d]*)/([a-z]+)
+        - pkg: github.com/gardener/gardener/pkg/api/core/([\w\d]+)/helper
+          alias: ${1}helper
+        - pkg: github.com/gardener/gardener/pkg/api/config/(\w+)/(v\d[\w\d]*)/([a-z]+)
           alias: $1$3
+        - pkg: github.com/gardener/gardener/pkg/api/([^c]\w+)/([\w\d]+)
+          alias: $1$2
+        - pkg: github.com/gardener/gardener/pkg/api/([^c]\w+)/([\w\d]+)/([\w\d]+)
+          alias: $1$2$3
         - pkg: github.com/gardener/gardener/pkg/(\w+)/features
           alias: ${1}features
         - pkg: github.com/gardener/gardener/pkg/\w+/controller/([\w\d]+)
