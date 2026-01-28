@@ -10,6 +10,7 @@ import (
 	"net"
 
 	"github.com/Masterminds/semver/v3"
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -189,9 +190,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 	Describe("#CalculateMaxNodesTotal", func() {
 		var (
-			shoot *gardencorev1beta1.Shoot
+			shoot     *gardencorev1beta1.Shoot
+			namespace string
 
 			maxNetworks int32
+
+			seedClient *mockclient.MockClient
 		)
 
 		BeforeEach(func() {
@@ -214,38 +218,62 @@ var _ = Describe("ClusterAutoscaler", func() {
 			botanist.Shoot.CloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
 				MaxNodesTotal: ptr.To[int32](100),
 			}
+
+			seedClient = mockclient.NewMockClient(ctrl)
+			namespace = "shoot--foo--bar"
+			botanist.SeedNamespaceObject = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 		})
 
 		It("should return 0 if there are no limits", func() {
 			shoot.Spec.Networking = nil
 			botanist.Shoot.CloudProfile.Spec.Limits = nil
-			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(0))
+			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(0))
 		})
 
 		It("should return 0 if maxNodesTotal is not limited", func() {
 			shoot.Spec.Networking = nil
 			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = nil
-			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(0))
+			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(0))
 		})
 
 		It("should return the network limit if maxNodesTotal is not limited", func() {
 			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = nil
-			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(maxNetworks))
+			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(maxNetworks))
 		})
 
 		It("should return the CloudProfile limit if network is not limited", func() {
+			kubernetesClient.EXPECT().Client().Return(seedClient)
+			seedClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&machinev1alpha1.MachineList{}), client.InNamespace(botanist.SeedNamespaceObject.Name))
+
 			shoot.Spec.Networking = nil
-			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(*botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal))
+			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(*botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal))
 		})
 
 		It("should return the CloudProfile limit if it is lower than the network limit", func() {
+			kubernetesClient.EXPECT().Client().Return(seedClient)
+			seedClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&machinev1alpha1.MachineList{}), client.InNamespace(botanist.SeedNamespaceObject.Name))
+
 			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(maxNetworks - 10)
-			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(*botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal))
+			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(*botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal))
 		})
 
 		It("should return the network limit if it is lower than the CloudProfile limit", func() {
+			kubernetesClient.EXPECT().Client().Return(seedClient)
+			seedClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&machinev1alpha1.MachineList{}), client.InNamespace(botanist.SeedNamespaceObject.Name))
+
 			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(maxNetworks + 10)
-			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(maxNetworks))
+			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(maxNetworks))
+		})
+
+		It("should return the current node count if it is higher than the CloudProfile limit", func() {
+			kubernetesClient.EXPECT().Client().Return(seedClient)
+			seedClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&machinev1alpha1.MachineList{}), client.InNamespace(botanist.SeedNamespaceObject.Name)).Do(func(_ context.Context, list *machinev1alpha1.MachineList, inNamespace client.InNamespace) {
+				Expect(inNamespace).To(BeEquivalentTo(namespace))
+				(&machinev1alpha1.MachineList{Items: make([]machinev1alpha1.Machine, maxNetworks-50)}).DeepCopyInto(list)
+			})
+
+			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(maxNetworks - 100)
+			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(maxNetworks - 50))
 		})
 	})
 
