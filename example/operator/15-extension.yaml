@@ -27,17 +27,21 @@ metadata:
 #          ociRepository:
 #            repository: registry.example.com/path-to-oci-repo/extensions/foo-admission-runtime
 #            tag: latest
-#            digest: <digest>           # optional
-#            pullSecretRef:             # optional
-#              name: <pull-secret-name> # located in garden namespace
+#            digest: <digest>                   # optional
+#            caBundleSecretRef:                 # optional
+#              name: <ca-bundle-secret-name>    # located in garden namespace, secret must have data key bundle.crt
+#            pullSecretRef:                     # optional
+#              name: <pull-secret-name>         # located in garden namespace
 #      virtualCluster:
 #        helm:
 #          ociRepository:
 #            repository: registry.example.com/path-to-oci-repo/extensions/foo-admission-application
 #            tag: latest
-#            digest: <digest>           # optional
-#            pullSecretRef:             # optional
-#              name: <pull-secret-name> # located in garden namespace
+#            digest: <digest>                   # optional
+#            caBundleSecretRef:                 # optional
+#              name: <ca-bundle-secret-name>    # located in garden namespace, secret must have data key bundle.crt
+#            pullSecretRef:                     # optional
+#              name: <pull-secret-name>         # located in garden namespace
 #    extension:
 #      values: {}
 #      runtimeClusterValues: {}
@@ -45,9 +49,11 @@ metadata:
 #          ociRepository:
 #            repository: registry.example.com/path-to-oci-repo/extensions/foo
 #            tag: latest
-#            digest: <digest>           # optional
-#            pullSecretRef:             # optional
-#              name: <pull-secret-name> # located in garden namespace
+#            digest: <digest>                   # optional
+#            caBundleSecretRef:                 # optional
+#              name: <ca-bundle-secret-name>    # located in garden namespace, secret must have data key bundle.crt
+#            pullSecretRef:                     # optional
+#              name: <pull-secret-name>         # located in garden namespace
 #      policy: OnDemand|Always
 #      seedSelector: {}
 #      injectGardenKubeconfig: true

@@ -165,6 +165,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			}
 			fakeRegistry.AddArtifact(oci, chartWithGardenKubeconfig)
 			fakeRegistry.SetExpectedPullSecretNamespace(gardenerutils.ComputeGardenNamespace(seed.Name))
+			fakeRegistry.SetExpectedCABundleSecretNamespace(gardenerutils.ComputeGardenNamespace(seed.Name))
 		})
 
 		It("should deploy the chart", func() {
