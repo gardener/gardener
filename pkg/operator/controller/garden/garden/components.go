@@ -76,6 +76,7 @@ import (
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	longtermprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/longterm"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
+	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
 	oteloperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
@@ -137,6 +138,7 @@ type components struct {
 	fluentOperatorCustomResources component.DeployWaiter
 	plutono                       plutono.Interface
 	vali                          component.Deployer
+	openTelemetryCollector        collector.Interface
 	prometheusOperator            component.DeployWaiter
 	openTelemetryOperator         component.DeployWaiter
 	alertManager                  alertmanager.Interface
@@ -313,6 +315,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.vali, err = r.newVali()
+	if err != nil {
+		return
+	}
+	c.openTelemetryCollector, err = r.newOpenTelemetryCollector(secretsManager)
 	if err != nil {
 		return
 	}
@@ -1558,6 +1564,16 @@ func (r *Reconciler) newOpenTelemetryOperator() (component.DeployWaiter, error) 
 		r.GardenNamespace,
 		true,
 		v1beta1constants.PriorityClassNameGardenSystem100,
+	)
+}
+
+func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Interface) (collector.Interface, error) {
+	return sharedcomponent.NewOpenTelemetryCollector(r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		v1beta1constants.PriorityClassNameGardenSystem100,
+		secretsManager,
+		operatorv1alpha1.SecretNameCARuntime,
+		component.ClusterTypeSeed,
 	)
 }
 

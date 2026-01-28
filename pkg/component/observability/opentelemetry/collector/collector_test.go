@@ -68,6 +68,9 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			ShootNodeLoggingEnabled: true,
 			IngressHost:             ingressHost,
 			ValiHost:                valiHost,
+			SecretNameServerCA:      v1beta1constants.SecretNameCACluster,
+			PriorityClassName:       "gardener-system-100",
+			ClusterType:             "shoot",
 		}
 
 		c         client.Client
@@ -185,7 +188,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Name:  "rbac-proxy-vali",
 			Image: kubeRBACProxyImage,
 			Args: []string{
-				"--insecure-listen-address=0.0.0.0:8081",
+				"--insecure-listen-address=[::]:8081",
 				"--upstream=http://logging:3100/",
 				"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 				"--logtostderr=true",
@@ -213,7 +216,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Name:  "rbac-proxy-otlp",
 			Image: kubeRBACProxyImage,
 			Args: []string{
-				"--insecure-listen-address=0.0.0.0:8080",
+				"--insecure-listen-address=[::]:8080",
 				"--upstream=http://127.0.0.1:4317/",
 				"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 				"--logtostderr=true",
@@ -324,6 +327,11 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				},
 			},
 			Spec: otelv1beta1.OpenTelemetryCollectorSpec{
+				Observability: otelv1beta1.ObservabilitySpec{
+					Metrics: otelv1beta1.MetricsConfigSpec{
+						DisablePrometheusAnnotations: true,
+					},
+				},
 				Mode:            "deployment",
 				UpgradeStrategy: "none",
 				OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
@@ -387,6 +395,35 @@ var _ = Describe("OpenTelemetry Collector", func() {
 									},
 								},
 							},
+							"attributes/vali": map[string]any{
+								"actions": []any{
+									map[string]any{
+										"key":            "nodename",
+										"from_attribute": "k8s.node.name",
+										"action":         "insert",
+									},
+									map[string]any{
+										"key":            "pod_name",
+										"from_attribute": "k8s.pod.name",
+										"action":         "insert",
+									},
+									map[string]any{
+										"key":            "container_name",
+										"from_attribute": "k8s.container.name",
+										"action":         "insert",
+									},
+									map[string]any{
+										"key":    "loki.resource.labels",
+										"value":  "job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role",
+										"action": "insert",
+									},
+									map[string]any{
+										"key":    "loki.format",
+										"value":  "raw",
+										"action": "insert",
+									},
+								},
+							},
 						},
 					},
 					Exporters: otelv1beta1.AnyConfig{
@@ -406,7 +443,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 											"pull": map[string]any{
 												"exporter": map[string]any{
 													"prometheus": map[string]any{
-														"host": "0.0.0.0",
+														"host": "[::]",
 														// Field needs to be cast to `float64` due to an issue with serialization during tests.
 														// When fetching the object from the apiserver, since there's no type information regarding this field.
 														// the deserializer will interpret it as a `float64`. By setting the value to `float64` here, we ensure that
@@ -428,7 +465,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 							"logs/vali": {
 								Exporters:  []string{"loki"},
 								Receivers:  []string{"otlp"},
-								Processors: []string{"resource/vali", "batch"},
+								Processors: []string{"resource/vali", "attributes/vali", "batch"},
 							},
 						},
 					},
@@ -568,6 +605,35 @@ var _ = Describe("OpenTelemetry Collector", func() {
 
 		})
 
+		It("should use custom CA secret name for certificate signing", func() {
+			customValues := values
+			customValues.SecretNameServerCA = "custom-ca-secret"
+			customValues.ShootNodeLoggingEnabled = false // Disable node logging for simpler test
+			customValues.PriorityClassName = "gardener-system-100"
+
+			component = New(c, namespace, customValues, fakeSecretManager)
+
+			// The main test is that deploy succeeds with a custom CA secret name
+			Expect(component.Deploy(ctx)).To(Succeed())
+
+			// Verify that the component created the managed resource
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
+		})
+
+		It("should use seed CA secret when SecretNameServerCA is set to SecretNameCASeed", func() {
+			customValues := values
+			customValues.SecretNameServerCA = v1beta1constants.SecretNameCASeed
+			customValues.ShootNodeLoggingEnabled = false // Disable node logging for simpler test
+			customValues.PriorityClassName = "gardener-system-100"
+
+			component = New(c, namespace, customValues, fakeSecretManager)
+
+			// The main test is that deploy succeeds with the seed CA secret
+			Expect(component.Deploy(ctx)).To(Succeed())
+
+			// Verify that the component created the managed resource
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
+		})
 	})
 
 	Describe("#Destroy", func() {
