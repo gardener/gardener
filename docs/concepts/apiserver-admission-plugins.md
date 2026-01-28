@@ -197,7 +197,7 @@ When the seed is using `WorkloadIdentity` as backup credentials, the plugin ensu
 
 ## `ShootDNS`
 
-**Type**: Mutating. **Enabled by default**: Yes.
+**Type**: Validating and Mutating. **Enabled by default**: Yes.
 
 This admission controller reacts on `CREATE` and `UPDATE` operations for `Shoot`s.
 It tries to assign a default domain to the `Shoot`.
