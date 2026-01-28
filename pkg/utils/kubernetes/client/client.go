@@ -305,12 +305,12 @@ func ensureGone(ctx context.Context, c client.Client, obj client.Object, ignoreF
 	}
 
 	for _, ignore := range ignoreFns {
-		if !ignore(obj) {
-			return NewObjectsRemaining(obj)
+		if ignore(obj) {
+			return nil
 		}
 	}
 
-	return nil
+	return NewObjectsRemaining(obj)
 }
 
 func ensureCollectionGone(ctx context.Context, c client.Client, list client.ObjectList, listOpts []client.ListOption, ignoreFns []IgnoreLeftoverFunc) error {
@@ -321,13 +321,15 @@ func ensureCollectionGone(ctx context.Context, c client.Client, list client.Obje
 		return err
 	}
 
-	var relevantObjectFound bool
+	objectsInList := meta.LenList(list)
+	ignoredObjects := 0
+
 	if err := meta.EachListItem(list, func(object runtime.Object) error {
 		for _, ignore := range ignoreFns {
 			// Iterate over all objects to report them later.
 			// TODO(timuthy): Remove this comment later, when the logger is passed down
-			if !ignore(object.(client.Object)) {
-				relevantObjectFound = true
+			if ignore(object.(client.Object)) {
+				ignoredObjects += 1
 			}
 		}
 		return nil
@@ -335,7 +337,7 @@ func ensureCollectionGone(ctx context.Context, c client.Client, list client.Obje
 		return fmt.Errorf("failed to iterate over list: %w", err)
 	}
 
-	if relevantObjectFound {
+	if objectsInList > 0 && ignoredObjects < objectsInList {
 		return NewObjectsRemaining(list)
 	}
 	return nil

@@ -544,6 +544,20 @@ var _ = Describe("Cleaner", func() {
 			Expect(EnsureGone(ctx, c, &cm1)).To(Equal(NewObjectsRemaining(&cm1)))
 		})
 
+		It("should ensure that the object is ignored", func() {
+			ctx := context.TODO()
+
+			c.EXPECT().Get(ctx, cm1Key, &cm1)
+
+			Expect(EnsureGone(ctx, c, &cm1, &CleanOptions{
+				IgnoreLeftovers: []IgnoreLeftoverFunc{
+					func(obj client.Object) bool {
+						return true
+					},
+				},
+			})).To(Succeed())
+		})
+
 		It("should error that the list is non-empty", func() {
 			var (
 				ctx  = context.TODO()
@@ -553,6 +567,23 @@ var _ = Describe("Cleaner", func() {
 			c.EXPECT().List(ctx, &list).SetArg(1, cmList)
 
 			Expect(EnsureGone(ctx, c, &list)).To(Equal(NewObjectsRemaining(&cmList)))
+		})
+
+		It("should ensure objects in list are ignored", func() {
+			var (
+				ctx  = context.TODO()
+				list = corev1.ConfigMapList{}
+			)
+
+			c.EXPECT().List(ctx, &list).SetArg(1, cmList)
+
+			Expect(EnsureGone(ctx, c, &list, &CleanOptions{
+				IgnoreLeftovers: []IgnoreLeftoverFunc{
+					func(obj client.Object) bool {
+						return true
+					},
+				},
+			})).To(Succeed())
 		})
 	})
 

@@ -211,6 +211,10 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		return err
 	}
 
+	if err := b.addAdditionalCleanOptionsForKubernetesCleanup(ctx, cleanOptions); err != nil {
+		return fmt.Errorf("failed to add additional clean options %w", err)
+	}
+
 	snapshotCleanOptions, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterOneHour, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds, 0.5)
 	if err != nil {
 		return err
@@ -248,6 +252,25 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 // remaining ones after five minutes.
 func CleanVolumeAttachments(ctx context.Context, c client.Client) error {
 	return cleanResourceFn(utilclient.DefaultCleanOps(), c, &storagev1.VolumeAttachmentList{}, utilclient.DeleteWith{ZeroGracePeriod}, FinalizeAfterFiveMinutes)(ctx)
+}
+
+func (b *Botanist) addAdditionalCleanOptionsForKubernetesCleanup(ctx context.Context, cleanOptions *utilclient.CleanOptions) error {
+	// Kubernetes objects in unknown namespaces should be ignored.
+	// Finalizing such objects will fail and block the cleanup process indefinitely.
+	namespaceList := &corev1.NamespaceList{}
+	if err := b.ShootClientSet.Client().List(ctx, namespaceList); err != nil {
+		return fmt.Errorf("could not list namespaces: %w", err)
+	}
+	namespaces := make([]string, 0, len(namespaceList.Items))
+	for _, ns := range namespaceList.Items {
+		namespaces = append(namespaces, ns.Name)
+	}
+
+	cleanOptions.IgnoreLeftovers = append(cleanOptions.IgnoreLeftovers,
+		utilclient.IgnoreUnknownNamespaces(namespaces),
+	)
+
+	return nil
 }
 
 func (b *Botanist) getCleanOptions(

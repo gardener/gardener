@@ -5,6 +5,7 @@
 package client
 
 import (
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -88,7 +89,15 @@ func (s FinalizeGracePeriodSeconds) ApplyToClean(opts *CleanOptions) {
 // TolerateErrors uses the given toleration funcs for a clean operation.
 type TolerateErrors []TolerateErrorFunc
 
-// ApplyToClean specifies a errors to be tolerated for a clean operation.
+// ApplyToClean specifies errors to be tolerated for a clean operation.
 func (m TolerateErrors) ApplyToClean(opts *CleanOptions) {
 	opts.ErrorToleration = append(opts.ErrorToleration, m...)
+}
+
+// IgnoreUnknownNamespaces returns an IgnoreLeftoverFunc that ignores objects in unknown namespaces.
+func IgnoreUnknownNamespaces(namespaces []string) IgnoreLeftoverFunc {
+	namespaceSet := sets.New(namespaces...)
+	return func(obj client.Object) bool {
+		return obj.GetNamespace() != "" && !namespaceSet.Has(obj.GetNamespace())
+	}
 }
