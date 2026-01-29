@@ -10,7 +10,7 @@ WHAT="protobuf codegen manifests logcheck"
 CODEGEN_GROUPS=""
 MANIFESTS_DIRS=""
 MODE=""
-MAX_PARALLEL_WORKERS=""
+MAX_PARALLEL_WORKERS="4"
 DEFAULT_MANIFESTS_DIRS=(
   "charts"
   "cmd"

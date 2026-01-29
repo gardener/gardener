@@ -195,7 +195,7 @@ define GENERATE_HELP_INFO
 #                            gardenlet_groups resourcemanager_groups shoottolerationrestriction_groups shootdnsrewriting_groups shootresourcereservation_groups provider_local_groups extensions_config_groups")
 #   MANIFESTS_DIRS         - Specify which directories to run the 'manifests' target in, not applicable for other targets (Default directories are "charts cmd example extensions imagevector pkg plugin test")
 #   MODE                   - Specify the mode for the 'manifests' (default=parallel) or 'codegen' (default=sequential) target (e.g., "parallel" or "sequential")
-#   MAX_PARALLEL_WORKERS   - Specify the number of maximum parallel workers that will be used in the case that MODE='parallel' (default=number of cores/hyperthreads)
+#   MAX_PARALLEL_WORKERS   - Specify the number of maximum parallel workers that will be used in the case that MODE='parallel' (default=4)
 #
 # Examples:
 #   make generate
