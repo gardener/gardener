@@ -112,9 +112,6 @@ config:
           pods: 10.3.0.0/16
           services: 10.4.0.0/16
       settings:
-        loadBalancerServices:
-          proxyProtocol:
-            allowed: true
         excessCapacityReservation:
           enabled: false
         scheduling:
