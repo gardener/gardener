@@ -18,7 +18,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	fakecontainerdclient "github.com/gardener/gardener/pkg/nodeagent/containerd/fake"
+	fakecontainerd "github.com/gardener/gardener/pkg/nodeagent/containerd/fake"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/utils/structuredmap"
 )
@@ -30,7 +30,7 @@ var (
 	ctx context.Context
 	log logr.Logger
 
-	containerdClient *fakecontainerdclient.FakeContainerdClient
+	containerdClient *fakecontainerd.Client
 )
 
 const (
@@ -46,7 +46,7 @@ func init() {
 	ctx = context.Background()
 	log = logr.Discard()
 
-	containerdClient = fakecontainerdclient.NewFakeClient()
+	containerdClient = fakecontainerd.NewClient()
 
 	r = operatingsystemconfig.Reconciler{
 		ContainerdClient: containerdClient,

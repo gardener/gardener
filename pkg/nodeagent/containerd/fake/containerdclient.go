@@ -12,26 +12,24 @@ import (
 	containerd "github.com/containerd/containerd/v2/client"
 )
 
-const (
-	defaultContainerdVersion = "2.1.2"
-)
+const defaultContainerdVersion = "2.1.2"
 
-// FakeContainerdClient is a fake containerd client used for testing
-type FakeContainerdClient struct {
+// Client is a fake containerd client used for testing
+type Client struct {
 	returnError bool
 	version     string
 }
 
-// NewFakeClient returns a new fake containerd client
-func NewFakeClient() *FakeContainerdClient {
-	return &FakeContainerdClient{
+// NewClient returns a new fake containerd client
+func NewClient() *Client {
+	return &Client{
 		returnError: false,
 		version:     defaultContainerdVersion,
 	}
 }
 
 // Version returns the version of the (fake) containerd represented by the FakeContainerdClient
-func (f FakeContainerdClient) Version(_ context.Context) (containerd.Version, error) {
+func (f Client) Version(_ context.Context) (containerd.Version, error) {
 	if f.returnError {
 		return containerd.Version{}, errors.New("calling fake containerd socket error")
 	}
@@ -42,12 +40,12 @@ func (f FakeContainerdClient) Version(_ context.Context) (containerd.Version, er
 }
 
 // SetFakeContainerdVersion sets the version of the (fake) containerd to the desired value
-func (f *FakeContainerdClient) SetFakeContainerdVersion(version string) {
+func (f *Client) SetFakeContainerdVersion(version string) {
 	semver.MustParse(version)
 	f.version = version
 }
 
 // SetReturnError sets whether or not the fake containerd client returns an error
-func (f *FakeContainerdClient) SetReturnError(returnError bool) {
+func (f *Client) SetReturnError(returnError bool) {
 	f.returnError = returnError
 }

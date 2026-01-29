@@ -23,7 +23,7 @@ import (
 type containerdHealthChecker struct {
 	client client.Client
 
-	containerdClient containerd.ContainerdClient
+	containerdClient containerd.Client
 	firstFailure     *time.Time
 	clock            clock.Clock
 	dbus             dbus.DBus
@@ -31,7 +31,7 @@ type containerdHealthChecker struct {
 }
 
 // NewContainerdHealthChecker creates a new instance of a containerd health check.
-func NewContainerdHealthChecker(client client.Client, containerdClient containerd.ContainerdClient, clock clock.Clock, dbus dbus.DBus, recorder record.EventRecorder) HealthChecker {
+func NewContainerdHealthChecker(client client.Client, containerdClient containerd.Client, clock clock.Clock, dbus dbus.DBus, recorder record.EventRecorder) HealthChecker {
 	return &containerdHealthChecker{
 		client:           client,
 		containerdClient: containerdClient,

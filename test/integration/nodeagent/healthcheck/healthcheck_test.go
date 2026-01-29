@@ -41,7 +41,7 @@ var _ = Describe("Healthcheck controller tests", func() {
 		node               *corev1.Node
 		fakeDBus           *fakedbus.DBus
 		interfaceAddresses []string
-		containerdClient   *fakecontainerdclient.FakeContainerdClient
+		containerdClient   *fakecontainerdclient.Client
 		kubeletHealthcheck *healthcheck.KubeletHealthChecker
 		ts                 *httptest.Server
 	)
@@ -72,7 +72,7 @@ var _ = Describe("Healthcheck controller tests", func() {
 			}
 			return result, nil
 		}
-		containerdClient = fakecontainerdclient.NewFakeClient()
+		containerdClient = fakecontainerdclient.NewClient()
 
 		nodeName = testRunID
 

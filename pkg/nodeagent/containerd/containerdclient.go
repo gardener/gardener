@@ -15,26 +15,22 @@ import (
 	"github.com/containerd/containerd/v2/pkg/namespaces"
 )
 
-// ContainerdClient defines the containerd client Interface exported for testing.
-type ContainerdClient interface {
+// Client defines the containerd client Interface exported for testing.
+type Client interface {
 	Version(context.Context) (containerd.Version, error)
 }
 
-const (
-	// envContainerdAddress is the name of the environment variable holding the containerd address
-	envContainerdAddress = "CONTAINERD_ADDRESS"
-)
+// envContainerdAddress is the name of the environment variable holding the containerd address
+const envContainerdAddress = "CONTAINERD_ADDRESS"
 
-var (
-	version2dot2 *semver.Version
-)
+var version2dot2 *semver.Version
 
 func init() {
 	version2dot2 = semver.MustParse("2.2")
 }
 
-// NewContainerdClient returns a new client to connect to containerd
-func NewContainerdClient() (*containerd.Client, error) {
+// NewClient returns a new client to connect to containerd
+func NewClient() (*containerd.Client, error) {
 	address := os.Getenv(envContainerdAddress)
 	if address == "" {
 		address = defaults.DefaultAddress
@@ -54,11 +50,11 @@ func NewContainerdClient() (*containerd.Client, error) {
 }
 
 // VersionGreaterThanEqual22 checks if the running containerd version is greater or equal to 2.2
-func VersionGreaterThanEqual22(ctx context.Context, client ContainerdClient) (bool, error) {
+func VersionGreaterThanEqual22(ctx context.Context, client Client) (bool, error) {
 	return versionGreaterThanEqual(ctx, client, version2dot2)
 }
 
-func versionGreaterThanEqual(ctx context.Context, client ContainerdClient, s *semver.Version) (bool, error) {
+func versionGreaterThanEqual(ctx context.Context, client Client, s *semver.Version) (bool, error) {
 	containerdVersion, err := client.Version(ctx)
 	if err != nil {
 		return false, err

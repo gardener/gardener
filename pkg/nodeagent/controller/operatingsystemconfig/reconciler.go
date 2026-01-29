@@ -97,7 +97,7 @@ func init() {
 // node.
 type Reconciler struct {
 	Client           client.Client
-	ContainerdClient nodeagentcontainerd.ContainerdClient
+	ContainerdClient nodeagentcontainerd.Client
 	Config           nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig
 	ConfigDir        string
 	Recorder         record.EventRecorder

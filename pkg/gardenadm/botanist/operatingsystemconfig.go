@@ -130,7 +130,7 @@ func (b *GardenadmBotanist) ApplyOperatingSystemConfig(ctx context.Context) erro
 		return fmt.Errorf("failed fetching node object by hostname %q: %w", b.HostName, err)
 	}
 
-	containerdclient, err := nodeagentcontainerd.NewContainerdClient()
+	containerdclient, err := nodeagentcontainerd.NewClient()
 	if err != nil {
 		return fmt.Errorf("failed connecting to containerd: %w", err)
 	}

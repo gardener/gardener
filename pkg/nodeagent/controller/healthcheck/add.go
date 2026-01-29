@@ -61,7 +61,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.P
 func (r *Reconciler) setDefaultHealthChecks() error {
 	clock := clock.RealClock{}
 
-	client, err := containerd.NewContainerdClient()
+	client, err := containerd.NewClient()
 	if err != nil {
 		return fmt.Errorf("error creating containerd client: %w", err)
 	}

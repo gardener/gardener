@@ -182,7 +182,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 				{SecretName: secretName2},
 			},
 			CancelContext:    cancelFunc.cancel,
-			ContainerdClient: fakecontainerdclient.NewFakeClient(),
+			ContainerdClient: fakecontainerdclient.NewClient(),
 		}).AddToManager(ctx, mgr)).To(Succeed())
 
 		By("Start manager")
