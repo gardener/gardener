@@ -881,8 +881,6 @@ message DNS {
   //
   // Deprecated: Configuring multiple DNS providers is deprecated and will be forbidden in a future release.
   // Please use the DNS extension provider config (e.g. shoot-dns-service) for additional providers.
-  // +patchMergeKey=type
-  // +patchStrategy=merge
   // +optional
   repeated DNSProvider providers = 2;
 }
