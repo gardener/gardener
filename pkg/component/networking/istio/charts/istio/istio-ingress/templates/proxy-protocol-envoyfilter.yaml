@@ -27,8 +27,8 @@ spec:
         - name: envoy.filters.listener.tls_inspector
           typed_config:
             "@type": type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+{{- if .Values.httpProxy.legacyPort.enabled }}
 ---
-{{- if .Values.vpn.legacyPort.enabled }}
 # TODO(hown3d): Drop with RemoveHTTPProxyLegacyPort feature gate
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
@@ -46,7 +46,7 @@ spec:
     match:
       context: GATEWAY
       listener:
-        portNumber: {{ .Values.vpn.legacyPort.port }}
+        portNumber: {{ .Values.httpProxy.legacyPort.port }}
     patch:
       operation: MERGE
       value:
@@ -57,7 +57,7 @@ spec:
             allow_requests_without_proxy_protocol: true
         per_connection_buffer_limit_bytes: 32768
 {{- end }}
-{{- if .Values.vpn.unifiedPort.enabled }}
+{{- if .Values.httpProxy.unifiedPort.enabled }}
 ---
 # TODO(hown3d): Unconditionally create with RemoveHTTPProxyLegacyPort feature gate
 apiVersion: networking.istio.io/v1alpha3
@@ -76,7 +76,7 @@ spec:
     match:
       context: GATEWAY
       listener:
-        portNumber: {{ .Values.vpn.unifiedPort.port }}
+        portNumber: {{ .Values.httpProxy.unifiedPort.port }}
     patch:
       operation: MERGE
       value:

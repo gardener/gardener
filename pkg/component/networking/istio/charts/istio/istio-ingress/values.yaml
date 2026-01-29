@@ -37,7 +37,7 @@ apiServerRequestHeaderGroup: X-Remote-Group
 apiServerAuthenticationDynamicMetadataKey: authenticated-kube-apiserver-host
 terminateAPIServerTLS: false
 terminateLoadBalancerProxyProtocol: false
-vpn:
+httpProxy:
   enabled: false
   legacyPort:
     enabled: false

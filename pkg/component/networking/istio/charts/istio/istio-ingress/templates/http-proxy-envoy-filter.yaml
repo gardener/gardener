@@ -1,4 +1,4 @@
-{{- if and .Values.vpn.enabled .Values.vpn.unifiedPort.enabled -}}
+{{- if and .Values.httpProxy.enabled .Values.httpProxy.unifiedPort.enabled -}}
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -13,13 +13,17 @@ spec:
         filterChain:
           filter:
             name: envoy.filters.network.http_connection_manager
-        portNumber: {{ .Values.vpn.unifiedPort.port }}
+        portNumber: {{ .Values.httpProxy.unifiedPort.port }}
     patch:
       operation: MERGE
       value:
         name: envoy.filters.network.http_connection_manager
         typed_config:
           '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          http_protocol_options:
+            accept_http_10: true
+          upgrade_configs:
+          - upgrade_type: CONNECT
           route_config:
             virtual_hosts:
             - domains:
@@ -29,12 +33,12 @@ spec:
               - match:
                   connect_matcher: {}
                   headers:
-                    - name: {{ .Values.vpn.unifiedPort.header }}
+                    - name: {{ .Values.httpProxy.unifiedPort.header }}
                       string_match:
                         safe_regex:
                           regex: '^(outbound\|(1194\|\|vpn-seed-server(-[0-4])?|443\|\|kube-apiserver)\..*\.svc\.cluster\.local|shoot--.*--.*--kube-apiserver-socket)$'
                 route:
-                  cluster_header: {{ .Values.vpn.unifiedPort.header }}
+                  cluster_header: {{ .Values.httpProxy.unifiedPort.header }}
                   upgrade_configs:
                   - connect_config: {}
                     upgrade_type: CONNECT
@@ -53,35 +57,6 @@ spec:
                 redirect:
                   https_redirect: true
                   port_redirect: 443
-  workloadSelector:
-    labels:
-{{ .Values.labels | toYaml | indent 6 }}
----
-apiVersion: networking.istio.io/v1alpha3
-kind: EnvoyFilter
-metadata:
-  name: http-proxy-listener
-  namespace: {{ .Release.Namespace }}
-spec:
-  configPatches:
-  - applyTo: NETWORK_FILTER
-    match:
-      context: GATEWAY
-      listener:
-        portNumber: {{ .Values.vpn.unifiedPort.port }}
-        filterChain:
-          filter:
-            name: envoy.filters.network.http_connection_manager
-    patch:
-      operation: MERGE
-      value:
-        name: envoy.filters.network.http_connection_manager
-        typed_config:
-          "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
-          http_protocol_options:
-            accept_http_10: true
-          upgrade_configs:
-          - upgrade_type: CONNECT
   workloadSelector:
     labels:
 {{ .Values.labels | toYaml | indent 6 }}

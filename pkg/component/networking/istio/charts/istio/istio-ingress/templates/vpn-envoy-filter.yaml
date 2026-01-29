@@ -1,4 +1,4 @@
-{{- if and .Values.vpn.enabled .Values.vpn.legacyPort.enabled -}}
+{{- if and .Values.httpProxy.enabled .Values.httpProxy.legacyPort.enabled -}}
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -13,7 +13,7 @@ spec:
         filterChain:
           filter:
             name: envoy.filters.network.http_connection_manager
-        portNumber: {{ .Values.vpn.legacyPort.port }}
+        portNumber: {{ .Values.httpProxy.legacyPort.port }}
     patch:
       operation: MERGE
       value:
@@ -29,12 +29,12 @@ spec:
               - match:
                   connect_matcher: {}
                   headers:
-                    - name: {{ .Values.vpn.legacyPort.header }}
+                    - name: {{ .Values.httpProxy.legacyPort.header }}
                       string_match:
                         safe_regex:
                           regex: '^(outbound\|(1194\|\|vpn-seed-server(-[0-4])?|443\|\|kube-apiserver)\..*\.svc\.cluster\.local|shoot--.*--.*--kube-apiserver-socket)$'
                 route:
-                  cluster_header: {{ .Values.vpn.legacyPort.header }}
+                  cluster_header: {{ .Values.httpProxy.legacyPort.header }}
                   upgrade_configs:
                   - connect_config: {}
                     upgrade_type: CONNECT
@@ -68,7 +68,7 @@ spec:
     match:
       context: GATEWAY
       listener:
-        portNumber: {{ .Values.vpn.legacyPort.port }}
+        portNumber: {{ .Values.httpProxy.legacyPort.port }}
         filterChain:
           filter:
             name: envoy.filters.network.http_connection_manager

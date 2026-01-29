@@ -299,9 +299,9 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
-		istioIngressEnvoyHTTPProxyFilterUnified = func(i int) string {
+		istioIngressEnvoyHTTPProxyFilterUnified = func() string {
 			data, _ := os.ReadFile("./test_charts/ingress_http_proxy_envoy_filter_unified.yaml")
-			return strings.Split(string(data), "---\n")[i]
+			return string(data)
 		}
 	)
 
@@ -842,8 +842,7 @@ var _ = Describe("istiod", func() {
 					istioIngressHTTPProxyGatewayUnified(),
 					istioIngressEnvoyVPNFilter(0),
 					istioIngressEnvoyVPNFilter(1),
-					istioIngressEnvoyHTTPProxyFilterUnified(0),
-					istioIngressEnvoyHTTPProxyFilterUnified(1),
+					istioIngressEnvoyHTTPProxyFilterUnified(),
 				}
 
 				By("Verify istio resources")
@@ -866,8 +865,7 @@ var _ = Describe("istiod", func() {
 						istioIngressHTTPProxyGatewayUnified(),
 						istioIngressEnvoyVPNFilter(0),
 						istioIngressEnvoyVPNFilter(1),
-						istioIngressEnvoyHTTPProxyFilterUnified(0),
-						istioIngressEnvoyHTTPProxyFilterUnified(1),
+						istioIngressEnvoyHTTPProxyFilterUnified(),
 						istioProxyProtocolEnvoyFilterVPNUnified(0),
 						istioProxyProtocolEnvoyFilterVPNUnified(1),
 					}

@@ -83,7 +83,7 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			cpuRequests = "450m"
 		}
 
-		vpnValues := map[string]any{
+		httpProxy := map[string]any{
 			"enabled": istioIngressGateway.VPNEnabled,
 			"legacyPort": map[string]any{
 				"enabled": true,
@@ -93,7 +93,7 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 		}
 
 		if features.DefaultFeatureGate.Enabled(features.UseUnifiedHTTPProxyPort) {
-			vpnValues["unifiedPort"] = map[string]any{
+			httpProxy["unifiedPort"] = map[string]any{
 				"enabled": true,
 				"port":    vpnseedserver.HTTPProxyGatewayPort,
 				"header":  "X-Gardener-Destination",
@@ -118,7 +118,7 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			"internalServiceName":                v1beta1constants.InternalSNIIngressServiceName,
 			"terminateLoadBalancerProxyProtocol": istioIngressGateway.TerminateLoadBalancerProxyProtocol,
 			"terminateAPIServerTLS":              enableAPIServerTLSTermination,
-			"vpn":                                vpnValues,
+			"httpProxy":                          httpProxy,
 			"enforceSpreadAcrossHosts":           istioIngressGateway.EnforceSpreadAcrossHosts,
 			"apiServerRequestHeaderUserName":     kubeapiserverconstants.RequestHeaderUserName,
 			"apiServerRequestHeaderGroup":        kubeapiserverconstants.RequestHeaderGroup,

@@ -1,4 +1,4 @@
-{{- if and .Values.vpn.enabled .Values.vpn.unifiedPort.enabled }}
+{{- if and .Values.httpProxy.enabled .Values.httpProxy.unifiedPort.enabled }}
 apiVersion: networking.istio.io/v1beta1
 kind: Gateway
 metadata:
@@ -13,6 +13,6 @@ spec:
     - non-existing-blackhole.garden.svc.cluster.local
     port:
       name: http-proxy
-      number: {{ .Values.vpn.unifiedPort.port }}
+      number: {{ .Values.httpProxy.unifiedPort.port }}
       protocol: HTTP
 {{- end }}
