@@ -31,6 +31,7 @@ func CurrentLifecycleClassification(version gardencorev1beta1.ExpirableVersion) 
 		currentTime           = time.Now()
 	)
 
+	// TODO: @RAPSNX refactor this
 	if version.Classification != nil || version.ExpirationDate != nil {
 		// old cloud profile definition, convert to lifecycle
 		// this can be removed as soon as we remove the old classification and expiration date fields
@@ -56,10 +57,7 @@ func CurrentLifecycleClassification(version gardencorev1beta1.ExpirableVersion) 
 	}
 
 	if len(version.Lifecycle) == 0 {
-		// when there is no classification lifecycle defined then default to supported
-		version.Lifecycle = append(version.Lifecycle, gardencorev1beta1.LifecycleStage{
-			Classification: gardencorev1beta1.ClassificationSupported,
-		})
+		return gardencorev1beta1.ClassificationSupported
 	}
 
 	for _, stage := range version.Lifecycle {

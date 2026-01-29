@@ -47,8 +47,8 @@ func ValidateCloudProfileUpdate(newProfile, oldProfile *core.CloudProfile) field
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newProfile.ObjectMeta, &oldProfile.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateCloudProfileSpecUpdate(&newProfile.Spec, &oldProfile.Spec, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateCloudProfile(newProfile)...)
+	allErrs = append(allErrs, ValidateCloudProfileSpecUpdate(&newProfile.Spec, &oldProfile.Spec, field.NewPath("spec"))...)
 
 	return allErrs
 }

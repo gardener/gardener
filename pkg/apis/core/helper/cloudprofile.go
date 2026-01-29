@@ -26,6 +26,7 @@ func CurrentLifecycleClassification(version core.ExpirableVersion) core.VersionC
 		currentTime           = time.Now()
 	)
 
+	// TODO: @RAPSNX refactor this
 	if version.Classification != nil || version.ExpirationDate != nil {
 		// old cloud profile definition, convert to lifecycle
 		// this can be removed as soon as we remove the old classification and expiration date fields
@@ -51,10 +52,7 @@ func CurrentLifecycleClassification(version core.ExpirableVersion) core.VersionC
 	}
 
 	if len(version.Lifecycle) == 0 {
-		// when there is no classification lifecycle defined then default to supported
-		version.Lifecycle = append(version.Lifecycle, core.LifecycleStage{
-			Classification: core.ClassificationSupported,
-		})
+		return core.ClassificationSupported
 	}
 
 	for _, stage := range version.Lifecycle {
@@ -229,7 +227,7 @@ func getVersionDiff(v1, v2 []core.ExpirableVersion) map[string]int {
 type MachineImageDiff struct {
 	RemovedImages                 sets.Set[string]
 	RemovedVersions               map[string]sets.Set[string]
-	RemovedVersionClassifications map[string]map[string][]core.VersionClassification
+	RemovedVersionClassifications map[string]map[string]sets.Set[core.VersionClassification]
 	AddedImages                   sets.Set[string]
 	AddedVersions                 map[string]sets.Set[string]
 }
@@ -239,7 +237,7 @@ func GetMachineImageDiff(old, new []core.MachineImage) MachineImageDiff {
 	diff := MachineImageDiff{
 		RemovedImages:                 sets.Set[string]{},
 		RemovedVersions:               map[string]sets.Set[string]{},
-		RemovedVersionClassifications: map[string]map[string][]core.VersionClassification{},
+		RemovedVersionClassifications: map[string]map[string]sets.Set[core.VersionClassification]{},
 		AddedImages:                   sets.Set[string]{},
 		AddedVersions:                 map[string]sets.Set[string]{},
 	}
@@ -281,10 +279,13 @@ func GetMachineImageDiff(old, new []core.MachineImage) MachineImageDiff {
 					}
 					removedClassifications := diff.RemovedVersionClassifications[imageName]
 					if removedClassifications == nil {
-						removedClassifications = make(map[string][]core.VersionClassification)
+						removedClassifications = make(map[string]sets.Set[core.VersionClassification])
 						diff.RemovedVersionClassifications[imageName] = removedClassifications
 					}
-					removedClassifications[version.Version] = append(removedClassifications[version.Version], existingStage.Classification)
+					if removedClassifications[version.Version] == nil {
+						removedClassifications[version.Version] = sets.New[core.VersionClassification]()
+					}
+					removedClassifications[version.Version].Insert(existingStage.Classification)
 				}
 			}
 		}
