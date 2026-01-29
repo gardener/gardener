@@ -372,7 +372,7 @@ images:
   - name: metrics-server
     sourceRepository: github.com/kubernetes-sigs/metrics-server
     repository: registry.k8s.io/metrics-server/metrics-server
-    tag: v0.8.0
+    tag: v0.8.1
     targetVersion: ">= 1.31"
     labels:
       - name: gardener.cloud/cve-categorisation
