@@ -2101,7 +2101,8 @@ SeedSelector
 </td>
 <td>
 <em>(Optional)</em>
-<p>SeedSelector is an optional selector which must match a seed&rsquo;s labels for the shoot to be scheduled on that seed.</p>
+<p>SeedSelector is an optional selector which must match a seed&rsquo;s labels for the shoot to be scheduled on that seed.
+Once the shoot is assigned to a seed, the selector can only be changed later if the new one still matches the assigned seed.</p>
 </td>
 </tr>
 <tr>
@@ -13550,7 +13551,8 @@ SeedSelector
 </td>
 <td>
 <em>(Optional)</em>
-<p>SeedSelector is an optional selector which must match a seed&rsquo;s labels for the shoot to be scheduled on that seed.</p>
+<p>SeedSelector is an optional selector which must match a seed&rsquo;s labels for the shoot to be scheduled on that seed.
+Once the shoot is assigned to a seed, the selector can only be changed later if the new one still matches the assigned seed.</p>
 </td>
 </tr>
 <tr>
@@ -14297,7 +14299,8 @@ SeedSelector
 </td>
 <td>
 <em>(Optional)</em>
-<p>SeedSelector is an optional selector which must match a seed&rsquo;s labels for the shoot to be scheduled on that seed.</p>
+<p>SeedSelector is an optional selector which must match a seed&rsquo;s labels for the shoot to be scheduled on that seed.
+Once the shoot is assigned to a seed, the selector can only be changed later if the new one still matches the assigned seed.</p>
 </td>
 </tr>
 <tr>

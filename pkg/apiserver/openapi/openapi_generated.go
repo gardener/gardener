@@ -9718,7 +9718,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					},
 					"seedSelector": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.",
+							Description: "SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed. Once the shoot is assigned to a seed, the selector can only be changed later if the new one still matches the assigned seed.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector"),
 						},
 					},

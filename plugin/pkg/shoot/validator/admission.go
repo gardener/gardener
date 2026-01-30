@@ -270,6 +270,27 @@ func (v *ValidateShoot) Validate(ctx context.Context, a admission.Attributes, _ 
 		}
 	}
 
+	// Allow changes to the seed selector retrospectively only if the new selector still matches the already selected seed.
+	if !apiequality.Semantic.DeepEqual(oldShoot.Spec.SeedSelector, shoot.Spec.SeedSelector) && shoot.Spec.SeedName != nil && seed != nil {
+		if shoot.Spec.SeedSelector == nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "seedSelector"), shoot.Spec.SeedSelector, "cannot unset seedSelector once it has been set"))
+		} else {
+			seedSelector := shoot.Spec.SeedSelector
+			selector, err := metav1.LabelSelectorAsSelector(&seedSelector.LabelSelector)
+			if err != nil {
+				return apierrors.NewInternalError(fmt.Errorf("label selector conversion failed for seedSelector: %w", err))
+			}
+
+			if !selector.Matches(labels.Set(seed.Labels)) {
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "seedSelector"), shoot.Spec.SeedSelector, fmt.Sprintf("cannot change seedSelector to not match the labels of the already selected seed %q", *shoot.Spec.SeedName)))
+			}
+
+			if len(seedSelector.ProviderTypes) > 0 && !slices.Contains(seedSelector.ProviderTypes, seed.Spec.Provider.Type) {
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "seedSelector", "providerTypes"), shoot.Spec.SeedSelector.ProviderTypes, fmt.Sprintf("cannot change seedSelector to not match the provider type of the already selected seed %q", *shoot.Spec.SeedName)))
+			}
+		}
+	}
+
 	project, err := admissionutils.ProjectForNamespaceFromLister(v.projectLister, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced project: %+v", err.Error()))

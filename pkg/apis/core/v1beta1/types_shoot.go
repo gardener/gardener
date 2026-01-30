@@ -112,6 +112,7 @@ type ShootSpec struct {
 	// +optional
 	SeedName *string `json:"seedName,omitempty" protobuf:"bytes,14,opt,name=seedName"`
 	// SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.
+	// Once the shoot is assigned to a seed, the selector can only be changed later if the new one still matches the assigned seed.
 	// +optional
 	SeedSelector *SeedSelector `json:"seedSelector,omitempty" protobuf:"bytes,15,opt,name=seedSelector"`
 	// Resources holds a list of named resource references that can be referred to in extension configs by their names.
