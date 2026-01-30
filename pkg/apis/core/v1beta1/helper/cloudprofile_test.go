@@ -11,8 +11,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/clock"
-	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -160,70 +158,6 @@ var _ = Describe("CloudProfile Helper", func() {
 			Expect(classification).To(Equal(gardencorev1beta1.ClassificationPreview))
 		})
 
-	})
-
-	Describe("Get the duration until the next lifecycle stage from the CloudProfile", func() {
-		var (
-			fakeNow          time.Time
-			fakeClock        clock.Clock
-			cloudProfileSpec = gardencorev1beta1.CloudProfileSpec{
-				Kubernetes: gardencorev1beta1.KubernetesSettings{
-					Versions: []gardencorev1beta1.ExpirableVersion{
-						{
-							Lifecycle: []gardencorev1beta1.LifecycleStage{},
-						},
-					},
-				},
-			}
-		)
-
-		BeforeEach(func() {
-			fakeNow = time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
-			fakeClock = testclock.NewFakeClock(fakeNow)
-
-		})
-
-		It("should return the duration of the next version lifecycle based on a chronological order", func() {
-			Lifecycles := []gardencorev1beta1.LifecycleStage{
-				{
-					StartTime: ptr.To(metav1.NewTime(fakeNow.Add(3 * time.Hour))),
-				},
-				{
-					StartTime: ptr.To(metav1.NewTime(fakeNow.Add(5 * time.Hour))),
-				},
-			}
-			cloudProfileSpec.Kubernetes.Versions[0].Lifecycle = Lifecycles
-
-			Expect(DurationUntilNextVersionLifecycleStage(&cloudProfileSpec, fakeClock)).To(BeNumerically("~", 3*time.Hour, 100*time.Millisecond))
-		})
-
-		It("should return the duration of the next version lifecycle without a chronological order", func() {
-			Lifecycles := []gardencorev1beta1.LifecycleStage{
-				{
-					StartTime: ptr.To(metav1.NewTime(fakeNow.Add(3 * time.Hour))),
-				},
-				{
-					StartTime: ptr.To(metav1.NewTime(fakeNow.Add(1 * time.Hour))),
-				},
-			}
-			cloudProfileSpec.Kubernetes.Versions[0].Lifecycle = Lifecycles
-
-			Expect(DurationUntilNextVersionLifecycleStage(&cloudProfileSpec, fakeClock)).To(BeNumerically("~", 1*time.Hour, 100*time.Millisecond))
-		})
-
-		It("should return the duration of the next version lifecycle with start time in the past", func() {
-			Lifecycles := []gardencorev1beta1.LifecycleStage{
-				{
-					StartTime: ptr.To(metav1.NewTime(fakeNow.Add(3 * time.Hour))),
-				},
-				{
-					StartTime: ptr.To(metav1.NewTime(fakeNow.Add(-1 * time.Hour))),
-				},
-			}
-			cloudProfileSpec.Kubernetes.Versions[0].Lifecycle = Lifecycles
-
-			Expect(DurationUntilNextVersionLifecycleStage(&cloudProfileSpec, fakeClock)).To(BeNumerically("~", 3*time.Hour, 100*time.Millisecond))
-		})
 	})
 
 	Describe("#FindMachineImageVersion", func() {

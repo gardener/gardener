@@ -12,9 +12,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/api"
@@ -87,46 +85,6 @@ func VersionIsSupported(version gardencorev1beta1.ExpirableVersion) bool {
 // VersionIsPreview reports whether the given version is in preview.
 func VersionIsPreview(version gardencorev1beta1.ExpirableVersion) bool {
 	return CurrentLifecycleClassification(version) == gardencorev1beta1.ClassificationPreview
-}
-
-// DurationUntilNextVersionLifecycleStage returns the duration until the earliest upcoming lifecycle start time
-// of any Kubernetes version or MachineImageVersion in the given <cloudProfile>.
-// If no future lifecycle start is found, it returns 0.
-func DurationUntilNextVersionLifecycleStage(cloudProfile *gardencorev1beta1.CloudProfileSpec, clock clock.Clock) time.Duration {
-	if cloudProfile == nil {
-		return 0
-	}
-
-	var next time.Time
-	now := clock.Now()
-
-	evaluate := func(t *metav1.Time) {
-		if t == nil {
-			return
-		}
-		if now.Before(t.Time) && (next.IsZero() || next.After(t.Time)) {
-			next = t.Time
-		}
-	}
-
-	for _, version := range cloudProfile.Kubernetes.Versions {
-		for _, stage := range version.Lifecycle {
-			evaluate(stage.StartTime)
-		}
-	}
-
-	for _, image := range cloudProfile.MachineImages {
-		for _, version := range image.Versions {
-			for _, stage := range version.Lifecycle {
-				evaluate(stage.StartTime)
-			}
-		}
-	}
-
-	if next.IsZero() {
-		return 0
-	}
-	return next.Sub(now)
 }
 
 // DetermineMachineImageForName finds the cloud specific machine images in the <cloudProfile> for the given <name> and
