@@ -27,7 +27,6 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -576,8 +575,6 @@ func (o *operatingSystemConfig) waitCleanup(ctx context.Context, wantedOSCNames 
 func (o *operatingSystemConfig) getWantedOSCNames(ctx context.Context) (sets.Set[string], error) {
 	wantedOSCNames := sets.New[string]()
 
-	o.log.Info("number of workers", "number", len(o.values.Workers))
-
 	for _, worker := range o.values.Workers {
 		version, err := o.hashVersion(worker)
 		if err != nil {
@@ -592,7 +589,7 @@ func (o *operatingSystemConfig) getWantedOSCNames(ctx context.Context) (sets.Set
 			if err != nil {
 				return nil, err
 			}
-			o.log.V(1).Info("inserted osc data from worker", "data", oscKey+keySuffix(version, worker.Machine.Image, purpose))
+			o.log.V(1).Info("Inserted osc data from worker", "data", oscKey+keySuffix(version, worker.Machine.Image, purpose))
 			wantedOSCNames.Insert(oscKey + keySuffix(version, worker.Machine.Image, purpose))
 		}
 	}
@@ -603,11 +600,11 @@ func (o *operatingSystemConfig) getWantedOSCNames(ctx context.Context) (sets.Set
 	}
 
 	for _, machine := range mdList.Items {
-		if val, ok := machine.Spec.NodeTemplateSpec.ObjectMeta.Labels[gardencorev1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]; ok {
+		if val, ok := machine.Spec.NodeTemplateSpec.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]; ok {
 			originalVal := val + "-original"
 			initVal := val + "-init"
 
-			o.log.V(1).Info("found wanted OSC name from existing machine", "init", initVal, "original", originalVal, "machine", machine.Name)
+			o.log.V(1).Info("Found wanted OSC name from existing machine", "init", initVal, "original", originalVal, "machine", machine.Name)
 			wantedOSCNames.Insert(originalVal, initVal)
 			continue
 		}
