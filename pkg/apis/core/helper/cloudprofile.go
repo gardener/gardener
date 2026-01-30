@@ -12,6 +12,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -26,24 +27,17 @@ func CurrentLifecycleClassification(version core.ExpirableVersion) core.VersionC
 		currentTime           = time.Now()
 	)
 
-	// TODO: @RAPSNX refactor this
-	if version.Classification != nil || version.ExpirationDate != nil {
-		// old cloud profile definition, convert to lifecycle
-		// this can be removed as soon as we remove the old classification and expiration date fields
+	if len(version.Lifecycle) == 0 && (version.Classification != nil || version.ExpirationDate != nil) {
+		// Deprecated: legacy classification/expiration fields are used, converting them to lifecycle stages.
+		// Remove once the legacy fields are removed.
 
-		if version.Classification != nil {
-			version.Lifecycle = append(version.Lifecycle, core.LifecycleStage{
-				Classification: *version.Classification,
-			})
-		}
+		// Add the configured classification stage, default to Supported if unset.
+		version.Lifecycle = append(version.Lifecycle, core.LifecycleStage{
+			Classification: ptr.Deref(version.Classification, core.ClassificationSupported),
+		})
 
+		// Add an Expired stage if ExpirationDate is set.
 		if version.ExpirationDate != nil {
-			if version.Classification == nil {
-				version.Lifecycle = append(version.Lifecycle, core.LifecycleStage{
-					Classification: core.ClassificationSupported,
-				})
-			}
-
 			version.Lifecycle = append(version.Lifecycle, core.LifecycleStage{
 				Classification: core.ClassificationExpired,
 				StartTime:      version.ExpirationDate,

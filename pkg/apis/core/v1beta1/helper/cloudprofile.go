@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -31,24 +32,17 @@ func CurrentLifecycleClassification(version gardencorev1beta1.ExpirableVersion) 
 		currentTime           = time.Now()
 	)
 
-	// TODO: @RAPSNX refactor this
-	if version.Classification != nil || version.ExpirationDate != nil {
-		// old cloud profile definition, convert to lifecycle
-		// this can be removed as soon as we remove the old classification and expiration date fields
+	if len(version.Lifecycle) == 0 && (version.Classification != nil || version.ExpirationDate != nil) {
+		// Deprecated: legacy classification/expiration fields are used, converting them to lifecycle stages.
+		// Remove once the legacy fields are removed.
 
-		if version.Classification != nil {
-			version.Lifecycle = append(version.Lifecycle, gardencorev1beta1.LifecycleStage{
-				Classification: *version.Classification,
-			})
-		}
+		// Add the configured classification stage, default to Supported if unset.
+		version.Lifecycle = append(version.Lifecycle, gardencorev1beta1.LifecycleStage{
+			Classification: ptr.Deref(version.Classification, gardencorev1beta1.ClassificationSupported),
+		})
 
+		// Add an Expired stage if ExpirationDate is set.
 		if version.ExpirationDate != nil {
-			if version.Classification == nil {
-				version.Lifecycle = append(version.Lifecycle, gardencorev1beta1.LifecycleStage{
-					Classification: gardencorev1beta1.ClassificationSupported,
-				})
-			}
-
 			version.Lifecycle = append(version.Lifecycle, gardencorev1beta1.LifecycleStage{
 				Classification: gardencorev1beta1.ClassificationExpired,
 				StartTime:      version.ExpirationDate,
