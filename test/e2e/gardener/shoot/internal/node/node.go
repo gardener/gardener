@@ -56,11 +56,18 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 		var node *corev1.Node
 		It("Wait for new Node to be created", func(ctx SpecContext) {
 			nodeList := &corev1.NodeList{}
-			Eventually(ctx, s.ShootKomega.ObjectList(nodeList)).Should(
-				HaveField("Items", Not(BeEmpty())), "new Node should be created",
-			)
-			node = &nodeList.Items[0]
-		}, SpecTimeout(10*time.Minute))
+			Eventually(ctx, func(g Gomega) {
+				g.Expect(s.ShootClient.List(ctx, nodeList)).To(Succeed())
+				g.Expect(nodeList.Items).To(Not(BeEmpty()))
+				for _, no := range nodeList.Items {
+					node = &no
+					if node.DeletionTimestamp == nil {
+						break
+					}
+				}
+				g.Expect(node.DeletionTimestamp).To(BeNil(), "node should not be in deletion")
+			}).Should(Succeed())
+		}, SpecTimeout(30*time.Minute))
 
 		It("Verify node-critical components not ready taint is present", func(ctx SpecContext) {
 			Eventually(ctx, s.ShootKomega.Object(node)).MustPassRepeatedly(3).WithPolling(2 * time.Second).Should(
@@ -90,7 +97,7 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 		var csiNodeObject *storagev1.CSINode
 
 		It("Wait for CSINode object", func(ctx SpecContext) {
-			csiNodeObject = waitForCSINodeObject(ctx, s.ShootClient)
+			csiNodeObject = waitForCSINodeObject(ctx, s.ShootClient, node)
 		}, SpecTimeout(time.Minute))
 
 		It("Patch CSINode object to contain required driver", func(ctx SpecContext) {
@@ -194,17 +201,25 @@ func waitForDaemonSetToBecomeHealthy(ctx context.Context, shootClient client.Cli
 	}).Should(Succeed())
 }
 
-func waitForCSINodeObject(ctx context.Context, shootClient client.Client) *storagev1.CSINode {
+func waitForCSINodeObject(ctx context.Context, shootClient client.Client, node *corev1.Node) *storagev1.CSINode {
 	GinkgoHelper()
 
 	csiNodeList := &storagev1.CSINodeList{}
+	csiNode := &storagev1.CSINode{}
 
 	Eventually(ctx, func(g Gomega) {
 		g.Expect(shootClient.List(ctx, csiNodeList)).To(Succeed())
-		g.Expect(csiNodeList.Items).To(HaveLen(1))
+		g.Expect(csiNodeList.Items).To(Not(BeEmpty()))
+		for _, csino := range csiNodeList.Items {
+			csiNode = &csino
+			if csino.OwnerReferences[0].UID == node.UID {
+				break
+			}
+		}
+		g.Expect(csiNode.OwnerReferences[0].UID).To(Equal(node.UID))
 	}).Should(Succeed())
 
-	return &csiNodeList.Items[0]
+	return csiNode
 }
 
 func patchCSINodeObjectWithRequiredDriver(ctx context.Context, shootClient client.Client, csiNode *storagev1.CSINode) {
