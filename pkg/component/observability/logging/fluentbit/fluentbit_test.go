@@ -76,7 +76,7 @@ var _ = Describe("Fluent Bit", func() {
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							TargetLabel: "__metrics_path__",
-							Replacement: ptr.To("/api/v1/metrics/prometheus"),
+							Replacement: ptr.To("/api/v2/metrics/prometheus"),
 						},
 						{
 							Action: "labelmap",
@@ -86,7 +86,7 @@ var _ = Describe("Fluent Bit", func() {
 					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 						SourceLabels: []monitoringv1.LabelName{"__name__"},
 						Action:       "keep",
-						Regex:        `^(fluentbit_input_bytes_total|fluentbit_input_records_total|fluentbit_output_proc_bytes_total|fluentbit_output_proc_records_total|fluentbit_output_errors_total|fluentbit_output_retries_total|fluentbit_output_retries_failed_total|fluentbit_filter_add_records_total|fluentbit_filter_drop_records_total)$`,
+						Regex:        `^(fluentbit_input_bytes_total|fluentbit_input_records_total|fluentbit_output_proc_bytes_total|fluentbit_output_proc_records_total|fluentbit_output_errors_total|fluentbit_output_retries_total|fluentbit_output_retries_failed_total|fluentbit_filter_add_records_total|fluentbit_filter_drop_records_total|fluentbit_storage_mem_chunks|fluentbit_storage_fs_chunks|fluentbit_storage_fs_chunks_up|fluentbit_storage_fs_chunks_down)$`,
 					}},
 				}},
 			},
@@ -123,7 +123,7 @@ var _ = Describe("Fluent Bit", func() {
 					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 						SourceLabels: []monitoringv1.LabelName{"__name__"},
 						Action:       "keep",
-						Regex:        `^(valitail_sent_entries_total|valitail_sent_bytes_total|valitail_request_duration_seconds_sum|valitail_request_duration_seconds_count|valitail_dropped_entries_total|fluentbit_vali_gardener_errors_total|fluentbit_vali_gardener_logs_without_metadata_total|fluentbit_vali_gardener_incoming_logs_total|fluentbit_vali_gardener_forwarded_logs_total|fluentbit_vali_gardener_dropped_logs_total|fluentbit_vali_gardener_dque_size)$`,
+						Regex:        `^(fluentbit_gardener_buffered_logs|fluentbit_gardener_incoming_logs_total|fluentbit_gardener_output_client_logs_total|fluentbit_gardener_clients_total|fluentbit_gardener_errors_total|fluentbit_gardener_dropped_logs_total|fluentbit_gardener_dque_size|fluentbit_gardener_exported_client_logs_total|fluentbit_gardener_throttled_logs_total|output_plugin_otel_sdk_exporter_log_exported_total|output_plugin_otel_sdk_log_created_total|output_plugin_otel_sdk_exporter_log_inflight|output_plugin_otel_sdk_exporter_operation_duration_seconds_bucket|output_plugin_otel_sdk_exporter_operation_duration_seconds_sum|output_plugin_otel_sdk_exporter_operation_duration_seconds_count|output_plugin_rpc_client_duration_milliseconds_bucket|output_plugin_rpc_client_duration_milliseconds_sum|output_plugin_rpc_client_duration_milliseconds_count|output_plugin_rpc_client_request_size_bytes_bucket|output_plugin_rpc_client_request_size_bytes_sum|output_plugin_rpc_client_request_size_bytes_count|output_plugin_rpc_client_response_size_bytes_bucket|output_plugin_rpc_client_response_size_bytes_sum|output_plugin_rpc_client_response_size_bytes_count|output_plugin_rpc_client_requests_per_rpc_sum|output_plugin_rpc_client_requests_per_rpc_count|output_plugin_rpc_client_responses_per_rpc_sum|output_plugin_rpc_client_responses_per_rpc_count|process_cpu_seconds_total|process_resident_memory_bytes|process_virtual_memory_bytes|process_network_transmit_bytes_total|process_network_receive_bytes_total|go_memstats_heap_alloc_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_objects|go_memstats_mallocs_total|go_memstats_frees_total|go_goroutines|go_gc_duration_seconds|go_gc_duration_seconds_sum|go_gc_duration_seconds_count)$`,
 					}},
 				}},
 			},
