@@ -8,8 +8,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileSpec,MachineTypes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileSpec,Regions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileSpec,VolumeTypes
-API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileStatus,Kubernetes
-API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileStatus,MachineImageVersions
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileStatus,MachineImages
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ClusterAutoscaler,IgnoreTaints
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ClusterAutoscaler,StartupTaints
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ClusterAutoscaler,StatusTaints
@@ -36,10 +35,10 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,LastError,Codes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineControllerManagerSettings,NodeConditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImage,Versions
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageStatus,Versions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageVersion,Architectures
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageVersion,CRI
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageVersion,CapabilityFlavors
-API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageVersionStatus,Versions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ManualWorkerPoolRollout,PendingWorkersRollouts
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,NamespacedCloudProfileSpec,MachineImages
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,NamespacedCloudProfileSpec,MachineTypes

@@ -181,7 +181,8 @@ type ExpirableVersion struct {
 }
 
 // LifecycleStage describes a stage in the versions lifecycle.
-// Each stage defines the classification of the version and the time at which this classification becomes effective.
+// Each stage defines the classification of the version (e.g. unavailable, preview, supported, deprecated, expired)
+// and the time at which this classification becomes effective.
 type LifecycleStage struct {
 	// Classification is the category of this lifecycle stage (unavailable, preview, supported, deprecated, expired).
 	Classification VersionClassification `json:"classification" protobuf:"bytes,1,opt,name=classification,casttype=VersionClassification"`
@@ -311,22 +312,26 @@ type Limits struct {
 // CloudProfileStatus contains the status of the cloud profile.
 type CloudProfileStatus struct {
 	// Kubernetes contains the status information for kubernetes.
-	Kubernetes []KubernetesStatus `json:"kubernetes,omitempty" protobuf:"bytes,1,name=kubernetes"`
-	// MachineImageVersions contains the statuses of the machine image versions.
-	MachineImageVersions []MachineImageVersionStatus `json:"machineImageVersions,omitempty" protobuf:"bytes,2,name=machineImageVersions"`
+	// +optional
+	Kubernetes *KubernetesStatus `json:"kubernetes,omitempty" protobuf:"bytes,1,name=kubernetes"`
+	// MachineImages contains the statuses of the machine image versions.
+	// +optional
+	MachineImages []MachineImageStatus `json:"machineImages,omitempty" protobuf:"bytes,2,name=machineImageVersions"`
 }
 
 // KubernetesStatus contains the status information for kubernetes.
 type KubernetesStatus struct {
 	// Versions contains the statuses of the kubernetes versions.
+	// +optional
 	Versions []ExpirableVersionStatus `json:"versions,omitempty" protobuf:"bytes,1,name=versions"`
 }
 
-// MachineImageVersionStatus contains the status of a machine image and its version classifications.
-type MachineImageVersionStatus struct {
+// MachineImageStatus contains the status of a machine image and its version classifications.
+type MachineImageStatus struct {
 	// Name matches the name of the MachineImage the status is represented of.
-	Name string `json:"name,omitempty" protobuf:"bytes,1,name=name"`
+	Name string `json:"name" protobuf:"bytes,1,name=name"`
 	// Versions contains the statuses of the machine image versions.
+	// +optional
 	Versions []ExpirableVersionStatus `json:"versions,omitempty" protobuf:"bytes,2,name=versions"`
 }
 
@@ -335,7 +340,7 @@ type ExpirableVersionStatus struct {
 	// Version is the version identifier.
 	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
 	// Classification reflects the current state in the classification lifecycle.
-	Classification VersionClassification `json:"classification,omitempty" protobuf:"bytes,2,opt,name=classification,casttype=VersionClassification"`
+	Classification VersionClassification `json:"classification" protobuf:"bytes,2,opt,name=classification,casttype=VersionClassification"`
 }
 
 const (

@@ -144,17 +144,19 @@ func (m *MachineImageVersion) SupportsArchitecture(capabilities Capabilities, ar
 	return slices.Contains(capabilities[constants.ArchitectureName], architecture)
 }
 
-// ExpirableVersion contains a version and an expiration date.
+// ExpirableVersion contains a version with associated lifecycle information.
 type ExpirableVersion struct {
 	// Version is the version identifier.
 	Version string
 	// ExpirationDate defines the time at which this version expires.
-	// Deprecated: Is replaced by Lifecycle.
+	// Deprecated: Is replaced by Lifecycle; mutually exclusive with it.
 	ExpirationDate *metav1.Time
 	// Classification defines the state of a version (preview, supported, deprecated).
-	// Deprecated: Is replaced by Lifecycle.
+	// Deprecated: Is replaced by Lifecycle. mutually exclusive with it.
 	Classification *VersionClassification
-	// Lifecycle defines the lifecycle stages for this version. Cannot be used in combination with deprecated Classification and ExpirationDate.
+	// Lifecycle defines the lifecycle stages for this version.
+	// Mutually exclusive with Classification and ExpirationDate.
+	// This can only be used when the VersionClassificationLifecycle feature gate is enabled.
 	Lifecycle []LifecycleStage
 }
 
@@ -165,6 +167,7 @@ type LifecycleStage struct {
 	// Classification is the category of this lifecycle stage (unavailable, preview, supported, deprecated, expired).
 	Classification VersionClassification
 	// StartTime defines when this lifecycle stage becomes active.
+	// StartTime can be omitted for the first lifecycle stage, implying a start time in the past.
 	StartTime *metav1.Time
 }
 
@@ -262,9 +265,9 @@ type BastionMachineType struct {
 // CloudProfileStatus contains the status of the cloud profile.
 type CloudProfileStatus struct {
 	// Kubernetes contains the status information for kubernetes.
-	Kubernetes []KubernetesStatus
-	// MachineImageVersions contains the statuses of the machine image versions.
-	MachineImageVersions []MachineImageVersionStatus
+	Kubernetes *KubernetesStatus
+	// MachineImages contains the statuses of the machine image versions.
+	MachineImages []MachineImageStatus
 }
 
 // KubernetesStatus contains the status information for kubernetes.
@@ -273,8 +276,8 @@ type KubernetesStatus struct {
 	Versions []ExpirableVersionStatus
 }
 
-// MachineImageVersionStatus contains the status of a machine image and its version classifications.
-type MachineImageVersionStatus struct {
+// MachineImageStatus contains the status of a machine image and its version classifications.
+type MachineImageStatus struct {
 	// Name matches the name of the MachineImage the status is represented of.
 	Name string
 	// Versions contains the statuses of the machine image versions.

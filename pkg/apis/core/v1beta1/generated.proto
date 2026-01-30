@@ -493,10 +493,12 @@ message CloudProfileSpec {
 // CloudProfileStatus contains the status of the cloud profile.
 message CloudProfileStatus {
   // Kubernetes contains the status information for kubernetes.
-  repeated KubernetesStatus kubernetes = 1;
+  // +optional
+  optional KubernetesStatus kubernetes = 1;
 
-  // MachineImageVersions contains the statuses of the machine image versions.
-  repeated MachineImageVersionStatus machineImageVersions = 2;
+  // MachineImages contains the statuses of the machine image versions.
+  // +optional
+  repeated MachineImageStatus machineImages = 2;
 }
 
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
@@ -1906,6 +1908,7 @@ message KubernetesSettings {
 // KubernetesStatus contains the status information for kubernetes.
 message KubernetesStatus {
   // Versions contains the statuses of the kubernetes versions.
+  // +optional
   repeated ExpirableVersionStatus versions = 1;
 }
 
@@ -1963,7 +1966,8 @@ message LastOperation {
 }
 
 // LifecycleStage describes a stage in the versions lifecycle.
-// Each stage defines the classification of the version and the time at which this classification becomes effective.
+// Each stage defines the classification of the version (e.g. unavailable, preview, supported, deprecated, expired)
+// and the time at which this classification becomes effective.
 message LifecycleStage {
   // Classification is the category of this lifecycle stage (unavailable, preview, supported, deprecated, expired).
   optional string classification = 1;
@@ -2063,6 +2067,16 @@ message MachineImageFlavor {
   map<string, CapabilityValues> capabilities = 1;
 }
 
+// MachineImageStatus contains the status of a machine image and its version classifications.
+message MachineImageStatus {
+  // Name matches the name of the MachineImage the status is represented of.
+  optional string name = 1;
+
+  // Versions contains the statuses of the machine image versions.
+  // +optional
+  repeated ExpirableVersionStatus versions = 2;
+}
+
 // MachineImageVersion is an expirable version with list of supported container runtimes and interfaces
 message MachineImageVersion {
   optional ExpirableVersion expirableVersion = 1;
@@ -2091,15 +2105,6 @@ message MachineImageVersion {
   // the machine image version.
   // +optional
   repeated MachineImageFlavor capabilityFlavors = 6;
-}
-
-// MachineImageVersionStatus contains the status of a machine image and its version classifications.
-message MachineImageVersionStatus {
-  // Name matches the name of the MachineImage the status is represented of.
-  optional string name = 1;
-
-  // Versions contains the statuses of the machine image versions.
-  repeated ExpirableVersionStatus versions = 2;
 }
 
 // MachineType contains certain properties of a machine type.

@@ -3911,25 +3911,27 @@ During maintenance upgrades, the image that matches most capabilities will be se
 <code>kubernetes</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.KubernetesStatus">
-[]KubernetesStatus
+KubernetesStatus
 </a>
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Kubernetes contains the status information for kubernetes.</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>machineImageVersions</code></br>
+<code>machineImages</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.MachineImageVersionStatus">
-[]MachineImageVersionStatus
+<a href="#core.gardener.cloud/v1beta1.MachineImageStatus">
+[]MachineImageStatus
 </a>
 </em>
 </td>
 <td>
-<p>MachineImageVersions contains the statuses of the machine image versions.</p>
+<em>(Optional)</em>
+<p>MachineImages contains the statuses of the machine image versions.</p>
 </td>
 </tr>
 </tbody>
@@ -5953,7 +5955,7 @@ This can only be used when the VersionClassificationLifecycle feature gate is en
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.KubernetesStatus">KubernetesStatus</a>, 
-<a href="#core.gardener.cloud/v1beta1.MachineImageVersionStatus">MachineImageVersionStatus</a>)
+<a href="#core.gardener.cloud/v1beta1.MachineImageStatus">MachineImageStatus</a>)
 </p>
 <p>
 <p>ExpirableVersionStatus defines the current status of an expirable version.</p>
@@ -8450,6 +8452,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Versions contains the statuses of the kubernetes versions.</p>
 </td>
 </tr>
@@ -8706,7 +8709,8 @@ LastOperationType
 </p>
 <p>
 <p>LifecycleStage describes a stage in the versions lifecycle.
-Each stage defines the classification of the version and the time at which this classification becomes effective.</p>
+Each stage defines the classification of the version (e.g. unavailable, preview, supported, deprecated, expired)
+and the time at which this classification becomes effective.</p>
 </p>
 <table>
 <thead>
@@ -9076,6 +9080,50 @@ Capabilities
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.MachineImageStatus">MachineImageStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileStatus">CloudProfileStatus</a>)
+</p>
+<p>
+<p>MachineImageStatus contains the status of a machine image and its version classifications.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name matches the name of the MachineImage the status is represented of.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>versions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ExpirableVersionStatus">
+[]ExpirableVersionStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Versions contains the statuses of the machine image versions.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.MachineImageUpdateStrategy">MachineImageUpdateStrategy
 (<code>string</code> alias)</p></h3>
 <p>
@@ -9186,49 +9234,6 @@ InPlaceUpdates
 <em>(Optional)</em>
 <p>CapabilityFlavors is an array of MachineImageFlavor. Each entry represents a combination of capabilities that is provided by
 the machine image version.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1beta1.MachineImageVersionStatus">MachineImageVersionStatus
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileStatus">CloudProfileStatus</a>)
-</p>
-<p>
-<p>MachineImageVersionStatus contains the status of a machine image and its version classifications.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>name</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Name matches the name of the MachineImage the status is represented of.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>versions</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.ExpirableVersionStatus">
-[]ExpirableVersionStatus
-</a>
-</em>
-</td>
-<td>
-<p>Versions contains the statuses of the machine image versions.</p>
 </td>
 </tr>
 </tbody>
