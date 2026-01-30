@@ -280,9 +280,8 @@ func validateLifecycleInOrder(lifecycles []core.LifecycleStage, fldPath *field.P
 			allErrs = append(allErrs, field.Invalid(
 				fldPath.Index(i).Child("classification"),
 				current,
-				fmt.Sprintf("lifecycle classifications not in order: %s cannot come after %s", current, previous),
+				fmt.Sprintf("lifecycle classifications not in expected order (preview, supported, deprecated, expired): %s must be before %s", current, previous),
 			))
-			break
 		}
 	}
 
