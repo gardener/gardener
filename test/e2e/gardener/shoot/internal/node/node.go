@@ -6,6 +6,7 @@ package node
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -59,15 +60,13 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 			Eventually(ctx, func(g Gomega) {
 				g.Expect(s.ShootClient.List(ctx, nodeList)).To(Succeed())
 				g.Expect(nodeList.Items).To(Not(BeEmpty()))
-				for _, no := range nodeList.Items {
-					node = &no
-					if node.DeletionTimestamp == nil {
-						break
-					}
-				}
-				g.Expect(node.DeletionTimestamp).To(BeNil(), "node should not be in deletion")
+				idx := slices.IndexFunc(nodeList.Items, func(no corev1.Node) bool {
+					return no.DeletionTimestamp == nil
+				})
+				g.Expect(idx).To(BeNumerically(">=", 0))
+				node = nodeList.Items[idx].DeepCopy()
 			}).Should(Succeed())
-		}, SpecTimeout(30*time.Minute))
+		}, SpecTimeout(10*time.Minute))
 
 		It("Verify node-critical components not ready taint is present", func(ctx SpecContext) {
 			Eventually(ctx, s.ShootKomega.Object(node)).MustPassRepeatedly(3).WithPolling(2 * time.Second).Should(
@@ -210,13 +209,11 @@ func waitForCSINodeObject(ctx context.Context, shootClient client.Client, node *
 	Eventually(ctx, func(g Gomega) {
 		g.Expect(shootClient.List(ctx, csiNodeList)).To(Succeed())
 		g.Expect(csiNodeList.Items).To(Not(BeEmpty()))
-		for _, csino := range csiNodeList.Items {
-			csiNode = &csino
-			if csino.OwnerReferences[0].UID == node.UID {
-				break
-			}
-		}
-		g.Expect(csiNode.OwnerReferences[0].UID).To(Equal(node.UID))
+		idx := slices.IndexFunc(csiNodeList.Items, func(csino storagev1.CSINode) bool {
+			return slices.ContainsFunc(csino.OwnerReferences, func(ownerRef metav1.OwnerReference) bool { return ownerRef.UID == node.UID })
+		})
+		g.Expect(idx).To(BeNumerically(">=", 0))
+		csiNode = csiNodeList.Items[idx].DeepCopy()
 	}).Should(Succeed())
 
 	return csiNode
