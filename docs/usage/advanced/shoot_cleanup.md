@@ -26,3 +26,8 @@ It is possible to override the finalization grace periods via annotations on the
 
 ⚠️ If `"0"` is provided, then all resources are finalized immediately without waiting for any graceful deletion.
 Please be aware that this might lead to orphaned infrastructure artifacts.
+
+In some cases, even with the described cleanup logic, shoot deletion may still become stuck due to remaining resources in the shoot cluster.
+To address this, Gardener ignores any remaining resources in the following situations:
+- Objects that belong to namespaces which have already been deleted (finalized).
+- Objects that were created after the cleanup process began for the first time, plus the finalize grace period.
