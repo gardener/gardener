@@ -592,24 +592,22 @@ func (o *operatingSystemConfig) getWantedOSCNames(ctx context.Context) (sets.Set
 			if err != nil {
 				return nil, err
 			}
-			o.log.Info("inserted osc data from worker", "data", oscKey+keySuffix(version, worker.Machine.Image, purpose)) // gardener-node-agent-worker-kaputt-15050ccbf2cd566b-init || gardener-node-agent-worker-kaputt-15050ccbf2cd566b-original
+			o.log.V(1).Info("inserted osc data from worker", "data", oscKey+keySuffix(version, worker.Machine.Image, purpose))
 			wantedOSCNames.Insert(oscKey + keySuffix(version, worker.Machine.Image, purpose))
 		}
 	}
 
 	mdList := &v1alpha1.MachineList{}
-	if err := o.client.List(ctx, mdList, client.InNamespace(o.values.Namespace), client.HasLabels{}); err != nil {
+	if err := o.client.List(ctx, mdList, client.InNamespace(o.values.Namespace)); err != nil {
 		return nil, fmt.Errorf("failed to list Machines: %w", err)
 	}
 
 	for _, machine := range mdList.Items {
-		o.log.Info("machine name", "name", machine.Name)
-
 		if val, ok := machine.Spec.NodeTemplateSpec.ObjectMeta.Labels[gardencorev1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]; ok {
 			originalVal := val + "-original"
 			initVal := val + "-init"
 
-			o.log.Info("found wanted OSC name from existing machine", "oscName-originalVal", originalVal, "oscName-initVal", initVal, "machineName", machine.Name)
+			o.log.V(1).Info("found wanted OSC name from existing machine", "init", initVal, "original", originalVal, "machine", machine.Name)
 			wantedOSCNames.Insert(originalVal, initVal)
 			continue
 		}
