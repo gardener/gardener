@@ -184,6 +184,8 @@ type KubeAPIServerValidationOptions struct {
 	// AllowInvalidAcceptedIssuers specifies whether invalid accepted issuers are allowed.
 	AllowInvalidAcceptedIssuers bool
 	// AllowInvalidEventTTL specifies whether invalid event ttl is allowed.
+	//
+	// TODO(ialidzhikov): Stop accepting invalid event ttl values for existing Shoots in Gardener v1.142.0.
 	AllowInvalidEventTTL bool
 }
 

@@ -276,9 +276,9 @@ var _ = Describe("Warnings", func() {
 		})
 
 		DescribeTable("shoot.spec.secretBindingName",
-			func(secretBindingName *string, expectedWarning gomegatypes.GomegaMatcher) {
+			func(secretBindingName *string, matcher gomegatypes.GomegaMatcher) {
 				shoot.Spec.SecretBindingName = secretBindingName
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(expectedWarning)
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(matcher)
 			},
 
 			Entry("should return a warning when secretBindingName is set", ptr.To("my-secret-binding"),
@@ -286,7 +286,7 @@ var _ = Describe("Warnings", func() {
 			Entry("should not return a warning when secretBindingName is not set", nil, BeEmpty()),
 		)
 
-		Describe("shoot.spec.cloudProfileName", func() {
+		Context("shoot.spec.cloudProfileName", func() {
 			It("should not return a warning when cloudProfileName is set and the Kubernetes version is < v1.33", func() {
 				shoot.Spec.Kubernetes.Version = "1.32.3"
 				shoot.Spec.CloudProfileName = ptr.To("local-profile")
@@ -369,5 +369,29 @@ var _ = Describe("Warnings", func() {
 				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are setting the spec.kubernetes.kubeAPIServer.watchCacheSizes.default field")))
 			})
 		})
+
+		DescribeTable("shoot.spec.kubernetes.kubeAPIServer.eventTTL",
+			func(kubeAPIServerConfig *core.KubeAPIServerConfig, matcher gomegatypes.GomegaMatcher) {
+				shoot.Spec.Kubernetes.KubeAPIServer = kubeAPIServerConfig
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(matcher)
+			},
+
+			Entry("should not return a warning when kubeAPIServerConfig is nil",
+				nil,
+				BeEmpty(),
+			),
+			Entry("should not return a warning when eventTTL is nil",
+				&core.KubeAPIServerConfig{EventTTL: nil},
+				BeEmpty(),
+			),
+			Entry("should not return a warning for valid eventTTL duration",
+				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: time.Hour * 24}},
+				BeEmpty(),
+			),
+			Entry("should return a warning for invalid eventTTL duration",
+				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: time.Hour * 24 * 10}},
+				ContainElement(Equal("you are setting the spec.kubernetes.kubeAPIServer.eventTTL field field to an invalid value. Invalid value: '240h0m0s', valid values: [0, 24h]. Invalid values will be no longer allowed in Gardener v1.142.0. See: https://github.com/gardener/gardener/issues/13825")),
+			),
+		)
 	})
 })
