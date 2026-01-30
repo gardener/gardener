@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/nodeagent/containerd"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/certificate"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/hostnamecheck"
@@ -43,6 +44,11 @@ func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Ma
 		return fmt.Errorf("failed adding node controller: %w", err)
 	}
 
+	containerdClient, err := containerd.NewClient()
+	if err != nil {
+		return fmt.Errorf("failed obtaining containerd client: %w", err)
+	}
+
 	var channel = make(chan event.TypedGenericEvent[*corev1.Secret])
 
 	if err := (&operatingsystemconfig.Reconciler{
@@ -54,6 +60,7 @@ func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Ma
 		NodeName:               nodeName,
 		MachineName:            machineName,
 		CancelContext:          cancel,
+		ContainerdClient:       containerdClient,
 	}).AddToManager(ctx, mgr); err != nil {
 		return fmt.Errorf("failed adding operating system config controller: %w", err)
 	}

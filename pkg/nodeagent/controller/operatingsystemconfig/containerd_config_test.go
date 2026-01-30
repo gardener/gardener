@@ -18,6 +18,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	fakecontainerd "github.com/gardener/gardener/pkg/nodeagent/containerd/fake"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/utils/structuredmap"
 )
@@ -28,6 +29,8 @@ var (
 
 	ctx context.Context
 	log logr.Logger
+
+	containerdClient *fakecontainerd.Client
 )
 
 const (
@@ -43,7 +46,11 @@ func init() {
 	ctx = context.Background()
 	log = logr.Discard()
 
-	r = operatingsystemconfig.Reconciler{}
+	containerdClient = fakecontainerd.NewClient()
+
+	r = operatingsystemconfig.Reconciler{
+		ContainerdClient: containerdClient,
+	}
 
 	osc = &extensionsv1alpha1.OperatingSystemConfig{
 		Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
@@ -195,6 +202,29 @@ var _ = Describe("containerd configuration file tests", func() {
 			structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dir"},
 		),
 	)
+
+	It("should configure CNI plugin dirs as array at corresponding path for containerd >= 2.2", func() {
+		var (
+			cniPluginDirPath  = structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dir"}
+			cniPluginDirsPath = structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dirs"}
+		)
+
+		containerdClient.SetFakeContainerdVersion("2.2.1")
+
+		Expect(loadContainerdConfig("testfiles/containerd-config.toml-v3", r.FS)).To(Succeed())
+		Expect(r.ReconcileContainerdConfig(ctx, log, osc)).To(Succeed())
+
+		pluginDirValue, err := getContainerdConfigValue(r.FS, cniPluginDirPath)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(pluginDirValue).To(BeNil())
+
+		configValue, err := getContainerdConfigValue(r.FS, cniPluginDirsPath)
+		Expect(err).ToNot(HaveOccurred())
+		pluginDirsValue, ok := configValue.([]any)
+		Expect(ok).To(BeTrue())
+		Expect(pluginDirsValue).To(HaveLen(1))
+		Expect(pluginDirsValue).To(ContainElements("/opt/cni/bin"))
+	})
 
 	Describe("plugin configuration paths inserted by osc plugin config", func() {
 

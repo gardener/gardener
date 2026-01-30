@@ -42,6 +42,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	fakecontainerdclient "github.com/gardener/gardener/pkg/nodeagent/containerd/fake"
 	healthcheckcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
@@ -180,7 +181,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 				{SecretName: secretName1},
 				{SecretName: secretName2},
 			},
-			CancelContext: cancelFunc.cancel,
+			CancelContext:    cancelFunc.cancel,
+			ContainerdClient: fakecontainerdclient.NewClient(),
 		}).AddToManager(ctx, mgr)).To(Succeed())
 
 		By("Start manager")
