@@ -5,12 +5,15 @@
 package client_test
 
 import (
+	"time"
+
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -83,6 +86,33 @@ var _ = Describe("Options", func() {
 			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "test2"}})).To(BeFalse())
 			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: ""}})).To(BeFalse())
 			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "test3"}})).To(BeTrue())
+		})
+	})
+
+	Describe("#IgnoreObjectsCreatedAfter", func() {
+		It("should ignore objects create after configured time", func() {
+			clock := testclock.NewFakeClock(time.Now())
+			ignore := IgnoreObjectsCreatedAfter(clock.Now())
+
+			createdBefore := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: metav1.Time{Time: clock.Now().Add(-time.Second)},
+				},
+			}
+			createdAt := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: metav1.Time{Time: clock.Now()},
+				},
+			}
+			createdAfter := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: metav1.Time{Time: clock.Now().Add(+time.Second)},
+				},
+			}
+
+			Expect(ignore(logr.Discard(), createdBefore)).To(BeFalse())
+			Expect(ignore(logr.Discard(), createdAt)).To(BeFalse())
+			Expect(ignore(logr.Discard(), createdAfter)).To(BeTrue())
 		})
 	})
 })

@@ -5,6 +5,8 @@
 package client
 
 import (
+	"time"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -104,5 +106,16 @@ func IgnoreUnknownNamespaces(namespaces []string) IgnoreLeftoverFunc {
 			log.Info("Ignoring leftover object in unknown namespace", "namespace", obj.GetNamespace(), "name", obj.GetName(), "kind", obj.GetObjectKind().GroupVersionKind().Kind)
 		}
 		return ignore
+	}
+}
+
+// IgnoreObjectsCreatedAfter returns an IgnoreLeftoverFunc that ignores objects created after the given time.
+func IgnoreObjectsCreatedAfter(timeStamp time.Time) IgnoreLeftoverFunc {
+	return func(log logr.Logger, obj client.Object) bool {
+		if obj.GetCreationTimestamp().After(timeStamp) {
+			log.Info("Ignoring leftover object created after cleanup start time", "name", obj.GetName(), "kind", obj.GetObjectKind().GroupVersionKind().Kind, "creationTimestamp", obj.GetCreationTimestamp(), "cleanupStartTime", timeStamp.Format(time.RFC3339))
+			return true
+		}
+		return false
 	}
 }

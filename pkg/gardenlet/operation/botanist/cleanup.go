@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
@@ -212,7 +213,12 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		return err
 	}
 
-	if err := b.addAdditionalCleanOptionsForKubernetesCleanup(ctx, cleanOptions); err != nil {
+	cleanupStartTime, err := b.addAndGetCleanupStartTime(ctx)
+	if err != nil {
+		return err
+	}
+
+	if err := b.addAdditionalCleanOptionsForKubernetesCleanup(ctx, cleanOptions, cleanupStartTime, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds); err != nil {
 		return fmt.Errorf("failed to add additional clean options %w", err)
 	}
 
@@ -249,13 +255,51 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 	)(ctx)
 }
 
+// addAndGetCleanupStartTime adds the cleanup start time annotation to the shoot namespace if not already present
+// and returns the timestamp.
+func (b *Botanist) addAndGetCleanupStartTime(ctx context.Context) (*time.Time, error) {
+	namespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: b.Shoot.ControlPlaneNamespace,
+		},
+	}
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
+		return nil, fmt.Errorf("failed to get shoot namespace %s: %w", b.Shoot.ControlPlaneNamespace, err)
+	}
+
+	cleanupStartTime := b.Clock.Now().UTC()
+	if !metav1.HasAnnotation(namespace.ObjectMeta, v1beta1constants.AnnotationShootCleanupKubernetesResourcesStartTime) {
+		patch := client.MergeFrom(namespace.DeepCopy())
+		metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, v1beta1constants.AnnotationShootCleanupKubernetesResourcesStartTime, cleanupStartTime.Format(time.RFC3339))
+
+		if err := b.SeedClientSet.Client().Patch(ctx, namespace, patch); err != nil {
+			return nil, fmt.Errorf("failed to record cleanup start time in shoot namespace: %w", err)
+		}
+	} else {
+		startTimeStr := namespace.Annotations[v1beta1constants.AnnotationShootCleanupKubernetesResourcesStartTime]
+		startTime, err := time.Parse(time.RFC3339, startTimeStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse cleanup start time %s from shoot namespace: %w", startTimeStr, err)
+		}
+		cleanupStartTime = startTime
+	}
+
+	return &cleanupStartTime, nil
+}
+
 // CleanVolumeAttachments cleans up all VolumeAttachments in the cluster, waits for them to be gone and finalizes any
 // remaining ones after five minutes.
 func CleanVolumeAttachments(ctx context.Context, log logr.Logger, c client.Client) error {
 	return cleanResourceFn(utilclient.DefaultCleanOps(), log, c, &storagev1.VolumeAttachmentList{}, utilclient.DeleteWith{ZeroGracePeriod}, FinalizeAfterFiveMinutes)(ctx)
 }
 
-func (b *Botanist) addAdditionalCleanOptionsForKubernetesCleanup(ctx context.Context, cleanOptions *utilclient.CleanOptions) error {
+func (b *Botanist) addAdditionalCleanOptionsForKubernetesCleanup(
+	ctx context.Context,
+	cleanOptions *utilclient.CleanOptions,
+	cleanupStartTime *time.Time,
+	defaultFinalizeAfter utilclient.FinalizeGracePeriodSeconds,
+	customFinalizeAfterAnnotation string,
+) error {
 	// Kubernetes objects in unknown namespaces should be ignored.
 	// Finalizing such objects will fail and block the cleanup process indefinitely.
 	namespaceList := &corev1.NamespaceList{}
@@ -269,6 +313,20 @@ func (b *Botanist) addAdditionalCleanOptionsForKubernetesCleanup(ctx context.Con
 
 	cleanOptions.IgnoreLeftovers = append(cleanOptions.IgnoreLeftovers,
 		utilclient.IgnoreUnknownNamespaces(namespaces),
+	)
+
+	// Kubernetes objects created after the cleanup started + finalize time should be ignored.
+	finalizeSeconds := int64(defaultFinalizeAfter)
+	if v, ok := b.Shoot.GetInfo().Annotations[customFinalizeAfterAnnotation]; ok {
+		seconds, err := strconv.Atoi(v)
+		if err != nil {
+			return fmt.Errorf("could not parse finalize seconds from annotation %s: %w", customFinalizeAfterAnnotation, err)
+		}
+		finalizeSeconds = int64(seconds)
+	}
+
+	cleanOptions.IgnoreLeftovers = append(cleanOptions.IgnoreLeftovers,
+		utilclient.IgnoreObjectsCreatedAfter(cleanupStartTime.Add(time.Duration(finalizeSeconds)*time.Second)),
 	)
 
 	return nil
