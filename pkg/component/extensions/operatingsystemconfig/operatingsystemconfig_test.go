@@ -50,6 +50,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/version"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
+	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 )
 
 var _ = Describe("OperatingSystemConfig", func() {
@@ -354,6 +355,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			s := runtime.NewScheme()
 			Expect(extensionsv1alpha1.AddToScheme(s)).To(Succeed())
 			Expect(fakekubernetes.AddToScheme(s)).To(Succeed())
+			Expect(v1alpha1.AddToScheme(s)).To(Succeed())
 			c = fakeclient.NewClientBuilder().WithScheme(s).Build()
 
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(s).Build()
