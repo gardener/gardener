@@ -86,7 +86,7 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 	// TODO(ialidzhikov): Remove this in Gardener v1.142.0 when gardener-apiserver stops accepting invalid event ttl values for existing Shoots.
 	if kubeAPIServer := shoot.Spec.Kubernetes.KubeAPIServer; kubeAPIServer != nil {
 		if kubeAPIServer.EventTTL != nil && kubeAPIServer.EventTTL.Duration > time.Hour*24 {
-			warnings = append(warnings, fmt.Sprintf("you are setting the spec.kubernetes.kubeAPIServer.eventTTL field field to an invalid value. Invalid value: '%s', valid values: [0, 24h]. Invalid values will be no longer allowed in Gardener v1.142.0. See: https://github.com/gardener/gardener/issues/13825", kubeAPIServer.EventTTL.Duration))
+			warnings = append(warnings, fmt.Sprintf("you are setting the spec.kubernetes.kubeAPIServer.eventTTL field to an invalid value. Invalid value: '%s', valid values: [0, 24h]. Invalid values will be no longer allowed in Gardener v1.142.0. See: https://github.com/gardener/gardener/issues/13825", kubeAPIServer.EventTTL.Duration))
 		}
 	}
 

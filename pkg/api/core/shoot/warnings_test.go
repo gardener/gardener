@@ -390,7 +390,7 @@ var _ = Describe("Warnings", func() {
 			),
 			Entry("should return a warning for invalid eventTTL duration",
 				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: time.Hour * 24 * 10}},
-				ContainElement(Equal("you are setting the spec.kubernetes.kubeAPIServer.eventTTL field field to an invalid value. Invalid value: '240h0m0s', valid values: [0, 24h]. Invalid values will be no longer allowed in Gardener v1.142.0. See: https://github.com/gardener/gardener/issues/13825")),
+				ContainElement(Equal("you are setting the spec.kubernetes.kubeAPIServer.eventTTL field to an invalid value. Invalid value: '240h0m0s', valid values: [0, 24h]. Invalid values will be no longer allowed in Gardener v1.142.0. See: https://github.com/gardener/gardener/issues/13825")),
 			),
 		)
 	})
