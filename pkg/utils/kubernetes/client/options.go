@@ -5,6 +5,10 @@
 package client
 
 import (
+	"time"
+
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -13,8 +17,11 @@ type CleanOption interface {
 	ApplyToClean(*CleanOptions)
 }
 
-// TolerateErrorFunc is a function for tolerating errors.
+// TolerateErrorFunc is a function type for tolerating errors.
 type TolerateErrorFunc func(err error) bool
+
+// IgnoreLeftoverFunc is a function type for ignoring objects that remain in the cluster.
+type IgnoreLeftoverFunc func(log logr.Logger, obj client.Object) bool
 
 // CleanOptions are options to clean certain resources.
 // If FinalizeGracePeriodSeconds is set, the finalizers of the resources are removed if the resources still
@@ -24,6 +31,7 @@ type CleanOptions struct {
 	DeleteOptions              []client.DeleteOption
 	FinalizeGracePeriodSeconds *int64
 	ErrorToleration            []TolerateErrorFunc
+	IgnoreLeftovers            []IgnoreLeftoverFunc
 }
 
 var _ CleanOption = &CleanOptions{}
@@ -41,6 +49,9 @@ func (o *CleanOptions) ApplyToClean(co *CleanOptions) {
 	}
 	if o.ErrorToleration != nil {
 		co.ErrorToleration = o.ErrorToleration
+	}
+	if o.IgnoreLeftovers != nil {
+		co.IgnoreLeftovers = o.IgnoreLeftovers
 	}
 }
 
@@ -81,7 +92,30 @@ func (s FinalizeGracePeriodSeconds) ApplyToClean(opts *CleanOptions) {
 // TolerateErrors uses the given toleration funcs for a clean operation.
 type TolerateErrors []TolerateErrorFunc
 
-// ApplyToClean specifies a errors to be tolerated for a clean operation.
+// ApplyToClean specifies errors to be tolerated for a clean operation.
 func (m TolerateErrors) ApplyToClean(opts *CleanOptions) {
 	opts.ErrorToleration = append(opts.ErrorToleration, m...)
+}
+
+// IgnoreUnknownNamespaces returns an IgnoreLeftoverFunc that ignores objects in unknown namespaces.
+func IgnoreUnknownNamespaces(namespaces []string) IgnoreLeftoverFunc {
+	namespaceSet := sets.New(namespaces...)
+	return func(log logr.Logger, obj client.Object) bool {
+		ignore := obj.GetNamespace() != "" && !namespaceSet.Has(obj.GetNamespace())
+		if ignore {
+			log.Info("Ignoring leftover object in unknown namespace", "namespace", obj.GetNamespace(), "name", obj.GetName(), "kind", obj.GetObjectKind().GroupVersionKind().Kind)
+		}
+		return ignore
+	}
+}
+
+// IgnoreObjectsCreatedAfter returns an IgnoreLeftoverFunc that ignores objects created after the given time.
+func IgnoreObjectsCreatedAfter(timeStamp time.Time) IgnoreLeftoverFunc {
+	return func(log logr.Logger, obj client.Object) bool {
+		if obj.GetCreationTimestamp().After(timeStamp) {
+			log.Info("Ignoring leftover object created after cleanup start time", "name", obj.GetName(), "kind", obj.GetObjectKind().GroupVersionKind().Kind, "creationTimestamp", obj.GetCreationTimestamp(), "cleanupStartTime", timeStamp.Format(time.RFC3339))
+			return true
+		}
+		return false
+	}
 }

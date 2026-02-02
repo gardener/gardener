@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/go-logr/logr"
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -134,10 +136,10 @@ var (
 	VolumeSnapshotContentCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
 )
 
-func cleanResourceFn(cleanOps utilclient.CleanOps, c client.Client, list client.ObjectList, opts ...utilclient.CleanOption) flow.TaskFn {
+func cleanResourceFn(cleanOps utilclient.CleanOps, log logr.Logger, c client.Client, list client.ObjectList, opts ...utilclient.CleanOption) flow.TaskFn {
 	return func(ctx context.Context) error {
 		return retry.Until(ctx, DefaultInterval, func(ctx context.Context) (done bool, err error) {
-			if err := cleanOps.CleanAndEnsureGone(ctx, c, list, opts...); err != nil {
+			if err := cleanOps.CleanAndEnsureGone(ctx, log, c, list, opts...); err != nil {
 				if utilclient.AreObjectsRemaining(err) {
 					return retry.MinorError(helper.NewErrorWithCodes(err, gardencorev1beta1.ErrorCleanupClusterResources))
 				}
@@ -169,8 +171,8 @@ func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 	}
 
 	return flow.Parallel(
-		cleanResourceFn(ops, c, &admissionregistrationv1.MutatingWebhookConfigurationList{}, MutatingWebhookConfigurationCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &admissionregistrationv1.ValidatingWebhookConfigurationList{}, ValidatingWebhookConfigurationCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &admissionregistrationv1.MutatingWebhookConfigurationList{}, MutatingWebhookConfigurationCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &admissionregistrationv1.ValidatingWebhookConfigurationList{}, ValidatingWebhookConfigurationCleanOption, cleanOptions),
 	)(ctx)
 }
 
@@ -188,8 +190,8 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 	}
 
 	return flow.Parallel(
-		cleanResourceFn(ops, c, &apiregistrationv1.APIServiceList{}, APIServiceCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &apiextensionsv1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &apiregistrationv1.APIServiceList{}, APIServiceCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &apiextensionsv1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOption, cleanOptions),
 	)(ctx)
 }
 
@@ -211,6 +213,15 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		return err
 	}
 
+	cleanupStartTime, err := b.addAndGetCleanupStartTime(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to handle cleanup start time: %w", err)
+	}
+
+	if err := b.addAdditionalCleanOptionsForKubernetesCleanup(ctx, cleanOptions, cleanupStartTime, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds); err != nil {
+		return fmt.Errorf("failed to add additional clean options %w", err)
+	}
+
 	snapshotCleanOptions, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterOneHour, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds, 0.5)
 	if err != nil {
 		return err
@@ -218,36 +229,104 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 
 	if metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.AnnotationShootSkipCleanup) {
 		return flow.Parallel(
-			cleanResourceFn(ops, c, &corev1.ServiceList{}, ServiceCleanOption, cleanOptions),
-			cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, cleanOptions),
-			cleanResourceFn(ops, c, &volumesnapshotv1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, cleanOptions),
-			cleanResourceFn(ops, c, &volumesnapshotv1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, cleanOptions),
+			cleanResourceFn(ops, b.Logger, c, &corev1.ServiceList{}, ServiceCleanOption, cleanOptions),
+			cleanResourceFn(ops, b.Logger, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, cleanOptions),
+			cleanResourceFn(ops, b.Logger, c, &volumesnapshotv1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, cleanOptions),
+			cleanResourceFn(ops, b.Logger, c, &volumesnapshotv1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, cleanOptions),
 		)(ctx)
 	}
 
 	return flow.Parallel(
-		cleanResourceFn(ops, c, &batchv1.CronJobList{}, CronJobCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &appsv1.DaemonSetList{}, DaemonSetCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &appsv1.DeploymentList{}, DeploymentCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &networkingv1.IngressList{}, IngressCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &batchv1.JobList{}, JobCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &corev1.PodList{}, PodCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &appsv1.ReplicaSetList{}, ReplicaSetCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &corev1.ReplicationControllerList{}, ReplicationControllerCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &corev1.ServiceList{}, ServiceCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &appsv1.StatefulSetList{}, StatefulSetCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &batchv1.CronJobList{}, CronJobCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &appsv1.DaemonSetList{}, DaemonSetCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &appsv1.DeploymentList{}, DeploymentCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &networkingv1.IngressList{}, IngressCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &batchv1.JobList{}, JobCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &corev1.PodList{}, PodCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &appsv1.ReplicaSetList{}, ReplicaSetCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &corev1.ReplicationControllerList{}, ReplicationControllerCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &corev1.ServiceList{}, ServiceCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &appsv1.StatefulSetList{}, StatefulSetCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, cleanOptions),
 		// Cleaning up VolumeSnapshots can take a longer time if many snapshots were taken.
 		// Hence, we only finalize these objects after 1h.
-		cleanResourceFn(ops, c, &volumesnapshotv1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
-		cleanResourceFn(snapshotContentOps, c, &volumesnapshotv1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &volumesnapshotv1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
+		cleanResourceFn(snapshotContentOps, b.Logger, c, &volumesnapshotv1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
 	)(ctx)
+}
+
+// addAndGetCleanupStartTime adds the cleanup start time annotation to the shoot namespace if not already present
+// and returns the timestamp.
+func (b *Botanist) addAndGetCleanupStartTime(ctx context.Context) (*time.Time, error) {
+	namespace := b.SeedNamespaceObject.DeepCopy()
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
+		return nil, fmt.Errorf("failed to get shoot namespace %s: %w", b.Shoot.ControlPlaneNamespace, err)
+	}
+
+	cleanupStartTime := b.Clock.Now().UTC()
+	if !metav1.HasAnnotation(namespace.ObjectMeta, v1beta1constants.AnnotationShootCleanupKubernetesResourcesStartTime) {
+		patch := client.MergeFrom(namespace.DeepCopy())
+		metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, v1beta1constants.AnnotationShootCleanupKubernetesResourcesStartTime, cleanupStartTime.Format(time.RFC3339))
+
+		if err := b.SeedClientSet.Client().Patch(ctx, namespace, patch); err != nil {
+			return nil, fmt.Errorf("failed to record cleanup start time in shoot namespace: %w", err)
+		}
+	} else {
+		startTimeStr := namespace.Annotations[v1beta1constants.AnnotationShootCleanupKubernetesResourcesStartTime]
+		startTime, err := time.Parse(time.RFC3339, startTimeStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse cleanup start time %s from shoot namespace: %w", startTimeStr, err)
+		}
+		cleanupStartTime = startTime
+	}
+
+	return &cleanupStartTime, nil
 }
 
 // CleanVolumeAttachments cleans up all VolumeAttachments in the cluster, waits for them to be gone and finalizes any
 // remaining ones after five minutes.
-func CleanVolumeAttachments(ctx context.Context, c client.Client) error {
-	return cleanResourceFn(utilclient.DefaultCleanOps(), c, &storagev1.VolumeAttachmentList{}, utilclient.DeleteWith{ZeroGracePeriod}, FinalizeAfterFiveMinutes)(ctx)
+func CleanVolumeAttachments(ctx context.Context, log logr.Logger, c client.Client) error {
+	return cleanResourceFn(utilclient.DefaultCleanOps(), log, c, &storagev1.VolumeAttachmentList{}, utilclient.DeleteWith{ZeroGracePeriod}, FinalizeAfterFiveMinutes)(ctx)
+}
+
+func (b *Botanist) addAdditionalCleanOptionsForKubernetesCleanup(
+	ctx context.Context,
+	cleanOptions *utilclient.CleanOptions,
+	cleanupStartTime *time.Time,
+	defaultFinalizeAfter utilclient.FinalizeGracePeriodSeconds,
+	customFinalizeAfterAnnotation string,
+) error {
+	// Kubernetes objects in unknown namespaces should be ignored.
+	// Finalizing such objects will fail and block the cleanup process indefinitely.
+	// See https://github.com/gardener/gardener/issues/13847 for more information.
+	namespaceList := &corev1.NamespaceList{}
+	if err := b.ShootClientSet.Client().List(ctx, namespaceList); err != nil {
+		return fmt.Errorf("could not list namespaces: %w", err)
+	}
+	namespaces := make([]string, 0, len(namespaceList.Items))
+	for _, ns := range namespaceList.Items {
+		namespaces = append(namespaces, ns.Name)
+	}
+
+	cleanOptions.IgnoreLeftovers = append(cleanOptions.IgnoreLeftovers,
+		utilclient.IgnoreUnknownNamespaces(namespaces),
+	)
+
+	// Kubernetes objects created after the cleanup started + finalize time should be ignored.
+	finalizeSeconds := int64(defaultFinalizeAfter)
+	if v, ok := b.Shoot.GetInfo().Annotations[customFinalizeAfterAnnotation]; ok {
+		seconds, err := strconv.Atoi(v)
+		if err != nil {
+			return fmt.Errorf("could not parse finalize seconds from annotation %s: %w", customFinalizeAfterAnnotation, err)
+		}
+		finalizeSeconds = int64(seconds)
+	}
+
+	cleanOptions.IgnoreLeftovers = append(cleanOptions.IgnoreLeftovers,
+		utilclient.IgnoreObjectsCreatedAfter(cleanupStartTime.Add(time.Duration(finalizeSeconds)*time.Second)),
+	)
+
+	return nil
 }
 
 func (b *Botanist) getCleanOptions(

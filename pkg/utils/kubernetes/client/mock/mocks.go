@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	client "github.com/gardener/gardener/pkg/utils/kubernetes/client"
+	logr "github.com/go-logr/logr"
 	gomock "go.uber.org/mock/gomock"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	client0 "sigs.k8s.io/controller-runtime/pkg/client"
@@ -87,9 +88,9 @@ func (m *MockGoneEnsurer) EXPECT() *MockGoneEnsurerMockRecorder {
 }
 
 // EnsureGone mocks base method.
-func (m *MockGoneEnsurer) EnsureGone(ctx context.Context, c client0.Client, obj runtime.Object, opts ...client0.ListOption) error {
+func (m *MockGoneEnsurer) EnsureGone(ctx context.Context, log logr.Logger, c client0.Client, obj runtime.Object, opts ...client.CleanOption) error {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, c, obj}
+	varargs := []any{ctx, log, c, obj}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -99,8 +100,8 @@ func (m *MockGoneEnsurer) EnsureGone(ctx context.Context, c client0.Client, obj 
 }
 
 // EnsureGone indicates an expected call of EnsureGone.
-func (mr *MockGoneEnsurerMockRecorder) EnsureGone(ctx, c, obj any, opts ...any) *gomock.Call {
+func (mr *MockGoneEnsurerMockRecorder) EnsureGone(ctx, log, c, obj any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, c, obj}, opts...)
+	varargs := append([]any{ctx, log, c, obj}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureGone", reflect.TypeOf((*MockGoneEnsurer)(nil).EnsureGone), varargs...)
 }
