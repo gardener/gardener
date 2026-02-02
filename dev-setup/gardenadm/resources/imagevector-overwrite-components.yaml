@@ -1,0 +1,9 @@
+# We don't make use of this image vector overwrite in our dev setup, but this serves as an example file in e2e tests
+# for verifying that `gardenadm bootstrap` correctly passes on the image vector overwrite for components to
+# `gardenadm init on the control plane machine.
+components:
+- name: etcd-druid
+  imageVectorOverwrite: |
+    images:
+    - name: not-used
+      repository: registry.local.gardener.cloud:5001/not-used

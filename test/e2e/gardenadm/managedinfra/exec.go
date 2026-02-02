@@ -44,6 +44,8 @@ func NewCommand(args ...string) *exec.Cmd { // #nosec G204 -- Used for e2e tests
 	cmd.Env = append(cmd.Env,
 		clientcmd.RecommendedConfigPathEnvVar+"=../../../example/gardener-local/kind/multi-zone/kubeconfig",
 		imagevector.OverrideEnv+"=../../../dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml",
+		imagevector.ComponentOverrideEnv+"=../../../dev-setup/gardenadm/resources/imagevector-overwrite-components.yaml",
+		imagevector.OverrideChartsEnv+"=../../../dev-setup/gardenadm/resources/generated/.imagevector-overwrite-charts.yaml",
 	)
 	return cmd
 }
