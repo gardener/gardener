@@ -323,13 +323,16 @@ func ensureCollectionGone(ctx context.Context, c client.Client, log logr.Logger,
 	}
 
 	objectsInList := meta.LenList(list)
-	ignoredObjects := 0
+	if objectsInList == 0 {
+		return nil
+	}
 
+	ignoredObjects := 0
 	if err := meta.EachListItem(list, func(object runtime.Object) error {
 		for _, ignore := range ignoreFns {
-			// Iterate over all objects to log them.
 			if ignore(log, object.(client.Object)) {
 				ignoredObjects += 1
+				return nil
 			}
 		}
 		return nil
@@ -337,7 +340,7 @@ func ensureCollectionGone(ctx context.Context, c client.Client, log logr.Logger,
 		return fmt.Errorf("failed to iterate over list: %w", err)
 	}
 
-	if objectsInList > 0 && ignoredObjects < objectsInList {
+	if ignoredObjects < objectsInList {
 		return NewObjectsRemaining(list)
 	}
 	return nil

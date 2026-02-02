@@ -215,7 +215,7 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 
 	cleanupStartTime, err := b.addAndGetCleanupStartTime(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to handle cleanup start time: %w", err)
 	}
 
 	if err := b.addAdditionalCleanOptionsForKubernetesCleanup(ctx, cleanOptions, cleanupStartTime, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds); err != nil {
@@ -258,11 +258,7 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 // addAndGetCleanupStartTime adds the cleanup start time annotation to the shoot namespace if not already present
 // and returns the timestamp.
 func (b *Botanist) addAndGetCleanupStartTime(ctx context.Context) (*time.Time, error) {
-	namespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: b.Shoot.ControlPlaneNamespace,
-		},
-	}
+	namespace := b.SeedNamespaceObject.DeepCopy()
 	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
 		return nil, fmt.Errorf("failed to get shoot namespace %s: %w", b.Shoot.ControlPlaneNamespace, err)
 	}
@@ -302,6 +298,7 @@ func (b *Botanist) addAdditionalCleanOptionsForKubernetesCleanup(
 ) error {
 	// Kubernetes objects in unknown namespaces should be ignored.
 	// Finalizing such objects will fail and block the cleanup process indefinitely.
+	// See https://github.com/gardener/gardener/issues/13847 for more information.
 	namespaceList := &corev1.NamespaceList{}
 	if err := b.ShootClientSet.Client().List(ctx, namespaceList); err != nil {
 		return fmt.Errorf("could not list namespaces: %w", err)
