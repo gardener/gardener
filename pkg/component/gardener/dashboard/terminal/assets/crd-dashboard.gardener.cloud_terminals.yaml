@@ -172,7 +172,7 @@ spec:
                                   Claims lists the names of resources, defined in spec.resourceClaims,
                                   that are used by this container.
 
-                                  This is an alpha field and requires enabling the
+                                  This field depends on the
                                   DynamicResourceAllocation feature gate.
 
                                   This field is immutable. It can only be set for containers.
@@ -398,7 +398,7 @@ spec:
                         description: ProjectMemberships defines the (temporary) project
                           memberships of the "access" service account. Each project
                           is updated by using the target.credential, hence the target
-                          has the be the (virtual) garden cluster.
+                          has to be the (virtual) garden cluster.
                         items:
                           description: ProjectMembership defines the (temporary) project
                             membership of the "access" service account. The project
@@ -442,8 +442,10 @@ spec:
                                 should be unique
                               type: string
                             roleRef:
-                              description: RoleRef can reference a Role in the current
-                                namespace or a ClusterRole in the global namespace.
+                              description: RoleRef references the Role or ClusterRole
+                                to bind to. For RoleBinding, it can reference a Role
+                                in the same namespace or a ClusterRole. For ClusterRoleBinding,
+                                it can only reference a ClusterRole.
                               properties:
                                 apiGroup:
                                   description: APIGroup is the group for the resource
