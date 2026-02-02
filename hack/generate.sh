@@ -69,7 +69,7 @@ run_target() {
       $REPO_ROOT/hack/update-protobuf.sh
       ;;
     codegen)
-      local mode="${MODE:-sequential}"
+      local mode="${MODE:-parallel}"
       $REPO_ROOT/hack/update-codegen.sh --groups "$CODEGEN_GROUPS" --mode "$mode"
       ;;
     manifests)

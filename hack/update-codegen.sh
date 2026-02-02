@@ -9,7 +9,7 @@ set -o nounset
 set -o pipefail
 
 CODEGEN_GROUPS=""
-MODE="sequential"
+MODE="parallel"
 AVAILABLE_CODEGEN_OPTIONS=(
   "authentication_groups"
   "core_groups"
@@ -35,6 +35,7 @@ AVAILABLE_CODEGEN_OPTIONS=(
 )
 
 CODE_GEN_DIR=$(go list -m -f '{{.Dir}}' k8s.io/code-generator)
+export CODE_GEN_DIR
 source "${CODE_GEN_DIR}/kube_codegen.sh"
 
 CURRENT_DIR=$(dirname $0)
@@ -66,6 +67,7 @@ parse_flags() {
 # core.gardener.cloud APIs
 
 core_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for pkg/apis/core"
   
   kube::codegen::gen_helpers \
@@ -85,6 +87,7 @@ export -f core_groups
 # extensions.gardener.cloud APIs
 
 extensions_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for pkg/apis/extensions"
   
   kube::codegen::gen_helpers \
@@ -96,6 +99,7 @@ export -f extensions_groups
 # resources.gardener.cloud APIs
 
 resources_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for pkg/apis/resources"
   
   kube::codegen::gen_helpers \
@@ -107,6 +111,7 @@ export -f resources_groups
 # operator.gardener.cloud APIs
 
 operator_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for pkg/apis/operator"
   
   kube::codegen::gen_helpers \
@@ -118,6 +123,7 @@ export -f operator_groups
 # seedmanagement.gardener.cloud APIs
 
 seedmanagement_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for pkg/apis/seedmanagement"
   
   kube::codegen::gen_helpers \
@@ -137,6 +143,7 @@ export -f seedmanagement_groups
 # settings.gardener.cloud APIs
 
 settings_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for pkg/apis/settings"
   
   kube::codegen::gen_helpers \
@@ -156,6 +163,7 @@ export -f settings_groups
 # security.gardener.cloud APIs
 
 security_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for pkg/apis/security"
   
   kube::codegen::gen_helpers \
@@ -175,6 +183,7 @@ export -f security_groups
 # operations.gardener.cloud APIs
 
 operations_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for pkg/apis/operations"
   
   kube::codegen::gen_helpers \
@@ -186,6 +195,7 @@ export -f operations_groups
 # authentication.gardener.cloud APIs
 
 authentication_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for pkg/apis/authentication"
   
   kube::codegen::gen_helpers \
@@ -197,6 +207,7 @@ export -f authentication_groups
 # Componentconfig for operator
 
 operatorconfig_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for pkg/operator/apis/config"
   
   kube::codegen::gen_helpers \
@@ -213,6 +224,7 @@ export -f operatorconfig_groups
 # Componentconfig for controller-manager
 
 controllermanager_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for pkg/controllermanager/apis/config"
   
   kube::codegen::gen_helpers \
@@ -229,6 +241,7 @@ export -f controllermanager_groups
 # Componentconfig for admission controller
 
 admissioncontroller_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for pkg/admissioncontroller/apis/config"
   
   kube::codegen::gen_helpers \
@@ -244,6 +257,7 @@ export -f admissioncontroller_groups
 # Configuration for gardener scheduler
 
 scheduler_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for pkg/scheduler/apis/config"
   
   kube::codegen::gen_helpers \
@@ -260,6 +274,7 @@ export -f scheduler_groups
 # Componentconfig for gardenlet
 
 gardenlet_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for pkg/gardenlet/apis/config"
   
   kube::codegen::gen_helpers \
@@ -276,6 +291,7 @@ export -f gardenlet_groups
 # Componentconfig for resource-manager
 
 resourcemanager_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for pkg/resourcemanager/apis/config"
   
   kube::codegen::gen_helpers \
@@ -292,6 +308,7 @@ export -f resourcemanager_groups
 # Componentconfig for node-agent
 
 nodeagent_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for pkg/nodeagent/apis/config"
   
   kube::codegen::gen_helpers \
@@ -308,6 +325,7 @@ export -f nodeagent_groups
 # Componentconfig for admission plugins
 
 shoottolerationrestriction_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction"
   
   kube::codegen::gen_helpers \
@@ -323,6 +341,7 @@ shoottolerationrestriction_groups() {
 export -f shoottolerationrestriction_groups
 
 shootdnsrewriting_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for plugin/pkg/shoot/dnsrewriting/apis/shootdnsrewriting"
   
   kube::codegen::gen_helpers \
@@ -338,6 +357,7 @@ shootdnsrewriting_groups() {
 export -f shootdnsrewriting_groups
 
 shootresourcereservation_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for plugin/pkg/shoot/resourcereservation/apis/shootresourcereservation"
   
   kube::codegen::gen_helpers \
@@ -355,6 +375,7 @@ export -f shootresourcereservation_groups
 # local.provider.extensions.gardener.cloud APIs
 
 provider_local_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for pkg/provider-local/apis/local"
   
   kube::codegen::gen_helpers \
@@ -371,6 +392,7 @@ export -f provider_local_groups
 # extensions/pkg/apis deepcopy methods
 
 extensions_config_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
   echo "Generating API groups for extensions/pkg/apis/config"
   
   kube::codegen::gen_helpers \
@@ -444,13 +466,82 @@ else
   fi
 fi
 
+# Groups that only use gen_helpers (safe to run in parallel)
+HELPERS_ONLY_GROUPS=(
+  "authentication_groups"
+  "extensions_groups"
+  "resources_groups"
+  "operator_groups"
+  "operations_groups"
+  "operatorconfig_groups"
+  "controllermanager_groups"
+  "admissioncontroller_groups"
+  "scheduler_groups"
+  "gardenlet_groups"
+  "resourcemanager_groups"
+  "shootresourcereservation_groups"
+  "shoottolerationrestriction_groups"
+  "shootdnsrewriting_groups"
+  "provider_local_groups"
+  "extensions_config_groups"
+  "nodeagent_groups"
+)
+
+# Groups that use gen_client (must be serialized to avoid race conditions)
+CLIENT_GROUPS=(
+  "core_groups"
+  "seedmanagement_groups"
+  "settings_groups"
+  "security_groups"
+)
+
 printf "\n> Generating codegen for groups: %s\n" "${valid_options[*]}"
+
+if [[ "$MODE" == "parallel" ]]; then
+  uncategorized=()
+  for option in "${valid_options[@]}"; do
+    if [[ ! " ${HELPERS_ONLY_GROUPS[*]} " =~ " ${option} " ]] && [[ ! " ${CLIENT_GROUPS[*]} " =~ " ${option} " ]]; then
+      uncategorized+=("$option")
+    fi
+  done
+
+  if [[ ${#uncategorized[@]} -gt 0 ]]; then
+    printf "ERROR: The following groups are not categorized in HELPERS_ONLY_GROUPS or CLIENT_GROUPS: %s\n" "${uncategorized[*]}"
+    printf "Please add them to the appropriate array based on whether they use gen_client (CLIENT_GROUPS) or only gen_helpers (HELPERS_ONLY_GROUPS).\n\n"
+    exit 1
+  fi
+fi
+
 if [[ "$MODE" == "sequential" ]]; then
   for target in "${valid_options[@]}"; do
     "$target"
   done
 elif [[ "$MODE" == "parallel" ]]; then
-  parallel --will-cite ::: "${valid_options[@]}"
+  # Separate groups into helpers-only and client-gen groups
+  helpers_to_run=()
+  clients_to_run=()
+  
+  for option in "${valid_options[@]}"; do
+    if [[ " ${CLIENT_GROUPS[*]} " =~ " ${option} " ]]; then
+      clients_to_run+=("$option")
+    elif [[ " ${HELPERS_ONLY_GROUPS[*]} " =~ " ${option} " ]]; then
+      helpers_to_run+=("$option")
+    fi
+  done
+  
+  # Run helpers-only groups in parallel (safe)
+  if [[ ${#helpers_to_run[@]} -gt 0 ]]; then
+    printf "> Running helpers-only groups in parallel: %s\n" "${helpers_to_run[*]}"
+    parallel --will-cite --halt now,fail=1 ::: "${helpers_to_run[@]}"
+  fi
+  
+  # Run client-gen groups sequentially to avoid race conditions
+  if [[ ${#clients_to_run[@]} -gt 0 ]]; then
+    printf "> Running client-gen groups sequentially: %s\n" "${clients_to_run[*]}"
+    for target in "${clients_to_run[@]}"; do
+      "$target"
+    done
+  fi
 else
   printf "ERROR: Invalid mode ('%s'). Specify either 'parallel' or 'sequential'\n\n" "$MODE"
   exit 1
