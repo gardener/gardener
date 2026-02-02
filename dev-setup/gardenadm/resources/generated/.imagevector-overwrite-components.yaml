@@ -1,0 +1,10 @@
+components:
+- name: etcd-druid
+  imageVectorOverwrite: |
+    images:
+    - name: etcd-backup-restore
+      repository: captainirs/etcdbrctl
+      tag: phase-2-outlook
+    - name: etcd-backup-restore-next
+      repository: captainirs/etcdbrctl
+      tag: phase-2-outlook

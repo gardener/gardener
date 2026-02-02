@@ -13,6 +13,7 @@ x-machine: &machine
     PATH: /gardenadm:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     IMAGEVECTOR_OVERWRITE: /gardenadm/imagevector-overwrite.yaml
     IMAGEVECTOR_OVERWRITE_CHARTS: /gardenadm/imagevector-overwrite-charts.yaml
+    IMAGEVECTOR_OVERWRITE_COMPONENTS: /gardenadm/imagevector-overwrite-components.yaml
   privileged: true
   security_opt:
   - seccomp=unconfined

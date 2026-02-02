@@ -41,10 +41,11 @@ case "$COMMAND" in
     for i in 0 1 2 3; do
       service="machine-$i"
       docker compose -f "$GIND_COMPOSE_FILE" exec "$service" bash -c 'mkdir -p /gardenadm/resources'
-      docker compose -f "$GIND_COMPOSE_FILE" cp "$(dirname "$0")/gardenadm/resources/generated/.skaffold-image"                    "$service:/gardenadm/.skaffold-image"
-      docker compose -f "$GIND_COMPOSE_FILE" cp "$(dirname "$0")/gardenadm/resources/generated/.imagevector-overwrite.yaml"        "$service:/gardenadm/imagevector-overwrite.yaml"
-      docker compose -f "$GIND_COMPOSE_FILE" cp "$(dirname "$0")/gardenadm/resources/generated/.imagevector-overwrite-charts.yaml" "$service:/gardenadm/imagevector-overwrite-charts.yaml"
-      docker compose -f "$GIND_COMPOSE_FILE" cp "$(dirname "$0")/gardenadm/resources/generated/unmanaged-infra/manifests.yaml"     "$service:/gardenadm/resources/manifests.yaml"
+      docker compose -f "$GIND_COMPOSE_FILE" cp "$(dirname "$0")/gardenadm/resources/generated/.skaffold-image"                        "$service:/gardenadm/.skaffold-image"
+      docker compose -f "$GIND_COMPOSE_FILE" cp "$(dirname "$0")/gardenadm/resources/generated/.imagevector-overwrite.yaml"            "$service:/gardenadm/imagevector-overwrite.yaml"
+      docker compose -f "$GIND_COMPOSE_FILE" cp "$(dirname "$0")/gardenadm/resources/generated/.imagevector-overwrite-charts.yaml"     "$service:/gardenadm/imagevector-overwrite-charts.yaml"
+      docker compose -f "$GIND_COMPOSE_FILE" cp "$(dirname "$0")/gardenadm/resources/generated/.imagevector-overwrite-components.yaml" "$service:/gardenadm/imagevector-overwrite-components.yaml"
+      docker compose -f "$GIND_COMPOSE_FILE" cp "$(dirname "$0")/gardenadm/resources/generated/unmanaged-infra/manifests.yaml"         "$service:/gardenadm/resources/manifests.yaml"
 
       docker compose -f "$GIND_COMPOSE_FILE" cp "$(dirname "$0")/gind/install-gardenadm.sh" "$service:/install-gardenadm.sh"
       docker compose -f "$GIND_COMPOSE_FILE" exec "$service" bash -c '/install-gardenadm.sh $(cat /gardenadm/.skaffold-image)'

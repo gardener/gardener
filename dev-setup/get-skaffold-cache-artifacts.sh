@@ -35,6 +35,7 @@ if [[ "$scenario" == "gardenadm" ]]; then
   patch_files=(
     "dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml"
     "dev-setup/gardenadm/resources/generated/.imagevector-overwrite-charts.yaml"
+    "dev-setup/gardenadm/resources/generated/.imagevector-overwrite-components.yaml"
   )
 fi
 
