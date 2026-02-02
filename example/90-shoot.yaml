@@ -161,6 +161,11 @@ spec:
     #       kind: Secret
     #       name: backup-secret
     #       namespace: kube-system
+    #   exposure: # either `extension` or `dns` or omitted/empty
+    #     extension:
+    #       type: local # defaults to `.spec.provider.type`, but could also be different
+    #       providerConfig: {} # *runtime.RawExtension
+    #     dns: {}
   # workersSettings:
   #   sshAccess:
   #     enabled: false

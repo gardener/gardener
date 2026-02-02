@@ -1389,7 +1389,32 @@ type WorkerControlPlane struct {
 	// Backup holds the object store configuration for the backups of shoot (currently only etcd).
 	// If it is not specified, then there won't be any backups taken.
 	Backup *Backup
+	// Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).
+	Exposure *Exposure
 }
+
+// Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).
+type Exposure struct {
+	// Extension holds the type and provider config of the exposure extension.
+	// Mutually exclusive with DNS.
+	Extension *ExtensionExposure
+	// DNS specifies that this shoot will be exposed by DNS.
+	// Mutually exclusive with Extension.
+	DNS *DNSExposure
+}
+
+// ExtensionExposure holds the type and provider config of the exposure extension.
+type ExtensionExposure struct {
+	// Type defines the type of the extension exposure.
+	// Defaults to `.spec.provider.type`
+	Type *string
+	// ProviderConfig holds the extension specific configuration.
+	ProviderConfig *runtime.RawExtension
+}
+
+// DNSExposure specifies that this shoot will be exposed by DNS.
+// There is no specific configuration currently, for future extendability.
+type DNSExposure struct{}
 
 // MachineUpdateStrategy specifies the machine update strategy for the worker pool.
 type MachineUpdateStrategy string

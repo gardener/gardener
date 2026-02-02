@@ -30,6 +30,7 @@ var _ = Describe("Shoot defaulting", func() {
 				},
 				Provider: Provider{
 					Workers: []Worker{{}},
+					Type:    "local",
 				},
 			},
 		}
@@ -1191,6 +1192,31 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.MemoryHistogramDecayHalfLife).To(PointTo(Equal(metav1.Duration{Duration: 7 * time.Second})))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.MemoryAggregationInterval).To(PointTo(Equal(metav1.Duration{Duration: 22 * time.Minute})))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.MemoryAggregationIntervalCount).To(PointTo(Equal(int64(42))))
+		})
+	})
+
+	Describe("Self-Hosted Shoots", func() {
+		BeforeEach(func() {
+			obj.Spec.Provider.Workers[0].ControlPlane = &WorkerControlPlane{
+				Exposure: &Exposure{
+					Extension: &ExtensionExposure{},
+				},
+			}
+		})
+
+		Describe("Exposure Extension defaulting", func() {
+			It("should default extension type to spec.provider.type", func() {
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Provider.Workers[0].ControlPlane.Exposure.Extension.Type).To(PointTo(Equal(obj.Spec.Provider.Type)))
+			})
+
+			It("should not overwrite existing extension type", func() {
+				obj.Spec.Provider.Workers[0].ControlPlane.Exposure.Extension.Type = ptr.To("stackit")
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Provider.Workers[0].ControlPlane.Exposure.Extension.Type).To(PointTo(Equal("stackit")))
+			})
 		})
 	})
 })

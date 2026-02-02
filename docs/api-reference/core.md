@@ -5121,6 +5121,16 @@ Please use the DNS extension provider config (e.g. shoot-dns-service) for additi
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.DNSExposure">DNSExposure
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Exposure">Exposure</a>)
+</p>
+<p>
+<p>DNSExposure specifies that this shoot will be exposed by DNS.
+There is no specific configuration currently, for future extendability.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.DNSIncludeExclude">DNSIncludeExclude
 </h3>
 <p>
@@ -5757,6 +5767,55 @@ To get the currently valid classification, use CurrentLifecycleClassification().
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.Exposure">Exposure
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.WorkerControlPlane">WorkerControlPlane</a>)
+</p>
+<p>
+<p>Exposure holds the exposure configuration for the shoot (either <code>extension</code> or <code>dns</code> or omitted/empty).</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>extension</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ExtensionExposure">
+ExtensionExposure
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Extension holds the type and provider config of the exposure extension.
+Mutually exclusive with DNS.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>dns</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.DNSExposure">
+DNSExposure
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DNS specifies that this shoot will be exposed by DNS.
+Mutually exclusive with Extension.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ExposureClassScheduling">ExposureClassScheduling
 </h3>
 <p>
@@ -5857,6 +5916,52 @@ bool
 <td>
 <em>(Optional)</em>
 <p>Disabled allows to disable extensions that were marked as &lsquo;automatically enabled&rsquo; by Gardener administrators.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ExtensionExposure">ExtensionExposure
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Exposure">Exposure</a>)
+</p>
+<p>
+<p>ExtensionExposure holds the type and provider config of the exposure extension.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Type defines the type of the extension exposure.
+Defaults to <code>.spec.provider.type</code></p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig holds the extension specific configuration.</p>
 </td>
 </tr>
 </tbody>
@@ -15481,6 +15586,20 @@ Backup
 <em>(Optional)</em>
 <p>Backup holds the object store configuration for the backups of shoot (currently only etcd).
 If it is not specified, then there won&rsquo;t be any backups taken.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>exposure</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Exposure">
+Exposure
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Exposure holds the exposure configuration for the shoot (either <code>extension</code> or <code>dns</code> or omitted/empty).</p>
 </td>
 </tr>
 </tbody>
