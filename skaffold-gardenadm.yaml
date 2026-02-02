@@ -1196,6 +1196,7 @@ deploy:
                   kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/.skaffold-image                    "$pod:/tmp/.skaffold-image"
                   kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml        "$pod:/gardenadm/imagevector-overwrite.yaml"
                   kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/.imagevector-overwrite-charts.yaml "$pod:/gardenadm/imagevector-overwrite-charts.yaml"
+                  kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/.imagevector-overwrite-components.yaml "$pod:/gardenadm/imagevector-overwrite-components.yaml"
                   kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/unmanaged-infra/manifests.yaml     "$pod:/gardenadm/resources/manifests.yaml"
                 done
         - container:

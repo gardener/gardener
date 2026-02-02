@@ -58,6 +58,8 @@ spec:
             value: /gardenadm/imagevector-overwrite.yaml
           - name: IMAGEVECTOR_OVERWRITE_CHARTS
             value: /gardenadm/imagevector-overwrite-charts.yaml
+          - name: IMAGEVECTOR_OVERWRITE_COMPONENTS
+            value: /gardenadm/imagevector-overwrite-components.yaml
         volumeMounts:
         - name: containerd
           mountPath: /var/lib/containerd
