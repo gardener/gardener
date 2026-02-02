@@ -682,7 +682,7 @@ var _ = Describe("validator", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should allow changing the seedSelector on update when not seed is assigned", func() {
+			It("should allow changing the seedSelector on update when no seed is assigned", func() {
 				shoot.Spec.SeedName = nil
 				oldShoot := shoot.DeepCopy()
 				shoot.Spec.SeedSelector = &core.SeedSelector{
@@ -718,7 +718,7 @@ var _ = Describe("validator", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should deny changing a seedSelector on update when seed is assigned", func() {
+			It("should deny changing a seedSelector on update when the assigned seed does not match the new selector", func() {
 				oldShoot := shoot.DeepCopy()
 				shoot.Spec.SeedSelector = &core.SeedSelector{
 					LabelSelector: metav1.LabelSelector{
@@ -737,7 +737,7 @@ var _ = Describe("validator", func() {
 				Expect(err).To(MatchError(ContainSubstring("cannot change seedSelector to not match the labels of the already selected seed")))
 			})
 
-			It("should deny changing the seedSelector provider type on update when seed is assigned", func() {
+			It("should deny changing the seedSelector provider type on update when the assigned seed does not match the new type", func() {
 				oldShoot := shoot.DeepCopy()
 				shoot.Spec.SeedSelector = &core.SeedSelector{
 					ProviderTypes: []string{"unknown"},
