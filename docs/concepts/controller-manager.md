@@ -291,6 +291,16 @@ Since the other two reconcilers are unable to actively monitor the relevant obje
 
 The `Project Activity Reconciler` is implemented to take care of such cases. An event handler will notify the reconciler for any activity and then it will update the `status.lastActivityTimestamp`. This update will also trigger the `Stale Project Reconciler`.
 
+#### [`ResourceQuota` Reconciler](../../pkg/controllermanager/controller/project/resourcequota)
+
+The `ResourceQuota` reconciler only reconciles `ResourceQuota`s in `Project` namespaces and ensures that the specified quotas do not interfere with Gardener's operations.
+
+In the lifecycle of a `Shoot`, Gardener also creates some resources (`Secret`s and `ConfigMap`s) e.g. for certain CAs of the `Shoot`s in the `Project` namespace. This means that the `ResourceQuota` must allow for the creation of these resources, otherwise the `Shoot` reconciliation would fail due to quota violations.
+
+The reconciler ensures this by adding annotations to the `ResourceQuota`s specifying how many resources (`Secret`s, `ConfigMap`s, etc.) Gardener itself will create in the `Project` namespace.
+This might change throughout Gardener versions. When such a change happens, the controller will update the annotations accordingly. 
+On a mismatch between the actual and the expected annotations, the reconciler will also update the `ResourceQuota` to ensure that the required resources can be created by Gardener.
+
 ### [`SecretBinding` Controller](../../pkg/controllermanager/controller/secretbinding)
 
 `SecretBinding`s reference `Secret`s and `Quota`s and are themselves referenced by `Shoot`s.

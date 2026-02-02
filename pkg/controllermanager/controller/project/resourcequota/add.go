@@ -1,0 +1,54 @@
+// SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
+//
+// SPDX-License-Identifier: Apache-2.0
+
+package resourcequota
+
+import (
+	"context"
+
+	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+)
+
+// ControllerName is the name of this controller.
+const ControllerName = "project-resourcequota"
+
+// AddToManager adds a controller with the given Options to the given manager.
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
+	if r.Client == nil {
+		r.Client = mgr.GetClient()
+	}
+
+	return builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
+		}).
+		For(&corev1.ResourceQuota{}, builder.WithPredicates(r.ObjectInProjectNamespace(ctx, mgr.GetLogger().WithValues("controller", ControllerName)))).
+		Complete(r)
+}
+
+// ObjectInProjectNamespace returns a predicate that filters objects that are in Project namespaces.
+func (r *Reconciler) ObjectInProjectNamespace(ctx context.Context, log logr.Logger) predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(object client.Object) bool {
+		namespace := object.GetNamespace()
+		project, err := gardenerutils.ProjectForNamespaceFromReader(ctx, r.Client, namespace)
+		if err != nil {
+			log.Error(err, "Unable to find project for namespace", "namespaceName", namespace)
+			return false
+		}
+		return project != nil
+	})
+}
