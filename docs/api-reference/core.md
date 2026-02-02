@@ -10204,7 +10204,7 @@ Kubernetes core/v1.LocalObjectReference
 <em>(Optional)</em>
 <p>CABundleSecretRef is a reference to a secret containing a PEM-encoded certificate authority bundle.
 The CA bundle is used to verify the TLS certificate of the OCI registry.
-The secret must be of type <code>Opaque</code> with a data key <code>bundle.crt</code> and must be located in the <code>garden</code> namespace.
+The secret must have a data key <code>bundle.crt</code> and must be located in the <code>garden</code> namespace.
 For usage in the gardenlet, the secret must have the label <code>gardener.cloud/role=oci-ca-bundle</code>.
 If not provided, the system&rsquo;s default certificate pool is used.</p>
 </td>

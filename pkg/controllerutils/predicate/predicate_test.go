@@ -139,6 +139,61 @@ var _ = Describe("Predicate", func() {
 		})
 	})
 
+	Describe("#HasNamespace", func() {
+		var (
+			shoot        *gardencorev1beta1.Shoot
+			predicate    predicate.Predicate
+			createEvent  event.CreateEvent
+			updateEvent  event.UpdateEvent
+			deleteEvent  event.DeleteEvent
+			genericEvent event.GenericEvent
+		)
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "foobar"},
+			}
+
+			predicate = HasNamespace(shoot.Namespace)
+
+			createEvent = event.CreateEvent{
+				Object: shoot,
+			}
+			updateEvent = event.UpdateEvent{
+				ObjectOld: shoot,
+				ObjectNew: shoot,
+			}
+			deleteEvent = event.DeleteEvent{
+				Object: shoot,
+			}
+			genericEvent = event.GenericEvent{
+				Object: shoot,
+			}
+		})
+
+		Context("object has the requested namespace", func() {
+			It("should be true", func() {
+				Expect(predicate.Create(createEvent)).To(BeTrue())
+				Expect(predicate.Update(updateEvent)).To(BeTrue())
+				Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+				Expect(predicate.Generic(genericEvent)).To(BeTrue())
+			})
+		})
+
+		Context("object does not have the requested namespace", func() {
+			BeforeEach(func() {
+				shoot.Namespace = "something-else"
+			})
+
+			It("should be false", func() {
+				Expect(predicate.Create(createEvent)).To(BeFalse())
+				Expect(predicate.Update(updateEvent)).To(BeFalse())
+				Expect(predicate.Delete(deleteEvent)).To(BeFalse())
+				Expect(predicate.Generic(genericEvent)).To(BeFalse())
+			})
+		})
+	})
+
 	DescribeTable("#ForEventTypes",
 		func(events []EventType, createMatcher, updateMatcher, deleteMatcher, genericMatcher gomegatypes.GomegaMatcher) {
 			p := ForEventTypes(events...)

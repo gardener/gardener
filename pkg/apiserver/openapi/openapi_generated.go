@@ -1055,7 +1055,7 @@ func schema_pkg_apis_core_v1_OCIRepository(ref common.ReferenceCallback) common.
 					},
 					"caBundleSecretRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CABundleSecretRef is a reference to a secret containing a PEM-encoded certificate authority bundle. The CA bundle is used to verify the TLS certificate of the OCI registry. The secret must be of type `Opaque` with a data key `bundle.crt` and must be located in the `garden` namespace. For usage in the gardenlet, the secret must have the label `gardener.cloud/role=oci-ca-bundle`. If not provided, the system's default certificate pool is used.",
+							Description: "CABundleSecretRef is a reference to a secret containing a PEM-encoded certificate authority bundle. The CA bundle is used to verify the TLS certificate of the OCI registry. The secret must have a data key `bundle.crt` and must be located in the `garden` namespace. For usage in the gardenlet, the secret must have the label `gardener.cloud/role=oci-ca-bundle`. If not provided, the system's default certificate pool is used.",
 							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
 						},
 					},
@@ -6976,7 +6976,7 @@ func schema_pkg_apis_core_v1beta1_OCIRepository(ref common.ReferenceCallback) co
 					},
 					"caBundleSecretRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CABundleSecretRef is a reference to a secret containing a PEM-encoded certificate authority bundle. The CA bundle is used to verify the TLS certificate of the OCI registry. The secret must be of type `Opaque` with a data key `bundle.crt` and must be located in the `garden` namespace. For usage in the gardenlet, the secret must have the label `gardener.cloud/role=oci-ca-bundle`. If not provided, the system's default certificate pool is used.",
+							Description: "CABundleSecretRef is a reference to a secret containing a PEM-encoded certificate authority bundle. The CA bundle is used to verify the TLS certificate of the OCI registry. The secret must have a data key `bundle.crt` and must be located in the `garden` namespace. For usage in the gardenlet, the secret must have the label `gardener.cloud/role=oci-ca-bundle`. If not provided, the system's default certificate pool is used.",
 							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
 						},
 					},

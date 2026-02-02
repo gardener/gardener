@@ -85,7 +85,7 @@ type OCIRepository struct {
 	PullSecretRef *corev1.LocalObjectReference `json:"pullSecretRef,omitempty" protobuf:"bytes,5,opt,name=pullSecretRef"`
 	// CABundleSecretRef is a reference to a secret containing a PEM-encoded certificate authority bundle.
 	// The CA bundle is used to verify the TLS certificate of the OCI registry.
-	// The secret must be of type `Opaque` with a data key `bundle.crt` and must be located in the `garden` namespace.
+	// The secret must have a data key `bundle.crt` and must be located in the `garden` namespace.
 	// For usage in the gardenlet, the secret must have the label `gardener.cloud/role=oci-ca-bundle`.
 	// If not provided, the system's default certificate pool is used.
 	// +optional
