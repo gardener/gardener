@@ -403,6 +403,8 @@ build:
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
             - pkg/utils/workloadidentity
+            - third_party/open-telemetry/opentelemetry-operator/apis/v1alpha1
+            - third_party/open-telemetry/opentelemetry-operator/apis/v1beta1
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -539,6 +541,8 @@ build:
             - pkg/utils/version
             - pkg/utils/workloadidentity
             - pkg/webhook/authorizer
+            - third_party/open-telemetry/opentelemetry-operator/apis/v1alpha1
+            - third_party/open-telemetry/opentelemetry-operator/apis/v1beta1
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -664,6 +668,8 @@ build:
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
             - pkg/utils/workloadidentity
+            - third_party/open-telemetry/opentelemetry-operator/apis/v1alpha1
+            - third_party/open-telemetry/opentelemetry-operator/apis/v1beta1
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'

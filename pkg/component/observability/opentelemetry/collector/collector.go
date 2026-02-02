@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"time"
 
-	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -35,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	otelv1beta1 "github.com/gardener/gardener/third_party/open-telemetry/opentelemetry-operator/apis/v1beta1"
 )
 
 const (

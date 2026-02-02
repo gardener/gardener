@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	otelv1beta1 "github.com/gardener/gardener/third_party/open-telemetry/opentelemetry-operator/apis/v1beta1"
 )
 
 func (g *garden) runMigrations(ctx context.Context, log logr.Logger) error {
