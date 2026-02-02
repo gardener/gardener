@@ -26,6 +26,7 @@ build:
             - pkg/admissioncontroller/apis/config/v1alpha1/validation
             - pkg/admissioncontroller/webhook/admission
             - pkg/api
+            - pkg/api/core/shoot
             - pkg/api/extensions
             - pkg/api/indexer
             - pkg/apis/authentication

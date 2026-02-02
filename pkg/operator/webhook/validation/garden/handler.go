@@ -49,22 +49,27 @@ func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) (admis
 		return nil, fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", obj)
 	}
 
+	warnings, err := GetWarnings(garden)
+	if err != nil {
+		return nil, apierrors.NewInternalError(fmt.Errorf("failed to get API warnings: %w", err))
+	}
+
 	for _, finalizer := range garden.Finalizers {
 		if forbiddenFinalizersOnCreation.Has(finalizer) {
-			return nil, apierrors.NewBadRequest(fmt.Sprintf("finalizer %q cannot be added on creation", finalizer))
+			return warnings, apierrors.NewBadRequest(fmt.Sprintf("finalizer %q cannot be added on creation", finalizer))
 		}
 	}
 
 	extensionList := &operatorv1alpha1.ExtensionList{}
 	if err := h.RuntimeClient.List(ctx, extensionList); err != nil {
-		return nil, apierrors.NewInternalError(err)
+		return warnings, apierrors.NewInternalError(err)
 	}
 
 	if errs := validation.ValidateGarden(garden, extensionList.Items); len(errs) > 0 {
-		return nil, apierrors.NewInvalid(operatorv1alpha1.Kind("Garden"), garden.Name, errs)
+		return warnings, apierrors.NewInvalid(operatorv1alpha1.Kind("Garden"), garden.Name, errs)
 	}
 
-	return nil, nil
+	return warnings, nil
 }
 
 // ValidateUpdate performs the validation.
@@ -78,16 +83,21 @@ func (h *Handler) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Obj
 		return nil, fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", newObj)
 	}
 
+	warnings, err := GetWarnings(newGarden)
+	if err != nil {
+		return nil, apierrors.NewInternalError(fmt.Errorf("failed to get API warnings: %w", err))
+	}
+
 	extensionList := &operatorv1alpha1.ExtensionList{}
 	if err := h.RuntimeClient.List(ctx, extensionList); err != nil {
-		return nil, apierrors.NewInternalError(fmt.Errorf("failed retrieving extensions: %w", err))
+		return warnings, apierrors.NewInternalError(fmt.Errorf("failed retrieving extensions: %w", err))
 	}
 
 	if errs := validation.ValidateGardenUpdate(oldGarden, newGarden, extensionList.Items); len(errs) > 0 {
-		return nil, apierrors.NewInvalid(operatorv1alpha1.Kind("Garden"), newGarden.Name, errs)
+		return warnings, apierrors.NewInvalid(operatorv1alpha1.Kind("Garden"), newGarden.Name, errs)
 	}
 
-	return nil, nil
+	return warnings, nil
 }
 
 // ValidateDelete performs the validation.
@@ -97,5 +107,10 @@ func (h *Handler) ValidateDelete(_ context.Context, obj runtime.Object) (admissi
 		return nil, fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", obj)
 	}
 
-	return nil, gardenerutils.CheckIfDeletionIsConfirmed(garden)
+	warnings, err := GetWarnings(garden)
+	if err != nil {
+		return nil, apierrors.NewInternalError(fmt.Errorf("failed to get API warnings: %w", err))
+	}
+
+	return warnings, gardenerutils.CheckIfDeletionIsConfirmed(garden)
 }

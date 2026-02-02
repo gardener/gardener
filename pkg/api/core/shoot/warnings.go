@@ -11,6 +11,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -19,7 +20,7 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
-// GetWarnings returns warnings for the provided shoot.
+// GetWarnings returns warnings for the given Shoot.
 func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRotationInterval time.Duration) []string {
 	if shoot == nil {
 		return nil
@@ -50,10 +51,6 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 		warnings = append(warnings, "you are setting the spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.33. The value is not used and will be set to nil. Instead, use the spec.kubernetes.clusterAutoscaler.maxScaleDownParallelism field.")
 	}
 
-	if helper.IsLegacyAnonymousAuthenticationSet(shoot.Spec.Kubernetes.KubeAPIServer) {
-		warnings = append(warnings, "you are setting the spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication field. The field is deprecated and will be forbidden starting with Kubernetes v1.35. Gardener sets this field to nil if it is set to false by the user. Use Structured Authentication Configuration instead. See: https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_access.md#configuring-anonymous-authentication")
-	}
-
 	kubernetesVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
 	if err == nil && versionutils.ConstraintK8sGreaterEqual133.Check(kubernetesVersion) && ptr.Deref(shoot.Spec.CloudProfileName, "") != "" {
 		warnings = append(warnings, "you are setting the spec.cloudProfileName field. The field is deprecated and will be forcefully set empty starting with Kubernetes 1.34. Use the new spec.cloudProfile.name field instead.")
@@ -75,19 +72,34 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 		warnings = append(warnings, "you are setting the spec.kubernetes.kubeScheduler.kubeMaxPDVols field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.35. The kubeMaxPDVols configuration is no longer necessary as values are set by the respective CSI driver.")
 	}
 
-	if shoot.Spec.Kubernetes.KubeAPIServer != nil && shoot.Spec.Kubernetes.KubeAPIServer.WatchCacheSizes != nil && shoot.Spec.Kubernetes.KubeAPIServer.WatchCacheSizes.Default != nil {
-		warnings = append(warnings, "you are setting the spec.kubernetes.kubeAPIServer.watchCacheSizes.default field.  The field has been deprecated and is forbidden to be set starting from Kubernetes 1.35. The cache size is automatically sized by the kube-apiserver.")
-	}
-
 	if shoot.Spec.SecretBindingName != nil {
 		warnings = append(warnings, "spec.secretBindingName is deprecated and will be disallowed starting with Kubernetes 1.34. For migration instructions, see: https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md")
 	}
 
-	// TODO(ialidzhikov): Remove this in Gardener v1.142.0 when gardener-apiserver stops accepting invalid event ttl values for existing Shoots.
 	if kubeAPIServer := shoot.Spec.Kubernetes.KubeAPIServer; kubeAPIServer != nil {
-		if kubeAPIServer.EventTTL != nil && kubeAPIServer.EventTTL.Duration > time.Hour*24 {
-			warnings = append(warnings, fmt.Sprintf("you are setting the spec.kubernetes.kubeAPIServer.eventTTL field to an invalid value. Invalid value: '%s', valid values: [0, 24h]. Invalid values will be no longer allowed in Gardener v1.142.0. See: https://github.com/gardener/gardener/issues/13825", kubeAPIServer.EventTTL.Duration))
-		}
+		path := field.NewPath("spec", "kubernetes", "kubeAPIServer")
+		warnings = append(warnings, GetKubeAPIServerWarnings(kubeAPIServer, path)...)
+	}
+
+	return warnings
+}
+
+// GetKubeAPIServerWarnings returns warnings for the given KubeAPIServerConfig.
+func GetKubeAPIServerWarnings(kubeAPIServer *core.KubeAPIServerConfig, fldPath *field.Path) []string {
+	if kubeAPIServer == nil {
+		return nil
+	}
+
+	var warnings []string
+	if kubeAPIServer.EnableAnonymousAuthentication != nil {
+		warnings = append(warnings, fmt.Sprintf("you are setting the %s field. The field is deprecated. Using Kubernetes v1.32 and above, please use anonymous authentication configuration. See: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration", fldPath.Child("enableAnonymousAuthentication").String()))
+	}
+	if kubeAPIServer.WatchCacheSizes != nil && kubeAPIServer.WatchCacheSizes.Default != nil {
+		warnings = append(warnings, fmt.Sprintf("you are setting the %s field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.35. The cache size is automatically sized by the kube-apiserver.", fldPath.Child("watchCacheSizes", "default").String()))
+	}
+	// TODO(ialidzhikov): Remove this in Gardener v1.142.0 when invalid event ttl values for existing Shoots are no longer accepted.
+	if kubeAPIServer.EventTTL != nil && kubeAPIServer.EventTTL.Duration > time.Hour*24 {
+		warnings = append(warnings, fmt.Sprintf("you are setting the %s field to an invalid value. Invalid value: '%s', valid values: [0, 24h]. Invalid values for existing resources will be no longer allowed in Gardener v1.142.0. See: https://github.com/gardener/gardener/issues/13825", fldPath.Child("eventTTL").String(), kubeAPIServer.EventTTL.Duration))
 	}
 
 	return warnings
