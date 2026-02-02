@@ -204,6 +204,7 @@ define GENERATE_HELP_INFO
 #   make generate WHAT="manifests" MANIFESTS_DIRS="pkg/component plugin" MODE="sequential"
 #   make generate WHAT="codegen" CODEGEN_GROUPS="core_groups extensions_groups"
 #   make generate WHAT="codegen manifests" CODEGEN_GROUPS="operator_groups controllermanager_groups" MANIFESTS_DIRS="charts extensions/pkg"
+#   make generate WHAT="manifests" MAX_PARALLEL_WORKERS=8
 #
 endef
 export GENERATE_HELP_INFO
