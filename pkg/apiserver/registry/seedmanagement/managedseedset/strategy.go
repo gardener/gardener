@@ -18,6 +18,7 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 
 	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/api/seedmanagement/managedseedset"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/validation"
@@ -115,13 +116,13 @@ func (Strategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object)
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.
-func (Strategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
-	return nil
+func (Strategy) WarningsOnCreate(_ context.Context, obj runtime.Object) []string {
+	return managedseedset.GetWarnings(obj.(*seedmanagement.ManagedSeedSet))
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (Strategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
-	return nil
+func (Strategy) WarningsOnUpdate(_ context.Context, obj, _ runtime.Object) []string {
+	return managedseedset.GetWarnings(obj.(*seedmanagement.ManagedSeedSet))
 }
 
 // StatusStrategy defines the strategy for storing seeds statuses.

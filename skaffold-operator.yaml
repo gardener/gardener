@@ -477,6 +477,7 @@ build:
             - pkg/api
             - pkg/api/core/shoot
             - pkg/api/extensions
+            - pkg/api/seedmanagement/managedseedset
             - pkg/apis/authentication
             - pkg/apis/authentication/install
             - pkg/apis/authentication/v1alpha1

@@ -7,15 +7,15 @@ package garden_test
 import (
 	"time"
 
-	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	. "github.com/gardener/gardener/pkg/operator/webhook/validation/garden"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gomegatypes "github.com/onsi/gomega/types"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	. "github.com/gardener/gardener/pkg/operator/webhook/validation/garden"
 )
 
 var _ = Describe("Warnings", func() {
