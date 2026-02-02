@@ -43,4 +43,5 @@ extend-exclude = [
     "crd-all.gen.yaml",
     "crd-opentelemetry.io*.yaml",
     "example/gardener-local/controlplane/values.yaml",
+    "pkg/component/observability/plutono/dashboards/garden-seed/istio/istio-service-dashboard.json",
 ]
