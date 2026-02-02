@@ -1159,6 +1159,10 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 		}
 		goAwayChance = apiServer.GoAwayChance
 	}
+	targetVersion, err := semver.NewVersion(garden.Spec.VirtualCluster.Kubernetes.Version)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse target version %q: %w", garden.Spec.VirtualCluster.Kubernetes.Version, err)
+	}
 
 	return sharedcomponent.NewGardenerAPIServer(
 		ctx,
@@ -1174,6 +1178,7 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 		garden.Spec.VirtualCluster.Gardener.ClusterIdentity,
 		workloadIdentityTokenIssuer,
 		goAwayChance,
+		targetVersion,
 	)
 }
 

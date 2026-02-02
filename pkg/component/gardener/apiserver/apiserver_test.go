@@ -142,6 +142,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			ShootAdminKubeconfigMaxExpiration: &metav1.Duration{Duration: 1 * time.Hour},
 			TopologyAwareRoutingEnabled:       true,
 			WorkloadIdentityTokenIssuer:       workloadIdentityIssuer,
+			TargetVersion:                     semver.MustParse("1.33.1"),
 		}
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
@@ -777,6 +778,7 @@ resources:
 									ETCDEncryption: apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: encryptWithCurrentKey, ResourcesToEncrypt: []string{"shootstates.core.gardener.cloud"}},
 									RuntimeVersion: semver.MustParse("1.33.1"),
 								},
+								TargetVersion: semver.MustParse("1.33.1"),
 							})
 
 							oldKeyName, oldKeySecret := "key-old", "old-secret"
@@ -894,6 +896,7 @@ resources:
 							Audit:          auditConfig,
 							RuntimeVersion: semver.MustParse("1.33.1"),
 						},
+						TargetVersion: semver.MustParse("1.33.1"),
 					})
 
 					expectedSecret := &corev1.Secret{
@@ -954,6 +957,7 @@ resources:
 								EnabledAdmissionPlugins: admissionPlugins,
 								RuntimeVersion:          semver.MustParse("1.33.1"),
 							},
+							TargetVersion: semver.MustParse("1.33.1"),
 						})
 
 						secretAdmissionKubeconfigs := &corev1.Secret{
@@ -1021,6 +1025,7 @@ rules:
 								Audit:          auditConfig,
 								RuntimeVersion: semver.MustParse("1.33.1"),
 							},
+							TargetVersion: semver.MustParse("1.33.1"),
 						})
 
 						configMapAuditPolicy := &corev1.ConfigMap{
@@ -1102,6 +1107,7 @@ kubeConfigFile: /etc/kubernetes/foobar.yaml
 								EnabledAdmissionPlugins: admissionPlugins,
 								RuntimeVersion:          semver.MustParse("1.33.1"),
 							},
+							TargetVersion: semver.MustParse("1.33.1"),
 						})
 
 						configMapAdmission := &corev1.ConfigMap{
@@ -1175,6 +1181,7 @@ kubeConfigFile: /etc/kubernetes/foobar.yaml
 								EnabledAdmissionPlugins: admissionPlugins,
 								RuntimeVersion:          semver.MustParse("1.33.1"),
 							},
+							TargetVersion: semver.MustParse("1.33.1"),
 						})
 
 						configMapAdmission := &corev1.ConfigMap{
@@ -1238,6 +1245,7 @@ kubeConfigFile: ""
 								EnabledAdmissionPlugins: admissionPlugins,
 								RuntimeVersion:          semver.MustParse("1.33.1"),
 							},
+							TargetVersion: semver.MustParse("1.33.1"),
 						})
 
 						configMapAdmission := &corev1.ConfigMap{
