@@ -21,9 +21,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	collectorconstants "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/constants"
@@ -62,8 +64,14 @@ type Values struct {
 	ShootNodeLoggingEnabled bool
 	// IngressHost is the name for the ingress to access the OpenTelemetry Collector.
 	IngressHost string
+	// SecretNameServerCA is the name of the server CA secret.
+	SecretNameServerCA string
+	// PriorityClassName is the priority class name for the OpenTelemetry Collector pods.
+	PriorityClassName string
 	// ValiHost is the name for the ingress to access the Vali instance.
 	ValiHost string
+	// ClusterType is the type of the cluster where the collector is deployed.
+	ClusterType component.ClusterType
 }
 
 type otelCollector struct {
@@ -126,7 +134,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 			CertType:                    secrets.ServerCert,
 			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
+		}, secretsmanager.SignedByCA(o.values.SecretNameServerCA))
 		if err != nil {
 			return err
 		}
@@ -282,7 +290,7 @@ func (o *otelCollector) serviceMonitor() *monitoringv1.ServiceMonitor {
 	}
 
 	return &monitoringv1.ServiceMonitor{
-		ObjectMeta: monitoringutils.ConfigObjectMeta(serviceMonitorName, o.namespace, shoot.Label),
+		ObjectMeta: monitoringutils.ConfigObjectMeta(serviceMonitorName, o.namespace, o.getPrometheusLabel()),
 		Spec: monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 			Endpoints: []monitoringv1.Endpoint{{
@@ -318,16 +326,22 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 			// Currently, there is no other way to define the annotations on the service other than adding them to the OpenTelemetryCollector resource.
 			// All annotations that exist here will be passed down to every resource that gets created by the OpenTelemetry Operator.
 			Annotations: map[string]string{
-				"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort),
+				"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports":                                                                                                  fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort),
+				resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicySeedScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"port":8888,"protocol":"TCP"},{"port":2021,"protocol":"TCP"}]`,
 			},
 		},
 		Spec: otelv1beta1.OpenTelemetryCollectorSpec{
 			Mode:            "deployment",
 			UpgradeStrategy: "none",
+			Observability: otelv1beta1.ObservabilitySpec{
+				Metrics: otelv1beta1.MetricsConfigSpec{
+					DisablePrometheusAnnotations: true,
+				},
+			},
 			OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
 				Image:             o.values.Image,
 				Replicas:          ptr.To(o.values.Replicas),
-				PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane100,
+				PriorityClassName: o.values.PriorityClassName,
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("10m"),
@@ -385,6 +399,35 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 								},
 							},
 						},
+						"attributes/vali": map[string]any{
+							"actions": []any{
+								map[string]any{
+									"key":            "nodename",
+									"from_attribute": "k8s.node.name",
+									"action":         "insert",
+								},
+								map[string]any{
+									"key":            "pod_name",
+									"from_attribute": "k8s.pod.name",
+									"action":         "insert",
+								},
+								map[string]any{
+									"key":            "container_name",
+									"from_attribute": "k8s.container.name",
+									"action":         "insert",
+								},
+								map[string]any{
+									"key":    "loki.resource.labels",
+									"value":  "job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role",
+									"action": "insert",
+								},
+								map[string]any{
+									"key":    "loki.format",
+									"value":  "raw",
+									"action": "insert",
+								},
+							},
+						},
 					},
 				},
 				Exporters: otelv1beta1.AnyConfig{
@@ -404,7 +447,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 										"pull": map[string]any{
 											"exporter": map[string]any{
 												"prometheus": map[string]any{
-													"host": "0.0.0.0",
+													"host": "[::]",
 													"port": metricsPort,
 												},
 											},
@@ -428,6 +471,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 							},
 							Processors: []string{
 								"resource/vali",
+								"attributes/vali",
 								"batch",
 							},
 						},
@@ -456,7 +500,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 				Name:  kubeRBACProxyName + "-vali",
 				Image: o.values.KubeRBACProxyImage,
 				Args: []string{
-					fmt.Sprintf("--insecure-listen-address=0.0.0.0:%d", collectorconstants.KubeRBACProxyValiPort),
+					fmt.Sprintf("--insecure-listen-address=[::]:%d", collectorconstants.KubeRBACProxyValiPort),
 					fmt.Sprintf("--upstream=http://logging:%d/", valiconstants.ValiPort),
 					"--kubeconfig=" + gardenerutils.VolumeMountPathGenericKubeconfig + "/kubeconfig",
 					"--logtostderr=true",
@@ -480,7 +524,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 				Name:  kubeRBACProxyName + "-otlp",
 				Image: o.values.KubeRBACProxyImage,
 				Args: []string{
-					fmt.Sprintf("--insecure-listen-address=0.0.0.0:%d", collectorconstants.KubeRBACProxyOTLPReceiverPort),
+					fmt.Sprintf("--insecure-listen-address=[::]:%d", collectorconstants.KubeRBACProxyOTLPReceiverPort),
 					fmt.Sprintf("--upstream=http://127.0.0.1:%d/", collectorconstants.PushPort),
 					"--kubeconfig=" + gardenerutils.VolumeMountPathGenericKubeconfig + "/kubeconfig",
 					"--logtostderr=true",
@@ -510,6 +554,17 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 		obj.Spec.Volumes = []corev1.Volume{gardenerutils.GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, "kubeconfig")}
 		obj.Spec.AdditionalContainers[0].VolumeMounts = []corev1.VolumeMount{gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)}
 		obj.Spec.AdditionalContainers[1].VolumeMounts = []corev1.VolumeMount{gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)}
+	}
+
+	switch o.values.ClusterType {
+	case component.ClusterTypeSeed:
+		obj.Annotations = map[string]string{
+			"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort),
+		}
+	case component.ClusterTypeShoot:
+		obj.Annotations = map[string]string{
+			"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort),
+		}
 	}
 
 	return obj
@@ -626,6 +681,13 @@ func (o *otelCollector) getLoggingAgentClusterRoleBinding(serviceAccountName, cl
 			Namespace: metav1.NamespaceSystem,
 		}},
 	}
+}
+
+func (o *otelCollector) getPrometheusLabel() string {
+	if o.values.ClusterType == component.ClusterTypeShoot {
+		return shoot.Label
+	}
+	return aggregate.Label
 }
 
 func getLabels() map[string]string {
