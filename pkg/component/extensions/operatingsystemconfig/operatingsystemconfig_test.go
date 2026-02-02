@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
@@ -50,7 +51,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/version"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
-	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 )
 
 var _ = Describe("OperatingSystemConfig", func() {
