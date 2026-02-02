@@ -16,7 +16,7 @@ var _ = Describe("Constraints", func() {
 	Describe("#CheckVersion", func() {
 		DescribeTable("should check version strings correctly",
 			func(constraintStr, version string, matcher gomegatypes.GomegaMatcher) {
-				constraint := NewConstraint(constraintStr)
+				constraint := MustNewConstraint(constraintStr)
 				Expect(constraint.CheckVersion(version)).To(matcher)
 			},
 

@@ -1497,7 +1497,7 @@ message KubeSchedulerConfig {
   // The maximum number of attached volumes is configured by the CSI driver.
   // More information can be found at https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits.
   // Deprecated: This field is deprecated. Using this field will be forbidden starting from Kubernetes 1.35.
-  // TODO(timuthy): Drop this field after support for Kubernetes 1.35 is dropped.
+  // TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.
   // +optional
   optional string kubeMaxPDVols = 2;
 
@@ -3350,7 +3350,7 @@ message ShootSSHKeypairRotation {
 message ShootSpec {
   // Addons contains information about enabled/disabled addons and their configuration.
   // Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.
-  // TODO(timuthy): Drop this field after support for Kubernetes 1.34 is dropped.
+  // TODO(timuthy): Drop this field when support for Kubernetes 1.34 is dropped.
   // +optional
   optional Addons addons = 1;
 
@@ -3797,7 +3797,7 @@ message WatchCacheSizes {
   // Default is not respected anymore by kube-apiserver.
   // The cache is sized automatically.
   // Deprecated: This field is deprecated. Setting the default cache size will be forbidden starting from Kubernetes 1.35.
-  // TODO(timuthy): Drop this field after support for Kubernetes 1.35 is dropped.
+  // TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.
   // +optional
   optional int32 default = 1;
 

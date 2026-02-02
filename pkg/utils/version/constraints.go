@@ -15,7 +15,7 @@ type Constraints struct {
 }
 
 // CheckVersion checks whether the given version string satisfies the constraints.
-// Please ensure the passed version is a valid semantic version.
+// Please ensure the passed version is a valid semantic version (errors related to parsing the version will result in `false` being returned - the error is omitted).
 func (c *Constraints) CheckVersion(version string) bool {
 	v, err := semver.NewVersion(version)
 	if err != nil {
@@ -25,8 +25,9 @@ func (c *Constraints) CheckVersion(version string) bool {
 	return c.Check(v)
 }
 
-// NewConstraint creates a new Constraints object from the given constraint string.
-func NewConstraint(constraintStr string) *Constraints {
+// MustNewConstraint creates a new Constraints object from the given constraint string.
+// The function panics if the passed constraint is invalid.
+func MustNewConstraint(constraintStr string) *Constraints {
 	constraint, err := semver.NewConstraint(constraintStr)
 	utilruntime.Must(err)
 	return &Constraints{Constraints: constraint}

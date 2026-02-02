@@ -12,6 +12,9 @@ For Kubernetes specific upgrade notes the upstream Kubernetes release notes, [ch
 ## Upgrading to Kubernetes `v1.35`
 
 - The `Shoot`'s `.spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication` field is forbidden. Gardener continues to disable anonymous authentication by default. If you need to configure anonymous authentication, use [Structured Authentication Configuration](shoot_access.md#configuring-anonymous-authentication) with the [anonymous authenticator](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration) instead.
+- The `Shoot`'s `.spec.addons` field is forbidden. The retirement of the previously contained components [Kubernetes Dashboard](https://github.com/kubernetes-retired/dashboard) and [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx), requires owners to remove any existing addon configurations from the `Shoot`.
+- The `Shoot`'s `.spec.kubernetes.kubeAPIServer.watchCacheSizes.default` field is forbidden. Watch cache sizes are automatically sized by Kubernetes.
+- The `Shoot`'s `.spec.kubernetes.kubeScheduler.kubeMaxPDVols` field is forbidden. The maximum number of attachable volumes is maintained by the respective CSI plugin.
 
 ## Upgrading to Kubernetes `v1.34`
 

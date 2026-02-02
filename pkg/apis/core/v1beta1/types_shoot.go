@@ -65,7 +65,7 @@ type ShootTemplate struct {
 type ShootSpec struct {
 	// Addons contains information about enabled/disabled addons and their configuration.
 	// Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.
-	// TODO(timuthy): Drop this field after support for Kubernetes 1.34 is dropped.
+	// TODO(timuthy): Drop this field when support for Kubernetes 1.34 is dropped.
 	// +optional
 	Addons *Addons `json:"addons,omitempty" protobuf:"bytes,1,opt,name=addons"`
 	// CloudProfileName is a name of a CloudProfile object.
@@ -1202,7 +1202,7 @@ type WatchCacheSizes struct {
 	// Default is not respected anymore by kube-apiserver.
 	// The cache is sized automatically.
 	// Deprecated: This field is deprecated. Setting the default cache size will be forbidden starting from Kubernetes 1.35.
-	// TODO(timuthy): Drop this field after support for Kubernetes 1.35 is dropped.
+	// TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.
 	// +optional
 	Default *int32 `json:"default,omitempty" protobuf:"varint,1,opt,name=default"`
 	// Resources configures the watch cache size of the kube-apiserver per resource
@@ -1293,7 +1293,7 @@ type KubeSchedulerConfig struct {
 	// The maximum number of attached volumes is configured by the CSI driver.
 	// More information can be found at https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits.
 	// Deprecated: This field is deprecated. Using this field will be forbidden starting from Kubernetes 1.35.
-	// TODO(timuthy): Drop this field after support for Kubernetes 1.35 is dropped.
+	// TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.
 	// +optional
 	KubeMaxPDVols *string `json:"kubeMaxPDVols,omitempty" protobuf:"bytes,2,opt,name=kubeMaxPDVols"`
 	// Profile configures the scheduling profile for the cluster.

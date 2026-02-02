@@ -37,17 +37,17 @@ var (
 )
 
 func init() {
-	ConstraintK8sLess131 = NewConstraint("< 1.31-0")
-	ConstraintK8sEqual131 = NewConstraint("~ 1.31.x-0")
-	ConstraintK8sGreaterEqual131 = NewConstraint(">= 1.31-0")
-	ConstraintK8sLess132 = NewConstraint("< 1.32-0")
-	ConstraintK8sGreaterEqual132 = NewConstraint(">= 1.32-0")
-	ConstraintK8sLess133 = NewConstraint("< 1.33-0")
-	ConstraintK8sGreaterEqual133 = NewConstraint(">= 1.33-0")
-	ConstraintK8sLess134 = NewConstraint("< 1.34-0")
-	ConstraintK8sGreaterEqual134 = NewConstraint(">= 1.34-0")
-	ConstraintK8sLess135 = NewConstraint("< 1.35-0")
-	ConstraintK8sGreaterEqual135 = NewConstraint(">= 1.35-0")
+	ConstraintK8sLess131 = MustNewConstraint("< 1.31-0")
+	ConstraintK8sEqual131 = MustNewConstraint("~ 1.31.x-0")
+	ConstraintK8sGreaterEqual131 = MustNewConstraint(">= 1.31-0")
+	ConstraintK8sLess132 = MustNewConstraint("< 1.32-0")
+	ConstraintK8sGreaterEqual132 = MustNewConstraint(">= 1.32-0")
+	ConstraintK8sLess133 = MustNewConstraint("< 1.33-0")
+	ConstraintK8sGreaterEqual133 = MustNewConstraint(">= 1.33-0")
+	ConstraintK8sLess134 = MustNewConstraint("< 1.34-0")
+	ConstraintK8sGreaterEqual134 = MustNewConstraint(">= 1.34-0")
+	ConstraintK8sLess135 = MustNewConstraint("< 1.35-0")
+	ConstraintK8sGreaterEqual135 = MustNewConstraint(">= 1.35-0")
 }
 
 // CompareVersions returns true if the constraint <version1> compared by <operator> to <version2>

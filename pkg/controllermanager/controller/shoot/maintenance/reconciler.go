@@ -236,18 +236,6 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 	}
 
-	// Disable kubernetes dashboard when Shoot cluster is being forcefully updated to K8s >= 1.35.
-	// Gardener forbids using the kubernetes dashboard for Shoots with K8s 1.35+.
-	{
-		oldK8sLess135 := versionutils.ConstraintK8sLess135.Check(oldShootKubernetesVersion)
-		newK8sGreaterEqual135 := versionutils.ConstraintK8sGreaterEqual135.Check(shootKubernetesVersion)
-		if oldK8sLess135 && newK8sGreaterEqual135 && shoot.Spec.Addons != nil && shoot.Spec.Addons.KubernetesDashboard != nil {
-			maintainedShoot.Spec.Addons.KubernetesDashboard = nil
-			reason := ".spec.addons.kubernetesDashboard was removed. Reason: Kubernetes dashboard is archived and can no longer be used for Shoot clusters using Kubernetes version 1.35+"
-			operations = append(operations, reason)
-		}
-	}
-
 	// Remove KubeMaxPDVols when Shoot cluster is being forcefully updated to K8s >= 1.35..
 	{
 		oldK8sLess135 := versionutils.ConstraintK8sLess135.Check(oldShootKubernetesVersion)

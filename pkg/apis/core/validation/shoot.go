@@ -1964,16 +1964,18 @@ func validateKubeScheduler(ks *core.KubeSchedulerConfig, kubernetesVersion strin
 func validateKubeMaxPDVols(kubeMaxPDVols *string, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if kubeMaxPDVols != nil {
-		if versionutils.ConstraintK8sGreaterEqual135.CheckVersion(kubernetesVersion) {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "for Kubernetes version >= 1.35, kubeMaxPDVols field is no longer supported"))
-		} else {
-			num, err := strconv.Atoi(*kubeMaxPDVols)
-			if err != nil {
-				allErrs = append(allErrs, field.Invalid(fldPath, *kubeMaxPDVols, fmt.Sprintf("conversion error: %v", err)))
-			} else if num < 1 {
-				allErrs = append(allErrs, field.Invalid(fldPath, *kubeMaxPDVols, "must be positive"))
-			}
+	if kubeMaxPDVols == nil {
+		return allErrs
+	}
+
+	if versionutils.ConstraintK8sGreaterEqual135.CheckVersion(kubernetesVersion) {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "for Kubernetes version >= 1.35, kubeMaxPDVols field is no longer supported"))
+	} else {
+		num, err := strconv.Atoi(*kubeMaxPDVols)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath, *kubeMaxPDVols, fmt.Sprintf("conversion error: %v", err)))
+		} else if num < 1 {
+			allErrs = append(allErrs, field.Invalid(fldPath, *kubeMaxPDVols, "must be positive"))
 		}
 	}
 
