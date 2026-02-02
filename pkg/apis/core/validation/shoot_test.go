@@ -1867,6 +1867,113 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					Expect(ValidateShoot(shoot)).To(BeEmpty())
 				})
+
+				It("should fail because extension and dns are set", func() {
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
+						Exposure: &core.Exposure{
+							Extension: &core.ExtensionExposure{
+								Type: ptr.To("stackit"),
+							},
+							DNS: &core.DNSExposure{},
+						},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.provider.workers[0].controlPlane.exposure"),
+						"Detail": Equal("cannot have dns and extension set at the same time"),
+					}))
+				})
+
+				It("should fail because extension exposure type is not set", func() {
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
+						Exposure: &core.Exposure{
+							Extension: &core.ExtensionExposure{
+								Type: nil,
+							},
+						},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeRequired),
+						"Field":  Equal("spec.provider.workers[0].controlPlane.exposure.type"),
+						"Detail": Equal("must specify a provider type"),
+					}))
+				})
+
+				It("should fail because extension exposure type is set to an empty string", func() {
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
+						Exposure: &core.Exposure{
+							Extension: &core.ExtensionExposure{
+								Type: ptr.To(""),
+							},
+						},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeRequired),
+						"Field":  Equal("spec.provider.workers[0].controlPlane.exposure.type"),
+						"Detail": Equal("must specify a provider type"),
+					}))
+				})
+
+				It("should fail because extension exposure type contains an invalid DNS1123 string", func() {
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
+						Exposure: &core.Exposure{
+							Extension: &core.ExtensionExposure{
+								Type: ptr.To("My_Service"),
+							},
+						},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOfFields(Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.provider.workers[0].controlPlane.exposure.type"),
+					}))
+				})
+
+				It("should work with dns set", func() {
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
+						Exposure: &core.Exposure{
+							DNS: &core.DNSExposure{},
+						},
+					}
+
+					Expect(ValidateShoot(shoot)).To(BeEmpty())
+				})
+
+				It("should work with an empty exposure", func() {
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
+						Exposure: &core.Exposure{},
+					}
+
+					Expect(ValidateShoot(shoot)).To(BeEmpty())
+				})
+
+				It("should work with extension set", func() {
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
+						Exposure: &core.Exposure{
+							Extension: &core.ExtensionExposure{
+								Type: ptr.To("stackit"),
+							},
+						},
+					}
+
+					Expect(ValidateShoot(shoot)).To(BeEmpty())
+				})
+
+				It("should work with extension and config set", func() {
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
+						Exposure: &core.Exposure{
+							Extension: &core.ExtensionExposure{
+								Type:           ptr.To("local"),
+								ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"apiVersion": "v1", "kind": "Configuration"}`)},
+							},
+						},
+					}
+
+					Expect(ValidateShoot(shoot)).To(BeEmpty())
+				})
 			})
 
 			Describe("ClusterAutoscaler options validation", func() {

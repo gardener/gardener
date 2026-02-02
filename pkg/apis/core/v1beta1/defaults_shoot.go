@@ -73,6 +73,10 @@ func SetDefaults_Shoot(obj *Shoot) {
 				}
 			}
 		}
+
+		if worker.ControlPlane != nil && worker.ControlPlane.Exposure != nil && worker.ControlPlane.Exposure.Extension != nil && worker.ControlPlane.Exposure.Extension.Type == nil {
+			worker.ControlPlane.Exposure.Extension.Type = ptr.To(obj.Spec.Provider.Type)
+		}
 	}
 
 	// these fields are relevant only for shoot with workers

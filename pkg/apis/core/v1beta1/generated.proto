@@ -885,6 +885,11 @@ message DNS {
   repeated DNSProvider providers = 2;
 }
 
+// DNSExposure specifies that this shoot will be exposed by DNS.
+// There is no specific configuration currently, for future extendability.
+message DNSExposure {
+}
+
 // DNSIncludeExclude contains information about which domains shall be included/excluded.
 message DNSIncludeExclude {
   // Include is a list of domains that shall be included.
@@ -1062,6 +1067,19 @@ message ExpirableVersion {
   optional string classification = 3;
 }
 
+// Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).
+message Exposure {
+  // Extension holds the type and provider config of the exposure extension.
+  // Mutually exclusive with DNS.
+  // +optional
+  optional ExtensionExposure extension = 1;
+
+  // DNS specifies that this shoot will be exposed by DNS.
+  // Mutually exclusive with Extension.
+  // +optional
+  optional DNSExposure dns = 2;
+}
+
 // ExposureClass represents a control plane endpoint exposure strategy.
 message ExposureClass {
   // Standard object metadata.
@@ -1113,6 +1131,18 @@ message Extension {
   // Disabled allows to disable extensions that were marked as 'automatically enabled' by Gardener administrators.
   // +optional
   optional bool disabled = 3;
+}
+
+// ExtensionExposure holds the type and provider config of the exposure extension.
+message ExtensionExposure {
+  // Type defines the type of the extension exposure.
+  // Defaults to `.spec.provider.type`
+  // +optional
+  optional string type = 1;
+
+  // ProviderConfig holds the extension specific configuration.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 }
 
 // ExtensionResourceState contains the kind of the extension custom resource and its last observed state in the Shoot's
@@ -3918,6 +3948,10 @@ message WorkerControlPlane {
   // If it is not specified, then there won't be any backups taken.
   // +optional
   optional Backup backup = 1;
+
+  // Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).
+  // +optional
+  optional Exposure exposure = 2;
 }
 
 // WorkerKubernetes contains configuration for Kubernetes components related to this worker pool.
