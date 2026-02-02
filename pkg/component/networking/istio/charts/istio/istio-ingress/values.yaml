@@ -37,9 +37,13 @@ apiServerRequestHeaderGroup: X-Remote-Group
 apiServerAuthenticationDynamicMetadataKey: authenticated-kube-apiserver-host
 terminateAPIServerTLS: false
 terminateLoadBalancerProxyProtocol: false
-vpn:
+httpProxy:
   enabled: false
-  ports: {}
-  # tls-tunnel:
-  #   header: Reversed-VPN
-  #   port: 8132
+  legacyPort:
+    enabled: false
+    header: Reversed-VPN
+    port: 8132
+  unifiedPort:
+    enabled: false
+    header: X-Gardener-Destination
+    port: 8443

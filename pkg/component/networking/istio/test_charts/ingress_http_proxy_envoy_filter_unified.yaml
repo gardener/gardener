@@ -1,9 +1,8 @@
-{{- if and .Values.httpProxy.enabled .Values.httpProxy.legacyPort.enabled -}}
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
-  name: reversed-vpn
-  namespace: {{ .Release.Namespace }}
+  name: http-proxy
+  namespace: test-ingress
 spec:
   configPatches:
   - applyTo: NETWORK_FILTER
@@ -13,28 +12,32 @@ spec:
         filterChain:
           filter:
             name: envoy.filters.network.http_connection_manager
-        portNumber: {{ .Values.httpProxy.legacyPort.port }}
+        portNumber: 8443
     patch:
       operation: MERGE
       value:
         name: envoy.filters.network.http_connection_manager
         typed_config:
           '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          http_protocol_options:
+            accept_http_10: true
+          upgrade_configs:
+          - upgrade_type: CONNECT
           route_config:
             virtual_hosts:
             - domains:
               - "*"
-              name: reversed-vpn-tls-tunnel
+              name: http-proxy
               routes:
               - match:
                   connect_matcher: {}
                   headers:
-                    - name: {{ .Values.httpProxy.legacyPort.header }}
+                    - name: X-Gardener-Destination
                       string_match:
                         safe_regex:
                           regex: '^(outbound\|(1194\|\|vpn-seed-server(-[0-4])?|443\|\|kube-apiserver)\..*\.svc\.cluster\.local|shoot--.*--.*--kube-apiserver-socket)$'
                 route:
-                  cluster_header: {{ .Values.httpProxy.legacyPort.header }}
+                  cluster_header: X-Gardener-Destination
                   upgrade_configs:
                   - connect_config: {}
                     upgrade_type: CONNECT
@@ -55,34 +58,5 @@ spec:
                   port_redirect: 443
   workloadSelector:
     labels:
-{{ .Values.labels | toYaml | indent 6 }}
----
-apiVersion: networking.istio.io/v1alpha3
-kind: EnvoyFilter
-metadata:
-  name: http-connect-listener
-  namespace: {{ .Release.Namespace }}
-spec:
-  configPatches:
-  - applyTo: NETWORK_FILTER
-    match:
-      context: GATEWAY
-      listener:
-        portNumber: {{ .Values.httpProxy.legacyPort.port }}
-        filterChain:
-          filter:
-            name: envoy.filters.network.http_connection_manager
-    patch:
-      operation: MERGE
-      value:
-        name: envoy.filters.network.http_connection_manager
-        typed_config:
-          "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
-          http_protocol_options:
-            accept_http_10: true
-          upgrade_configs:
-          - upgrade_type: CONNECT
-  workloadSelector:
-    labels:
-{{ .Values.labels | toYaml | indent 6 }}
-{{- end }}
+      app: istio-ingressgateway
+      foo: bar

@@ -27,6 +27,7 @@ spec:
         - name: envoy.filters.listener.tls_inspector
           typed_config:
             "@type": type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+{{- if .Values.httpProxy.legacyPort.enabled }}
 ---
 # TODO(hown3d): Drop with RemoveHTTPProxyLegacyPort feature gate
 apiVersion: networking.istio.io/v1alpha3
@@ -45,7 +46,7 @@ spec:
     match:
       context: GATEWAY
       listener:
-        portNumber: 8132
+        portNumber: {{ .Values.httpProxy.legacyPort.port }}
     patch:
       operation: MERGE
       value:
@@ -55,4 +56,35 @@ spec:
             '@type': type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol
             allow_requests_without_proxy_protocol: true
         per_connection_buffer_limit_bytes: 32768
+{{- end }}
+{{- if .Values.httpProxy.unifiedPort.enabled }}
+---
+# TODO(hown3d): Unconditionally create with RemoveHTTPProxyLegacyPort feature gate
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  labels:
+{{ .Values.labels | toYaml | indent 4 }}
+  name: proxy-protocol-http-proxy
+  namespace: {{ .Release.Namespace }}
+spec:
+  workloadSelector:
+    labels:
+{{ .Values.labels | toYaml | indent 6 }}
+  configPatches:
+  - applyTo: LISTENER
+    match:
+      context: GATEWAY
+      listener:
+        portNumber: {{ .Values.httpProxy.unifiedPort.port }}
+    patch:
+      operation: MERGE
+      value:
+        listener_filters:
+        - name: proxy_protocol
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol
+            allow_requests_without_proxy_protocol: true
+        per_connection_buffer_limit_bytes: 32768
+{{- end }}
 {{ end -}}
