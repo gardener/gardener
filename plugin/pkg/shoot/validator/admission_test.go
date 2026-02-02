@@ -648,6 +648,108 @@ var _ = Describe("validator", func() {
 			})
 		})
 
+		Context("handling spec.seedSelector", func() {
+			BeforeEach(func() {
+				seed.Labels = map[string]string{
+					"provider": "local",
+					"purpose":  "test",
+				}
+				seed.Spec.Provider.Type = "local"
+
+				auth = mockauthorizer.NewMockAuthorizer(ctrl)
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+				auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionAllow, "", nil).AnyTimes()
+			})
+
+			It("should allow setting the seedSelector on create", func() {
+				shoot.Spec.SeedName = nil
+				shoot.Spec.SeedSelector = &core.SeedSelector{
+					LabelSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"provider": "local",
+						},
+					},
+					ProviderTypes: []string{"local"},
+				}
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Validate(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should allow changing the seedSelector on update when no seed is assigned", func() {
+				shoot.Spec.SeedName = nil
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.SeedSelector = &core.SeedSelector{
+					LabelSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"provider": "local",
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+				err := admissionHandler.Validate(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should allow changing a matching seedSelector on update when seed is assigned", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.SeedSelector = &core.SeedSelector{
+					LabelSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"provider": "local",
+						},
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{Key: "purpose", Operator: metav1.LabelSelectorOpIn, Values: []string{"test"}},
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+				err := admissionHandler.Validate(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should deny changing a seedSelector on update when the assigned seed does not match the new selector", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.SeedSelector = &core.SeedSelector{
+					LabelSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"provider": "local",
+						},
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{Key: "purpose", Operator: metav1.LabelSelectorOpIn, Values: []string{"production"}},
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+				err := admissionHandler.Validate(ctx, attrs, nil)
+
+				Expect(err).To(MatchError(ContainSubstring("cannot change seedSelector to not match the labels of the already selected seed")))
+			})
+
+			It("should deny changing the seedSelector provider type on update when the assigned seed does not match the new type", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.SeedSelector = &core.SeedSelector{
+					ProviderTypes: []string{"unknown"},
+				}
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+				err := admissionHandler.Validate(ctx, attrs, nil)
+
+				Expect(err).To(MatchError(ContainSubstring("cannot change seedSelector to not match the provider type of the already selected seed")))
+			})
+		})
+
 		Context("seedName change", func() {
 			var (
 				oldShoot core.Shoot

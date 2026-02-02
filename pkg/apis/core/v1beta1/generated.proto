@@ -3441,6 +3441,7 @@ message ShootSpec {
   optional string seedName = 14;
 
   // SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.
+  // Once the shoot is assigned to a seed, the selector can only be changed later if the new one still matches the assigned seed.
   // +optional
   optional SeedSelector seedSelector = 15;
 

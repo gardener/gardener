@@ -95,6 +95,7 @@ type ShootSpec struct {
 	// SeedName is the name of the seed cluster that runs the control plane of the Shoot.
 	SeedName *string
 	// SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.
+	// Once the shoot is assigned to a seed, the selector can only be changed later if the new one still matches the assigned seed.
 	SeedSelector *SeedSelector
 	// Resources holds a list of named resource references that can be referred to in extension configs by their names.
 	Resources []NamedResourceReference
