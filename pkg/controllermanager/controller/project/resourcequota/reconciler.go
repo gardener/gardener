@@ -24,13 +24,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-const (
-	annotationKeyConfigMapsPerShoot = "quota.gardener.cloud/configmaps-per-shoot"
-	annotationKeySecretsPerShoot    = "quota.gardener.cloud/secrets-per-shoot"
-
-	shootCountResource = "count/shoots.core.gardener.cloud"
-)
-
 // ResourceQuotaUsages describes the resource quota usages per shoot cluster in project namespaces.
 type ResourceQuotaUsages struct {
 	Annotation       string
@@ -43,12 +36,12 @@ var (
 	// Exposed for testing.
 	PerShootQuotaDescriptors = []ResourceQuotaUsages{
 		{
-			annotationKeyConfigMapsPerShoot,
+			"quota.gardener.cloud/configmaps-per-shoot",
 			"count/configmaps",
 			len(gardenerutils.GetShootProjectConfigMapSuffixes()),
 		},
 		{
-			annotationKeySecretsPerShoot,
+			"quota.gardener.cloud/secrets-per-shoot",
 			"count/secrets",
 			len(gardenerutils.GetShootProjectSecretSuffixes()),
 		},
@@ -107,22 +100,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
-	if err := r.Client.Patch(ctx, resourceQuota, patch); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed updating resource quota %q in namespace %q: %w", resourceQuota.Name, resourceQuota.Namespace, err)
-	}
-
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, r.Client.Patch(ctx, resourceQuota, patch)
 }
 
 func (r *Reconciler) handleMissingAnnotation(ctx context.Context, log logr.Logger, resourceQuota *corev1.ResourceQuota, usageAnnotation string, usageSpecKey corev1.ResourceName, expectedCount int) error {
 	maximumShootsInProject, err := r.getMaximumShootsInProject(ctx, *resourceQuota)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get maximum shoots in project: %w", err)
 	}
 
 	currentQuotaResource, ok := resourceQuota.Spec.Hard[usageSpecKey]
 	if !ok {
-		metav1.SetMetaDataAnnotation(&resourceQuota.ObjectMeta, usageAnnotation, strconv.Itoa(expectedCount))
 		return nil
 	}
 
@@ -147,7 +135,7 @@ func (r *Reconciler) handleAnnotationMismatch(ctx context.Context, log logr.Logg
 	if countDiff > 0 {
 		maximum, err := r.getMaximumShootsInProject(ctx, *resourceQuota)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not get maximum shoots in project: %w", err)
 		}
 
 		newQuota := ptr.To(resourceQuota.Spec.Hard[usageSpecKey]).Value() + maximum*countDiff
@@ -161,7 +149,7 @@ func (r *Reconciler) handleAnnotationMismatch(ctx context.Context, log logr.Logg
 }
 
 func (r *Reconciler) getMaximumShootsInProject(ctx context.Context, resourceQuota corev1.ResourceQuota) (int64, error) {
-	if limit, hasQuota := resourceQuota.Spec.Hard[corev1.ResourceName(shootCountResource)]; hasQuota {
+	if limit, hasQuota := resourceQuota.Spec.Hard[corev1.ResourceName("count/shoots.core.gardener.cloud")]; hasQuota {
 		return limit.Value(), nil
 	}
 	shootList := &metav1.PartialObjectMetadataList{}

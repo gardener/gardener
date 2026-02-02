@@ -147,7 +147,7 @@ var _ = Describe("ResourceQuota Controller tests", func() {
 		})
 
 		Context("Annotations do not exist", func() {
-			Context("Quota is enough", func() {
+			When("Quota is enough", func() {
 				BeforeEach(func() {
 					By("Create ResourceQuota with sufficient quota")
 					resourceQuota = &corev1.ResourceQuota{
@@ -186,7 +186,7 @@ var _ = Describe("ResourceQuota Controller tests", func() {
 				})
 			})
 
-			Context("No relevant Quota is specified", func() {
+			When("No relevant Quota is specified", func() {
 				BeforeEach(func() {
 					By("Create ResourceQuota with shoot quota but without configmap/secret quotas")
 					resourceQuota = &corev1.ResourceQuota{
@@ -214,8 +214,8 @@ var _ = Describe("ResourceQuota Controller tests", func() {
 					})
 				})
 
-				It("should only add the gardener created resource annotations to the resource quota", func() {
-					eventuallyExpectActualUsageAnnotations(ctx, resourceQuota)
+				It("should not add the gardener created resource annotations to the resource quota", func() {
+					consistentlyNotExpectUsageAnnotations(ctx, resourceQuota)
 					Consistently(func(g Gomega) {
 						currentResourceQuota := &corev1.ResourceQuota{}
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(resourceQuota), currentResourceQuota)).To(Succeed())
@@ -225,7 +225,7 @@ var _ = Describe("ResourceQuota Controller tests", func() {
 				})
 			})
 
-			Context("Quota is not enough", func() {
+			When("Quota is not enough", func() {
 				BeforeEach(func() {
 					By("Create ResourceQuota with insufficient quota")
 					resourceQuota = &corev1.ResourceQuota{
@@ -263,7 +263,7 @@ var _ = Describe("ResourceQuota Controller tests", func() {
 		})
 
 		Context("Annotations already exist", func() {
-			Context("Annotation values are equal to the expected values", func() {
+			When("Annotation values are equal to the expected values", func() {
 				BeforeEach(func() {
 					By("Create ResourceQuota with matching annotations")
 					resourceQuota = &corev1.ResourceQuota{
@@ -306,7 +306,7 @@ var _ = Describe("ResourceQuota Controller tests", func() {
 				})
 			})
 
-			Context("New annotation value is smaller than the existing one", func() {
+			When("New annotation value is smaller than the existing one", func() {
 				BeforeEach(func() {
 					By("Create ResourceQuota with higher annotation values")
 					resourceQuota = &corev1.ResourceQuota{
@@ -349,7 +349,7 @@ var _ = Describe("ResourceQuota Controller tests", func() {
 				})
 			})
 
-			Context("New annotation value is bigger than the existing one", func() {
+			When("New annotation value is bigger than the existing one", func() {
 				BeforeEach(func() {
 					By("Create ResourceQuota with lower annotation values")
 					resourceQuota = &corev1.ResourceQuota{
@@ -398,6 +398,19 @@ func consistentlyExpectUsageAnnotations(ctx context.Context, resourceQuota *core
 		currentResourceQuota := &corev1.ResourceQuota{}
 		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(resourceQuota), currentResourceQuota)).To(Succeed())
 		expectUsageAnnotations(g, currentResourceQuota, configMapsPerShoot, secretsPerShoot)
+	}).Should(Succeed())
+}
+
+func consistentlyNotExpectUsageAnnotations(ctx context.Context, resourceQuota *corev1.ResourceQuota) {
+	GinkgoHelper()
+	Consistently(func(g Gomega) {
+		currentResourceQuota := &corev1.ResourceQuota{}
+		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(resourceQuota), currentResourceQuota)).To(Succeed())
+		_, hasConfigMapAnnotation := currentResourceQuota.Annotations["gardener.cloud/configmaps-per-shoot"]
+		_, hasSecretAnnotation := currentResourceQuota.Annotations["gardener.cloud/secrets-per-shoot"]
+
+		g.Expect(hasConfigMapAnnotation).To(BeFalse(), "did not expect ConfigMap annotation to be present")
+		g.Expect(hasSecretAnnotation).To(BeFalse(), "did not expect secret annotation to be present")
 	}).Should(Succeed())
 }
 

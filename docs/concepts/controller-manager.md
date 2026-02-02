@@ -297,7 +297,7 @@ The `ResourceQuota` reconciler only reconciles `ResourceQuota`s in `Project` nam
 
 In the lifecycle of a `Shoot`, Gardener also creates some resources (`Secret`s and `ConfigMap`s) e.g. for certain CAs of the `Shoot`s in the `Project` namespace. This means that the `ResourceQuota` must allow for the creation of these resources, otherwise the `Shoot` reconciliation would fail due to quota violations.
 
-The reconciler ensures this by adding annotations to the `ResourceQuota`s as to how many resources (`Secret`s, `ConfigMap`s, etc.) Gardener itself will create in the `Project` namespace.
+The reconciler ensures this by adding annotations to the `ResourceQuota`s specifying how many resources (`Secret`s, `ConfigMap`s, etc.) Gardener itself will create in the `Project` namespace.
 This might change throughout Gardener versions. When such a change happens, the controller will update the annotations accordingly. 
 On a mismatch between the actual and the expected annotations, the reconciler will also update the `ResourceQuota` to ensure that the required resources can be created by Gardener.
 

@@ -29,8 +29,6 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		r.Client = mgr.GetClient()
 	}
 
-	log := mgr.GetLogger().WithValues("controller", ControllerName)
-
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -38,7 +36,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
-		For(&corev1.ResourceQuota{}, builder.WithPredicates(r.ObjectInProjectNamespace(ctx, log))).
+		For(&corev1.ResourceQuota{}, builder.WithPredicates(r.ObjectInProjectNamespace(ctx, mgr.GetLogger().WithValues("controller", ControllerName)))).
 		Complete(r)
 }
 
@@ -48,7 +46,7 @@ func (r *Reconciler) ObjectInProjectNamespace(ctx context.Context, log logr.Logg
 		namespace := object.GetNamespace()
 		project, err := gardenerutils.ProjectForNamespaceFromReader(ctx, r.Client, namespace)
 		if err != nil {
-			log.Error(err, "Unable to find gardener project", "namespace", namespace)
+			log.Error(err, "Unable to find project for namespace", "namespaceName", namespace)
 			return false
 		}
 		return project != nil
