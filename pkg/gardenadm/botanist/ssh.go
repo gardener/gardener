@@ -69,7 +69,7 @@ func (b *GardenadmBotanist) SSHConnection() *sshutils.Connection {
 var (
 	// envToOverrideFile maps ImageVector overwrite environment variables to their corresponding remote file paths on
 	// the control plane machine. If the environment variable is set locally, the file is copied to the remote path
-	// and WithImageVectorOverwriteEnvMap configures the remote commands to use the respective file.
+	// and ImageVectorOverrideEnv configures the remote commands to use the respective file.
 	// NB: We don't use filepath.Join here, because we explicitly need Linux path separators for the target machine,
 	// even when running `gardenadm bootstrap` on Windows.
 	envToOverrideFile = map[string]string{
