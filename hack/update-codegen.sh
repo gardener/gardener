@@ -496,6 +496,22 @@ CLIENT_GROUPS=(
 )
 
 printf "\n> Generating codegen for groups: %s\n" "${valid_options[*]}"
+
+if [[ "$MODE" == "parallel" ]]; then
+  uncategorized=()
+  for option in "${valid_options[@]}"; do
+    if [[ ! " ${HELPERS_ONLY_GROUPS[*]} " =~ " ${option} " ]] && [[ ! " ${CLIENT_GROUPS[*]} " =~ " ${option} " ]]; then
+      uncategorized+=("$option")
+    fi
+  done
+
+  if [[ ${#uncategorized[@]} -gt 0 ]]; then
+    printf "ERROR: The following groups are not categorized in HELPERS_ONLY_GROUPS or CLIENT_GROUPS: %s\n" "${uncategorized[*]}"
+    printf "Please add them to the appropriate array based on whether they use gen_client (CLIENT_GROUPS) or only gen_helpers (HELPERS_ONLY_GROUPS).\n\n"
+    exit 1
+  fi
+fi
+
 if [[ "$MODE" == "sequential" ]]; then
   for target in "${valid_options[@]}"; do
     "$target"
