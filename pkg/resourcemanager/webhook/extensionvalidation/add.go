@@ -61,9 +61,8 @@ func AddToManager(mgr manager.Manager) error {
 	} {
 		// RecoverPanic is defaulted to true.
 		if err := builder.
-			WebhookManagedBy(mgr).
+			WebhookManagedBy(mgr, obj).
 			WithValidator(validator).
-			For(obj).
 			Complete(); err != nil {
 			return err
 		}

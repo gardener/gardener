@@ -26,7 +26,6 @@ require (
 	github.com/go-jose/go-jose/v4 v4.1.3
 	github.com/go-logr/logr v1.4.3
 	github.com/go-test/deep v1.1.1
-	github.com/gogo/protobuf v1.3.2
 	github.com/google/gnostic-models v0.7.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.1
@@ -66,28 +65,28 @@ require (
 	helm.sh/helm/v3 v3.19.5
 	istio.io/api v1.27.6
 	istio.io/client-go v1.27.2
-	k8s.io/api v0.34.4
-	k8s.io/apiextensions-apiserver v0.34.4
-	k8s.io/apimachinery v0.34.4
-	k8s.io/apiserver v0.34.4
+	k8s.io/api v0.35.0
+	k8s.io/apiextensions-apiserver v0.35.0
+	k8s.io/apimachinery v0.35.0
+	k8s.io/apiserver v0.35.0
 	k8s.io/autoscaler/vertical-pod-autoscaler v1.5.1
-	k8s.io/cli-runtime v0.34.4
-	k8s.io/client-go v0.34.4
-	k8s.io/cluster-bootstrap v0.34.4
-	k8s.io/code-generator v0.34.4
-	k8s.io/component-base v0.34.4
-	k8s.io/component-helpers v0.34.4
+	k8s.io/cli-runtime v0.35.0
+	k8s.io/client-go v0.35.0
+	k8s.io/cluster-bootstrap v0.35.0
+	k8s.io/code-generator v0.35.0
+	k8s.io/component-base v0.35.0
+	k8s.io/component-helpers v0.35.0
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/kube-aggregator v0.34.4
+	k8s.io/kube-aggregator v0.35.0
 	k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912
-	k8s.io/kube-proxy v0.34.4
+	k8s.io/kube-proxy v0.35.0
 	k8s.io/kube-state-metrics/v2 v2.13.0
-	k8s.io/kubelet v0.34.4
-	k8s.io/metrics v0.34.4
-	k8s.io/pod-security-admission v0.34.4
+	k8s.io/kubelet v0.35.0
+	k8s.io/metrics v0.35.0
+	k8s.io/pod-security-admission v0.35.0
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
-	sigs.k8s.io/controller-runtime v0.22.5
-	sigs.k8s.io/controller-tools v0.19.0
+	sigs.k8s.io/controller-runtime v0.23.1
+	sigs.k8s.io/controller-tools v0.20.0
 	sigs.k8s.io/yaml v1.6.0
 )
 
@@ -182,6 +181,7 @@ require (
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
@@ -266,9 +266,9 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zitadel/oidc/v3 v3.38.1 // indirect
 	github.com/zitadel/schema v1.3.1 // indirect
-	go.etcd.io/etcd/api/v3 v3.6.4 // indirect
-	go.etcd.io/etcd/client/pkg/v3 v3.6.4 // indirect
-	go.etcd.io/etcd/client/v3 v3.6.4 // indirect
+	go.etcd.io/etcd/api/v3 v3.6.5 // indirect
+	go.etcd.io/etcd/client/pkg/v3 v3.6.5 // indirect
+	go.etcd.io/etcd/client/v3 v3.6.5 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/collector/featuregate v1.45.0 // indirect
@@ -314,14 +314,14 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01 // indirect
-	k8s.io/gengo/v2 v2.0.0-20250820003526-c297c0c1eb9d // indirect
+	k8s.io/gengo/v2 v2.0.0-20250922181213-ec3ebc5fd46b // indirect
 	k8s.io/klog v1.0.0 // indirect
-	k8s.io/kms v0.34.4 // indirect
+	k8s.io/kms v0.35.0 // indirect
 	k8s.io/sample-controller v0.30.3 // indirect
 	oras.land/oras-go/v2 v2.6.0 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.33.0 // indirect
 	sigs.k8s.io/gateway-api v1.3.0 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v6 v6.3.2-0.20260122202528-d9cc6641c482 // indirect
 )

@@ -44,7 +44,7 @@ func NewControllerDeploymentInformer(client versioned.Interface, resyncPeriod ti
 // one. This reduces memory footprint and number of connections to the server.
 func NewFilteredControllerDeploymentInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
-		&cache.ListWatch{
+		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
@@ -69,7 +69,7 @@ func NewFilteredControllerDeploymentInformer(client versioned.Interface, resyncP
 				}
 				return client.CoreV1().ControllerDeployments().Watch(ctx, options)
 			},
-		},
+		}, client),
 		&apiscorev1.ControllerDeployment{},
 		resyncPeriod,
 		indexers,
