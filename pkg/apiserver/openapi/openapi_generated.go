@@ -4894,7 +4894,7 @@ func schema_pkg_apis_core_v1beta1_KubeSchedulerConfig(ref common.ReferenceCallba
 					},
 					"kubeMaxPDVols": {
 						SchemaProps: spec.SchemaProps{
-							Description: "KubeMaxPDVols allows to configure the `KUBE_MAX_PD_VOLS` environment variable for the kube-scheduler. Please find more information here: https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits Note that using this field is considered alpha-/experimental-level and is on your own risk. You should be aware of all the side-effects and consequences when changing it.",
+							Description: "KubeMaxPDVols is not respected anymore by kube-scheduler. The maximum number of attached volumes is configured by the CSI driver. More information can be found at https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits. Deprecated: This field is deprecated. Using this field will be forbidden starting from Kubernetes 1.35.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -9618,7 +9618,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 				Properties: map[string]spec.Schema{
 					"addons": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Addons contains information about enabled/disabled addons and their configuration.",
+							Description: "Addons contains information about enabled/disabled addons and their configuration. Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons"),
 						},
 					},
@@ -10602,7 +10602,7 @@ func schema_pkg_apis_core_v1beta1_WatchCacheSizes(ref common.ReferenceCallback) 
 				Properties: map[string]spec.Schema{
 					"default": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Default configures the default watch cache size of the kube-apiserver (flag `--default-watch-cache-size`, defaults to 100). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/",
+							Description: "Default is not respected anymore by kube-apiserver. The cache is sized automatically. Deprecated: This field is deprecated. Setting the default cache size will be forbidden starting from Kubernetes 1.35.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},

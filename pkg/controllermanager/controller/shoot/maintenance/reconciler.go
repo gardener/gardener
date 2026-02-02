@@ -214,7 +214,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			if maintainedShoot.Spec.Kubernetes.KubeAPIServer != nil && maintainedShoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication != nil {
 				maintainedShoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = nil
 
-				reason := ".spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication is set to nil. Reason: The field is no longer supported for Shoot clusters using Kubernetes version 1.35+"
+				reason := ".spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication was removed. Reason: The field is no longer supported for Shoot clusters using Kubernetes version 1.35+"
 				operations = append(operations, reason)
 			}
 		}
@@ -233,6 +233,40 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 				reason := ".spec.secretBindingName was migrated to .spec.credentialsBindingName. Reason: SecretBinding is deprecated and can no longer be used for Shoot clusters using Kubernetes version 1.34+"
 				operations = append(operations, reason)
 			}
+		}
+	}
+
+	// Remove KubeMaxPDVols when Shoot cluster is being forcefully updated to K8s >= 1.35..
+	{
+		oldK8sLess135 := versionutils.ConstraintK8sLess135.Check(oldShootKubernetesVersion)
+		newK8sGreaterEqual135 := versionutils.ConstraintK8sGreaterEqual135.Check(shootKubernetesVersion)
+		if oldK8sLess135 && newK8sGreaterEqual135 && shoot.Spec.Kubernetes.KubeScheduler != nil && shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols != nil {
+			maintainedShoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = nil
+			reason := ".spec.kubernetes.kubeScheduler.kubeMaxPDVols was removed. Reason: kubeMaxPDVols is deprecated and not respected by the kube-scheduler"
+			operations = append(operations, reason)
+		}
+	}
+
+	// Remove default watch cache size when Shoot cluster is being forcefully updated to K8s >= 1.35..
+	{
+		oldK8sLess135 := versionutils.ConstraintK8sLess135.Check(oldShootKubernetesVersion)
+		newK8sGreaterEqual135 := versionutils.ConstraintK8sGreaterEqual135.Check(shootKubernetesVersion)
+		if oldK8sLess135 && newK8sGreaterEqual135 && shoot.Spec.Kubernetes.KubeAPIServer != nil &&
+			shoot.Spec.Kubernetes.KubeAPIServer.WatchCacheSizes != nil && shoot.Spec.Kubernetes.KubeAPIServer.WatchCacheSizes.Default != nil {
+			maintainedShoot.Spec.Kubernetes.KubeAPIServer.WatchCacheSizes.Default = nil
+			reason := ".spec.kubernetes.kubeAPIServer.watchCacheSizes.default was removed. Reason: the default size configuration is deprecated and not respected by the kube-apiserver"
+			operations = append(operations, reason)
+		}
+	}
+
+	// Remove addons when Shoot cluster is being forcefully updated to K8s >= 1.35..
+	{
+		oldK8sLess135 := versionutils.ConstraintK8sLess135.Check(oldShootKubernetesVersion)
+		newK8sGreaterEqual135 := versionutils.ConstraintK8sGreaterEqual135.Check(shootKubernetesVersion)
+		if oldK8sLess135 && newK8sGreaterEqual135 && shoot.Spec.Addons != nil {
+			maintainedShoot.Spec.Addons = nil
+			reason := ".spec.addons was removed. Reason: addons are not supported anymore for Kubernetes versions 1.35+"
+			operations = append(operations, reason)
 		}
 	}
 

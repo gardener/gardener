@@ -164,7 +164,6 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 
 		port           int32 = 10259
 		probeURIScheme       = corev1.URISchemeHTTPS
-		env                  = k.computeEnvironmentVariables()
 		command              = k.computeCommand(port)
 	)
 
@@ -253,7 +252,6 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 								Protocol:      corev1.ProtocolTCP,
 							},
 						},
-						Env: env,
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("10m"),
@@ -563,16 +561,6 @@ func (k *kubeScheduler) reconcileShootResources(ctx context.Context, serviceAcco
 	}
 
 	return managedresources.CreateForShoot(ctx, k.client, k.namespace, managedResourceName, managedresources.LabelValueGardener, false, data)
-}
-
-func (k *kubeScheduler) computeEnvironmentVariables() []corev1.EnvVar {
-	if k.config != nil && k.config.KubeMaxPDVols != nil {
-		return []corev1.EnvVar{{
-			Name:  "KUBE_MAX_PD_VOLS",
-			Value: *k.config.KubeMaxPDVols,
-		}}
-	}
-	return nil
 }
 
 func (k *kubeScheduler) computeComponentConfig() (string, error) {

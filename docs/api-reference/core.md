@@ -1908,7 +1908,9 @@ Addons
 </td>
 <td>
 <em>(Optional)</em>
-<p>Addons contains information about enabled/disabled addons and their configuration.</p>
+<p>Addons contains information about enabled/disabled addons and their configuration.
+Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.
+TODO(timuthy): Drop this field when support for Kubernetes 1.34 is dropped.</p>
 </td>
 </tr>
 <tr>
@@ -7045,10 +7047,11 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>KubeMaxPDVols allows to configure the <code>KUBE_MAX_PD_VOLS</code> environment variable for the kube-scheduler.
-Please find more information here: <a href="https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits">https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits</a>
-Note that using this field is considered alpha-/experimental-level and is on your own risk. You should be aware
-of all the side-effects and consequences when changing it.</p>
+<p>KubeMaxPDVols is not respected anymore by kube-scheduler.
+The maximum number of attached volumes is configured by the CSI driver.
+More information can be found at <a href="https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits">https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits</a>.
+Deprecated: This field is deprecated. Using this field will be forbidden starting from Kubernetes 1.35.
+TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.</p>
 </td>
 </tr>
 <tr>
@@ -10744,11 +10747,10 @@ WorkersSettings
 </p>
 <p>
 <p>ProxyMode available in Linux platform: &lsquo;userspace&rsquo; (older, going to be EOL), &lsquo;iptables&rsquo;
-(newer, faster), &lsquo;ipvs&rsquo; (newest, better in performance and scalability).
-As of now only &lsquo;iptables&rsquo; and &lsquo;ipvs&rsquo; is supported by Gardener.
+(newer, faster), &lsquo;nftables&rsquo;, and &lsquo;ipvs&rsquo; (deprecated starting with Kubernetes 1.35).
+As of now only &lsquo;iptables&rsquo;, &lsquo;nftables&rsquo; and &lsquo;ipvs&rsquo; (deprecated starting with Kubernetes 1.35) is supported by Gardener.
 In Linux platform, if the iptables proxy is selected, regardless of how, but the system&rsquo;s kernel or iptables versions are
-insufficient, this always falls back to the userspace proxy. IPVS mode will be enabled when proxy mode is set to &lsquo;ipvs&rsquo;,
-and the fall back path is firstly iptables and then userspace.</p>
+insufficient, this always falls back to the userspace proxy.</p>
 </p>
 <h3 id="core.gardener.cloud/v1beta1.QuotaSpec">QuotaSpec
 </h3>
@@ -13357,7 +13359,9 @@ Addons
 </td>
 <td>
 <em>(Optional)</em>
-<p>Addons contains information about enabled/disabled addons and their configuration.</p>
+<p>Addons contains information about enabled/disabled addons and their configuration.
+Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.
+TODO(timuthy): Drop this field when support for Kubernetes 1.34 is dropped.</p>
 </td>
 </tr>
 <tr>
@@ -14104,7 +14108,9 @@ Addons
 </td>
 <td>
 <em>(Optional)</em>
-<p>Addons contains information about enabled/disabled addons and their configuration.</p>
+<p>Addons contains information about enabled/disabled addons and their configuration.
+Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.
+TODO(timuthy): Drop this field when support for Kubernetes 1.34 is dropped.</p>
 </td>
 </tr>
 <tr>
@@ -15079,9 +15085,10 @@ int32
 </td>
 <td>
 <em>(Optional)</em>
-<p>Default configures the default watch cache size of the kube-apiserver
-(flag <code>--default-watch-cache-size</code>, defaults to 100).
-See: <a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/">https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/</a></p>
+<p>Default is not respected anymore by kube-apiserver.
+The cache is sized automatically.
+Deprecated: This field is deprecated. Setting the default cache size will be forbidden starting from Kubernetes 1.35.
+TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.</p>
 </td>
 </tr>
 <tr>

@@ -25,9 +25,6 @@ true
 
 {{- define "gardener-apiserver.watchCacheSizes" -}}
 {{- with .Values.global.apiserver.watchCacheSizes }}
-{{- if not (kindIs "invalid" .default) }}
-- --default-watch-cache-size={{ .default }}
-{{- end }}
 {{- with .resources }}
 - --watch-cache-sizes={{ include "gardener-apiserver.resourceWatchCacheSize" . | trimSuffix "," }}
 {{- end }}

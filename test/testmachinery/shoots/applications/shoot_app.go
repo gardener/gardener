@@ -74,7 +74,7 @@ var _ = ginkgo.Describe("Shoot application testing", func() {
 
 	f.Default().Beta().CIt("Dashboard should be available", func(ctx context.Context) {
 		shoot := f.Shoot
-		if !shoot.Spec.Addons.KubernetesDashboard.Enabled {
+		if shoot.Spec.Addons == nil || !shoot.Spec.Addons.KubernetesDashboard.Enabled {
 			ginkgo.Fail("The test requires .spec.addons.kubernetesDashboard.enabled to be true")
 		}
 

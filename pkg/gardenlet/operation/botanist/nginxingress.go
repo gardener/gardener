@@ -31,14 +31,14 @@ func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
 		externalTrafficPolicy    corev1.ServiceExternalTrafficPolicy
 	)
 
-	if nginxIngressSpec := b.Shoot.GetInfo().Spec.Addons.NginxIngress; nginxIngressSpec != nil {
-		configData = getConfig(nginxIngressSpec.Config)
+	if b.Shoot.GetInfo().Spec.Addons != nil && b.Shoot.GetInfo().Spec.Addons.NginxIngress != nil {
+		configData = getConfig(b.Shoot.GetInfo().Spec.Addons.NginxIngress.Config)
 
-		if nginxIngressSpec.LoadBalancerSourceRanges != nil {
-			loadBalancerSourceRanges = nginxIngressSpec.LoadBalancerSourceRanges
+		if b.Shoot.GetInfo().Spec.Addons.NginxIngress.LoadBalancerSourceRanges != nil {
+			loadBalancerSourceRanges = b.Shoot.GetInfo().Spec.Addons.NginxIngress.LoadBalancerSourceRanges
 		}
-		if nginxIngressSpec.ExternalTrafficPolicy != nil {
-			externalTrafficPolicy = *nginxIngressSpec.ExternalTrafficPolicy
+		if b.Shoot.GetInfo().Spec.Addons.NginxIngress.ExternalTrafficPolicy != nil {
+			externalTrafficPolicy = *b.Shoot.GetInfo().Spec.Addons.NginxIngress.ExternalTrafficPolicy
 		}
 	}
 

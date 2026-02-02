@@ -1,3 +1,4 @@
+# TODO(rfranzke): Update to v1.35 once https://github.com/gardener/gardener/pull/13651 is resolved.
 FROM kindest/node:v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a
 
 RUN apt-get update -yq && \

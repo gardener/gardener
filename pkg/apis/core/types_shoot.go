@@ -56,6 +56,8 @@ type ShootTemplate struct {
 // ShootSpec is the specification of a Shoot.
 type ShootSpec struct {
 	// Addons contains information about enabled/disabled addons and their configuration.
+	// Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.
+	// TODO(timuthy): Drop this field when support for Kubernetes 1.34 is dropped.
 	Addons *Addons
 	// CloudProfileName is a name of a CloudProfile object.
 	// Deprecated: This field will be removed in a future version of Gardener. Use `CloudProfile` instead.
@@ -911,9 +913,10 @@ type AdmissionPlugin struct {
 
 // WatchCacheSizes contains configuration of the API server's watch cache sizes.
 type WatchCacheSizes struct {
-	// Default configures the default watch cache size of the kube-apiserver
-	// (flag `--default-watch-cache-size`, defaults to 100).
-	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+	// Default is not respected anymore by kube-apiserver.
+	// The cache is sized automatically.
+	// Deprecated: This field is deprecated. Setting the default cache size will be forbidden starting from Kubernetes 1.35.
+	// TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.
 	Default *int32
 	// Resources configures the watch cache size of the kube-apiserver per resource
 	// (flag `--watch-cache-sizes`).
@@ -975,10 +978,11 @@ type HorizontalPodAutoscalerConfig struct {
 type KubeSchedulerConfig struct {
 	KubernetesConfig
 
-	// KubeMaxPDVols allows to configure the `KUBE_MAX_PD_VOLS` environment variable for the kube-scheduler.
-	// Please find more information here: https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits
-	// Note that using this field is considered alpha-/experimental-level and is on your own risk. You should be aware
-	// of all the side-effects and consequences when changing it.
+	// KubeMaxPDVols is not respected anymore by kube-scheduler.
+	// The maximum number of attached volumes is configured by the CSI driver.
+	// More information can be found at https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits.
+	// Deprecated: This field is deprecated. Using this field will be forbidden starting from Kubernetes 1.35.
+	// TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.
 	KubeMaxPDVols *string
 	// Profile configures the scheduling profile for the cluster.
 	// If not specified, the used profile is "balanced" (provides the default kube-scheduler behavior).
@@ -1012,11 +1016,10 @@ type KubeProxyConfig struct {
 }
 
 // ProxyMode available in Linux platform: 'userspace' (older, going to be EOL), 'iptables'
-// (newer, faster), 'ipvs' (newest, better in performance and scalability).
-// As of now only 'iptables' and 'ipvs' is supported by Gardener.
+// (newer, faster), 'nftables', and 'ipvs' (deprecated starting with Kubernetes 1.35).
+// As of now only 'iptables', 'nftables' and 'ipvs' (deprecated starting with Kubernetes 1.35) is supported by Gardener.
 // In Linux platform, if the iptables proxy is selected, regardless of how, but the system's kernel or iptables versions are
-// insufficient, this always falls back to the userspace proxy. IPVS mode will be enabled when proxy mode is set to 'ipvs',
-// and the fall back path is firstly iptables and then userspace.
+// insufficient, this always falls back to the userspace proxy.
 type ProxyMode string
 
 const (

@@ -439,7 +439,7 @@ func validateETCDAutoscaling(autoscaling *gardencorev1beta1.ControlPlaneAutoscal
 func validateGardener(gardener operatorv1alpha1.Gardener, kubernetes operatorv1alpha1.Kubernetes, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateGardenerAPIServerConfig(gardener.APIServer, fldPath.Child("gardenerAPIServer"))...)
+	allErrs = append(allErrs, validateGardenerAPIServerConfig(gardener.APIServer, kubernetes.Version, fldPath.Child("gardenerAPIServer"))...)
 	allErrs = append(allErrs, validateGardenerAdmissionController(gardener.AdmissionController, fldPath.Child("gardenerAdmissionController"))...)
 	allErrs = append(allErrs, validateGardenerControllerManagerConfig(gardener.ControllerManager, fldPath.Child("gardenerControllerManager"))...)
 	allErrs = append(allErrs, validateGardenerSchedulerConfig(gardener.Scheduler, fldPath.Child("gardenerScheduler"))...)
@@ -448,7 +448,7 @@ func validateGardener(gardener operatorv1alpha1.Gardener, kubernetes operatorv1a
 	return allErrs
 }
 
-func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerConfig, fldPath *field.Path) field.ErrorList {
+func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerConfig, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if config == nil {
@@ -514,7 +514,7 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 			allErrs = append(allErrs, field.InternalError(fldPath.Child("watchCacheSizes"), err))
 			return allErrs
 		}
-		allErrs = append(allErrs, gardencorevalidation.ValidateWatchCacheSizes(watchCacheSizes, fldPath.Child("watchCacheSizes"))...)
+		allErrs = append(allErrs, gardencorevalidation.ValidateWatchCacheSizes(watchCacheSizes, kubernetesVersion, fldPath.Child("watchCacheSizes"))...)
 	}
 
 	if config.Logging != nil {
@@ -646,9 +646,9 @@ func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardC
 
 func validateOperation(operations []string, garden *operatorv1alpha1.Garden, fldPath *field.Path) field.ErrorList {
 	var (
-		allErrs       = field.ErrorList{}
-		fldPathOp     = fldPath.Key(v1beta1constants.GardenerOperation)
-		k8sLess134, _ = versionutils.CheckVersionMeetsConstraint(garden.Spec.VirtualCluster.Kubernetes.Version, "< 1.34")
+		allErrs    = field.ErrorList{}
+		fldPathOp  = fldPath.Key(v1beta1constants.GardenerOperation)
+		k8sLess134 = versionutils.ConstraintK8sLess134.CheckVersion(garden.Spec.VirtualCluster.Kubernetes.Version)
 	)
 
 	if len(operations) == 0 {
@@ -682,7 +682,7 @@ func validateOperationContext(operations []string, garden *operatorv1alpha1.Gard
 		resourcesToEncrypt       = sets.New[schema.GroupResource]()
 		encryptionConfig         *gardencorev1beta1.EncryptionConfig
 		gardenerEncryptionConfig *gardencorev1beta1.EncryptionConfig
-		k8sLess134, _            = versionutils.CheckVersionMeetsConstraint(garden.Spec.VirtualCluster.Kubernetes.Version, "< 1.34")
+		k8sLess134               = versionutils.ConstraintK8sLess134.CheckVersion(garden.Spec.VirtualCluster.Kubernetes.Version)
 	)
 
 	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig != nil {

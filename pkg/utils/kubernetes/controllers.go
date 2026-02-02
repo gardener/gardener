@@ -48,11 +48,12 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 	},
 	"certificates/v1alpha1": {
 		"kube-apiserver-serving-clustertrustbundle-publisher-controller": {AddedInVersion: "1.32"},
-		"podcertificaterequest-cleaner-controller":                       {AddedInVersion: "1.34"},
+		"podcertificaterequest-cleaner-controller":                       {AddedInVersion: "1.34", RemovedInVersion: "1.35"},
 	},
 	"certificates/v1beta1": {
 		"csrsigning": {},
 		"kube-apiserver-serving-clustertrustbundle-publisher-controller": {AddedInVersion: "1.33"},
+		"podcertificaterequest-cleaner-controller":                       {AddedInVersion: "1.35"},
 	},
 	"coordination/v1": {
 		"nodelifecycle":      {},
@@ -88,7 +89,8 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"resource-claim-controller": {RemovedInVersion: "1.31"},
 	},
 	"resource/v1alpha3": {
-		"resource-claim-controller": {AddedInVersion: "1.31", RemovedInVersion: "1.32"},
+		"device-taint-eviction-controller": {AddedInVersion: "1.35"},
+		"resource-claim-controller":        {AddedInVersion: "1.31", RemovedInVersion: "1.32"},
 	},
 	"resource/v1beta1": {
 		"device-taint-eviction-controller": {AddedInVersion: "1.33", RemovedInVersion: "1.34"},
@@ -102,7 +104,10 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"volumeattributesclass-protection-controller": {AddedInVersion: "1.32", RemovedInVersion: "1.34"},
 	},
 	"storagemigration/v1alpha1": {
-		"storage-version-migrator-controller": {AddedInVersion: "1.30"},
+		"storage-version-migrator-controller": {AddedInVersion: "1.30", RemovedInVersion: "1.35"},
+	},
+	"storagemigration/v1beta1": {
+		"storage-version-migrator-controller": {AddedInVersion: "1.35"},
 	},
 	"v1": {
 		"attachdetach":                         {},

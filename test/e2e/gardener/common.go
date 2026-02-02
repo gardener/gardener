@@ -38,7 +38,7 @@ func baseShoot(name string) *gardencorev1beta1.Shoot {
 				Name: "local",
 			},
 			Kubernetes: gardencorev1beta1.Kubernetes{
-				Version:       "1.33.0",
+				Version:       "1.33",
 				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
 			},
 			Provider: gardencorev1beta1.Provider{
@@ -60,7 +60,7 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 	metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationShootCloudConfigExecutionMaxDelaySeconds, "0")
 	metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationAuthenticationIssuer, v1beta1constants.AnnotationAuthenticationIssuerManaged)
 
-	shoot.Spec.SecretBindingName = ptr.To("local")
+	shoot.Spec.CredentialsBindingName = ptr.To("local")
 	shoot.Spec.Kubernetes.Kubelet = &gardencorev1beta1.KubeletConfig{
 		SerializeImagePulls: ptr.To(false),
 		RegistryPullQPS:     ptr.To[int32](10),

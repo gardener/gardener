@@ -9,50 +9,45 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 var (
 	// ConstraintK8sLess131 is a version constraint for versions < 1.31.
-	ConstraintK8sLess131 *semver.Constraints
+	ConstraintK8sLess131 *Constraints
 	// ConstraintK8sEqual131 is a version constraint for versions == 1.31.
-	ConstraintK8sEqual131 *semver.Constraints
+	ConstraintK8sEqual131 *Constraints
 	// ConstraintK8sGreaterEqual131 is a version constraint for versions >= 1.31.
-	ConstraintK8sGreaterEqual131 *semver.Constraints
+	ConstraintK8sGreaterEqual131 *Constraints
 	// ConstraintK8sLess132 is a version constraint for versions < 1.32.
-	ConstraintK8sLess132 *semver.Constraints
+	ConstraintK8sLess132 *Constraints
 	// ConstraintK8sGreaterEqual132 is a version constraint for versions >= 1.32.
-	ConstraintK8sGreaterEqual132 *semver.Constraints
+	ConstraintK8sGreaterEqual132 *Constraints
 	// ConstraintK8sLess133 is a version constraint for versions < 1.33.
-	ConstraintK8sLess133 *semver.Constraints
+	ConstraintK8sLess133 *Constraints
 	// ConstraintK8sGreaterEqual133 is a version constraint for versions >= 1.33.
-	ConstraintK8sGreaterEqual133 *semver.Constraints
+	ConstraintK8sGreaterEqual133 *Constraints
 	// ConstraintK8sLess134 is a version constraint for versions < 1.34.
-	ConstraintK8sLess134 *semver.Constraints
+	ConstraintK8sLess134 *Constraints
 	// ConstraintK8sGreaterEqual134 is a version constraint for versions >= 1.34.
-	ConstraintK8sGreaterEqual134 *semver.Constraints
+	ConstraintK8sGreaterEqual134 *Constraints
+	// ConstraintK8sLess135 is a version constraint for versions < 1.35.
+	ConstraintK8sLess135 *Constraints
+	// ConstraintK8sGreaterEqual135 is a version constraint for versions >= 1.35.
+	ConstraintK8sGreaterEqual135 *Constraints
 )
 
 func init() {
-	var err error
-	ConstraintK8sLess131, err = semver.NewConstraint("< 1.31-0")
-	utilruntime.Must(err)
-	ConstraintK8sEqual131, err = semver.NewConstraint("~ 1.31.x-0")
-	utilruntime.Must(err)
-	ConstraintK8sGreaterEqual131, err = semver.NewConstraint(">= 1.31-0")
-	utilruntime.Must(err)
-	ConstraintK8sLess132, err = semver.NewConstraint("< 1.32-0")
-	utilruntime.Must(err)
-	ConstraintK8sGreaterEqual132, err = semver.NewConstraint(">= 1.32-0")
-	utilruntime.Must(err)
-	ConstraintK8sLess133, err = semver.NewConstraint("< 1.33-0")
-	utilruntime.Must(err)
-	ConstraintK8sGreaterEqual133, err = semver.NewConstraint(">= 1.33-0")
-	utilruntime.Must(err)
-	ConstraintK8sLess134, err = semver.NewConstraint("< 1.34-0")
-	utilruntime.Must(err)
-	ConstraintK8sGreaterEqual134, err = semver.NewConstraint(">= 1.34-0")
-	utilruntime.Must(err)
+	ConstraintK8sLess131 = MustNewConstraint("< 1.31-0")
+	ConstraintK8sEqual131 = MustNewConstraint("~ 1.31.x-0")
+	ConstraintK8sGreaterEqual131 = MustNewConstraint(">= 1.31-0")
+	ConstraintK8sLess132 = MustNewConstraint("< 1.32-0")
+	ConstraintK8sGreaterEqual132 = MustNewConstraint(">= 1.32-0")
+	ConstraintK8sLess133 = MustNewConstraint("< 1.33-0")
+	ConstraintK8sGreaterEqual133 = MustNewConstraint(">= 1.33-0")
+	ConstraintK8sLess134 = MustNewConstraint("< 1.34-0")
+	ConstraintK8sGreaterEqual134 = MustNewConstraint(">= 1.34-0")
+	ConstraintK8sLess135 = MustNewConstraint("< 1.35-0")
+	ConstraintK8sGreaterEqual135 = MustNewConstraint(">= 1.35-0")
 }
 
 // CompareVersions returns true if the constraint <version1> compared by <operator> to <version2>
