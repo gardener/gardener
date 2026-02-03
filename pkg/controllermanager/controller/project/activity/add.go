@@ -77,8 +77,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Complete(r)
 }
 
-// OnlyNewlyCreatedObjects filters for objects which are created less than an hour ago for create events. This can be
-// used to prevent unnecessary reconciliations in case of controller restarts.
+// OnlyNewlyCreatedObjects filters for objects which are created less than an hour ago for create events and update events where the resource version
+// has changed. This can be used to prevent unnecessary reconciliations in case of controller restarts or cache resyncs.
 func (r *Reconciler) OnlyNewlyCreatedObjects() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
@@ -88,6 +88,9 @@ func (r *Reconciler) OnlyNewlyCreatedObjects() predicate.Predicate {
 			}
 
 			return r.Clock.Now().UTC().Sub(objMeta.GetCreationTimestamp().UTC()) <= time.Hour
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return e.ObjectOld.GetResourceVersion() != e.ObjectNew.GetResourceVersion()
 		},
 	}
 }
