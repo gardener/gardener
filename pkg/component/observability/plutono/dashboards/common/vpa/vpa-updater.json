@@ -175,7 +175,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(increase(vpa_updater_evicted_pods_total{pod=~\"$pod\"}[$__range]))",
+          "expr": "sum(floor(increase(vpa_updater_evicted_pods_total{pod=~\"$pod\"}[$__range])))",
           "interval": "",
           "legendFormat": "Successful ",
           "refId": "Successful evictions"
