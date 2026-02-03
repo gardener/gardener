@@ -26,12 +26,12 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterInput{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "journald-containerd",
+							Name:   "systemd-containerd",
 							Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 						},
 						Spec: fluentbitv1alpha2.InputSpec{
 							Systemd: &fluentbitv1alpha2input.Systemd{
-								Tag:           "journald.containerd",
+								Tag:           "systemd.containerd",
 								ReadFromTail:  "on",
 								SystemdFilter: []string{"_SYSTEMD_UNIT=containerd.service"},
 							},
@@ -43,11 +43,11 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterFilter{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "journald-containerd",
+							Name:   "systemd-containerd",
 							Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 						},
 						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: "journald.containerd.*",
+							Match: "systemd.containerd.*",
 							FilterItems: []fluentbitv1alpha2.FilterItem{
 								{
 									RecordModifier: &fluentbitv1alpha2filter.RecordModifier{

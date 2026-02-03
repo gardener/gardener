@@ -26,12 +26,12 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterInput{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "journald-gardener-node-agent",
+							Name:   "systemd-gardener-node-agent",
 							Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 						},
 						Spec: fluentbitv1alpha2.InputSpec{
 							Systemd: &fluentbitv1alpha2input.Systemd{
-								Tag:           "journald.gardener-node-agent",
+								Tag:           "systemd.gardener-node-agent",
 								ReadFromTail:  "on",
 								SystemdFilter: []string{"_SYSTEMD_UNIT=gardener-node-agent.service"},
 							},
@@ -43,11 +43,11 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterFilter{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "journald-gardener-node-agent",
+							Name:   "systemd-gardener-node-agent",
 							Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 						},
 						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: "journald.gardener-node-agent.*",
+							Match: "systemd.gardener-node-agent.*",
 							FilterItems: []fluentbitv1alpha2.FilterItem{
 								{
 									RecordModifier: &fluentbitv1alpha2filter.RecordModifier{
