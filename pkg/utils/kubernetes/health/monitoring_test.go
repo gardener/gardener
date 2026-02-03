@@ -188,21 +188,6 @@ var _ = Describe("Monitoring", func() {
 			port            int
 			responseHandler func(w http.ResponseWriter)
 
-			createPrometheusVectorResponse = func(value string) map[string]any {
-				// Example response format:
-				// {"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[1756207466.038,"1"]}]}}
-				return map[string]any{
-					"status": "success",
-					"data": map[string]any{
-						"resultType": "vector",
-						"result": []map[string]any{{
-							"metric": map[string]any{},
-							"value":  []any{float64(time.Now().Unix()), value},
-						}},
-					},
-				}
-			}
-
 			createResponseHandler = func(statusCode int, response map[string]any) func(w http.ResponseWriter) {
 				return func(w http.ResponseWriter) {
 					w.WriteHeader(statusCode)
@@ -247,21 +232,47 @@ var _ = Describe("Monitoring", func() {
 		})
 
 		It("should return false when healthcheck:up is 0", func() {
-			response := createPrometheusVectorResponse("0")
+			response := map[string]any{
+				"status": "success",
+				"data": map[string]any{
+					"resultType": "vector",
+					"result": []map[string]any{
+						{
+							"metric": map[string]any{"__name__": "healthcheck:up", "task": "foo"},
+							"value":  []any{float64(time.Now().Unix()), "0"},
+						},
+						{
+							"metric": map[string]any{"__name__": "healthcheck:up", "task": "bar"},
+							"value":  []any{float64(time.Now().Unix()), "0"},
+						},
+					},
+				},
+			}
 			responseHandler = createResponseHandler(http.StatusOK, response)
 
 			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.IsHealthy).To(BeFalse())
+			Expect(result.Message).To(Equal(`healthcheck:up{task="bar"} => 0, healthcheck:up{task="foo"} => 0`))
 		})
 
-		It("should return true when health:up is 1", func() {
-			response := createPrometheusVectorResponse("1")
+		It("should return true when healthcheck:up is 1", func() {
+			response := map[string]any{
+				"status": "success",
+				"data": map[string]any{
+					"resultType": "vector",
+					"result": []map[string]any{{
+						"metric": map[string]string{"__name__": "healthcheck:up"},
+						"value":  []any{float64(time.Now().Unix()), "1"},
+					}},
+				},
+			}
 			responseHandler = createResponseHandler(http.StatusOK, response)
 
 			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.IsHealthy).To(BeTrue())
+			Expect(result.Message).To(Equal(""))
 		})
 
 		It("should handle prometheus error responses", func() {
@@ -275,17 +286,28 @@ var _ = Describe("Monitoring", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("invalid query"))
 			Expect(result.IsHealthy).To(BeFalse())
+			Expect(result.Message).To(Equal(""))
 		})
 
 		It("should handle warnings in prometheus response", func() {
-			response := createPrometheusVectorResponse("1")
-			response["warnings"] = []string{"some warning"}
+			response := map[string]any{
+				"status":   "success",
+				"warnings": []string{"some warning"},
+				"data": map[string]any{
+					"resultType": "vector",
+					"result": []map[string]any{{
+						"metric": map[string]string{"__name__": "healthcheck:up"},
+						"value":  []any{float64(time.Now().Unix()), "1"},
+					}},
+				},
+			}
 			responseHandler = createResponseHandler(http.StatusOK, response)
 
 			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("query returned warnings"))
 			Expect(result.IsHealthy).To(BeFalse())
+			Expect(result.Message).To(Equal(""))
 		})
 
 		It("should handle unexpected result type", func() {
@@ -302,6 +324,7 @@ var _ = Describe("Monitoring", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("query returned an unexpected result type"))
 			Expect(result.IsHealthy).To(BeFalse())
+			Expect(result.Message).To(Equal(""))
 		})
 
 		It("should handle empty vector response", func() {
@@ -318,20 +341,21 @@ var _ = Describe("Monitoring", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("recording rules are not deployed or running yet"))
 			Expect(result.IsHealthy).To(BeFalse())
+			Expect(result.Message).To(Equal(""))
 		})
 
-		It("should handle vector response with multiple values", func() {
+		It("should handle vector response with unexpected samples", func() {
 			response := map[string]any{
 				"status": "success",
 				"data": map[string]any{
 					"resultType": "vector",
 					"result": []map[string]any{
 						{
-							"metric": map[string]any{},
-							"value":  []any{float64(time.Now().Unix()), "1"},
+							"metric": map[string]any{"__name__": "healthcheck:up", "task": "foo"},
+							"value":  []any{float64(time.Now().Unix()), "2"},
 						},
 						{
-							"metric": map[string]any{},
+							"metric": map[string]any{"__name__": "healthcheck:up", "task": "bar"},
 							"value":  []any{float64(time.Now().Unix()), "2"},
 						},
 					},
@@ -341,15 +365,77 @@ var _ = Describe("Monitoring", func() {
 
 			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("query returned multiple results but a single value was expected"))
+			Expect(err.Error()).To(Equal(`query returned inconsistent sample values: healthcheck:up{task="bar"} => 2, healthcheck:up{task="foo"} => 2`))
 			Expect(result.IsHealthy).To(BeFalse())
+			Expect(result.Message).To(Equal(""))
+		})
+
+		It("should handle vector response with multiple healthy samples", func() {
+			response := map[string]any{
+				"status": "success",
+				"data": map[string]any{
+					"resultType": "vector",
+					"result": []map[string]any{
+						{
+							"metric": map[string]any{"__name__": "healthcheck:up", "task": "foo"},
+							"value":  []any{float64(time.Now().Unix()), "1"},
+						},
+						{
+							"metric": map[string]any{"__name__": "healthcheck:up"},
+							"value":  []any{float64(time.Now().Unix()), "1"},
+						},
+					},
+				},
+			}
+			responseHandler = createResponseHandler(http.StatusOK, response)
+
+			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal(`query returned inconsistent sample values: healthcheck:up => 1, healthcheck:up{task="foo"} => 1`))
+			Expect(result.IsHealthy).To(BeFalse())
+			Expect(result.Message).To(Equal(""))
+		})
+
+		It("should handle vector response with healthy and unhealthy samples", func() {
+			response := map[string]any{
+				"status": "success",
+				"data": map[string]any{
+					"resultType": "vector",
+					"result": []map[string]any{
+						{
+							"metric": map[string]any{"__name__": "healthcheck:up", "task": "foo"},
+							"value":  []any{float64(time.Now().Unix()), "0"},
+						},
+						{
+							"metric": map[string]any{"__name__": "healthcheck:up"},
+							"value":  []any{float64(time.Now().Unix()), "1"},
+						},
+					},
+				},
+			}
+			responseHandler = createResponseHandler(http.StatusOK, response)
+
+			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal(`query returned inconsistent sample values: healthcheck:up => 1, healthcheck:up{task="foo"} => 0`))
+			Expect(result.IsHealthy).To(BeFalse())
+			Expect(result.Message).To(Equal(""))
 		})
 
 		It("should handle timeouts", func() {
 			serverCtx, serverCancel := context.WithCancel(context.Background())
 			defer serverCancel()
 
-			response := createPrometheusVectorResponse("1")
+			response := map[string]any{
+				"status": "success",
+				"data": map[string]any{
+					"resultType": "vector",
+					"result": []map[string]any{{
+						"metric": map[string]string{"__name__": "healthcheck:up"},
+						"value":  []any{float64(time.Now().Unix()), "1"},
+					}},
+				},
+			}
 			responseHandler = func(w http.ResponseWriter) {
 				// cancel sleep if serverCtx is canceled
 				select {

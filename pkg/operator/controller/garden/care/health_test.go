@@ -555,7 +555,7 @@ var _ = Describe("Garden health", func() {
 					return health.PrometheusHealthCheckResult{IsHealthy: true}, nil
 				}
 				unhealthy = func(_ context.Context, _ string, _ int) (health.PrometheusHealthCheckResult, error) {
-					return health.PrometheusHealthCheckResult{IsHealthy: false}, nil
+					return health.PrometheusHealthCheckResult{IsHealthy: false, Message: "foo is unhealthy"}, nil
 				}
 				erroring = func(_ context.Context, _ string, _ int) (health.PrometheusHealthCheckResult, error) {
 					return health.PrometheusHealthCheckResult{}, errors.New("test error")
@@ -592,7 +592,7 @@ var _ = Describe("Garden health", func() {
 						operatorv1alpha1.ObservabilityComponentsHealthy,
 						gardencorev1beta1.ConditionFalse,
 						"PrometheusHealthCheckDown",
-						`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "healthcheck" for more details.`)))
+						`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "healthcheck:up" for more details: foo is unhealthy`)))
 			})
 
 			It("should set ObservabilityComponentsHealthy condition to false if Prometheus health check is erroring", func() {
@@ -669,7 +669,7 @@ var _ = Describe("Garden health", func() {
 							operatorv1alpha1.ObservabilityComponentsHealthy,
 							gardencorev1beta1.ConditionFalse,
 							"PrometheusHealthCheckDown",
-							`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "healthcheck" for more details.`)))
+							`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "healthcheck:up" for more details: foo is unhealthy`)))
 				})
 
 				It("should ignore the Prometheus resource if it doesn't have the right health-check-by label", func() {

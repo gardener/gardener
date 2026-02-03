@@ -747,7 +747,7 @@ var _ = Describe("HealthChecker", func() {
 					return health.PrometheusHealthCheckResult{IsHealthy: true}, nil
 				}
 				unhealthy = func() (health.PrometheusHealthCheckResult, error) { // nolint:unparam
-					return health.PrometheusHealthCheckResult{IsHealthy: false}, nil
+					return health.PrometheusHealthCheckResult{IsHealthy: false, Message: "foo is unhealthy"}, nil
 				}
 				erroring = func() (health.PrometheusHealthCheckResult, error) {
 					return health.PrometheusHealthCheckResult{}, errors.New("test error")
@@ -851,7 +851,7 @@ var _ = Describe("HealthChecker", func() {
 				Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
 				Expect(result.Reason).To(Equal("PrometheusHealthCheckDown"))
 				Expect(result.Message).To(Equal(`There are health issues in Prometheus pod "shoot--foo--bar/prometheus-testprom-2". ` +
-					`Access Prometheus UI and query for "healthcheck" for more details.`))
+					`Access Prometheus UI and query for "healthcheck:up" for more details: foo is unhealthy`))
 			})
 
 			It("should return nil when there are no health issues", func() {
@@ -955,7 +955,7 @@ var _ = Describe("HealthChecker", func() {
 					Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
 					Expect(result.Reason).To(Equal("PrometheusHealthCheckDown"))
 					Expect(result.Message).To(Equal(`There are health issues in Prometheus pod "shoot--foo--bar/prometheus-testprom-2". ` +
-						`Access Prometheus UI and query for "healthcheck" for more details.`))
+						`Access Prometheus UI and query for "healthcheck:up" for more details: foo is unhealthy`))
 
 					// Change the order of managed resources and expect the same result
 					prometheuses = &monitoringv1.PrometheusList{Items: []monitoringv1.Prometheus{prometheuses.Items[1], prometheuses.Items[0]}}

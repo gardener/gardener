@@ -7,6 +7,8 @@ package health
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -17,8 +19,10 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+// PrometheusHealthCheckResult contains the result of a Prometheus health check.
 type PrometheusHealthCheckResult struct {
 	IsHealthy bool
+	Message   string
 }
 
 // PrometheusHealthChecker is a function type that checks for health issues in a Prometheus instance.
@@ -53,12 +57,52 @@ func IsPrometheusHealthy(ctx context.Context, endpoint string, port int) (Promet
 	vector := result.(model.Vector)
 	if len(vector) == 0 {
 		return PrometheusHealthCheckResult{}, fmt.Errorf("recording rules are not deployed or running yet")
-	} else if len(vector) > 1 {
-		return PrometheusHealthCheckResult{}, fmt.Errorf("query returned multiple results but a single value was expected")
 	}
 
-	isHealthy := vector[0].Value == 1
-	return PrometheusHealthCheckResult{IsHealthy: isHealthy}, nil
+	var (
+		healthySamples    []string
+		unhealthySamples  []string
+		unexpectedSamples []string
+
+		healthy        = model.SampleValue(1)
+		unhealthy      = model.SampleValue(0)
+		sampleToString = func(s *model.Sample) string {
+			return fmt.Sprintf("%s => %s", s.Metric, s.Value)
+		}
+	)
+
+	for _, sample := range vector {
+		switch sample.Value {
+		case healthy:
+			healthySamples = append(healthySamples, sampleToString(sample))
+		case unhealthy:
+			unhealthySamples = append(unhealthySamples, sampleToString(sample))
+		default:
+			unexpectedSamples = append(unexpectedSamples, sampleToString(sample))
+		}
+	}
+
+	slices.Sort(unhealthySamples)
+
+	var (
+		hasUnexpectedSamples          = len(unexpectedSamples) > 0
+		hasMultipleHealthySamples     = len(healthySamples) > 1
+		hasHealthyAndUnhealthySamples = len(healthySamples) > 0 && len(unhealthySamples) > 0
+
+		isHealthy = len(healthySamples) == 1
+		message   = strings.Join(unhealthySamples, ", ")
+	)
+
+	if hasUnexpectedSamples || hasMultipleHealthySamples || hasHealthyAndUnhealthySamples {
+		var samples []string
+		samples = append(samples, healthySamples...)
+		samples = append(samples, unhealthySamples...)
+		samples = append(samples, unexpectedSamples...)
+		slices.Sort(samples)
+		return PrometheusHealthCheckResult{}, fmt.Errorf("query returned inconsistent sample values: %s", strings.Join(samples, ", "))
+	}
+
+	return PrometheusHealthCheckResult{IsHealthy: isHealthy, Message: message}, nil
 }
 
 // CheckPrometheus checks whether the given Prometheus is healthy.

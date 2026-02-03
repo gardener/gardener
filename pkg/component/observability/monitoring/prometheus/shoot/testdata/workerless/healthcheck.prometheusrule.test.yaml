@@ -10,8 +10,8 @@ rule_files:
 #
 #   - Group 1: Indentation guide for better readability. The values are aligned vertically to form columns,
 #     making it easy to visually match each value to its evaluation interval.
-#   - Group 2: The time series that are relevant for the test together with the expected result.
-#   - Group 3: Other time series that are needed for the test to pass.
+#   - Groups 2..N: The time series that are relevant for the test together with the expected result.
+#   - Group N+1: Other time series that are needed for the test to pass.
 #
 # - The assertion in the `promql_expr_test` uses set difference operations
 #   to ensure that the actual result and the expected result are the same.
@@ -35,8 +35,13 @@ tests:
 
       - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
         values: 0     1     2     stale _     _     _     _     0     1     0
+      - series: expected_healthcheck:up{task="rule_evaluation:unknown_status"}
+        values: stale stale stale 0     0     0     0     0     stale stale stale
+      - series: expected_healthcheck:up{task="rule_evaluation:first_cycle"}
+        values: 0     stale stale stale stale stale stale stale 0     stale stale
+
       - series: expected_healthcheck:up
-        values: 0     1     1     0     0     0     0     0     0     1     1
+        values: stale 1     1     stale stale stale stale stale stale 1     1
 
       - series: container_cpu_usage_seconds_total{pod="prometheus-shoot-0"}
         values: 100x10
@@ -86,8 +91,11 @@ tests:
 
       - series: up
         values: 1     1     1     0     1     stale _     _     0     0     1
+      - series: expected_healthcheck:up{task="target:down"}
+        values: stale stale stale 0     stale stale stale stale 0     0     stale
+
       - series: expected_healthcheck:up
-        values: 0     1     1     0     1     1     1     1     0     0     1
+        values: 1     1     1     stale 1     1     1     1     stale stale 1
 
       - series: container_cpu_usage_seconds_total{pod="prometheus-shoot-0"}
         values: 100x10
@@ -98,7 +106,7 @@ tests:
       - series: metering:cpu_requests:sum_by_namespace
         values: 1x10
       - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
-        values: 0+1x10
+        values: 1+1x10
     promql_expr_test: *promql_expr_test
 
   # The focus of this test is the `prometheus_target_scrape_pool_targets` time series.
@@ -116,8 +124,11 @@ tests:
         values: 0     0     0     0     0     0     0     0     0     0     0
       - series: prometheus_target_scrape_pool_targets{scrape_job="scrapeConfig/shoot--abc/shoot-calico-bird"}
         values: 0     0     0     0     0     0     0     0     0     0     0
+      - series: expected_healthcheck:up{task="scrape_pool:empty"}
+        values: stale stale stale 0     0     stale stale stale stale stale stale
+
       - series: expected_healthcheck:up
-        values: 0     1     1     0     0     1     1     1     1     1     1
+        values: 1     1     1     stale stale 1     1     1     1     1     1
 
       - series: container_cpu_usage_seconds_total{pod="prometheus-shoot-0"}
         values: 100x10
@@ -128,7 +139,7 @@ tests:
       - series: metering:cpu_requests:sum_by_namespace
         values: 1x10
       - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
-        values: 0+1x10
+        values: 1+1x10
     promql_expr_test: *promql_expr_test
 
   # The focus of this test is the scrape_samples_post_metric_relabeling time series.
@@ -144,8 +155,11 @@ tests:
         values: 100   100   0     100   0     0     0     0     0     0     100
       - series: scrape_samples_post_metric_relabeling{job="foo", instance="2"}
         values: 0     0     0     0     100   0     0     0     0     0     0
+      - series: expected_healthcheck:up{task="scrape:empty", job="foo"}
+        values: stale stale 0     stale stale 0     0     0     0     0     stale
+
       - series: expected_healthcheck:up
-        values: 0     1     0     1     1     0     0     0     0     0     1
+        values: 1     1     stale 1     1     stale stale stale stale stale 1
 
       - series: container_cpu_usage_seconds_total{pod="prometheus-shoot-0"}
         values: 100x10
@@ -156,7 +170,7 @@ tests:
       - series: metering:cpu_requests:sum_by_namespace
         values: 1x10
       - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
-        values: 0+1x10
+        values: 1+1x10
     promql_expr_test: *promql_expr_test
 
   # The focus of this test are the cAdvisor and kube-state-metrics time series of the control plane.
@@ -171,17 +185,23 @@ tests:
 
       - series: container_cpu_usage_seconds_total{pod="prometheus-shoot-0"}
         values: 1     1     stale 1     1     1     1     1     1     1     1
+      - series: expected_healthcheck:up{task="cadvisor:control_plane:absent"}
+        values: stale stale 0     stale stale stale stale stale stale stale stale
+
       - series: kube_pod_container_resource_requests{pod="prometheus-shoot-0"}
         values: 1     1     1     1     stale 1     1     1     1     1     1
+      - series: expected_healthcheck:up{task="kube_state_metrics:control_plane:absent"}
+        values: stale stale stale stale 0     stale stale stale stale stale stale
+
       - series: expected_healthcheck:up
-        values: 0     1     0     1     0     1     1     1     1     1     1
+        values: 1     1     stale 1     stale 1     1     1     1     1     1
 
       - series: apiserver_request_total
         values: 1x10
       - series: metering:cpu_requests:sum_by_namespace
         values: 1x10
       - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
-        values: 0+1x10
+        values: 1+1x10
     promql_expr_test: *promql_expr_test
 
   # The focus of this test is the Kubernetes API server time series.
@@ -196,8 +216,11 @@ tests:
 
       - series: apiserver_request_total
         values: 1     1     stale 1     1     1     1     stale 1     1     1
+      - series: expected_healthcheck:up{task="apiserver_request:absent"}
+        values: stale stale 0     stale stale stale stale 0     stale stale stale
+
       - series: expected_healthcheck:up
-        values: 0     1     0     1     1     1     1     0     1     1     1
+        values: 1     1     stale 1     1     1     1     stale 1     1     1
 
       - series: container_cpu_usage_seconds_total{pod="prometheus-shoot-0"}
         values: 100x10
@@ -206,7 +229,7 @@ tests:
       - series: metering:cpu_requests:sum_by_namespace
         values: 1x10
       - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
-        values: 0+1x10
+        values: 1+1x10
     promql_expr_test: *promql_expr_test
 
   # The focus of this test are the metering time series.
@@ -221,8 +244,11 @@ tests:
 
       - series: metering:cpu_requests:sum_by_namespace
         values: 1     1     1     1     stale 1     1     stale 1     1     1
+      - series: expected_healthcheck:up{task="federate:metering:absent"}
+        values: stale stale stale stale 0     stale stale 0     stale stale stale
+
       - series: expected_healthcheck:up
-        values: 0     1     1     1     0     1     1     0     1     1     1
+        values: 1     1     1     1     stale 1     1     stale 1     1     1
 
       - series: container_cpu_usage_seconds_total{pod="prometheus-shoot-0"}
         values: 100x10
@@ -231,5 +257,5 @@ tests:
       - series: apiserver_request_total
         values: 1x10
       - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
-        values: 0+1x10
+        values: 1+1x10
     promql_expr_test: *promql_expr_test
