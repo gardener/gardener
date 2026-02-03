@@ -5,6 +5,8 @@
 package apiserver
 
 import (
+	"net"
+
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,6 +14,18 @@ import (
 
 	"github.com/gardener/gardener/pkg/utils"
 )
+
+// GetAddressType returns the AddressType for the given IP address string.
+func GetAddressType(ip string) discoveryv1.AddressType {
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil {
+		return discoveryv1.AddressTypeFQDN
+	}
+	if parsedIP.To4() != nil {
+		return discoveryv1.AddressTypeIPv4
+	}
+	return discoveryv1.AddressTypeIPv6
+}
 
 func (g *gardenerAPIServer) endpointslice(clusterIP string) *discoveryv1.EndpointSlice {
 	return &discoveryv1.EndpointSlice{
@@ -22,8 +36,7 @@ func (g *gardenerAPIServer) endpointslice(clusterIP string) *discoveryv1.Endpoin
 				discoveryv1.LabelServiceName: serviceName,
 			}),
 		},
-		// TODO(tobschli): This could also be IPv6, depending on the cluster setup.
-		AddressType: discoveryv1.AddressTypeIPv4,
+		AddressType: GetAddressType(clusterIP),
 		Ports: []discoveryv1.EndpointPort{{
 			Port:     ptr.To(int32(servicePort)),
 			Protocol: ptr.To(corev1.ProtocolTCP),

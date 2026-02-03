@@ -16,6 +16,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -1614,6 +1615,18 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 				Expect(deployer.WaitCleanup(ctx)).To(Succeed())
 			})
 		})
+	})
+
+	Context("helper functions", func() {
+		DescribeTable("#GetAddressType",
+			func(address string, expected discoveryv1.AddressType) {
+				result := GetAddressType(address)
+				Expect(result).To(Equal(expected))
+			},
+			Entry("IPv4 address", "127.0.0.1", discoveryv1.AddressTypeIPv4),
+			Entry("IPv6 address", "2001:0db8:85a3:0000:0000:8a2e:0370:7334", discoveryv1.AddressTypeIPv6),
+			Entry("hostname", "example.com", discoveryv1.AddressTypeFQDN),
+		)
 	})
 })
 
