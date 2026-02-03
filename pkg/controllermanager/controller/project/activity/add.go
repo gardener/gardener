@@ -52,34 +52,35 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Watches(
 			&gardencorev1beta1.Shoot{},
 			handler.EnqueueRequestsFromMapFunc(r.MapObjectToProject(mgr.GetLogger().WithValues("controller", ControllerName))),
-			builder.WithPredicates(r.OnlyNewlyCreatedObjects(), predicate.GenerationChangedPredicate{}),
+			builder.WithPredicates(r.OnlyRelevantCreatesAndUpdates(), predicate.GenerationChangedPredicate{}),
 		).
 		Watches(
 			&gardencorev1beta1.BackupEntry{},
 			handler.EnqueueRequestsFromMapFunc(r.MapObjectToProject(mgr.GetLogger().WithValues("controller", ControllerName))),
-			builder.WithPredicates(r.OnlyNewlyCreatedObjects(), predicate.GenerationChangedPredicate{}),
+			builder.WithPredicates(r.OnlyRelevantCreatesAndUpdates(), predicate.GenerationChangedPredicate{}),
 		).
 		Watches(
 			&gardencorev1beta1.Quota{},
 			handler.EnqueueRequestsFromMapFunc(r.MapObjectToProject(mgr.GetLogger().WithValues("controller", ControllerName))),
-			builder.WithPredicates(r.OnlyNewlyCreatedObjects(), r.HasSecretOrCredentialsBindingReferenceLabelPredicate()),
+			builder.WithPredicates(r.OnlyRelevantCreatesAndUpdates(), r.HasSecretOrCredentialsBindingReferenceLabelPredicate()),
 		).
 		Watches(
 			&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(r.MapObjectToProject(mgr.GetLogger().WithValues("controller", ControllerName))),
-			builder.WithPredicates(r.OnlyNewlyCreatedObjects(), r.HasSecretOrCredentialsBindingReferenceLabelPredicate()),
+			builder.WithPredicates(r.OnlyRelevantCreatesAndUpdates(), r.HasSecretOrCredentialsBindingReferenceLabelPredicate()),
 		).
 		Watches(
 			&gardencorev1beta1.InternalSecret{},
 			handler.EnqueueRequestsFromMapFunc(r.MapObjectToProject(mgr.GetLogger().WithValues("controller", ControllerName))),
-			builder.WithPredicates(r.OnlyNewlyCreatedObjects(), r.HasSecretOrCredentialsBindingReferenceLabelPredicate()),
+			builder.WithPredicates(r.OnlyRelevantCreatesAndUpdates(), r.HasSecretOrCredentialsBindingReferenceLabelPredicate()),
 		).
 		Complete(r)
 }
 
-// OnlyNewlyCreatedObjects filters for objects which are created less than an hour ago for create events and update events where the resource version
-// has changed. This can be used to prevent unnecessary reconciliations in case of controller restarts or cache resyncs.
-func (r *Reconciler) OnlyNewlyCreatedObjects() predicate.Predicate {
+// OnlyRelevantCreatesAndUpdates returns a predicate that filters CREATE/UPDATE events:
+// - CREATE events: only pass if the object was created within the last hour. This helps to ignore stale create events for existing objects during controller restarts.
+// - UPDATE events: only pass if the resource version changed. This helps to ignore update events that do not change the object (e.g. periodic cache resyncs).
+func (r *Reconciler) OnlyRelevantCreatesAndUpdates() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			objMeta, err := meta.Accessor(e.Object)

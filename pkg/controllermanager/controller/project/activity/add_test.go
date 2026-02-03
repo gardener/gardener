@@ -56,11 +56,11 @@ var _ = Describe("Add", func() {
 		}
 	})
 
-	Describe("OnlyNewlyCreatedObjects", func() {
+	Describe("OnlyRelevantCreatesAndUpdates", func() {
 		var p predicate.Predicate
 
 		BeforeEach(func() {
-			p = reconciler.OnlyNewlyCreatedObjects()
+			p = reconciler.OnlyRelevantCreatesAndUpdates()
 		})
 
 		Describe("#Create", func() {
