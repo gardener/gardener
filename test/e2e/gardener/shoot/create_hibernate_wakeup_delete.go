@@ -206,7 +206,7 @@ func itShouldVerifyShootPrometheusHealthCheck(s *ShootContext) {
 				"Status": Equal(gardencorev1beta1.ConditionFalse),
 				"Reason": Equal("PrometheusHealthCheckDown"),
 				"Message": Equal(`There are health issues in Prometheus pod "shoot--local--` + s.Shoot.Name + `/prometheus-shoot-0". ` +
-					`Access Prometheus UI and query for "healthcheck" for more details.`),
+					`Access Prometheus UI and query for "healthcheck:up" for more details: healthcheck:up{job="test", task="target:down"} => 0`),
 			}))),
 		)
 	}, SpecTimeout(10*time.Minute))
