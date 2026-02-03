@@ -286,5 +286,5 @@ echo "$ROOTS" | while IFS= read -r dir; do
     # Directory has non-skippable directives, always generate
     echo "github.com/gardener/gardener/$dir"
   fi
-  # TODO(rrhubenov) Revisit whether MAX_PARALLEL_WORKERS will be neede after nodes start using coreutils >= 9.8. Ref: https://github.com/gardener/gardener/pull/13903#issuecomment-3835448178
+  # TODO(rrhubenov): Revisit whether MAX_PARALLEL_WORKERS will be needed after prow cluster nodes start using coreutils >= 9.8. Ref: https://github.com/gardener/gardener/pull/13903#issuecomment-3835448178
 done | parallel --will-cite $([ "${MAX_PARALLEL_WORKERS}" != "" ] && echo "-j ${MAX_PARALLEL_WORKERS}") 'echo "Generate {}"; go generate {}'
