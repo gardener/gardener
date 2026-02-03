@@ -322,13 +322,6 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 			Name:      collectorconstants.OpenTelemetryCollectorResourceName,
 			Namespace: namespace,
 			Labels:    getLabels(),
-			// We want this annotation to be passed down to the service that will be created by the OpenTelemetry Operator.
-			// Currently, there is no other way to define the annotations on the service other than adding them to the OpenTelemetryCollector resource.
-			// All annotations that exist here will be passed down to every resource that gets created by the OpenTelemetry Operator.
-			Annotations: map[string]string{
-				"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports":                                                                                                  fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort),
-				resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicySeedScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"port":8888,"protocol":"TCP"},{"port":2021,"protocol":"TCP"}]`,
-			},
 		},
 		Spec: otelv1beta1.OpenTelemetryCollectorSpec{
 			Mode:            "deployment",
@@ -556,15 +549,14 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 		obj.Spec.AdditionalContainers[1].VolumeMounts = []corev1.VolumeMount{gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)}
 	}
 
+	// We want these annotations to be passed down to the service that will be created by the OpenTelemetry Operator.
+	// Currently, there is no other way to define the annotations on the service other than adding them to the OpenTelemetryCollector resource.
+	// All annotations that exist here will be passed down to every resource that gets created by the OpenTelemetry Operator.
 	switch o.values.ClusterType {
 	case component.ClusterTypeSeed:
-		obj.Annotations = map[string]string{
-			"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort),
-		}
+		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix+v1beta1constants.LabelNetworkPolicySeedScrapeTargets+resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort))
 	case component.ClusterTypeShoot:
-		obj.Annotations = map[string]string{
-			"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort),
-		}
+		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix+v1beta1constants.LabelNetworkPolicyScrapeTargets+resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort))
 	}
 
 	return obj
