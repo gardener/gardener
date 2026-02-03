@@ -13,7 +13,9 @@ spec:
     updateMode: Recreate
   resourcePolicy:
     containerPolicies:
-      - containerName: '*'
+      - containerName: gardener-controller-manager
         minAllowed:
           memory: 300Mi
+      - containerName: '*'
+        mode: "Off"
 {{- end }}
