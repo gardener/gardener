@@ -43,7 +43,7 @@ var _ = Describe("helmregistry", func() {
 				Namespace: v1beta1constants.GardenNamespace,
 			},
 			Data: map[string][]byte{
-				"bundle.crt": registryCABundle,
+				"bundle.crt": testCACert,
 			},
 		}
 		pullSecret := &corev1.Secret{

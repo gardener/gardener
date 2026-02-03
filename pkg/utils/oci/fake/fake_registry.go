@@ -42,7 +42,7 @@ func (r *Registry) Pull(ctx context.Context, ociRepo *gardencorev1.OCIRepository
 		}
 		vs, ok := v.(string)
 		if !ok {
-			return nil, fmt.Errorf("expected pull secret namespace %q, but got %v", r.expectedPullSecretNamespace, v)
+			return nil, fmt.Errorf("expected context value of type string, but got %T instead", v)
 		}
 		if vs != r.expectedPullSecretNamespace {
 			return nil, fmt.Errorf("expected pull secret namespace %q, but got %q", r.expectedPullSecretNamespace, vs)
@@ -55,7 +55,7 @@ func (r *Registry) Pull(ctx context.Context, ociRepo *gardencorev1.OCIRepository
 		}
 		vs, ok := v.(string)
 		if !ok {
-			return nil, fmt.Errorf("expected CA bundle secret namespace %q, but got %v", r.expectedCABundleSecretNamespace, v)
+			return nil, fmt.Errorf("expected context value of type string, but got %T instead", v)
 		}
 		if vs != r.expectedCABundleSecretNamespace {
 			return nil, fmt.Errorf("expected CA bundle secret namespace %q, but got %q", r.expectedCABundleSecretNamespace, vs)

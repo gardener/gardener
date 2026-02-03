@@ -23,6 +23,7 @@ import (
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 const (
@@ -80,7 +81,7 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 		if v := ctx.Value(ContextKeyCABundleSecretNamespace); v != nil {
 			s, ok := v.(string)
 			if !ok {
-				return nil, errors.New("pull secret namespace must be a string")
+				return nil, fmt.Errorf("pull secret namespace must be a string, got %T instead", v)
 			}
 			namespace = s
 		}
@@ -89,12 +90,12 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 		if err := r.client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 			return nil, fmt.Errorf("failed to get CA bundle secret %s: %w", client.ObjectKeyFromObject(secret), err)
 		}
-		caBundle, ok := secret.Data["bundle.crt"]
+		caBundle, ok := secret.Data[secretsutils.DataKeyCertificateBundle]
 		if !ok {
-			return nil, fmt.Errorf("CA bundle secret %s is missing the data key %s", client.ObjectKeyFromObject(secret), "bundle.crt")
+			return nil, fmt.Errorf("CA bundle secret %s is missing the data key %s", client.ObjectKeyFromObject(secret), secretsutils.DataKeyCertificateBundle)
 		}
 		if len(caBundle) == 0 {
-			return nil, fmt.Errorf("CA bundle secret %s has empty data for key %s", client.ObjectKeyFromObject(secret), "bundle.crt")
+			return nil, fmt.Errorf("CA bundle secret %s has empty data for key %s", client.ObjectKeyFromObject(secret), secretsutils.DataKeyCertificateBundle)
 		}
 
 		caCertPool := x509.NewCertPool()
@@ -115,7 +116,7 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 		if v := ctx.Value(ContextKeyPullSecretNamespace); v != nil {
 			s, ok := v.(string)
 			if !ok {
-				return nil, errors.New("pull secret namespace must be a string")
+				return nil, fmt.Errorf("pull secret namespace must be a string, got %T instead", v)
 			}
 			namespace = s
 		}
