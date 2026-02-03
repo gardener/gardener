@@ -5,7 +5,6 @@
 package terminal
 
 import (
-	terminalv1alpha1 "github.com/gardener/terminal-controller-manager/api/v1alpha1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
@@ -67,12 +66,12 @@ func (t *terminal) clusterRole() *rbacv1.ClusterRole {
 				Verbs:     []string{"create"},
 			},
 			{
-				APIGroups: []string{terminalv1alpha1.GroupVersion.Group},
+				APIGroups: []string{"dashboard.gardener.cloud"},
 				Resources: []string{"terminals"},
 				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
 			},
 			{
-				APIGroups: []string{terminalv1alpha1.GroupVersion.Group},
+				APIGroups: []string{"dashboard.gardener.cloud"},
 				Resources: []string{"terminals/status"},
 				Verbs:     []string{"get", "patch", "update"},
 			},

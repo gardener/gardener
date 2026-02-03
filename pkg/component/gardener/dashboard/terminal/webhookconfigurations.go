@@ -5,7 +5,6 @@
 package terminal
 
 import (
-	terminalv1alpha1 "github.com/gardener/terminal-controller-manager/api/v1alpha1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -60,8 +59,8 @@ func (t *terminal) validatingWebhookConfiguration(caBundle []byte) *admissionreg
 
 var webhookRules = []admissionregistrationv1.RuleWithOperations{{
 	Rule: admissionregistrationv1.Rule{
-		APIGroups:   []string{terminalv1alpha1.GroupVersion.Group},
-		APIVersions: []string{terminalv1alpha1.GroupVersion.Version},
+		APIGroups:   []string{"dashboard.gardener.cloud"},
+		APIVersions: []string{"v1alpha1"},
 		Resources:   []string{"terminals"},
 	},
 	Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
