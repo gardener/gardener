@@ -1068,7 +1068,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Type":     Equal(field.ErrorTypeInvalid),
 					"Field":    Equal("spec.tolerations[6].key"),
 					"BadValue": Equal(strings.Repeat("n", 64)),
-					"Detail":   Equal("name part must be no more than 63 characters"),
+					"Detail":   Equal("name part must be no more than 63 bytes"),
 				})),
 			))
 		})

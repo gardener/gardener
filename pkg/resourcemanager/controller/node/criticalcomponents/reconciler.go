@@ -124,7 +124,7 @@ func AllNodeCriticalDaemonPodsAreScheduled(log logr.Logger, recorder record.Even
 		}
 
 		// determine whether DaemonSet needs to be scheduled to the node at all
-		if shouldRun, _ := helper.NodeShouldRunDaemonPod(node, &daemonSet); !shouldRun {
+		if shouldRun, _ := helper.NodeShouldRunDaemonPod(log, node, &daemonSet); !shouldRun {
 			continue
 		}
 
