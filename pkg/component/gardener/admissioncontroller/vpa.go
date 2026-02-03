@@ -34,7 +34,7 @@ func (a *gardenerAdmissionController) vpa() *vpaautoscalingv1.VerticalPodAutosca
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
-						ContainerName: ContainerName,
+						ContainerName: containerName,
 						MinAllowed: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("25Mi"),
 						},
