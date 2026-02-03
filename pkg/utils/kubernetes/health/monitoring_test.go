@@ -246,22 +246,22 @@ var _ = Describe("Monitoring", func() {
 			responseHandler = nil
 		})
 
-		It("should return false when health:up is 0", func() {
+		It("should return false when healthcheck:up is 0", func() {
 			response := createPrometheusVectorResponse("0")
 			responseHandler = createResponseHandler(http.StatusOK, response)
 
-			isPrometheusHealthy, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
+			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(isPrometheusHealthy).To(BeFalse())
+			Expect(result.IsHealthy).To(BeFalse())
 		})
 
 		It("should return true when health:up is 1", func() {
 			response := createPrometheusVectorResponse("1")
 			responseHandler = createResponseHandler(http.StatusOK, response)
 
-			isPrometheusHealthy, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
+			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(isPrometheusHealthy).To(BeTrue())
+			Expect(result.IsHealthy).To(BeTrue())
 		})
 
 		It("should handle prometheus error responses", func() {
@@ -271,9 +271,10 @@ var _ = Describe("Monitoring", func() {
 			}
 			responseHandler = createResponseHandler(http.StatusBadRequest, response)
 
-			_, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
+			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("invalid query"))
+			Expect(result.IsHealthy).To(BeFalse())
 		})
 
 		It("should handle warnings in prometheus response", func() {
@@ -281,9 +282,10 @@ var _ = Describe("Monitoring", func() {
 			response["warnings"] = []string{"some warning"}
 			responseHandler = createResponseHandler(http.StatusOK, response)
 
-			_, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
+			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("query returned warnings"))
+			Expect(result.IsHealthy).To(BeFalse())
 		})
 
 		It("should handle unexpected result type", func() {
@@ -296,9 +298,10 @@ var _ = Describe("Monitoring", func() {
 			}
 			responseHandler = createResponseHandler(http.StatusOK, response)
 
-			_, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
+			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("query returned an unexpected result type"))
+			Expect(result.IsHealthy).To(BeFalse())
 		})
 
 		It("should handle empty vector response", func() {
@@ -311,9 +314,10 @@ var _ = Describe("Monitoring", func() {
 			}
 			responseHandler = createResponseHandler(http.StatusOK, response)
 
-			_, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
+			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("recording rules are not deployed or running yet"))
+			Expect(result.IsHealthy).To(BeFalse())
 		})
 
 		It("should handle vector response with multiple values", func() {
@@ -335,9 +339,10 @@ var _ = Describe("Monitoring", func() {
 			}
 			responseHandler = createResponseHandler(http.StatusOK, response)
 
-			_, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
+			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("query returned multiple results but a single value was expected"))
+			Expect(result.IsHealthy).To(BeFalse())
 		})
 
 		It("should handle timeouts", func() {
@@ -359,9 +364,10 @@ var _ = Describe("Monitoring", func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 			defer cancel()
 
-			_, err := health.IsPrometheusHealthy(ctx, endpoint, port)
+			result, err := health.IsPrometheusHealthy(ctx, endpoint, port)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal(fmt.Sprintf(`query failed: Post "http://%s:%d/api/v1/query": context deadline exceeded`, endpoint, port)))
+			Expect(result.IsHealthy).To(BeFalse())
 		})
 	})
 })

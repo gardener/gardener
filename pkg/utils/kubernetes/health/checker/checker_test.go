@@ -743,21 +743,27 @@ var _ = Describe("HealthChecker", func() {
 				prometheuses                *monitoringv1.PrometheusList
 				testPrometheusHealthChecker health.PrometheusHealthChecker
 
-				healthy   = func() (bool, error) { return true, nil }
-				unhealthy = func() (bool, error) { return false, nil }
-				erroring  = func() (bool, error) { return false, errors.New("test error") }
+				healthy = func() (health.PrometheusHealthCheckResult, error) {
+					return health.PrometheusHealthCheckResult{IsHealthy: true}, nil
+				}
+				unhealthy = func() (health.PrometheusHealthCheckResult, error) {
+					return health.PrometheusHealthCheckResult{IsHealthy: false}, nil
+				}
+				erroring = func() (health.PrometheusHealthCheckResult, error) {
+					return health.PrometheusHealthCheckResult{}, errors.New("test error")
+				}
 			)
 
 			BeforeEach(func() {
-				testPrometheusHealthChecker = func(_ context.Context, _ string, _ int) (bool, error) {
+				testPrometheusHealthChecker = func(_ context.Context, _ string, _ int) (health.PrometheusHealthCheckResult, error) {
 					msg := "testPrometheusHealthChecker should have been overridden"
 					defer GinkgoRecover()
 					Fail(msg)
-					return false, errors.New(msg)
+					return health.PrometheusHealthCheckResult{}, errors.New(msg)
 				}
 
 				healthChecker = NewHealthChecker(fakeClient, fakeClock, WithPrometheusHealthChecker(
-					func(ctx context.Context, endpoint string, port int) (bool, error) {
+					func(ctx context.Context, endpoint string, port int) (health.PrometheusHealthCheckResult, error) {
 						return testPrometheusHealthChecker(ctx, endpoint, port)
 					}))
 
@@ -777,7 +783,7 @@ var _ = Describe("HealthChecker", func() {
 			})
 
 			It("should skip when filter function returns false", func() {
-				testPrometheusHealthChecker = func(_ context.Context, _ string, _ int) (bool, error) {
+				testPrometheusHealthChecker = func(_ context.Context, _ string, _ int) (health.PrometheusHealthCheckResult, error) {
 					return unhealthy()
 				}
 
@@ -789,7 +795,7 @@ var _ = Describe("HealthChecker", func() {
 			})
 
 			It("should return failing condition when filter function is nil", func() {
-				testPrometheusHealthChecker = func(_ context.Context, _ string, _ int) (bool, error) {
+				testPrometheusHealthChecker = func(_ context.Context, _ string, _ int) (health.PrometheusHealthCheckResult, error) {
 					return unhealthy()
 				}
 
@@ -798,7 +804,7 @@ var _ = Describe("HealthChecker", func() {
 			})
 
 			It("should return error condition when health check returns error in at least a replica", func() {
-				testPrometheusHealthChecker = func(_ context.Context, endpoint string, port int) (bool, error) {
+				testPrometheusHealthChecker = func(_ context.Context, endpoint string, port int) (health.PrometheusHealthCheckResult, error) {
 					Expect(port).To(Equal(9090))
 					switch endpoint {
 					case "prometheus-testprom-0.prometheus-operated.shoot--foo--bar.svc.cluster.local":
@@ -811,7 +817,7 @@ var _ = Describe("HealthChecker", func() {
 						msg := "unexpected endpoint: " + endpoint
 						defer GinkgoRecover()
 						Fail(msg)
-						return false, errors.New(msg)
+						return health.PrometheusHealthCheckResult{}, errors.New(msg)
 					}
 				}
 
@@ -823,7 +829,7 @@ var _ = Describe("HealthChecker", func() {
 			})
 
 			It("should return failing condition when there are health issues in at least a replica", func() {
-				testPrometheusHealthChecker = func(_ context.Context, endpoint string, port int) (bool, error) {
+				testPrometheusHealthChecker = func(_ context.Context, endpoint string, port int) (health.PrometheusHealthCheckResult, error) {
 					Expect(port).To(Equal(9090))
 					switch endpoint {
 					case "prometheus-testprom-0.prometheus-operated.shoot--foo--bar.svc.cluster.local":
@@ -836,7 +842,7 @@ var _ = Describe("HealthChecker", func() {
 						msg := "unexpected endpoint: " + endpoint
 						defer GinkgoRecover()
 						Fail(msg)
-						return false, errors.New(msg)
+						return health.PrometheusHealthCheckResult{}, errors.New(msg)
 					}
 				}
 
@@ -849,7 +855,7 @@ var _ = Describe("HealthChecker", func() {
 			})
 
 			It("should return nil when there are no health issues", func() {
-				testPrometheusHealthChecker = func(_ context.Context, endpoint string, port int) (bool, error) {
+				testPrometheusHealthChecker = func(_ context.Context, endpoint string, port int) (health.PrometheusHealthCheckResult, error) {
 					Expect(port).To(Equal(9090))
 					switch endpoint {
 					case "prometheus-testprom-0.prometheus-operated.shoot--foo--bar.svc.cluster.local":
@@ -862,7 +868,7 @@ var _ = Describe("HealthChecker", func() {
 						msg := "unexpected endpoint: " + endpoint
 						defer GinkgoRecover()
 						Fail(msg)
-						return false, errors.New(msg)
+						return health.PrometheusHealthCheckResult{}, errors.New(msg)
 					}
 				}
 
@@ -871,11 +877,11 @@ var _ = Describe("HealthChecker", func() {
 			})
 
 			It("should return nil when replicas are scaled down due to hibernation", func() {
-				testPrometheusHealthChecker = func(_ context.Context, endpoint string, _ int) (bool, error) {
+				testPrometheusHealthChecker = func(_ context.Context, endpoint string, _ int) (health.PrometheusHealthCheckResult, error) {
 					msg := "unexpected query to hibernated endpoint: " + endpoint
 					defer GinkgoRecover()
 					Fail(msg)
-					return false, errors.New(msg)
+					return health.PrometheusHealthCheckResult{}, errors.New(msg)
 				}
 
 				prometheuses.Items[0].Spec.Replicas = ptr.To(int32(0))
@@ -900,7 +906,7 @@ var _ = Describe("HealthChecker", func() {
 
 				It("should check for all Prometheus instances in parallel", func() {
 					checkDuration := 100 * time.Millisecond
-					testPrometheusHealthChecker = func(_ context.Context, _ string, _ int) (bool, error) {
+					testPrometheusHealthChecker = func(_ context.Context, _ string, _ int) (health.PrometheusHealthCheckResult, error) {
 						time.Sleep(checkDuration)
 						return healthy()
 					}
@@ -921,7 +927,7 @@ var _ = Describe("HealthChecker", func() {
 				})
 
 				It("should always return the same error regardless the order of Prometheuses", func() {
-					testPrometheusHealthChecker = func(_ context.Context, endpoint string, port int) (bool, error) {
+					testPrometheusHealthChecker = func(_ context.Context, endpoint string, port int) (health.PrometheusHealthCheckResult, error) {
 						Expect(port).To(Equal(9090))
 						switch endpoint {
 						case "prometheus-testprom-0.prometheus-operated.shoot--foo--bar.svc.cluster.local":
@@ -940,7 +946,7 @@ var _ = Describe("HealthChecker", func() {
 							msg := "unexpected endpoint: " + endpoint
 							defer GinkgoRecover()
 							Fail(msg)
-							return false, errors.New(msg)
+							return health.PrometheusHealthCheckResult{}, errors.New(msg)
 						}
 					}
 

@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -99,9 +100,15 @@ var _ = Describe("Seed health", func() {
 			var (
 				prometheus *monitoringv1.Prometheus
 
-				healthy   = func(_ context.Context, _ string, _ int) (bool, error) { return true, nil }
-				unhealthy = func(_ context.Context, _ string, _ int) (bool, error) { return false, nil }
-				erroring  = func(_ context.Context, _ string, _ int) (bool, error) { return false, errors.New("test error") }
+				healthy = func(_ context.Context, _ string, _ int) (health.PrometheusHealthCheckResult, error) {
+					return health.PrometheusHealthCheckResult{IsHealthy: true}, nil
+				}
+				unhealthy = func(_ context.Context, _ string, _ int) (health.PrometheusHealthCheckResult, error) {
+					return health.PrometheusHealthCheckResult{IsHealthy: false}, nil
+				}
+				erroring = func(_ context.Context, _ string, _ int) (health.PrometheusHealthCheckResult, error) {
+					return health.PrometheusHealthCheckResult{}, errors.New("test error")
+				}
 			)
 
 			BeforeEach(func() {

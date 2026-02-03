@@ -17,14 +17,18 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+type PrometheusHealthCheckResult struct {
+	IsHealthy bool
+}
+
 // PrometheusHealthChecker is a function type that checks for health issues in a Prometheus instance.
-type PrometheusHealthChecker func(ctx context.Context, endpoint string, port int) (bool, error)
+type PrometheusHealthChecker func(ctx context.Context, endpoint string, port int) (PrometheusHealthCheckResult, error)
 
 // IsPrometheusHealthy checks for health issues in a Prometheus instance.
-func IsPrometheusHealthy(ctx context.Context, endpoint string, port int) (bool, error) {
+func IsPrometheusHealthy(ctx context.Context, endpoint string, port int) (PrometheusHealthCheckResult, error) {
 	client, err := prom.NewClient(prom.Config{Address: fmt.Sprintf("http://%s:%d", endpoint, port)})
 	if err != nil {
-		return false, fmt.Errorf("failed to create Prometheus client: %w", err)
+		return PrometheusHealthCheckResult{}, fmt.Errorf("failed to create Prometheus client: %w", err)
 	}
 
 	v1api := promv1.NewAPI(client)
@@ -35,26 +39,26 @@ func IsPrometheusHealthy(ctx context.Context, endpoint string, port int) (bool, 
 
 	result, warnings, err := v1api.Query(ctx, "healthcheck:up", time.Now())
 	if err != nil {
-		return false, fmt.Errorf("query failed: %w", err)
+		return PrometheusHealthCheckResult{}, fmt.Errorf("query failed: %w", err)
 	}
 
 	if len(warnings) > 0 {
-		return false, fmt.Errorf("query returned warnings")
+		return PrometheusHealthCheckResult{}, fmt.Errorf("query returned warnings")
 	}
 
 	if result.Type() != model.ValVector {
-		return false, fmt.Errorf("query returned an unexpected result type")
+		return PrometheusHealthCheckResult{}, fmt.Errorf("query returned an unexpected result type")
 	}
 
 	vector := result.(model.Vector)
 	if len(vector) == 0 {
-		return false, fmt.Errorf("recording rules are not deployed or running yet")
+		return PrometheusHealthCheckResult{}, fmt.Errorf("recording rules are not deployed or running yet")
 	} else if len(vector) > 1 {
-		return false, fmt.Errorf("query returned multiple results but a single value was expected")
+		return PrometheusHealthCheckResult{}, fmt.Errorf("query returned multiple results but a single value was expected")
 	}
 
 	isHealthy := vector[0].Value == 1
-	return isHealthy, nil
+	return PrometheusHealthCheckResult{IsHealthy: isHealthy}, nil
 }
 
 // CheckPrometheus checks whether the given Prometheus is healthy.

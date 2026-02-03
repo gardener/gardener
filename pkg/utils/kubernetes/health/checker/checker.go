@@ -597,13 +597,13 @@ func (h *HealthChecker) checkPrometheusReplicaHealth(ctx context.Context, condit
 		endpoint    = fmt.Sprintf("prometheus-%s-%d.%s.%s.svc.cluster.local", prometheus.Name, replica, serviceName, prometheus.Namespace)
 	)
 
-	isPrometheusHealthy, err := h.prometheusHealthChecker(ctx, endpoint, 9090)
+	result, err := h.prometheusHealthChecker(ctx, endpoint, 9090)
 	if err != nil {
 		msg := fmt.Sprintf(`Querying Prometheus pod "%s/prometheus-%s-%d" for health checking returned an error: %v`, prometheus.Namespace, prometheus.Name, replica, err)
 		return ptr.To(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "PrometheusHealthCheckError", msg))
 	}
 
-	if !isPrometheusHealthy {
+	if !result.IsHealthy {
 		msg := fmt.Sprintf(`There are health issues in Prometheus pod "%s/prometheus-%s-%d". Access Prometheus UI and query for "healthcheck" for more details.`, prometheus.Namespace, prometheus.Name, replica)
 		return ptr.To(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "PrometheusHealthCheckDown", msg))
 	}
