@@ -445,7 +445,7 @@ In the first version of this document we define an AZ outage only when either of
 
 As part of the [current recovery mechanisms](#current-recovery-mechanisms), if `Machine-Controller-Manager` is able to delete the machines, then per `MachineDeployment` it will delete one machine at a time and wait for a new machine to transition from `Pending` to `Running` state. In case of a network outage, it will be able to delete a machine and subsequently launch a new machine but the newly launched machine will be stuck in `Pending` state, as the `Kubelet` running on the machine will not be able to create its lease. There will also not be any corresponding `Node` object for the newly launched machine. The rest of the machines in this `MachineDeployment` will be stuck in `Unknown` state.
 
-**Kube Apiserver, Gardener Resource Manager & seed system omponents**
+**Kube Apiserver, Gardener Resource Manager & seed system components**
 
 These pods are stateless, so losing one pod can be tolerated since there will be two other replicas that will continue to run in the other two zones which are available (considering that there are 3 zones in a region).
 
