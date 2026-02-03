@@ -158,12 +158,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			nodeRole = "control-plane"
 		}
 
-		log.Info("Setting node-role label on Node object", "role", nodeRole)
+		log.Info("Setting node labels on Node object", "role", nodeRole)
 
 		patch := client.MergeFrom(node.DeepCopy())
 		metav1.SetMetaDataLabel(&node.ObjectMeta, "node-role.kubernetes.io/"+nodeRole, "")
+
+		if zone, err := r.FS.ReadFile(nodeagentconfigv1alpha1.ZoneFilePath); err == nil {
+			metav1.SetMetaDataLabel(&node.ObjectMeta, corev1.LabelTopologyZone, strings.TrimSpace(string(zone)))
+		} else if !errors.Is(err, afero.ErrFileNotFound) {
+			return reconcile.Result{}, fmt.Errorf("failed to read zone file %q: %w", nodeagentconfigv1alpha1.ZoneFilePath, err)
+		}
+
 		if err := r.Client.Patch(ctx, node, patch); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to add node-role label to node object: %w", err)
+			return reconcile.Result{}, fmt.Errorf("failed adding node labels to node object: %w", err)
 		}
 	}
 
