@@ -29,18 +29,18 @@ var _ = Describe("Applier", func() {
 
 	It("no shoot is passed, no modifications", func() {
 		shoot = nil
-		specCpy := spec.DeepCopy()
+		specCopy := spec.DeepCopy()
 
 		oidc.ApplyOIDCConfiguration(shoot, spec)
-		Expect(spec).To(Equal(specCpy))
+		Expect(spec).To(Equal(specCopy))
 	})
 
 	It("no spec is passed, no modifications", func() {
 		spec = nil
-		shootCpy := shoot.DeepCopy()
+		shootCopy := shoot.DeepCopy()
 
 		oidc.ApplyOIDCConfiguration(shoot, spec)
-		Expect(shoot).To(Equal(shootCpy))
+		Expect(shoot).To(Equal(shootCopy))
 	})
 
 	It("full preset, empty shoot", func() {
