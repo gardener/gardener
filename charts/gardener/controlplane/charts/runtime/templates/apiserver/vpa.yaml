@@ -19,7 +19,9 @@ spec:
     updateMode: Recreate
   resourcePolicy:
     containerPolicies:
-      - containerName: '*'
+      - containerName: gardener-apiserver
         minAllowed:
           memory: 256Mi
+      - containerName: '*'
+        mode: "Off"
 {{- end }}
