@@ -154,7 +154,7 @@ machineImages:
 
 The `inPlaceUpdates` field in the Shoot status provides details about in-place updates for the Shoot workers. It includes the `pendingWorkerUpdates` field, which lists the worker pools that are awaiting in-place updates.
 
-For worker pools using the `AutoInPlaceUpdate` or `ManualInPlaceUpdate` strategy, the following actions are not allowed (they are allowed with `AutoRollingUpdate`):
+⚠️ For worker pools using the `AutoInPlaceUpdate` or `ManualInPlaceUpdate` strategy, the following actions are not allowed (they are allowed with `AutoRollingUpdate`):
 
 - Skipping a minor version when upgrading the worker pool Kubernetes version (`.spec.provider.workers[].kubernetes.version`).
 - Downgrading the machine image version (`.spec.provider.workers[].machine.image.version`).

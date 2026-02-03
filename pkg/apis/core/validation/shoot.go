@@ -449,16 +449,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 		allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newKubernetesVersion, oldKubernetesVersion, !helper.IsUpdateStrategyInPlace(newWorker.UpdateStrategy), idxPath.Child("kubernetes", "version"))...)
 
 		if helper.IsUpdateStrategyInPlace(newWorker.UpdateStrategy) {
-			var newMachineImageVersion, oldMachineImageVersion string
-
-			if newWorker.Machine.Image != nil {
-				newMachineImageVersion = newWorker.Machine.Image.Version
-			}
-			if oldWorker.Machine.Image != nil {
-				oldMachineImageVersion = oldWorker.Machine.Image.Version
-			}
-
-			allErrs = append(allErrs, validateMachineImageVersionInPlaceUpdate(newMachineImageVersion, oldMachineImageVersion, idxPath.Child("machine", "image", "version"))...)
+			allErrs = append(allErrs, validateMachineImageVersionInPlaceUpdate(newWorker.Machine.Image, oldWorker.Machine.Image, idxPath.Child("machine", "image", "version"))...)
 		}
 	}
 
@@ -847,18 +838,28 @@ func ValidateKubernetesVersionUpdate(new, old string, skipMinorVersionAllowed bo
 }
 
 // validateMachineImageVersionInPlaceUpdate ensures that the new machine image version is newer than old version in case the strategy is in-place update
-func validateMachineImageVersionInPlaceUpdate(new, old string, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
+func validateMachineImageVersionInPlaceUpdate(new, old *core.ShootMachineImage, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs                = field.ErrorList{}
+		newVersion, oldVersion string
+	)
 
-	if len(new) == 0 {
+	if new != nil {
+		newVersion = new.Version
+	}
+	if old != nil {
+		oldVersion = old.Version
+	}
+
+	if len(newVersion) == 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath, new, "cannot validate machine image version upgrade because it is unset"))
 		return allErrs
 	}
 
 	// Forbid machine image version downgrade
-	downgrade, err := versionutils.CompareVersions(new, "<", old)
+	downgrade, err := versionutils.CompareVersions(newVersion, "<", oldVersion)
 	if err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath, new, err.Error()))
+		allErrs = append(allErrs, field.Invalid(fldPath, newVersion, err.Error()))
 	}
 	if downgrade {
 		allErrs = append(allErrs, field.Forbidden(fldPath, "machine image version downgrade is not supported when the update strategy is AutoInPlaceUpdate or ManualInPlaceUpdate"))
