@@ -59,7 +59,6 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 					g.Expect(s.SeedClient.Patch(ctx, &machine, patch)).To(Succeed())
 				}
 				g.Expect(s.SeedClient.DeleteAllOf(ctx, &machinev1alpha1.Machine{}, client.InNamespace(seedNamespace))).To(Succeed())
-				g.Expect(s.ShootClient.DeleteAllOf(ctx, &corev1.Node{})).To(Succeed())
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
