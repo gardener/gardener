@@ -156,8 +156,8 @@ The `inPlaceUpdates` field in the Shoot status provides details about in-place u
 
 ⚠️ For worker pools using the `AutoInPlaceUpdate` or `ManualInPlaceUpdate` strategy, the following actions are not allowed (they are allowed with `AutoRollingUpdate`):
 
-- Skipping a minor version when upgrading the worker pool Kubernetes version (`.spec.provider.workers[].kubernetes.version`).
-- Downgrading the machine image version (`.spec.provider.workers[].machine.image.version`).
+* Skipping a minor version when upgrading the worker pool Kubernetes version (`.spec.provider.workers[].kubernetes.version`).
+* Downgrading the machine image version of the worker pool (`.spec.provider.workers[].machine.image.version`).
 
 #### Customize In-Place Update Behaviour of Shoot Worker Nodes
 
