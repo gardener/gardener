@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
@@ -45,8 +44,10 @@ type GetExtensionObjectFunc = func() extensionsv1alpha1.Object
 // For example: func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} }
 type GetExtensionObjectListFunc = func() client.ObjectList
 
-// PreCheckFunc checks whether the health check shall be performed based on the given object and cluster.
-type PreCheckFunc = func(context.Context, client.Client, client.Object, *extensionscontroller.Cluster) bool
+// PreCheckFunc checks whether the health check shall be performed based on the given object.
+// For shoot extensions, the object is a cluster resource *extensions.Cluster.
+// For garden extensions, the object is *operatorv1alpha1.Garden.
+type PreCheckFunc = func(context.Context, client.Client, client.Object, any) bool
 
 // ErrorCodeCheckFunc checks if the given error is user specific and return respective Gardener ErrorCodes.
 type ErrorCodeCheckFunc = func(error) []gardencorev1beta1.ErrorCode
@@ -107,7 +108,7 @@ func (h *Result) GetDetails() string {
 }
 
 // HealthCheck represents a single health check
-// Each health check gets the shoot and seed clients injected
+// Each health check gets the target (i.e. shoot) and source (i.e. seed) clients injected
 // returns isHealthy, conditionReason, conditionDetail and error
 // returning an error means the health check could not be conducted and will result in a condition with with type "Unknown" and reason "ConditionCheckError"
 type HealthCheck interface {
