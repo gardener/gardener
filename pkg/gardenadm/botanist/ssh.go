@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -66,11 +67,17 @@ func (b *GardenadmBotanist) SSHConnection() *sshutils.Connection {
 }
 
 var (
+	// envToOverrideFile maps ImageVector overwrite environment variables to their corresponding remote file paths on
+	// the control plane machine. If the environment variable is set locally, the file is copied to the remote path
+	// and ImageVectorOverrideEnv configures the remote commands to use the respective file.
 	// NB: We don't use filepath.Join here, because we explicitly need Linux path separators for the target machine,
 	// even when running `gardenadm bootstrap` on Windows.
+	envToOverrideFile = map[string]string{
+		imagevector.OverrideEnv:          GardenadmBaseDir + "/imagevector-overwrite.yaml",
+		imagevector.ComponentOverrideEnv: GardenadmBaseDir + "/imagevector-overwrite-components.yaml",
+		imagevector.OverrideChartsEnv:    GardenadmBaseDir + "/imagevector-overwrite-charts.yaml",
+	}
 
-	// ImageVectorOverrideFile is the path where the image vector overwrite is copied to on the control plane machine.
-	ImageVectorOverrideFile = GardenadmBaseDir + "/imagevector-overwrite.yaml"
 	// ManifestsDir is the path where the manifests are copied to on the control plane machine.
 	ManifestsDir = GardenadmBaseDir + "/manifests"
 
@@ -93,7 +100,7 @@ func (b *GardenadmBotanist) CopyManifests(ctx context.Context, configDir fs.FS) 
 		return fmt.Errorf("error copying manifests: %w", err)
 	}
 
-	if err := copyImageVectorOverride(ctx, b.sshConnection); err != nil {
+	if err := copyImageVectorOverrides(ctx, b.sshConnection); err != nil {
 		return err
 	}
 
@@ -112,24 +119,31 @@ func prepareRemoteDirs(ctx context.Context, conn *sshutils.Connection) error {
 	return nil
 }
 
-func copyImageVectorOverride(ctx context.Context, conn *sshutils.Connection) (err error) {
-	imageVectorOverride := os.Getenv(imagevector.OverrideEnv)
-	if imageVectorOverride == "" {
-		return nil
-	}
-
-	file, err := os.Open(imageVectorOverride) // #nosec: G304 -- ImageVectorOverwrite is a feature.
-	if err != nil {
-		return fmt.Errorf("error opening image vector overwrite file: %w", err)
-	}
-	defer func() {
-		if closeErr := file.Close(); closeErr != nil {
-			err = errors.Join(err, closeErr)
+func copyImageVectorOverrides(ctx context.Context, conn *sshutils.Connection) error {
+	for env, remotePath := range envToOverrideFile {
+		localPath := os.Getenv(env)
+		if localPath == "" {
+			continue
 		}
-	}()
 
-	if err := conn.CopyFile(ctx, ImageVectorOverrideFile, manifestFilePermissions, file); err != nil {
-		return fmt.Errorf("error copying image vector overwrite file: %w", err)
+		if err := func() (rErr error) {
+			localFile, err := os.Open(localPath) // #nosec: G304 -- ImageVectorOverwrite is a feature.
+			if err != nil {
+				return fmt.Errorf("error opening %s file: %w", env, err)
+			}
+			defer func() {
+				if closeErr := localFile.Close(); closeErr != nil {
+					rErr = errors.Join(rErr, closeErr)
+				}
+			}()
+
+			if err := conn.CopyFile(ctx, remotePath, manifestFilePermissions, localFile); err != nil {
+				return fmt.Errorf("error copying %s file: %w", env, err)
+			}
+			return nil
+		}(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -154,4 +168,20 @@ func (b *GardenadmBotanist) copyShootState(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// ImageVectorOverrideEnv returns the image vector overwrite environment variables for remote commands based on the
+// existence in the local environment in a key=value string format. The pairs are separated by spaces, values are
+// quoted, and a trailing space is added for convenience, so that the output can be directly prepended to remote
+// commands.
+func ImageVectorOverrideEnv() string {
+	out := strings.Builder{}
+
+	for env, filePath := range envToOverrideFile {
+		if os.Getenv(env) != "" {
+			out.WriteString(fmt.Sprintf("%s=%q ", env, filePath))
+		}
+	}
+
+	return out.String()
 }

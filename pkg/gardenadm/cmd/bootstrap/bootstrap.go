@@ -23,13 +23,13 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/publicip"
 )
 
@@ -293,8 +293,9 @@ func run(ctx context.Context, opts *Options) error {
 			Name: "Bootstrapping control plane on the first control plane machine",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return b.SSHConnection().RunWithStreams(ctx, nil, opts.Out, opts.ErrOut,
-					fmt.Sprintf("%s=%q /opt/bin/gardenadm init -d %q --log-level=%s",
-						imagevector.OverrideEnv, botanist.ImageVectorOverrideFile, botanist.ManifestsDir, opts.LogLevel,
+					fmt.Sprintf("%s%s init -d %q --log-level=%s",
+						botanist.ImageVectorOverrideEnv(),
+						nodeinit.GardenadmBinaryPath, botanist.ManifestsDir, opts.LogLevel,
 					),
 				)
 			}).Timeout(30 * time.Minute),
