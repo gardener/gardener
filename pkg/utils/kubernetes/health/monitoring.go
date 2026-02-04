@@ -48,16 +48,16 @@ func IsPrometheusHealthy(ctx context.Context, endpoint string, port int) Prometh
 	}
 
 	if len(warnings) > 0 {
-		return PrometheusHealthCheckResult{Error: fmt.Errorf("query returned warnings")}
+		return PrometheusHealthCheckResult{Error: fmt.Errorf("query returned warnings: %s", strings.Join(warnings, ", "))}
 	}
 
-	if result.Type() != model.ValVector {
-		return PrometheusHealthCheckResult{Error: fmt.Errorf("query returned an unexpected result type")}
+	vector, ok := result.(model.Vector)
+	if !ok {
+		return PrometheusHealthCheckResult{Error: fmt.Errorf("query returned an unexpected result type: %s", result.Type())}
 	}
 
-	vector := result.(model.Vector)
 	if len(vector) == 0 {
-		return PrometheusHealthCheckResult{Error: fmt.Errorf("recording rules are not deployed or running yet")}
+		return PrometheusHealthCheckResult{Error: fmt.Errorf("health check recording rules are not deployed or running yet")}
 	}
 
 	var (
