@@ -1574,6 +1574,7 @@ func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Int
 		secretsManager,
 		operatorv1alpha1.SecretNameCARuntime,
 		component.ClusterTypeSeed,
+		true,
 	)
 }
 
