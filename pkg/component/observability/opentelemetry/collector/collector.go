@@ -355,7 +355,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 						"otlp": map[string]any{
 							"protocols": map[string]any{
 								"grpc": map[string]any{
-									"endpoint": "127.0.0.1:" + strconv.Itoa(collectorconstants.PushPort),
+									"endpoint": "[::]:" + strconv.Itoa(collectorconstants.PushPort),
 								},
 							},
 						},
@@ -381,6 +381,11 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 								map[string]any{
 									"key":            "container_name",
 									"from_attribute": "k8s.container.name",
+									"action":         "insert",
+								},
+								map[string]any{
+									"key":            "namespace_name",
+									"from_attribute": "k8s.namespace.name",
 									"action":         "insert",
 								},
 								map[string]any{
@@ -413,9 +418,14 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 									"action":         "insert",
 								},
 								map[string]any{
-									"key":    "loki.resource.labels",
-									"value":  "job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role",
-									"action": "insert",
+									"key":            "namespace_name",
+									"from_attribute": "k8s.namespace.name",
+									"action":         "insert",
+								},
+								map[string]any{
+									"key":    "loki.attribute.labels",
+									"value":  "priority, level, process.command, process.pid, host.name, host.id, service.name, service.namespace, job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role",
+									"action": "upsert",
 								},
 								map[string]any{
 									"key":    "loki.format",
@@ -430,6 +440,13 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 					Object: map[string]any{
 						"loki": map[string]any{
 							"endpoint": lokiEndpoint,
+							"default_labels_enabled": map[string]any{
+								"exporter": false,
+								"job":      false,
+							},
+						},
+						"debug/logs": map[string]any{
+							"verbosity": "basic",
 						},
 					},
 				},
@@ -460,7 +477,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 					Pipelines: map[string]*otelv1beta1.Pipeline{
 						"logs/vali": {
 							Exporters: []string{
-								"loki",
+								"loki", "debug/logs",
 							},
 							Receivers: []string{
 								"otlp",
@@ -564,6 +581,8 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 		}
 	case component.ClusterTypeShoot:
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix+v1beta1constants.LabelNetworkPolicyScrapeTargets+resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort))
+		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingNamespaceSelectors, `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`)
 	}
 
 	return obj
