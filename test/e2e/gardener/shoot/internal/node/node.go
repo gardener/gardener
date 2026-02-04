@@ -6,7 +6,6 @@ package node
 
 import (
 	"context"
-	"slices"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -59,12 +58,8 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 			nodeList := &corev1.NodeList{}
 			Eventually(ctx, func(g Gomega) {
 				g.Expect(s.ShootClient.List(ctx, nodeList)).To(Succeed())
-				g.Expect(nodeList.Items).To(Not(BeEmpty()))
-				idx := slices.IndexFunc(nodeList.Items, func(no corev1.Node) bool {
-					return no.DeletionTimestamp == nil
-				})
-				g.Expect(idx).To(BeNumerically(">=", 0))
-				node = nodeList.Items[idx].DeepCopy()
+				g.Expect(nodeList.Items).To(HaveLen(1))
+				g.Expect(nodeList.Items[0].DeletionTimestamp).To(BeNil())
 			}).Should(Succeed())
 		}, SpecTimeout(10*time.Minute))
 
@@ -96,7 +91,7 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 		var csiNodeObject *storagev1.CSINode
 
 		It("Wait for CSINode object", func(ctx SpecContext) {
-			csiNodeObject = waitForCSINodeObject(ctx, s.ShootClient, node)
+			csiNodeObject = waitForCSINodeObject(ctx, s.ShootClient)
 		}, SpecTimeout(time.Minute))
 
 		It("Patch CSINode object to contain required driver", func(ctx SpecContext) {
@@ -200,23 +195,17 @@ func waitForDaemonSetToBecomeHealthy(ctx context.Context, shootClient client.Cli
 	}).Should(Succeed())
 }
 
-func waitForCSINodeObject(ctx context.Context, shootClient client.Client, node *corev1.Node) *storagev1.CSINode {
+func waitForCSINodeObject(ctx context.Context, shootClient client.Client) *storagev1.CSINode {
 	GinkgoHelper()
 
 	csiNodeList := &storagev1.CSINodeList{}
-	csiNode := &storagev1.CSINode{}
 
 	Eventually(ctx, func(g Gomega) {
 		g.Expect(shootClient.List(ctx, csiNodeList)).To(Succeed())
-		g.Expect(csiNodeList.Items).To(Not(BeEmpty()))
-		idx := slices.IndexFunc(csiNodeList.Items, func(csino storagev1.CSINode) bool {
-			return slices.ContainsFunc(csino.OwnerReferences, func(ownerRef metav1.OwnerReference) bool { return ownerRef.UID == node.UID })
-		})
-		g.Expect(idx).To(BeNumerically(">=", 0))
-		csiNode = csiNodeList.Items[idx].DeepCopy()
+		g.Expect(csiNodeList.Items).To(HaveLen(1))
 	}).Should(Succeed())
 
-	return csiNode
+	return &csiNodeList.Items[0]
 }
 
 func patchCSINodeObjectWithRequiredDriver(ctx context.Context, shootClient client.Client, csiNode *storagev1.CSINode) {
