@@ -867,19 +867,19 @@ images:
             teamname: 'gardener/gardener-core-networking-maintainers'
       - name: 'cloud.gardener.cnudie/dso/scanning-hints/package-versions'
         value:
-          # https://www.envoyproxy.io/docs/envoy/v1.35.0/intro/arch_overview/security/external_deps
+          # https://www.envoyproxy.io/docs/envoy/v1.37.0/intro/arch_overview/security/external_deps
           - name: 'v8'
             version: '13.8.258.26'
           - name: 'grpc'
-            version: '1.72.0'
+            version: '1.76.0'
           - name: 'luajit'
-            version: '19878ec'
+            version: '871db2c'
           - name: 'nghttp2'
             version: '1.66.0'
           - name: 'protobuf'
-            version: '29.3'
+            version: '33.2'
           - name: 'fmt'
-            version: '11.2.0'
+            version: '12.1.0'
           - name: 'boringssl'
             version: '0.20250514.0'
           # lua version is unclear. lua runtime is luajit.
