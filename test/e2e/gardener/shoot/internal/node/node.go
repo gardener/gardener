@@ -66,7 +66,7 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 				g.Expect(idx).To(BeNumerically(">=", 0))
 				node = nodeList.Items[idx].DeepCopy()
 			}).Should(Succeed())
-		}, SpecTimeout(30*time.Minute))
+		}, SpecTimeout(10*time.Minute))
 
 		It("Verify node-critical components not ready taint is present", func(ctx SpecContext) {
 			Eventually(ctx, s.ShootKomega.Object(node)).MustPassRepeatedly(3).WithPolling(2 * time.Second).Should(
