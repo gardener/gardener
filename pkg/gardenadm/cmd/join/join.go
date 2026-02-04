@@ -18,6 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -157,6 +158,21 @@ func run(ctx context.Context, opts *Options) error {
 			},
 			SkipIf: !opts.ControlPlane,
 		})
+		validateZone = g.Add(flow.Task{
+			Name: "Validate zone configuration",
+			Fn: func(ctx context.Context) error {
+				effectiveZone, err := ValidateZone(ctx, opts, b)
+				if err != nil {
+					return err
+				}
+
+				if effectiveZone != "" {
+					b.Zone = ptr.To(effectiveZone)
+				}
+				return nil
+			},
+			Dependencies: flow.NewTaskIDs(ensureNoActiveShootReconciliation),
+		})
 		determineGardenerNodeAgentSecretName = g.Add(flow.Task{
 			Name: "Determining gardener-node-agent Secret containing the configuration for this node",
 			Fn: func(ctx context.Context) error {
@@ -164,6 +180,7 @@ func run(ctx context.Context, opts *Options) error {
 				gardenerNodeAgentSecret, err = GetGardenerNodeAgentSecret(ctx, opts, b)
 				return err
 			},
+			Dependencies: flow.NewTaskIDs(validateZone),
 		})
 
 		generateETCDCertificates = g.Add(flow.Task{
@@ -313,28 +330,65 @@ func getWorkerPoolName(ctx context.Context, opts *Options, b *botanist.Gardenadm
 		return "", fmt.Errorf("failed reading extensions.gardener.cloud/v1alpha1.Cluster object: %w", err)
 	}
 
+	worker, err := getWorker(opts, cluster.Shoot.Spec.Provider.Workers)
+	if err != nil {
+		return "", err
+	}
+
+	return worker.Name, nil
+}
+
+func getWorker(opts *Options, workers []gardencorev1beta1.Worker) (gardencorev1beta1.Worker, error) {
 	if opts.ControlPlane {
-		return getControlPlaneWorkerPoolName(cluster.Shoot.Spec.Provider.Workers)
-	}
-	return getFirstWorkerPoolName(cluster.Shoot.Spec.Provider.Workers)
-}
-
-func getControlPlaneWorkerPoolName(workers []gardencorev1beta1.Worker) (string, error) {
-	if pool := v1beta1helper.ControlPlaneWorkerPoolForShoot(workers); pool != nil {
-		return pool.Name, nil
+		if pool := v1beta1helper.ControlPlaneWorkerPoolForShoot(workers); pool != nil {
+			return *pool, nil
+		}
+		return gardencorev1beta1.Worker{}, fmt.Errorf("no control plane worker pool found in Shoot manifest")
 	}
 
-	return "", fmt.Errorf("no control plane worker pool found in Shoot manifest")
-}
+	if opts.WorkerPoolName != "" {
+		for _, worker := range workers {
+			if worker.Name == opts.WorkerPoolName {
+				return worker, nil
+			}
+		}
+		return gardencorev1beta1.Worker{}, fmt.Errorf("worker pool %q not found in Shoot manifest", opts.WorkerPoolName)
+	}
 
-func getFirstWorkerPoolName(workers []gardencorev1beta1.Worker) (string, error) {
 	for _, worker := range workers {
 		if worker.ControlPlane == nil {
-			return worker.Name, nil
+			return worker, nil
 		}
 	}
 
-	return "", fmt.Errorf("no non-control-plane pool found in Shoot manifest")
+	return gardencorev1beta1.Worker{}, fmt.Errorf("no non-control-plane pool found in Shoot manifest")
+}
+
+// ValidateZone validates the zone configuration against the shoot specification.
+func ValidateZone(ctx context.Context, opts *Options, b *botanist.GardenadmBotanist) (effectiveZone string, err error) {
+	cluster, err := gardenerextensions.GetCluster(ctx, b.ShootClientSet.Client(), metav1.NamespaceSystem)
+	if err != nil {
+		return "", fmt.Errorf("failed reading extensions.gardener.cloud/v1alpha1.Cluster object: %w", err)
+	}
+
+	if cluster.Shoot.Spec.CredentialsBindingName != nil || cluster.Shoot.Spec.SecretBindingName != nil {
+		if opts.Zone != "" {
+			return "", fmt.Errorf("zone can't be configured for shoot with managed infrastrcture")
+		}
+		return "", nil
+	}
+
+	worker, err := getWorker(opts, cluster.Shoot.Spec.Provider.Workers)
+	if err != nil {
+		return "", err
+	}
+
+	effectiveZone, err = cmd.ValidateZone(worker, opts.Zone)
+	if err != nil {
+		return "", fmt.Errorf("zone validation failed: %w", err)
+	}
+
+	return effectiveZone, nil
 }
 
 func waitForNodeToJoinCluster(ctx context.Context, log logr.Logger, c client.Client, hostName string) (*corev1.Node, error) {
