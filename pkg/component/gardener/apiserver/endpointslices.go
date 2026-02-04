@@ -18,13 +18,14 @@ import (
 // GetAddressType returns the AddressType for the given IP address string.
 func GetAddressType(ip string) discoveryv1.AddressType {
 	parsedIP := net.ParseIP(ip)
-	if parsedIP == nil {
+	switch {
+	case parsedIP.To4() != nil:
+		return discoveryv1.AddressTypeIPv4
+	case parsedIP.To16() != nil:
+		return discoveryv1.AddressTypeIPv6
+	default:
 		return discoveryv1.AddressTypeFQDN
 	}
-	if parsedIP.To4() != nil {
-		return discoveryv1.AddressTypeIPv4
-	}
-	return discoveryv1.AddressTypeIPv6
 }
 
 func (g *gardenerAPIServer) endpointslice(clusterIP string) *discoveryv1.EndpointSlice {

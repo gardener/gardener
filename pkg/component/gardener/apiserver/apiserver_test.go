@@ -44,6 +44,7 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 var _ = Describe("GardenerAPIServer", func() {
@@ -104,7 +105,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			}
 		}
 		serviceVirtual                   *corev1.Service
-		endpoints                        *corev1.Endpoints
+		endpointsOrEndpointSlice         client.Object
 		clusterRole                      *rbacv1.ClusterRole
 		clusterRoleBinding               *rbacv1.ClusterRoleBinding
 		clusterRoleBindingAuthDelegation *rbacv1.ClusterRoleBinding
@@ -543,24 +544,46 @@ var _ = Describe("GardenerAPIServer", func() {
 				}},
 			},
 		}
-		endpoints = &corev1.Endpoints{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener-apiserver",
-				Namespace: "kube-system",
-				Labels: map[string]string{
-					"app":  "gardener",
-					"role": "apiserver",
+		if version.ConstraintK8sGreaterEqual133.Check(values.TargetVersion) {
+			endpointsOrEndpointSlice = &discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener-apiserver",
+					Namespace: "kube-system",
+					Labels: map[string]string{
+						"app":                        "gardener",
+						"role":                       "apiserver",
+						"kubernetes.io/service-name": "gardener-apiserver",
+					},
 				},
-			},
-			Subsets: []corev1.EndpointSubset{{
-				Ports: []corev1.EndpointPort{{
-					Port:     443,
-					Protocol: corev1.ProtocolTCP,
+				AddressType: "IPv4",
+				Ports: []discoveryv1.EndpointPort{{
+					Port:     ptr.To(int32(443)),
+					Protocol: ptr.To(corev1.ProtocolTCP),
 				}},
-				Addresses: []corev1.EndpointAddress{{
-					IP: clusterIP,
+				Endpoints: []discoveryv1.Endpoint{{
+					Addresses: []string{clusterIP},
 				}},
-			}},
+			}
+		} else {
+			endpointsOrEndpointSlice = &corev1.Endpoints{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener-apiserver",
+					Namespace: "kube-system",
+					Labels: map[string]string{
+						"app":  "gardener",
+						"role": "apiserver",
+					},
+				},
+				Subsets: []corev1.EndpointSubset{{
+					Ports: []corev1.EndpointPort{{
+						Port:     443,
+						Protocol: corev1.ProtocolTCP,
+					}},
+					Addresses: []corev1.EndpointAddress{{
+						IP: clusterIP,
+					}},
+				}},
+			}
 		}
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1369,7 +1392,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						apiServiceFor("settings.gardener.cloud", "v1alpha1"),
 						apiServiceFor("security.gardener.cloud", "v1alpha1"),
 						serviceVirtual,
-						endpoints,
+						endpointsOrEndpointSlice,
 						clusterRole,
 						clusterRoleBinding,
 						clusterRoleBindingAuthDelegation,
@@ -1615,18 +1638,6 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 				Expect(deployer.WaitCleanup(ctx)).To(Succeed())
 			})
 		})
-	})
-
-	Context("helper functions", func() {
-		DescribeTable("#GetAddressType",
-			func(address string, expected discoveryv1.AddressType) {
-				result := GetAddressType(address)
-				Expect(result).To(Equal(expected))
-			},
-			Entry("IPv4 address", "127.0.0.1", discoveryv1.AddressTypeIPv4),
-			Entry("IPv6 address", "2001:0db8:85a3:0000:0000:8a2e:0370:7334", discoveryv1.AddressTypeIPv6),
-			Entry("hostname", "example.com", discoveryv1.AddressTypeFQDN),
-		)
 	})
 })
 
