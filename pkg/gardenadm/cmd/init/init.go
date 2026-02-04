@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -446,6 +447,10 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Garden
 	b, err := botanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir, true)
 	if err != nil {
 		return nil, err
+	}
+
+	if opts.Zone != "" {
+		b.Zone = ptr.To(opts.Zone)
 	}
 
 	kubeconfigFileExists, err := b.FS.Exists(botanist.PathKubeconfig)
