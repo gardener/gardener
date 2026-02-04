@@ -292,7 +292,7 @@ var _ = Describe("Monitoring", func() {
 		It("should handle warnings in prometheus response", func() {
 			response := map[string]any{
 				"status":   "success",
-				"warnings": []string{"some warning"},
+				"warnings": []string{"some warning", "another warning"},
 				"data": map[string]any{
 					"resultType": "vector",
 					"result": []map[string]any{{
@@ -305,7 +305,7 @@ var _ = Describe("Monitoring", func() {
 
 			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("query returned warnings"))
+			Expect(err.Error()).To(Equal("query returned warnings: some warning, another warning"))
 			Expect(result.IsHealthy).To(BeFalse())
 			Expect(result.Message).To(Equal(""))
 		})
@@ -322,7 +322,7 @@ var _ = Describe("Monitoring", func() {
 
 			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("query returned an unexpected result type"))
+			Expect(err.Error()).To(Equal("query returned an unexpected result type: matrix"))
 			Expect(result.IsHealthy).To(BeFalse())
 			Expect(result.Message).To(Equal(""))
 		})
@@ -339,7 +339,7 @@ var _ = Describe("Monitoring", func() {
 
 			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("recording rules are not deployed or running yet"))
+			Expect(err.Error()).To(Equal("health check recording rules are not deployed or running yet"))
 			Expect(result.IsHealthy).To(BeFalse())
 			Expect(result.Message).To(Equal(""))
 		})
@@ -447,8 +447,8 @@ var _ = Describe("Monitoring", func() {
 				`healthcheck:up{task="task-12"} => 0, healthcheck:up{t...`
 			Expect(expectedMessage).To(HaveLen(500))
 
-			result := health.IsPrometheusHealthy(context.Background(), endpoint, port)
-			Expect(result.Error).NotTo(HaveOccurred())
+			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(result.IsHealthy).To(BeFalse())
 			Expect(result.Message).To(Equal(expectedMessage))
 		})
@@ -478,9 +478,9 @@ var _ = Describe("Monitoring", func() {
 				`healthcheck:up{task="task-12"} => 2, healthcheck:up{t...`
 			Expect(expectedMessage).To(HaveLen(500))
 
-			result := health.IsPrometheusHealthy(context.Background(), endpoint, port)
-			Expect(result.Error).To(HaveOccurred())
-			Expect(result.Error.Error()).To(Equal("query returned inconsistent sample values: " + expectedMessage))
+			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("query returned inconsistent sample values: " + expectedMessage))
 			Expect(result.IsHealthy).To(BeFalse())
 			Expect(result.Message).To(Equal(""))
 		})
