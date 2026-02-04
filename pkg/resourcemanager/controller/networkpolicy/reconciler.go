@@ -18,11 +18,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -38,7 +39,7 @@ var fromPolicyRegexp = regexp.MustCompile(resourcesv1alpha1.NetworkPolicyFromPol
 type Reconciler struct {
 	TargetClient client.Client
 	Config       resourcemanagerconfigv1alpha1.NetworkPolicyControllerConfig
-	Recorder     record.EventRecorder
+	Recorder     events.EventRecorder
 
 	selectors []labels.Selector
 }
@@ -348,7 +349,7 @@ func (r *Reconciler) reconcilePolicy(
 
 	if mutated {
 		log.V(1).Info("Usual pod label selector contained at least one key exceeding 63 characters - it had to be mutated", "usualPodLabelSelector", podLabelSelector, "mutatedPodLabelSelector", effectivePodLabelSelector)
-		r.Recorder.Eventf(service, corev1.EventTypeWarning, "PodLabelSelectorKey(s)TooLong", "Usual pod label selector has at least one key exceeding 63 characters and had to be mutated - consider shortening the namespace name or the service name (%+v was mutated to %+v)", podLabelSelector, effectivePodLabelSelector)
+		r.Recorder.Eventf(service, nil, corev1.EventTypeWarning, "PodLabelSelectorKey(s)TooLong", gardencorev1beta1.EventActionReconcile, "Usual pod label selector has at least one key exceeding 63 characters and had to be mutated - consider shortening the namespace name or the service name (%+v was mutated to %+v)", podLabelSelector, effectivePodLabelSelector)
 	}
 
 	return err

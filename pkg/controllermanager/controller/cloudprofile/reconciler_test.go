@@ -16,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -45,7 +45,7 @@ var _ = Describe("Reconciler", func() {
 
 		cloudProfileName = "test-cloudprofile"
 		fakeErr = errors.New("fake err")
-		reconciler = &Reconciler{Client: c, Recorder: &record.FakeRecorder{}}
+		reconciler = &Reconciler{Client: c, Recorder: &events.FakeRecorder{}}
 		cloudProfile = &gardencorev1beta1.CloudProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            cloudProfileName,

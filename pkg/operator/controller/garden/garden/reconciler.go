@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,7 +57,7 @@ type Reconciler struct {
 	RuntimeVersion        *semver.Version
 	Config                operatorconfigv1alpha1.OperatorConfiguration
 	Clock                 clock.Clock
-	Recorder              record.EventRecorder
+	Recorder              events.EventRecorder
 	Identity              *gardencorev1beta1.Gardener
 	ComponentImageVectors imagevector.ComponentImageVectors
 	GardenNamespace       string

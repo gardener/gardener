@@ -21,7 +21,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -49,7 +49,7 @@ var _ = Describe("Reconciler", func() {
 		fakeClient client.Client
 		log        logr.Logger
 		logBuffer  *gbytes.Buffer
-		recorder   *record.FakeRecorder
+		recorder   *events.FakeRecorder
 
 		node *corev1.Node
 	)
@@ -58,7 +58,7 @@ var _ = Describe("Reconciler", func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 		logBuffer = gbytes.NewBuffer()
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(logBuffer))
-		recorder = record.NewFakeRecorder(1)
+		recorder = events.NewFakeRecorder(1)
 
 		node = &corev1.Node{
 			ObjectMeta: metav1.ObjectMeta{

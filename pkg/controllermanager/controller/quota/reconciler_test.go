@@ -12,7 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -41,7 +41,7 @@ var _ = Describe("Reconciler", func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 
 		quotaName = "test-quota"
-		reconciler = &Reconciler{Client: fakeClient, Recorder: &record.FakeRecorder{}}
+		reconciler = &Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
 		quota = &gardencorev1beta1.Quota{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: quotaName,

@@ -14,7 +14,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -39,7 +39,7 @@ type Reconciler struct {
 	GardenRESTConfig *rest.Config
 	SeedClientSet    kubernetes.Interface
 	Config           gardenletconfigv1alpha1.GardenletConfiguration
-	Recorder         record.EventRecorder
+	Recorder         events.EventRecorder
 	Clock            clock.Clock
 	GardenNamespace  string
 	HelmRegistry     oci.Interface
@@ -65,7 +65,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	_, gardenletConfig, err := helper.ExtractSeedTemplateAndGardenletConfig(gardenlet.Name, &gardenlet.Spec.Config)
 	if err != nil {
-		r.Recorder.Eventf(gardenlet, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
+		r.Recorder.Eventf(gardenlet, nil, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, gardencorev1beta1.EventActionReconcile, err.Error())
 		updateCondition(r.Clock, status, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error())
 		if updateErr := r.updateStatus(ctx, gardenlet, status); updateErr != nil {
 			log.Error(updateErr, "Could not update status")
@@ -77,7 +77,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if !strings.HasPrefix(gardenlet.Name, gardenletutils.ResourcePrefixSelfHostedShoot) {
 		seed, err = gardenletdeployer.GetSeed(ctx, r.GardenClient, gardenlet.Name)
 		if err != nil {
-			r.Recorder.Eventf(gardenlet, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
+			r.Recorder.Eventf(gardenlet, nil, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, gardencorev1beta1.EventActionReconcile, err.Error())
 			updateCondition(r.Clock, status, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error())
 			if updateErr := r.updateStatus(ctx, gardenlet, status); updateErr != nil {
 				log.Error(updateErr, "Could not update status")
@@ -87,9 +87,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	log.Info("Deploying gardenlet")
-	r.Recorder.Eventf(gardenlet, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet")
+	r.Recorder.Eventf(gardenlet, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Deploying gardenlet")
 	if err := r.deployGardenlet(ctx, log, gardenlet, seed, gardenletConfig); err != nil {
-		r.Recorder.Eventf(gardenlet, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
+		r.Recorder.Eventf(gardenlet, nil, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, gardencorev1beta1.EventActionReconcile, err.Error())
 		updateCondition(r.Clock, status, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error())
 		if updateErr := r.updateStatus(ctx, gardenlet, status); updateErr != nil {
 			log.Error(updateErr, "Could not update status")
@@ -98,7 +98,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	log.V(1).Info("Reconciliation finished")
-	r.Recorder.Eventf(gardenlet, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, "Gardenlet has been deployed")
+	r.Recorder.Eventf(gardenlet, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, gardencorev1beta1.EventActionReconcile, "Gardenlet has been deployed")
 	updateCondition(r.Clock, status, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled, "Gardenlet with chart from "+gardenlet.Spec.Deployment.Helm.OCIRepository.GetURL()+" has been deployed")
 	if updateErr := r.updateStatus(ctx, gardenlet, status); updateErr != nil {
 		log.Error(updateErr, "Could not update status")

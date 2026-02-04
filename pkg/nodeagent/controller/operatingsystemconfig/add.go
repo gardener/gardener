@@ -42,7 +42,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		r.Client = mgr.GetClient()
 	}
 	if r.Recorder == nil {
-		r.Recorder = mgr.GetEventRecorderFor(ControllerName)
+		r.Recorder = mgr.GetEventRecorder(ControllerName)
 	}
 	if r.DBus == nil {
 		r.DBus = dbus.New(mgr.GetLogger().WithValues("controller", ControllerName))

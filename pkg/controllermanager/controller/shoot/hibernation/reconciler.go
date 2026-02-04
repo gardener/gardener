@@ -14,7 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -72,7 +72,7 @@ type Reconciler struct {
 	Client   client.Client
 	Config   controllermanagerconfigv1alpha1.ShootHibernationControllerConfiguration
 	Clock    clock.Clock
-	Recorder record.EventRecorder
+	Recorder events.EventRecorder
 }
 
 // Reconcile reconciles Shoots and hibernates or wakes them up according to their hibernation schedules.
@@ -133,10 +133,10 @@ func (r *Reconciler) hibernateOrWakeUpShootBasedOnSchedule(ctx context.Context, 
 	switch schedule.operation {
 	case hibernate:
 		shoot.Spec.Hibernation.Enabled = ptr.To(true)
-		r.Recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationEnabled, "Hibernating cluster due to schedule")
+		r.Recorder.Eventf(shoot, nil, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationEnabled, gardencorev1beta1.EventActionReconcile, "Hibernating cluster due to schedule")
 	case wakeUp:
 		shoot.Spec.Hibernation.Enabled = ptr.To(false)
-		r.Recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationDisabled, "Waking up cluster due to schedule")
+		r.Recorder.Eventf(shoot, nil, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationDisabled, gardencorev1beta1.EventActionReconcile, "Waking up cluster due to schedule")
 	}
 	if err := r.Client.Patch(ctx, shoot, patch); err != nil {
 		return err

@@ -30,7 +30,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		r.TargetClient = targetCluster.GetClient()
 	}
 	if r.Recorder == nil {
-		r.Recorder = targetCluster.GetEventRecorderFor(ControllerName + "-controller")
+		r.Recorder = targetCluster.GetEventRecorder(ControllerName + "-controller")
 	}
 
 	return builder.

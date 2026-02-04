@@ -15,7 +15,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
@@ -322,7 +322,7 @@ func newGardenletDeployer(b *botanist.GardenadmBotanist, gardenClientSet kuberne
 		},
 		Clock:                    clock.RealClock{},
 		ValuesHelper:             gardenletdeployer.NewValuesHelper(nil),
-		Recorder:                 &record.FakeRecorder{},
+		Recorder:                 &events.FakeRecorder{},
 		GardenletNamespaceTarget: b.Shoot.ControlPlaneNamespace,
 		BootstrapToken:           gardenClientSet.RESTConfig().BearerToken,
 	}

@@ -11,7 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -27,7 +27,7 @@ import (
 type Reconciler struct {
 	Client   client.Client
 	Config   controllermanagerconfigv1alpha1.QuotaControllerConfiguration
-	Recorder record.EventRecorder
+	Recorder events.EventRecorder
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -75,7 +75,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 
 		message := fmt.Sprintf("Cannot delete Quota, because the following resources are still referencing it: SecretBindings - %+v, CredentialsBindings - %+v", associatedSecretBindings, associatedCredentialsBindings)
-		r.Recorder.Event(quota, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
+		r.Recorder.Eventf(quota, nil, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, gardencorev1beta1.EventActionReconcile, message)
 		return reconcile.Result{}, fmt.Errorf("cannot delete Quota, because the following resources are still referencing it: SecretBindings - %+v, CredentialsBindings - %+v", associatedSecretBindings, associatedCredentialsBindings)
 	}
 

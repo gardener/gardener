@@ -17,7 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -73,7 +73,7 @@ var _ = Describe("Deployment", func() {
 		virtualClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.VirtualScheme).Build()
 		virtualClientSet = fakekubernetes.NewClientSetBuilder().WithChartRenderer(chartRenderer).WithClient(virtualClient).Build()
 
-		admission = New(runtimeClientSet, &record.FakeRecorder{}, "garden", ociRegistry)
+		admission = New(runtimeClientSet, &events.FakeRecorder{}, "garden", ociRegistry)
 
 		extensionName = "test-extension"
 		extension = &operatorv1alpha1.Extension{

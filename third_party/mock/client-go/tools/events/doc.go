@@ -2,6 +2,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-//go:generate mockgen -package record -destination=mocks.go k8s.io/client-go/tools/record EventRecorder
+//go:generate mockgen -package events -destination=mocks.go k8s.io/client-go/tools/events EventRecorder
 
-package record
+package events

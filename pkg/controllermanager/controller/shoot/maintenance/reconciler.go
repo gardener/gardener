@@ -17,7 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,7 +42,7 @@ type Reconciler struct {
 	Client   client.Client
 	Config   controllermanagerconfigv1alpha1.ShootMaintenanceControllerConfiguration
 	Clock    clock.Clock
-	Recorder record.EventRecorder
+	Recorder events.EventRecorder
 }
 
 // Reconcile reconciles Shoots and maintains them by updating versions or triggering operations.
@@ -418,7 +418,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	// try to maintain shoot, but don't retry on conflict, because a conflict means that we potentially operated on stale
 	// data (e.g. when calculating the updated k8s version), so rather return error and backoff
 	if err := r.Client.Update(ctx, shoot); err != nil {
-		r.Recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootMaintenanceFailed, err.Error())
+		r.Recorder.Eventf(shoot, nil, corev1.EventTypeWarning, gardencorev1beta1.ShootMaintenanceFailed, gardencorev1beta1.EventActionReconcile, err.Error())
 		return err
 	}
 
@@ -448,9 +448,9 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	// make sure to report (partial) maintenance failures
 	if kubernetesControlPlaneUpdate != nil {
 		if kubernetesControlPlaneUpdate.isSuccessful {
-			r.Recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventK8sVersionMaintenance, "%s", fmt.Sprintf("Control Plane: %s. Reason: %s.", kubernetesControlPlaneUpdate.description, kubernetesControlPlaneUpdate.reason))
+			r.Recorder.Eventf(shoot, nil, corev1.EventTypeNormal, gardencorev1beta1.ShootEventK8sVersionMaintenance, gardencorev1beta1.EventActionReconcile, "Control Plane: %s. Reason: %s.", kubernetesControlPlaneUpdate.description, kubernetesControlPlaneUpdate.reason)
 		} else {
-			r.Recorder.Eventf(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventK8sVersionMaintenance, "%s", fmt.Sprintf("Control Plane: Kubernetes version maintenance failed. Reason for update: %s. Error: %v", kubernetesControlPlaneUpdate.reason, kubernetesControlPlaneUpdate.description))
+			r.Recorder.Eventf(shoot, nil, corev1.EventTypeWarning, gardencorev1beta1.ShootEventK8sVersionMaintenance, gardencorev1beta1.EventActionReconcile, "Control Plane: Kubernetes version maintenance failed. Reason for update: %s. Error: %v", kubernetesControlPlaneUpdate.reason, kubernetesControlPlaneUpdate.description)
 		}
 	}
 
@@ -530,13 +530,13 @@ func buildMaintenanceMessages(kubernetesControlPlaneUpdate *updateResult, worker
 func (r *Reconciler) recordMaintenanceEventsForPool(workerToUpdateResult map[string]updateResult, shoot *gardencorev1beta1.Shoot, eventType string, maintenanceType string) {
 	for worker, reason := range workerToUpdateResult {
 		if reason.isSuccessful {
-			r.Recorder.Eventf(shoot, corev1.EventTypeNormal, eventType, "%s", fmt.Sprintf("Worker pool %q: %v. Reason: %s.",
-				worker, reason.description, reason.reason))
+			r.Recorder.Eventf(shoot, nil, corev1.EventTypeNormal, eventType, gardencorev1beta1.EventActionReconcile, "Worker pool %q: %v. Reason: %s.",
+				worker, reason.description, reason.reason)
 			continue
 		}
 
-		r.Recorder.Eventf(shoot, corev1.EventTypeWarning, eventType, "%s", fmt.Sprintf("Worker pool %q: %s version maintenance failed. Reason for update: %s. Error: %v",
-			worker, maintenanceType, reason.reason, reason.description))
+		r.Recorder.Eventf(shoot, nil, corev1.EventTypeWarning, eventType, gardencorev1beta1.EventActionReconcile, "Worker pool %q: %s version maintenance failed. Reason for update: %s. Error: %v",
+			worker, maintenanceType, reason.reason, reason.description)
 	}
 }
 

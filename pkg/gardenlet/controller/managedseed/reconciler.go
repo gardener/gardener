@@ -13,7 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,7 +41,7 @@ type Reconciler struct {
 	SeedClient            client.Client
 	Config                gardenletconfigv1alpha1.GardenletConfiguration
 	Clock                 clock.Clock
-	Recorder              record.EventRecorder
+	Recorder              events.EventRecorder
 	ShootClientMap        clientmap.ClientMap
 	GardenNamespaceGarden string
 	GardenNamespaceSeed   string
@@ -158,7 +158,7 @@ func (r *Reconciler) reconcile(
 		log.Info("Waiting for shoot to be reconciled")
 
 		msg := fmt.Sprintf("Waiting for shoot %q to be reconciled", client.ObjectKeyFromObject(shoot).String())
-		r.Recorder.Event(ms, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, msg)
+		r.Recorder.Eventf(ms, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, msg)
 		updateCondition(r.Clock, status, seedmanagementv1alpha1.ManagedSeedShootReconciled, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconciling, msg)
 
 		return reconcile.Result{RequeueAfter: r.Config.Controllers.ManagedSeed.WaitSyncPeriod.Duration}, r.updateStatus(ctx, ms, status)

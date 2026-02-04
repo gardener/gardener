@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,7 +41,7 @@ import (
 type Reconciler struct {
 	Client   client.Client
 	Config   controllermanagerconfigv1alpha1.ProjectControllerConfiguration
-	Recorder record.EventRecorder
+	Recorder events.EventRecorder
 
 	// RateLimiter allows limiting exponential backoff for testing purposes
 	RateLimiter workqueue.TypedRateLimiter[reconcile.Request]
@@ -98,19 +98,19 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 	// - if it is not set, determine the namespace name based on project UID and create it
 	namespace, err := r.reconcileNamespaceForProject(ctx, log, project, ownerReference)
 	if err != nil {
-		r.Recorder.Event(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
+		r.Recorder.Eventf(project, nil, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, gardencorev1beta1.EventActionReconcile, err.Error())
 		if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {
 			log.Error(err, "Failed to update Project status")
 		}
 		return err
 	}
-	r.Recorder.Eventf(project, corev1.EventTypeNormal, gardencorev1beta1.ProjectEventNamespaceReconcileSuccessful, "Successfully reconciled namespace %q for project", namespace.Name)
+	r.Recorder.Eventf(project, nil, corev1.EventTypeNormal, gardencorev1beta1.ProjectEventNamespaceReconcileSuccessful, gardencorev1beta1.EventActionReconcile, "Successfully reconciled namespace %q for project", namespace.Name)
 
 	// set the created namespace in spec.namespace
 	if project.Spec.Namespace == nil {
 		project.Spec.Namespace = ptr.To(namespace.Name)
 		if err := r.Client.Update(ctx, project); err != nil {
-			r.Recorder.Event(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
+			r.Recorder.Eventf(project, nil, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, gardencorev1beta1.EventActionReconcile, err.Error())
 			if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {
 				log.Error(err, "Failed to update Project status")
 			}
@@ -121,7 +121,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 	// Create ResourceQuota for project if configured.
 	quotaConfig, err := quotaConfigurationForProject(r.Config, project)
 	if err != nil {
-		r.Recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while setting up ResourceQuota: %+v", err)
+		r.Recorder.Eventf(project, nil, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, gardencorev1beta1.EventActionReconcile, "Error while setting up ResourceQuota: %+v", err)
 		if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {
 			log.Error(err, "Failed to update Project status")
 		}
@@ -130,7 +130,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 
 	if quotaConfig != nil {
 		if err := createOrUpdateResourceQuota(ctx, r.Client, namespace.Name, ownerReference, *quotaConfig); err != nil {
-			r.Recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while setting up ResourceQuota: %+v", err)
+			r.Recorder.Eventf(project, nil, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, gardencorev1beta1.EventActionReconcile, "Error while setting up ResourceQuota: %+v", err)
 			if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {
 				log.Error(err, "Failed to update Project status")
 			}
@@ -141,7 +141,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 	// Create RBAC rules to allow project members to interact with it.
 	rbac, err := projectrbac.New(r.Client, project)
 	if err != nil {
-		r.Recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while preparing for reconciling RBAC resources for namespace %q: %+v", namespace.Name, err)
+		r.Recorder.Eventf(project, nil, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, gardencorev1beta1.EventActionReconcile, "Error while preparing for reconciling RBAC resources for namespace %q: %+v", namespace.Name, err)
 		if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {
 			log.Error(err, "Failed to update Project status")
 		}
@@ -149,7 +149,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 	}
 
 	if err := rbac.Deploy(ctx); err != nil {
-		r.Recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while reconciling RBAC resources for namespace %q: %+v", namespace.Name, err)
+		r.Recorder.Eventf(project, nil, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, gardencorev1beta1.EventActionReconcile, "Error while reconciling RBAC resources for namespace %q: %+v", namespace.Name, err)
 		if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {
 			log.Error(err, "Failed to update Project status")
 		}
@@ -157,7 +157,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 	}
 
 	if err := rbac.DeleteStaleExtensionRolesResources(ctx); err != nil {
-		r.Recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while deleting stale RBAC rules for extension roles: %+v", err)
+		r.Recorder.Eventf(project, nil, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, gardencorev1beta1.EventActionReconcile, "Error while deleting stale RBAC rules for extension roles: %+v", err)
 		if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {
 			log.Error(err, "Failed to update Project status")
 		}
@@ -166,7 +166,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 
 	// Update the project status to mark it as 'ready'.
 	if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectReady); err != nil {
-		r.Recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while trying to mark project as ready: %+v", err)
+		r.Recorder.Eventf(project, nil, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, gardencorev1beta1.EventActionReconcile, "Error while trying to mark project as ready: %+v", err)
 		return err
 	}
 
@@ -320,14 +320,14 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, project *garde
 		}
 
 		if inUse {
-			r.Recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceNotEmpty, "Cannot release namespace %q because it still contains Shoots", *namespace)
+			r.Recorder.Eventf(project, nil, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceNotEmpty, gardencorev1beta1.EventActionDelete, "Cannot release namespace %q because it still contains Shoots", *namespace)
 			log.Info("Cannot release Project Namespace because it still contains Shoots")
 			return reconcile.Result{}, patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectTerminating)
 		}
 
 		released, err := r.releaseNamespace(ctx, log, project, *namespace)
 		if err != nil {
-			r.Recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceDeletionFailed, "Failed to release project namespace %q: %v", *namespace, err)
+			r.Recorder.Eventf(project, nil, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceDeletionFailed, gardencorev1beta1.EventActionDelete, "Failed to release project namespace %q: %v", *namespace, err)
 			if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {
 				log.Error(err, "Failed to update Project status")
 			}
@@ -335,7 +335,7 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, project *garde
 		}
 
 		if !released {
-			r.Recorder.Eventf(project, corev1.EventTypeNormal, gardencorev1beta1.ProjectEventNamespaceMarkedForDeletion, "Successfully marked project namespace %q for deletion", *namespace)
+			r.Recorder.Eventf(project, nil, corev1.EventTypeNormal, gardencorev1beta1.ProjectEventNamespaceMarkedForDeletion, gardencorev1beta1.EventActionDelete, "Successfully marked project namespace %q for deletion", *namespace)
 			// Project will be enqueued again once project namespace is gone, but recheck every minute to be sure
 			return reconcile.Result{RequeueAfter: time.Minute}, patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectTerminating)
 		}

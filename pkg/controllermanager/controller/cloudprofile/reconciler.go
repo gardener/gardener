@@ -12,7 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -28,7 +28,7 @@ import (
 type Reconciler struct {
 	Client   client.Client
 	Config   controllermanagerconfigv1alpha1.CloudProfileControllerConfiguration
-	Recorder record.EventRecorder
+	Recorder events.EventRecorder
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -62,7 +62,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 				associatedNamespacedCloudProfiles = append(associatedNamespacedCloudProfiles, fmt.Sprintf("%s/%s", namespacedCloudProfile.Namespace, namespacedCloudProfile.Name))
 			}
 			message := fmt.Sprintf("Cannot delete CloudProfile, because the following NamespacedCloudProfiles are still referencing it: %+v", associatedNamespacedCloudProfiles)
-			r.Recorder.Event(cloudProfile, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
+			r.Recorder.Eventf(cloudProfile, nil, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, gardencorev1beta1.EventActionDelete, message)
 			return reconcile.Result{}, errors.New(message)
 		}
 		log.Info("No NamespacedCloudProfiles are referencing the CloudProfile")
@@ -86,7 +86,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 
 		message := fmt.Sprintf("Cannot delete CloudProfile, because the following Shoots are still referencing it: %+v", associatedShoots)
-		r.Recorder.Event(cloudProfile, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
+		r.Recorder.Eventf(cloudProfile, nil, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, gardencorev1beta1.EventActionDelete, message)
 		return reconcile.Result{}, errors.New(message)
 	}
 

@@ -485,7 +485,7 @@ func (g *garden) Start(ctx context.Context) error {
 		}
 
 		runnables = append(runnables, manager.RunnableFunc(func(ctx context.Context) error {
-			return certificateManager.ScheduleCertificateRotation(ctx, g.cancel, g.mgr.GetEventRecorderFor("certificate-manager"))
+			return certificateManager.ScheduleCertificateRotation(ctx, g.cancel, g.mgr.GetEventRecorder("certificate-manager"))
 		}))
 	}
 

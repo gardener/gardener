@@ -57,7 +57,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virt
 		r.GardenNamespaceTarget = v1beta1constants.GardenNamespace
 	}
 	if r.Recorder == nil {
-		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
+		r.Recorder = mgr.GetEventRecorder(ControllerName + "-controller")
 	}
 	if r.HelmRegistry == nil {
 		r.HelmRegistry = oci.NewHelmRegistry(r.RuntimeCluster.GetClient())

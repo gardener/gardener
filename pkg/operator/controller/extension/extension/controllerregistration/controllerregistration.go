@@ -11,9 +11,10 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -31,7 +32,7 @@ type Interface interface {
 
 type registration struct {
 	runtimeClient client.Client
-	recorder      record.EventRecorder
+	recorder      events.EventRecorder
 
 	gardenNamespace string
 }
@@ -45,7 +46,7 @@ func (r *registration) Reconcile(ctx context.Context, log logr.Logger, extension
 		if err := r.Delete(ctx, log, extension); err != nil {
 			return err
 		}
-		r.recorder.Event(extension, corev1.EventTypeNormal, "Deletion", "ControllerRegistration and ControllerDeployment deleted successfully")
+		r.recorder.Eventf(extension, nil, corev1.EventTypeNormal, gardencorev1beta1.EventDeleted, gardencorev1beta1.EventActionReconcile, "ControllerRegistration and ControllerDeployment deleted successfully")
 
 		return nil
 	}
@@ -54,7 +55,7 @@ func (r *registration) Reconcile(ctx context.Context, log logr.Logger, extension
 	if err := r.createOrUpdateControllerRegistration(ctx, extension); err != nil {
 		return fmt.Errorf("failed to reconcile ControllerRegistration: %w", err)
 	}
-	r.recorder.Event(extension, corev1.EventTypeNormal, "Reconciliation", "ControllerRegistration and ControllerDeployment applied successfully")
+	r.recorder.Eventf(extension, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, gardencorev1beta1.EventActionReconcile, "ControllerRegistration and ControllerDeployment applied successfully")
 
 	return nil
 }
@@ -130,7 +131,7 @@ func managedResourceName(extension *operatorv1alpha1.Extension) string {
 }
 
 // New creates a new handler for ControllerRegistrations.
-func New(runtimeClient client.Client, recorder record.EventRecorder, gardenNamespace string) Interface {
+func New(runtimeClient client.Client, recorder events.EventRecorder, gardenNamespace string) Interface {
 	return &registration{
 		runtimeClient: runtimeClient,
 		recorder:      recorder,

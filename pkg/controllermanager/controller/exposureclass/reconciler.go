@@ -11,7 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -28,7 +28,7 @@ import (
 type Reconciler struct {
 	Client   client.Client
 	Config   controllermanagerconfigv1alpha1.ExposureClassControllerConfiguration
-	Recorder record.EventRecorder
+	Recorder events.EventRecorder
 
 	// RateLimiter allows limiting exponential backoff for testing purposes
 	RateLimiter workqueue.TypedRateLimiter[reconcile.Request]
@@ -73,7 +73,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, nil
 		}
 
-		r.Recorder.Event(exposureClass, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, fmt.Sprintf("Cannot delete ExposureClass, because it is still associated by the following Shoots: %+v", associatedShoots))
+		r.Recorder.Eventf(exposureClass, nil, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, gardencorev1beta1.EventActionReconcile, "Cannot delete ExposureClass, because it is still associated by the following Shoots: %+v", associatedShoots)
 		return reconcile.Result{}, fmt.Errorf("cannot delete ExposureClass, because it is still associated by the following Shoots: %+v", associatedShoots)
 	}
 

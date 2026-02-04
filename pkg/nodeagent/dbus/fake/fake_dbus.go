@@ -12,7 +12,7 @@ import (
 
 	systemddbus "github.com/coreos/go-systemd/v22/dbus"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 )
@@ -121,7 +121,7 @@ func (d *DBus) Enable(_ context.Context, unitNames ...string) error {
 }
 
 // Restart implements dbus.DBus.
-func (d *DBus) Restart(_ context.Context, _ record.EventRecorder, _ runtime.Object, unitName string) error {
+func (d *DBus) Restart(_ context.Context, _ events.EventRecorder, _ runtime.Object, unitName string) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -165,7 +165,7 @@ func (d *DBus) Reboot() error {
 }
 
 // Start implements dbus.DBus.
-func (d *DBus) Start(_ context.Context, _ record.EventRecorder, _ runtime.Object, unitName string) error {
+func (d *DBus) Start(_ context.Context, _ events.EventRecorder, _ runtime.Object, unitName string) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -177,7 +177,7 @@ func (d *DBus) Start(_ context.Context, _ record.EventRecorder, _ runtime.Object
 }
 
 // Stop implements dbus.DBus.
-func (d *DBus) Stop(_ context.Context, _ record.EventRecorder, _ runtime.Object, unitName string) error {
+func (d *DBus) Stop(_ context.Context, _ events.EventRecorder, _ runtime.Object, unitName string) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 

@@ -19,7 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -38,7 +38,7 @@ type Reconciler struct {
 	Client          client.Client
 	Config          *schedulerconfigv1alpha1.ShootSchedulerConfiguration
 	GardenNamespace string
-	Recorder        record.EventRecorder
+	Recorder        events.EventRecorder
 }
 
 // Reconcile schedules shoots to seeds.
@@ -85,13 +85,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		"strategy", r.Config.Strategy,
 	)
 
-	r.reportEvent(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventSchedulingSuccessful, "Scheduled to seed '%s'", seed.Name)
+	r.reportEvent(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventSchedulingSuccessful, gardencorev1beta1.EventActionReconcile, "Scheduled to seed %q", seed.Name)
 	return reconcile.Result{}, nil
 }
 
 func (r *Reconciler) reportFailedScheduling(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot, err error) {
 	description := "Failed to schedule Shoot: " + err.Error()
-	r.reportEvent(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventSchedulingFailed, description)
+	r.reportEvent(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventSchedulingFailed, gardencorev1beta1.EventActionReconcile, description)
 
 	patch := client.MergeFrom(shoot.DeepCopy())
 	if shoot.Status.LastOperation == nil {
@@ -106,8 +106,8 @@ func (r *Reconciler) reportFailedScheduling(ctx context.Context, log logr.Logger
 	}
 }
 
-func (r *Reconciler) reportEvent(shoot *gardencorev1beta1.Shoot, eventType string, eventReason, messageFmt string, args ...any) {
-	r.Recorder.Eventf(shoot, eventType, eventReason, messageFmt, args...)
+func (r *Reconciler) reportEvent(shoot *gardencorev1beta1.Shoot, eventType string, eventReason, action, messageFmt string, args ...any) {
+	r.Recorder.Eventf(shoot, nil, eventType, eventReason, action, messageFmt, args...)
 }
 
 // DetermineSeed returns an appropriate Seed cluster (or nil).

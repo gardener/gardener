@@ -56,7 +56,7 @@ func (r *Reconciler) delete(
 
 	if len(associatedShoots) > 0 {
 		log.Info("Cannot delete Seed because the following Shoots are still referencing it", "shoots", associatedShoots)
-		r.Recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, fmt.Sprintf("%s Shoots=%v", parentLogMessage, associatedShoots))
+		r.Recorder.Eventf(seed, nil, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, gardencorev1beta1.EventActionDelete, "%s Shoots=%v", parentLogMessage, associatedShoots)
 		return reconcile.Result{RequeueAfter: time.Minute}, nil
 	}
 
@@ -75,7 +75,7 @@ func (r *Reconciler) delete(
 
 	if len(associatedBackupBuckets) > 0 {
 		log.Info("Cannot delete Seed because the following BackupBuckets are still referencing it", "backupBuckets", associatedBackupBuckets)
-		r.Recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, fmt.Sprintf("%s BackupBuckets=%v", parentLogMessage, associatedBackupBuckets))
+		r.Recorder.Eventf(seed, nil, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, gardencorev1beta1.EventActionDelete, "%s BackupBuckets=%v", parentLogMessage, associatedBackupBuckets)
 		return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
