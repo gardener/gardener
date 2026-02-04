@@ -64,6 +64,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.R
 		conditionThresholds,
 		r.GardenNamespace,
 		healthchecker.NewHealthChecker(
+			log,
 			r.RuntimeClient,
 			r.Clock,
 			healthchecker.WithConditionThresholds(conditionThresholds)),

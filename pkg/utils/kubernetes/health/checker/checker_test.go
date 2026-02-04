@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -37,6 +38,7 @@ import (
 var _ = Describe("HealthChecker", func() {
 	var _ = Describe("health check", func() {
 		var (
+			log              logr.Logger
 			ctx              = context.Background()
 			fakeClient       client.Client
 			fakeGardenClient client.Client
@@ -61,7 +63,7 @@ var _ = Describe("HealthChecker", func() {
 			func(conditions []gardencorev1beta1.Condition, upToDate bool, stepTime bool, conditionMatcher types.GomegaMatcher) {
 				var (
 					mr      = new(resourcesv1alpha1.ManagedResource)
-					checker = NewHealthChecker(fakeClient, fakeClock)
+					checker = NewHealthChecker(log, fakeClient, fakeClock)
 				)
 
 				if !upToDate {
@@ -265,7 +267,7 @@ var _ = Describe("HealthChecker", func() {
 					Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating deployment "+client.ObjectKeyFromObject(obj).String())
 				}
 
-				checker := NewHealthChecker(fakeClient, fakeClock)
+				checker := NewHealthChecker(log, fakeClient, fakeClock)
 				exitCondition, err := checker.CheckLoggingControlPlane(ctx, namespace, eventLoggingEnabled, condition)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exitCondition).To(conditionMatcher)
@@ -297,7 +299,7 @@ var _ = Describe("HealthChecker", func() {
 		// CheckExtensionCondition
 		DescribeTable("#CheckExtensionCondition - HealthCheckReport",
 			func(healthCheckOutdatedThreshold *metav1.Duration, condition gardencorev1beta1.Condition, extensionsConditions []ExtensionCondition, expected types.GomegaMatcher) {
-				checker := NewHealthChecker(fakeClient, fakeClock)
+				checker := NewHealthChecker(log, fakeClient, fakeClock)
 				updatedCondition := checker.CheckExtensionCondition(condition, extensionsConditions, healthCheckOutdatedThreshold)
 				if expected == nil {
 					Expect(updatedCondition).To(BeNil())
@@ -443,7 +445,7 @@ var _ = Describe("HealthChecker", func() {
 					Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating deployment "+client.ObjectKeyFromObject(obj).String())
 				}
 
-				checker := NewHealthChecker(fakeClient, fakeClock)
+				checker := NewHealthChecker(log, fakeClient, fakeClock)
 
 				exitCondition, err := checker.CheckMonitoringControlPlane(
 					ctx,
@@ -473,7 +475,7 @@ var _ = Describe("HealthChecker", func() {
 
 		DescribeTable("#CheckControllerInstallation",
 			func(conditions []gardencorev1beta1.Condition, upToDate bool, stepTime bool, conditionMatcher types.GomegaMatcher) {
-				var checker = NewHealthChecker(fakeClient, fakeClock)
+				var checker = NewHealthChecker(log, fakeClient, fakeClock)
 
 				controllerRegistration := &gardencorev1beta1.ControllerRegistration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -762,7 +764,7 @@ var _ = Describe("HealthChecker", func() {
 					return health.PrometheusHealthCheckResult{}, errors.New(msg)
 				}
 
-				healthChecker = NewHealthChecker(fakeClient, fakeClock, WithPrometheusHealthChecker(
+				healthChecker = NewHealthChecker(log, fakeClient, fakeClock, WithPrometheusHealthChecker(
 					func(ctx context.Context, endpoint string, port int) (health.PrometheusHealthCheckResult, error) {
 						return testPrometheusHealthChecker(ctx, endpoint, port)
 					}))

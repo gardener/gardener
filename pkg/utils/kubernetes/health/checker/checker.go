@@ -12,6 +12,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -53,6 +54,7 @@ var (
 
 // HealthChecker contains the condition thresholds.
 type HealthChecker struct {
+	log                     logr.Logger
 	reader                  client.Reader
 	clock                   clock.Clock
 	conditionThresholds     map[gardencorev1beta1.ConditionType]time.Duration
@@ -61,8 +63,9 @@ type HealthChecker struct {
 }
 
 // NewHealthChecker creates a new health checker.
-func NewHealthChecker(reader client.Reader, clock clock.Clock, opts ...option) *HealthChecker {
+func NewHealthChecker(log logr.Logger, reader client.Reader, clock clock.Clock, opts ...option) *HealthChecker {
 	healthChecker := &HealthChecker{
+		log:                     log,
 		reader:                  reader,
 		clock:                   clock,
 		prometheusHealthChecker: health.IsPrometheusHealthy,

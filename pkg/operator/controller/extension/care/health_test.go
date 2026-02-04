@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -31,6 +32,7 @@ import (
 
 var _ = Describe("Extension health", func() {
 	var (
+		log           logr.Logger
 		ctx           context.Context
 		runtimeClient client.Client
 		virtualClient client.Client
@@ -128,6 +130,7 @@ var _ = Describe("Extension health", func() {
 					nil,
 					gardenNamespace,
 					healthchecker.NewHealthChecker(
+						log,
 						runtimeClient,
 						fakeClock),
 				).Check(ctx, extensionConditions)
@@ -153,6 +156,7 @@ var _ = Describe("Extension health", func() {
 							nil,
 							gardenNamespace,
 							healthchecker.NewHealthChecker(
+								log,
 								runtimeClient,
 								fakeClock),
 						).Check(ctx, extensionConditions)
@@ -185,6 +189,7 @@ var _ = Describe("Extension health", func() {
 								conditionThresholds,
 								gardenNamespace,
 								healthchecker.NewHealthChecker(
+									log,
 									runtimeClient,
 									fakeClock,
 									healthchecker.WithConditionThresholds(conditionThresholds)),
@@ -219,6 +224,7 @@ var _ = Describe("Extension health", func() {
 								conditionThresholds,
 								gardenNamespace,
 								healthchecker.NewHealthChecker(
+									log,
 									runtimeClient,
 									fakeClock,
 									healthchecker.WithConditionThresholds(conditionThresholds)),
@@ -253,6 +259,7 @@ var _ = Describe("Extension health", func() {
 								conditionThresholds,
 								gardenNamespace,
 								healthchecker.NewHealthChecker(
+									log,
 									runtimeClient,
 									fakeClock,
 									healthchecker.WithConditionThresholds(conditionThresholds)),
@@ -280,6 +287,7 @@ var _ = Describe("Extension health", func() {
 								conditionThresholds,
 								gardenNamespace,
 								healthchecker.NewHealthChecker(
+									log,
 									runtimeClient,
 									fakeClock,
 									healthchecker.WithConditionThresholds(conditionThresholds)),
@@ -357,6 +365,7 @@ var _ = Describe("Extension health", func() {
 							nil,
 							gardenNamespace,
 							healthchecker.NewHealthChecker(
+								log,
 								runtimeClient,
 								fakeClock),
 						).Check(ctx, extensionConditions)
@@ -386,6 +395,7 @@ var _ = Describe("Extension health", func() {
 								conditionThresholds,
 								gardenNamespace,
 								healthchecker.NewHealthChecker(
+									log,
 									runtimeClient,
 									fakeClock,
 									healthchecker.WithConditionThresholds(conditionThresholds)),
@@ -417,6 +427,7 @@ var _ = Describe("Extension health", func() {
 								conditionThresholds,
 								gardenNamespace,
 								healthchecker.NewHealthChecker(
+									log,
 									runtimeClient,
 									fakeClock,
 									healthchecker.WithConditionThresholds(conditionThresholds)),
@@ -448,6 +459,7 @@ var _ = Describe("Extension health", func() {
 								conditionThresholds,
 								gardenNamespace,
 								healthchecker.NewHealthChecker(
+									log,
 									runtimeClient,
 									fakeClock,
 									healthchecker.WithConditionThresholds(conditionThresholds)),
@@ -474,6 +486,7 @@ var _ = Describe("Extension health", func() {
 								conditionThresholds,
 								gardenNamespace,
 								healthchecker.NewHealthChecker(
+									log,
 									runtimeClient,
 									fakeClock,
 									healthchecker.WithConditionThresholds(conditionThresholds)),
