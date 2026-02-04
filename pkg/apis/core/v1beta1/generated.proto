@@ -1041,6 +1041,9 @@ message EncryptionAtRest {
   // See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
   // +optional
   repeated string resources = 1;
+
+  // Provider contains information about Shoot encryption provider.
+  optional EncryptionProviderStatus provider = 2;
 }
 
 // EncryptionConfig contains customizable encryption configuration of the API server.
@@ -1049,7 +1052,28 @@ message EncryptionConfig {
   // Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
   // Wildcards are not supported for now.
   // See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
+  // +optional
   repeated string resources = 1;
+
+  // Provider contains information about the encryption provider.
+  optional EncryptionProvider provider = 2;
+}
+
+// EncryptionProvider contains information about the encryption provider.
+message EncryptionProvider {
+  // Type contains the type of the encryption provider.
+  //
+  // Supported types:
+  //   - "aescbc"
+  // Defaults to aescbc.
+  // +optional
+  optional string type = 1;
+}
+
+// EncryptionProviderStatus contains information about Shoot encryption provider.
+message EncryptionProviderStatus {
+  // Type is the used encryption provider type.
+  optional string type = 1;
 }
 
 // ExpirableVersion contains a version and an expiration date.

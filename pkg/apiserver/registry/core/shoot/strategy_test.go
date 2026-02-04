@@ -247,6 +247,63 @@ var _ = Describe("Strategy", func() {
 			})
 		})
 
+		DescribeTable("should sync encryption provider in status.credentials.encryptionAtRest.providerType",
+			func(providerType *core.EncryptionProviderType, status core.ShootStatus, expectedStatus core.ShootStatus) {
+				oldShoot := &core.Shoot{
+					Spec: core.ShootSpec{
+						Kubernetes: core.Kubernetes{
+							KubeAPIServer: &core.KubeAPIServerConfig{
+								EncryptionConfig: &core.EncryptionConfig{
+									Provider: core.EncryptionProvider{
+										Type: providerType,
+									},
+								},
+							},
+						},
+					},
+					Status: status,
+				}
+				newShoot := oldShoot.DeepCopy()
+
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
+
+				Expect(newShoot.Status).To(Equal(expectedStatus))
+			},
+			Entry("sync with encryption provider", ptr.To(core.EncryptionProviderTypeAESCBC), core.ShootStatus{},
+				core.ShootStatus{
+					Credentials: &core.ShootCredentials{
+						EncryptionAtRest: &core.EncryptionAtRest{
+							Provider: core.EncryptionProviderStatus{
+								Type: core.EncryptionProviderTypeAESCBC,
+							},
+						},
+					},
+				},
+			),
+			Entry("do not overwrite existing provider in status", ptr.To(core.EncryptionProviderTypeAESCBC),
+				core.ShootStatus{
+					Credentials: &core.ShootCredentials{
+						EncryptionAtRest: &core.EncryptionAtRest{
+							Provider: core.EncryptionProviderStatus{
+								Type: core.EncryptionProviderType("foo"),
+							},
+						},
+					},
+				},
+				core.ShootStatus{
+					Credentials: &core.ShootCredentials{
+						EncryptionAtRest: &core.EncryptionAtRest{
+							Provider: core.EncryptionProviderStatus{
+								Type: core.EncryptionProviderType("foo"),
+							},
+						},
+					},
+				},
+			),
+			Entry("do not sync when encryption provider is nil", nil, core.ShootStatus{}, core.ShootStatus{}),
+			Entry("do not sync when encryption provider is empty", ptr.To(core.EncryptionProviderType("")), core.ShootStatus{}, core.ShootStatus{}),
+		)
+
 		DescribeTable("should sync encrypted resources from status.encryptedResources to status.credentials.encryptionAtRest.resources",
 			func(status core.ShootStatus, expected core.ShootStatus) {
 				oldShoot.Status = status
@@ -1048,6 +1105,63 @@ var _ = Describe("Strategy", func() {
 				Entry("rotation phase is not prepared", nil, &core.ETCDEncryptionKeyRotation{Phase: core.RotationCompleting, AutoCompleteAfterPrepared: ptr.To(true)}, false),
 			)
 		})
+
+		DescribeTable("should sync encryption provider in  status.credentials.encryptionAtRest.providerType",
+			func(providerType *core.EncryptionProviderType, status core.ShootStatus, expectedStatus core.ShootStatus) {
+				oldShoot := &core.Shoot{
+					Spec: core.ShootSpec{
+						Kubernetes: core.Kubernetes{
+							KubeAPIServer: &core.KubeAPIServerConfig{
+								EncryptionConfig: &core.EncryptionConfig{
+									Provider: core.EncryptionProvider{
+										Type: providerType,
+									},
+								},
+							},
+						},
+					},
+					Status: status,
+				}
+				newShoot := oldShoot.DeepCopy()
+
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
+
+				Expect(newShoot.Status).To(Equal(expectedStatus))
+			},
+			Entry("sync with encryption provider", ptr.To(core.EncryptionProviderTypeAESCBC), core.ShootStatus{},
+				core.ShootStatus{
+					Credentials: &core.ShootCredentials{
+						EncryptionAtRest: &core.EncryptionAtRest{
+							Provider: core.EncryptionProviderStatus{
+								Type: core.EncryptionProviderTypeAESCBC,
+							},
+						},
+					},
+				},
+			),
+			Entry("do not overwrite existing provider in status", ptr.To(core.EncryptionProviderTypeAESCBC),
+				core.ShootStatus{
+					Credentials: &core.ShootCredentials{
+						EncryptionAtRest: &core.EncryptionAtRest{
+							Provider: core.EncryptionProviderStatus{
+								Type: core.EncryptionProviderType("foo"),
+							},
+						},
+					},
+				},
+				core.ShootStatus{
+					Credentials: &core.ShootCredentials{
+						EncryptionAtRest: &core.EncryptionAtRest{
+							Provider: core.EncryptionProviderStatus{
+								Type: core.EncryptionProviderType("foo"),
+							},
+						},
+					},
+				},
+			),
+			Entry("do not sync when encryption provider is nil", nil, core.ShootStatus{}, core.ShootStatus{}),
+			Entry("do not sync when encryption provider is empty", ptr.To(core.EncryptionProviderType("")), core.ShootStatus{}, core.ShootStatus{}),
+		)
 
 		DescribeTable("should sync encrypted resources from status.encryptedResources to status.credentials.encryptionAtRest.resources",
 			func(status core.ShootStatus, expected core.ShootStatus) {

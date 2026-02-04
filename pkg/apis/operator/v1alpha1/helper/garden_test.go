@@ -286,6 +286,85 @@ var _ = Describe("helper", func() {
 		Entry("with resources", operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{Resources: []string{"configmaps", "shoots.core.gardener.cloud"}}}}, []string{"configmaps", "shoots.core.gardener.cloud"}),
 	)
 
+	Describe("EncryptionProvider", func() {
+		const EncryptionProviderType gardencorev1beta1.EncryptionProviderType = "foo"
+
+		DescribeTable("#GetGardenAPIServerEncryptionProviderType",
+			func(gardenAPIServerConfig *operatorv1alpha1.GardenerAPIServerConfig, expectedProvider string) {
+				Expect(string(GetGardenAPIServerEncryptionProviderType(gardenAPIServerConfig))).To(Equal(expectedProvider))
+			},
+
+			Entry("kubeAPIServerConfig is nil", nil, ""),
+			Entry("encryptionConfig is nil", &operatorv1alpha1.GardenerAPIServerConfig{}, ""),
+			Entry("Provider is empty", &operatorv1alpha1.GardenerAPIServerConfig{
+				EncryptionConfig: &gardencorev1beta1.EncryptionConfig{},
+			}, ""),
+			Entry("Type is nil", &operatorv1alpha1.GardenerAPIServerConfig{
+				EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+					Provider: gardencorev1beta1.EncryptionProvider{
+						Type: nil,
+					},
+				},
+			}, ""),
+			Entry("Type is set", &operatorv1alpha1.GardenerAPIServerConfig{
+				EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+					Provider: gardencorev1beta1.EncryptionProvider{
+						Type: ptr.To(EncryptionProviderType),
+					},
+				},
+			}, "foo"),
+		)
+
+		DescribeTable("#GetKubeAPIServerEncryptionProviderType",
+			func(kubeAPIServerConfig *operatorv1alpha1.KubeAPIServerConfig, expectedProvider string) {
+				Expect(string(GetKubeAPIServerEncryptionProviderType(kubeAPIServerConfig))).To(Equal(expectedProvider))
+			},
+
+			Entry("kubeAPIServerConfig is nil", nil, ""),
+			Entry("encryptionConfig is nil", &operatorv1alpha1.KubeAPIServerConfig{}, ""),
+			Entry("Provider is empty", &operatorv1alpha1.KubeAPIServerConfig{
+				KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+					EncryptionConfig: &gardencorev1beta1.EncryptionConfig{},
+				},
+			}, ""),
+			Entry("Type is nil", &operatorv1alpha1.KubeAPIServerConfig{
+				KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+					EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+						Provider: gardencorev1beta1.EncryptionProvider{
+							Type: nil,
+						},
+					},
+				},
+			}, ""),
+			Entry("Type is set", &operatorv1alpha1.KubeAPIServerConfig{
+				KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+					EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+						Provider: gardencorev1beta1.EncryptionProvider{
+							Type: ptr.To(EncryptionProviderType),
+						},
+					},
+				},
+			}, "foo"),
+		)
+
+		DescribeTable("#GetEncryptionProviderInStatus",
+			func(status operatorv1alpha1.GardenStatus, expected string) {
+				Expect(string(GetEncryptionProviderTypeInStatus(status))).To(Equal(expected))
+			},
+			Entry("no credentials field", operatorv1alpha1.GardenStatus{}, ""),
+			Entry("without provider", operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{}}, ""),
+			Entry("with provider", operatorv1alpha1.GardenStatus{
+				Credentials: &operatorv1alpha1.Credentials{
+					EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
+						Provider: operatorv1alpha1.EncryptionProviderStatus{
+							Type: EncryptionProviderType,
+						},
+					},
+				},
+			}, "foo"),
+		)
+	})
+
 	DescribeTable("#GetGardenerOperations",
 		func(annotations map[string]string, expectedResult []string) {
 			Expect(GetGardenerOperations(annotations)).To(Equal(expectedResult))

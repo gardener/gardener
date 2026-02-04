@@ -439,7 +439,7 @@ func validateETCDAutoscaling(autoscaling *gardencorev1beta1.ControlPlaneAutoscal
 func validateGardener(gardener operatorv1alpha1.Gardener, kubernetes operatorv1alpha1.Kubernetes, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateGardenerAPIServerConfig(gardener.APIServer, kubernetes.Version, fldPath.Child("gardenerAPIServer"))...)
+	allErrs = append(allErrs, validateGardenerAPIServerConfig(gardener.APIServer, kubernetes.KubeAPIServer, kubernetes.Version, fldPath.Child("gardenerAPIServer"))...)
 	allErrs = append(allErrs, validateGardenerAdmissionController(gardener.AdmissionController, fldPath.Child("gardenerAdmissionController"))...)
 	allErrs = append(allErrs, validateGardenerControllerManagerConfig(gardener.ControllerManager, fldPath.Child("gardenerControllerManager"))...)
 	allErrs = append(allErrs, validateGardenerSchedulerConfig(gardener.Scheduler, fldPath.Child("gardenerScheduler"))...)
@@ -448,7 +448,7 @@ func validateGardener(gardener operatorv1alpha1.Gardener, kubernetes operatorv1a
 	return allErrs
 }
 
-func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerConfig, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
+func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerConfig, kubeAPIServerConfig *operatorv1alpha1.KubeAPIServerConfig, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if config == nil {
@@ -471,11 +471,14 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 	}
 
 	if config.EncryptionConfig != nil {
-		seenResources := sets.New[schema.GroupResource]()
+		var (
+			seenResources        = sets.New[schema.GroupResource]()
+			encryptionConfigPath = fldPath.Child("encryptionConfig")
+		)
 
 		for i, resource := range config.EncryptionConfig.Resources {
 			var (
-				idxPath = fldPath.Child("encryptionConfig", "resources").Index(i)
+				idxPath = encryptionConfigPath.Child("resources").Index(i)
 				gr      = schema.ParseGroupResource(resource)
 			)
 
@@ -498,6 +501,10 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 			}
 
 			seenResources.Insert(gr)
+		}
+
+		if helper.GetGardenAPIServerEncryptionProviderType(config) != helper.GetKubeAPIServerEncryptionProviderType(kubeAPIServerConfig) {
+			allErrs = append(allErrs, field.Invalid(encryptionConfigPath.Child("provider", "type"), config.EncryptionConfig.Provider.Type, "field must be equal to spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.provider.type"))
 		}
 	}
 

@@ -5654,6 +5654,19 @@ Secrets are encrypted by default and are not part of the list.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md">https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md</a> for more details.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>provider</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.EncryptionProviderStatus">
+EncryptionProviderStatus
+</a>
+</em>
+</td>
+<td>
+<p>Provider contains information about Shoot encryption provider.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.EncryptionConfig">EncryptionConfig
@@ -5681,14 +5694,106 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/securit
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Resources contains the list of resources that shall be encrypted in addition to secrets.
 Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
 Wildcards are not supported for now.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md">https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md</a> for more details.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>provider</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.EncryptionProvider">
+EncryptionProvider
+</a>
+</em>
+</td>
+<td>
+<p>Provider contains information about the encryption provider.</p>
+</td>
+</tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.EncryptionProvider">EncryptionProvider
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.EncryptionConfig">EncryptionConfig</a>)
+</p>
+<p>
+<p>EncryptionProvider contains information about the encryption provider.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.EncryptionProviderType">
+EncryptionProviderType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Type contains the type of the encryption provider.</p>
+<p>Supported types:
+- &ldquo;aescbc&rdquo;
+Defaults to aescbc.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.EncryptionProviderStatus">EncryptionProviderStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.EncryptionAtRest">EncryptionAtRest</a>)
+</p>
+<p>
+<p>EncryptionProviderStatus contains information about Shoot encryption provider.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.EncryptionProviderType">
+EncryptionProviderType
+</a>
+</em>
+</td>
+<td>
+<p>Type is the used encryption provider type.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.EncryptionProviderType">EncryptionProviderType
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.EncryptionProvider">EncryptionProvider</a>, 
+<a href="#core.gardener.cloud/v1beta1.EncryptionProviderStatus">EncryptionProviderStatus</a>)
+</p>
+<p>
+<p>EncryptionProviderType is a type alias for the encryption provider type string.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.ErrorCode">ErrorCode
 (<code>string</code> alias)</p></h3>
 <p>

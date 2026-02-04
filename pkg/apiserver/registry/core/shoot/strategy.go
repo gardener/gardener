@@ -87,8 +87,11 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 
 	gardenerutils.SyncCloudProfileFields(oldShoot, newShoot)
 
-	// Ensure that encrypted resources are synced from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
+	// Ensure that encrypted resources are synced from `status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
 	SyncEncryptedResourcesStatus(newShoot)
+
+	// Ensure that encrypted provider type is set in `status.credentials.encryptionAtRest.providerType`.
+	SyncEncryptedProviderStatus(newShoot)
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
@@ -310,8 +313,11 @@ func (shootStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.
 		newShoot.Generation = oldShoot.Generation + 1
 	}
 
-	// Ensure that encrypted resources are synced from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
+	// Ensure that encrypted resources are synced from `status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
 	SyncEncryptedResourcesStatus(newShoot)
+
+	// Ensure that encrypted provider type is set in `status.credentials.encryptionAtRest.providerType`.
+	SyncEncryptedProviderStatus(newShoot)
 
 	// Ensure credentialsRef is synced even on /status subresource requests.
 	// Some clients are patching just the status which still results in update events
@@ -483,5 +489,26 @@ func SyncDNSProviderCredentials(shoot *core.Shoot) {
 		// - both fields are unset -> we have nothing to sync
 		// - both fields are set -> let the validation check if they are correct
 		// - credentialsRef refer to WorkloadIdentity -> secretRef should stay unset
+	}
+}
+
+// SyncEncryptedProviderStatus ensures the status fields shoot.spec.kubernetes.kubeAPIServer.encryptionConfig.provider.type
+// and shoot.status.credentials.encryptionAtRest.providerType are in sync, when status provider type in not set.
+// TODO(AleksandarSavchev): Remove this function after v1.137 has been released.
+func SyncEncryptedProviderStatus(shoot *core.Shoot) {
+	encryptionProviderType := gardencorehelper.GetEncryptionProviderType(shoot.Spec.Kubernetes.KubeAPIServer)
+	if len(encryptionProviderType) == 0 {
+		return
+	}
+
+	if shoot.Status.Credentials == nil {
+		shoot.Status.Credentials = &core.ShootCredentials{}
+	}
+	if shoot.Status.Credentials.EncryptionAtRest == nil {
+		shoot.Status.Credentials.EncryptionAtRest = &core.EncryptionAtRest{}
+	}
+
+	if len(shoot.Status.Credentials.EncryptionAtRest.Provider.Type) == 0 {
+		shoot.Status.Credentials.EncryptionAtRest.Provider.Type = encryptionProviderType
 	}
 }

@@ -748,6 +748,21 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.Logging.Verbosity).To(PointTo(Equal(int32(3))))
 		})
 
+		It("should default the encryption provider type", func() {
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type).To(PointTo(Equal(EncryptionProviderTypeAESCBC)))
+		})
+
+		It("should not overwrite the already set encryption provider type", func() {
+			const EncryptionProviderTypeFoo EncryptionProviderType = "foo"
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{EncryptionConfig: &EncryptionConfig{Provider: EncryptionProvider{Type: ptr.To(EncryptionProviderTypeFoo)}}}
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type).To(PointTo(Equal(EncryptionProviderTypeFoo)))
+		})
+
 		It("should default the defaultNotReadyTolerationSeconds field", func() {
 			SetObjectDefaults_Shoot(obj)
 

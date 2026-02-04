@@ -172,6 +172,10 @@ var (
 		"none",
 	)
 
+	availableEncryptionAtRestProviders = sets.New(
+		core.EncryptionProviderTypeAESCBC,
+	)
+
 	workerlessErrorMsg = "this field should not be set for workerless Shoot clusters"
 )
 
@@ -1387,6 +1391,10 @@ func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEn
 		}
 
 		seenResources.Insert(gr)
+	}
+
+	if encryptionConfig.Provider.Type != nil && !availableEncryptionAtRestProviders.Has(*encryptionConfig.Provider.Type) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("encryptionConfig", "provider", "type"), *encryptionConfig.Provider.Type, sets.List(availableEncryptionAtRestProviders)))
 	}
 
 	return allErrs

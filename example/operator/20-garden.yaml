@@ -185,6 +185,8 @@ spec:
     #     resources: # secrets are always encrypted
     #     - configmaps
     #     - customresource.fancyoperator.io
+    #     provider:
+    #       type: "aescbc"
     #   autoscaling:
     #     minAllowed:
     #       cpu: "1"
@@ -231,6 +233,8 @@ spec:
     #     resources:
     #     - shoots.core.gardener.cloud
     #     - managedseeds.seedmanagement.gardener.cloud
+    #     provider:
+    #       type: "aescbc"
     #   requests:
     #     maxNonMutatingInflight: 400
     #     maxMutatingInflight: 200

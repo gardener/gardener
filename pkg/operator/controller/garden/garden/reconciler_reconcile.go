@@ -174,6 +174,10 @@ func (r *Reconciler) reconcile(
 		defaultEncryptedGVKs    = append(gardenerutils.DefaultGardenerGVKsForEncryption(), gardenerutils.DefaultGVKsForEncryption()...)
 		resourcesToEncrypt      = append(shared.StringifyGroupResources(getKubernetesResourcesForEncryption(garden)), shared.StringifyGroupResources(getGardenerResourcesForEncryption(garden))...)
 		encryptedResources      = shared.NormalizeResources(helper.GetEncryptedResourcesInStatus(garden.Status))
+		// Both kube-apiserver and garden-apiserver must use the same encryption provider type.
+		// This is validated by a webhook, so we can read from either apiserver config.
+		encryptionProviderToUse = v1beta1helper.GetEncryptionProviderType(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig)
+		encryptionProvider      = helper.GetEncryptionProviderTypeInStatus(garden.Status)
 
 		g                              = flow.NewGraph("Garden reconciliation")
 		generateGenericTokenKubeconfig = g.Add(flow.Task{
@@ -501,7 +505,8 @@ func (r *Reconciler) reconcile(
 				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClientSet, secretsManager, r.GardenNamespace, operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer, resourcesToEncrypt, encryptedResources, defaultEncryptedGVKs)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
 			SkipIf: helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing &&
-				sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...)),
+				sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...)) && (encryptionProviderToUse == encryptionProvider ||
+				helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationCompleting),
 			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient, waitUntilGardenerAPIServerReady),
 		})
 		snapshotETCD = g.Add(flow.Task{
@@ -511,7 +516,8 @@ func (r *Reconciler) reconcile(
 			},
 			SkipIf: !backupConfigured ||
 				(helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing &&
-					sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...))),
+					sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...)) && (encryptionProviderToUse == encryptionProvider ||
+					helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationCompleting)),
 			Dependencies: flow.NewTaskIDs(rewriteResourcesAddLabel),
 		})
 		_ = g.Add(flow.Task{
@@ -521,7 +527,8 @@ func (r *Reconciler) reconcile(
 					return err
 				}
 
-				if !sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...)) {
+				if !sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...)) ||
+					encryptionProviderToUse != encryptionProvider {
 					encryptedResources := append(getKubernetesResourcesForEncryption(garden), getGardenerResourcesForEncryption(garden)...)
 
 					patch := client.MergeFrom(garden.DeepCopy())
@@ -529,16 +536,18 @@ func (r *Reconciler) reconcile(
 					// TODO(AleksandarSavchev): Stop setting the shoot.Status.EncryptedResources after v1.135 has been released.
 					garden.Status.EncryptedResources = shared.StringifyGroupResources(encryptedResources)
 
-					if len(encryptedResources) > 0 {
-						if garden.Status.Credentials == nil {
-							garden.Status.Credentials = &operatorv1alpha1.Credentials{}
-						}
-						if garden.Status.Credentials.EncryptionAtRest == nil {
-							garden.Status.Credentials.EncryptionAtRest = &operatorv1alpha1.EncryptionAtRest{}
-						}
+					if garden.Status.Credentials == nil {
+						garden.Status.Credentials = &operatorv1alpha1.Credentials{}
+					}
+					if garden.Status.Credentials.EncryptionAtRest == nil {
+						garden.Status.Credentials.EncryptionAtRest = &operatorv1alpha1.EncryptionAtRest{}
+					}
 
+					garden.Status.Credentials.EncryptionAtRest.Provider.Type = encryptionProviderToUse
+
+					if len(encryptedResources) > 0 {
 						garden.Status.Credentials.EncryptionAtRest.Resources = shared.StringifyGroupResources(encryptedResources)
-					} else if garden.Status.Credentials != nil && garden.Status.Credentials.EncryptionAtRest != nil {
+					} else {
 						garden.Status.Credentials.EncryptionAtRest.Resources = nil
 					}
 
@@ -550,7 +559,9 @@ func (r *Reconciler) reconcile(
 				return nil
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
 			SkipIf: helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationCompleting &&
-				sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...)),
+				sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...)) && (encryptionProviderToUse == encryptionProvider ||
+				helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPreparing ||
+				helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPrepared),
 			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient, waitUntilGardenerAPIServerReady, snapshotETCD),
 		})
 
@@ -969,6 +980,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 			nil,
 			shared.StringifyGroupResources(getKubernetesResourcesForEncryption(garden)),
 			utils.FilterEntriesByFilterFn(shared.NormalizeResources(helper.GetEncryptedResourcesInStatus(garden.Status)), operator.IsServedByKubeAPIServer),
+			v1beta1helper.GetEncryptionProviderType(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
 			false,
 		)
@@ -1008,6 +1020,7 @@ func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden
 			gardenerAPIServer,
 			shared.StringifyGroupResources(getGardenerResourcesForEncryption(garden)),
 			utils.FilterEntriesByFilterFn(helper.GetEncryptedResourcesInStatus(garden.Status), operator.IsServedByGardenerAPIServer),
+			helper.GetGardenAPIServerEncryptionProviderType(garden.Spec.VirtualCluster.Gardener.APIServer),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
 			helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials),
 		)
