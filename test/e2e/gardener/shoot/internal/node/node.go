@@ -33,6 +33,7 @@ const nodeCriticalDaemonSetName = "e2e-test-node-critical"
 const csiNodeDaemonSetName = "e2e-test-csi-node"
 const waitForCSINodeAnnotation = v1beta1constants.AnnotationPrefixWaitForCSINode + "driver"
 const driverName = "foo.driver.example.org"
+const markMachinesForcefulDeletionLabel = "force-deletion"
 
 // VerifyNodeCriticalComponentsBootstrapping tests the node readiness feature (see docs/usage/advanced/node-readiness.md).
 func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
@@ -48,7 +49,15 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 		}, SpecTimeout(time.Minute))
 
 		It("Delete Nodes and Machines to trigger new Node bootstrap", func(ctx SpecContext) {
+			machineList := &machinev1alpha1.MachineList{}
 			Eventually(ctx, func(g Gomega) {
+				g.Expect(s.SeedClient.List(ctx, machineList), client.InNamespace(seedNamespace)).To(Succeed())
+				g.Expect(machineList.Items).To(Not(BeEmpty()))
+				for _, machine := range machineList.Items {
+					patch := client.MergeFrom(machine.DeepCopy())
+					metav1.SetMetaDataLabel(&machine.ObjectMeta, markMachinesForcefulDeletionLabel, "True")
+					g.Expect(s.SeedClient.Patch(ctx, &machine, patch)).To(Succeed())
+				}
 				g.Expect(s.SeedClient.DeleteAllOf(ctx, &machinev1alpha1.Machine{}, client.InNamespace(seedNamespace))).To(Succeed())
 				g.Expect(s.ShootClient.DeleteAllOf(ctx, &corev1.Node{})).To(Succeed())
 			}).Should(Succeed())
