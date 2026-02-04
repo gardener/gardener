@@ -6,6 +6,7 @@ package node
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -58,10 +59,14 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 			nodeList := &corev1.NodeList{}
 			Eventually(ctx, func(g Gomega) {
 				g.Expect(s.ShootClient.List(ctx, nodeList)).To(Succeed())
-				g.Expect(nodeList.Items).To(HaveLen(1))
-				g.Expect(nodeList.Items[0].DeletionTimestamp).To(BeNil())
+				g.Expect(nodeList.Items).To(Not(BeEmpty()))
+				idx := slices.IndexFunc(nodeList.Items, func(no corev1.Node) bool {
+					return no.DeletionTimestamp == nil
+				})
+				g.Expect(idx).To(BeNumerically(">=", 0))
+				node = nodeList.Items[idx].DeepCopy()
 			}).Should(Succeed())
-		}, SpecTimeout(10*time.Minute))
+		}, SpecTimeout(30*time.Minute))
 
 		It("Verify node-critical components not ready taint is present", func(ctx SpecContext) {
 			Eventually(ctx, s.ShootKomega.Object(node)).MustPassRepeatedly(3).WithPolling(2 * time.Second).Should(
@@ -91,7 +96,7 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 		var csiNodeObject *storagev1.CSINode
 
 		It("Wait for CSINode object", func(ctx SpecContext) {
-			csiNodeObject = waitForCSINodeObject(ctx, s.ShootClient)
+			csiNodeObject = waitForCSINodeObject(ctx, s.ShootClient, node)
 		}, SpecTimeout(time.Minute))
 
 		It("Patch CSINode object to contain required driver", func(ctx SpecContext) {
@@ -108,9 +113,10 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 		}, SpecTimeout(5*time.Minute))
 
 		AfterAll(func(ctx SpecContext) {
+			waitForTerminatingNodesToBeDeleted(ctx, s.ShootClient)
 			cleanupNodeCriticalManagedResource(ctx, s.SeedClient, seedNamespace, nodeCriticalDaemonSetName)
 			cleanupNodeCriticalManagedResource(ctx, s.SeedClient, seedNamespace, csiNodeDaemonSetName)
-		}, NodeTimeout(time.Minute))
+		}, NodeTimeout(5*time.Minute))
 	})
 }
 
@@ -195,17 +201,23 @@ func waitForDaemonSetToBecomeHealthy(ctx context.Context, shootClient client.Cli
 	}).Should(Succeed())
 }
 
-func waitForCSINodeObject(ctx context.Context, shootClient client.Client) *storagev1.CSINode {
+func waitForCSINodeObject(ctx context.Context, shootClient client.Client, node *corev1.Node) *storagev1.CSINode {
 	GinkgoHelper()
 
 	csiNodeList := &storagev1.CSINodeList{}
+	csiNode := &storagev1.CSINode{}
 
 	Eventually(ctx, func(g Gomega) {
 		g.Expect(shootClient.List(ctx, csiNodeList)).To(Succeed())
-		g.Expect(csiNodeList.Items).To(HaveLen(1))
+		g.Expect(csiNodeList.Items).To(Not(BeEmpty()))
+		idx := slices.IndexFunc(csiNodeList.Items, func(csino storagev1.CSINode) bool {
+			return slices.ContainsFunc(csino.OwnerReferences, func(ownerRef metav1.OwnerReference) bool { return ownerRef.UID == node.UID })
+		})
+		g.Expect(idx).To(BeNumerically(">=", 0))
+		csiNode = csiNodeList.Items[idx].DeepCopy()
 	}).Should(Succeed())
 
-	return &csiNodeList.Items[0]
+	return csiNode
 }
 
 func patchCSINodeObjectWithRequiredDriver(ctx context.Context, shootClient client.Client, csiNode *storagev1.CSINode) {
@@ -230,5 +242,16 @@ func cleanupNodeCriticalManagedResource(ctx context.Context, seedClient client.C
 	Eventually(ctx, func(g Gomega) {
 		g.Expect(seedClient.DeleteAllOf(ctx, &resourcesv1alpha1.ManagedResource{}, client.InNamespace(namespace), client.MatchingLabels(getLabels(name)))).To(Succeed())
 		g.Expect(seedClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(namespace), client.MatchingLabels(getLabels(name)))).To(Succeed())
+	}).Should(Succeed())
+}
+
+func waitForTerminatingNodesToBeDeleted(ctx context.Context, shootClient client.Client) {
+	GinkgoHelper()
+
+	By("Wait for Nodes to be deleted")
+	Eventually(ctx, func(g Gomega) {
+		nodeList := &corev1.NodeList{}
+		g.Expect(shootClient.List(ctx, nodeList)).To(Succeed())
+		g.Expect(nodeList.Items).To(HaveLen(1))
 	}).Should(Succeed())
 }
