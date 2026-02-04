@@ -25,7 +25,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	collectorconstants "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/constants"
@@ -72,6 +73,8 @@ type Values struct {
 	ValiHost string
 	// ClusterType is the type of the cluster where the collector is deployed.
 	ClusterType component.ClusterType
+	// IsGardenCluster specifies if the Collector is being deployed in a cluster registered as a Garden.
+	IsGardenCluster bool
 }
 
 type otelCollector struct {
@@ -322,13 +325,6 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 			Name:      collectorconstants.OpenTelemetryCollectorResourceName,
 			Namespace: namespace,
 			Labels:    getLabels(),
-			// We want this annotation to be passed down to the service that will be created by the OpenTelemetry Operator.
-			// Currently, there is no other way to define the annotations on the service other than adding them to the OpenTelemetryCollector resource.
-			// All annotations that exist here will be passed down to every resource that gets created by the OpenTelemetry Operator.
-			Annotations: map[string]string{
-				"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports":                                                                                                  fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort),
-				resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicySeedScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"port":8888,"protocol":"TCP"},{"port":2021,"protocol":"TCP"}]`,
-			},
 		},
 		Spec: otelv1beta1.OpenTelemetryCollectorSpec{
 			Mode:            "deployment",
@@ -556,15 +552,18 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 		obj.Spec.AdditionalContainers[1].VolumeMounts = []corev1.VolumeMount{gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)}
 	}
 
+	// We want these annotations to be passed down to the service that will be created by the OpenTelemetry Operator.
+	// Currently, there is no other way to define the annotations on the service other than adding them to the OpenTelemetryCollector resource.
+	// All annotations that exist here will be passed down to every resource that gets created by the OpenTelemetry Operator.
 	switch o.values.ClusterType {
 	case component.ClusterTypeSeed:
-		obj.Annotations = map[string]string{
-			"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort),
+		if o.values.IsGardenCluster {
+			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix+v1beta1constants.LabelNetworkPolicyGardenScrapeTargets+resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort))
+		} else {
+			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix+v1beta1constants.LabelNetworkPolicySeedScrapeTargets+resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort))
 		}
 	case component.ClusterTypeShoot:
-		obj.Annotations = map[string]string{
-			"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort),
-		}
+		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix+v1beta1constants.LabelNetworkPolicyScrapeTargets+resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort))
 	}
 
 	return obj
@@ -684,10 +683,13 @@ func (o *otelCollector) getLoggingAgentClusterRoleBinding(serviceAccountName, cl
 }
 
 func (o *otelCollector) getPrometheusLabel() string {
-	if o.values.ClusterType == component.ClusterTypeShoot {
-		return shoot.Label
+	if o.values.ClusterType == component.ClusterTypeSeed {
+		if o.values.IsGardenCluster {
+			return garden.Label
+		}
+		return seed.Label
 	}
-	return aggregate.Label
+	return shoot.Label
 }
 
 func getLabels() map[string]string {

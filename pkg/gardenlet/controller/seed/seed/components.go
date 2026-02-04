@@ -226,7 +226,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.openTelemetryCollector, err = r.newOpenTelemetryCollector(secretsManager)
+	c.openTelemetryCollector, err = r.newOpenTelemetryCollector(secretsManager, seedIsGarden)
 	if err != nil {
 		return
 	}
@@ -323,7 +323,7 @@ func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, se
 	})
 }
 
-func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenCluster bool) (component.DeployWaiter, map[string]string, string, error) {
+func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, seedIsGarden bool) (component.DeployWaiter, map[string]string, string, error) {
 	labels := sharedcomponent.GetIstioZoneLabels(r.Config.SNI.Ingress.Labels, nil)
 
 	servicePorts := []corev1.ServicePort{
@@ -342,7 +342,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 		"",
 		*r.Config.SNI.Ingress.Namespace,
 		v1beta1constants.PriorityClassNameSeedSystemCritical,
-		!isGardenCluster,
+		!seedIsGarden,
 		labels,
 		gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port),
 		seed.GetLoadBalancerServiceAnnotations(),
@@ -760,7 +760,7 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 	)
 }
 
-func (r *Reconciler) newVerticalPodAutoscaler(settings *gardencorev1beta1.SeedSettings, secretsManager secretsmanager.Interface, isGardenCluster bool) (component.DeployWaiter, error) {
+func (r *Reconciler) newVerticalPodAutoscaler(settings *gardencorev1beta1.SeedSettings, secretsManager secretsmanager.Interface, seedIsGarden bool) (component.DeployWaiter, error) {
 	var featureGates map[string]bool
 
 	if settings.VerticalPodAutoscaler != nil {
@@ -777,7 +777,7 @@ func (r *Reconciler) newVerticalPodAutoscaler(settings *gardencorev1beta1.SeedSe
 		v1beta1constants.PriorityClassNameSeedSystem800,
 		v1beta1constants.PriorityClassNameSeedSystem700,
 		v1beta1constants.PriorityClassNameSeedSystem700,
-		isGardenCluster,
+		seedIsGarden,
 		featureGates,
 	)
 	if err != nil {
@@ -859,7 +859,7 @@ func (r *Reconciler) newOpenTelemetryOperator() (component.DeployWaiter, error) 
 	)
 }
 
-func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Interface) (component.Deployer, error) {
+func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Interface, seedIsGarden bool) (component.Deployer, error) {
 	deployer, err := sharedcomponent.NewOpenTelemetryCollector(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
@@ -867,6 +867,7 @@ func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Int
 		secretsManager,
 		v1beta1constants.SecretNameCASeed,
 		component.ClusterTypeSeed,
+		seedIsGarden,
 	)
 	if err != nil {
 		return nil, err

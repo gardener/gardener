@@ -151,6 +151,7 @@ func (b *Botanist) DefaultOtelCollector() (collector.Interface, error) {
 			PriorityClassName:       v1beta1constants.PriorityClassNameShootControlPlane100,
 			ValiHost:                b.ComputeValiHost(),
 			ClusterType:             component.ClusterTypeShoot,
+			IsGardenCluster:         false,
 		},
 		b.SecretsManager,
 	), nil

@@ -702,7 +702,6 @@ var _ = Describe("Seed controller tests", func() {
 					"prometheus-aggregate",
 					"kube-state-metrics-seed",
 					"referenced-resources-" + seedName,
-					"opentelemetry-collector",
 				}
 
 				if !seedIsGarden {
@@ -718,6 +717,7 @@ var _ = Describe("Seed controller tests", func() {
 						"prometheus-operator",
 						"perses-operator",
 						"opentelemetry-operator",
+						"opentelemetry-collector",
 					)
 				} else {
 					expectedManagedResources = append(expectedManagedResources,

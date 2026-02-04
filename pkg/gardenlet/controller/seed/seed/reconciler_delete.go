@@ -140,10 +140,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name: "Destroying aggregate Prometheus",
 			Fn:   c.aggregatePrometheus.Destroy,
 		})
-		destroyOpenTelemetryCollector = g.Add(flow.Task{
-			Name: "Destroying OpenTelemetry Collector",
-			Fn:   component.OpDestroyAndWait(c.openTelemetryCollector).Destroy,
-		})
 		destroyAlertManager = g.Add(flow.Task{
 			Name: "Destroying AlertManager",
 			Fn:   c.alertManager.Destroy,
@@ -203,6 +199,11 @@ func (r *Reconciler) runDeleteSeedFlow(
 		destroyPrometheusOperator = g.Add(flow.Task{
 			Name:   "Destroy Prometheus Operator",
 			Fn:     component.OpDestroyAndWait(c.prometheusOperator).Destroy,
+			SkipIf: seedIsGarden,
+		})
+		destroyOpenTelemetryCollector = g.Add(flow.Task{
+			Name:   "Destroying OpenTelemetry Collector",
+			Fn:     component.OpDestroyAndWait(c.openTelemetryCollector).Destroy,
 			SkipIf: seedIsGarden,
 		})
 		destroyOpenTelemetryOperator = g.Add(flow.Task{

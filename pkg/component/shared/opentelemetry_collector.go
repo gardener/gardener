@@ -24,6 +24,7 @@ func NewOpenTelemetryCollector(
 	secretsManager secretsmanager.Interface,
 	secretNameServerCA string,
 	clusterType component.ClusterType,
+	isGardenCluster bool,
 ) (
 	deployer collector.Interface,
 	err error,
@@ -50,6 +51,7 @@ func NewOpenTelemetryCollector(
 			SecretNameServerCA:      secretNameServerCA,
 			PriorityClassName:       priorityClassName,
 			ClusterType:             clusterType,
+			IsGardenCluster:         isGardenCluster,
 		},
 		secretsManager,
 	), nil
