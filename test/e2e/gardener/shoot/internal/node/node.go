@@ -57,8 +57,8 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 					patch := client.MergeFrom(machine.DeepCopy())
 					metav1.SetMetaDataLabel(&machine.ObjectMeta, markMachinesForcefulDeletionLabel, "True")
 					g.Expect(s.ShootClient.Patch(ctx, &machine, patch)).To(Succeed())
+					g.Expect(s.ShootClient.Delete(ctx, &machine)).To(Succeed())
 				}
-				g.Expect(s.SeedClient.DeleteAllOf(ctx, &machinev1alpha1.Machine{}, client.InNamespace(seedNamespace))).To(Succeed())
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
