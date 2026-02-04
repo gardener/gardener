@@ -10,7 +10,14 @@
 package openapi
 
 import (
-	v1 "k8s.io/api/autoscaling/v1"
+	v1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
+	v1 "github.com/gardener/gardener/pkg/apis/core/v1"
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -26,666 +33,666 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequest":           schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequest(ref),
-		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequestSpec":       schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequestStatus":     schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequest":          schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequest(ref),
-		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequestSpec":      schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequestSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequestStatus":    schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequestStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1.ControllerDeployment":                             schema_pkg_apis_core_v1_ControllerDeployment(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1.ControllerDeploymentList":                         schema_pkg_apis_core_v1_ControllerDeploymentList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1.HelmControllerDeployment":                         schema_pkg_apis_core_v1_HelmControllerDeployment(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1.OCIRepository":                                    schema_pkg_apis_core_v1_OCIRepository(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging":                            schema_pkg_apis_core_v1beta1_APIServerLogging(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests":                           schema_pkg_apis_core_v1beta1_APIServerRequests(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestriction":                           schema_pkg_apis_core_v1beta1_AccessRestriction(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestrictionWithOptions":                schema_pkg_apis_core_v1beta1_AccessRestrictionWithOptions(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addon":                                       schema_pkg_apis_core_v1beta1_Addon(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons":                                      schema_pkg_apis_core_v1beta1_Addons(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin":                             schema_pkg_apis_core_v1beta1_AdmissionPlugin(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Alerting":                                    schema_pkg_apis_core_v1beta1_Alerting(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig":                                 schema_pkg_apis_core_v1beta1_AuditConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditPolicy":                                 schema_pkg_apis_core_v1beta1_AuditPolicy(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AuthorizerKubeconfigReference":               schema_pkg_apis_core_v1beta1_AuthorizerKubeconfigReference(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AvailabilityZone":                            schema_pkg_apis_core_v1beta1_AvailabilityZone(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Backup":                                      schema_pkg_apis_core_v1beta1_Backup(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucket":                                schema_pkg_apis_core_v1beta1_BackupBucket(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketList":                            schema_pkg_apis_core_v1beta1_BackupBucketList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketProvider":                        schema_pkg_apis_core_v1beta1_BackupBucketProvider(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketSpec":                            schema_pkg_apis_core_v1beta1_BackupBucketSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketStatus":                          schema_pkg_apis_core_v1beta1_BackupBucketStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntry":                                 schema_pkg_apis_core_v1beta1_BackupEntry(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntryList":                             schema_pkg_apis_core_v1beta1_BackupEntryList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntrySpec":                             schema_pkg_apis_core_v1beta1_BackupEntrySpec(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntryStatus":                           schema_pkg_apis_core_v1beta1_BackupEntryStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Bastion":                                     schema_pkg_apis_core_v1beta1_Bastion(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineImage":                         schema_pkg_apis_core_v1beta1_BastionMachineImage(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineType":                          schema_pkg_apis_core_v1beta1_BastionMachineType(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CARotation":                                  schema_pkg_apis_core_v1beta1_CARotation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI":                                         schema_pkg_apis_core_v1beta1_CRI(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityDefinition":                        schema_pkg_apis_core_v1beta1_CapabilityDefinition(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfile":                                schema_pkg_apis_core_v1beta1_CloudProfile(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileList":                            schema_pkg_apis_core_v1beta1_CloudProfileList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference":                       schema_pkg_apis_core_v1beta1_CloudProfileReference(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileSpec":                            schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileStatus":                          schema_pkg_apis_core_v1beta1_CloudProfileStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscaler":                           schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscalerOptions":                    schema_pkg_apis_core_v1beta1_ClusterAutoscalerOptions(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition":                                   schema_pkg_apis_core_v1beta1_Condition(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ContainerRuntime":                            schema_pkg_apis_core_v1beta1_ContainerRuntime(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlane":                                schema_pkg_apis_core_v1beta1_ControlPlane(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling":                     schema_pkg_apis_core_v1beta1_ControlPlaneAutoscaling(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeployment":                        schema_pkg_apis_core_v1beta1_ControllerDeployment(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeploymentList":                    schema_pkg_apis_core_v1beta1_ControllerDeploymentList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallation":                      schema_pkg_apis_core_v1beta1_ControllerInstallation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallationList":                  schema_pkg_apis_core_v1beta1_ControllerInstallationList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallationSpec":                  schema_pkg_apis_core_v1beta1_ControllerInstallationSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallationStatus":                schema_pkg_apis_core_v1beta1_ControllerInstallationStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistration":                      schema_pkg_apis_core_v1beta1_ControllerRegistration(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistrationDeployment":            schema_pkg_apis_core_v1beta1_ControllerRegistrationDeployment(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistrationList":                  schema_pkg_apis_core_v1beta1_ControllerRegistrationList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistrationSpec":                  schema_pkg_apis_core_v1beta1_ControllerRegistrationSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerResource":                          schema_pkg_apis_core_v1beta1_ControllerResource(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerResourceLifecycle":                 schema_pkg_apis_core_v1beta1_ControllerResourceLifecycle(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNS":                                     schema_pkg_apis_core_v1beta1_CoreDNS(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSAutoscaling":                          schema_pkg_apis_core_v1beta1_CoreDNSAutoscaling(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSRewriting":                            schema_pkg_apis_core_v1beta1_CoreDNSRewriting(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS":                                         schema_pkg_apis_core_v1beta1_DNS(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSExposure":                                 schema_pkg_apis_core_v1beta1_DNSExposure(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude":                           schema_pkg_apis_core_v1beta1_DNSIncludeExclude(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSProvider":                                 schema_pkg_apis_core_v1beta1_DNSProvider(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume":                                  schema_pkg_apis_core_v1beta1_DataVolume(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DeploymentRef":                               schema_pkg_apis_core_v1beta1_DeploymentRef(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DualApprovalForDeletion":                     schema_pkg_apis_core_v1beta1_DualApprovalForDeletion(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCD":                                        schema_pkg_apis_core_v1beta1_ETCD(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDConfig":                                  schema_pkg_apis_core_v1beta1_ETCDConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation":                   schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionAtRest":                            schema_pkg_apis_core_v1beta1_EncryptionAtRest(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig":                            schema_pkg_apis_core_v1beta1_EncryptionConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionProvider":                          schema_pkg_apis_core_v1beta1_EncryptionProvider(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionProviderStatus":                    schema_pkg_apis_core_v1beta1_EncryptionProviderStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion":                            schema_pkg_apis_core_v1beta1_ExpirableVersion(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersionStatus":                      schema_pkg_apis_core_v1beta1_ExpirableVersionStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Exposure":                                    schema_pkg_apis_core_v1beta1_Exposure(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClass":                               schema_pkg_apis_core_v1beta1_ExposureClass(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClassList":                           schema_pkg_apis_core_v1beta1_ExposureClassList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClassScheduling":                     schema_pkg_apis_core_v1beta1_ExposureClassScheduling(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension":                                   schema_pkg_apis_core_v1beta1_Extension(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExtensionExposure":                           schema_pkg_apis_core_v1beta1_ExtensionExposure(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExtensionResourceState":                      schema_pkg_apis_core_v1beta1_ExtensionResourceState(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.FailureTolerance":                            schema_pkg_apis_core_v1beta1_FailureTolerance(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener":                                    schema_pkg_apis_core_v1beta1_Gardener(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerResourceData":                        schema_pkg_apis_core_v1beta1_GardenerResourceData(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HelmControllerDeployment":                    schema_pkg_apis_core_v1beta1_HelmControllerDeployment(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation":                                 schema_pkg_apis_core_v1beta1_Hibernation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HibernationSchedule":                         schema_pkg_apis_core_v1beta1_HibernationSchedule(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability":                            schema_pkg_apis_core_v1beta1_HighAvailability(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HorizontalPodAutoscalerConfig":               schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates":                              schema_pkg_apis_core_v1beta1_InPlaceUpdates(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdatesStatus":                        schema_pkg_apis_core_v1beta1_InPlaceUpdatesStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress":                                     schema_pkg_apis_core_v1beta1_Ingress(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.IngressController":                           schema_pkg_apis_core_v1beta1_IngressController(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.InternalSecret":                              schema_pkg_apis_core_v1beta1_InternalSecret(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.InternalSecretList":                          schema_pkg_apis_core_v1beta1_InternalSecretList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerConfig":                         schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeControllerManagerConfig":                 schema_pkg_apis_core_v1beta1_KubeControllerManagerConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeProxyConfig":                             schema_pkg_apis_core_v1beta1_KubeProxyConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeSchedulerConfig":                         schema_pkg_apis_core_v1beta1_KubeSchedulerConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfig":                               schema_pkg_apis_core_v1beta1_KubeletConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEviction":                       schema_pkg_apis_core_v1beta1_KubeletConfigEviction(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionMinimumReclaim":         schema_pkg_apis_core_v1beta1_KubeletConfigEvictionMinimumReclaim(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionSoftGracePeriod":        schema_pkg_apis_core_v1beta1_KubeletConfigEvictionSoftGracePeriod(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved":                       schema_pkg_apis_core_v1beta1_KubeletConfigReserved(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes":                                  schema_pkg_apis_core_v1beta1_Kubernetes(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesConfig":                            schema_pkg_apis_core_v1beta1_KubernetesConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesDashboard":                         schema_pkg_apis_core_v1beta1_KubernetesDashboard(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings":                          schema_pkg_apis_core_v1beta1_KubernetesSettings(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesStatus":                            schema_pkg_apis_core_v1beta1_KubernetesStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError":                                   schema_pkg_apis_core_v1beta1_LastError(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastMaintenance":                             schema_pkg_apis_core_v1beta1_LastMaintenance(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation":                               schema_pkg_apis_core_v1beta1_LastOperation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LifecycleStage":                              schema_pkg_apis_core_v1beta1_LifecycleStage(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits":                                      schema_pkg_apis_core_v1beta1_Limits(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LoadBalancerServicesProxyProtocol":           schema_pkg_apis_core_v1beta1_LoadBalancerServicesProxyProtocol(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine":                                     schema_pkg_apis_core_v1beta1_Machine(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSettings":            schema_pkg_apis_core_v1beta1_MachineControllerManagerSettings(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage":                                schema_pkg_apis_core_v1beta1_MachineImage(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageFlavor":                          schema_pkg_apis_core_v1beta1_MachineImageFlavor(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageStatus":                          schema_pkg_apis_core_v1beta1_MachineImageStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageVersion":                         schema_pkg_apis_core_v1beta1_MachineImageVersion(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType":                                 schema_pkg_apis_core_v1beta1_MachineType(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineTypeStorage":                          schema_pkg_apis_core_v1beta1_MachineTypeStorage(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance":                                 schema_pkg_apis_core_v1beta1_Maintenance(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoRotation":                     schema_pkg_apis_core_v1beta1_MaintenanceAutoRotation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoUpdate":                       schema_pkg_apis_core_v1beta1_MaintenanceAutoUpdate(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceCredentialsAutoRotation":          schema_pkg_apis_core_v1beta1_MaintenanceCredentialsAutoRotation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceRotationConfig":                   schema_pkg_apis_core_v1beta1_MaintenanceRotationConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow":                       schema_pkg_apis_core_v1beta1_MaintenanceTimeWindow(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ManualWorkerPoolRollout":                     schema_pkg_apis_core_v1beta1_ManualWorkerPoolRollout(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MemorySwapConfiguration":                     schema_pkg_apis_core_v1beta1_MemorySwapConfiguration(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring":                                  schema_pkg_apis_core_v1beta1_Monitoring(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference":                      schema_pkg_apis_core_v1beta1_NamedResourceReference(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NamespacedCloudProfile":                      schema_pkg_apis_core_v1beta1_NamespacedCloudProfile(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NamespacedCloudProfileList":                  schema_pkg_apis_core_v1beta1_NamespacedCloudProfileList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NamespacedCloudProfileSpec":                  schema_pkg_apis_core_v1beta1_NamespacedCloudProfileSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NamespacedCloudProfileStatus":                schema_pkg_apis_core_v1beta1_NamespacedCloudProfileStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking":                                  schema_pkg_apis_core_v1beta1_Networking(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NetworkingStatus":                            schema_pkg_apis_core_v1beta1_NetworkingStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NginxIngress":                                schema_pkg_apis_core_v1beta1_NginxIngress(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NodeLocalDNS":                                schema_pkg_apis_core_v1beta1_NodeLocalDNS(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.OCIRepository":                               schema_pkg_apis_core_v1beta1_OCIRepository(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig":                                  schema_pkg_apis_core_v1beta1_OIDCConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ObservabilityRotation":                       schema_pkg_apis_core_v1beta1_ObservabilityRotation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.OpenIDConnectClientAuthentication":           schema_pkg_apis_core_v1beta1_OpenIDConnectClientAuthentication(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkerUpdates":                        schema_pkg_apis_core_v1beta1_PendingWorkerUpdates(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkersRollout":                       schema_pkg_apis_core_v1beta1_PendingWorkersRollout(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Project":                                     schema_pkg_apis_core_v1beta1_Project(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectList":                                 schema_pkg_apis_core_v1beta1_ProjectList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectMember":                               schema_pkg_apis_core_v1beta1_ProjectMember(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectSpec":                                 schema_pkg_apis_core_v1beta1_ProjectSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectStatus":                               schema_pkg_apis_core_v1beta1_ProjectStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectTolerations":                          schema_pkg_apis_core_v1beta1_ProjectTolerations(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider":                                    schema_pkg_apis_core_v1beta1_Provider(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Quota":                                       schema_pkg_apis_core_v1beta1_Quota(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.QuotaList":                                   schema_pkg_apis_core_v1beta1_QuotaList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.QuotaSpec":                                   schema_pkg_apis_core_v1beta1_QuotaSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Region":                                      schema_pkg_apis_core_v1beta1_Region(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceData":                                schema_pkg_apis_core_v1beta1_ResourceData(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceWatchCacheSize":                      schema_pkg_apis_core_v1beta1_ResourceWatchCacheSize(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SSHAccess":                                   schema_pkg_apis_core_v1beta1_SSHAccess(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBinding":                               schema_pkg_apis_core_v1beta1_SecretBinding(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBindingList":                           schema_pkg_apis_core_v1beta1_SecretBindingList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBindingProvider":                       schema_pkg_apis_core_v1beta1_SecretBindingProvider(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Seed":                                        schema_pkg_apis_core_v1beta1_Seed(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS":                                     schema_pkg_apis_core_v1beta1_SeedDNS(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProvider":                             schema_pkg_apis_core_v1beta1_SeedDNSProvider(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProviderConfig":                       schema_pkg_apis_core_v1beta1_SeedDNSProviderConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedList":                                    schema_pkg_apis_core_v1beta1_SeedList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks":                                schema_pkg_apis_core_v1beta1_SeedNetworks(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider":                                schema_pkg_apis_core_v1beta1_SeedProvider(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector":                                schema_pkg_apis_core_v1beta1_SeedSelector(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdog":               schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdog(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogProber":         schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdogProber(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogWeeder":         schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdogWeeder(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation":        schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservationConfig":  schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservationConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices":             schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServicesZonalIngress": schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZonalIngress(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServicesZones":        schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZones(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling":                       schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingTopologyAwareRouting":             schema_pkg_apis_core_v1beta1_SeedSettingTopologyAwareRouting(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler":            schema_pkg_apis_core_v1beta1_SeedSettingVerticalPodAutoscaler(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings":                                schema_pkg_apis_core_v1beta1_SeedSettings(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSpec":                                    schema_pkg_apis_core_v1beta1_SeedSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedStatus":                                  schema_pkg_apis_core_v1beta1_SeedStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint":                                   schema_pkg_apis_core_v1beta1_SeedTaint(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTemplate":                                schema_pkg_apis_core_v1beta1_SeedTemplate(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume":                                  schema_pkg_apis_core_v1beta1_SeedVolume(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolumeProvider":                          schema_pkg_apis_core_v1beta1_SeedVolumeProvider(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig":                        schema_pkg_apis_core_v1beta1_ServiceAccountConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountKeyRotation":                   schema_pkg_apis_core_v1beta1_ServiceAccountKeyRotation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Shoot":                                       schema_pkg_apis_core_v1beta1_Shoot(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootAdvertisedAddress":                      schema_pkg_apis_core_v1beta1_ShootAdvertisedAddress(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentials":                            schema_pkg_apis_core_v1beta1_ShootCredentials(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentialsRotation":                    schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootKubeconfigRotation":                     schema_pkg_apis_core_v1beta1_ShootKubeconfigRotation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootList":                                   schema_pkg_apis_core_v1beta1_ShootList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootMachineImage":                           schema_pkg_apis_core_v1beta1_ShootMachineImage(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootNetworks":                               schema_pkg_apis_core_v1beta1_ShootNetworks(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSSHKeypairRotation":                     schema_pkg_apis_core_v1beta1_ShootSSHKeypairRotation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec":                                   schema_pkg_apis_core_v1beta1_ShootSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootState":                                  schema_pkg_apis_core_v1beta1_ShootState(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStateList":                              schema_pkg_apis_core_v1beta1_ShootStateList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStateSpec":                              schema_pkg_apis_core_v1beta1_ShootStateSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStatus":                                 schema_pkg_apis_core_v1beta1_ShootStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootTemplate":                               schema_pkg_apis_core_v1beta1_ShootTemplate(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthentication":                    schema_pkg_apis_core_v1beta1_StructuredAuthentication(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthorization":                     schema_pkg_apis_core_v1beta1_StructuredAuthorization(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SystemComponents":                            schema_pkg_apis_core_v1beta1_SystemComponents(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration":                                  schema_pkg_apis_core_v1beta1_Toleration(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler":                       schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume":                                      schema_pkg_apis_core_v1beta1_Volume(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType":                                  schema_pkg_apis_core_v1beta1_VolumeType(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes":                             schema_pkg_apis_core_v1beta1_WatchCacheSizes(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Worker":                                      schema_pkg_apis_core_v1beta1_Worker(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerControlPlane":                          schema_pkg_apis_core_v1beta1_WorkerControlPlane(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes":                            schema_pkg_apis_core_v1beta1_WorkerKubernetes(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerSystemComponents":                      schema_pkg_apis_core_v1beta1_WorkerSystemComponents(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkersSettings":                             schema_pkg_apis_core_v1beta1_WorkersSettings(ref),
-		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.Bastion":                              schema_pkg_apis_operations_v1alpha1_Bastion(ref),
-		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionIngressPolicy":                 schema_pkg_apis_operations_v1alpha1_BastionIngressPolicy(ref),
-		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionList":                          schema_pkg_apis_operations_v1alpha1_BastionList(ref),
-		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionSpec":                          schema_pkg_apis_operations_v1alpha1_BastionSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionStatus":                        schema_pkg_apis_operations_v1alpha1_BastionStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.ContextObject":                          schema_pkg_apis_security_v1alpha1_ContextObject(ref),
-		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBinding":                     schema_pkg_apis_security_v1alpha1_CredentialsBinding(ref),
-		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBindingList":                 schema_pkg_apis_security_v1alpha1_CredentialsBindingList(ref),
-		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBindingProvider":             schema_pkg_apis_security_v1alpha1_CredentialsBindingProvider(ref),
-		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.TargetSystem":                           schema_pkg_apis_security_v1alpha1_TargetSystem(ref),
-		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.TokenRequest":                           schema_pkg_apis_security_v1alpha1_TokenRequest(ref),
-		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.TokenRequestSpec":                       schema_pkg_apis_security_v1alpha1_TokenRequestSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.TokenRequestStatus":                     schema_pkg_apis_security_v1alpha1_TokenRequestStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentity":                       schema_pkg_apis_security_v1alpha1_WorkloadIdentity(ref),
-		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentityList":                   schema_pkg_apis_security_v1alpha1_WorkloadIdentityList(ref),
-		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentitySpec":                   schema_pkg_apis_security_v1alpha1_WorkloadIdentitySpec(ref),
-		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentityStatus":                 schema_pkg_apis_security_v1alpha1_WorkloadIdentityStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Gardenlet":                        schema_pkg_apis_seedmanagement_v1alpha1_Gardenlet(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletConfig":                  schema_pkg_apis_seedmanagement_v1alpha1_GardenletConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletDeployment":              schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletHelm":                    schema_pkg_apis_seedmanagement_v1alpha1_GardenletHelm(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletList":                    schema_pkg_apis_seedmanagement_v1alpha1_GardenletList(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletSelfDeployment":          schema_pkg_apis_seedmanagement_v1alpha1_GardenletSelfDeployment(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletSpec":                    schema_pkg_apis_seedmanagement_v1alpha1_GardenletSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletStatus":                  schema_pkg_apis_seedmanagement_v1alpha1_GardenletStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image":                            schema_pkg_apis_seedmanagement_v1alpha1_Image(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeed":                      schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeed(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedList":                  schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedList(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSet":                   schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSet(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSetList":               schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetList(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSetSpec":               schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSetStatus":             schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSpec":                  schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedStatus":                schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedTemplate":              schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedTemplate(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.PendingReplica":                   schema_pkg_apis_seedmanagement_v1alpha1_PendingReplica(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.RollingUpdateStrategy":            schema_pkg_apis_seedmanagement_v1alpha1_RollingUpdateStrategy(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Shoot":                            schema_pkg_apis_seedmanagement_v1alpha1_Shoot(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.UpdateStrategy":                   schema_pkg_apis_seedmanagement_v1alpha1_UpdateStrategy(ref),
-		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.ClusterOpenIDConnectPreset":             schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPreset(ref),
-		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.ClusterOpenIDConnectPresetList":         schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetList(ref),
-		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.ClusterOpenIDConnectPresetSpec":         schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.KubeAPIServerOpenIDConnect":             schema_pkg_apis_settings_v1alpha1_KubeAPIServerOpenIDConnect(ref),
-		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication":      schema_pkg_apis_settings_v1alpha1_OpenIDConnectClientAuthentication(ref),
-		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectPreset":                    schema_pkg_apis_settings_v1alpha1_OpenIDConnectPreset(ref),
-		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectPresetList":                schema_pkg_apis_settings_v1alpha1_OpenIDConnectPresetList(ref),
-		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectPresetSpec":                schema_pkg_apis_settings_v1alpha1_OpenIDConnectPresetSpec(ref),
-		v1.ContainerResourceMetricSource{}.OpenAPIModelName():                                            schema_k8sio_api_autoscaling_v1_ContainerResourceMetricSource(ref),
-		v1.ContainerResourceMetricStatus{}.OpenAPIModelName():                                            schema_k8sio_api_autoscaling_v1_ContainerResourceMetricStatus(ref),
-		v1.CrossVersionObjectReference{}.OpenAPIModelName():                                              schema_k8sio_api_autoscaling_v1_CrossVersionObjectReference(ref),
-		v1.ExternalMetricSource{}.OpenAPIModelName():                                                     schema_k8sio_api_autoscaling_v1_ExternalMetricSource(ref),
-		v1.ExternalMetricStatus{}.OpenAPIModelName():                                                     schema_k8sio_api_autoscaling_v1_ExternalMetricStatus(ref),
-		v1.HorizontalPodAutoscaler{}.OpenAPIModelName():                                                  schema_k8sio_api_autoscaling_v1_HorizontalPodAutoscaler(ref),
-		v1.HorizontalPodAutoscalerCondition{}.OpenAPIModelName():                                         schema_k8sio_api_autoscaling_v1_HorizontalPodAutoscalerCondition(ref),
-		v1.HorizontalPodAutoscalerList{}.OpenAPIModelName():                                              schema_k8sio_api_autoscaling_v1_HorizontalPodAutoscalerList(ref),
-		v1.HorizontalPodAutoscalerSpec{}.OpenAPIModelName():                                              schema_k8sio_api_autoscaling_v1_HorizontalPodAutoscalerSpec(ref),
-		v1.HorizontalPodAutoscalerStatus{}.OpenAPIModelName():                                            schema_k8sio_api_autoscaling_v1_HorizontalPodAutoscalerStatus(ref),
-		v1.MetricSpec{}.OpenAPIModelName():                                                               schema_k8sio_api_autoscaling_v1_MetricSpec(ref),
-		v1.MetricStatus{}.OpenAPIModelName():                                                             schema_k8sio_api_autoscaling_v1_MetricStatus(ref),
-		v1.ObjectMetricSource{}.OpenAPIModelName():                                                       schema_k8sio_api_autoscaling_v1_ObjectMetricSource(ref),
-		v1.ObjectMetricStatus{}.OpenAPIModelName():                                                       schema_k8sio_api_autoscaling_v1_ObjectMetricStatus(ref),
-		v1.PodsMetricSource{}.OpenAPIModelName():                                                         schema_k8sio_api_autoscaling_v1_PodsMetricSource(ref),
-		v1.PodsMetricStatus{}.OpenAPIModelName():                                                         schema_k8sio_api_autoscaling_v1_PodsMetricStatus(ref),
-		v1.ResourceMetricSource{}.OpenAPIModelName():                                                     schema_k8sio_api_autoscaling_v1_ResourceMetricSource(ref),
-		v1.ResourceMetricStatus{}.OpenAPIModelName():                                                     schema_k8sio_api_autoscaling_v1_ResourceMetricStatus(ref),
-		v1.Scale{}.OpenAPIModelName():                                                                    schema_k8sio_api_autoscaling_v1_Scale(ref),
-		v1.ScaleSpec{}.OpenAPIModelName():                                                                schema_k8sio_api_autoscaling_v1_ScaleSpec(ref),
-		v1.ScaleStatus{}.OpenAPIModelName():                                                              schema_k8sio_api_autoscaling_v1_ScaleStatus(ref),
-		corev1.AWSElasticBlockStoreVolumeSource{}.OpenAPIModelName():                                     schema_k8sio_api_core_v1_AWSElasticBlockStoreVolumeSource(ref),
-		corev1.Affinity{}.OpenAPIModelName():                                                             schema_k8sio_api_core_v1_Affinity(ref),
-		corev1.AppArmorProfile{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_AppArmorProfile(ref),
-		corev1.AttachedVolume{}.OpenAPIModelName():                                                       schema_k8sio_api_core_v1_AttachedVolume(ref),
-		corev1.AvoidPods{}.OpenAPIModelName():                                                            schema_k8sio_api_core_v1_AvoidPods(ref),
-		corev1.AzureDiskVolumeSource{}.OpenAPIModelName():                                                schema_k8sio_api_core_v1_AzureDiskVolumeSource(ref),
-		corev1.AzureFilePersistentVolumeSource{}.OpenAPIModelName():                                      schema_k8sio_api_core_v1_AzureFilePersistentVolumeSource(ref),
-		corev1.AzureFileVolumeSource{}.OpenAPIModelName():                                                schema_k8sio_api_core_v1_AzureFileVolumeSource(ref),
-		corev1.Binding{}.OpenAPIModelName():                                                              schema_k8sio_api_core_v1_Binding(ref),
-		corev1.CSIPersistentVolumeSource{}.OpenAPIModelName():                                            schema_k8sio_api_core_v1_CSIPersistentVolumeSource(ref),
-		corev1.CSIVolumeSource{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_CSIVolumeSource(ref),
-		corev1.Capabilities{}.OpenAPIModelName():                                                         schema_k8sio_api_core_v1_Capabilities(ref),
-		corev1.CephFSPersistentVolumeSource{}.OpenAPIModelName():                                         schema_k8sio_api_core_v1_CephFSPersistentVolumeSource(ref),
-		corev1.CephFSVolumeSource{}.OpenAPIModelName():                                                   schema_k8sio_api_core_v1_CephFSVolumeSource(ref),
-		corev1.CinderPersistentVolumeSource{}.OpenAPIModelName():                                         schema_k8sio_api_core_v1_CinderPersistentVolumeSource(ref),
-		corev1.CinderVolumeSource{}.OpenAPIModelName():                                                   schema_k8sio_api_core_v1_CinderVolumeSource(ref),
-		corev1.ClientIPConfig{}.OpenAPIModelName():                                                       schema_k8sio_api_core_v1_ClientIPConfig(ref),
-		corev1.ClusterTrustBundleProjection{}.OpenAPIModelName():                                         schema_k8sio_api_core_v1_ClusterTrustBundleProjection(ref),
-		corev1.ComponentCondition{}.OpenAPIModelName():                                                   schema_k8sio_api_core_v1_ComponentCondition(ref),
-		corev1.ComponentStatus{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_ComponentStatus(ref),
-		corev1.ComponentStatusList{}.OpenAPIModelName():                                                  schema_k8sio_api_core_v1_ComponentStatusList(ref),
-		corev1.ConfigMap{}.OpenAPIModelName():                                                            schema_k8sio_api_core_v1_ConfigMap(ref),
-		corev1.ConfigMapEnvSource{}.OpenAPIModelName():                                                   schema_k8sio_api_core_v1_ConfigMapEnvSource(ref),
-		corev1.ConfigMapKeySelector{}.OpenAPIModelName():                                                 schema_k8sio_api_core_v1_ConfigMapKeySelector(ref),
-		corev1.ConfigMapList{}.OpenAPIModelName():                                                        schema_k8sio_api_core_v1_ConfigMapList(ref),
-		corev1.ConfigMapNodeConfigSource{}.OpenAPIModelName():                                            schema_k8sio_api_core_v1_ConfigMapNodeConfigSource(ref),
-		corev1.ConfigMapProjection{}.OpenAPIModelName():                                                  schema_k8sio_api_core_v1_ConfigMapProjection(ref),
-		corev1.ConfigMapVolumeSource{}.OpenAPIModelName():                                                schema_k8sio_api_core_v1_ConfigMapVolumeSource(ref),
-		corev1.Container{}.OpenAPIModelName():                                                            schema_k8sio_api_core_v1_Container(ref),
-		corev1.ContainerExtendedResourceRequest{}.OpenAPIModelName():                                     schema_k8sio_api_core_v1_ContainerExtendedResourceRequest(ref),
-		corev1.ContainerImage{}.OpenAPIModelName():                                                       schema_k8sio_api_core_v1_ContainerImage(ref),
-		corev1.ContainerPort{}.OpenAPIModelName():                                                        schema_k8sio_api_core_v1_ContainerPort(ref),
-		corev1.ContainerResizePolicy{}.OpenAPIModelName():                                                schema_k8sio_api_core_v1_ContainerResizePolicy(ref),
-		corev1.ContainerRestartRule{}.OpenAPIModelName():                                                 schema_k8sio_api_core_v1_ContainerRestartRule(ref),
-		corev1.ContainerRestartRuleOnExitCodes{}.OpenAPIModelName():                                      schema_k8sio_api_core_v1_ContainerRestartRuleOnExitCodes(ref),
-		corev1.ContainerState{}.OpenAPIModelName():                                                       schema_k8sio_api_core_v1_ContainerState(ref),
-		corev1.ContainerStateRunning{}.OpenAPIModelName():                                                schema_k8sio_api_core_v1_ContainerStateRunning(ref),
-		corev1.ContainerStateTerminated{}.OpenAPIModelName():                                             schema_k8sio_api_core_v1_ContainerStateTerminated(ref),
-		corev1.ContainerStateWaiting{}.OpenAPIModelName():                                                schema_k8sio_api_core_v1_ContainerStateWaiting(ref),
-		corev1.ContainerStatus{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_ContainerStatus(ref),
-		corev1.ContainerUser{}.OpenAPIModelName():                                                        schema_k8sio_api_core_v1_ContainerUser(ref),
-		corev1.DaemonEndpoint{}.OpenAPIModelName():                                                       schema_k8sio_api_core_v1_DaemonEndpoint(ref),
-		corev1.DownwardAPIProjection{}.OpenAPIModelName():                                                schema_k8sio_api_core_v1_DownwardAPIProjection(ref),
-		corev1.DownwardAPIVolumeFile{}.OpenAPIModelName():                                                schema_k8sio_api_core_v1_DownwardAPIVolumeFile(ref),
-		corev1.DownwardAPIVolumeSource{}.OpenAPIModelName():                                              schema_k8sio_api_core_v1_DownwardAPIVolumeSource(ref),
-		corev1.EmptyDirVolumeSource{}.OpenAPIModelName():                                                 schema_k8sio_api_core_v1_EmptyDirVolumeSource(ref),
-		corev1.EndpointAddress{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_EndpointAddress(ref),
-		corev1.EndpointPort{}.OpenAPIModelName():                                                         schema_k8sio_api_core_v1_EndpointPort(ref),
-		corev1.EndpointSubset{}.OpenAPIModelName():                                                       schema_k8sio_api_core_v1_EndpointSubset(ref),
-		corev1.Endpoints{}.OpenAPIModelName():                                                            schema_k8sio_api_core_v1_Endpoints(ref),
-		corev1.EndpointsList{}.OpenAPIModelName():                                                        schema_k8sio_api_core_v1_EndpointsList(ref),
-		corev1.EnvFromSource{}.OpenAPIModelName():                                                        schema_k8sio_api_core_v1_EnvFromSource(ref),
-		corev1.EnvVar{}.OpenAPIModelName():                                                               schema_k8sio_api_core_v1_EnvVar(ref),
-		corev1.EnvVarSource{}.OpenAPIModelName():                                                         schema_k8sio_api_core_v1_EnvVarSource(ref),
-		corev1.EphemeralContainer{}.OpenAPIModelName():                                                   schema_k8sio_api_core_v1_EphemeralContainer(ref),
-		corev1.EphemeralContainerCommon{}.OpenAPIModelName():                                             schema_k8sio_api_core_v1_EphemeralContainerCommon(ref),
-		corev1.EphemeralVolumeSource{}.OpenAPIModelName():                                                schema_k8sio_api_core_v1_EphemeralVolumeSource(ref),
-		corev1.Event{}.OpenAPIModelName():                                                                schema_k8sio_api_core_v1_Event(ref),
-		corev1.EventList{}.OpenAPIModelName():                                                            schema_k8sio_api_core_v1_EventList(ref),
-		corev1.EventSeries{}.OpenAPIModelName():                                                          schema_k8sio_api_core_v1_EventSeries(ref),
-		corev1.EventSource{}.OpenAPIModelName():                                                          schema_k8sio_api_core_v1_EventSource(ref),
-		corev1.ExecAction{}.OpenAPIModelName():                                                           schema_k8sio_api_core_v1_ExecAction(ref),
-		corev1.FCVolumeSource{}.OpenAPIModelName():                                                       schema_k8sio_api_core_v1_FCVolumeSource(ref),
-		corev1.FileKeySelector{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_FileKeySelector(ref),
-		corev1.FlexPersistentVolumeSource{}.OpenAPIModelName():                                           schema_k8sio_api_core_v1_FlexPersistentVolumeSource(ref),
-		corev1.FlexVolumeSource{}.OpenAPIModelName():                                                     schema_k8sio_api_core_v1_FlexVolumeSource(ref),
-		corev1.FlockerVolumeSource{}.OpenAPIModelName():                                                  schema_k8sio_api_core_v1_FlockerVolumeSource(ref),
-		corev1.GCEPersistentDiskVolumeSource{}.OpenAPIModelName():                                        schema_k8sio_api_core_v1_GCEPersistentDiskVolumeSource(ref),
-		corev1.GRPCAction{}.OpenAPIModelName():                                                           schema_k8sio_api_core_v1_GRPCAction(ref),
-		corev1.GitRepoVolumeSource{}.OpenAPIModelName():                                                  schema_k8sio_api_core_v1_GitRepoVolumeSource(ref),
-		corev1.GlusterfsPersistentVolumeSource{}.OpenAPIModelName():                                      schema_k8sio_api_core_v1_GlusterfsPersistentVolumeSource(ref),
-		corev1.GlusterfsVolumeSource{}.OpenAPIModelName():                                                schema_k8sio_api_core_v1_GlusterfsVolumeSource(ref),
-		corev1.HTTPGetAction{}.OpenAPIModelName():                                                        schema_k8sio_api_core_v1_HTTPGetAction(ref),
-		corev1.HTTPHeader{}.OpenAPIModelName():                                                           schema_k8sio_api_core_v1_HTTPHeader(ref),
-		corev1.HostAlias{}.OpenAPIModelName():                                                            schema_k8sio_api_core_v1_HostAlias(ref),
-		corev1.HostIP{}.OpenAPIModelName():                                                               schema_k8sio_api_core_v1_HostIP(ref),
-		corev1.HostPathVolumeSource{}.OpenAPIModelName():                                                 schema_k8sio_api_core_v1_HostPathVolumeSource(ref),
-		corev1.ISCSIPersistentVolumeSource{}.OpenAPIModelName():                                          schema_k8sio_api_core_v1_ISCSIPersistentVolumeSource(ref),
-		corev1.ISCSIVolumeSource{}.OpenAPIModelName():                                                    schema_k8sio_api_core_v1_ISCSIVolumeSource(ref),
-		corev1.ImageVolumeSource{}.OpenAPIModelName():                                                    schema_k8sio_api_core_v1_ImageVolumeSource(ref),
-		corev1.KeyToPath{}.OpenAPIModelName():                                                            schema_k8sio_api_core_v1_KeyToPath(ref),
-		corev1.Lifecycle{}.OpenAPIModelName():                                                            schema_k8sio_api_core_v1_Lifecycle(ref),
-		corev1.LifecycleHandler{}.OpenAPIModelName():                                                     schema_k8sio_api_core_v1_LifecycleHandler(ref),
-		corev1.LimitRange{}.OpenAPIModelName():                                                           schema_k8sio_api_core_v1_LimitRange(ref),
-		corev1.LimitRangeItem{}.OpenAPIModelName():                                                       schema_k8sio_api_core_v1_LimitRangeItem(ref),
-		corev1.LimitRangeList{}.OpenAPIModelName():                                                       schema_k8sio_api_core_v1_LimitRangeList(ref),
-		corev1.LimitRangeSpec{}.OpenAPIModelName():                                                       schema_k8sio_api_core_v1_LimitRangeSpec(ref),
-		corev1.LinuxContainerUser{}.OpenAPIModelName():                                                   schema_k8sio_api_core_v1_LinuxContainerUser(ref),
-		corev1.List{}.OpenAPIModelName():                                                                 schema_k8sio_api_core_v1_List(ref),
-		corev1.LoadBalancerIngress{}.OpenAPIModelName():                                                  schema_k8sio_api_core_v1_LoadBalancerIngress(ref),
-		corev1.LoadBalancerStatus{}.OpenAPIModelName():                                                   schema_k8sio_api_core_v1_LoadBalancerStatus(ref),
-		corev1.LocalObjectReference{}.OpenAPIModelName():                                                 schema_k8sio_api_core_v1_LocalObjectReference(ref),
-		corev1.LocalVolumeSource{}.OpenAPIModelName():                                                    schema_k8sio_api_core_v1_LocalVolumeSource(ref),
-		corev1.ModifyVolumeStatus{}.OpenAPIModelName():                                                   schema_k8sio_api_core_v1_ModifyVolumeStatus(ref),
-		corev1.NFSVolumeSource{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_NFSVolumeSource(ref),
-		corev1.Namespace{}.OpenAPIModelName():                                                            schema_k8sio_api_core_v1_Namespace(ref),
-		corev1.NamespaceCondition{}.OpenAPIModelName():                                                   schema_k8sio_api_core_v1_NamespaceCondition(ref),
-		corev1.NamespaceList{}.OpenAPIModelName():                                                        schema_k8sio_api_core_v1_NamespaceList(ref),
-		corev1.NamespaceSpec{}.OpenAPIModelName():                                                        schema_k8sio_api_core_v1_NamespaceSpec(ref),
-		corev1.NamespaceStatus{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_NamespaceStatus(ref),
-		corev1.Node{}.OpenAPIModelName():                                                                 schema_k8sio_api_core_v1_Node(ref),
-		corev1.NodeAddress{}.OpenAPIModelName():                                                          schema_k8sio_api_core_v1_NodeAddress(ref),
-		corev1.NodeAffinity{}.OpenAPIModelName():                                                         schema_k8sio_api_core_v1_NodeAffinity(ref),
-		corev1.NodeCondition{}.OpenAPIModelName():                                                        schema_k8sio_api_core_v1_NodeCondition(ref),
-		corev1.NodeConfigSource{}.OpenAPIModelName():                                                     schema_k8sio_api_core_v1_NodeConfigSource(ref),
-		corev1.NodeConfigStatus{}.OpenAPIModelName():                                                     schema_k8sio_api_core_v1_NodeConfigStatus(ref),
-		corev1.NodeDaemonEndpoints{}.OpenAPIModelName():                                                  schema_k8sio_api_core_v1_NodeDaemonEndpoints(ref),
-		corev1.NodeFeatures{}.OpenAPIModelName():                                                         schema_k8sio_api_core_v1_NodeFeatures(ref),
-		corev1.NodeList{}.OpenAPIModelName():                                                             schema_k8sio_api_core_v1_NodeList(ref),
-		corev1.NodeProxyOptions{}.OpenAPIModelName():                                                     schema_k8sio_api_core_v1_NodeProxyOptions(ref),
-		corev1.NodeRuntimeHandler{}.OpenAPIModelName():                                                   schema_k8sio_api_core_v1_NodeRuntimeHandler(ref),
-		corev1.NodeRuntimeHandlerFeatures{}.OpenAPIModelName():                                           schema_k8sio_api_core_v1_NodeRuntimeHandlerFeatures(ref),
-		corev1.NodeSelector{}.OpenAPIModelName():                                                         schema_k8sio_api_core_v1_NodeSelector(ref),
-		corev1.NodeSelectorRequirement{}.OpenAPIModelName():                                              schema_k8sio_api_core_v1_NodeSelectorRequirement(ref),
-		corev1.NodeSelectorTerm{}.OpenAPIModelName():                                                     schema_k8sio_api_core_v1_NodeSelectorTerm(ref),
-		corev1.NodeSpec{}.OpenAPIModelName():                                                             schema_k8sio_api_core_v1_NodeSpec(ref),
-		corev1.NodeStatus{}.OpenAPIModelName():                                                           schema_k8sio_api_core_v1_NodeStatus(ref),
-		corev1.NodeSwapStatus{}.OpenAPIModelName():                                                       schema_k8sio_api_core_v1_NodeSwapStatus(ref),
-		corev1.NodeSystemInfo{}.OpenAPIModelName():                                                       schema_k8sio_api_core_v1_NodeSystemInfo(ref),
-		corev1.ObjectFieldSelector{}.OpenAPIModelName():                                                  schema_k8sio_api_core_v1_ObjectFieldSelector(ref),
-		corev1.ObjectReference{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_ObjectReference(ref),
-		corev1.PersistentVolume{}.OpenAPIModelName():                                                     schema_k8sio_api_core_v1_PersistentVolume(ref),
-		corev1.PersistentVolumeClaim{}.OpenAPIModelName():                                                schema_k8sio_api_core_v1_PersistentVolumeClaim(ref),
-		corev1.PersistentVolumeClaimCondition{}.OpenAPIModelName():                                       schema_k8sio_api_core_v1_PersistentVolumeClaimCondition(ref),
-		corev1.PersistentVolumeClaimList{}.OpenAPIModelName():                                            schema_k8sio_api_core_v1_PersistentVolumeClaimList(ref),
-		corev1.PersistentVolumeClaimSpec{}.OpenAPIModelName():                                            schema_k8sio_api_core_v1_PersistentVolumeClaimSpec(ref),
-		corev1.PersistentVolumeClaimStatus{}.OpenAPIModelName():                                          schema_k8sio_api_core_v1_PersistentVolumeClaimStatus(ref),
-		corev1.PersistentVolumeClaimTemplate{}.OpenAPIModelName():                                        schema_k8sio_api_core_v1_PersistentVolumeClaimTemplate(ref),
-		corev1.PersistentVolumeClaimVolumeSource{}.OpenAPIModelName():                                    schema_k8sio_api_core_v1_PersistentVolumeClaimVolumeSource(ref),
-		corev1.PersistentVolumeList{}.OpenAPIModelName():                                                 schema_k8sio_api_core_v1_PersistentVolumeList(ref),
-		corev1.PersistentVolumeSource{}.OpenAPIModelName():                                               schema_k8sio_api_core_v1_PersistentVolumeSource(ref),
-		corev1.PersistentVolumeSpec{}.OpenAPIModelName():                                                 schema_k8sio_api_core_v1_PersistentVolumeSpec(ref),
-		corev1.PersistentVolumeStatus{}.OpenAPIModelName():                                               schema_k8sio_api_core_v1_PersistentVolumeStatus(ref),
-		corev1.PhotonPersistentDiskVolumeSource{}.OpenAPIModelName():                                     schema_k8sio_api_core_v1_PhotonPersistentDiskVolumeSource(ref),
-		corev1.Pod{}.OpenAPIModelName():                                                                  schema_k8sio_api_core_v1_Pod(ref),
-		corev1.PodAffinity{}.OpenAPIModelName():                                                          schema_k8sio_api_core_v1_PodAffinity(ref),
-		corev1.PodAffinityTerm{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_PodAffinityTerm(ref),
-		corev1.PodAntiAffinity{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_PodAntiAffinity(ref),
-		corev1.PodAttachOptions{}.OpenAPIModelName():                                                     schema_k8sio_api_core_v1_PodAttachOptions(ref),
-		corev1.PodCertificateProjection{}.OpenAPIModelName():                                             schema_k8sio_api_core_v1_PodCertificateProjection(ref),
-		corev1.PodCondition{}.OpenAPIModelName():                                                         schema_k8sio_api_core_v1_PodCondition(ref),
-		corev1.PodDNSConfig{}.OpenAPIModelName():                                                         schema_k8sio_api_core_v1_PodDNSConfig(ref),
-		corev1.PodDNSConfigOption{}.OpenAPIModelName():                                                   schema_k8sio_api_core_v1_PodDNSConfigOption(ref),
-		corev1.PodExecOptions{}.OpenAPIModelName():                                                       schema_k8sio_api_core_v1_PodExecOptions(ref),
-		corev1.PodExtendedResourceClaimStatus{}.OpenAPIModelName():                                       schema_k8sio_api_core_v1_PodExtendedResourceClaimStatus(ref),
-		corev1.PodIP{}.OpenAPIModelName():                                                                schema_k8sio_api_core_v1_PodIP(ref),
-		corev1.PodList{}.OpenAPIModelName():                                                              schema_k8sio_api_core_v1_PodList(ref),
-		corev1.PodLogOptions{}.OpenAPIModelName():                                                        schema_k8sio_api_core_v1_PodLogOptions(ref),
-		corev1.PodOS{}.OpenAPIModelName():                                                                schema_k8sio_api_core_v1_PodOS(ref),
-		corev1.PodPortForwardOptions{}.OpenAPIModelName():                                                schema_k8sio_api_core_v1_PodPortForwardOptions(ref),
-		corev1.PodProxyOptions{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_PodProxyOptions(ref),
-		corev1.PodReadinessGate{}.OpenAPIModelName():                                                     schema_k8sio_api_core_v1_PodReadinessGate(ref),
-		corev1.PodResourceClaim{}.OpenAPIModelName():                                                     schema_k8sio_api_core_v1_PodResourceClaim(ref),
-		corev1.PodResourceClaimStatus{}.OpenAPIModelName():                                               schema_k8sio_api_core_v1_PodResourceClaimStatus(ref),
-		corev1.PodSchedulingGate{}.OpenAPIModelName():                                                    schema_k8sio_api_core_v1_PodSchedulingGate(ref),
-		corev1.PodSecurityContext{}.OpenAPIModelName():                                                   schema_k8sio_api_core_v1_PodSecurityContext(ref),
-		corev1.PodSignature{}.OpenAPIModelName():                                                         schema_k8sio_api_core_v1_PodSignature(ref),
-		corev1.PodSpec{}.OpenAPIModelName():                                                              schema_k8sio_api_core_v1_PodSpec(ref),
-		corev1.PodStatus{}.OpenAPIModelName():                                                            schema_k8sio_api_core_v1_PodStatus(ref),
-		corev1.PodStatusResult{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_PodStatusResult(ref),
-		corev1.PodTemplate{}.OpenAPIModelName():                                                          schema_k8sio_api_core_v1_PodTemplate(ref),
-		corev1.PodTemplateList{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_PodTemplateList(ref),
-		corev1.PodTemplateSpec{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_PodTemplateSpec(ref),
-		corev1.PortStatus{}.OpenAPIModelName():                                                           schema_k8sio_api_core_v1_PortStatus(ref),
-		corev1.PortworxVolumeSource{}.OpenAPIModelName():                                                 schema_k8sio_api_core_v1_PortworxVolumeSource(ref),
-		corev1.PreferAvoidPodsEntry{}.OpenAPIModelName():                                                 schema_k8sio_api_core_v1_PreferAvoidPodsEntry(ref),
-		corev1.PreferredSchedulingTerm{}.OpenAPIModelName():                                              schema_k8sio_api_core_v1_PreferredSchedulingTerm(ref),
-		corev1.Probe{}.OpenAPIModelName():                                                                schema_k8sio_api_core_v1_Probe(ref),
-		corev1.ProbeHandler{}.OpenAPIModelName():                                                         schema_k8sio_api_core_v1_ProbeHandler(ref),
-		corev1.ProjectedVolumeSource{}.OpenAPIModelName():                                                schema_k8sio_api_core_v1_ProjectedVolumeSource(ref),
-		corev1.QuobyteVolumeSource{}.OpenAPIModelName():                                                  schema_k8sio_api_core_v1_QuobyteVolumeSource(ref),
-		corev1.RBDPersistentVolumeSource{}.OpenAPIModelName():                                            schema_k8sio_api_core_v1_RBDPersistentVolumeSource(ref),
-		corev1.RBDVolumeSource{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_RBDVolumeSource(ref),
-		corev1.RangeAllocation{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_RangeAllocation(ref),
-		corev1.ReplicationController{}.OpenAPIModelName():                                                schema_k8sio_api_core_v1_ReplicationController(ref),
-		corev1.ReplicationControllerCondition{}.OpenAPIModelName():                                       schema_k8sio_api_core_v1_ReplicationControllerCondition(ref),
-		corev1.ReplicationControllerList{}.OpenAPIModelName():                                            schema_k8sio_api_core_v1_ReplicationControllerList(ref),
-		corev1.ReplicationControllerSpec{}.OpenAPIModelName():                                            schema_k8sio_api_core_v1_ReplicationControllerSpec(ref),
-		corev1.ReplicationControllerStatus{}.OpenAPIModelName():                                          schema_k8sio_api_core_v1_ReplicationControllerStatus(ref),
-		corev1.ResourceClaim{}.OpenAPIModelName():                                                        schema_k8sio_api_core_v1_ResourceClaim(ref),
-		corev1.ResourceFieldSelector{}.OpenAPIModelName():                                                schema_k8sio_api_core_v1_ResourceFieldSelector(ref),
-		corev1.ResourceHealth{}.OpenAPIModelName():                                                       schema_k8sio_api_core_v1_ResourceHealth(ref),
-		corev1.ResourceQuota{}.OpenAPIModelName():                                                        schema_k8sio_api_core_v1_ResourceQuota(ref),
-		corev1.ResourceQuotaList{}.OpenAPIModelName():                                                    schema_k8sio_api_core_v1_ResourceQuotaList(ref),
-		corev1.ResourceQuotaSpec{}.OpenAPIModelName():                                                    schema_k8sio_api_core_v1_ResourceQuotaSpec(ref),
-		corev1.ResourceQuotaStatus{}.OpenAPIModelName():                                                  schema_k8sio_api_core_v1_ResourceQuotaStatus(ref),
-		corev1.ResourceRequirements{}.OpenAPIModelName():                                                 schema_k8sio_api_core_v1_ResourceRequirements(ref),
-		corev1.ResourceStatus{}.OpenAPIModelName():                                                       schema_k8sio_api_core_v1_ResourceStatus(ref),
-		corev1.SELinuxOptions{}.OpenAPIModelName():                                                       schema_k8sio_api_core_v1_SELinuxOptions(ref),
-		corev1.ScaleIOPersistentVolumeSource{}.OpenAPIModelName():                                        schema_k8sio_api_core_v1_ScaleIOPersistentVolumeSource(ref),
-		corev1.ScaleIOVolumeSource{}.OpenAPIModelName():                                                  schema_k8sio_api_core_v1_ScaleIOVolumeSource(ref),
-		corev1.ScopeSelector{}.OpenAPIModelName():                                                        schema_k8sio_api_core_v1_ScopeSelector(ref),
-		corev1.ScopedResourceSelectorRequirement{}.OpenAPIModelName():                                    schema_k8sio_api_core_v1_ScopedResourceSelectorRequirement(ref),
-		corev1.SeccompProfile{}.OpenAPIModelName():                                                       schema_k8sio_api_core_v1_SeccompProfile(ref),
-		corev1.Secret{}.OpenAPIModelName():                                                               schema_k8sio_api_core_v1_Secret(ref),
-		corev1.SecretEnvSource{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_SecretEnvSource(ref),
-		corev1.SecretKeySelector{}.OpenAPIModelName():                                                    schema_k8sio_api_core_v1_SecretKeySelector(ref),
-		corev1.SecretList{}.OpenAPIModelName():                                                           schema_k8sio_api_core_v1_SecretList(ref),
-		corev1.SecretProjection{}.OpenAPIModelName():                                                     schema_k8sio_api_core_v1_SecretProjection(ref),
-		corev1.SecretReference{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_SecretReference(ref),
-		corev1.SecretVolumeSource{}.OpenAPIModelName():                                                   schema_k8sio_api_core_v1_SecretVolumeSource(ref),
-		corev1.SecurityContext{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_SecurityContext(ref),
-		corev1.SerializedReference{}.OpenAPIModelName():                                                  schema_k8sio_api_core_v1_SerializedReference(ref),
-		corev1.Service{}.OpenAPIModelName():                                                              schema_k8sio_api_core_v1_Service(ref),
-		corev1.ServiceAccount{}.OpenAPIModelName():                                                       schema_k8sio_api_core_v1_ServiceAccount(ref),
-		corev1.ServiceAccountList{}.OpenAPIModelName():                                                   schema_k8sio_api_core_v1_ServiceAccountList(ref),
-		corev1.ServiceAccountTokenProjection{}.OpenAPIModelName():                                        schema_k8sio_api_core_v1_ServiceAccountTokenProjection(ref),
-		corev1.ServiceList{}.OpenAPIModelName():                                                          schema_k8sio_api_core_v1_ServiceList(ref),
-		corev1.ServicePort{}.OpenAPIModelName():                                                          schema_k8sio_api_core_v1_ServicePort(ref),
-		corev1.ServiceProxyOptions{}.OpenAPIModelName():                                                  schema_k8sio_api_core_v1_ServiceProxyOptions(ref),
-		corev1.ServiceSpec{}.OpenAPIModelName():                                                          schema_k8sio_api_core_v1_ServiceSpec(ref),
-		corev1.ServiceStatus{}.OpenAPIModelName():                                                        schema_k8sio_api_core_v1_ServiceStatus(ref),
-		corev1.SessionAffinityConfig{}.OpenAPIModelName():                                                schema_k8sio_api_core_v1_SessionAffinityConfig(ref),
-		corev1.SleepAction{}.OpenAPIModelName():                                                          schema_k8sio_api_core_v1_SleepAction(ref),
-		corev1.StorageOSPersistentVolumeSource{}.OpenAPIModelName():                                      schema_k8sio_api_core_v1_StorageOSPersistentVolumeSource(ref),
-		corev1.StorageOSVolumeSource{}.OpenAPIModelName():                                                schema_k8sio_api_core_v1_StorageOSVolumeSource(ref),
-		corev1.Sysctl{}.OpenAPIModelName():                                                               schema_k8sio_api_core_v1_Sysctl(ref),
-		corev1.TCPSocketAction{}.OpenAPIModelName():                                                      schema_k8sio_api_core_v1_TCPSocketAction(ref),
-		corev1.Taint{}.OpenAPIModelName():                                                                schema_k8sio_api_core_v1_Taint(ref),
-		corev1.Toleration{}.OpenAPIModelName():                                                           schema_k8sio_api_core_v1_Toleration(ref),
-		corev1.TopologySelectorLabelRequirement{}.OpenAPIModelName():                                     schema_k8sio_api_core_v1_TopologySelectorLabelRequirement(ref),
-		corev1.TopologySelectorTerm{}.OpenAPIModelName():                                                 schema_k8sio_api_core_v1_TopologySelectorTerm(ref),
-		corev1.TopologySpreadConstraint{}.OpenAPIModelName():                                             schema_k8sio_api_core_v1_TopologySpreadConstraint(ref),
-		corev1.TypedLocalObjectReference{}.OpenAPIModelName():                                            schema_k8sio_api_core_v1_TypedLocalObjectReference(ref),
-		corev1.TypedObjectReference{}.OpenAPIModelName():                                                 schema_k8sio_api_core_v1_TypedObjectReference(ref),
-		corev1.Volume{}.OpenAPIModelName():                                                               schema_k8sio_api_core_v1_Volume(ref),
-		corev1.VolumeDevice{}.OpenAPIModelName():                                                         schema_k8sio_api_core_v1_VolumeDevice(ref),
-		corev1.VolumeMount{}.OpenAPIModelName():                                                          schema_k8sio_api_core_v1_VolumeMount(ref),
-		corev1.VolumeMountStatus{}.OpenAPIModelName():                                                    schema_k8sio_api_core_v1_VolumeMountStatus(ref),
-		corev1.VolumeNodeAffinity{}.OpenAPIModelName():                                                   schema_k8sio_api_core_v1_VolumeNodeAffinity(ref),
-		corev1.VolumeProjection{}.OpenAPIModelName():                                                     schema_k8sio_api_core_v1_VolumeProjection(ref),
-		corev1.VolumeResourceRequirements{}.OpenAPIModelName():                                           schema_k8sio_api_core_v1_VolumeResourceRequirements(ref),
-		corev1.VolumeSource{}.OpenAPIModelName():                                                         schema_k8sio_api_core_v1_VolumeSource(ref),
-		corev1.VsphereVirtualDiskVolumeSource{}.OpenAPIModelName():                                       schema_k8sio_api_core_v1_VsphereVirtualDiskVolumeSource(ref),
-		corev1.WeightedPodAffinityTerm{}.OpenAPIModelName():                                              schema_k8sio_api_core_v1_WeightedPodAffinityTerm(ref),
-		corev1.WindowsSecurityContextOptions{}.OpenAPIModelName():                                        schema_k8sio_api_core_v1_WindowsSecurityContextOptions(ref),
-		corev1.WorkloadReference{}.OpenAPIModelName():                                                    schema_k8sio_api_core_v1_WorkloadReference(ref),
-		networkingv1.HTTPIngressPath{}.OpenAPIModelName():                                                schema_k8sio_api_networking_v1_HTTPIngressPath(ref),
-		networkingv1.HTTPIngressRuleValue{}.OpenAPIModelName():                                           schema_k8sio_api_networking_v1_HTTPIngressRuleValue(ref),
-		networkingv1.IPAddress{}.OpenAPIModelName():                                                      schema_k8sio_api_networking_v1_IPAddress(ref),
-		networkingv1.IPAddressList{}.OpenAPIModelName():                                                  schema_k8sio_api_networking_v1_IPAddressList(ref),
-		networkingv1.IPAddressSpec{}.OpenAPIModelName():                                                  schema_k8sio_api_networking_v1_IPAddressSpec(ref),
-		networkingv1.IPBlock{}.OpenAPIModelName():                                                        schema_k8sio_api_networking_v1_IPBlock(ref),
-		networkingv1.Ingress{}.OpenAPIModelName():                                                        schema_k8sio_api_networking_v1_Ingress(ref),
-		networkingv1.IngressBackend{}.OpenAPIModelName():                                                 schema_k8sio_api_networking_v1_IngressBackend(ref),
-		networkingv1.IngressClass{}.OpenAPIModelName():                                                   schema_k8sio_api_networking_v1_IngressClass(ref),
-		networkingv1.IngressClassList{}.OpenAPIModelName():                                               schema_k8sio_api_networking_v1_IngressClassList(ref),
-		networkingv1.IngressClassParametersReference{}.OpenAPIModelName():                                schema_k8sio_api_networking_v1_IngressClassParametersReference(ref),
-		networkingv1.IngressClassSpec{}.OpenAPIModelName():                                               schema_k8sio_api_networking_v1_IngressClassSpec(ref),
-		networkingv1.IngressList{}.OpenAPIModelName():                                                    schema_k8sio_api_networking_v1_IngressList(ref),
-		networkingv1.IngressLoadBalancerIngress{}.OpenAPIModelName():                                     schema_k8sio_api_networking_v1_IngressLoadBalancerIngress(ref),
-		networkingv1.IngressLoadBalancerStatus{}.OpenAPIModelName():                                      schema_k8sio_api_networking_v1_IngressLoadBalancerStatus(ref),
-		networkingv1.IngressPortStatus{}.OpenAPIModelName():                                              schema_k8sio_api_networking_v1_IngressPortStatus(ref),
-		networkingv1.IngressRule{}.OpenAPIModelName():                                                    schema_k8sio_api_networking_v1_IngressRule(ref),
-		networkingv1.IngressRuleValue{}.OpenAPIModelName():                                               schema_k8sio_api_networking_v1_IngressRuleValue(ref),
-		networkingv1.IngressServiceBackend{}.OpenAPIModelName():                                          schema_k8sio_api_networking_v1_IngressServiceBackend(ref),
-		networkingv1.IngressSpec{}.OpenAPIModelName():                                                    schema_k8sio_api_networking_v1_IngressSpec(ref),
-		networkingv1.IngressStatus{}.OpenAPIModelName():                                                  schema_k8sio_api_networking_v1_IngressStatus(ref),
-		networkingv1.IngressTLS{}.OpenAPIModelName():                                                     schema_k8sio_api_networking_v1_IngressTLS(ref),
-		networkingv1.NetworkPolicy{}.OpenAPIModelName():                                                  schema_k8sio_api_networking_v1_NetworkPolicy(ref),
-		networkingv1.NetworkPolicyEgressRule{}.OpenAPIModelName():                                        schema_k8sio_api_networking_v1_NetworkPolicyEgressRule(ref),
-		networkingv1.NetworkPolicyIngressRule{}.OpenAPIModelName():                                       schema_k8sio_api_networking_v1_NetworkPolicyIngressRule(ref),
-		networkingv1.NetworkPolicyList{}.OpenAPIModelName():                                              schema_k8sio_api_networking_v1_NetworkPolicyList(ref),
-		networkingv1.NetworkPolicyPeer{}.OpenAPIModelName():                                              schema_k8sio_api_networking_v1_NetworkPolicyPeer(ref),
-		networkingv1.NetworkPolicyPort{}.OpenAPIModelName():                                              schema_k8sio_api_networking_v1_NetworkPolicyPort(ref),
-		networkingv1.NetworkPolicySpec{}.OpenAPIModelName():                                              schema_k8sio_api_networking_v1_NetworkPolicySpec(ref),
-		networkingv1.ParentReference{}.OpenAPIModelName():                                                schema_k8sio_api_networking_v1_ParentReference(ref),
-		networkingv1.ServiceBackendPort{}.OpenAPIModelName():                                             schema_k8sio_api_networking_v1_ServiceBackendPort(ref),
-		networkingv1.ServiceCIDR{}.OpenAPIModelName():                                                    schema_k8sio_api_networking_v1_ServiceCIDR(ref),
-		networkingv1.ServiceCIDRList{}.OpenAPIModelName():                                                schema_k8sio_api_networking_v1_ServiceCIDRList(ref),
-		networkingv1.ServiceCIDRSpec{}.OpenAPIModelName():                                                schema_k8sio_api_networking_v1_ServiceCIDRSpec(ref),
-		networkingv1.ServiceCIDRStatus{}.OpenAPIModelName():                                              schema_k8sio_api_networking_v1_ServiceCIDRStatus(ref),
-		rbacv1.AggregationRule{}.OpenAPIModelName():                                                      schema_k8sio_api_rbac_v1_AggregationRule(ref),
-		rbacv1.ClusterRole{}.OpenAPIModelName():                                                          schema_k8sio_api_rbac_v1_ClusterRole(ref),
-		rbacv1.ClusterRoleBinding{}.OpenAPIModelName():                                                   schema_k8sio_api_rbac_v1_ClusterRoleBinding(ref),
-		rbacv1.ClusterRoleBindingList{}.OpenAPIModelName():                                               schema_k8sio_api_rbac_v1_ClusterRoleBindingList(ref),
-		rbacv1.ClusterRoleList{}.OpenAPIModelName():                                                      schema_k8sio_api_rbac_v1_ClusterRoleList(ref),
-		rbacv1.PolicyRule{}.OpenAPIModelName():                                                           schema_k8sio_api_rbac_v1_PolicyRule(ref),
-		rbacv1.Role{}.OpenAPIModelName():                                                                 schema_k8sio_api_rbac_v1_Role(ref),
-		rbacv1.RoleBinding{}.OpenAPIModelName():                                                          schema_k8sio_api_rbac_v1_RoleBinding(ref),
-		rbacv1.RoleBindingList{}.OpenAPIModelName():                                                      schema_k8sio_api_rbac_v1_RoleBindingList(ref),
-		rbacv1.RoleList{}.OpenAPIModelName():                                                             schema_k8sio_api_rbac_v1_RoleList(ref),
-		rbacv1.RoleRef{}.OpenAPIModelName():                                                              schema_k8sio_api_rbac_v1_RoleRef(ref),
-		rbacv1.Subject{}.OpenAPIModelName():                                                              schema_k8sio_api_rbac_v1_Subject(ref),
-		apiextensionsv1.ConversionRequest{}.OpenAPIModelName():                                           schema_pkg_apis_apiextensions_v1_ConversionRequest(ref),
-		apiextensionsv1.ConversionResponse{}.OpenAPIModelName():                                          schema_pkg_apis_apiextensions_v1_ConversionResponse(ref),
-		apiextensionsv1.ConversionReview{}.OpenAPIModelName():                                            schema_pkg_apis_apiextensions_v1_ConversionReview(ref),
-		apiextensionsv1.CustomResourceColumnDefinition{}.OpenAPIModelName():                              schema_pkg_apis_apiextensions_v1_CustomResourceColumnDefinition(ref),
-		apiextensionsv1.CustomResourceConversion{}.OpenAPIModelName():                                    schema_pkg_apis_apiextensions_v1_CustomResourceConversion(ref),
-		apiextensionsv1.CustomResourceDefinition{}.OpenAPIModelName():                                    schema_pkg_apis_apiextensions_v1_CustomResourceDefinition(ref),
-		apiextensionsv1.CustomResourceDefinitionCondition{}.OpenAPIModelName():                           schema_pkg_apis_apiextensions_v1_CustomResourceDefinitionCondition(ref),
-		apiextensionsv1.CustomResourceDefinitionList{}.OpenAPIModelName():                                schema_pkg_apis_apiextensions_v1_CustomResourceDefinitionList(ref),
-		apiextensionsv1.CustomResourceDefinitionNames{}.OpenAPIModelName():                               schema_pkg_apis_apiextensions_v1_CustomResourceDefinitionNames(ref),
-		apiextensionsv1.CustomResourceDefinitionSpec{}.OpenAPIModelName():                                schema_pkg_apis_apiextensions_v1_CustomResourceDefinitionSpec(ref),
-		apiextensionsv1.CustomResourceDefinitionStatus{}.OpenAPIModelName():                              schema_pkg_apis_apiextensions_v1_CustomResourceDefinitionStatus(ref),
-		apiextensionsv1.CustomResourceDefinitionVersion{}.OpenAPIModelName():                             schema_pkg_apis_apiextensions_v1_CustomResourceDefinitionVersion(ref),
-		apiextensionsv1.CustomResourceSubresourceScale{}.OpenAPIModelName():                              schema_pkg_apis_apiextensions_v1_CustomResourceSubresourceScale(ref),
-		apiextensionsv1.CustomResourceSubresourceStatus{}.OpenAPIModelName():                             schema_pkg_apis_apiextensions_v1_CustomResourceSubresourceStatus(ref),
-		apiextensionsv1.CustomResourceSubresources{}.OpenAPIModelName():                                  schema_pkg_apis_apiextensions_v1_CustomResourceSubresources(ref),
-		apiextensionsv1.CustomResourceValidation{}.OpenAPIModelName():                                    schema_pkg_apis_apiextensions_v1_CustomResourceValidation(ref),
-		apiextensionsv1.ExternalDocumentation{}.OpenAPIModelName():                                       schema_pkg_apis_apiextensions_v1_ExternalDocumentation(ref),
-		apiextensionsv1.JSON{}.OpenAPIModelName():                                                        schema_pkg_apis_apiextensions_v1_JSON(ref),
-		apiextensionsv1.JSONSchemaProps{}.OpenAPIModelName():                                             schema_pkg_apis_apiextensions_v1_JSONSchemaProps(ref),
-		apiextensionsv1.JSONSchemaPropsOrArray{}.OpenAPIModelName():                                      schema_pkg_apis_apiextensions_v1_JSONSchemaPropsOrArray(ref),
-		apiextensionsv1.JSONSchemaPropsOrBool{}.OpenAPIModelName():                                       schema_pkg_apis_apiextensions_v1_JSONSchemaPropsOrBool(ref),
-		apiextensionsv1.JSONSchemaPropsOrStringArray{}.OpenAPIModelName():                                schema_pkg_apis_apiextensions_v1_JSONSchemaPropsOrStringArray(ref),
-		apiextensionsv1.SelectableField{}.OpenAPIModelName():                                             schema_pkg_apis_apiextensions_v1_SelectableField(ref),
-		apiextensionsv1.ServiceReference{}.OpenAPIModelName():                                            schema_pkg_apis_apiextensions_v1_ServiceReference(ref),
-		apiextensionsv1.ValidationRule{}.OpenAPIModelName():                                              schema_pkg_apis_apiextensions_v1_ValidationRule(ref),
-		apiextensionsv1.WebhookClientConfig{}.OpenAPIModelName():                                         schema_pkg_apis_apiextensions_v1_WebhookClientConfig(ref),
-		apiextensionsv1.WebhookConversion{}.OpenAPIModelName():                                           schema_pkg_apis_apiextensions_v1_WebhookConversion(ref),
-		resource.Quantity{}.OpenAPIModelName():                                                           schema_apimachinery_pkg_api_resource_Quantity(ref),
-		metav1.APIGroup{}.OpenAPIModelName():                                                             schema_pkg_apis_meta_v1_APIGroup(ref),
-		metav1.APIGroupList{}.OpenAPIModelName():                                                         schema_pkg_apis_meta_v1_APIGroupList(ref),
-		metav1.APIResource{}.OpenAPIModelName():                                                          schema_pkg_apis_meta_v1_APIResource(ref),
-		metav1.APIResourceList{}.OpenAPIModelName():                                                      schema_pkg_apis_meta_v1_APIResourceList(ref),
-		metav1.APIVersions{}.OpenAPIModelName():                                                          schema_pkg_apis_meta_v1_APIVersions(ref),
-		metav1.ApplyOptions{}.OpenAPIModelName():                                                         schema_pkg_apis_meta_v1_ApplyOptions(ref),
-		metav1.Condition{}.OpenAPIModelName():                                                            schema_pkg_apis_meta_v1_Condition(ref),
-		metav1.CreateOptions{}.OpenAPIModelName():                                                        schema_pkg_apis_meta_v1_CreateOptions(ref),
-		metav1.DeleteOptions{}.OpenAPIModelName():                                                        schema_pkg_apis_meta_v1_DeleteOptions(ref),
-		metav1.Duration{}.OpenAPIModelName():                                                             schema_pkg_apis_meta_v1_Duration(ref),
-		metav1.FieldSelectorRequirement{}.OpenAPIModelName():                                             schema_pkg_apis_meta_v1_FieldSelectorRequirement(ref),
-		metav1.FieldsV1{}.OpenAPIModelName():                                                             schema_pkg_apis_meta_v1_FieldsV1(ref),
-		metav1.GetOptions{}.OpenAPIModelName():                                                           schema_pkg_apis_meta_v1_GetOptions(ref),
-		metav1.GroupKind{}.OpenAPIModelName():                                                            schema_pkg_apis_meta_v1_GroupKind(ref),
-		metav1.GroupResource{}.OpenAPIModelName():                                                        schema_pkg_apis_meta_v1_GroupResource(ref),
-		metav1.GroupVersion{}.OpenAPIModelName():                                                         schema_pkg_apis_meta_v1_GroupVersion(ref),
-		metav1.GroupVersionForDiscovery{}.OpenAPIModelName():                                             schema_pkg_apis_meta_v1_GroupVersionForDiscovery(ref),
-		metav1.GroupVersionKind{}.OpenAPIModelName():                                                     schema_pkg_apis_meta_v1_GroupVersionKind(ref),
-		metav1.GroupVersionResource{}.OpenAPIModelName():                                                 schema_pkg_apis_meta_v1_GroupVersionResource(ref),
-		metav1.InternalEvent{}.OpenAPIModelName():                                                        schema_pkg_apis_meta_v1_InternalEvent(ref),
-		metav1.LabelSelector{}.OpenAPIModelName():                                                        schema_pkg_apis_meta_v1_LabelSelector(ref),
-		metav1.LabelSelectorRequirement{}.OpenAPIModelName():                                             schema_pkg_apis_meta_v1_LabelSelectorRequirement(ref),
-		metav1.List{}.OpenAPIModelName():                                                                 schema_pkg_apis_meta_v1_List(ref),
-		metav1.ListMeta{}.OpenAPIModelName():                                                             schema_pkg_apis_meta_v1_ListMeta(ref),
-		metav1.ListOptions{}.OpenAPIModelName():                                                          schema_pkg_apis_meta_v1_ListOptions(ref),
-		metav1.ManagedFieldsEntry{}.OpenAPIModelName():                                                   schema_pkg_apis_meta_v1_ManagedFieldsEntry(ref),
-		metav1.MicroTime{}.OpenAPIModelName():                                                            schema_pkg_apis_meta_v1_MicroTime(ref),
-		metav1.ObjectMeta{}.OpenAPIModelName():                                                           schema_pkg_apis_meta_v1_ObjectMeta(ref),
-		metav1.OwnerReference{}.OpenAPIModelName():                                                       schema_pkg_apis_meta_v1_OwnerReference(ref),
-		metav1.PartialObjectMetadata{}.OpenAPIModelName():                                                schema_pkg_apis_meta_v1_PartialObjectMetadata(ref),
-		metav1.PartialObjectMetadataList{}.OpenAPIModelName():                                            schema_pkg_apis_meta_v1_PartialObjectMetadataList(ref),
-		metav1.Patch{}.OpenAPIModelName():                                                                schema_pkg_apis_meta_v1_Patch(ref),
-		metav1.PatchOptions{}.OpenAPIModelName():                                                         schema_pkg_apis_meta_v1_PatchOptions(ref),
-		metav1.Preconditions{}.OpenAPIModelName():                                                        schema_pkg_apis_meta_v1_Preconditions(ref),
-		metav1.RootPaths{}.OpenAPIModelName():                                                            schema_pkg_apis_meta_v1_RootPaths(ref),
-		metav1.ServerAddressByClientCIDR{}.OpenAPIModelName():                                            schema_pkg_apis_meta_v1_ServerAddressByClientCIDR(ref),
-		metav1.Status{}.OpenAPIModelName():                                                               schema_pkg_apis_meta_v1_Status(ref),
-		metav1.StatusCause{}.OpenAPIModelName():                                                          schema_pkg_apis_meta_v1_StatusCause(ref),
-		metav1.StatusDetails{}.OpenAPIModelName():                                                        schema_pkg_apis_meta_v1_StatusDetails(ref),
-		metav1.Table{}.OpenAPIModelName():                                                                schema_pkg_apis_meta_v1_Table(ref),
-		metav1.TableColumnDefinition{}.OpenAPIModelName():                                                schema_pkg_apis_meta_v1_TableColumnDefinition(ref),
-		metav1.TableOptions{}.OpenAPIModelName():                                                         schema_pkg_apis_meta_v1_TableOptions(ref),
-		metav1.TableRow{}.OpenAPIModelName():                                                             schema_pkg_apis_meta_v1_TableRow(ref),
-		metav1.TableRowCondition{}.OpenAPIModelName():                                                    schema_pkg_apis_meta_v1_TableRowCondition(ref),
-		metav1.Time{}.OpenAPIModelName():                                                                 schema_pkg_apis_meta_v1_Time(ref),
-		metav1.Timestamp{}.OpenAPIModelName():                                                            schema_pkg_apis_meta_v1_Timestamp(ref),
-		metav1.TypeMeta{}.OpenAPIModelName():                                                             schema_pkg_apis_meta_v1_TypeMeta(ref),
-		metav1.UpdateOptions{}.OpenAPIModelName():                                                        schema_pkg_apis_meta_v1_UpdateOptions(ref),
-		metav1.WatchEvent{}.OpenAPIModelName():                                                           schema_pkg_apis_meta_v1_WatchEvent(ref),
-		runtime.RawExtension{}.OpenAPIModelName():                                                        schema_k8sio_apimachinery_pkg_runtime_RawExtension(ref),
-		runtime.TypeMeta{}.OpenAPIModelName():                                                            schema_k8sio_apimachinery_pkg_runtime_TypeMeta(ref),
-		runtime.Unknown{}.OpenAPIModelName():                                                             schema_k8sio_apimachinery_pkg_runtime_Unknown(ref),
-		intstr.IntOrString{}.OpenAPIModelName():                                                          schema_apimachinery_pkg_util_intstr_IntOrString(ref),
-		version.Info{}.OpenAPIModelName():                                                                schema_k8sio_apimachinery_pkg_version_Info(ref),
+		v1alpha1.AdminKubeconfigRequest{}.OpenAPIModelName():                     schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequest(ref),
+		v1alpha1.AdminKubeconfigRequestSpec{}.OpenAPIModelName():                 schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestSpec(ref),
+		v1alpha1.AdminKubeconfigRequestStatus{}.OpenAPIModelName():               schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestStatus(ref),
+		v1alpha1.ViewerKubeconfigRequest{}.OpenAPIModelName():                    schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequest(ref),
+		v1alpha1.ViewerKubeconfigRequestSpec{}.OpenAPIModelName():                schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequestSpec(ref),
+		v1alpha1.ViewerKubeconfigRequestStatus{}.OpenAPIModelName():              schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequestStatus(ref),
+		v1.ControllerDeployment{}.OpenAPIModelName():                             schema_pkg_apis_core_v1_ControllerDeployment(ref),
+		v1.ControllerDeploymentList{}.OpenAPIModelName():                         schema_pkg_apis_core_v1_ControllerDeploymentList(ref),
+		v1.HelmControllerDeployment{}.OpenAPIModelName():                         schema_pkg_apis_core_v1_HelmControllerDeployment(ref),
+		v1.OCIRepository{}.OpenAPIModelName():                                    schema_pkg_apis_core_v1_OCIRepository(ref),
+		v1beta1.APIServerLogging{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_APIServerLogging(ref),
+		v1beta1.APIServerRequests{}.OpenAPIModelName():                           schema_pkg_apis_core_v1beta1_APIServerRequests(ref),
+		v1beta1.AccessRestriction{}.OpenAPIModelName():                           schema_pkg_apis_core_v1beta1_AccessRestriction(ref),
+		v1beta1.AccessRestrictionWithOptions{}.OpenAPIModelName():                schema_pkg_apis_core_v1beta1_AccessRestrictionWithOptions(ref),
+		v1beta1.Addon{}.OpenAPIModelName():                                       schema_pkg_apis_core_v1beta1_Addon(ref),
+		v1beta1.Addons{}.OpenAPIModelName():                                      schema_pkg_apis_core_v1beta1_Addons(ref),
+		v1beta1.AdmissionPlugin{}.OpenAPIModelName():                             schema_pkg_apis_core_v1beta1_AdmissionPlugin(ref),
+		v1beta1.Alerting{}.OpenAPIModelName():                                    schema_pkg_apis_core_v1beta1_Alerting(ref),
+		v1beta1.AuditConfig{}.OpenAPIModelName():                                 schema_pkg_apis_core_v1beta1_AuditConfig(ref),
+		v1beta1.AuditPolicy{}.OpenAPIModelName():                                 schema_pkg_apis_core_v1beta1_AuditPolicy(ref),
+		v1beta1.AuthorizerKubeconfigReference{}.OpenAPIModelName():               schema_pkg_apis_core_v1beta1_AuthorizerKubeconfigReference(ref),
+		v1beta1.AvailabilityZone{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_AvailabilityZone(ref),
+		v1beta1.Backup{}.OpenAPIModelName():                                      schema_pkg_apis_core_v1beta1_Backup(ref),
+		v1beta1.BackupBucket{}.OpenAPIModelName():                                schema_pkg_apis_core_v1beta1_BackupBucket(ref),
+		v1beta1.BackupBucketList{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_BackupBucketList(ref),
+		v1beta1.BackupBucketProvider{}.OpenAPIModelName():                        schema_pkg_apis_core_v1beta1_BackupBucketProvider(ref),
+		v1beta1.BackupBucketSpec{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_BackupBucketSpec(ref),
+		v1beta1.BackupBucketStatus{}.OpenAPIModelName():                          schema_pkg_apis_core_v1beta1_BackupBucketStatus(ref),
+		v1beta1.BackupEntry{}.OpenAPIModelName():                                 schema_pkg_apis_core_v1beta1_BackupEntry(ref),
+		v1beta1.BackupEntryList{}.OpenAPIModelName():                             schema_pkg_apis_core_v1beta1_BackupEntryList(ref),
+		v1beta1.BackupEntrySpec{}.OpenAPIModelName():                             schema_pkg_apis_core_v1beta1_BackupEntrySpec(ref),
+		v1beta1.BackupEntryStatus{}.OpenAPIModelName():                           schema_pkg_apis_core_v1beta1_BackupEntryStatus(ref),
+		v1beta1.Bastion{}.OpenAPIModelName():                                     schema_pkg_apis_core_v1beta1_Bastion(ref),
+		v1beta1.BastionMachineImage{}.OpenAPIModelName():                         schema_pkg_apis_core_v1beta1_BastionMachineImage(ref),
+		v1beta1.BastionMachineType{}.OpenAPIModelName():                          schema_pkg_apis_core_v1beta1_BastionMachineType(ref),
+		v1beta1.CARotation{}.OpenAPIModelName():                                  schema_pkg_apis_core_v1beta1_CARotation(ref),
+		v1beta1.CRI{}.OpenAPIModelName():                                         schema_pkg_apis_core_v1beta1_CRI(ref),
+		v1beta1.CapabilityDefinition{}.OpenAPIModelName():                        schema_pkg_apis_core_v1beta1_CapabilityDefinition(ref),
+		v1beta1.CloudProfile{}.OpenAPIModelName():                                schema_pkg_apis_core_v1beta1_CloudProfile(ref),
+		v1beta1.CloudProfileList{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_CloudProfileList(ref),
+		v1beta1.CloudProfileReference{}.OpenAPIModelName():                       schema_pkg_apis_core_v1beta1_CloudProfileReference(ref),
+		v1beta1.CloudProfileSpec{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref),
+		v1beta1.CloudProfileStatus{}.OpenAPIModelName():                          schema_pkg_apis_core_v1beta1_CloudProfileStatus(ref),
+		v1beta1.ClusterAutoscaler{}.OpenAPIModelName():                           schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref),
+		v1beta1.ClusterAutoscalerOptions{}.OpenAPIModelName():                    schema_pkg_apis_core_v1beta1_ClusterAutoscalerOptions(ref),
+		v1beta1.Condition{}.OpenAPIModelName():                                   schema_pkg_apis_core_v1beta1_Condition(ref),
+		v1beta1.ContainerRuntime{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_ContainerRuntime(ref),
+		v1beta1.ControlPlane{}.OpenAPIModelName():                                schema_pkg_apis_core_v1beta1_ControlPlane(ref),
+		v1beta1.ControlPlaneAutoscaling{}.OpenAPIModelName():                     schema_pkg_apis_core_v1beta1_ControlPlaneAutoscaling(ref),
+		v1beta1.ControllerDeployment{}.OpenAPIModelName():                        schema_pkg_apis_core_v1beta1_ControllerDeployment(ref),
+		v1beta1.ControllerDeploymentList{}.OpenAPIModelName():                    schema_pkg_apis_core_v1beta1_ControllerDeploymentList(ref),
+		v1beta1.ControllerInstallation{}.OpenAPIModelName():                      schema_pkg_apis_core_v1beta1_ControllerInstallation(ref),
+		v1beta1.ControllerInstallationList{}.OpenAPIModelName():                  schema_pkg_apis_core_v1beta1_ControllerInstallationList(ref),
+		v1beta1.ControllerInstallationSpec{}.OpenAPIModelName():                  schema_pkg_apis_core_v1beta1_ControllerInstallationSpec(ref),
+		v1beta1.ControllerInstallationStatus{}.OpenAPIModelName():                schema_pkg_apis_core_v1beta1_ControllerInstallationStatus(ref),
+		v1beta1.ControllerRegistration{}.OpenAPIModelName():                      schema_pkg_apis_core_v1beta1_ControllerRegistration(ref),
+		v1beta1.ControllerRegistrationDeployment{}.OpenAPIModelName():            schema_pkg_apis_core_v1beta1_ControllerRegistrationDeployment(ref),
+		v1beta1.ControllerRegistrationList{}.OpenAPIModelName():                  schema_pkg_apis_core_v1beta1_ControllerRegistrationList(ref),
+		v1beta1.ControllerRegistrationSpec{}.OpenAPIModelName():                  schema_pkg_apis_core_v1beta1_ControllerRegistrationSpec(ref),
+		v1beta1.ControllerResource{}.OpenAPIModelName():                          schema_pkg_apis_core_v1beta1_ControllerResource(ref),
+		v1beta1.ControllerResourceLifecycle{}.OpenAPIModelName():                 schema_pkg_apis_core_v1beta1_ControllerResourceLifecycle(ref),
+		v1beta1.CoreDNS{}.OpenAPIModelName():                                     schema_pkg_apis_core_v1beta1_CoreDNS(ref),
+		v1beta1.CoreDNSAutoscaling{}.OpenAPIModelName():                          schema_pkg_apis_core_v1beta1_CoreDNSAutoscaling(ref),
+		v1beta1.CoreDNSRewriting{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_CoreDNSRewriting(ref),
+		v1beta1.DNS{}.OpenAPIModelName():                                         schema_pkg_apis_core_v1beta1_DNS(ref),
+		v1beta1.DNSExposure{}.OpenAPIModelName():                                 schema_pkg_apis_core_v1beta1_DNSExposure(ref),
+		v1beta1.DNSIncludeExclude{}.OpenAPIModelName():                           schema_pkg_apis_core_v1beta1_DNSIncludeExclude(ref),
+		v1beta1.DNSProvider{}.OpenAPIModelName():                                 schema_pkg_apis_core_v1beta1_DNSProvider(ref),
+		v1beta1.DataVolume{}.OpenAPIModelName():                                  schema_pkg_apis_core_v1beta1_DataVolume(ref),
+		v1beta1.DeploymentRef{}.OpenAPIModelName():                               schema_pkg_apis_core_v1beta1_DeploymentRef(ref),
+		v1beta1.DualApprovalForDeletion{}.OpenAPIModelName():                     schema_pkg_apis_core_v1beta1_DualApprovalForDeletion(ref),
+		v1beta1.ETCD{}.OpenAPIModelName():                                        schema_pkg_apis_core_v1beta1_ETCD(ref),
+		v1beta1.ETCDConfig{}.OpenAPIModelName():                                  schema_pkg_apis_core_v1beta1_ETCDConfig(ref),
+		v1beta1.ETCDEncryptionKeyRotation{}.OpenAPIModelName():                   schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref),
+		v1beta1.EncryptionAtRest{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_EncryptionAtRest(ref),
+		v1beta1.EncryptionConfig{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_EncryptionConfig(ref),
+		v1beta1.EncryptionProvider{}.OpenAPIModelName():                          schema_pkg_apis_core_v1beta1_EncryptionProvider(ref),
+		v1beta1.EncryptionProviderStatus{}.OpenAPIModelName():                    schema_pkg_apis_core_v1beta1_EncryptionProviderStatus(ref),
+		v1beta1.ExpirableVersion{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_ExpirableVersion(ref),
+		v1beta1.ExpirableVersionStatus{}.OpenAPIModelName():                      schema_pkg_apis_core_v1beta1_ExpirableVersionStatus(ref),
+		v1beta1.Exposure{}.OpenAPIModelName():                                    schema_pkg_apis_core_v1beta1_Exposure(ref),
+		v1beta1.ExposureClass{}.OpenAPIModelName():                               schema_pkg_apis_core_v1beta1_ExposureClass(ref),
+		v1beta1.ExposureClassList{}.OpenAPIModelName():                           schema_pkg_apis_core_v1beta1_ExposureClassList(ref),
+		v1beta1.ExposureClassScheduling{}.OpenAPIModelName():                     schema_pkg_apis_core_v1beta1_ExposureClassScheduling(ref),
+		v1beta1.Extension{}.OpenAPIModelName():                                   schema_pkg_apis_core_v1beta1_Extension(ref),
+		v1beta1.ExtensionExposure{}.OpenAPIModelName():                           schema_pkg_apis_core_v1beta1_ExtensionExposure(ref),
+		v1beta1.ExtensionResourceState{}.OpenAPIModelName():                      schema_pkg_apis_core_v1beta1_ExtensionResourceState(ref),
+		v1beta1.FailureTolerance{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_FailureTolerance(ref),
+		v1beta1.Gardener{}.OpenAPIModelName():                                    schema_pkg_apis_core_v1beta1_Gardener(ref),
+		v1beta1.GardenerResourceData{}.OpenAPIModelName():                        schema_pkg_apis_core_v1beta1_GardenerResourceData(ref),
+		v1beta1.HelmControllerDeployment{}.OpenAPIModelName():                    schema_pkg_apis_core_v1beta1_HelmControllerDeployment(ref),
+		v1beta1.Hibernation{}.OpenAPIModelName():                                 schema_pkg_apis_core_v1beta1_Hibernation(ref),
+		v1beta1.HibernationSchedule{}.OpenAPIModelName():                         schema_pkg_apis_core_v1beta1_HibernationSchedule(ref),
+		v1beta1.HighAvailability{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_HighAvailability(ref),
+		v1beta1.HorizontalPodAutoscalerConfig{}.OpenAPIModelName():               schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref),
+		v1beta1.InPlaceUpdates{}.OpenAPIModelName():                              schema_pkg_apis_core_v1beta1_InPlaceUpdates(ref),
+		v1beta1.InPlaceUpdatesStatus{}.OpenAPIModelName():                        schema_pkg_apis_core_v1beta1_InPlaceUpdatesStatus(ref),
+		v1beta1.Ingress{}.OpenAPIModelName():                                     schema_pkg_apis_core_v1beta1_Ingress(ref),
+		v1beta1.IngressController{}.OpenAPIModelName():                           schema_pkg_apis_core_v1beta1_IngressController(ref),
+		v1beta1.InternalSecret{}.OpenAPIModelName():                              schema_pkg_apis_core_v1beta1_InternalSecret(ref),
+		v1beta1.InternalSecretList{}.OpenAPIModelName():                          schema_pkg_apis_core_v1beta1_InternalSecretList(ref),
+		v1beta1.KubeAPIServerConfig{}.OpenAPIModelName():                         schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref),
+		v1beta1.KubeControllerManagerConfig{}.OpenAPIModelName():                 schema_pkg_apis_core_v1beta1_KubeControllerManagerConfig(ref),
+		v1beta1.KubeProxyConfig{}.OpenAPIModelName():                             schema_pkg_apis_core_v1beta1_KubeProxyConfig(ref),
+		v1beta1.KubeSchedulerConfig{}.OpenAPIModelName():                         schema_pkg_apis_core_v1beta1_KubeSchedulerConfig(ref),
+		v1beta1.KubeletConfig{}.OpenAPIModelName():                               schema_pkg_apis_core_v1beta1_KubeletConfig(ref),
+		v1beta1.KubeletConfigEviction{}.OpenAPIModelName():                       schema_pkg_apis_core_v1beta1_KubeletConfigEviction(ref),
+		v1beta1.KubeletConfigEvictionMinimumReclaim{}.OpenAPIModelName():         schema_pkg_apis_core_v1beta1_KubeletConfigEvictionMinimumReclaim(ref),
+		v1beta1.KubeletConfigEvictionSoftGracePeriod{}.OpenAPIModelName():        schema_pkg_apis_core_v1beta1_KubeletConfigEvictionSoftGracePeriod(ref),
+		v1beta1.KubeletConfigReserved{}.OpenAPIModelName():                       schema_pkg_apis_core_v1beta1_KubeletConfigReserved(ref),
+		v1beta1.Kubernetes{}.OpenAPIModelName():                                  schema_pkg_apis_core_v1beta1_Kubernetes(ref),
+		v1beta1.KubernetesConfig{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_KubernetesConfig(ref),
+		v1beta1.KubernetesDashboard{}.OpenAPIModelName():                         schema_pkg_apis_core_v1beta1_KubernetesDashboard(ref),
+		v1beta1.KubernetesSettings{}.OpenAPIModelName():                          schema_pkg_apis_core_v1beta1_KubernetesSettings(ref),
+		v1beta1.KubernetesStatus{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_KubernetesStatus(ref),
+		v1beta1.LastError{}.OpenAPIModelName():                                   schema_pkg_apis_core_v1beta1_LastError(ref),
+		v1beta1.LastMaintenance{}.OpenAPIModelName():                             schema_pkg_apis_core_v1beta1_LastMaintenance(ref),
+		v1beta1.LastOperation{}.OpenAPIModelName():                               schema_pkg_apis_core_v1beta1_LastOperation(ref),
+		v1beta1.LifecycleStage{}.OpenAPIModelName():                              schema_pkg_apis_core_v1beta1_LifecycleStage(ref),
+		v1beta1.Limits{}.OpenAPIModelName():                                      schema_pkg_apis_core_v1beta1_Limits(ref),
+		v1beta1.LoadBalancerServicesProxyProtocol{}.OpenAPIModelName():           schema_pkg_apis_core_v1beta1_LoadBalancerServicesProxyProtocol(ref),
+		v1beta1.Machine{}.OpenAPIModelName():                                     schema_pkg_apis_core_v1beta1_Machine(ref),
+		v1beta1.MachineControllerManagerSettings{}.OpenAPIModelName():            schema_pkg_apis_core_v1beta1_MachineControllerManagerSettings(ref),
+		v1beta1.MachineImage{}.OpenAPIModelName():                                schema_pkg_apis_core_v1beta1_MachineImage(ref),
+		v1beta1.MachineImageFlavor{}.OpenAPIModelName():                          schema_pkg_apis_core_v1beta1_MachineImageFlavor(ref),
+		v1beta1.MachineImageStatus{}.OpenAPIModelName():                          schema_pkg_apis_core_v1beta1_MachineImageStatus(ref),
+		v1beta1.MachineImageVersion{}.OpenAPIModelName():                         schema_pkg_apis_core_v1beta1_MachineImageVersion(ref),
+		v1beta1.MachineType{}.OpenAPIModelName():                                 schema_pkg_apis_core_v1beta1_MachineType(ref),
+		v1beta1.MachineTypeStorage{}.OpenAPIModelName():                          schema_pkg_apis_core_v1beta1_MachineTypeStorage(ref),
+		v1beta1.Maintenance{}.OpenAPIModelName():                                 schema_pkg_apis_core_v1beta1_Maintenance(ref),
+		v1beta1.MaintenanceAutoRotation{}.OpenAPIModelName():                     schema_pkg_apis_core_v1beta1_MaintenanceAutoRotation(ref),
+		v1beta1.MaintenanceAutoUpdate{}.OpenAPIModelName():                       schema_pkg_apis_core_v1beta1_MaintenanceAutoUpdate(ref),
+		v1beta1.MaintenanceCredentialsAutoRotation{}.OpenAPIModelName():          schema_pkg_apis_core_v1beta1_MaintenanceCredentialsAutoRotation(ref),
+		v1beta1.MaintenanceRotationConfig{}.OpenAPIModelName():                   schema_pkg_apis_core_v1beta1_MaintenanceRotationConfig(ref),
+		v1beta1.MaintenanceTimeWindow{}.OpenAPIModelName():                       schema_pkg_apis_core_v1beta1_MaintenanceTimeWindow(ref),
+		v1beta1.ManualWorkerPoolRollout{}.OpenAPIModelName():                     schema_pkg_apis_core_v1beta1_ManualWorkerPoolRollout(ref),
+		v1beta1.MemorySwapConfiguration{}.OpenAPIModelName():                     schema_pkg_apis_core_v1beta1_MemorySwapConfiguration(ref),
+		v1beta1.Monitoring{}.OpenAPIModelName():                                  schema_pkg_apis_core_v1beta1_Monitoring(ref),
+		v1beta1.NamedResourceReference{}.OpenAPIModelName():                      schema_pkg_apis_core_v1beta1_NamedResourceReference(ref),
+		v1beta1.NamespacedCloudProfile{}.OpenAPIModelName():                      schema_pkg_apis_core_v1beta1_NamespacedCloudProfile(ref),
+		v1beta1.NamespacedCloudProfileList{}.OpenAPIModelName():                  schema_pkg_apis_core_v1beta1_NamespacedCloudProfileList(ref),
+		v1beta1.NamespacedCloudProfileSpec{}.OpenAPIModelName():                  schema_pkg_apis_core_v1beta1_NamespacedCloudProfileSpec(ref),
+		v1beta1.NamespacedCloudProfileStatus{}.OpenAPIModelName():                schema_pkg_apis_core_v1beta1_NamespacedCloudProfileStatus(ref),
+		v1beta1.Networking{}.OpenAPIModelName():                                  schema_pkg_apis_core_v1beta1_Networking(ref),
+		v1beta1.NetworkingStatus{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_NetworkingStatus(ref),
+		v1beta1.NginxIngress{}.OpenAPIModelName():                                schema_pkg_apis_core_v1beta1_NginxIngress(ref),
+		v1beta1.NodeLocalDNS{}.OpenAPIModelName():                                schema_pkg_apis_core_v1beta1_NodeLocalDNS(ref),
+		v1beta1.OCIRepository{}.OpenAPIModelName():                               schema_pkg_apis_core_v1beta1_OCIRepository(ref),
+		v1beta1.OIDCConfig{}.OpenAPIModelName():                                  schema_pkg_apis_core_v1beta1_OIDCConfig(ref),
+		v1beta1.ObservabilityRotation{}.OpenAPIModelName():                       schema_pkg_apis_core_v1beta1_ObservabilityRotation(ref),
+		v1beta1.OpenIDConnectClientAuthentication{}.OpenAPIModelName():           schema_pkg_apis_core_v1beta1_OpenIDConnectClientAuthentication(ref),
+		v1beta1.PendingWorkerUpdates{}.OpenAPIModelName():                        schema_pkg_apis_core_v1beta1_PendingWorkerUpdates(ref),
+		v1beta1.PendingWorkersRollout{}.OpenAPIModelName():                       schema_pkg_apis_core_v1beta1_PendingWorkersRollout(ref),
+		v1beta1.Project{}.OpenAPIModelName():                                     schema_pkg_apis_core_v1beta1_Project(ref),
+		v1beta1.ProjectList{}.OpenAPIModelName():                                 schema_pkg_apis_core_v1beta1_ProjectList(ref),
+		v1beta1.ProjectMember{}.OpenAPIModelName():                               schema_pkg_apis_core_v1beta1_ProjectMember(ref),
+		v1beta1.ProjectSpec{}.OpenAPIModelName():                                 schema_pkg_apis_core_v1beta1_ProjectSpec(ref),
+		v1beta1.ProjectStatus{}.OpenAPIModelName():                               schema_pkg_apis_core_v1beta1_ProjectStatus(ref),
+		v1beta1.ProjectTolerations{}.OpenAPIModelName():                          schema_pkg_apis_core_v1beta1_ProjectTolerations(ref),
+		v1beta1.Provider{}.OpenAPIModelName():                                    schema_pkg_apis_core_v1beta1_Provider(ref),
+		v1beta1.Quota{}.OpenAPIModelName():                                       schema_pkg_apis_core_v1beta1_Quota(ref),
+		v1beta1.QuotaList{}.OpenAPIModelName():                                   schema_pkg_apis_core_v1beta1_QuotaList(ref),
+		v1beta1.QuotaSpec{}.OpenAPIModelName():                                   schema_pkg_apis_core_v1beta1_QuotaSpec(ref),
+		v1beta1.Region{}.OpenAPIModelName():                                      schema_pkg_apis_core_v1beta1_Region(ref),
+		v1beta1.ResourceData{}.OpenAPIModelName():                                schema_pkg_apis_core_v1beta1_ResourceData(ref),
+		v1beta1.ResourceWatchCacheSize{}.OpenAPIModelName():                      schema_pkg_apis_core_v1beta1_ResourceWatchCacheSize(ref),
+		v1beta1.SSHAccess{}.OpenAPIModelName():                                   schema_pkg_apis_core_v1beta1_SSHAccess(ref),
+		v1beta1.SecretBinding{}.OpenAPIModelName():                               schema_pkg_apis_core_v1beta1_SecretBinding(ref),
+		v1beta1.SecretBindingList{}.OpenAPIModelName():                           schema_pkg_apis_core_v1beta1_SecretBindingList(ref),
+		v1beta1.SecretBindingProvider{}.OpenAPIModelName():                       schema_pkg_apis_core_v1beta1_SecretBindingProvider(ref),
+		v1beta1.Seed{}.OpenAPIModelName():                                        schema_pkg_apis_core_v1beta1_Seed(ref),
+		v1beta1.SeedDNS{}.OpenAPIModelName():                                     schema_pkg_apis_core_v1beta1_SeedDNS(ref),
+		v1beta1.SeedDNSProvider{}.OpenAPIModelName():                             schema_pkg_apis_core_v1beta1_SeedDNSProvider(ref),
+		v1beta1.SeedDNSProviderConfig{}.OpenAPIModelName():                       schema_pkg_apis_core_v1beta1_SeedDNSProviderConfig(ref),
+		v1beta1.SeedList{}.OpenAPIModelName():                                    schema_pkg_apis_core_v1beta1_SeedList(ref),
+		v1beta1.SeedNetworks{}.OpenAPIModelName():                                schema_pkg_apis_core_v1beta1_SeedNetworks(ref),
+		v1beta1.SeedProvider{}.OpenAPIModelName():                                schema_pkg_apis_core_v1beta1_SeedProvider(ref),
+		v1beta1.SeedSelector{}.OpenAPIModelName():                                schema_pkg_apis_core_v1beta1_SeedSelector(ref),
+		v1beta1.SeedSettingDependencyWatchdog{}.OpenAPIModelName():               schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdog(ref),
+		v1beta1.SeedSettingDependencyWatchdogProber{}.OpenAPIModelName():         schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdogProber(ref),
+		v1beta1.SeedSettingDependencyWatchdogWeeder{}.OpenAPIModelName():         schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdogWeeder(ref),
+		v1beta1.SeedSettingExcessCapacityReservation{}.OpenAPIModelName():        schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref),
+		v1beta1.SeedSettingExcessCapacityReservationConfig{}.OpenAPIModelName():  schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservationConfig(ref),
+		v1beta1.SeedSettingLoadBalancerServices{}.OpenAPIModelName():             schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref),
+		v1beta1.SeedSettingLoadBalancerServicesZonalIngress{}.OpenAPIModelName(): schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZonalIngress(ref),
+		v1beta1.SeedSettingLoadBalancerServicesZones{}.OpenAPIModelName():        schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZones(ref),
+		v1beta1.SeedSettingScheduling{}.OpenAPIModelName():                       schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref),
+		v1beta1.SeedSettingTopologyAwareRouting{}.OpenAPIModelName():             schema_pkg_apis_core_v1beta1_SeedSettingTopologyAwareRouting(ref),
+		v1beta1.SeedSettingVerticalPodAutoscaler{}.OpenAPIModelName():            schema_pkg_apis_core_v1beta1_SeedSettingVerticalPodAutoscaler(ref),
+		v1beta1.SeedSettings{}.OpenAPIModelName():                                schema_pkg_apis_core_v1beta1_SeedSettings(ref),
+		v1beta1.SeedSpec{}.OpenAPIModelName():                                    schema_pkg_apis_core_v1beta1_SeedSpec(ref),
+		v1beta1.SeedStatus{}.OpenAPIModelName():                                  schema_pkg_apis_core_v1beta1_SeedStatus(ref),
+		v1beta1.SeedTaint{}.OpenAPIModelName():                                   schema_pkg_apis_core_v1beta1_SeedTaint(ref),
+		v1beta1.SeedTemplate{}.OpenAPIModelName():                                schema_pkg_apis_core_v1beta1_SeedTemplate(ref),
+		v1beta1.SeedVolume{}.OpenAPIModelName():                                  schema_pkg_apis_core_v1beta1_SeedVolume(ref),
+		v1beta1.SeedVolumeProvider{}.OpenAPIModelName():                          schema_pkg_apis_core_v1beta1_SeedVolumeProvider(ref),
+		v1beta1.ServiceAccountConfig{}.OpenAPIModelName():                        schema_pkg_apis_core_v1beta1_ServiceAccountConfig(ref),
+		v1beta1.ServiceAccountKeyRotation{}.OpenAPIModelName():                   schema_pkg_apis_core_v1beta1_ServiceAccountKeyRotation(ref),
+		v1beta1.Shoot{}.OpenAPIModelName():                                       schema_pkg_apis_core_v1beta1_Shoot(ref),
+		v1beta1.ShootAdvertisedAddress{}.OpenAPIModelName():                      schema_pkg_apis_core_v1beta1_ShootAdvertisedAddress(ref),
+		v1beta1.ShootCredentials{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_ShootCredentials(ref),
+		v1beta1.ShootCredentialsRotation{}.OpenAPIModelName():                    schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref),
+		v1beta1.ShootKubeconfigRotation{}.OpenAPIModelName():                     schema_pkg_apis_core_v1beta1_ShootKubeconfigRotation(ref),
+		v1beta1.ShootList{}.OpenAPIModelName():                                   schema_pkg_apis_core_v1beta1_ShootList(ref),
+		v1beta1.ShootMachineImage{}.OpenAPIModelName():                           schema_pkg_apis_core_v1beta1_ShootMachineImage(ref),
+		v1beta1.ShootNetworks{}.OpenAPIModelName():                               schema_pkg_apis_core_v1beta1_ShootNetworks(ref),
+		v1beta1.ShootSSHKeypairRotation{}.OpenAPIModelName():                     schema_pkg_apis_core_v1beta1_ShootSSHKeypairRotation(ref),
+		v1beta1.ShootSpec{}.OpenAPIModelName():                                   schema_pkg_apis_core_v1beta1_ShootSpec(ref),
+		v1beta1.ShootState{}.OpenAPIModelName():                                  schema_pkg_apis_core_v1beta1_ShootState(ref),
+		v1beta1.ShootStateList{}.OpenAPIModelName():                              schema_pkg_apis_core_v1beta1_ShootStateList(ref),
+		v1beta1.ShootStateSpec{}.OpenAPIModelName():                              schema_pkg_apis_core_v1beta1_ShootStateSpec(ref),
+		v1beta1.ShootStatus{}.OpenAPIModelName():                                 schema_pkg_apis_core_v1beta1_ShootStatus(ref),
+		v1beta1.ShootTemplate{}.OpenAPIModelName():                               schema_pkg_apis_core_v1beta1_ShootTemplate(ref),
+		v1beta1.StructuredAuthentication{}.OpenAPIModelName():                    schema_pkg_apis_core_v1beta1_StructuredAuthentication(ref),
+		v1beta1.StructuredAuthorization{}.OpenAPIModelName():                     schema_pkg_apis_core_v1beta1_StructuredAuthorization(ref),
+		v1beta1.SystemComponents{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_SystemComponents(ref),
+		v1beta1.Toleration{}.OpenAPIModelName():                                  schema_pkg_apis_core_v1beta1_Toleration(ref),
+		v1beta1.VerticalPodAutoscaler{}.OpenAPIModelName():                       schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref),
+		v1beta1.Volume{}.OpenAPIModelName():                                      schema_pkg_apis_core_v1beta1_Volume(ref),
+		v1beta1.VolumeType{}.OpenAPIModelName():                                  schema_pkg_apis_core_v1beta1_VolumeType(ref),
+		v1beta1.WatchCacheSizes{}.OpenAPIModelName():                             schema_pkg_apis_core_v1beta1_WatchCacheSizes(ref),
+		v1beta1.Worker{}.OpenAPIModelName():                                      schema_pkg_apis_core_v1beta1_Worker(ref),
+		v1beta1.WorkerControlPlane{}.OpenAPIModelName():                          schema_pkg_apis_core_v1beta1_WorkerControlPlane(ref),
+		v1beta1.WorkerKubernetes{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_WorkerKubernetes(ref),
+		v1beta1.WorkerSystemComponents{}.OpenAPIModelName():                      schema_pkg_apis_core_v1beta1_WorkerSystemComponents(ref),
+		v1beta1.WorkersSettings{}.OpenAPIModelName():                             schema_pkg_apis_core_v1beta1_WorkersSettings(ref),
+		operationsv1alpha1.Bastion{}.OpenAPIModelName():                          schema_pkg_apis_operations_v1alpha1_Bastion(ref),
+		operationsv1alpha1.BastionIngressPolicy{}.OpenAPIModelName():             schema_pkg_apis_operations_v1alpha1_BastionIngressPolicy(ref),
+		operationsv1alpha1.BastionList{}.OpenAPIModelName():                      schema_pkg_apis_operations_v1alpha1_BastionList(ref),
+		operationsv1alpha1.BastionSpec{}.OpenAPIModelName():                      schema_pkg_apis_operations_v1alpha1_BastionSpec(ref),
+		operationsv1alpha1.BastionStatus{}.OpenAPIModelName():                    schema_pkg_apis_operations_v1alpha1_BastionStatus(ref),
+		securityv1alpha1.ContextObject{}.OpenAPIModelName():                      schema_pkg_apis_security_v1alpha1_ContextObject(ref),
+		securityv1alpha1.CredentialsBinding{}.OpenAPIModelName():                 schema_pkg_apis_security_v1alpha1_CredentialsBinding(ref),
+		securityv1alpha1.CredentialsBindingList{}.OpenAPIModelName():             schema_pkg_apis_security_v1alpha1_CredentialsBindingList(ref),
+		securityv1alpha1.CredentialsBindingProvider{}.OpenAPIModelName():         schema_pkg_apis_security_v1alpha1_CredentialsBindingProvider(ref),
+		securityv1alpha1.TargetSystem{}.OpenAPIModelName():                       schema_pkg_apis_security_v1alpha1_TargetSystem(ref),
+		securityv1alpha1.TokenRequest{}.OpenAPIModelName():                       schema_pkg_apis_security_v1alpha1_TokenRequest(ref),
+		securityv1alpha1.TokenRequestSpec{}.OpenAPIModelName():                   schema_pkg_apis_security_v1alpha1_TokenRequestSpec(ref),
+		securityv1alpha1.TokenRequestStatus{}.OpenAPIModelName():                 schema_pkg_apis_security_v1alpha1_TokenRequestStatus(ref),
+		securityv1alpha1.WorkloadIdentity{}.OpenAPIModelName():                   schema_pkg_apis_security_v1alpha1_WorkloadIdentity(ref),
+		securityv1alpha1.WorkloadIdentityList{}.OpenAPIModelName():               schema_pkg_apis_security_v1alpha1_WorkloadIdentityList(ref),
+		securityv1alpha1.WorkloadIdentitySpec{}.OpenAPIModelName():               schema_pkg_apis_security_v1alpha1_WorkloadIdentitySpec(ref),
+		securityv1alpha1.WorkloadIdentityStatus{}.OpenAPIModelName():             schema_pkg_apis_security_v1alpha1_WorkloadIdentityStatus(ref),
+		seedmanagementv1alpha1.Gardenlet{}.OpenAPIModelName():                    schema_pkg_apis_seedmanagement_v1alpha1_Gardenlet(ref),
+		seedmanagementv1alpha1.GardenletConfig{}.OpenAPIModelName():              schema_pkg_apis_seedmanagement_v1alpha1_GardenletConfig(ref),
+		seedmanagementv1alpha1.GardenletDeployment{}.OpenAPIModelName():          schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref),
+		seedmanagementv1alpha1.GardenletHelm{}.OpenAPIModelName():                schema_pkg_apis_seedmanagement_v1alpha1_GardenletHelm(ref),
+		seedmanagementv1alpha1.GardenletList{}.OpenAPIModelName():                schema_pkg_apis_seedmanagement_v1alpha1_GardenletList(ref),
+		seedmanagementv1alpha1.GardenletSelfDeployment{}.OpenAPIModelName():      schema_pkg_apis_seedmanagement_v1alpha1_GardenletSelfDeployment(ref),
+		seedmanagementv1alpha1.GardenletSpec{}.OpenAPIModelName():                schema_pkg_apis_seedmanagement_v1alpha1_GardenletSpec(ref),
+		seedmanagementv1alpha1.GardenletStatus{}.OpenAPIModelName():              schema_pkg_apis_seedmanagement_v1alpha1_GardenletStatus(ref),
+		seedmanagementv1alpha1.Image{}.OpenAPIModelName():                        schema_pkg_apis_seedmanagement_v1alpha1_Image(ref),
+		seedmanagementv1alpha1.ManagedSeed{}.OpenAPIModelName():                  schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeed(ref),
+		seedmanagementv1alpha1.ManagedSeedList{}.OpenAPIModelName():              schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedList(ref),
+		seedmanagementv1alpha1.ManagedSeedSet{}.OpenAPIModelName():               schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSet(ref),
+		seedmanagementv1alpha1.ManagedSeedSetList{}.OpenAPIModelName():           schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetList(ref),
+		seedmanagementv1alpha1.ManagedSeedSetSpec{}.OpenAPIModelName():           schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetSpec(ref),
+		seedmanagementv1alpha1.ManagedSeedSetStatus{}.OpenAPIModelName():         schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetStatus(ref),
+		seedmanagementv1alpha1.ManagedSeedSpec{}.OpenAPIModelName():              schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSpec(ref),
+		seedmanagementv1alpha1.ManagedSeedStatus{}.OpenAPIModelName():            schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedStatus(ref),
+		seedmanagementv1alpha1.ManagedSeedTemplate{}.OpenAPIModelName():          schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedTemplate(ref),
+		seedmanagementv1alpha1.PendingReplica{}.OpenAPIModelName():               schema_pkg_apis_seedmanagement_v1alpha1_PendingReplica(ref),
+		seedmanagementv1alpha1.RollingUpdateStrategy{}.OpenAPIModelName():        schema_pkg_apis_seedmanagement_v1alpha1_RollingUpdateStrategy(ref),
+		seedmanagementv1alpha1.Shoot{}.OpenAPIModelName():                        schema_pkg_apis_seedmanagement_v1alpha1_Shoot(ref),
+		seedmanagementv1alpha1.UpdateStrategy{}.OpenAPIModelName():               schema_pkg_apis_seedmanagement_v1alpha1_UpdateStrategy(ref),
+		settingsv1alpha1.ClusterOpenIDConnectPreset{}.OpenAPIModelName():         schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPreset(ref),
+		settingsv1alpha1.ClusterOpenIDConnectPresetList{}.OpenAPIModelName():     schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetList(ref),
+		settingsv1alpha1.ClusterOpenIDConnectPresetSpec{}.OpenAPIModelName():     schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetSpec(ref),
+		settingsv1alpha1.KubeAPIServerOpenIDConnect{}.OpenAPIModelName():         schema_pkg_apis_settings_v1alpha1_KubeAPIServerOpenIDConnect(ref),
+		settingsv1alpha1.OpenIDConnectClientAuthentication{}.OpenAPIModelName():  schema_pkg_apis_settings_v1alpha1_OpenIDConnectClientAuthentication(ref),
+		settingsv1alpha1.OpenIDConnectPreset{}.OpenAPIModelName():                schema_pkg_apis_settings_v1alpha1_OpenIDConnectPreset(ref),
+		settingsv1alpha1.OpenIDConnectPresetList{}.OpenAPIModelName():            schema_pkg_apis_settings_v1alpha1_OpenIDConnectPresetList(ref),
+		settingsv1alpha1.OpenIDConnectPresetSpec{}.OpenAPIModelName():            schema_pkg_apis_settings_v1alpha1_OpenIDConnectPresetSpec(ref),
+		autoscalingv1.ContainerResourceMetricSource{}.OpenAPIModelName():         schema_k8sio_api_autoscaling_v1_ContainerResourceMetricSource(ref),
+		autoscalingv1.ContainerResourceMetricStatus{}.OpenAPIModelName():         schema_k8sio_api_autoscaling_v1_ContainerResourceMetricStatus(ref),
+		autoscalingv1.CrossVersionObjectReference{}.OpenAPIModelName():           schema_k8sio_api_autoscaling_v1_CrossVersionObjectReference(ref),
+		autoscalingv1.ExternalMetricSource{}.OpenAPIModelName():                  schema_k8sio_api_autoscaling_v1_ExternalMetricSource(ref),
+		autoscalingv1.ExternalMetricStatus{}.OpenAPIModelName():                  schema_k8sio_api_autoscaling_v1_ExternalMetricStatus(ref),
+		autoscalingv1.HorizontalPodAutoscaler{}.OpenAPIModelName():               schema_k8sio_api_autoscaling_v1_HorizontalPodAutoscaler(ref),
+		autoscalingv1.HorizontalPodAutoscalerCondition{}.OpenAPIModelName():      schema_k8sio_api_autoscaling_v1_HorizontalPodAutoscalerCondition(ref),
+		autoscalingv1.HorizontalPodAutoscalerList{}.OpenAPIModelName():           schema_k8sio_api_autoscaling_v1_HorizontalPodAutoscalerList(ref),
+		autoscalingv1.HorizontalPodAutoscalerSpec{}.OpenAPIModelName():           schema_k8sio_api_autoscaling_v1_HorizontalPodAutoscalerSpec(ref),
+		autoscalingv1.HorizontalPodAutoscalerStatus{}.OpenAPIModelName():         schema_k8sio_api_autoscaling_v1_HorizontalPodAutoscalerStatus(ref),
+		autoscalingv1.MetricSpec{}.OpenAPIModelName():                            schema_k8sio_api_autoscaling_v1_MetricSpec(ref),
+		autoscalingv1.MetricStatus{}.OpenAPIModelName():                          schema_k8sio_api_autoscaling_v1_MetricStatus(ref),
+		autoscalingv1.ObjectMetricSource{}.OpenAPIModelName():                    schema_k8sio_api_autoscaling_v1_ObjectMetricSource(ref),
+		autoscalingv1.ObjectMetricStatus{}.OpenAPIModelName():                    schema_k8sio_api_autoscaling_v1_ObjectMetricStatus(ref),
+		autoscalingv1.PodsMetricSource{}.OpenAPIModelName():                      schema_k8sio_api_autoscaling_v1_PodsMetricSource(ref),
+		autoscalingv1.PodsMetricStatus{}.OpenAPIModelName():                      schema_k8sio_api_autoscaling_v1_PodsMetricStatus(ref),
+		autoscalingv1.ResourceMetricSource{}.OpenAPIModelName():                  schema_k8sio_api_autoscaling_v1_ResourceMetricSource(ref),
+		autoscalingv1.ResourceMetricStatus{}.OpenAPIModelName():                  schema_k8sio_api_autoscaling_v1_ResourceMetricStatus(ref),
+		autoscalingv1.Scale{}.OpenAPIModelName():                                 schema_k8sio_api_autoscaling_v1_Scale(ref),
+		autoscalingv1.ScaleSpec{}.OpenAPIModelName():                             schema_k8sio_api_autoscaling_v1_ScaleSpec(ref),
+		autoscalingv1.ScaleStatus{}.OpenAPIModelName():                           schema_k8sio_api_autoscaling_v1_ScaleStatus(ref),
+		corev1.AWSElasticBlockStoreVolumeSource{}.OpenAPIModelName():             schema_k8sio_api_core_v1_AWSElasticBlockStoreVolumeSource(ref),
+		corev1.Affinity{}.OpenAPIModelName():                                     schema_k8sio_api_core_v1_Affinity(ref),
+		corev1.AppArmorProfile{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_AppArmorProfile(ref),
+		corev1.AttachedVolume{}.OpenAPIModelName():                               schema_k8sio_api_core_v1_AttachedVolume(ref),
+		corev1.AvoidPods{}.OpenAPIModelName():                                    schema_k8sio_api_core_v1_AvoidPods(ref),
+		corev1.AzureDiskVolumeSource{}.OpenAPIModelName():                        schema_k8sio_api_core_v1_AzureDiskVolumeSource(ref),
+		corev1.AzureFilePersistentVolumeSource{}.OpenAPIModelName():              schema_k8sio_api_core_v1_AzureFilePersistentVolumeSource(ref),
+		corev1.AzureFileVolumeSource{}.OpenAPIModelName():                        schema_k8sio_api_core_v1_AzureFileVolumeSource(ref),
+		corev1.Binding{}.OpenAPIModelName():                                      schema_k8sio_api_core_v1_Binding(ref),
+		corev1.CSIPersistentVolumeSource{}.OpenAPIModelName():                    schema_k8sio_api_core_v1_CSIPersistentVolumeSource(ref),
+		corev1.CSIVolumeSource{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_CSIVolumeSource(ref),
+		corev1.Capabilities{}.OpenAPIModelName():                                 schema_k8sio_api_core_v1_Capabilities(ref),
+		corev1.CephFSPersistentVolumeSource{}.OpenAPIModelName():                 schema_k8sio_api_core_v1_CephFSPersistentVolumeSource(ref),
+		corev1.CephFSVolumeSource{}.OpenAPIModelName():                           schema_k8sio_api_core_v1_CephFSVolumeSource(ref),
+		corev1.CinderPersistentVolumeSource{}.OpenAPIModelName():                 schema_k8sio_api_core_v1_CinderPersistentVolumeSource(ref),
+		corev1.CinderVolumeSource{}.OpenAPIModelName():                           schema_k8sio_api_core_v1_CinderVolumeSource(ref),
+		corev1.ClientIPConfig{}.OpenAPIModelName():                               schema_k8sio_api_core_v1_ClientIPConfig(ref),
+		corev1.ClusterTrustBundleProjection{}.OpenAPIModelName():                 schema_k8sio_api_core_v1_ClusterTrustBundleProjection(ref),
+		corev1.ComponentCondition{}.OpenAPIModelName():                           schema_k8sio_api_core_v1_ComponentCondition(ref),
+		corev1.ComponentStatus{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_ComponentStatus(ref),
+		corev1.ComponentStatusList{}.OpenAPIModelName():                          schema_k8sio_api_core_v1_ComponentStatusList(ref),
+		corev1.ConfigMap{}.OpenAPIModelName():                                    schema_k8sio_api_core_v1_ConfigMap(ref),
+		corev1.ConfigMapEnvSource{}.OpenAPIModelName():                           schema_k8sio_api_core_v1_ConfigMapEnvSource(ref),
+		corev1.ConfigMapKeySelector{}.OpenAPIModelName():                         schema_k8sio_api_core_v1_ConfigMapKeySelector(ref),
+		corev1.ConfigMapList{}.OpenAPIModelName():                                schema_k8sio_api_core_v1_ConfigMapList(ref),
+		corev1.ConfigMapNodeConfigSource{}.OpenAPIModelName():                    schema_k8sio_api_core_v1_ConfigMapNodeConfigSource(ref),
+		corev1.ConfigMapProjection{}.OpenAPIModelName():                          schema_k8sio_api_core_v1_ConfigMapProjection(ref),
+		corev1.ConfigMapVolumeSource{}.OpenAPIModelName():                        schema_k8sio_api_core_v1_ConfigMapVolumeSource(ref),
+		corev1.Container{}.OpenAPIModelName():                                    schema_k8sio_api_core_v1_Container(ref),
+		corev1.ContainerExtendedResourceRequest{}.OpenAPIModelName():             schema_k8sio_api_core_v1_ContainerExtendedResourceRequest(ref),
+		corev1.ContainerImage{}.OpenAPIModelName():                               schema_k8sio_api_core_v1_ContainerImage(ref),
+		corev1.ContainerPort{}.OpenAPIModelName():                                schema_k8sio_api_core_v1_ContainerPort(ref),
+		corev1.ContainerResizePolicy{}.OpenAPIModelName():                        schema_k8sio_api_core_v1_ContainerResizePolicy(ref),
+		corev1.ContainerRestartRule{}.OpenAPIModelName():                         schema_k8sio_api_core_v1_ContainerRestartRule(ref),
+		corev1.ContainerRestartRuleOnExitCodes{}.OpenAPIModelName():              schema_k8sio_api_core_v1_ContainerRestartRuleOnExitCodes(ref),
+		corev1.ContainerState{}.OpenAPIModelName():                               schema_k8sio_api_core_v1_ContainerState(ref),
+		corev1.ContainerStateRunning{}.OpenAPIModelName():                        schema_k8sio_api_core_v1_ContainerStateRunning(ref),
+		corev1.ContainerStateTerminated{}.OpenAPIModelName():                     schema_k8sio_api_core_v1_ContainerStateTerminated(ref),
+		corev1.ContainerStateWaiting{}.OpenAPIModelName():                        schema_k8sio_api_core_v1_ContainerStateWaiting(ref),
+		corev1.ContainerStatus{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_ContainerStatus(ref),
+		corev1.ContainerUser{}.OpenAPIModelName():                                schema_k8sio_api_core_v1_ContainerUser(ref),
+		corev1.DaemonEndpoint{}.OpenAPIModelName():                               schema_k8sio_api_core_v1_DaemonEndpoint(ref),
+		corev1.DownwardAPIProjection{}.OpenAPIModelName():                        schema_k8sio_api_core_v1_DownwardAPIProjection(ref),
+		corev1.DownwardAPIVolumeFile{}.OpenAPIModelName():                        schema_k8sio_api_core_v1_DownwardAPIVolumeFile(ref),
+		corev1.DownwardAPIVolumeSource{}.OpenAPIModelName():                      schema_k8sio_api_core_v1_DownwardAPIVolumeSource(ref),
+		corev1.EmptyDirVolumeSource{}.OpenAPIModelName():                         schema_k8sio_api_core_v1_EmptyDirVolumeSource(ref),
+		corev1.EndpointAddress{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_EndpointAddress(ref),
+		corev1.EndpointPort{}.OpenAPIModelName():                                 schema_k8sio_api_core_v1_EndpointPort(ref),
+		corev1.EndpointSubset{}.OpenAPIModelName():                               schema_k8sio_api_core_v1_EndpointSubset(ref),
+		corev1.Endpoints{}.OpenAPIModelName():                                    schema_k8sio_api_core_v1_Endpoints(ref),
+		corev1.EndpointsList{}.OpenAPIModelName():                                schema_k8sio_api_core_v1_EndpointsList(ref),
+		corev1.EnvFromSource{}.OpenAPIModelName():                                schema_k8sio_api_core_v1_EnvFromSource(ref),
+		corev1.EnvVar{}.OpenAPIModelName():                                       schema_k8sio_api_core_v1_EnvVar(ref),
+		corev1.EnvVarSource{}.OpenAPIModelName():                                 schema_k8sio_api_core_v1_EnvVarSource(ref),
+		corev1.EphemeralContainer{}.OpenAPIModelName():                           schema_k8sio_api_core_v1_EphemeralContainer(ref),
+		corev1.EphemeralContainerCommon{}.OpenAPIModelName():                     schema_k8sio_api_core_v1_EphemeralContainerCommon(ref),
+		corev1.EphemeralVolumeSource{}.OpenAPIModelName():                        schema_k8sio_api_core_v1_EphemeralVolumeSource(ref),
+		corev1.Event{}.OpenAPIModelName():                                        schema_k8sio_api_core_v1_Event(ref),
+		corev1.EventList{}.OpenAPIModelName():                                    schema_k8sio_api_core_v1_EventList(ref),
+		corev1.EventSeries{}.OpenAPIModelName():                                  schema_k8sio_api_core_v1_EventSeries(ref),
+		corev1.EventSource{}.OpenAPIModelName():                                  schema_k8sio_api_core_v1_EventSource(ref),
+		corev1.ExecAction{}.OpenAPIModelName():                                   schema_k8sio_api_core_v1_ExecAction(ref),
+		corev1.FCVolumeSource{}.OpenAPIModelName():                               schema_k8sio_api_core_v1_FCVolumeSource(ref),
+		corev1.FileKeySelector{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_FileKeySelector(ref),
+		corev1.FlexPersistentVolumeSource{}.OpenAPIModelName():                   schema_k8sio_api_core_v1_FlexPersistentVolumeSource(ref),
+		corev1.FlexVolumeSource{}.OpenAPIModelName():                             schema_k8sio_api_core_v1_FlexVolumeSource(ref),
+		corev1.FlockerVolumeSource{}.OpenAPIModelName():                          schema_k8sio_api_core_v1_FlockerVolumeSource(ref),
+		corev1.GCEPersistentDiskVolumeSource{}.OpenAPIModelName():                schema_k8sio_api_core_v1_GCEPersistentDiskVolumeSource(ref),
+		corev1.GRPCAction{}.OpenAPIModelName():                                   schema_k8sio_api_core_v1_GRPCAction(ref),
+		corev1.GitRepoVolumeSource{}.OpenAPIModelName():                          schema_k8sio_api_core_v1_GitRepoVolumeSource(ref),
+		corev1.GlusterfsPersistentVolumeSource{}.OpenAPIModelName():              schema_k8sio_api_core_v1_GlusterfsPersistentVolumeSource(ref),
+		corev1.GlusterfsVolumeSource{}.OpenAPIModelName():                        schema_k8sio_api_core_v1_GlusterfsVolumeSource(ref),
+		corev1.HTTPGetAction{}.OpenAPIModelName():                                schema_k8sio_api_core_v1_HTTPGetAction(ref),
+		corev1.HTTPHeader{}.OpenAPIModelName():                                   schema_k8sio_api_core_v1_HTTPHeader(ref),
+		corev1.HostAlias{}.OpenAPIModelName():                                    schema_k8sio_api_core_v1_HostAlias(ref),
+		corev1.HostIP{}.OpenAPIModelName():                                       schema_k8sio_api_core_v1_HostIP(ref),
+		corev1.HostPathVolumeSource{}.OpenAPIModelName():                         schema_k8sio_api_core_v1_HostPathVolumeSource(ref),
+		corev1.ISCSIPersistentVolumeSource{}.OpenAPIModelName():                  schema_k8sio_api_core_v1_ISCSIPersistentVolumeSource(ref),
+		corev1.ISCSIVolumeSource{}.OpenAPIModelName():                            schema_k8sio_api_core_v1_ISCSIVolumeSource(ref),
+		corev1.ImageVolumeSource{}.OpenAPIModelName():                            schema_k8sio_api_core_v1_ImageVolumeSource(ref),
+		corev1.KeyToPath{}.OpenAPIModelName():                                    schema_k8sio_api_core_v1_KeyToPath(ref),
+		corev1.Lifecycle{}.OpenAPIModelName():                                    schema_k8sio_api_core_v1_Lifecycle(ref),
+		corev1.LifecycleHandler{}.OpenAPIModelName():                             schema_k8sio_api_core_v1_LifecycleHandler(ref),
+		corev1.LimitRange{}.OpenAPIModelName():                                   schema_k8sio_api_core_v1_LimitRange(ref),
+		corev1.LimitRangeItem{}.OpenAPIModelName():                               schema_k8sio_api_core_v1_LimitRangeItem(ref),
+		corev1.LimitRangeList{}.OpenAPIModelName():                               schema_k8sio_api_core_v1_LimitRangeList(ref),
+		corev1.LimitRangeSpec{}.OpenAPIModelName():                               schema_k8sio_api_core_v1_LimitRangeSpec(ref),
+		corev1.LinuxContainerUser{}.OpenAPIModelName():                           schema_k8sio_api_core_v1_LinuxContainerUser(ref),
+		corev1.List{}.OpenAPIModelName():                                         schema_k8sio_api_core_v1_List(ref),
+		corev1.LoadBalancerIngress{}.OpenAPIModelName():                          schema_k8sio_api_core_v1_LoadBalancerIngress(ref),
+		corev1.LoadBalancerStatus{}.OpenAPIModelName():                           schema_k8sio_api_core_v1_LoadBalancerStatus(ref),
+		corev1.LocalObjectReference{}.OpenAPIModelName():                         schema_k8sio_api_core_v1_LocalObjectReference(ref),
+		corev1.LocalVolumeSource{}.OpenAPIModelName():                            schema_k8sio_api_core_v1_LocalVolumeSource(ref),
+		corev1.ModifyVolumeStatus{}.OpenAPIModelName():                           schema_k8sio_api_core_v1_ModifyVolumeStatus(ref),
+		corev1.NFSVolumeSource{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_NFSVolumeSource(ref),
+		corev1.Namespace{}.OpenAPIModelName():                                    schema_k8sio_api_core_v1_Namespace(ref),
+		corev1.NamespaceCondition{}.OpenAPIModelName():                           schema_k8sio_api_core_v1_NamespaceCondition(ref),
+		corev1.NamespaceList{}.OpenAPIModelName():                                schema_k8sio_api_core_v1_NamespaceList(ref),
+		corev1.NamespaceSpec{}.OpenAPIModelName():                                schema_k8sio_api_core_v1_NamespaceSpec(ref),
+		corev1.NamespaceStatus{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_NamespaceStatus(ref),
+		corev1.Node{}.OpenAPIModelName():                                         schema_k8sio_api_core_v1_Node(ref),
+		corev1.NodeAddress{}.OpenAPIModelName():                                  schema_k8sio_api_core_v1_NodeAddress(ref),
+		corev1.NodeAffinity{}.OpenAPIModelName():                                 schema_k8sio_api_core_v1_NodeAffinity(ref),
+		corev1.NodeCondition{}.OpenAPIModelName():                                schema_k8sio_api_core_v1_NodeCondition(ref),
+		corev1.NodeConfigSource{}.OpenAPIModelName():                             schema_k8sio_api_core_v1_NodeConfigSource(ref),
+		corev1.NodeConfigStatus{}.OpenAPIModelName():                             schema_k8sio_api_core_v1_NodeConfigStatus(ref),
+		corev1.NodeDaemonEndpoints{}.OpenAPIModelName():                          schema_k8sio_api_core_v1_NodeDaemonEndpoints(ref),
+		corev1.NodeFeatures{}.OpenAPIModelName():                                 schema_k8sio_api_core_v1_NodeFeatures(ref),
+		corev1.NodeList{}.OpenAPIModelName():                                     schema_k8sio_api_core_v1_NodeList(ref),
+		corev1.NodeProxyOptions{}.OpenAPIModelName():                             schema_k8sio_api_core_v1_NodeProxyOptions(ref),
+		corev1.NodeRuntimeHandler{}.OpenAPIModelName():                           schema_k8sio_api_core_v1_NodeRuntimeHandler(ref),
+		corev1.NodeRuntimeHandlerFeatures{}.OpenAPIModelName():                   schema_k8sio_api_core_v1_NodeRuntimeHandlerFeatures(ref),
+		corev1.NodeSelector{}.OpenAPIModelName():                                 schema_k8sio_api_core_v1_NodeSelector(ref),
+		corev1.NodeSelectorRequirement{}.OpenAPIModelName():                      schema_k8sio_api_core_v1_NodeSelectorRequirement(ref),
+		corev1.NodeSelectorTerm{}.OpenAPIModelName():                             schema_k8sio_api_core_v1_NodeSelectorTerm(ref),
+		corev1.NodeSpec{}.OpenAPIModelName():                                     schema_k8sio_api_core_v1_NodeSpec(ref),
+		corev1.NodeStatus{}.OpenAPIModelName():                                   schema_k8sio_api_core_v1_NodeStatus(ref),
+		corev1.NodeSwapStatus{}.OpenAPIModelName():                               schema_k8sio_api_core_v1_NodeSwapStatus(ref),
+		corev1.NodeSystemInfo{}.OpenAPIModelName():                               schema_k8sio_api_core_v1_NodeSystemInfo(ref),
+		corev1.ObjectFieldSelector{}.OpenAPIModelName():                          schema_k8sio_api_core_v1_ObjectFieldSelector(ref),
+		corev1.ObjectReference{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_ObjectReference(ref),
+		corev1.PersistentVolume{}.OpenAPIModelName():                             schema_k8sio_api_core_v1_PersistentVolume(ref),
+		corev1.PersistentVolumeClaim{}.OpenAPIModelName():                        schema_k8sio_api_core_v1_PersistentVolumeClaim(ref),
+		corev1.PersistentVolumeClaimCondition{}.OpenAPIModelName():               schema_k8sio_api_core_v1_PersistentVolumeClaimCondition(ref),
+		corev1.PersistentVolumeClaimList{}.OpenAPIModelName():                    schema_k8sio_api_core_v1_PersistentVolumeClaimList(ref),
+		corev1.PersistentVolumeClaimSpec{}.OpenAPIModelName():                    schema_k8sio_api_core_v1_PersistentVolumeClaimSpec(ref),
+		corev1.PersistentVolumeClaimStatus{}.OpenAPIModelName():                  schema_k8sio_api_core_v1_PersistentVolumeClaimStatus(ref),
+		corev1.PersistentVolumeClaimTemplate{}.OpenAPIModelName():                schema_k8sio_api_core_v1_PersistentVolumeClaimTemplate(ref),
+		corev1.PersistentVolumeClaimVolumeSource{}.OpenAPIModelName():            schema_k8sio_api_core_v1_PersistentVolumeClaimVolumeSource(ref),
+		corev1.PersistentVolumeList{}.OpenAPIModelName():                         schema_k8sio_api_core_v1_PersistentVolumeList(ref),
+		corev1.PersistentVolumeSource{}.OpenAPIModelName():                       schema_k8sio_api_core_v1_PersistentVolumeSource(ref),
+		corev1.PersistentVolumeSpec{}.OpenAPIModelName():                         schema_k8sio_api_core_v1_PersistentVolumeSpec(ref),
+		corev1.PersistentVolumeStatus{}.OpenAPIModelName():                       schema_k8sio_api_core_v1_PersistentVolumeStatus(ref),
+		corev1.PhotonPersistentDiskVolumeSource{}.OpenAPIModelName():             schema_k8sio_api_core_v1_PhotonPersistentDiskVolumeSource(ref),
+		corev1.Pod{}.OpenAPIModelName():                                          schema_k8sio_api_core_v1_Pod(ref),
+		corev1.PodAffinity{}.OpenAPIModelName():                                  schema_k8sio_api_core_v1_PodAffinity(ref),
+		corev1.PodAffinityTerm{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_PodAffinityTerm(ref),
+		corev1.PodAntiAffinity{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_PodAntiAffinity(ref),
+		corev1.PodAttachOptions{}.OpenAPIModelName():                             schema_k8sio_api_core_v1_PodAttachOptions(ref),
+		corev1.PodCertificateProjection{}.OpenAPIModelName():                     schema_k8sio_api_core_v1_PodCertificateProjection(ref),
+		corev1.PodCondition{}.OpenAPIModelName():                                 schema_k8sio_api_core_v1_PodCondition(ref),
+		corev1.PodDNSConfig{}.OpenAPIModelName():                                 schema_k8sio_api_core_v1_PodDNSConfig(ref),
+		corev1.PodDNSConfigOption{}.OpenAPIModelName():                           schema_k8sio_api_core_v1_PodDNSConfigOption(ref),
+		corev1.PodExecOptions{}.OpenAPIModelName():                               schema_k8sio_api_core_v1_PodExecOptions(ref),
+		corev1.PodExtendedResourceClaimStatus{}.OpenAPIModelName():               schema_k8sio_api_core_v1_PodExtendedResourceClaimStatus(ref),
+		corev1.PodIP{}.OpenAPIModelName():                                        schema_k8sio_api_core_v1_PodIP(ref),
+		corev1.PodList{}.OpenAPIModelName():                                      schema_k8sio_api_core_v1_PodList(ref),
+		corev1.PodLogOptions{}.OpenAPIModelName():                                schema_k8sio_api_core_v1_PodLogOptions(ref),
+		corev1.PodOS{}.OpenAPIModelName():                                        schema_k8sio_api_core_v1_PodOS(ref),
+		corev1.PodPortForwardOptions{}.OpenAPIModelName():                        schema_k8sio_api_core_v1_PodPortForwardOptions(ref),
+		corev1.PodProxyOptions{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_PodProxyOptions(ref),
+		corev1.PodReadinessGate{}.OpenAPIModelName():                             schema_k8sio_api_core_v1_PodReadinessGate(ref),
+		corev1.PodResourceClaim{}.OpenAPIModelName():                             schema_k8sio_api_core_v1_PodResourceClaim(ref),
+		corev1.PodResourceClaimStatus{}.OpenAPIModelName():                       schema_k8sio_api_core_v1_PodResourceClaimStatus(ref),
+		corev1.PodSchedulingGate{}.OpenAPIModelName():                            schema_k8sio_api_core_v1_PodSchedulingGate(ref),
+		corev1.PodSecurityContext{}.OpenAPIModelName():                           schema_k8sio_api_core_v1_PodSecurityContext(ref),
+		corev1.PodSignature{}.OpenAPIModelName():                                 schema_k8sio_api_core_v1_PodSignature(ref),
+		corev1.PodSpec{}.OpenAPIModelName():                                      schema_k8sio_api_core_v1_PodSpec(ref),
+		corev1.PodStatus{}.OpenAPIModelName():                                    schema_k8sio_api_core_v1_PodStatus(ref),
+		corev1.PodStatusResult{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_PodStatusResult(ref),
+		corev1.PodTemplate{}.OpenAPIModelName():                                  schema_k8sio_api_core_v1_PodTemplate(ref),
+		corev1.PodTemplateList{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_PodTemplateList(ref),
+		corev1.PodTemplateSpec{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_PodTemplateSpec(ref),
+		corev1.PortStatus{}.OpenAPIModelName():                                   schema_k8sio_api_core_v1_PortStatus(ref),
+		corev1.PortworxVolumeSource{}.OpenAPIModelName():                         schema_k8sio_api_core_v1_PortworxVolumeSource(ref),
+		corev1.PreferAvoidPodsEntry{}.OpenAPIModelName():                         schema_k8sio_api_core_v1_PreferAvoidPodsEntry(ref),
+		corev1.PreferredSchedulingTerm{}.OpenAPIModelName():                      schema_k8sio_api_core_v1_PreferredSchedulingTerm(ref),
+		corev1.Probe{}.OpenAPIModelName():                                        schema_k8sio_api_core_v1_Probe(ref),
+		corev1.ProbeHandler{}.OpenAPIModelName():                                 schema_k8sio_api_core_v1_ProbeHandler(ref),
+		corev1.ProjectedVolumeSource{}.OpenAPIModelName():                        schema_k8sio_api_core_v1_ProjectedVolumeSource(ref),
+		corev1.QuobyteVolumeSource{}.OpenAPIModelName():                          schema_k8sio_api_core_v1_QuobyteVolumeSource(ref),
+		corev1.RBDPersistentVolumeSource{}.OpenAPIModelName():                    schema_k8sio_api_core_v1_RBDPersistentVolumeSource(ref),
+		corev1.RBDVolumeSource{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_RBDVolumeSource(ref),
+		corev1.RangeAllocation{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_RangeAllocation(ref),
+		corev1.ReplicationController{}.OpenAPIModelName():                        schema_k8sio_api_core_v1_ReplicationController(ref),
+		corev1.ReplicationControllerCondition{}.OpenAPIModelName():               schema_k8sio_api_core_v1_ReplicationControllerCondition(ref),
+		corev1.ReplicationControllerList{}.OpenAPIModelName():                    schema_k8sio_api_core_v1_ReplicationControllerList(ref),
+		corev1.ReplicationControllerSpec{}.OpenAPIModelName():                    schema_k8sio_api_core_v1_ReplicationControllerSpec(ref),
+		corev1.ReplicationControllerStatus{}.OpenAPIModelName():                  schema_k8sio_api_core_v1_ReplicationControllerStatus(ref),
+		corev1.ResourceClaim{}.OpenAPIModelName():                                schema_k8sio_api_core_v1_ResourceClaim(ref),
+		corev1.ResourceFieldSelector{}.OpenAPIModelName():                        schema_k8sio_api_core_v1_ResourceFieldSelector(ref),
+		corev1.ResourceHealth{}.OpenAPIModelName():                               schema_k8sio_api_core_v1_ResourceHealth(ref),
+		corev1.ResourceQuota{}.OpenAPIModelName():                                schema_k8sio_api_core_v1_ResourceQuota(ref),
+		corev1.ResourceQuotaList{}.OpenAPIModelName():                            schema_k8sio_api_core_v1_ResourceQuotaList(ref),
+		corev1.ResourceQuotaSpec{}.OpenAPIModelName():                            schema_k8sio_api_core_v1_ResourceQuotaSpec(ref),
+		corev1.ResourceQuotaStatus{}.OpenAPIModelName():                          schema_k8sio_api_core_v1_ResourceQuotaStatus(ref),
+		corev1.ResourceRequirements{}.OpenAPIModelName():                         schema_k8sio_api_core_v1_ResourceRequirements(ref),
+		corev1.ResourceStatus{}.OpenAPIModelName():                               schema_k8sio_api_core_v1_ResourceStatus(ref),
+		corev1.SELinuxOptions{}.OpenAPIModelName():                               schema_k8sio_api_core_v1_SELinuxOptions(ref),
+		corev1.ScaleIOPersistentVolumeSource{}.OpenAPIModelName():                schema_k8sio_api_core_v1_ScaleIOPersistentVolumeSource(ref),
+		corev1.ScaleIOVolumeSource{}.OpenAPIModelName():                          schema_k8sio_api_core_v1_ScaleIOVolumeSource(ref),
+		corev1.ScopeSelector{}.OpenAPIModelName():                                schema_k8sio_api_core_v1_ScopeSelector(ref),
+		corev1.ScopedResourceSelectorRequirement{}.OpenAPIModelName():            schema_k8sio_api_core_v1_ScopedResourceSelectorRequirement(ref),
+		corev1.SeccompProfile{}.OpenAPIModelName():                               schema_k8sio_api_core_v1_SeccompProfile(ref),
+		corev1.Secret{}.OpenAPIModelName():                                       schema_k8sio_api_core_v1_Secret(ref),
+		corev1.SecretEnvSource{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_SecretEnvSource(ref),
+		corev1.SecretKeySelector{}.OpenAPIModelName():                            schema_k8sio_api_core_v1_SecretKeySelector(ref),
+		corev1.SecretList{}.OpenAPIModelName():                                   schema_k8sio_api_core_v1_SecretList(ref),
+		corev1.SecretProjection{}.OpenAPIModelName():                             schema_k8sio_api_core_v1_SecretProjection(ref),
+		corev1.SecretReference{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_SecretReference(ref),
+		corev1.SecretVolumeSource{}.OpenAPIModelName():                           schema_k8sio_api_core_v1_SecretVolumeSource(ref),
+		corev1.SecurityContext{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_SecurityContext(ref),
+		corev1.SerializedReference{}.OpenAPIModelName():                          schema_k8sio_api_core_v1_SerializedReference(ref),
+		corev1.Service{}.OpenAPIModelName():                                      schema_k8sio_api_core_v1_Service(ref),
+		corev1.ServiceAccount{}.OpenAPIModelName():                               schema_k8sio_api_core_v1_ServiceAccount(ref),
+		corev1.ServiceAccountList{}.OpenAPIModelName():                           schema_k8sio_api_core_v1_ServiceAccountList(ref),
+		corev1.ServiceAccountTokenProjection{}.OpenAPIModelName():                schema_k8sio_api_core_v1_ServiceAccountTokenProjection(ref),
+		corev1.ServiceList{}.OpenAPIModelName():                                  schema_k8sio_api_core_v1_ServiceList(ref),
+		corev1.ServicePort{}.OpenAPIModelName():                                  schema_k8sio_api_core_v1_ServicePort(ref),
+		corev1.ServiceProxyOptions{}.OpenAPIModelName():                          schema_k8sio_api_core_v1_ServiceProxyOptions(ref),
+		corev1.ServiceSpec{}.OpenAPIModelName():                                  schema_k8sio_api_core_v1_ServiceSpec(ref),
+		corev1.ServiceStatus{}.OpenAPIModelName():                                schema_k8sio_api_core_v1_ServiceStatus(ref),
+		corev1.SessionAffinityConfig{}.OpenAPIModelName():                        schema_k8sio_api_core_v1_SessionAffinityConfig(ref),
+		corev1.SleepAction{}.OpenAPIModelName():                                  schema_k8sio_api_core_v1_SleepAction(ref),
+		corev1.StorageOSPersistentVolumeSource{}.OpenAPIModelName():              schema_k8sio_api_core_v1_StorageOSPersistentVolumeSource(ref),
+		corev1.StorageOSVolumeSource{}.OpenAPIModelName():                        schema_k8sio_api_core_v1_StorageOSVolumeSource(ref),
+		corev1.Sysctl{}.OpenAPIModelName():                                       schema_k8sio_api_core_v1_Sysctl(ref),
+		corev1.TCPSocketAction{}.OpenAPIModelName():                              schema_k8sio_api_core_v1_TCPSocketAction(ref),
+		corev1.Taint{}.OpenAPIModelName():                                        schema_k8sio_api_core_v1_Taint(ref),
+		corev1.Toleration{}.OpenAPIModelName():                                   schema_k8sio_api_core_v1_Toleration(ref),
+		corev1.TopologySelectorLabelRequirement{}.OpenAPIModelName():             schema_k8sio_api_core_v1_TopologySelectorLabelRequirement(ref),
+		corev1.TopologySelectorTerm{}.OpenAPIModelName():                         schema_k8sio_api_core_v1_TopologySelectorTerm(ref),
+		corev1.TopologySpreadConstraint{}.OpenAPIModelName():                     schema_k8sio_api_core_v1_TopologySpreadConstraint(ref),
+		corev1.TypedLocalObjectReference{}.OpenAPIModelName():                    schema_k8sio_api_core_v1_TypedLocalObjectReference(ref),
+		corev1.TypedObjectReference{}.OpenAPIModelName():                         schema_k8sio_api_core_v1_TypedObjectReference(ref),
+		corev1.Volume{}.OpenAPIModelName():                                       schema_k8sio_api_core_v1_Volume(ref),
+		corev1.VolumeDevice{}.OpenAPIModelName():                                 schema_k8sio_api_core_v1_VolumeDevice(ref),
+		corev1.VolumeMount{}.OpenAPIModelName():                                  schema_k8sio_api_core_v1_VolumeMount(ref),
+		corev1.VolumeMountStatus{}.OpenAPIModelName():                            schema_k8sio_api_core_v1_VolumeMountStatus(ref),
+		corev1.VolumeNodeAffinity{}.OpenAPIModelName():                           schema_k8sio_api_core_v1_VolumeNodeAffinity(ref),
+		corev1.VolumeProjection{}.OpenAPIModelName():                             schema_k8sio_api_core_v1_VolumeProjection(ref),
+		corev1.VolumeResourceRequirements{}.OpenAPIModelName():                   schema_k8sio_api_core_v1_VolumeResourceRequirements(ref),
+		corev1.VolumeSource{}.OpenAPIModelName():                                 schema_k8sio_api_core_v1_VolumeSource(ref),
+		corev1.VsphereVirtualDiskVolumeSource{}.OpenAPIModelName():               schema_k8sio_api_core_v1_VsphereVirtualDiskVolumeSource(ref),
+		corev1.WeightedPodAffinityTerm{}.OpenAPIModelName():                      schema_k8sio_api_core_v1_WeightedPodAffinityTerm(ref),
+		corev1.WindowsSecurityContextOptions{}.OpenAPIModelName():                schema_k8sio_api_core_v1_WindowsSecurityContextOptions(ref),
+		corev1.WorkloadReference{}.OpenAPIModelName():                            schema_k8sio_api_core_v1_WorkloadReference(ref),
+		networkingv1.HTTPIngressPath{}.OpenAPIModelName():                        schema_k8sio_api_networking_v1_HTTPIngressPath(ref),
+		networkingv1.HTTPIngressRuleValue{}.OpenAPIModelName():                   schema_k8sio_api_networking_v1_HTTPIngressRuleValue(ref),
+		networkingv1.IPAddress{}.OpenAPIModelName():                              schema_k8sio_api_networking_v1_IPAddress(ref),
+		networkingv1.IPAddressList{}.OpenAPIModelName():                          schema_k8sio_api_networking_v1_IPAddressList(ref),
+		networkingv1.IPAddressSpec{}.OpenAPIModelName():                          schema_k8sio_api_networking_v1_IPAddressSpec(ref),
+		networkingv1.IPBlock{}.OpenAPIModelName():                                schema_k8sio_api_networking_v1_IPBlock(ref),
+		networkingv1.Ingress{}.OpenAPIModelName():                                schema_k8sio_api_networking_v1_Ingress(ref),
+		networkingv1.IngressBackend{}.OpenAPIModelName():                         schema_k8sio_api_networking_v1_IngressBackend(ref),
+		networkingv1.IngressClass{}.OpenAPIModelName():                           schema_k8sio_api_networking_v1_IngressClass(ref),
+		networkingv1.IngressClassList{}.OpenAPIModelName():                       schema_k8sio_api_networking_v1_IngressClassList(ref),
+		networkingv1.IngressClassParametersReference{}.OpenAPIModelName():        schema_k8sio_api_networking_v1_IngressClassParametersReference(ref),
+		networkingv1.IngressClassSpec{}.OpenAPIModelName():                       schema_k8sio_api_networking_v1_IngressClassSpec(ref),
+		networkingv1.IngressList{}.OpenAPIModelName():                            schema_k8sio_api_networking_v1_IngressList(ref),
+		networkingv1.IngressLoadBalancerIngress{}.OpenAPIModelName():             schema_k8sio_api_networking_v1_IngressLoadBalancerIngress(ref),
+		networkingv1.IngressLoadBalancerStatus{}.OpenAPIModelName():              schema_k8sio_api_networking_v1_IngressLoadBalancerStatus(ref),
+		networkingv1.IngressPortStatus{}.OpenAPIModelName():                      schema_k8sio_api_networking_v1_IngressPortStatus(ref),
+		networkingv1.IngressRule{}.OpenAPIModelName():                            schema_k8sio_api_networking_v1_IngressRule(ref),
+		networkingv1.IngressRuleValue{}.OpenAPIModelName():                       schema_k8sio_api_networking_v1_IngressRuleValue(ref),
+		networkingv1.IngressServiceBackend{}.OpenAPIModelName():                  schema_k8sio_api_networking_v1_IngressServiceBackend(ref),
+		networkingv1.IngressSpec{}.OpenAPIModelName():                            schema_k8sio_api_networking_v1_IngressSpec(ref),
+		networkingv1.IngressStatus{}.OpenAPIModelName():                          schema_k8sio_api_networking_v1_IngressStatus(ref),
+		networkingv1.IngressTLS{}.OpenAPIModelName():                             schema_k8sio_api_networking_v1_IngressTLS(ref),
+		networkingv1.NetworkPolicy{}.OpenAPIModelName():                          schema_k8sio_api_networking_v1_NetworkPolicy(ref),
+		networkingv1.NetworkPolicyEgressRule{}.OpenAPIModelName():                schema_k8sio_api_networking_v1_NetworkPolicyEgressRule(ref),
+		networkingv1.NetworkPolicyIngressRule{}.OpenAPIModelName():               schema_k8sio_api_networking_v1_NetworkPolicyIngressRule(ref),
+		networkingv1.NetworkPolicyList{}.OpenAPIModelName():                      schema_k8sio_api_networking_v1_NetworkPolicyList(ref),
+		networkingv1.NetworkPolicyPeer{}.OpenAPIModelName():                      schema_k8sio_api_networking_v1_NetworkPolicyPeer(ref),
+		networkingv1.NetworkPolicyPort{}.OpenAPIModelName():                      schema_k8sio_api_networking_v1_NetworkPolicyPort(ref),
+		networkingv1.NetworkPolicySpec{}.OpenAPIModelName():                      schema_k8sio_api_networking_v1_NetworkPolicySpec(ref),
+		networkingv1.ParentReference{}.OpenAPIModelName():                        schema_k8sio_api_networking_v1_ParentReference(ref),
+		networkingv1.ServiceBackendPort{}.OpenAPIModelName():                     schema_k8sio_api_networking_v1_ServiceBackendPort(ref),
+		networkingv1.ServiceCIDR{}.OpenAPIModelName():                            schema_k8sio_api_networking_v1_ServiceCIDR(ref),
+		networkingv1.ServiceCIDRList{}.OpenAPIModelName():                        schema_k8sio_api_networking_v1_ServiceCIDRList(ref),
+		networkingv1.ServiceCIDRSpec{}.OpenAPIModelName():                        schema_k8sio_api_networking_v1_ServiceCIDRSpec(ref),
+		networkingv1.ServiceCIDRStatus{}.OpenAPIModelName():                      schema_k8sio_api_networking_v1_ServiceCIDRStatus(ref),
+		rbacv1.AggregationRule{}.OpenAPIModelName():                              schema_k8sio_api_rbac_v1_AggregationRule(ref),
+		rbacv1.ClusterRole{}.OpenAPIModelName():                                  schema_k8sio_api_rbac_v1_ClusterRole(ref),
+		rbacv1.ClusterRoleBinding{}.OpenAPIModelName():                           schema_k8sio_api_rbac_v1_ClusterRoleBinding(ref),
+		rbacv1.ClusterRoleBindingList{}.OpenAPIModelName():                       schema_k8sio_api_rbac_v1_ClusterRoleBindingList(ref),
+		rbacv1.ClusterRoleList{}.OpenAPIModelName():                              schema_k8sio_api_rbac_v1_ClusterRoleList(ref),
+		rbacv1.PolicyRule{}.OpenAPIModelName():                                   schema_k8sio_api_rbac_v1_PolicyRule(ref),
+		rbacv1.Role{}.OpenAPIModelName():                                         schema_k8sio_api_rbac_v1_Role(ref),
+		rbacv1.RoleBinding{}.OpenAPIModelName():                                  schema_k8sio_api_rbac_v1_RoleBinding(ref),
+		rbacv1.RoleBindingList{}.OpenAPIModelName():                              schema_k8sio_api_rbac_v1_RoleBindingList(ref),
+		rbacv1.RoleList{}.OpenAPIModelName():                                     schema_k8sio_api_rbac_v1_RoleList(ref),
+		rbacv1.RoleRef{}.OpenAPIModelName():                                      schema_k8sio_api_rbac_v1_RoleRef(ref),
+		rbacv1.Subject{}.OpenAPIModelName():                                      schema_k8sio_api_rbac_v1_Subject(ref),
+		apiextensionsv1.ConversionRequest{}.OpenAPIModelName():                   schema_pkg_apis_apiextensions_v1_ConversionRequest(ref),
+		apiextensionsv1.ConversionResponse{}.OpenAPIModelName():                  schema_pkg_apis_apiextensions_v1_ConversionResponse(ref),
+		apiextensionsv1.ConversionReview{}.OpenAPIModelName():                    schema_pkg_apis_apiextensions_v1_ConversionReview(ref),
+		apiextensionsv1.CustomResourceColumnDefinition{}.OpenAPIModelName():      schema_pkg_apis_apiextensions_v1_CustomResourceColumnDefinition(ref),
+		apiextensionsv1.CustomResourceConversion{}.OpenAPIModelName():            schema_pkg_apis_apiextensions_v1_CustomResourceConversion(ref),
+		apiextensionsv1.CustomResourceDefinition{}.OpenAPIModelName():            schema_pkg_apis_apiextensions_v1_CustomResourceDefinition(ref),
+		apiextensionsv1.CustomResourceDefinitionCondition{}.OpenAPIModelName():   schema_pkg_apis_apiextensions_v1_CustomResourceDefinitionCondition(ref),
+		apiextensionsv1.CustomResourceDefinitionList{}.OpenAPIModelName():        schema_pkg_apis_apiextensions_v1_CustomResourceDefinitionList(ref),
+		apiextensionsv1.CustomResourceDefinitionNames{}.OpenAPIModelName():       schema_pkg_apis_apiextensions_v1_CustomResourceDefinitionNames(ref),
+		apiextensionsv1.CustomResourceDefinitionSpec{}.OpenAPIModelName():        schema_pkg_apis_apiextensions_v1_CustomResourceDefinitionSpec(ref),
+		apiextensionsv1.CustomResourceDefinitionStatus{}.OpenAPIModelName():      schema_pkg_apis_apiextensions_v1_CustomResourceDefinitionStatus(ref),
+		apiextensionsv1.CustomResourceDefinitionVersion{}.OpenAPIModelName():     schema_pkg_apis_apiextensions_v1_CustomResourceDefinitionVersion(ref),
+		apiextensionsv1.CustomResourceSubresourceScale{}.OpenAPIModelName():      schema_pkg_apis_apiextensions_v1_CustomResourceSubresourceScale(ref),
+		apiextensionsv1.CustomResourceSubresourceStatus{}.OpenAPIModelName():     schema_pkg_apis_apiextensions_v1_CustomResourceSubresourceStatus(ref),
+		apiextensionsv1.CustomResourceSubresources{}.OpenAPIModelName():          schema_pkg_apis_apiextensions_v1_CustomResourceSubresources(ref),
+		apiextensionsv1.CustomResourceValidation{}.OpenAPIModelName():            schema_pkg_apis_apiextensions_v1_CustomResourceValidation(ref),
+		apiextensionsv1.ExternalDocumentation{}.OpenAPIModelName():               schema_pkg_apis_apiextensions_v1_ExternalDocumentation(ref),
+		apiextensionsv1.JSON{}.OpenAPIModelName():                                schema_pkg_apis_apiextensions_v1_JSON(ref),
+		apiextensionsv1.JSONSchemaProps{}.OpenAPIModelName():                     schema_pkg_apis_apiextensions_v1_JSONSchemaProps(ref),
+		apiextensionsv1.JSONSchemaPropsOrArray{}.OpenAPIModelName():              schema_pkg_apis_apiextensions_v1_JSONSchemaPropsOrArray(ref),
+		apiextensionsv1.JSONSchemaPropsOrBool{}.OpenAPIModelName():               schema_pkg_apis_apiextensions_v1_JSONSchemaPropsOrBool(ref),
+		apiextensionsv1.JSONSchemaPropsOrStringArray{}.OpenAPIModelName():        schema_pkg_apis_apiextensions_v1_JSONSchemaPropsOrStringArray(ref),
+		apiextensionsv1.SelectableField{}.OpenAPIModelName():                     schema_pkg_apis_apiextensions_v1_SelectableField(ref),
+		apiextensionsv1.ServiceReference{}.OpenAPIModelName():                    schema_pkg_apis_apiextensions_v1_ServiceReference(ref),
+		apiextensionsv1.ValidationRule{}.OpenAPIModelName():                      schema_pkg_apis_apiextensions_v1_ValidationRule(ref),
+		apiextensionsv1.WebhookClientConfig{}.OpenAPIModelName():                 schema_pkg_apis_apiextensions_v1_WebhookClientConfig(ref),
+		apiextensionsv1.WebhookConversion{}.OpenAPIModelName():                   schema_pkg_apis_apiextensions_v1_WebhookConversion(ref),
+		resource.Quantity{}.OpenAPIModelName():                                   schema_apimachinery_pkg_api_resource_Quantity(ref),
+		metav1.APIGroup{}.OpenAPIModelName():                                     schema_pkg_apis_meta_v1_APIGroup(ref),
+		metav1.APIGroupList{}.OpenAPIModelName():                                 schema_pkg_apis_meta_v1_APIGroupList(ref),
+		metav1.APIResource{}.OpenAPIModelName():                                  schema_pkg_apis_meta_v1_APIResource(ref),
+		metav1.APIResourceList{}.OpenAPIModelName():                              schema_pkg_apis_meta_v1_APIResourceList(ref),
+		metav1.APIVersions{}.OpenAPIModelName():                                  schema_pkg_apis_meta_v1_APIVersions(ref),
+		metav1.ApplyOptions{}.OpenAPIModelName():                                 schema_pkg_apis_meta_v1_ApplyOptions(ref),
+		metav1.Condition{}.OpenAPIModelName():                                    schema_pkg_apis_meta_v1_Condition(ref),
+		metav1.CreateOptions{}.OpenAPIModelName():                                schema_pkg_apis_meta_v1_CreateOptions(ref),
+		metav1.DeleteOptions{}.OpenAPIModelName():                                schema_pkg_apis_meta_v1_DeleteOptions(ref),
+		metav1.Duration{}.OpenAPIModelName():                                     schema_pkg_apis_meta_v1_Duration(ref),
+		metav1.FieldSelectorRequirement{}.OpenAPIModelName():                     schema_pkg_apis_meta_v1_FieldSelectorRequirement(ref),
+		metav1.FieldsV1{}.OpenAPIModelName():                                     schema_pkg_apis_meta_v1_FieldsV1(ref),
+		metav1.GetOptions{}.OpenAPIModelName():                                   schema_pkg_apis_meta_v1_GetOptions(ref),
+		metav1.GroupKind{}.OpenAPIModelName():                                    schema_pkg_apis_meta_v1_GroupKind(ref),
+		metav1.GroupResource{}.OpenAPIModelName():                                schema_pkg_apis_meta_v1_GroupResource(ref),
+		metav1.GroupVersion{}.OpenAPIModelName():                                 schema_pkg_apis_meta_v1_GroupVersion(ref),
+		metav1.GroupVersionForDiscovery{}.OpenAPIModelName():                     schema_pkg_apis_meta_v1_GroupVersionForDiscovery(ref),
+		metav1.GroupVersionKind{}.OpenAPIModelName():                             schema_pkg_apis_meta_v1_GroupVersionKind(ref),
+		metav1.GroupVersionResource{}.OpenAPIModelName():                         schema_pkg_apis_meta_v1_GroupVersionResource(ref),
+		metav1.InternalEvent{}.OpenAPIModelName():                                schema_pkg_apis_meta_v1_InternalEvent(ref),
+		metav1.LabelSelector{}.OpenAPIModelName():                                schema_pkg_apis_meta_v1_LabelSelector(ref),
+		metav1.LabelSelectorRequirement{}.OpenAPIModelName():                     schema_pkg_apis_meta_v1_LabelSelectorRequirement(ref),
+		metav1.List{}.OpenAPIModelName():                                         schema_pkg_apis_meta_v1_List(ref),
+		metav1.ListMeta{}.OpenAPIModelName():                                     schema_pkg_apis_meta_v1_ListMeta(ref),
+		metav1.ListOptions{}.OpenAPIModelName():                                  schema_pkg_apis_meta_v1_ListOptions(ref),
+		metav1.ManagedFieldsEntry{}.OpenAPIModelName():                           schema_pkg_apis_meta_v1_ManagedFieldsEntry(ref),
+		metav1.MicroTime{}.OpenAPIModelName():                                    schema_pkg_apis_meta_v1_MicroTime(ref),
+		metav1.ObjectMeta{}.OpenAPIModelName():                                   schema_pkg_apis_meta_v1_ObjectMeta(ref),
+		metav1.OwnerReference{}.OpenAPIModelName():                               schema_pkg_apis_meta_v1_OwnerReference(ref),
+		metav1.PartialObjectMetadata{}.OpenAPIModelName():                        schema_pkg_apis_meta_v1_PartialObjectMetadata(ref),
+		metav1.PartialObjectMetadataList{}.OpenAPIModelName():                    schema_pkg_apis_meta_v1_PartialObjectMetadataList(ref),
+		metav1.Patch{}.OpenAPIModelName():                                        schema_pkg_apis_meta_v1_Patch(ref),
+		metav1.PatchOptions{}.OpenAPIModelName():                                 schema_pkg_apis_meta_v1_PatchOptions(ref),
+		metav1.Preconditions{}.OpenAPIModelName():                                schema_pkg_apis_meta_v1_Preconditions(ref),
+		metav1.RootPaths{}.OpenAPIModelName():                                    schema_pkg_apis_meta_v1_RootPaths(ref),
+		metav1.ServerAddressByClientCIDR{}.OpenAPIModelName():                    schema_pkg_apis_meta_v1_ServerAddressByClientCIDR(ref),
+		metav1.Status{}.OpenAPIModelName():                                       schema_pkg_apis_meta_v1_Status(ref),
+		metav1.StatusCause{}.OpenAPIModelName():                                  schema_pkg_apis_meta_v1_StatusCause(ref),
+		metav1.StatusDetails{}.OpenAPIModelName():                                schema_pkg_apis_meta_v1_StatusDetails(ref),
+		metav1.Table{}.OpenAPIModelName():                                        schema_pkg_apis_meta_v1_Table(ref),
+		metav1.TableColumnDefinition{}.OpenAPIModelName():                        schema_pkg_apis_meta_v1_TableColumnDefinition(ref),
+		metav1.TableOptions{}.OpenAPIModelName():                                 schema_pkg_apis_meta_v1_TableOptions(ref),
+		metav1.TableRow{}.OpenAPIModelName():                                     schema_pkg_apis_meta_v1_TableRow(ref),
+		metav1.TableRowCondition{}.OpenAPIModelName():                            schema_pkg_apis_meta_v1_TableRowCondition(ref),
+		metav1.Time{}.OpenAPIModelName():                                         schema_pkg_apis_meta_v1_Time(ref),
+		metav1.Timestamp{}.OpenAPIModelName():                                    schema_pkg_apis_meta_v1_Timestamp(ref),
+		metav1.TypeMeta{}.OpenAPIModelName():                                     schema_pkg_apis_meta_v1_TypeMeta(ref),
+		metav1.UpdateOptions{}.OpenAPIModelName():                                schema_pkg_apis_meta_v1_UpdateOptions(ref),
+		metav1.WatchEvent{}.OpenAPIModelName():                                   schema_pkg_apis_meta_v1_WatchEvent(ref),
+		runtime.RawExtension{}.OpenAPIModelName():                                schema_k8sio_apimachinery_pkg_runtime_RawExtension(ref),
+		runtime.TypeMeta{}.OpenAPIModelName():                                    schema_k8sio_apimachinery_pkg_runtime_TypeMeta(ref),
+		runtime.Unknown{}.OpenAPIModelName():                                     schema_k8sio_apimachinery_pkg_runtime_Unknown(ref),
+		intstr.IntOrString{}.OpenAPIModelName():                                  schema_apimachinery_pkg_util_intstr_IntOrString(ref),
+		version.Info{}.OpenAPIModelName():                                        schema_k8sio_apimachinery_pkg_version_Info(ref),
 	}
 }
 
@@ -721,14 +728,14 @@ func schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequest(ref common.R
 						SchemaProps: spec.SchemaProps{
 							Description: "Spec is the specification of the AdminKubeconfigRequest.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequestSpec"),
+							Ref:         ref(v1alpha1.AdminKubeconfigRequestSpec{}.OpenAPIModelName()),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Status is the status of the AdminKubeconfigRequest.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequestStatus"),
+							Ref:         ref(v1alpha1.AdminKubeconfigRequestStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -736,7 +743,7 @@ func schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequest(ref common.R
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequestSpec", "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequestStatus", metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1alpha1.AdminKubeconfigRequestSpec{}.OpenAPIModelName(), v1alpha1.AdminKubeconfigRequestStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -821,14 +828,14 @@ func schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequest(ref common.
 						SchemaProps: spec.SchemaProps{
 							Description: "Spec is the specification of the ViewerKubeconfigRequest.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequestSpec"),
+							Ref:         ref(v1alpha1.ViewerKubeconfigRequestSpec{}.OpenAPIModelName()),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Status is the status of the ViewerKubeconfigRequest.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequestStatus"),
+							Ref:         ref(v1alpha1.ViewerKubeconfigRequestStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -836,7 +843,7 @@ func schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequest(ref common.
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequestSpec", "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequestStatus", metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1alpha1.ViewerKubeconfigRequestSpec{}.OpenAPIModelName(), v1alpha1.ViewerKubeconfigRequestStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -920,7 +927,7 @@ func schema_pkg_apis_core_v1_ControllerDeployment(ref common.ReferenceCallback) 
 					"helm": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Helm configures that an extension controller is deployed using helm.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1.HelmControllerDeployment"),
+							Ref:         ref(v1.HelmControllerDeployment{}.OpenAPIModelName()),
 						},
 					},
 					"injectGardenKubeconfig": {
@@ -934,7 +941,7 @@ func schema_pkg_apis_core_v1_ControllerDeployment(ref common.ReferenceCallback) 
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1.HelmControllerDeployment", metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1.HelmControllerDeployment{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -974,7 +981,7 @@ func schema_pkg_apis_core_v1_ControllerDeploymentList(ref common.ReferenceCallba
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1.ControllerDeployment"),
+										Ref:     ref(v1.ControllerDeployment{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -985,7 +992,7 @@ func schema_pkg_apis_core_v1_ControllerDeploymentList(ref common.ReferenceCallba
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1.ControllerDeployment", metav1.ListMeta{}.OpenAPIModelName()},
+			v1.ControllerDeployment{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -1012,14 +1019,14 @@ func schema_pkg_apis_core_v1_HelmControllerDeployment(ref common.ReferenceCallba
 					"ociRepository": {
 						SchemaProps: spec.SchemaProps{
 							Description: "OCIRepository defines where to pull the chart.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1.OCIRepository"),
+							Ref:         ref(v1.OCIRepository{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1.OCIRepository", apiextensionsv1.JSON{}.OpenAPIModelName()},
+			v1.OCIRepository{}.OpenAPIModelName(), apiextensionsv1.JSON{}.OpenAPIModelName()},
 	}
 }
 
@@ -1224,20 +1231,20 @@ func schema_pkg_apis_core_v1beta1_Addons(ref common.ReferenceCallback) common.Op
 					"kubernetesDashboard": {
 						SchemaProps: spec.SchemaProps{
 							Description: "KubernetesDashboard holds configuration settings for the kubernetes dashboard addon.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesDashboard"),
+							Ref:         ref(v1beta1.KubernetesDashboard{}.OpenAPIModelName()),
 						},
 					},
 					"nginxIngress": {
 						SchemaProps: spec.SchemaProps{
 							Description: "NginxIngress holds configuration settings for the nginx-ingress addon.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.NginxIngress"),
+							Ref:         ref(v1beta1.NginxIngress{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesDashboard", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NginxIngress"},
+			v1beta1.KubernetesDashboard{}.OpenAPIModelName(), v1beta1.NginxIngress{}.OpenAPIModelName()},
 	}
 }
 
@@ -1323,14 +1330,14 @@ func schema_pkg_apis_core_v1beta1_AuditConfig(ref common.ReferenceCallback) comm
 					"auditPolicy": {
 						SchemaProps: spec.SchemaProps{
 							Description: "AuditPolicy contains configuration settings for audit policy of the kube-apiserver.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditPolicy"),
+							Ref:         ref(v1beta1.AuditPolicy{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditPolicy"},
+			v1beta1.AuditPolicy{}.OpenAPIModelName()},
 	}
 }
 
@@ -1512,14 +1519,14 @@ func schema_pkg_apis_core_v1beta1_BackupBucket(ref common.ReferenceCallback) com
 						SchemaProps: spec.SchemaProps{
 							Description: "Specification of the Backup Bucket.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketSpec"),
+							Ref:         ref(v1beta1.BackupBucketSpec{}.OpenAPIModelName()),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Most recently observed status of the Backup Bucket.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketStatus"),
+							Ref:         ref(v1beta1.BackupBucketStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -1527,7 +1534,7 @@ func schema_pkg_apis_core_v1beta1_BackupBucket(ref common.ReferenceCallback) com
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketSpec", "github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketStatus", metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1beta1.BackupBucketSpec{}.OpenAPIModelName(), v1beta1.BackupBucketStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -1567,7 +1574,7 @@ func schema_pkg_apis_core_v1beta1_BackupBucketList(ref common.ReferenceCallback)
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucket"),
+										Ref:     ref(v1beta1.BackupBucket{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -1578,7 +1585,7 @@ func schema_pkg_apis_core_v1beta1_BackupBucketList(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucket", metav1.ListMeta{}.OpenAPIModelName()},
+			v1beta1.BackupBucket{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -1623,7 +1630,7 @@ func schema_pkg_apis_core_v1beta1_BackupBucketSpec(ref common.ReferenceCallback)
 						SchemaProps: spec.SchemaProps{
 							Description: "Provider holds the details of cloud provider of the object store. This field is immutable.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketProvider"),
+							Ref:         ref(v1beta1.BackupBucketProvider{}.OpenAPIModelName()),
 						},
 					},
 					"providerConfig": {
@@ -1656,7 +1663,7 @@ func schema_pkg_apis_core_v1beta1_BackupBucketSpec(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketProvider", corev1.ObjectReference{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName()},
+			v1beta1.BackupBucketProvider{}.OpenAPIModelName(), corev1.ObjectReference{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName()},
 	}
 }
 
@@ -1676,13 +1683,13 @@ func schema_pkg_apis_core_v1beta1_BackupBucketStatus(ref common.ReferenceCallbac
 					"lastOperation": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastOperation holds information about the last operation on the BackupBucket.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation"),
+							Ref:         ref(v1beta1.LastOperation{}.OpenAPIModelName()),
 						},
 					},
 					"lastError": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastError holds information about the last occurred error during an operation.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError"),
+							Ref:         ref(v1beta1.LastError{}.OpenAPIModelName()),
 						},
 					},
 					"observedGeneration": {
@@ -1702,7 +1709,7 @@ func schema_pkg_apis_core_v1beta1_BackupBucketStatus(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", corev1.SecretReference{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName()},
+			v1beta1.LastError{}.OpenAPIModelName(), v1beta1.LastOperation{}.OpenAPIModelName(), corev1.SecretReference{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName()},
 	}
 }
 
@@ -1738,14 +1745,14 @@ func schema_pkg_apis_core_v1beta1_BackupEntry(ref common.ReferenceCallback) comm
 						SchemaProps: spec.SchemaProps{
 							Description: "Spec contains the specification of the Backup Entry.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntrySpec"),
+							Ref:         ref(v1beta1.BackupEntrySpec{}.OpenAPIModelName()),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Status contains the most recently observed status of the Backup Entry.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntryStatus"),
+							Ref:         ref(v1beta1.BackupEntryStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -1753,7 +1760,7 @@ func schema_pkg_apis_core_v1beta1_BackupEntry(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntrySpec", "github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntryStatus", metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1beta1.BackupEntrySpec{}.OpenAPIModelName(), v1beta1.BackupEntryStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -1793,7 +1800,7 @@ func schema_pkg_apis_core_v1beta1_BackupEntryList(ref common.ReferenceCallback) 
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntry"),
+										Ref:     ref(v1beta1.BackupEntry{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -1804,7 +1811,7 @@ func schema_pkg_apis_core_v1beta1_BackupEntryList(ref common.ReferenceCallback) 
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntry", metav1.ListMeta{}.OpenAPIModelName()},
+			v1beta1.BackupEntry{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -1855,13 +1862,13 @@ func schema_pkg_apis_core_v1beta1_BackupEntryStatus(ref common.ReferenceCallback
 					"lastOperation": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastOperation holds information about the last operation on the BackupEntry.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation"),
+							Ref:         ref(v1beta1.LastOperation{}.OpenAPIModelName()),
 						},
 					},
 					"lastError": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastError holds information about the last occurred error during an operation.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError"),
+							Ref:         ref(v1beta1.LastError{}.OpenAPIModelName()),
 						},
 					},
 					"observedGeneration": {
@@ -1888,7 +1895,7 @@ func schema_pkg_apis_core_v1beta1_BackupEntryStatus(ref common.ReferenceCallback
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", metav1.Time{}.OpenAPIModelName()},
+			v1beta1.LastError{}.OpenAPIModelName(), v1beta1.LastOperation{}.OpenAPIModelName(), metav1.Time{}.OpenAPIModelName()},
 	}
 }
 
@@ -1902,20 +1909,20 @@ func schema_pkg_apis_core_v1beta1_Bastion(ref common.ReferenceCallback) common.O
 					"machineImage": {
 						SchemaProps: spec.SchemaProps{
 							Description: "MachineImage contains the bastions machine image properties",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineImage"),
+							Ref:         ref(v1beta1.BastionMachineImage{}.OpenAPIModelName()),
 						},
 					},
 					"machineType": {
 						SchemaProps: spec.SchemaProps{
 							Description: "MachineType contains the bastions machine type properties",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineType"),
+							Ref:         ref(v1beta1.BastionMachineType{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineType"},
+			v1beta1.BastionMachineImage{}.OpenAPIModelName(), v1beta1.BastionMachineType{}.OpenAPIModelName()},
 	}
 }
 
@@ -2017,7 +2024,7 @@ func schema_pkg_apis_core_v1beta1_CARotation(ref common.ReferenceCallback) commo
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkersRollout"),
+										Ref:     ref(v1beta1.PendingWorkersRollout{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -2028,7 +2035,7 @@ func schema_pkg_apis_core_v1beta1_CARotation(ref common.ReferenceCallback) commo
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkersRollout", metav1.Time{}.OpenAPIModelName()},
+			v1beta1.PendingWorkersRollout{}.OpenAPIModelName(), metav1.Time{}.OpenAPIModelName()},
 	}
 }
 
@@ -2055,7 +2062,7 @@ func schema_pkg_apis_core_v1beta1_CRI(ref common.ReferenceCallback) common.OpenA
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ContainerRuntime"),
+										Ref:     ref(v1beta1.ContainerRuntime{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -2066,7 +2073,7 @@ func schema_pkg_apis_core_v1beta1_CRI(ref common.ReferenceCallback) common.OpenA
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ContainerRuntime"},
+			v1beta1.ContainerRuntime{}.OpenAPIModelName()},
 	}
 }
 
@@ -2137,21 +2144,21 @@ func schema_pkg_apis_core_v1beta1_CloudProfile(ref common.ReferenceCallback) com
 						SchemaProps: spec.SchemaProps{
 							Description: "Spec defines the provider environment properties.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileSpec"),
+							Ref:         ref(v1beta1.CloudProfileSpec{}.OpenAPIModelName()),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Status contains the current status of the cloud profile.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileStatus"),
+							Ref:         ref(v1beta1.CloudProfileStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileSpec", "github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileStatus", metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1beta1.CloudProfileSpec{}.OpenAPIModelName(), v1beta1.CloudProfileStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -2191,7 +2198,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileList(ref common.ReferenceCallback)
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfile"),
+										Ref:     ref(v1beta1.CloudProfile{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -2202,7 +2209,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileList(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfile", metav1.ListMeta{}.OpenAPIModelName()},
+			v1beta1.CloudProfile{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -2254,7 +2261,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 						SchemaProps: spec.SchemaProps{
 							Description: "Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings"),
+							Ref:         ref(v1beta1.KubernetesSettings{}.OpenAPIModelName()),
 						},
 					},
 					"machineImages": {
@@ -2271,7 +2278,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage"),
+										Ref:     ref(v1beta1.MachineImage{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -2291,7 +2298,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType"),
+										Ref:     ref(v1beta1.MachineType{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -2317,7 +2324,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Region"),
+										Ref:     ref(v1beta1.Region{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -2326,7 +2333,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 					"seedSelector": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile. An empty list means that all seeds of the same provider type are supported. This is useful for environments that are of the same type (like openstack) but may have different \"instances\"/landscapes. Optionally a list of possible providers can be added to enable cross-provider scheduling. By default, the provider type of the seed must match the shoot's provider.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector"),
+							Ref:         ref(v1beta1.SeedSelector{}.OpenAPIModelName()),
 						},
 					},
 					"type": {
@@ -2351,7 +2358,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType"),
+										Ref:     ref(v1beta1.VolumeType{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -2360,13 +2367,13 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 					"bastion": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Bastion contains the machine and image properties",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Bastion"),
+							Ref:         ref(v1beta1.Bastion{}.OpenAPIModelName()),
 						},
 					},
 					"limits": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Limits configures operational limits for Shoot clusters using this CloudProfile. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits"),
+							Ref:         ref(v1beta1.Limits{}.OpenAPIModelName()),
 						},
 					},
 					"machineCapabilities": {
@@ -2377,7 +2384,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityDefinition"),
+										Ref:     ref(v1beta1.CapabilityDefinition{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -2388,7 +2395,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Bastion", "github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityDefinition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Region", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType", runtime.RawExtension{}.OpenAPIModelName()},
+			v1beta1.Bastion{}.OpenAPIModelName(), v1beta1.CapabilityDefinition{}.OpenAPIModelName(), v1beta1.KubernetesSettings{}.OpenAPIModelName(), v1beta1.Limits{}.OpenAPIModelName(), v1beta1.MachineImage{}.OpenAPIModelName(), v1beta1.MachineType{}.OpenAPIModelName(), v1beta1.Region{}.OpenAPIModelName(), v1beta1.SeedSelector{}.OpenAPIModelName(), v1beta1.VolumeType{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName()},
 	}
 }
 
@@ -2402,7 +2409,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileStatus(ref common.ReferenceCallbac
 					"kubernetes": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Kubernetes contains the status information for kubernetes.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesStatus"),
+							Ref:         ref(v1beta1.KubernetesStatus{}.OpenAPIModelName()),
 						},
 					},
 					"machineImages": {
@@ -2413,7 +2420,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileStatus(ref common.ReferenceCallbac
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageStatus"),
+										Ref:     ref(v1beta1.MachineImageStatus{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -2423,7 +2430,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileStatus(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesStatus", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageStatus"},
+			v1beta1.KubernetesStatus{}.OpenAPIModelName(), v1beta1.MachineImageStatus{}.OpenAPIModelName()},
 	}
 }
 
@@ -2765,14 +2772,14 @@ func schema_pkg_apis_core_v1beta1_ControlPlane(ref common.ReferenceCallback) com
 					"highAvailability": {
 						SchemaProps: spec.SchemaProps{
 							Description: "HighAvailability holds the configuration settings for high availability of the control plane of a shoot.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability"),
+							Ref:         ref(v1beta1.HighAvailability{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability"},
+			v1beta1.HighAvailability{}.OpenAPIModelName()},
 	}
 }
 
@@ -2900,7 +2907,7 @@ func schema_pkg_apis_core_v1beta1_ControllerDeploymentList(ref common.ReferenceC
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeployment"),
+										Ref:     ref(v1beta1.ControllerDeployment{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -2911,7 +2918,7 @@ func schema_pkg_apis_core_v1beta1_ControllerDeploymentList(ref common.ReferenceC
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeployment", metav1.ListMeta{}.OpenAPIModelName()},
+			v1beta1.ControllerDeployment{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -2947,21 +2954,21 @@ func schema_pkg_apis_core_v1beta1_ControllerInstallation(ref common.ReferenceCal
 						SchemaProps: spec.SchemaProps{
 							Description: "Spec contains the specification of this installation. If the object's deletion timestamp is set, this field is immutable.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallationSpec"),
+							Ref:         ref(v1beta1.ControllerInstallationSpec{}.OpenAPIModelName()),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Status contains the status of this installation.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallationStatus"),
+							Ref:         ref(v1beta1.ControllerInstallationStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallationSpec", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallationStatus", metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1beta1.ControllerInstallationSpec{}.OpenAPIModelName(), v1beta1.ControllerInstallationStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -3001,7 +3008,7 @@ func schema_pkg_apis_core_v1beta1_ControllerInstallationList(ref common.Referenc
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallation"),
+										Ref:     ref(v1beta1.ControllerInstallation{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -3012,7 +3019,7 @@ func schema_pkg_apis_core_v1beta1_ControllerInstallationList(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallation", metav1.ListMeta{}.OpenAPIModelName()},
+			v1beta1.ControllerInstallation{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -3073,7 +3080,7 @@ func schema_pkg_apis_core_v1beta1_ControllerInstallationStatus(ref common.Refere
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition"),
+										Ref:     ref(v1beta1.Condition{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -3089,7 +3096,7 @@ func schema_pkg_apis_core_v1beta1_ControllerInstallationStatus(ref common.Refere
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", runtime.RawExtension{}.OpenAPIModelName()},
+			v1beta1.Condition{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName()},
 	}
 }
 
@@ -3125,14 +3132,14 @@ func schema_pkg_apis_core_v1beta1_ControllerRegistration(ref common.ReferenceCal
 						SchemaProps: spec.SchemaProps{
 							Description: "Spec contains the specification of this registration. If the object's deletion timestamp is set, this field is immutable.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistrationSpec"),
+							Ref:         ref(v1beta1.ControllerRegistrationSpec{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistrationSpec", metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1beta1.ControllerRegistrationSpec{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -3164,7 +3171,7 @@ func schema_pkg_apis_core_v1beta1_ControllerRegistrationDeployment(ref common.Re
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DeploymentRef"),
+										Ref:     ref(v1beta1.DeploymentRef{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -3174,7 +3181,7 @@ func schema_pkg_apis_core_v1beta1_ControllerRegistrationDeployment(ref common.Re
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.DeploymentRef", metav1.LabelSelector{}.OpenAPIModelName()},
+			v1beta1.DeploymentRef{}.OpenAPIModelName(), metav1.LabelSelector{}.OpenAPIModelName()},
 	}
 }
 
@@ -3214,7 +3221,7 @@ func schema_pkg_apis_core_v1beta1_ControllerRegistrationList(ref common.Referenc
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistration"),
+										Ref:     ref(v1beta1.ControllerRegistration{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -3225,7 +3232,7 @@ func schema_pkg_apis_core_v1beta1_ControllerRegistrationList(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistration", metav1.ListMeta{}.OpenAPIModelName()},
+			v1beta1.ControllerRegistration{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -3244,7 +3251,7 @@ func schema_pkg_apis_core_v1beta1_ControllerRegistrationSpec(ref common.Referenc
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerResource"),
+										Ref:     ref(v1beta1.ControllerResource{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -3253,14 +3260,14 @@ func schema_pkg_apis_core_v1beta1_ControllerRegistrationSpec(ref common.Referenc
 					"deployment": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Deployment contains information for how this controller is deployed.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistrationDeployment"),
+							Ref:         ref(v1beta1.ControllerRegistrationDeployment{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistrationDeployment", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerResource"},
+			v1beta1.ControllerRegistrationDeployment{}.OpenAPIModelName(), v1beta1.ControllerResource{}.OpenAPIModelName()},
 	}
 }
 
@@ -3303,7 +3310,7 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 					"lifecycle": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed. This field is defaulted in the following way when kind is \"Extension\".\n Reconcile: \"AfterKubeAPIServer\"\n Delete: \"BeforeKubeAPIServer\"\n Migrate: \"BeforeKubeAPIServer\"",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerResourceLifecycle"),
+							Ref:         ref(v1beta1.ControllerResourceLifecycle{}.OpenAPIModelName()),
 						},
 					},
 					"workerlessSupported": {
@@ -3348,7 +3355,7 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerResourceLifecycle", metav1.Duration{}.OpenAPIModelName()},
+			v1beta1.ControllerResourceLifecycle{}.OpenAPIModelName(), metav1.Duration{}.OpenAPIModelName()},
 	}
 }
 
@@ -3396,20 +3403,20 @@ func schema_pkg_apis_core_v1beta1_CoreDNS(ref common.ReferenceCallback) common.O
 					"autoscaling": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Autoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSAutoscaling"),
+							Ref:         ref(v1beta1.CoreDNSAutoscaling{}.OpenAPIModelName()),
 						},
 					},
 					"rewriting": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Rewriting contains the setting related to rewriting of requests, which are obviously incorrect due to the unnecessary application of the search path.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSRewriting"),
+							Ref:         ref(v1beta1.CoreDNSRewriting{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSAutoscaling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSRewriting"},
+			v1beta1.CoreDNSAutoscaling{}.OpenAPIModelName(), v1beta1.CoreDNSRewriting{}.OpenAPIModelName()},
 	}
 }
 
@@ -3485,7 +3492,7 @@ func schema_pkg_apis_core_v1beta1_DNS(ref common.ReferenceCallback) common.OpenA
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSProvider"),
+										Ref:     ref(v1beta1.DNSProvider{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -3495,7 +3502,7 @@ func schema_pkg_apis_core_v1beta1_DNS(ref common.ReferenceCallback) common.OpenA
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSProvider"},
+			v1beta1.DNSProvider{}.OpenAPIModelName()},
 	}
 }
 
@@ -3563,7 +3570,7 @@ func schema_pkg_apis_core_v1beta1_DNSProvider(ref common.ReferenceCallback) comm
 					"domains": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Domains contains information about which domains shall be included/excluded for this provider.\n\nDeprecated: This field is deprecated and will be removed in a future release. Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
+							Ref:         ref(v1beta1.DNSIncludeExclude{}.OpenAPIModelName()),
 						},
 					},
 					"primary": {
@@ -3590,20 +3597,20 @@ func schema_pkg_apis_core_v1beta1_DNSProvider(ref common.ReferenceCallback) comm
 					"zones": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider.\n\nDeprecated: This field is deprecated and will be removed in a future release. Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
+							Ref:         ref(v1beta1.DNSIncludeExclude{}.OpenAPIModelName()),
 						},
 					},
 					"credentialsRef": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CredentialsRef is a reference to a resource providing credentials for the DNS provider. Supported resources are Secret and WorkloadIdentity.",
-							Ref:         ref(v1.CrossVersionObjectReference{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.CrossVersionObjectReference{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude", v1.CrossVersionObjectReference{}.OpenAPIModelName()},
+			v1beta1.DNSIncludeExclude{}.OpenAPIModelName(), autoscalingv1.CrossVersionObjectReference{}.OpenAPIModelName()},
 	}
 }
 
@@ -3721,20 +3728,20 @@ func schema_pkg_apis_core_v1beta1_ETCD(ref common.ReferenceCallback) common.Open
 					"main": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Main contains configuration for the main etcd.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDConfig"),
+							Ref:         ref(v1beta1.ETCDConfig{}.OpenAPIModelName()),
 						},
 					},
 					"events": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Events contains configuration for the events etcd.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDConfig"),
+							Ref:         ref(v1beta1.ETCDConfig{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDConfig"},
+			v1beta1.ETCDConfig{}.OpenAPIModelName()},
 	}
 }
 
@@ -3748,14 +3755,14 @@ func schema_pkg_apis_core_v1beta1_ETCDConfig(ref common.ReferenceCallback) commo
 					"autoscaling": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Autoscaling contains auto-scaling configuration options for etcd.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling"),
+							Ref:         ref(v1beta1.ControlPlaneAutoscaling{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling"},
+			v1beta1.ControlPlaneAutoscaling{}.OpenAPIModelName()},
 	}
 }
 
@@ -3840,7 +3847,7 @@ func schema_pkg_apis_core_v1beta1_EncryptionAtRest(ref common.ReferenceCallback)
 						SchemaProps: spec.SchemaProps{
 							Description: "Provider contains information about Shoot encryption provider.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionProviderStatus"),
+							Ref:         ref(v1beta1.EncryptionProviderStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -3848,7 +3855,7 @@ func schema_pkg_apis_core_v1beta1_EncryptionAtRest(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionProviderStatus"},
+			v1beta1.EncryptionProviderStatus{}.OpenAPIModelName()},
 	}
 }
 
@@ -3878,7 +3885,7 @@ func schema_pkg_apis_core_v1beta1_EncryptionConfig(ref common.ReferenceCallback)
 						SchemaProps: spec.SchemaProps{
 							Description: "Provider contains information about the encryption provider.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionProvider"),
+							Ref:         ref(v1beta1.EncryptionProvider{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -3886,7 +3893,7 @@ func schema_pkg_apis_core_v1beta1_EncryptionConfig(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionProvider"},
+			v1beta1.EncryptionProvider{}.OpenAPIModelName()},
 	}
 }
 
@@ -3968,7 +3975,7 @@ func schema_pkg_apis_core_v1beta1_ExpirableVersion(ref common.ReferenceCallback)
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LifecycleStage"),
+										Ref:     ref(v1beta1.LifecycleStage{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -3979,7 +3986,7 @@ func schema_pkg_apis_core_v1beta1_ExpirableVersion(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.LifecycleStage", metav1.Time{}.OpenAPIModelName()},
+			v1beta1.LifecycleStage{}.OpenAPIModelName(), metav1.Time{}.OpenAPIModelName()},
 	}
 }
 
@@ -4023,20 +4030,20 @@ func schema_pkg_apis_core_v1beta1_Exposure(ref common.ReferenceCallback) common.
 					"extension": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Extension holds the type and provider config of the exposure extension. Mutually exclusive with DNS.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExtensionExposure"),
+							Ref:         ref(v1beta1.ExtensionExposure{}.OpenAPIModelName()),
 						},
 					},
 					"dns": {
 						SchemaProps: spec.SchemaProps{
 							Description: "DNS specifies that this shoot will be exposed by DNS. Mutually exclusive with Extension.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSExposure"),
+							Ref:         ref(v1beta1.DNSExposure{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSExposure", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ExtensionExposure"},
+			v1beta1.DNSExposure{}.OpenAPIModelName(), v1beta1.ExtensionExposure{}.OpenAPIModelName()},
 	}
 }
 
@@ -4079,7 +4086,7 @@ func schema_pkg_apis_core_v1beta1_ExposureClass(ref common.ReferenceCallback) co
 					"scheduling": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Scheduling holds information how to select applicable Seed's for ExposureClass usage. This field is immutable.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClassScheduling"),
+							Ref:         ref(v1beta1.ExposureClassScheduling{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -4087,7 +4094,7 @@ func schema_pkg_apis_core_v1beta1_ExposureClass(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClassScheduling", metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1beta1.ExposureClassScheduling{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -4127,7 +4134,7 @@ func schema_pkg_apis_core_v1beta1_ExposureClassList(ref common.ReferenceCallback
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClass"),
+										Ref:     ref(v1beta1.ExposureClass{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -4138,7 +4145,7 @@ func schema_pkg_apis_core_v1beta1_ExposureClassList(ref common.ReferenceCallback
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClass", metav1.ListMeta{}.OpenAPIModelName()},
+			v1beta1.ExposureClass{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -4152,7 +4159,7 @@ func schema_pkg_apis_core_v1beta1_ExposureClassScheduling(ref common.ReferenceCa
 					"seedSelector": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SeedSelector is an optional label selector for Seed's which are suitable to use the ExposureClass.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector"),
+							Ref:         ref(v1beta1.SeedSelector{}.OpenAPIModelName()),
 						},
 					},
 					"tolerations": {
@@ -4169,7 +4176,7 @@ func schema_pkg_apis_core_v1beta1_ExposureClassScheduling(ref common.ReferenceCa
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"),
+										Ref:     ref(v1beta1.Toleration{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -4179,7 +4186,7 @@ func schema_pkg_apis_core_v1beta1_ExposureClassScheduling(ref common.ReferenceCa
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"},
+			v1beta1.SeedSelector{}.OpenAPIModelName(), v1beta1.Toleration{}.OpenAPIModelName()},
 	}
 }
 
@@ -4291,7 +4298,7 @@ func schema_pkg_apis_core_v1beta1_ExtensionResourceState(ref common.ReferenceCal
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference"),
+										Ref:     ref(v1beta1.NamedResourceReference{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -4302,7 +4309,7 @@ func schema_pkg_apis_core_v1beta1_ExtensionResourceState(ref common.ReferenceCal
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", runtime.RawExtension{}.OpenAPIModelName()},
+			v1beta1.NamedResourceReference{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName()},
 	}
 }
 
@@ -4443,14 +4450,14 @@ func schema_pkg_apis_core_v1beta1_HelmControllerDeployment(ref common.ReferenceC
 					"ociRepository": {
 						SchemaProps: spec.SchemaProps{
 							Description: "OCIRepository defines where to pull the chart.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.OCIRepository"),
+							Ref:         ref(v1beta1.OCIRepository{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.OCIRepository", apiextensionsv1.JSON{}.OpenAPIModelName()},
+			v1beta1.OCIRepository{}.OpenAPIModelName(), apiextensionsv1.JSON{}.OpenAPIModelName()},
 	}
 }
 
@@ -4476,7 +4483,7 @@ func schema_pkg_apis_core_v1beta1_Hibernation(ref common.ReferenceCallback) comm
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.HibernationSchedule"),
+										Ref:     ref(v1beta1.HibernationSchedule{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -4486,7 +4493,7 @@ func schema_pkg_apis_core_v1beta1_Hibernation(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.HibernationSchedule"},
+			v1beta1.HibernationSchedule{}.OpenAPIModelName()},
 	}
 }
 
@@ -4535,7 +4542,7 @@ func schema_pkg_apis_core_v1beta1_HighAvailability(ref common.ReferenceCallback)
 						SchemaProps: spec.SchemaProps{
 							Description: "FailureTolerance holds information about failure tolerance level of a highly available resource.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.FailureTolerance"),
+							Ref:         ref(v1beta1.FailureTolerance{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -4543,7 +4550,7 @@ func schema_pkg_apis_core_v1beta1_HighAvailability(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.FailureTolerance"},
+			v1beta1.FailureTolerance{}.OpenAPIModelName()},
 	}
 }
 
@@ -4632,14 +4639,14 @@ func schema_pkg_apis_core_v1beta1_InPlaceUpdatesStatus(ref common.ReferenceCallb
 					"pendingWorkerUpdates": {
 						SchemaProps: spec.SchemaProps{
 							Description: "PendingWorkerUpdates contains information about worker pools pending in-place updates.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkerUpdates"),
+							Ref:         ref(v1beta1.PendingWorkerUpdates{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkerUpdates"},
+			v1beta1.PendingWorkerUpdates{}.OpenAPIModelName()},
 	}
 }
 
@@ -4662,7 +4669,7 @@ func schema_pkg_apis_core_v1beta1_Ingress(ref common.ReferenceCallback) common.O
 						SchemaProps: spec.SchemaProps{
 							Description: "Controller configures a Gardener managed Ingress Controller listening on the ingressDomain",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.IngressController"),
+							Ref:         ref(v1beta1.IngressController{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -4670,7 +4677,7 @@ func schema_pkg_apis_core_v1beta1_Ingress(ref common.ReferenceCallback) common.O
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.IngressController"},
+			v1beta1.IngressController{}.OpenAPIModelName()},
 	}
 }
 
@@ -4821,7 +4828,7 @@ func schema_pkg_apis_core_v1beta1_InternalSecretList(ref common.ReferenceCallbac
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.InternalSecret"),
+										Ref:     ref(v1beta1.InternalSecret{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -4832,7 +4839,7 @@ func schema_pkg_apis_core_v1beta1_InternalSecretList(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.InternalSecret", metav1.ListMeta{}.OpenAPIModelName()},
+			v1beta1.InternalSecret{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -4873,7 +4880,7 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin"),
+										Ref:     ref(v1beta1.AdmissionPlugin{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -4897,13 +4904,13 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 					"auditConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "AuditConfig contains configuration settings for the audit of the kube-apiserver.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig"),
+							Ref:         ref(v1beta1.AuditConfig{}.OpenAPIModelName()),
 						},
 					},
 					"oidcConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "OIDCConfig contains configuration settings for the OIDC provider.\n\nDeprecated: This field is deprecated and will be forbidden starting from Kubernetes 1.32. Please configure and use structured authentication instead of oidc flags. For more information check https://github.com/gardener/gardener/issues/9858",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig"),
+							Ref:         ref(v1beta1.OIDCConfig{}.OpenAPIModelName()),
 						},
 					},
 					"runtimeConfig": {
@@ -4925,19 +4932,19 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 					"serviceAccountConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ServiceAccountConfig contains configuration settings for the service account handling of the kube-apiserver.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig"),
+							Ref:         ref(v1beta1.ServiceAccountConfig{}.OpenAPIModelName()),
 						},
 					},
 					"watchCacheSizes": {
 						SchemaProps: spec.SchemaProps{
 							Description: "WatchCacheSizes contains configuration of the API server's watch cache sizes. Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests and a lot of watching controllers (e.g. large ManagedSeed clusters). When the API server's watch cache's capacity is too small to cope with the amount of update requests and watchers for a particular resource, it might happen that controller watches are permanently stopped with `too old resource version` errors. Starting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes"),
+							Ref:         ref(v1beta1.WatchCacheSizes{}.OpenAPIModelName()),
 						},
 					},
 					"requests": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Requests contains configuration for request-specific settings for the kube-apiserver.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests"),
+							Ref:         ref(v1beta1.APIServerRequests{}.OpenAPIModelName()),
 						},
 					},
 					"enableAnonymousAuthentication": {
@@ -4956,7 +4963,7 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 					"logging": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Logging contains configuration for the log level and HTTP access logs.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging"),
+							Ref:         ref(v1beta1.APIServerLogging{}.OpenAPIModelName()),
 						},
 					},
 					"defaultNotReadyTolerationSeconds": {
@@ -4976,32 +4983,32 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 					"encryptionConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "EncryptionConfig contains customizable encryption configuration of the Kube API server.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig"),
+							Ref:         ref(v1beta1.EncryptionConfig{}.OpenAPIModelName()),
 						},
 					},
 					"structuredAuthentication": {
 						SchemaProps: spec.SchemaProps{
 							Description: "StructuredAuthentication contains configuration settings for structured authentication for the kube-apiserver.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthentication"),
+							Ref:         ref(v1beta1.StructuredAuthentication{}.OpenAPIModelName()),
 						},
 					},
 					"structuredAuthorization": {
 						SchemaProps: spec.SchemaProps{
 							Description: "StructuredAuthorization contains configuration settings for structured authorization for the kube-apiserver.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthorization"),
+							Ref:         ref(v1beta1.StructuredAuthorization{}.OpenAPIModelName()),
 						},
 					},
 					"autoscaling": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Autoscaling contains auto-scaling configuration options for the kube-apiserver.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling"),
+							Ref:         ref(v1beta1.ControlPlaneAutoscaling{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging", "github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthentication", "github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthorization", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes", metav1.Duration{}.OpenAPIModelName()},
+			v1beta1.APIServerLogging{}.OpenAPIModelName(), v1beta1.APIServerRequests{}.OpenAPIModelName(), v1beta1.AdmissionPlugin{}.OpenAPIModelName(), v1beta1.AuditConfig{}.OpenAPIModelName(), v1beta1.ControlPlaneAutoscaling{}.OpenAPIModelName(), v1beta1.EncryptionConfig{}.OpenAPIModelName(), v1beta1.OIDCConfig{}.OpenAPIModelName(), v1beta1.ServiceAccountConfig{}.OpenAPIModelName(), v1beta1.StructuredAuthentication{}.OpenAPIModelName(), v1beta1.StructuredAuthorization{}.OpenAPIModelName(), v1beta1.WatchCacheSizes{}.OpenAPIModelName(), metav1.Duration{}.OpenAPIModelName()},
 	}
 }
 
@@ -5031,7 +5038,7 @@ func schema_pkg_apis_core_v1beta1_KubeControllerManagerConfig(ref common.Referen
 					"horizontalPodAutoscaler": {
 						SchemaProps: spec.SchemaProps{
 							Description: "HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.HorizontalPodAutoscalerConfig"),
+							Ref:         ref(v1beta1.HorizontalPodAutoscalerConfig{}.OpenAPIModelName()),
 						},
 					},
 					"nodeCIDRMaskSize": {
@@ -5057,7 +5064,7 @@ func schema_pkg_apis_core_v1beta1_KubeControllerManagerConfig(ref common.Referen
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.HorizontalPodAutoscalerConfig", metav1.Duration{}.OpenAPIModelName()},
+			v1beta1.HorizontalPodAutoscalerConfig{}.OpenAPIModelName(), metav1.Duration{}.OpenAPIModelName()},
 	}
 }
 
@@ -5187,7 +5194,7 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 					"evictionHard": {
 						SchemaProps: spec.SchemaProps{
 							Description: "EvictionHard describes a set of eviction thresholds (e.g. memory.available<1Gi) that if met would trigger a Pod eviction. Default:\n  memory.available:   \"100Mi/1Gi/5%\"\n  nodefs.available:   \"5%\"\n  nodefs.inodesFree:  \"5%\"\n  imagefs.available:  \"5%\"\n  imagefs.inodesFree: \"5%\"",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEviction"),
+							Ref:         ref(v1beta1.KubeletConfigEviction{}.OpenAPIModelName()),
 						},
 					},
 					"evictionMaxPodGracePeriod": {
@@ -5200,7 +5207,7 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 					"evictionMinimumReclaim": {
 						SchemaProps: spec.SchemaProps{
 							Description: "EvictionMinimumReclaim configures the amount of resources below the configured eviction threshold that the kubelet attempts to reclaim whenever the kubelet observes resource pressure. Default: 0 for each resource",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionMinimumReclaim"),
+							Ref:         ref(v1beta1.KubeletConfigEvictionMinimumReclaim{}.OpenAPIModelName()),
 						},
 					},
 					"evictionPressureTransitionPeriod": {
@@ -5212,13 +5219,13 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 					"evictionSoft": {
 						SchemaProps: spec.SchemaProps{
 							Description: "EvictionSoft describes a set of eviction thresholds (e.g. memory.available<1.5Gi) that if met over a corresponding grace period would trigger a Pod eviction. Default:\n  memory.available:   \"200Mi/1.5Gi/10%\"\n  nodefs.available:   \"10%\"\n  nodefs.inodesFree:  \"10%\"\n  imagefs.available:  \"10%\"\n  imagefs.inodesFree: \"10%\"",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEviction"),
+							Ref:         ref(v1beta1.KubeletConfigEviction{}.OpenAPIModelName()),
 						},
 					},
 					"evictionSoftGracePeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "EvictionSoftGracePeriod describes a set of eviction grace periods (e.g. memory.available=1m30s) that correspond to how long a soft eviction threshold must hold before triggering a Pod eviction. Default:\n  memory.available:   1m30s\n  nodefs.available:   1m30s\n  nodefs.inodesFree:  1m30s\n  imagefs.available:  1m30s\n  imagefs.inodesFree: 1m30s",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionSoftGracePeriod"),
+							Ref:         ref(v1beta1.KubeletConfigEvictionSoftGracePeriod{}.OpenAPIModelName()),
 						},
 					},
 					"maxPods": {
@@ -5245,13 +5252,13 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 					"kubeReserved": {
 						SchemaProps: spec.SchemaProps{
 							Description: "KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime). When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied. Default: cpu=80m,memory=1Gi,pid=20k",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved"),
+							Ref:         ref(v1beta1.KubeletConfigReserved{}.OpenAPIModelName()),
 						},
 					},
 					"systemReserved": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald). When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.\n\nDeprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31. Please merge existing resource reservations into the kubeReserved field.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved"),
+							Ref:         ref(v1beta1.KubeletConfigReserved{}.OpenAPIModelName()),
 						},
 					},
 					"imageGCHighThresholdPercent": {
@@ -5325,7 +5332,7 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 					"memorySwap": {
 						SchemaProps: spec.SchemaProps{
 							Description: "MemorySwap configures swap memory available to container workloads.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MemorySwapConfiguration"),
+							Ref:         ref(v1beta1.MemorySwapConfiguration{}.OpenAPIModelName()),
 						},
 					},
 					"maxParallelImagePulls": {
@@ -5351,7 +5358,7 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEviction", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionMinimumReclaim", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionSoftGracePeriod", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MemorySwapConfiguration", resource.Quantity{}.OpenAPIModelName(), metav1.Duration{}.OpenAPIModelName()},
+			v1beta1.KubeletConfigEviction{}.OpenAPIModelName(), v1beta1.KubeletConfigEvictionMinimumReclaim{}.OpenAPIModelName(), v1beta1.KubeletConfigEvictionSoftGracePeriod{}.OpenAPIModelName(), v1beta1.KubeletConfigReserved{}.OpenAPIModelName(), v1beta1.MemorySwapConfiguration{}.OpenAPIModelName(), resource.Quantity{}.OpenAPIModelName(), metav1.Duration{}.OpenAPIModelName()},
 	}
 }
 
@@ -5542,37 +5549,37 @@ func schema_pkg_apis_core_v1beta1_Kubernetes(ref common.ReferenceCallback) commo
 					"clusterAutoscaler": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscaler"),
+							Ref:         ref(v1beta1.ClusterAutoscaler{}.OpenAPIModelName()),
 						},
 					},
 					"kubeAPIServer": {
 						SchemaProps: spec.SchemaProps{
 							Description: "KubeAPIServer contains configuration settings for the kube-apiserver.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerConfig"),
+							Ref:         ref(v1beta1.KubeAPIServerConfig{}.OpenAPIModelName()),
 						},
 					},
 					"kubeControllerManager": {
 						SchemaProps: spec.SchemaProps{
 							Description: "KubeControllerManager contains configuration settings for the kube-controller-manager.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeControllerManagerConfig"),
+							Ref:         ref(v1beta1.KubeControllerManagerConfig{}.OpenAPIModelName()),
 						},
 					},
 					"kubeScheduler": {
 						SchemaProps: spec.SchemaProps{
 							Description: "KubeScheduler contains configuration settings for the kube-scheduler.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeSchedulerConfig"),
+							Ref:         ref(v1beta1.KubeSchedulerConfig{}.OpenAPIModelName()),
 						},
 					},
 					"kubeProxy": {
 						SchemaProps: spec.SchemaProps{
 							Description: "KubeProxy contains configuration settings for the kube-proxy.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeProxyConfig"),
+							Ref:         ref(v1beta1.KubeProxyConfig{}.OpenAPIModelName()),
 						},
 					},
 					"kubelet": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Kubelet contains configuration settings for the kubelet.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfig"),
+							Ref:         ref(v1beta1.KubeletConfig{}.OpenAPIModelName()),
 						},
 					},
 					"version": {
@@ -5585,20 +5592,20 @@ func schema_pkg_apis_core_v1beta1_Kubernetes(ref common.ReferenceCallback) commo
 					"verticalPodAutoscaler": {
 						SchemaProps: spec.SchemaProps{
 							Description: "VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler"),
+							Ref:         ref(v1beta1.VerticalPodAutoscaler{}.OpenAPIModelName()),
 						},
 					},
 					"etcd": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ETCD contains configuration for etcds of the shoot cluster.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCD"),
+							Ref:         ref(v1beta1.ETCD{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscaler", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCD", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeControllerManagerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeProxyConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeSchedulerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler"},
+			v1beta1.ClusterAutoscaler{}.OpenAPIModelName(), v1beta1.ETCD{}.OpenAPIModelName(), v1beta1.KubeAPIServerConfig{}.OpenAPIModelName(), v1beta1.KubeControllerManagerConfig{}.OpenAPIModelName(), v1beta1.KubeProxyConfig{}.OpenAPIModelName(), v1beta1.KubeSchedulerConfig{}.OpenAPIModelName(), v1beta1.KubeletConfig{}.OpenAPIModelName(), v1beta1.VerticalPodAutoscaler{}.OpenAPIModelName()},
 	}
 }
 
@@ -5681,7 +5688,7 @@ func schema_pkg_apis_core_v1beta1_KubernetesSettings(ref common.ReferenceCallbac
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion"),
+										Ref:     ref(v1beta1.ExpirableVersion{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -5691,7 +5698,7 @@ func schema_pkg_apis_core_v1beta1_KubernetesSettings(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion"},
+			v1beta1.ExpirableVersion{}.OpenAPIModelName()},
 	}
 }
 
@@ -5710,7 +5717,7 @@ func schema_pkg_apis_core_v1beta1_KubernetesStatus(ref common.ReferenceCallback)
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersionStatus"),
+										Ref:     ref(v1beta1.ExpirableVersionStatus{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -5720,7 +5727,7 @@ func schema_pkg_apis_core_v1beta1_KubernetesStatus(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersionStatus"},
+			v1beta1.ExpirableVersionStatus{}.OpenAPIModelName()},
 	}
 }
 
@@ -5965,7 +5972,7 @@ func schema_pkg_apis_core_v1beta1_Machine(ref common.ReferenceCallback) common.O
 					"image": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Image holds information about the machine image to use for all nodes of this pool. It will default to the latest version of the first image stated in the referenced CloudProfile if no value has been provided.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootMachineImage"),
+							Ref:         ref(v1beta1.ShootMachineImage{}.OpenAPIModelName()),
 						},
 					},
 					"architecture": {
@@ -5980,7 +5987,7 @@ func schema_pkg_apis_core_v1beta1_Machine(ref common.ReferenceCallback) common.O
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootMachineImage"},
+			v1beta1.ShootMachineImage{}.OpenAPIModelName()},
 	}
 }
 
@@ -6081,7 +6088,7 @@ func schema_pkg_apis_core_v1beta1_MachineImage(ref common.ReferenceCallback) com
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageVersion"),
+										Ref:     ref(v1beta1.MachineImageVersion{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -6099,7 +6106,7 @@ func schema_pkg_apis_core_v1beta1_MachineImage(ref common.ReferenceCallback) com
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageVersion"},
+			v1beta1.MachineImageVersion{}.OpenAPIModelName()},
 	}
 }
 
@@ -6137,7 +6144,7 @@ func schema_pkg_apis_core_v1beta1_MachineImageStatus(ref common.ReferenceCallbac
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersionStatus"),
+										Ref:     ref(v1beta1.ExpirableVersionStatus{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -6148,7 +6155,7 @@ func schema_pkg_apis_core_v1beta1_MachineImageStatus(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersionStatus"},
+			v1beta1.ExpirableVersionStatus{}.OpenAPIModelName()},
 	}
 }
 
@@ -6188,7 +6195,7 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LifecycleStage"),
+										Ref:     ref(v1beta1.LifecycleStage{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -6202,7 +6209,7 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI"),
+										Ref:     ref(v1beta1.CRI{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -6233,7 +6240,7 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 					"inPlaceUpdates": {
 						SchemaProps: spec.SchemaProps{
 							Description: "InPlaceUpdates contains the configuration for in-place updates for this machine image version.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates"),
+							Ref:         ref(v1beta1.InPlaceUpdates{}.OpenAPIModelName()),
 						},
 					},
 					"capabilityFlavors": {
@@ -6243,7 +6250,7 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageFlavor"),
+										Ref: ref(v1beta1.MachineImageFlavor{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -6254,7 +6261,7 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LifecycleStage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageFlavor", metav1.Time{}.OpenAPIModelName()},
+			v1beta1.CRI{}.OpenAPIModelName(), v1beta1.InPlaceUpdates{}.OpenAPIModelName(), v1beta1.LifecycleStage{}.OpenAPIModelName(), v1beta1.MachineImageFlavor{}.OpenAPIModelName(), metav1.Time{}.OpenAPIModelName()},
 	}
 }
 
@@ -6294,7 +6301,7 @@ func schema_pkg_apis_core_v1beta1_MachineType(ref common.ReferenceCallback) comm
 					"storage": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Storage is the amount of storage associated with the root volume of this machine type.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineTypeStorage"),
+							Ref:         ref(v1beta1.MachineTypeStorage{}.OpenAPIModelName()),
 						},
 					},
 					"usable": {
@@ -6339,7 +6346,7 @@ func schema_pkg_apis_core_v1beta1_MachineType(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineTypeStorage", resource.Quantity{}.OpenAPIModelName()},
+			v1beta1.MachineTypeStorage{}.OpenAPIModelName(), resource.Quantity{}.OpenAPIModelName()},
 	}
 }
 
@@ -6397,13 +6404,13 @@ func schema_pkg_apis_core_v1beta1_Maintenance(ref common.ReferenceCallback) comm
 					"autoUpdate": {
 						SchemaProps: spec.SchemaProps{
 							Description: "AutoUpdate contains information about which constraints should be automatically updated.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoUpdate"),
+							Ref:         ref(v1beta1.MaintenanceAutoUpdate{}.OpenAPIModelName()),
 						},
 					},
 					"timeWindow": {
 						SchemaProps: spec.SchemaProps{
 							Description: "TimeWindow contains information about the time window for maintenance operations.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow"),
+							Ref:         ref(v1beta1.MaintenanceTimeWindow{}.OpenAPIModelName()),
 						},
 					},
 					"confineSpecUpdateRollout": {
@@ -6416,14 +6423,14 @@ func schema_pkg_apis_core_v1beta1_Maintenance(ref common.ReferenceCallback) comm
 					"autoRotation": {
 						SchemaProps: spec.SchemaProps{
 							Description: "AutoRotation contains information about which rotations should be automatically performed.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoRotation"),
+							Ref:         ref(v1beta1.MaintenanceAutoRotation{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoUpdate", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow"},
+			v1beta1.MaintenanceAutoRotation{}.OpenAPIModelName(), v1beta1.MaintenanceAutoUpdate{}.OpenAPIModelName(), v1beta1.MaintenanceTimeWindow{}.OpenAPIModelName()},
 	}
 }
 
@@ -6437,14 +6444,14 @@ func schema_pkg_apis_core_v1beta1_MaintenanceAutoRotation(ref common.ReferenceCa
 					"credentials": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Credentials contains information about which credentials should be automatically rotated.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceCredentialsAutoRotation"),
+							Ref:         ref(v1beta1.MaintenanceCredentialsAutoRotation{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceCredentialsAutoRotation"},
+			v1beta1.MaintenanceCredentialsAutoRotation{}.OpenAPIModelName()},
 	}
 }
 
@@ -6487,26 +6494,26 @@ func schema_pkg_apis_core_v1beta1_MaintenanceCredentialsAutoRotation(ref common.
 					"observability": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Observability configures the automatic rotation for the observability credentials.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceRotationConfig"),
+							Ref:         ref(v1beta1.MaintenanceRotationConfig{}.OpenAPIModelName()),
 						},
 					},
 					"sshKeypair": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SSHKeypair configures the automatic rotation for the ssh keypair for worker nodes.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceRotationConfig"),
+							Ref:         ref(v1beta1.MaintenanceRotationConfig{}.OpenAPIModelName()),
 						},
 					},
 					"etcdEncryptionKey": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ETCDEncryptionKey configures the automatic rotation for the etcd encryption key.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceRotationConfig"),
+							Ref:         ref(v1beta1.MaintenanceRotationConfig{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceRotationConfig"},
+			v1beta1.MaintenanceRotationConfig{}.OpenAPIModelName()},
 	}
 }
 
@@ -6576,7 +6583,7 @@ func schema_pkg_apis_core_v1beta1_ManualWorkerPoolRollout(ref common.ReferenceCa
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkersRollout"),
+										Ref:     ref(v1beta1.PendingWorkersRollout{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -6586,7 +6593,7 @@ func schema_pkg_apis_core_v1beta1_ManualWorkerPoolRollout(ref common.ReferenceCa
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkersRollout"},
+			v1beta1.PendingWorkersRollout{}.OpenAPIModelName()},
 	}
 }
 
@@ -6620,14 +6627,14 @@ func schema_pkg_apis_core_v1beta1_Monitoring(ref common.ReferenceCallback) commo
 					"alerting": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Alerting contains information about the alerting configuration for the shoot cluster.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Alerting"),
+							Ref:         ref(v1beta1.Alerting{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Alerting"},
+			v1beta1.Alerting{}.OpenAPIModelName()},
 	}
 }
 
@@ -6650,7 +6657,7 @@ func schema_pkg_apis_core_v1beta1_NamedResourceReference(ref common.ReferenceCal
 						SchemaProps: spec.SchemaProps{
 							Description: "ResourceRef is a reference to a resource.",
 							Default:     map[string]interface{}{},
-							Ref:         ref(v1.CrossVersionObjectReference{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.CrossVersionObjectReference{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -6658,7 +6665,7 @@ func schema_pkg_apis_core_v1beta1_NamedResourceReference(ref common.ReferenceCal
 			},
 		},
 		Dependencies: []string{
-			v1.CrossVersionObjectReference{}.OpenAPIModelName()},
+			autoscalingv1.CrossVersionObjectReference{}.OpenAPIModelName()},
 	}
 }
 
@@ -6694,21 +6701,21 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfile(ref common.ReferenceCal
 						SchemaProps: spec.SchemaProps{
 							Description: "Spec defines the provider environment properties.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.NamespacedCloudProfileSpec"),
+							Ref:         ref(v1beta1.NamespacedCloudProfileSpec{}.OpenAPIModelName()),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Most recently observed status of the NamespacedCloudProfile.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.NamespacedCloudProfileStatus"),
+							Ref:         ref(v1beta1.NamespacedCloudProfileStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.NamespacedCloudProfileSpec", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamespacedCloudProfileStatus", metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1beta1.NamespacedCloudProfileSpec{}.OpenAPIModelName(), v1beta1.NamespacedCloudProfileStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -6748,7 +6755,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileList(ref common.Referenc
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.NamespacedCloudProfile"),
+										Ref:     ref(v1beta1.NamespacedCloudProfile{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -6759,7 +6766,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileList(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.NamespacedCloudProfile", metav1.ListMeta{}.OpenAPIModelName()},
+			v1beta1.NamespacedCloudProfile{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -6780,7 +6787,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileSpec(ref common.Referenc
 					"kubernetes": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings"),
+							Ref:         ref(v1beta1.KubernetesSettings{}.OpenAPIModelName()),
 						},
 					},
 					"machineImages": {
@@ -6797,7 +6804,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileSpec(ref common.Referenc
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage"),
+										Ref:     ref(v1beta1.MachineImage{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -6817,7 +6824,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileSpec(ref common.Referenc
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType"),
+										Ref:     ref(v1beta1.MachineType{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -6837,7 +6844,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileSpec(ref common.Referenc
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType"),
+										Ref:     ref(v1beta1.VolumeType{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -6847,7 +6854,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileSpec(ref common.Referenc
 						SchemaProps: spec.SchemaProps{
 							Description: "Parent contains a reference to a CloudProfile it inherits from.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference"),
+							Ref:         ref(v1beta1.CloudProfileReference{}.OpenAPIModelName()),
 						},
 					},
 					"providerConfig": {
@@ -6859,7 +6866,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileSpec(ref common.Referenc
 					"limits": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Limits configures operational limits for Shoot clusters using this NamespacedCloudProfile. Any limits specified here override those set in the parent CloudProfile. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits"),
+							Ref:         ref(v1beta1.Limits{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -6867,7 +6874,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileSpec(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType", runtime.RawExtension{}.OpenAPIModelName()},
+			v1beta1.CloudProfileReference{}.OpenAPIModelName(), v1beta1.KubernetesSettings{}.OpenAPIModelName(), v1beta1.Limits{}.OpenAPIModelName(), v1beta1.MachineImage{}.OpenAPIModelName(), v1beta1.MachineType{}.OpenAPIModelName(), v1beta1.VolumeType{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName()},
 	}
 }
 
@@ -6882,7 +6889,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileStatus(ref common.Refere
 						SchemaProps: spec.SchemaProps{
 							Description: "CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileSpec"),
+							Ref:         ref(v1beta1.CloudProfileSpec{}.OpenAPIModelName()),
 						},
 					},
 					"observedGeneration": {
@@ -6896,7 +6903,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileStatus(ref common.Refere
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileSpec"},
+			v1beta1.CloudProfileSpec{}.OpenAPIModelName()},
 	}
 }
 
@@ -7213,7 +7220,7 @@ func schema_pkg_apis_core_v1beta1_OIDCConfig(ref common.ReferenceCallback) commo
 					"clientAuthentication": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ClientAuthentication can optionally contain client configuration used for kubeconfig generation.\n\nDeprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31. It's use was planned for generating OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.OpenIDConnectClientAuthentication"),
+							Ref:         ref(v1beta1.OpenIDConnectClientAuthentication{}.OpenAPIModelName()),
 						},
 					},
 					"clientID": {
@@ -7293,7 +7300,7 @@ func schema_pkg_apis_core_v1beta1_OIDCConfig(ref common.ReferenceCallback) commo
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.OpenIDConnectClientAuthentication"},
+			v1beta1.OpenIDConnectClientAuthentication{}.OpenAPIModelName()},
 	}
 }
 
@@ -7465,21 +7472,21 @@ func schema_pkg_apis_core_v1beta1_Project(ref common.ReferenceCallback) common.O
 						SchemaProps: spec.SchemaProps{
 							Description: "Spec defines the project properties.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectSpec"),
+							Ref:         ref(v1beta1.ProjectSpec{}.OpenAPIModelName()),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Most recently observed status of the Project.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectStatus"),
+							Ref:         ref(v1beta1.ProjectStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectSpec", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectStatus", metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1beta1.ProjectSpec{}.OpenAPIModelName(), v1beta1.ProjectStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -7519,7 +7526,7 @@ func schema_pkg_apis_core_v1beta1_ProjectList(ref common.ReferenceCallback) comm
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Project"),
+										Ref:     ref(v1beta1.Project{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -7530,7 +7537,7 @@ func schema_pkg_apis_core_v1beta1_ProjectList(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Project", metav1.ListMeta{}.OpenAPIModelName()},
+			v1beta1.Project{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -7642,7 +7649,7 @@ func schema_pkg_apis_core_v1beta1_ProjectSpec(ref common.ReferenceCallback) comm
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectMember"),
+										Ref:     ref(v1beta1.ProjectMember{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -7658,7 +7665,7 @@ func schema_pkg_apis_core_v1beta1_ProjectSpec(ref common.ReferenceCallback) comm
 					"tolerations": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Tolerations contains the tolerations for taints on seed clusters.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectTolerations"),
+							Ref:         ref(v1beta1.ProjectTolerations{}.OpenAPIModelName()),
 						},
 					},
 					"dualApprovalForDeletion": {
@@ -7669,7 +7676,7 @@ func schema_pkg_apis_core_v1beta1_ProjectSpec(ref common.ReferenceCallback) comm
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DualApprovalForDeletion"),
+										Ref:     ref(v1beta1.DualApprovalForDeletion{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -7679,7 +7686,7 @@ func schema_pkg_apis_core_v1beta1_ProjectSpec(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.DualApprovalForDeletion", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectMember", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectTolerations", rbacv1.Subject{}.OpenAPIModelName()},
+			v1beta1.DualApprovalForDeletion{}.OpenAPIModelName(), v1beta1.ProjectMember{}.OpenAPIModelName(), v1beta1.ProjectTolerations{}.OpenAPIModelName(), rbacv1.Subject{}.OpenAPIModelName()},
 	}
 }
 
@@ -7751,7 +7758,7 @@ func schema_pkg_apis_core_v1beta1_ProjectTolerations(ref common.ReferenceCallbac
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"),
+										Ref:     ref(v1beta1.Toleration{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -7771,7 +7778,7 @@ func schema_pkg_apis_core_v1beta1_ProjectTolerations(ref common.ReferenceCallbac
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"),
+										Ref:     ref(v1beta1.Toleration{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -7781,7 +7788,7 @@ func schema_pkg_apis_core_v1beta1_ProjectTolerations(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"},
+			v1beta1.Toleration{}.OpenAPIModelName()},
 	}
 }
 
@@ -7826,7 +7833,7 @@ func schema_pkg_apis_core_v1beta1_Provider(ref common.ReferenceCallback) common.
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Worker"),
+										Ref:     ref(v1beta1.Worker{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -7835,7 +7842,7 @@ func schema_pkg_apis_core_v1beta1_Provider(ref common.ReferenceCallback) common.
 					"workersSettings": {
 						SchemaProps: spec.SchemaProps{
 							Description: "WorkersSettings contains settings for all workers.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkersSettings"),
+							Ref:         ref(v1beta1.WorkersSettings{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -7843,7 +7850,7 @@ func schema_pkg_apis_core_v1beta1_Provider(ref common.ReferenceCallback) common.
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Worker", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkersSettings", runtime.RawExtension{}.OpenAPIModelName()},
+			v1beta1.Worker{}.OpenAPIModelName(), v1beta1.WorkersSettings{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName()},
 	}
 }
 
@@ -7879,14 +7886,14 @@ func schema_pkg_apis_core_v1beta1_Quota(ref common.ReferenceCallback) common.Ope
 						SchemaProps: spec.SchemaProps{
 							Description: "Spec defines the Quota constraints.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.QuotaSpec"),
+							Ref:         ref(v1beta1.QuotaSpec{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.QuotaSpec", metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1beta1.QuotaSpec{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -7926,7 +7933,7 @@ func schema_pkg_apis_core_v1beta1_QuotaList(ref common.ReferenceCallback) common
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Quota"),
+										Ref:     ref(v1beta1.Quota{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -7937,7 +7944,7 @@ func schema_pkg_apis_core_v1beta1_QuotaList(ref common.ReferenceCallback) common
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Quota", metav1.ListMeta{}.OpenAPIModelName()},
+			v1beta1.Quota{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -8014,7 +8021,7 @@ func schema_pkg_apis_core_v1beta1_Region(ref common.ReferenceCallback) common.Op
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.AvailabilityZone"),
+										Ref:     ref(v1beta1.AvailabilityZone{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -8044,7 +8051,7 @@ func schema_pkg_apis_core_v1beta1_Region(ref common.ReferenceCallback) common.Op
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestriction"),
+										Ref:     ref(v1beta1.AccessRestriction{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -8055,7 +8062,7 @@ func schema_pkg_apis_core_v1beta1_Region(ref common.ReferenceCallback) common.Op
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestriction", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AvailabilityZone"},
+			v1beta1.AccessRestriction{}.OpenAPIModelName(), v1beta1.AvailabilityZone{}.OpenAPIModelName()},
 	}
 }
 
@@ -8215,7 +8222,7 @@ func schema_pkg_apis_core_v1beta1_SecretBinding(ref common.ReferenceCallback) co
 					"provider": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Provider defines the provider type of the SecretBinding. This field is immutable.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBindingProvider"),
+							Ref:         ref(v1beta1.SecretBindingProvider{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -8223,7 +8230,7 @@ func schema_pkg_apis_core_v1beta1_SecretBinding(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBindingProvider", corev1.ObjectReference{}.OpenAPIModelName(), corev1.SecretReference{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1beta1.SecretBindingProvider{}.OpenAPIModelName(), corev1.ObjectReference{}.OpenAPIModelName(), corev1.SecretReference{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -8263,7 +8270,7 @@ func schema_pkg_apis_core_v1beta1_SecretBindingList(ref common.ReferenceCallback
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBinding"),
+										Ref:     ref(v1beta1.SecretBinding{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -8274,7 +8281,7 @@ func schema_pkg_apis_core_v1beta1_SecretBindingList(ref common.ReferenceCallback
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBinding", metav1.ListMeta{}.OpenAPIModelName()},
+			v1beta1.SecretBinding{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -8332,21 +8339,21 @@ func schema_pkg_apis_core_v1beta1_Seed(ref common.ReferenceCallback) common.Open
 						SchemaProps: spec.SchemaProps{
 							Description: "Spec contains the specification of this installation.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSpec"),
+							Ref:         ref(v1beta1.SeedSpec{}.OpenAPIModelName()),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Status contains the status of this installation.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedStatus"),
+							Ref:         ref(v1beta1.SeedStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSpec", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedStatus", metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1beta1.SeedSpec{}.OpenAPIModelName(), v1beta1.SeedStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -8360,13 +8367,13 @@ func schema_pkg_apis_core_v1beta1_SeedDNS(ref common.ReferenceCallback) common.O
 					"provider": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Provider configures a DNSProvider",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProvider"),
+							Ref:         ref(v1beta1.SeedDNSProvider{}.OpenAPIModelName()),
 						},
 					},
 					"internal": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Internal configures DNS settings related to seed internal domain.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProviderConfig"),
+							Ref:         ref(v1beta1.SeedDNSProviderConfig{}.OpenAPIModelName()),
 						},
 					},
 					"defaults": {
@@ -8377,7 +8384,7 @@ func schema_pkg_apis_core_v1beta1_SeedDNS(ref common.ReferenceCallback) common.O
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProviderConfig"),
+										Ref:     ref(v1beta1.SeedDNSProviderConfig{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -8387,7 +8394,7 @@ func schema_pkg_apis_core_v1beta1_SeedDNS(ref common.ReferenceCallback) common.O
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProviderConfig"},
+			v1beta1.SeedDNSProvider{}.OpenAPIModelName(), v1beta1.SeedDNSProviderConfig{}.OpenAPIModelName()},
 	}
 }
 
@@ -8510,7 +8517,7 @@ func schema_pkg_apis_core_v1beta1_SeedList(ref common.ReferenceCallback) common.
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Seed"),
+										Ref:     ref(v1beta1.Seed{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -8521,7 +8528,7 @@ func schema_pkg_apis_core_v1beta1_SeedList(ref common.ReferenceCallback) common.
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Seed", metav1.ListMeta{}.OpenAPIModelName()},
+			v1beta1.Seed{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -8558,7 +8565,7 @@ func schema_pkg_apis_core_v1beta1_SeedNetworks(ref common.ReferenceCallback) com
 					"shootDefaults": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ShootDefaults contains the default networks CIDRs for shoots.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootNetworks"),
+							Ref:         ref(v1beta1.ShootNetworks{}.OpenAPIModelName()),
 						},
 					},
 					"blockCIDRs": {
@@ -8596,7 +8603,7 @@ func schema_pkg_apis_core_v1beta1_SeedNetworks(ref common.ReferenceCallback) com
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootNetworks"},
+			v1beta1.ShootNetworks{}.OpenAPIModelName()},
 	}
 }
 
@@ -8728,20 +8735,20 @@ func schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdog(ref common.Refer
 					"weeder": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Weeder controls the weeder settings for the dependency-watchdog for the seed.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogWeeder"),
+							Ref:         ref(v1beta1.SeedSettingDependencyWatchdogWeeder{}.OpenAPIModelName()),
 						},
 					},
 					"prober": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Prober controls the prober settings for the dependency-watchdog for the seed.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogProber"),
+							Ref:         ref(v1beta1.SeedSettingDependencyWatchdogProber{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogProber", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogWeeder"},
+			v1beta1.SeedSettingDependencyWatchdogProber{}.OpenAPIModelName(), v1beta1.SeedSettingDependencyWatchdogWeeder{}.OpenAPIModelName()},
 	}
 }
 
@@ -8811,7 +8818,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref commo
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservationConfig"),
+										Ref:     ref(v1beta1.SeedSettingExcessCapacityReservationConfig{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -8821,7 +8828,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref commo
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservationConfig"},
+			v1beta1.SeedSettingExcessCapacityReservationConfig{}.OpenAPIModelName()},
 	}
 }
 
@@ -8924,7 +8931,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref common.Ref
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServicesZones"),
+										Ref:     ref(v1beta1.SeedSettingLoadBalancerServicesZones{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -8933,13 +8940,13 @@ func schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref common.Ref
 					"proxyProtocol": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services. Defaults to nil, which is equivalent to not allowing ProxyProtocol.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LoadBalancerServicesProxyProtocol"),
+							Ref:         ref(v1beta1.LoadBalancerServicesProxyProtocol{}.OpenAPIModelName()),
 						},
 					},
 					"zonalIngress": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ZonalIngress controls whether ingress gateways are deployed per availability zone. Defaults to true.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServicesZonalIngress"),
+							Ref:         ref(v1beta1.SeedSettingLoadBalancerServicesZonalIngress{}.OpenAPIModelName()),
 						},
 					},
 					"class": {
@@ -8953,7 +8960,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref common.Ref
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.LoadBalancerServicesProxyProtocol", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServicesZonalIngress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServicesZones"},
+			v1beta1.LoadBalancerServicesProxyProtocol{}.OpenAPIModelName(), v1beta1.SeedSettingLoadBalancerServicesZonalIngress{}.OpenAPIModelName(), v1beta1.SeedSettingLoadBalancerServicesZones{}.OpenAPIModelName()},
 	}
 }
 
@@ -9019,7 +9026,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZones(ref commo
 					"proxyProtocol": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services. Defaults to nil, which is equivalent to not allowing ProxyProtocol.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LoadBalancerServicesProxyProtocol"),
+							Ref:         ref(v1beta1.LoadBalancerServicesProxyProtocol{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -9027,7 +9034,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZones(ref commo
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.LoadBalancerServicesProxyProtocol"},
+			v1beta1.LoadBalancerServicesProxyProtocol{}.OpenAPIModelName()},
 	}
 }
 
@@ -9139,44 +9146,44 @@ func schema_pkg_apis_core_v1beta1_SeedSettings(ref common.ReferenceCallback) com
 					"excessCapacityReservation": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation"),
+							Ref:         ref(v1beta1.SeedSettingExcessCapacityReservation{}.OpenAPIModelName()),
 						},
 					},
 					"scheduling": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Scheduling controls settings for scheduling decisions for the seed.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling"),
+							Ref:         ref(v1beta1.SeedSettingScheduling{}.OpenAPIModelName()),
 						},
 					},
 					"loadBalancerServices": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LoadBalancerServices controls certain settings for services of type load balancer that are created in the seed.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices"),
+							Ref:         ref(v1beta1.SeedSettingLoadBalancerServices{}.OpenAPIModelName()),
 						},
 					},
 					"verticalPodAutoscaler": {
 						SchemaProps: spec.SchemaProps{
 							Description: "VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler"),
+							Ref:         ref(v1beta1.SeedSettingVerticalPodAutoscaler{}.OpenAPIModelName()),
 						},
 					},
 					"dependencyWatchdog": {
 						SchemaProps: spec.SchemaProps{
 							Description: "DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdog"),
+							Ref:         ref(v1beta1.SeedSettingDependencyWatchdog{}.OpenAPIModelName()),
 						},
 					},
 					"topologyAwareRouting": {
 						SchemaProps: spec.SchemaProps{
 							Description: "TopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed. See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingTopologyAwareRouting"),
+							Ref:         ref(v1beta1.SeedSettingTopologyAwareRouting{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdog", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingTopologyAwareRouting", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler"},
+			v1beta1.SeedSettingDependencyWatchdog{}.OpenAPIModelName(), v1beta1.SeedSettingExcessCapacityReservation{}.OpenAPIModelName(), v1beta1.SeedSettingLoadBalancerServices{}.OpenAPIModelName(), v1beta1.SeedSettingScheduling{}.OpenAPIModelName(), v1beta1.SeedSettingTopologyAwareRouting{}.OpenAPIModelName(), v1beta1.SeedSettingVerticalPodAutoscaler{}.OpenAPIModelName()},
 	}
 }
 
@@ -9190,28 +9197,28 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 					"backup": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Backup holds the object store configuration for the backups of shoot (currently only etcd). If it is not specified, then there won't be any backups taken for shoots associated with this seed. If backup field is present in seed, then backups of the etcd from shoot control plane will be stored under the configured object store.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Backup"),
+							Ref:         ref(v1beta1.Backup{}.OpenAPIModelName()),
 						},
 					},
 					"dns": {
 						SchemaProps: spec.SchemaProps{
 							Description: "DNS contains DNS-relevant information about this seed cluster.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS"),
+							Ref:         ref(v1beta1.SeedDNS{}.OpenAPIModelName()),
 						},
 					},
 					"networks": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Networks defines the pod, service and worker network of the Seed cluster.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks"),
+							Ref:         ref(v1beta1.SeedNetworks{}.OpenAPIModelName()),
 						},
 					},
 					"provider": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Provider defines the provider type and region for this Seed cluster.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider"),
+							Ref:         ref(v1beta1.SeedProvider{}.OpenAPIModelName()),
 						},
 					},
 					"taints": {
@@ -9222,7 +9229,7 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint"),
+										Ref:     ref(v1beta1.SeedTaint{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -9231,19 +9238,19 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 					"volume": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Volume contains settings for persistentvolumes created in the seed cluster.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume"),
+							Ref:         ref(v1beta1.SeedVolume{}.OpenAPIModelName()),
 						},
 					},
 					"settings": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Settings contains certain settings for this seed cluster.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings"),
+							Ref:         ref(v1beta1.SeedSettings{}.OpenAPIModelName()),
 						},
 					},
 					"ingress": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress"),
+							Ref:         ref(v1beta1.Ingress{}.OpenAPIModelName()),
 						},
 					},
 					"accessRestrictions": {
@@ -9254,7 +9261,7 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestriction"),
+										Ref:     ref(v1beta1.AccessRestriction{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -9268,7 +9275,7 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension"),
+										Ref:     ref(v1beta1.Extension{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -9282,7 +9289,7 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference"),
+										Ref:     ref(v1beta1.NamedResourceReference{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -9293,7 +9300,7 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestriction", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Backup", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume"},
+			v1beta1.AccessRestriction{}.OpenAPIModelName(), v1beta1.Backup{}.OpenAPIModelName(), v1beta1.Extension{}.OpenAPIModelName(), v1beta1.Ingress{}.OpenAPIModelName(), v1beta1.NamedResourceReference{}.OpenAPIModelName(), v1beta1.SeedDNS{}.OpenAPIModelName(), v1beta1.SeedNetworks{}.OpenAPIModelName(), v1beta1.SeedProvider{}.OpenAPIModelName(), v1beta1.SeedSettings{}.OpenAPIModelName(), v1beta1.SeedTaint{}.OpenAPIModelName(), v1beta1.SeedVolume{}.OpenAPIModelName()},
 	}
 }
 
@@ -9307,7 +9314,7 @@ func schema_pkg_apis_core_v1beta1_SeedStatus(ref common.ReferenceCallback) commo
 					"gardener": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Gardener holds information about the Gardener which last acted on the Shoot.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener"),
+							Ref:         ref(v1beta1.Gardener{}.OpenAPIModelName()),
 						},
 					},
 					"kubernetesVersion": {
@@ -9331,7 +9338,7 @@ func schema_pkg_apis_core_v1beta1_SeedStatus(ref common.ReferenceCallback) commo
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition"),
+										Ref:     ref(v1beta1.Condition{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -9388,14 +9395,14 @@ func schema_pkg_apis_core_v1beta1_SeedStatus(ref common.ReferenceCallback) commo
 					"lastOperation": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastOperation holds information about the last operation on the Seed.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation"),
+							Ref:         ref(v1beta1.LastOperation{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", resource.Quantity{}.OpenAPIModelName(), metav1.Time{}.OpenAPIModelName()},
+			v1beta1.Condition{}.OpenAPIModelName(), v1beta1.Gardener{}.OpenAPIModelName(), v1beta1.LastOperation{}.OpenAPIModelName(), resource.Quantity{}.OpenAPIModelName(), metav1.Time{}.OpenAPIModelName()},
 	}
 }
 
@@ -9446,14 +9453,14 @@ func schema_pkg_apis_core_v1beta1_SeedTemplate(ref common.ReferenceCallback) com
 						SchemaProps: spec.SchemaProps{
 							Description: "Specification of the desired behavior of the Seed.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSpec"),
+							Ref:         ref(v1beta1.SeedSpec{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSpec", metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1beta1.SeedSpec{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -9484,7 +9491,7 @@ func schema_pkg_apis_core_v1beta1_SeedVolume(ref common.ReferenceCallback) commo
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolumeProvider"),
+										Ref:     ref(v1beta1.SeedVolumeProvider{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -9494,7 +9501,7 @@ func schema_pkg_apis_core_v1beta1_SeedVolume(ref common.ReferenceCallback) commo
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolumeProvider", resource.Quantity{}.OpenAPIModelName()},
+			v1beta1.SeedVolumeProvider{}.OpenAPIModelName(), resource.Quantity{}.OpenAPIModelName()},
 	}
 }
 
@@ -9625,7 +9632,7 @@ func schema_pkg_apis_core_v1beta1_ServiceAccountKeyRotation(ref common.Reference
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkersRollout"),
+										Ref:     ref(v1beta1.PendingWorkersRollout{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -9636,7 +9643,7 @@ func schema_pkg_apis_core_v1beta1_ServiceAccountKeyRotation(ref common.Reference
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkersRollout", metav1.Time{}.OpenAPIModelName()},
+			v1beta1.PendingWorkersRollout{}.OpenAPIModelName(), metav1.Time{}.OpenAPIModelName()},
 	}
 }
 
@@ -9672,21 +9679,21 @@ func schema_pkg_apis_core_v1beta1_Shoot(ref common.ReferenceCallback) common.Ope
 						SchemaProps: spec.SchemaProps{
 							Description: "Specification of the Shoot cluster. If the object's deletion timestamp is set, this field is immutable.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec"),
+							Ref:         ref(v1beta1.ShootSpec{}.OpenAPIModelName()),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Most recently observed status of the Shoot cluster.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStatus"),
+							Ref:         ref(v1beta1.ShootStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStatus", metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1beta1.ShootSpec{}.OpenAPIModelName(), v1beta1.ShootStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -9730,20 +9737,20 @@ func schema_pkg_apis_core_v1beta1_ShootCredentials(ref common.ReferenceCallback)
 					"rotation": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Rotation contains information about the credential rotations.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentialsRotation"),
+							Ref:         ref(v1beta1.ShootCredentialsRotation{}.OpenAPIModelName()),
 						},
 					},
 					"encryptionAtRest": {
 						SchemaProps: spec.SchemaProps{
 							Description: "EncryptionAtRest contains information about Shoot data encryption at rest.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionAtRest"),
+							Ref:         ref(v1beta1.EncryptionAtRest{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionAtRest", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentialsRotation"},
+			v1beta1.EncryptionAtRest{}.OpenAPIModelName(), v1beta1.ShootCredentialsRotation{}.OpenAPIModelName()},
 	}
 }
 
@@ -9757,38 +9764,38 @@ func schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref common.ReferenceC
 					"certificateAuthorities": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CertificateAuthorities contains information about the certificate authority credential rotation.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CARotation"),
+							Ref:         ref(v1beta1.CARotation{}.OpenAPIModelName()),
 						},
 					},
 					"sshKeypair": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SSHKeypair contains information about the ssh-keypair credential rotation.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSSHKeypairRotation"),
+							Ref:         ref(v1beta1.ShootSSHKeypairRotation{}.OpenAPIModelName()),
 						},
 					},
 					"observability": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Observability contains information about the observability credential rotation.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ObservabilityRotation"),
+							Ref:         ref(v1beta1.ObservabilityRotation{}.OpenAPIModelName()),
 						},
 					},
 					"serviceAccountKey": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ServiceAccountKey contains information about the service account key credential rotation.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountKeyRotation"),
+							Ref:         ref(v1beta1.ServiceAccountKeyRotation{}.OpenAPIModelName()),
 						},
 					},
 					"etcdEncryptionKey": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation"),
+							Ref:         ref(v1beta1.ETCDEncryptionKeyRotation{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CARotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ObservabilityRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountKeyRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSSHKeypairRotation"},
+			v1beta1.CARotation{}.OpenAPIModelName(), v1beta1.ETCDEncryptionKeyRotation{}.OpenAPIModelName(), v1beta1.ObservabilityRotation{}.OpenAPIModelName(), v1beta1.ServiceAccountKeyRotation{}.OpenAPIModelName(), v1beta1.ShootSSHKeypairRotation{}.OpenAPIModelName()},
 	}
 }
 
@@ -9855,7 +9862,7 @@ func schema_pkg_apis_core_v1beta1_ShootList(ref common.ReferenceCallback) common
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Shoot"),
+										Ref:     ref(v1beta1.Shoot{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -9866,7 +9873,7 @@ func schema_pkg_apis_core_v1beta1_ShootList(ref common.ReferenceCallback) common
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Shoot", metav1.ListMeta{}.OpenAPIModelName()},
+			v1beta1.Shoot{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -9971,7 +9978,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					"addons": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Addons contains information about enabled/disabled addons and their configuration. Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons"),
+							Ref:         ref(v1beta1.Addons{}.OpenAPIModelName()),
 						},
 					},
 					"cloudProfileName": {
@@ -9984,7 +9991,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					"dns": {
 						SchemaProps: spec.SchemaProps{
 							Description: "DNS contains information about the DNS settings of the Shoot.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS"),
+							Ref:         ref(v1beta1.DNS{}.OpenAPIModelName()),
 						},
 					},
 					"extensions": {
@@ -9995,7 +10002,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension"),
+										Ref:     ref(v1beta1.Extension{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -10004,39 +10011,39 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					"hibernation": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Hibernation contains information whether the Shoot is suspended or not.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation"),
+							Ref:         ref(v1beta1.Hibernation{}.OpenAPIModelName()),
 						},
 					},
 					"kubernetes": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Kubernetes contains the version and configuration settings of the control plane components.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes"),
+							Ref:         ref(v1beta1.Kubernetes{}.OpenAPIModelName()),
 						},
 					},
 					"networking": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Networking contains information about cluster networking such as CNI Plugin type, CIDRs, ...etc.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking"),
+							Ref:         ref(v1beta1.Networking{}.OpenAPIModelName()),
 						},
 					},
 					"maintenance": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Maintenance contains information about the time window for maintenance operations and which operations should be performed.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance"),
+							Ref:         ref(v1beta1.Maintenance{}.OpenAPIModelName()),
 						},
 					},
 					"monitoring": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Monitoring contains information about custom monitoring configurations for the shoot.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring"),
+							Ref:         ref(v1beta1.Monitoring{}.OpenAPIModelName()),
 						},
 					},
 					"provider": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Provider contains all provider-specific and provider-relevant information.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider"),
+							Ref:         ref(v1beta1.Provider{}.OpenAPIModelName()),
 						},
 					},
 					"purpose": {
@@ -10071,7 +10078,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					"seedSelector": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed. Once the shoot is assigned to a seed, the selector can only be changed later if the new one still matches the assigned seed.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector"),
+							Ref:         ref(v1beta1.SeedSelector{}.OpenAPIModelName()),
 						},
 					},
 					"resources": {
@@ -10082,7 +10089,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference"),
+										Ref:     ref(v1beta1.NamedResourceReference{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -10102,7 +10109,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"),
+										Ref:     ref(v1beta1.Toleration{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -10118,13 +10125,13 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					"systemComponents": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SystemComponents"),
+							Ref:         ref(v1beta1.SystemComponents{}.OpenAPIModelName()),
 						},
 					},
 					"controlPlane": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ControlPlane contains general settings for the control plane of the shoot.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlane"),
+							Ref:         ref(v1beta1.ControlPlane{}.OpenAPIModelName()),
 						},
 					},
 					"schedulerName": {
@@ -10137,7 +10144,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					"cloudProfile": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference"),
+							Ref:         ref(v1beta1.CloudProfileReference{}.OpenAPIModelName()),
 						},
 					},
 					"credentialsBindingName": {
@@ -10155,7 +10162,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestrictionWithOptions"),
+										Ref:     ref(v1beta1.AccessRestrictionWithOptions{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -10166,7 +10173,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestrictionWithOptions", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlane", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SystemComponents", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"},
+			v1beta1.AccessRestrictionWithOptions{}.OpenAPIModelName(), v1beta1.Addons{}.OpenAPIModelName(), v1beta1.CloudProfileReference{}.OpenAPIModelName(), v1beta1.ControlPlane{}.OpenAPIModelName(), v1beta1.DNS{}.OpenAPIModelName(), v1beta1.Extension{}.OpenAPIModelName(), v1beta1.Hibernation{}.OpenAPIModelName(), v1beta1.Kubernetes{}.OpenAPIModelName(), v1beta1.Maintenance{}.OpenAPIModelName(), v1beta1.Monitoring{}.OpenAPIModelName(), v1beta1.NamedResourceReference{}.OpenAPIModelName(), v1beta1.Networking{}.OpenAPIModelName(), v1beta1.Provider{}.OpenAPIModelName(), v1beta1.SeedSelector{}.OpenAPIModelName(), v1beta1.SystemComponents{}.OpenAPIModelName(), v1beta1.Toleration{}.OpenAPIModelName()},
 	}
 }
 
@@ -10202,14 +10209,14 @@ func schema_pkg_apis_core_v1beta1_ShootState(ref common.ReferenceCallback) commo
 						SchemaProps: spec.SchemaProps{
 							Description: "Specification of the ShootState.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStateSpec"),
+							Ref:         ref(v1beta1.ShootStateSpec{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStateSpec", metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1beta1.ShootStateSpec{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -10249,7 +10256,7 @@ func schema_pkg_apis_core_v1beta1_ShootStateList(ref common.ReferenceCallback) c
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootState"),
+										Ref:     ref(v1beta1.ShootState{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -10260,7 +10267,7 @@ func schema_pkg_apis_core_v1beta1_ShootStateList(ref common.ReferenceCallback) c
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootState", metav1.ListMeta{}.OpenAPIModelName()},
+			v1beta1.ShootState{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -10285,7 +10292,7 @@ func schema_pkg_apis_core_v1beta1_ShootStateSpec(ref common.ReferenceCallback) c
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerResourceData"),
+										Ref:     ref(v1beta1.GardenerResourceData{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -10299,7 +10306,7 @@ func schema_pkg_apis_core_v1beta1_ShootStateSpec(ref common.ReferenceCallback) c
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExtensionResourceState"),
+										Ref:     ref(v1beta1.ExtensionResourceState{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -10313,7 +10320,7 @@ func schema_pkg_apis_core_v1beta1_ShootStateSpec(ref common.ReferenceCallback) c
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceData"),
+										Ref:     ref(v1beta1.ResourceData{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -10323,7 +10330,7 @@ func schema_pkg_apis_core_v1beta1_ShootStateSpec(ref common.ReferenceCallback) c
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExtensionResourceState", "github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerResourceData", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceData"},
+			v1beta1.ExtensionResourceState{}.OpenAPIModelName(), v1beta1.GardenerResourceData{}.OpenAPIModelName(), v1beta1.ResourceData{}.OpenAPIModelName()},
 	}
 }
 
@@ -10348,7 +10355,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition"),
+										Ref:     ref(v1beta1.Condition{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -10368,7 +10375,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition"),
+										Ref:     ref(v1beta1.Condition{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -10378,7 +10385,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 						SchemaProps: spec.SchemaProps{
 							Description: "Gardener holds information about the Gardener which last acted on the Shoot.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener"),
+							Ref:         ref(v1beta1.Gardener{}.OpenAPIModelName()),
 						},
 					},
 					"hibernated": {
@@ -10392,7 +10399,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 					"lastOperation": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastOperation holds information about the last operation on the Shoot.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation"),
+							Ref:         ref(v1beta1.LastOperation{}.OpenAPIModelName()),
 						},
 					},
 					"lastErrors": {
@@ -10403,7 +10410,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError"),
+										Ref:     ref(v1beta1.LastError{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -10466,7 +10473,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootAdvertisedAddress"),
+										Ref:     ref(v1beta1.ShootAdvertisedAddress{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -10481,7 +10488,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 					"credentials": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Credentials contains information about the shoot credentials.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentials"),
+							Ref:         ref(v1beta1.ShootCredentials{}.OpenAPIModelName()),
 						},
 					},
 					"lastHibernationTriggerTime": {
@@ -10493,7 +10500,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 					"lastMaintenance": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastMaintenance holds information about the last maintenance operations on the Shoot.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LastMaintenance"),
+							Ref:         ref(v1beta1.LastMaintenance{}.OpenAPIModelName()),
 						},
 					},
 					"encryptedResources": {
@@ -10514,19 +10521,19 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 					"networking": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Networking contains information about cluster networking such as CIDRs.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.NetworkingStatus"),
+							Ref:         ref(v1beta1.NetworkingStatus{}.OpenAPIModelName()),
 						},
 					},
 					"inPlaceUpdates": {
 						SchemaProps: spec.SchemaProps{
 							Description: "InPlaceUpdates contains information about in-place updates for the Shoot workers.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdatesStatus"),
+							Ref:         ref(v1beta1.InPlaceUpdatesStatus{}.OpenAPIModelName()),
 						},
 					},
 					"manualWorkerPoolRollout": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ManualWorkerPoolRollout contains information about the worker pool rollout progress.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ManualWorkerPoolRollout"),
+							Ref:         ref(v1beta1.ManualWorkerPoolRollout{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -10534,7 +10541,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdatesStatus", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastMaintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ManualWorkerPoolRollout", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NetworkingStatus", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootAdvertisedAddress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentials", metav1.Time{}.OpenAPIModelName()},
+			v1beta1.Condition{}.OpenAPIModelName(), v1beta1.Gardener{}.OpenAPIModelName(), v1beta1.InPlaceUpdatesStatus{}.OpenAPIModelName(), v1beta1.LastError{}.OpenAPIModelName(), v1beta1.LastMaintenance{}.OpenAPIModelName(), v1beta1.LastOperation{}.OpenAPIModelName(), v1beta1.ManualWorkerPoolRollout{}.OpenAPIModelName(), v1beta1.NetworkingStatus{}.OpenAPIModelName(), v1beta1.ShootAdvertisedAddress{}.OpenAPIModelName(), v1beta1.ShootCredentials{}.OpenAPIModelName(), metav1.Time{}.OpenAPIModelName()},
 	}
 }
 
@@ -10556,14 +10563,14 @@ func schema_pkg_apis_core_v1beta1_ShootTemplate(ref common.ReferenceCallback) co
 						SchemaProps: spec.SchemaProps{
 							Description: "Specification of the desired behavior of the Shoot.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec"),
+							Ref:         ref(v1beta1.ShootSpec{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec", metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1beta1.ShootSpec{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -10612,7 +10619,7 @@ func schema_pkg_apis_core_v1beta1_StructuredAuthorization(ref common.ReferenceCa
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.AuthorizerKubeconfigReference"),
+										Ref:     ref(v1beta1.AuthorizerKubeconfigReference{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -10623,7 +10630,7 @@ func schema_pkg_apis_core_v1beta1_StructuredAuthorization(ref common.ReferenceCa
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AuthorizerKubeconfigReference"},
+			v1beta1.AuthorizerKubeconfigReference{}.OpenAPIModelName()},
 	}
 }
 
@@ -10637,20 +10644,20 @@ func schema_pkg_apis_core_v1beta1_SystemComponents(ref common.ReferenceCallback)
 					"coreDNS": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNS"),
+							Ref:         ref(v1beta1.CoreDNS{}.OpenAPIModelName()),
 						},
 					},
 					"nodeLocalDNS": {
 						SchemaProps: spec.SchemaProps{
 							Description: "NodeLocalDNS contains the settings of the node local DNS components running in the data plane of the Shoot cluster.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.NodeLocalDNS"),
+							Ref:         ref(v1beta1.NodeLocalDNS{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NodeLocalDNS"},
+			v1beta1.CoreDNS{}.OpenAPIModelName(), v1beta1.NodeLocalDNS{}.OpenAPIModelName()},
 	}
 }
 
@@ -10967,7 +10974,7 @@ func schema_pkg_apis_core_v1beta1_WatchCacheSizes(ref common.ReferenceCallback) 
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceWatchCacheSize"),
+										Ref:     ref(v1beta1.ResourceWatchCacheSize{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -10977,7 +10984,7 @@ func schema_pkg_apis_core_v1beta1_WatchCacheSizes(ref common.ReferenceCallback) 
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceWatchCacheSize"},
+			v1beta1.ResourceWatchCacheSize{}.OpenAPIModelName()},
 	}
 }
 
@@ -11014,13 +11021,13 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 					"cri": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CRI contains configurations of CRI support of every machine in the worker pool. Defaults to a CRI with name `containerd`.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI"),
+							Ref:         ref(v1beta1.CRI{}.OpenAPIModelName()),
 						},
 					},
 					"kubernetes": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Kubernetes contains configuration for Kubernetes components related to this worker pool.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes"),
+							Ref:         ref(v1beta1.WorkerKubernetes{}.OpenAPIModelName()),
 						},
 					},
 					"labels": {
@@ -11051,7 +11058,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 						SchemaProps: spec.SchemaProps{
 							Description: "Machine contains information about the machine type and image.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine"),
+							Ref:         ref(v1beta1.Machine{}.OpenAPIModelName()),
 						},
 					},
 					"maximum": {
@@ -11105,7 +11112,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 					"volume": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Volume contains information about the volume type and size.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume"),
+							Ref:         ref(v1beta1.Volume{}.OpenAPIModelName()),
 						},
 					},
 					"dataVolumes": {
@@ -11116,7 +11123,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume"),
+										Ref:     ref(v1beta1.DataVolume{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -11147,13 +11154,13 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 					"systemComponents": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SystemComponents contains configuration for system components related to this worker pool",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerSystemComponents"),
+							Ref:         ref(v1beta1.WorkerSystemComponents{}.OpenAPIModelName()),
 						},
 					},
 					"machineControllerManager": {
 						SchemaProps: spec.SchemaProps{
 							Description: "MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSettings"),
+							Ref:         ref(v1beta1.MachineControllerManagerSettings{}.OpenAPIModelName()),
 						},
 					},
 					"sysctls": {
@@ -11175,7 +11182,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 					"clusterAutoscaler": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscalerOptions"),
+							Ref:         ref(v1beta1.ClusterAutoscalerOptions{}.OpenAPIModelName()),
 						},
 					},
 					"priority": {
@@ -11195,7 +11202,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 					"controlPlane": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ControlPlane specifies that the shoot cluster control plane components should be running in this worker pool. This is only relevant for self-hosted shoot clusters.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerControlPlane"),
+							Ref:         ref(v1beta1.WorkerControlPlane{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -11203,7 +11210,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscalerOptions", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerControlPlane", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerSystemComponents", corev1.Taint{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName(), intstr.IntOrString{}.OpenAPIModelName()},
+			v1beta1.CRI{}.OpenAPIModelName(), v1beta1.ClusterAutoscalerOptions{}.OpenAPIModelName(), v1beta1.DataVolume{}.OpenAPIModelName(), v1beta1.Machine{}.OpenAPIModelName(), v1beta1.MachineControllerManagerSettings{}.OpenAPIModelName(), v1beta1.Volume{}.OpenAPIModelName(), v1beta1.WorkerControlPlane{}.OpenAPIModelName(), v1beta1.WorkerKubernetes{}.OpenAPIModelName(), v1beta1.WorkerSystemComponents{}.OpenAPIModelName(), corev1.Taint{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName(), intstr.IntOrString{}.OpenAPIModelName()},
 	}
 }
 
@@ -11217,20 +11224,20 @@ func schema_pkg_apis_core_v1beta1_WorkerControlPlane(ref common.ReferenceCallbac
 					"backup": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Backup holds the object store configuration for the backups of shoot (currently only etcd). If it is not specified, then there won't be any backups taken.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Backup"),
+							Ref:         ref(v1beta1.Backup{}.OpenAPIModelName()),
 						},
 					},
 					"exposure": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Exposure"),
+							Ref:         ref(v1beta1.Exposure{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Backup", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Exposure"},
+			v1beta1.Backup{}.OpenAPIModelName(), v1beta1.Exposure{}.OpenAPIModelName()},
 	}
 }
 
@@ -11244,7 +11251,7 @@ func schema_pkg_apis_core_v1beta1_WorkerKubernetes(ref common.ReferenceCallback)
 					"kubelet": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Kubelet contains configuration settings for all kubelets of this worker pool. If set, all `spec.kubernetes.kubelet` settings will be overwritten for this worker pool (no merge of settings).",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfig"),
+							Ref:         ref(v1beta1.KubeletConfig{}.OpenAPIModelName()),
 						},
 					},
 					"version": {
@@ -11258,7 +11265,7 @@ func schema_pkg_apis_core_v1beta1_WorkerKubernetes(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfig"},
+			v1beta1.KubeletConfig{}.OpenAPIModelName()},
 	}
 }
 
@@ -11294,14 +11301,14 @@ func schema_pkg_apis_core_v1beta1_WorkersSettings(ref common.ReferenceCallback) 
 					"sshAccess": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SSHAccess contains settings regarding ssh access to the worker nodes.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SSHAccess"),
+							Ref:         ref(v1beta1.SSHAccess{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SSHAccess"},
+			v1beta1.SSHAccess{}.OpenAPIModelName()},
 	}
 }
 
@@ -11337,14 +11344,14 @@ func schema_pkg_apis_operations_v1alpha1_Bastion(ref common.ReferenceCallback) c
 						SchemaProps: spec.SchemaProps{
 							Description: "Specification of the Bastion.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionSpec"),
+							Ref:         ref(operationsv1alpha1.BastionSpec{}.OpenAPIModelName()),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Most recently observed status of the Bastion.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionStatus"),
+							Ref:         ref(operationsv1alpha1.BastionStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -11352,7 +11359,7 @@ func schema_pkg_apis_operations_v1alpha1_Bastion(ref common.ReferenceCallback) c
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionSpec", "github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionStatus", metav1.ObjectMeta{}.OpenAPIModelName()},
+			operationsv1alpha1.BastionSpec{}.OpenAPIModelName(), operationsv1alpha1.BastionStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -11415,7 +11422,7 @@ func schema_pkg_apis_operations_v1alpha1_BastionList(ref common.ReferenceCallbac
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/operations/v1alpha1.Bastion"),
+										Ref:     ref(operationsv1alpha1.Bastion{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -11426,7 +11433,7 @@ func schema_pkg_apis_operations_v1alpha1_BastionList(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.Bastion", metav1.ListMeta{}.OpenAPIModelName()},
+			operationsv1alpha1.Bastion{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -11474,7 +11481,7 @@ func schema_pkg_apis_operations_v1alpha1_BastionSpec(ref common.ReferenceCallbac
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionIngressPolicy"),
+										Ref:     ref(operationsv1alpha1.BastionIngressPolicy{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -11485,7 +11492,7 @@ func schema_pkg_apis_operations_v1alpha1_BastionSpec(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionIngressPolicy", corev1.LocalObjectReference{}.OpenAPIModelName()},
+			operationsv1alpha1.BastionIngressPolicy{}.OpenAPIModelName(), corev1.LocalObjectReference{}.OpenAPIModelName()},
 	}
 }
 
@@ -11516,7 +11523,7 @@ func schema_pkg_apis_operations_v1alpha1_BastionStatus(ref common.ReferenceCallb
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition"),
+										Ref:     ref(v1beta1.Condition{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -11545,7 +11552,7 @@ func schema_pkg_apis_operations_v1alpha1_BastionStatus(ref common.ReferenceCallb
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", corev1.LoadBalancerIngress{}.OpenAPIModelName(), metav1.Time{}.OpenAPIModelName()},
+			v1beta1.Condition{}.OpenAPIModelName(), corev1.LoadBalancerIngress{}.OpenAPIModelName(), metav1.Time{}.OpenAPIModelName()},
 	}
 }
 
@@ -11634,7 +11641,7 @@ func schema_pkg_apis_security_v1alpha1_CredentialsBinding(ref common.ReferenceCa
 						SchemaProps: spec.SchemaProps{
 							Description: "Provider defines the provider type of the CredentialsBinding. This field is immutable.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBindingProvider"),
+							Ref:         ref(securityv1alpha1.CredentialsBindingProvider{}.OpenAPIModelName()),
 						},
 					},
 					"credentialsRef": {
@@ -11663,7 +11670,7 @@ func schema_pkg_apis_security_v1alpha1_CredentialsBinding(ref common.ReferenceCa
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBindingProvider", corev1.ObjectReference{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
+			securityv1alpha1.CredentialsBindingProvider{}.OpenAPIModelName(), corev1.ObjectReference{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -11703,7 +11710,7 @@ func schema_pkg_apis_security_v1alpha1_CredentialsBindingList(ref common.Referen
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBinding"),
+										Ref:     ref(securityv1alpha1.CredentialsBinding{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -11714,7 +11721,7 @@ func schema_pkg_apis_security_v1alpha1_CredentialsBindingList(ref common.Referen
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBinding", metav1.ListMeta{}.OpenAPIModelName()},
+			securityv1alpha1.CredentialsBinding{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -11802,14 +11809,14 @@ func schema_pkg_apis_security_v1alpha1_TokenRequest(ref common.ReferenceCallback
 						SchemaProps: spec.SchemaProps{
 							Description: "Spec holds configuration settings for the requested token.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.TokenRequestSpec"),
+							Ref:         ref(securityv1alpha1.TokenRequestSpec{}.OpenAPIModelName()),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Status bears the issued token with additional information back to the client.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.TokenRequestStatus"),
+							Ref:         ref(securityv1alpha1.TokenRequestStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -11817,7 +11824,7 @@ func schema_pkg_apis_security_v1alpha1_TokenRequest(ref common.ReferenceCallback
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/security/v1alpha1.TokenRequestSpec", "github.com/gardener/gardener/pkg/apis/security/v1alpha1.TokenRequestStatus", metav1.ObjectMeta{}.OpenAPIModelName()},
+			securityv1alpha1.TokenRequestSpec{}.OpenAPIModelName(), securityv1alpha1.TokenRequestStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -11831,7 +11838,7 @@ func schema_pkg_apis_security_v1alpha1_TokenRequestSpec(ref common.ReferenceCall
 					"contextObject": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ContextObject identifies the object the token is requested for.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.ContextObject"),
+							Ref:         ref(securityv1alpha1.ContextObject{}.OpenAPIModelName()),
 						},
 					},
 					"expirationSeconds": {
@@ -11845,7 +11852,7 @@ func schema_pkg_apis_security_v1alpha1_TokenRequestSpec(ref common.ReferenceCall
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/security/v1alpha1.ContextObject"},
+			securityv1alpha1.ContextObject{}.OpenAPIModelName()},
 	}
 }
 
@@ -11911,14 +11918,14 @@ func schema_pkg_apis_security_v1alpha1_WorkloadIdentity(ref common.ReferenceCall
 						SchemaProps: spec.SchemaProps{
 							Description: "Spec configures the JSON Web Token issued by the Gardener API server.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentitySpec"),
+							Ref:         ref(securityv1alpha1.WorkloadIdentitySpec{}.OpenAPIModelName()),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Status contain the latest observed status of the WorkloadIdentity.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentityStatus"),
+							Ref:         ref(securityv1alpha1.WorkloadIdentityStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -11926,7 +11933,7 @@ func schema_pkg_apis_security_v1alpha1_WorkloadIdentity(ref common.ReferenceCall
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentitySpec", "github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentityStatus", metav1.ObjectMeta{}.OpenAPIModelName()},
+			securityv1alpha1.WorkloadIdentitySpec{}.OpenAPIModelName(), securityv1alpha1.WorkloadIdentityStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -11966,7 +11973,7 @@ func schema_pkg_apis_security_v1alpha1_WorkloadIdentityList(ref common.Reference
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentity"),
+										Ref:     ref(securityv1alpha1.WorkloadIdentity{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -11977,7 +11984,7 @@ func schema_pkg_apis_security_v1alpha1_WorkloadIdentityList(ref common.Reference
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentity", metav1.ListMeta{}.OpenAPIModelName()},
+			securityv1alpha1.WorkloadIdentity{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -12007,7 +12014,7 @@ func schema_pkg_apis_security_v1alpha1_WorkloadIdentitySpec(ref common.Reference
 						SchemaProps: spec.SchemaProps{
 							Description: "TargetSystem represents specific configurations for the system that will accept the JWTs.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.TargetSystem"),
+							Ref:         ref(securityv1alpha1.TargetSystem{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -12015,7 +12022,7 @@ func schema_pkg_apis_security_v1alpha1_WorkloadIdentitySpec(ref common.Reference
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/security/v1alpha1.TargetSystem"},
+			securityv1alpha1.TargetSystem{}.OpenAPIModelName()},
 	}
 }
 
@@ -12073,21 +12080,21 @@ func schema_pkg_apis_seedmanagement_v1alpha1_Gardenlet(ref common.ReferenceCallb
 						SchemaProps: spec.SchemaProps{
 							Description: "Specification of the Gardenlet.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletSpec"),
+							Ref:         ref(seedmanagementv1alpha1.GardenletSpec{}.OpenAPIModelName()),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Most recently observed status of the Gardenlet.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletStatus"),
+							Ref:         ref(seedmanagementv1alpha1.GardenletStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletSpec", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletStatus", metav1.ObjectMeta{}.OpenAPIModelName()},
+			seedmanagementv1alpha1.GardenletSpec{}.OpenAPIModelName(), seedmanagementv1alpha1.GardenletStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -12101,7 +12108,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletConfig(ref common.Referenc
 					"deployment": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Deployment specifies certain gardenlet deployment parameters, such as the number of replicas, the image, etc.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletDeployment"),
+							Ref:         ref(seedmanagementv1alpha1.GardenletDeployment{}.OpenAPIModelName()),
 						},
 					},
 					"config": {
@@ -12128,7 +12135,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletConfig(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletDeployment", runtime.RawExtension{}.OpenAPIModelName()},
+			seedmanagementv1alpha1.GardenletDeployment{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName()},
 	}
 }
 
@@ -12163,7 +12170,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref common.Refe
 					"image": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Image is the gardenlet container image.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image"),
+							Ref:         ref(seedmanagementv1alpha1.Image{}.OpenAPIModelName()),
 						},
 					},
 					"resources": {
@@ -12264,7 +12271,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref common.Refe
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image", corev1.EnvVar{}.OpenAPIModelName(), corev1.ResourceRequirements{}.OpenAPIModelName(), corev1.Toleration{}.OpenAPIModelName(), corev1.Volume{}.OpenAPIModelName(), corev1.VolumeMount{}.OpenAPIModelName()},
+			seedmanagementv1alpha1.Image{}.OpenAPIModelName(), corev1.EnvVar{}.OpenAPIModelName(), corev1.ResourceRequirements{}.OpenAPIModelName(), corev1.Toleration{}.OpenAPIModelName(), corev1.Volume{}.OpenAPIModelName(), corev1.VolumeMount{}.OpenAPIModelName()},
 	}
 }
 
@@ -12279,7 +12286,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletHelm(ref common.ReferenceC
 						SchemaProps: spec.SchemaProps{
 							Description: "OCIRepository defines where to pull the chart.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1.OCIRepository"),
+							Ref:         ref(v1.OCIRepository{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -12287,7 +12294,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletHelm(ref common.ReferenceC
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1.OCIRepository"},
+			v1.OCIRepository{}.OpenAPIModelName()},
 	}
 }
 
@@ -12327,7 +12334,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletList(ref common.ReferenceC
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Gardenlet"),
+										Ref:     ref(seedmanagementv1alpha1.Gardenlet{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -12338,7 +12345,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletList(ref common.ReferenceC
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Gardenlet", metav1.ListMeta{}.OpenAPIModelName()},
+			seedmanagementv1alpha1.Gardenlet{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -12373,7 +12380,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletSelfDeployment(ref common.
 					"image": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Image is the gardenlet container image.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image"),
+							Ref:         ref(seedmanagementv1alpha1.Image{}.OpenAPIModelName()),
 						},
 					},
 					"resources": {
@@ -12474,7 +12481,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletSelfDeployment(ref common.
 						SchemaProps: spec.SchemaProps{
 							Description: "Helm is the Helm deployment configuration.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletHelm"),
+							Ref:         ref(seedmanagementv1alpha1.GardenletHelm{}.OpenAPIModelName()),
 						},
 					},
 					"imageVectorOverwrite": {
@@ -12496,7 +12503,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletSelfDeployment(ref common.
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletHelm", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image", corev1.EnvVar{}.OpenAPIModelName(), corev1.ResourceRequirements{}.OpenAPIModelName(), corev1.Toleration{}.OpenAPIModelName(), corev1.Volume{}.OpenAPIModelName(), corev1.VolumeMount{}.OpenAPIModelName()},
+			seedmanagementv1alpha1.GardenletHelm{}.OpenAPIModelName(), seedmanagementv1alpha1.Image{}.OpenAPIModelName(), corev1.EnvVar{}.OpenAPIModelName(), corev1.ResourceRequirements{}.OpenAPIModelName(), corev1.Toleration{}.OpenAPIModelName(), corev1.Volume{}.OpenAPIModelName(), corev1.VolumeMount{}.OpenAPIModelName()},
 	}
 }
 
@@ -12511,7 +12518,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletSpec(ref common.ReferenceC
 						SchemaProps: spec.SchemaProps{
 							Description: "Deployment specifies certain gardenlet deployment parameters, such as the number of replicas, the image, etc.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletSelfDeployment"),
+							Ref:         ref(seedmanagementv1alpha1.GardenletSelfDeployment{}.OpenAPIModelName()),
 						},
 					},
 					"config": {
@@ -12531,7 +12538,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletSpec(ref common.ReferenceC
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletSelfDeployment", corev1.LocalObjectReference{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName()},
+			seedmanagementv1alpha1.GardenletSelfDeployment{}.OpenAPIModelName(), corev1.LocalObjectReference{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName()},
 	}
 }
 
@@ -12556,7 +12563,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletStatus(ref common.Referenc
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition"),
+										Ref:     ref(v1beta1.Condition{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -12573,7 +12580,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletStatus(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition"},
+			v1beta1.Condition{}.OpenAPIModelName()},
 	}
 }
 
@@ -12644,21 +12651,21 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeed(ref common.ReferenceCal
 						SchemaProps: spec.SchemaProps{
 							Description: "Specification of the ManagedSeed.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSpec"),
+							Ref:         ref(seedmanagementv1alpha1.ManagedSeedSpec{}.OpenAPIModelName()),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Most recently observed status of the ManagedSeed.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedStatus"),
+							Ref:         ref(seedmanagementv1alpha1.ManagedSeedStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSpec", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedStatus", metav1.ObjectMeta{}.OpenAPIModelName()},
+			seedmanagementv1alpha1.ManagedSeedSpec{}.OpenAPIModelName(), seedmanagementv1alpha1.ManagedSeedStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -12698,7 +12705,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedList(ref common.Referenc
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeed"),
+										Ref:     ref(seedmanagementv1alpha1.ManagedSeed{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -12709,7 +12716,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedList(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeed", metav1.ListMeta{}.OpenAPIModelName()},
+			seedmanagementv1alpha1.ManagedSeed{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -12745,21 +12752,21 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSet(ref common.Reference
 						SchemaProps: spec.SchemaProps{
 							Description: "Spec defines the desired identities of ManagedSeeds and Shoots in this set.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSetSpec"),
+							Ref:         ref(seedmanagementv1alpha1.ManagedSeedSetSpec{}.OpenAPIModelName()),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Status is the current status of ManagedSeeds and Shoots in this ManagedSeedSet.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSetStatus"),
+							Ref:         ref(seedmanagementv1alpha1.ManagedSeedSetStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSetSpec", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSetStatus", metav1.ObjectMeta{}.OpenAPIModelName()},
+			seedmanagementv1alpha1.ManagedSeedSetSpec{}.OpenAPIModelName(), seedmanagementv1alpha1.ManagedSeedSetStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -12799,7 +12806,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetList(ref common.Refer
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSet"),
+										Ref:     ref(seedmanagementv1alpha1.ManagedSeedSet{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -12810,7 +12817,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetList(ref common.Refer
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSet", metav1.ListMeta{}.OpenAPIModelName()},
+			seedmanagementv1alpha1.ManagedSeedSet{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -12839,20 +12846,20 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetSpec(ref common.Refer
 						SchemaProps: spec.SchemaProps{
 							Description: "Template describes the ManagedSeed that will be created if insufficient replicas are detected. Each ManagedSeed created / updated by the ManagedSeedSet will fulfill this template.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedTemplate"),
+							Ref:         ref(seedmanagementv1alpha1.ManagedSeedTemplate{}.OpenAPIModelName()),
 						},
 					},
 					"shootTemplate": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ShootTemplate describes the Shoot that will be created if insufficient replicas are detected for hosting the corresponding ManagedSeed. Each Shoot created / updated by the ManagedSeedSet will fulfill this template.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootTemplate"),
+							Ref:         ref(v1beta1.ShootTemplate{}.OpenAPIModelName()),
 						},
 					},
 					"updateStrategy": {
 						SchemaProps: spec.SchemaProps{
 							Description: "UpdateStrategy specifies the UpdateStrategy that will be employed to update ManagedSeeds / Shoots in the ManagedSeedSet when a revision is made to Template / ShootTemplate.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.UpdateStrategy"),
+							Ref:         ref(seedmanagementv1alpha1.UpdateStrategy{}.OpenAPIModelName()),
 						},
 					},
 					"revisionHistoryLimit": {
@@ -12867,7 +12874,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetSpec(ref common.Refer
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootTemplate", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedTemplate", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.UpdateStrategy", metav1.LabelSelector{}.OpenAPIModelName()},
+			v1beta1.ShootTemplate{}.OpenAPIModelName(), seedmanagementv1alpha1.ManagedSeedTemplate{}.OpenAPIModelName(), seedmanagementv1alpha1.UpdateStrategy{}.OpenAPIModelName(), metav1.LabelSelector{}.OpenAPIModelName()},
 	}
 }
 
@@ -12956,7 +12963,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetStatus(ref common.Ref
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition"),
+										Ref:     ref(v1beta1.Condition{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -12965,7 +12972,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetStatus(ref common.Ref
 					"pendingReplica": {
 						SchemaProps: spec.SchemaProps{
 							Description: "PendingReplica, if not empty, indicates the replica that is currently pending creation, update, or deletion. This replica is in a state that requires the controller to wait for it to change before advancing to the next replica.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.PendingReplica"),
+							Ref:         ref(seedmanagementv1alpha1.PendingReplica{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -12973,7 +12980,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetStatus(ref common.Ref
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.PendingReplica"},
+			v1beta1.Condition{}.OpenAPIModelName(), seedmanagementv1alpha1.PendingReplica{}.OpenAPIModelName()},
 	}
 }
 
@@ -12987,14 +12994,14 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSpec(ref common.Referenc
 					"shoot": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Shoot references a Shoot that should be registered as Seed. This field is immutable.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Shoot"),
+							Ref:         ref(seedmanagementv1alpha1.Shoot{}.OpenAPIModelName()),
 						},
 					},
 					"gardenlet": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster with the given deployment parameters and GardenletConfiguration.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletConfig"),
+							Ref:         ref(seedmanagementv1alpha1.GardenletConfig{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -13002,7 +13009,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSpec(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletConfig", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Shoot"},
+			seedmanagementv1alpha1.GardenletConfig{}.OpenAPIModelName(), seedmanagementv1alpha1.Shoot{}.OpenAPIModelName()},
 	}
 }
 
@@ -13027,7 +13034,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedStatus(ref common.Refere
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition"),
+										Ref:     ref(v1beta1.Condition{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -13044,7 +13051,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedStatus(ref common.Refere
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition"},
+			v1beta1.Condition{}.OpenAPIModelName()},
 	}
 }
 
@@ -13066,14 +13073,14 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedTemplate(ref common.Refe
 						SchemaProps: spec.SchemaProps{
 							Description: "Specification of the desired behavior of the ManagedSeed.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSpec"),
+							Ref:         ref(seedmanagementv1alpha1.ManagedSeedSpec{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSpec", metav1.ObjectMeta{}.OpenAPIModelName()},
+			seedmanagementv1alpha1.ManagedSeedSpec{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -13181,14 +13188,14 @@ func schema_pkg_apis_seedmanagement_v1alpha1_UpdateStrategy(ref common.Reference
 					"rollingUpdate": {
 						SchemaProps: spec.SchemaProps{
 							Description: "RollingUpdate is used to communicate parameters when Type is RollingUpdateStrategyType.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.RollingUpdateStrategy"),
+							Ref:         ref(seedmanagementv1alpha1.RollingUpdateStrategy{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.RollingUpdateStrategy"},
+			seedmanagementv1alpha1.RollingUpdateStrategy{}.OpenAPIModelName()},
 	}
 }
 
@@ -13224,7 +13231,7 @@ func schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPreset(ref common.Ref
 						SchemaProps: spec.SchemaProps{
 							Description: "Spec is the specification of this OpenIDConnect preset.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.ClusterOpenIDConnectPresetSpec"),
+							Ref:         ref(settingsv1alpha1.ClusterOpenIDConnectPresetSpec{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -13232,7 +13239,7 @@ func schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPreset(ref common.Ref
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.ClusterOpenIDConnectPresetSpec", metav1.ObjectMeta{}.OpenAPIModelName()},
+			settingsv1alpha1.ClusterOpenIDConnectPresetSpec{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -13272,7 +13279,7 @@ func schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetList(ref common
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.ClusterOpenIDConnectPreset"),
+										Ref:     ref(settingsv1alpha1.ClusterOpenIDConnectPreset{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -13283,7 +13290,7 @@ func schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetList(ref common
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.ClusterOpenIDConnectPreset", metav1.ListMeta{}.OpenAPIModelName()},
+			settingsv1alpha1.ClusterOpenIDConnectPreset{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -13298,13 +13305,13 @@ func schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetSpec(ref common
 						SchemaProps: spec.SchemaProps{
 							Description: "Server contains the kube-apiserver's OpenID Connect configuration. This configuration is not overwriting any existing OpenID Connect configuration already set on the Shoot object.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.KubeAPIServerOpenIDConnect"),
+							Ref:         ref(settingsv1alpha1.KubeAPIServerOpenIDConnect{}.OpenAPIModelName()),
 						},
 					},
 					"client": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwriting any existing OpenID Connect client authentication already set on the Shoot object.\n\nDeprecated: The OpenID Connect configuration this field specifies is not used and will be forbidden starting from Kubernetes 1.31. It's use was planned for generating OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication"),
+							Ref:         ref(settingsv1alpha1.OpenIDConnectClientAuthentication{}.OpenAPIModelName()),
 						},
 					},
 					"shootSelector": {
@@ -13332,7 +13339,7 @@ func schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetSpec(ref common
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.KubeAPIServerOpenIDConnect", "github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication", metav1.LabelSelector{}.OpenAPIModelName()},
+			settingsv1alpha1.KubeAPIServerOpenIDConnect{}.OpenAPIModelName(), settingsv1alpha1.OpenIDConnectClientAuthentication{}.OpenAPIModelName(), metav1.LabelSelector{}.OpenAPIModelName()},
 	}
 }
 
@@ -13500,7 +13507,7 @@ func schema_pkg_apis_settings_v1alpha1_OpenIDConnectPreset(ref common.ReferenceC
 						SchemaProps: spec.SchemaProps{
 							Description: "Spec is the specification of this OpenIDConnect preset.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectPresetSpec"),
+							Ref:         ref(settingsv1alpha1.OpenIDConnectPresetSpec{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -13508,7 +13515,7 @@ func schema_pkg_apis_settings_v1alpha1_OpenIDConnectPreset(ref common.ReferenceC
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectPresetSpec", metav1.ObjectMeta{}.OpenAPIModelName()},
+			settingsv1alpha1.OpenIDConnectPresetSpec{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -13548,7 +13555,7 @@ func schema_pkg_apis_settings_v1alpha1_OpenIDConnectPresetList(ref common.Refere
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectPreset"),
+										Ref:     ref(settingsv1alpha1.OpenIDConnectPreset{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -13559,7 +13566,7 @@ func schema_pkg_apis_settings_v1alpha1_OpenIDConnectPresetList(ref common.Refere
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectPreset", metav1.ListMeta{}.OpenAPIModelName()},
+			settingsv1alpha1.OpenIDConnectPreset{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -13574,13 +13581,13 @@ func schema_pkg_apis_settings_v1alpha1_OpenIDConnectPresetSpec(ref common.Refere
 						SchemaProps: spec.SchemaProps{
 							Description: "Server contains the kube-apiserver's OpenID Connect configuration. This configuration is not overwriting any existing OpenID Connect configuration already set on the Shoot object.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.KubeAPIServerOpenIDConnect"),
+							Ref:         ref(settingsv1alpha1.KubeAPIServerOpenIDConnect{}.OpenAPIModelName()),
 						},
 					},
 					"client": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwriting any existing OpenID Connect client authentication already set on the Shoot object.\n\nDeprecated: The OpenID Connect configuration this field specifies is not used and will be forbidden starting from Kubernetes 1.31. It's use was planned for generating OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication"),
+							Ref:         ref(settingsv1alpha1.OpenIDConnectClientAuthentication{}.OpenAPIModelName()),
 						},
 					},
 					"shootSelector": {
@@ -13602,7 +13609,7 @@ func schema_pkg_apis_settings_v1alpha1_OpenIDConnectPresetSpec(ref common.Refere
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.KubeAPIServerOpenIDConnect", "github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication", metav1.LabelSelector{}.OpenAPIModelName()},
+			settingsv1alpha1.KubeAPIServerOpenIDConnect{}.OpenAPIModelName(), settingsv1alpha1.OpenIDConnectClientAuthentication{}.OpenAPIModelName(), metav1.LabelSelector{}.OpenAPIModelName()},
 	}
 }
 
@@ -13854,21 +13861,21 @@ func schema_k8sio_api_autoscaling_v1_HorizontalPodAutoscaler(ref common.Referenc
 						SchemaProps: spec.SchemaProps{
 							Description: "spec defines the behaviour of autoscaler. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status.",
 							Default:     map[string]interface{}{},
-							Ref:         ref(v1.HorizontalPodAutoscalerSpec{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.HorizontalPodAutoscalerSpec{}.OpenAPIModelName()),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "status is the current information about the autoscaler.",
 							Default:     map[string]interface{}{},
-							Ref:         ref(v1.HorizontalPodAutoscalerStatus{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.HorizontalPodAutoscalerStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			v1.HorizontalPodAutoscalerSpec{}.OpenAPIModelName(), v1.HorizontalPodAutoscalerStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
+			autoscalingv1.HorizontalPodAutoscalerSpec{}.OpenAPIModelName(), autoscalingv1.HorizontalPodAutoscalerStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -13960,7 +13967,7 @@ func schema_k8sio_api_autoscaling_v1_HorizontalPodAutoscalerList(ref common.Refe
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref(v1.HorizontalPodAutoscaler{}.OpenAPIModelName()),
+										Ref:     ref(autoscalingv1.HorizontalPodAutoscaler{}.OpenAPIModelName()),
 									},
 								},
 							},
@@ -13971,7 +13978,7 @@ func schema_k8sio_api_autoscaling_v1_HorizontalPodAutoscalerList(ref common.Refe
 			},
 		},
 		Dependencies: []string{
-			v1.HorizontalPodAutoscaler{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
+			autoscalingv1.HorizontalPodAutoscaler{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -13986,7 +13993,7 @@ func schema_k8sio_api_autoscaling_v1_HorizontalPodAutoscalerSpec(ref common.Refe
 						SchemaProps: spec.SchemaProps{
 							Description: "reference to scaled resource; horizontal pod autoscaler will learn the current resource consumption and will set the desired number of pods by using its Scale subresource.",
 							Default:     map[string]interface{}{},
-							Ref:         ref(v1.CrossVersionObjectReference{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.CrossVersionObjectReference{}.OpenAPIModelName()),
 						},
 					},
 					"minReplicas": {
@@ -14016,7 +14023,7 @@ func schema_k8sio_api_autoscaling_v1_HorizontalPodAutoscalerSpec(ref common.Refe
 			},
 		},
 		Dependencies: []string{
-			v1.CrossVersionObjectReference{}.OpenAPIModelName()},
+			autoscalingv1.CrossVersionObjectReference{}.OpenAPIModelName()},
 	}
 }
 
@@ -14091,31 +14098,31 @@ func schema_k8sio_api_autoscaling_v1_MetricSpec(ref common.ReferenceCallback) co
 					"object": {
 						SchemaProps: spec.SchemaProps{
 							Description: "object refers to a metric describing a single kubernetes object (for example, hits-per-second on an Ingress object).",
-							Ref:         ref(v1.ObjectMetricSource{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.ObjectMetricSource{}.OpenAPIModelName()),
 						},
 					},
 					"pods": {
 						SchemaProps: spec.SchemaProps{
 							Description: "pods refers to a metric describing each pod in the current scale target (for example, transactions-processed-per-second).  The values will be averaged together before being compared to the target value.",
-							Ref:         ref(v1.PodsMetricSource{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.PodsMetricSource{}.OpenAPIModelName()),
 						},
 					},
 					"resource": {
 						SchemaProps: spec.SchemaProps{
 							Description: "resource refers to a resource metric (such as those specified in requests and limits) known to Kubernetes describing each pod in the current scale target (e.g. CPU or memory). Such metrics are built in to Kubernetes, and have special scaling options on top of those available to normal per-pod metrics using the \"pods\" source.",
-							Ref:         ref(v1.ResourceMetricSource{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.ResourceMetricSource{}.OpenAPIModelName()),
 						},
 					},
 					"containerResource": {
 						SchemaProps: spec.SchemaProps{
 							Description: "containerResource refers to a resource metric (such as those specified in requests and limits) known to Kubernetes describing a single container in each pod of the current scale target (e.g. CPU or memory). Such metrics are built in to Kubernetes, and have special scaling options on top of those available to normal per-pod metrics using the \"pods\" source.",
-							Ref:         ref(v1.ContainerResourceMetricSource{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.ContainerResourceMetricSource{}.OpenAPIModelName()),
 						},
 					},
 					"external": {
 						SchemaProps: spec.SchemaProps{
 							Description: "external refers to a global metric that is not associated with any Kubernetes object. It allows autoscaling based on information coming from components running outside of cluster (for example length of queue in cloud messaging service, or QPS from loadbalancer running outside of cluster).",
-							Ref:         ref(v1.ExternalMetricSource{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.ExternalMetricSource{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -14123,7 +14130,7 @@ func schema_k8sio_api_autoscaling_v1_MetricSpec(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{
-			v1.ContainerResourceMetricSource{}.OpenAPIModelName(), v1.ExternalMetricSource{}.OpenAPIModelName(), v1.ObjectMetricSource{}.OpenAPIModelName(), v1.PodsMetricSource{}.OpenAPIModelName(), v1.ResourceMetricSource{}.OpenAPIModelName()},
+			autoscalingv1.ContainerResourceMetricSource{}.OpenAPIModelName(), autoscalingv1.ExternalMetricSource{}.OpenAPIModelName(), autoscalingv1.ObjectMetricSource{}.OpenAPIModelName(), autoscalingv1.PodsMetricSource{}.OpenAPIModelName(), autoscalingv1.ResourceMetricSource{}.OpenAPIModelName()},
 	}
 }
 
@@ -14146,31 +14153,31 @@ func schema_k8sio_api_autoscaling_v1_MetricStatus(ref common.ReferenceCallback) 
 					"object": {
 						SchemaProps: spec.SchemaProps{
 							Description: "object refers to a metric describing a single kubernetes object (for example, hits-per-second on an Ingress object).",
-							Ref:         ref(v1.ObjectMetricStatus{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.ObjectMetricStatus{}.OpenAPIModelName()),
 						},
 					},
 					"pods": {
 						SchemaProps: spec.SchemaProps{
 							Description: "pods refers to a metric describing each pod in the current scale target (for example, transactions-processed-per-second).  The values will be averaged together before being compared to the target value.",
-							Ref:         ref(v1.PodsMetricStatus{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.PodsMetricStatus{}.OpenAPIModelName()),
 						},
 					},
 					"resource": {
 						SchemaProps: spec.SchemaProps{
 							Description: "resource refers to a resource metric (such as those specified in requests and limits) known to Kubernetes describing each pod in the current scale target (e.g. CPU or memory). Such metrics are built in to Kubernetes, and have special scaling options on top of those available to normal per-pod metrics using the \"pods\" source.",
-							Ref:         ref(v1.ResourceMetricStatus{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.ResourceMetricStatus{}.OpenAPIModelName()),
 						},
 					},
 					"containerResource": {
 						SchemaProps: spec.SchemaProps{
 							Description: "containerResource refers to a resource metric (such as those specified in requests and limits) known to Kubernetes describing a single container in each pod in the current scale target (e.g. CPU or memory). Such metrics are built in to Kubernetes, and have special scaling options on top of those available to normal per-pod metrics using the \"pods\" source.",
-							Ref:         ref(v1.ContainerResourceMetricStatus{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.ContainerResourceMetricStatus{}.OpenAPIModelName()),
 						},
 					},
 					"external": {
 						SchemaProps: spec.SchemaProps{
 							Description: "external refers to a global metric that is not associated with any Kubernetes object. It allows autoscaling based on information coming from components running outside of cluster (for example length of queue in cloud messaging service, or QPS from loadbalancer running outside of cluster).",
-							Ref:         ref(v1.ExternalMetricStatus{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.ExternalMetricStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
@@ -14178,7 +14185,7 @@ func schema_k8sio_api_autoscaling_v1_MetricStatus(ref common.ReferenceCallback) 
 			},
 		},
 		Dependencies: []string{
-			v1.ContainerResourceMetricStatus{}.OpenAPIModelName(), v1.ExternalMetricStatus{}.OpenAPIModelName(), v1.ObjectMetricStatus{}.OpenAPIModelName(), v1.PodsMetricStatus{}.OpenAPIModelName(), v1.ResourceMetricStatus{}.OpenAPIModelName()},
+			autoscalingv1.ContainerResourceMetricStatus{}.OpenAPIModelName(), autoscalingv1.ExternalMetricStatus{}.OpenAPIModelName(), autoscalingv1.ObjectMetricStatus{}.OpenAPIModelName(), autoscalingv1.PodsMetricStatus{}.OpenAPIModelName(), autoscalingv1.ResourceMetricStatus{}.OpenAPIModelName()},
 	}
 }
 
@@ -14193,7 +14200,7 @@ func schema_k8sio_api_autoscaling_v1_ObjectMetricSource(ref common.ReferenceCall
 						SchemaProps: spec.SchemaProps{
 							Description: "target is the described Kubernetes object.",
 							Default:     map[string]interface{}{},
-							Ref:         ref(v1.CrossVersionObjectReference{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.CrossVersionObjectReference{}.OpenAPIModelName()),
 						},
 					},
 					"metricName": {
@@ -14227,7 +14234,7 @@ func schema_k8sio_api_autoscaling_v1_ObjectMetricSource(ref common.ReferenceCall
 			},
 		},
 		Dependencies: []string{
-			v1.CrossVersionObjectReference{}.OpenAPIModelName(), resource.Quantity{}.OpenAPIModelName(), metav1.LabelSelector{}.OpenAPIModelName()},
+			autoscalingv1.CrossVersionObjectReference{}.OpenAPIModelName(), resource.Quantity{}.OpenAPIModelName(), metav1.LabelSelector{}.OpenAPIModelName()},
 	}
 }
 
@@ -14242,7 +14249,7 @@ func schema_k8sio_api_autoscaling_v1_ObjectMetricStatus(ref common.ReferenceCall
 						SchemaProps: spec.SchemaProps{
 							Description: "target is the described Kubernetes object.",
 							Default:     map[string]interface{}{},
-							Ref:         ref(v1.CrossVersionObjectReference{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.CrossVersionObjectReference{}.OpenAPIModelName()),
 						},
 					},
 					"metricName": {
@@ -14276,7 +14283,7 @@ func schema_k8sio_api_autoscaling_v1_ObjectMetricStatus(ref common.ReferenceCall
 			},
 		},
 		Dependencies: []string{
-			v1.CrossVersionObjectReference{}.OpenAPIModelName(), resource.Quantity{}.OpenAPIModelName(), metav1.LabelSelector{}.OpenAPIModelName()},
+			autoscalingv1.CrossVersionObjectReference{}.OpenAPIModelName(), resource.Quantity{}.OpenAPIModelName(), metav1.LabelSelector{}.OpenAPIModelName()},
 	}
 }
 
@@ -14458,21 +14465,21 @@ func schema_k8sio_api_autoscaling_v1_Scale(ref common.ReferenceCallback) common.
 						SchemaProps: spec.SchemaProps{
 							Description: "spec defines the behavior of the scale. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status.",
 							Default:     map[string]interface{}{},
-							Ref:         ref(v1.ScaleSpec{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.ScaleSpec{}.OpenAPIModelName()),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "status is the current status of the scale. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status. Read-only.",
 							Default:     map[string]interface{}{},
-							Ref:         ref(v1.ScaleStatus{}.OpenAPIModelName()),
+							Ref:         ref(autoscalingv1.ScaleStatus{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			v1.ScaleSpec{}.OpenAPIModelName(), v1.ScaleStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
+			autoscalingv1.ScaleSpec{}.OpenAPIModelName(), autoscalingv1.ScaleStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 

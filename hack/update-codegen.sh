@@ -409,13 +409,7 @@ openapi_definitions() {
   echo "> Generating openapi definitions"
   rm -Rf ./${PROJECT_ROOT}/openapi/openapi_generated.go
 
-  "openapi-gen" \
-    -v 1 \
-    --output-file openapi_generated.go \
-    --go-header-file "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
-    --output-dir "${PROJECT_ROOT}/pkg/apiserver/openapi" \
-    --output-pkg "github.com/gardener/gardener/pkg/apiserver/openapi" \
-    --report-filename "${PROJECT_ROOT}/pkg/apiserver/openapi/api_violations.report" \
+  gardener_apis=(
     "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1" \
     "github.com/gardener/gardener/pkg/apis/core/v1" \
     "github.com/gardener/gardener/pkg/apis/core/v1beta1" \
@@ -423,17 +417,46 @@ openapi_definitions() {
     "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1" \
     "github.com/gardener/gardener/pkg/apis/security/v1alpha1" \
     "github.com/gardener/gardener/pkg/apis/operations/v1alpha1" \
-    "k8s.io/api/core/v1" \
-    "k8s.io/api/rbac/v1" \
-    "k8s.io/api/autoscaling/v1" \
-    "k8s.io/api/networking/v1" \
-    "k8s.io/apimachinery/pkg/apis/meta/v1" \
-    "k8s.io/apimachinery/pkg/api/resource" \
-    "k8s.io/apimachinery/pkg/types" \
-    "k8s.io/apimachinery/pkg/version" \
-    "k8s.io/apimachinery/pkg/runtime" \
-    "k8s.io/apimachinery/pkg/util/intstr" \
-    "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+  )
+
+  kube_apis=(
+      "k8s.io/api/core/v1"
+      "k8s.io/api/rbac/v1"
+      "k8s.io/api/autoscaling/v1"
+      "k8s.io/api/networking/v1"
+      "k8s.io/apimachinery/pkg/apis/meta/v1"
+      "k8s.io/apimachinery/pkg/api/resource"
+      "k8s.io/apimachinery/pkg/types"
+      "k8s.io/apimachinery/pkg/version"
+      "k8s.io/apimachinery/pkg/runtime"
+      "k8s.io/apimachinery/pkg/util/intstr"
+      "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+  )
+
+  # First generate the openapi definitions for Gardener APIs only.
+  # This step is mainly required to generate the model name file (zz_generated.model_name.go).
+  # TODO(timuthy): Remove this separate step once https://github.com/kubernetes/kube-openapi/issues/571 is resolved.
+  "openapi-gen" \
+    -v 1 \
+    --output-file openapi_generated.go \
+    --go-header-file "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    --output-dir "${PROJECT_ROOT}/pkg/apiserver/openapi" \
+    --output-pkg "github.com/gardener/gardener/pkg/apiserver/openapi" \
+    --report-filename "${PROJECT_ROOT}/pkg/apiserver/openapi/api_violations.report" \
+    --output-model-name-file "zz_generated.model_name.go" \
+    "${gardener_apis[@]}"
+
+  # Now generate the openapi definitions for Gardener APIs along with required Kubernetes APIs.
+  # `output-model-name-file` must not be specified here, since it would lead to generation errors (see https://github.com/kubernetes/kube-openapi/issues/571).
+  "openapi-gen" \
+    -v 1 \
+    --output-file openapi_generated.go \
+    --go-header-file "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    --output-dir "${PROJECT_ROOT}/pkg/apiserver/openapi" \
+    --output-pkg "github.com/gardener/gardener/pkg/apiserver/openapi" \
+    --report-filename "${PROJECT_ROOT}/pkg/apiserver/openapi/api_violations.report" \
+    "${gardener_apis[@]}" \
+    "${kube_apis[@]}"
 }
 export -f openapi_definitions
 

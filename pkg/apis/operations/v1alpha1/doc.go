@@ -8,6 +8,7 @@
 // +k8s:openapi-gen=true
 // +k8s:defaulter-gen=TypeMeta
 // +k8s:protobuf-gen=package
+// +k8s:openapi-model-package=com.github.gardener.gardener.pkg.apis.operations.v1alpha1
 
 //go:generate gen-crd-api-reference-docs -api-dir github.com/gardener/gardener/pkg/apis/operations/v1alpha1 -config ../../../../hack/api-reference/operations-config.json -template-dir ../../../../hack/api-reference/template -out-file ../../../../docs/api-reference/operations.md
 
