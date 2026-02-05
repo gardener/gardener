@@ -16,6 +16,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -43,6 +44,7 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 var _ = Describe("GardenerAPIServer", func() {
@@ -103,7 +105,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			}
 		}
 		serviceVirtual                   *corev1.Service
-		endpoints                        *corev1.Endpoints
+		endpointsOrEndpointSlice         client.Object
 		clusterRole                      *rbacv1.ClusterRole
 		clusterRoleBinding               *rbacv1.ClusterRoleBinding
 		clusterRoleBindingAuthDelegation *rbacv1.ClusterRoleBinding
@@ -142,6 +144,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			ShootAdminKubeconfigMaxExpiration: &metav1.Duration{Duration: 1 * time.Hour},
 			TopologyAwareRoutingEnabled:       true,
 			WorkloadIdentityTokenIssuer:       workloadIdentityIssuer,
+			TargetVersion:                     semver.MustParse("1.33.1"),
 		}
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
@@ -541,24 +544,46 @@ var _ = Describe("GardenerAPIServer", func() {
 				}},
 			},
 		}
-		endpoints = &corev1.Endpoints{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener-apiserver",
-				Namespace: "kube-system",
-				Labels: map[string]string{
-					"app":  "gardener",
-					"role": "apiserver",
+		if version.ConstraintK8sGreaterEqual133.Check(values.TargetVersion) {
+			endpointsOrEndpointSlice = &discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener-apiserver",
+					Namespace: "kube-system",
+					Labels: map[string]string{
+						"app":                        "gardener",
+						"role":                       "apiserver",
+						"kubernetes.io/service-name": "gardener-apiserver",
+					},
 				},
-			},
-			Subsets: []corev1.EndpointSubset{{
-				Ports: []corev1.EndpointPort{{
-					Port:     443,
-					Protocol: corev1.ProtocolTCP,
+				AddressType: "IPv4",
+				Ports: []discoveryv1.EndpointPort{{
+					Port:     ptr.To(int32(443)),
+					Protocol: ptr.To(corev1.ProtocolTCP),
 				}},
-				Addresses: []corev1.EndpointAddress{{
-					IP: clusterIP,
+				Endpoints: []discoveryv1.Endpoint{{
+					Addresses: []string{clusterIP},
 				}},
-			}},
+			}
+		} else {
+			endpointsOrEndpointSlice = &corev1.Endpoints{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener-apiserver",
+					Namespace: "kube-system",
+					Labels: map[string]string{
+						"app":  "gardener",
+						"role": "apiserver",
+					},
+				},
+				Subsets: []corev1.EndpointSubset{{
+					Ports: []corev1.EndpointPort{{
+						Port:     443,
+						Protocol: corev1.ProtocolTCP,
+					}},
+					Addresses: []corev1.EndpointAddress{{
+						IP: clusterIP,
+					}},
+				}},
+			}
 		}
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
@@ -777,6 +802,7 @@ resources:
 									ETCDEncryption: apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: encryptWithCurrentKey, ResourcesToEncrypt: []string{"shootstates.core.gardener.cloud"}},
 									RuntimeVersion: semver.MustParse("1.33.1"),
 								},
+								TargetVersion: semver.MustParse("1.33.1"),
 							})
 
 							oldKeyName, oldKeySecret := "key-old", "old-secret"
@@ -894,6 +920,7 @@ resources:
 							Audit:          auditConfig,
 							RuntimeVersion: semver.MustParse("1.33.1"),
 						},
+						TargetVersion: semver.MustParse("1.33.1"),
 					})
 
 					expectedSecret := &corev1.Secret{
@@ -954,6 +981,7 @@ resources:
 								EnabledAdmissionPlugins: admissionPlugins,
 								RuntimeVersion:          semver.MustParse("1.33.1"),
 							},
+							TargetVersion: semver.MustParse("1.33.1"),
 						})
 
 						secretAdmissionKubeconfigs := &corev1.Secret{
@@ -1021,6 +1049,7 @@ rules:
 								Audit:          auditConfig,
 								RuntimeVersion: semver.MustParse("1.33.1"),
 							},
+							TargetVersion: semver.MustParse("1.33.1"),
 						})
 
 						configMapAuditPolicy := &corev1.ConfigMap{
@@ -1102,6 +1131,7 @@ kubeConfigFile: /etc/kubernetes/foobar.yaml
 								EnabledAdmissionPlugins: admissionPlugins,
 								RuntimeVersion:          semver.MustParse("1.33.1"),
 							},
+							TargetVersion: semver.MustParse("1.33.1"),
 						})
 
 						configMapAdmission := &corev1.ConfigMap{
@@ -1175,6 +1205,7 @@ kubeConfigFile: /etc/kubernetes/foobar.yaml
 								EnabledAdmissionPlugins: admissionPlugins,
 								RuntimeVersion:          semver.MustParse("1.33.1"),
 							},
+							TargetVersion: semver.MustParse("1.33.1"),
 						})
 
 						configMapAdmission := &corev1.ConfigMap{
@@ -1238,6 +1269,7 @@ kubeConfigFile: ""
 								EnabledAdmissionPlugins: admissionPlugins,
 								RuntimeVersion:          semver.MustParse("1.33.1"),
 							},
+							TargetVersion: semver.MustParse("1.33.1"),
 						})
 
 						configMapAdmission := &corev1.ConfigMap{
@@ -1360,7 +1392,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						apiServiceFor("settings.gardener.cloud", "v1alpha1"),
 						apiServiceFor("security.gardener.cloud", "v1alpha1"),
 						serviceVirtual,
-						endpoints,
+						endpointsOrEndpointSlice,
 						clusterRole,
 						clusterRoleBinding,
 						clusterRoleBindingAuthDelegation,

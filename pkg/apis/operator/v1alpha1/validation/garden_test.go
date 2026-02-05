@@ -126,8 +126,6 @@ var _ = Describe("Validation Tests", func() {
 				Entry("start ServiceAccount key rotation", "rotate-serviceaccount-key-start"),
 				Entry("complete ServiceAccount key rotation", "rotate-serviceaccount-key-complete"),
 				Entry("start single operation ETCD encryption key rotation", "rotate-etcd-encryption-key"),
-				Entry("start ETCD encryption key rotation", "rotate-etcd-encryption-key-start"),
-				Entry("complete ETCD encryption key rotation", "rotate-etcd-encryption-key-complete"),
 				Entry("start Observability key rotation", "rotate-observability-credentials"),
 				Entry("start WorkloadIdentity key rotation", "rotate-workload-identity-key-start"),
 				Entry("complete WorkloadIdentity key rotation", "rotate-workload-identity-key-complete"),

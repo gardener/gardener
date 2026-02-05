@@ -39,6 +39,7 @@ func NewGardenerAPIServer(
 	clusterIdentity,
 	workloadIdentityTokenIssuer string,
 	goAwayChance *float64,
+	targetVersion *semver.Version,
 ) (
 	gardenerapiserver.Interface,
 	error,
@@ -109,6 +110,7 @@ func NewGardenerAPIServer(
 			ShootAdminKubeconfigMaxExpiration: shootAdminKubeconfigMaxExpiration,
 			TopologyAwareRoutingEnabled:       topologyAwareRoutingEnabled,
 			WorkloadIdentityTokenIssuer:       workloadIdentityTokenIssuer,
+			TargetVersion:                     targetVersion,
 		},
 	), nil
 }

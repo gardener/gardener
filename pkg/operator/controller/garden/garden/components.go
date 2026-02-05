@@ -271,7 +271,7 @@ func (r *Reconciler) instantiateComponents(
 	// gardener control plane components
 	discoveryServerDomain := discoveryServerDomain(garden)
 	workloadIdentityTokenIssuer := workloadIdentityTokenIssuerURL(garden)
-	c.gardenerAPIServer, err = r.newGardenerAPIServer(ctx, garden, secretsManager, workloadIdentityTokenIssuer)
+	c.gardenerAPIServer, err = r.newGardenerAPIServer(ctx, garden, secretsManager, workloadIdentityTokenIssuer, targetVersion)
 	if err != nil {
 		return
 	}
@@ -1153,7 +1153,7 @@ func (r *Reconciler) newVirtualSystem(enableSeedAuthorizer bool) component.Deplo
 	return virtualgardensystem.New(r.RuntimeClientSet.Client(), r.GardenNamespace, virtualgardensystem.Values{SeedAuthorizerEnabled: enableSeedAuthorizer})
 }
 
-func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, workloadIdentityTokenIssuer string) (gardenerapiserver.Interface, error) {
+func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, workloadIdentityTokenIssuer string, targetVersion *semver.Version) (gardenerapiserver.Interface, error) {
 	var (
 		err                error
 		apiServerConfig    *operatorv1alpha1.GardenerAPIServerConfig
@@ -1185,6 +1185,7 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 		garden.Spec.VirtualCluster.Gardener.ClusterIdentity,
 		workloadIdentityTokenIssuer,
 		goAwayChance,
+		targetVersion,
 	)
 }
 
