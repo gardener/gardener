@@ -51,14 +51,14 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 		It("Delete Nodes and Machines to trigger new Node bootstrap", func(ctx SpecContext) {
 			machineList := &machinev1alpha1.MachineList{}
 			Eventually(ctx, func(g Gomega) {
-				g.Expect(s.ShootClient.List(ctx, machineList)).To(Succeed())
+				g.Expect(s.SeedClient.List(ctx, machineList)).To(Succeed())
 				g.Expect(machineList.Items).To(Not(BeEmpty()))
 				for _, machine := range machineList.Items {
 					patch := client.MergeFrom(machine.DeepCopy())
 					metav1.SetMetaDataLabel(&machine.ObjectMeta, markMachinesForcefulDeletionLabel, "True")
-					g.Expect(s.ShootClient.Patch(ctx, &machine, patch)).To(Succeed())
-					g.Expect(s.ShootClient.Delete(ctx, &machine)).To(Succeed())
+					g.Expect(s.SeedClient.Patch(ctx, &machine, patch)).To(Succeed())
 				}
+				g.Expect(s.ShootClient.DeleteAllOf(ctx, &corev1.Node{})).To(Succeed())
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
