@@ -338,10 +338,9 @@ var _ = Describe("Monitoring", func() {
 			responseHandler = createResponseHandler(http.StatusOK, response)
 
 			result, err := health.IsPrometheusHealthy(context.Background(), endpoint, port)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("health check recording rules are not deployed or running yet"))
+			Expect(err).NotTo(HaveOccurred())
 			Expect(result.IsHealthy).To(BeFalse())
-			Expect(result.Message).To(Equal(""))
+			Expect(result.Message).To(Equal("health check recording rules are not deployed or running yet"))
 		})
 
 		It("should handle vector response with unexpected samples", func() {

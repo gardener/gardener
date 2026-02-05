@@ -56,7 +56,7 @@ func IsPrometheusHealthy(ctx context.Context, endpoint string, port int) (Promet
 	}
 
 	if len(vector) == 0 {
-		return PrometheusHealthCheckResult{}, fmt.Errorf("health check recording rules are not deployed or running yet")
+		return PrometheusHealthCheckResult{IsHealthy: false, Message: "health check recording rules are not deployed or running yet"}, nil
 	}
 
 	var (
