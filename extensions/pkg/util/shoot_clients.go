@@ -90,7 +90,12 @@ func NewClientForShoot(ctx context.Context, c client.Client, namespace string, o
 		return nil, nil, err
 	}
 
-	shootRESTConfig, err := NewRESTConfigFromKubeconfig(gardenerSecret.Data[secrets.DataKeyKubeconfig])
+	shootRESTConfig, err := kubernetesclient.RESTConfigFromKubeconfig(
+		gardenerSecret.Data[secrets.DataKeyKubeconfig],
+		kubernetesclient.AuthTokenFile,
+		kubernetesclient.AuthClientKey,
+		kubernetesclient.AuthClientCertificate,
+	)
 	if err != nil {
 		return nil, nil, err
 	}
