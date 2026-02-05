@@ -323,7 +323,11 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				Namespace: namespace,
 				Labels:    getLabels(),
 				Annotations: map[string]string{
-					`networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports`: `[{"protocol":"TCP","port":8888}]`,
+					resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix +
+						v1beta1constants.LabelNetworkPolicyScrapeTargets +
+						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":8888}]`,
+					resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias: v1beta1constants.LabelNetworkPolicyShootNamespaceAlias,
+					resourcesv1alpha1.NetworkingNamespaceSelectors:             `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
 				},
 			},
 			Spec: otelv1beta1.OpenTelemetryCollectorSpec{
@@ -355,7 +359,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 							"otlp": map[string]any{
 								"protocols": map[string]any{
 									"grpc": map[string]any{
-										"endpoint": "127.0.0.1:4317",
+										"endpoint": "[::]:4317",
 									},
 								},
 							},
@@ -381,6 +385,11 @@ var _ = Describe("OpenTelemetry Collector", func() {
 									map[string]any{
 										"key":            "container_name",
 										"from_attribute": "k8s.container.name",
+										"action":         "insert",
+									},
+									map[string]any{
+										"key":            "namespace_name",
+										"from_attribute": "k8s.namespace.name",
 										"action":         "insert",
 									},
 									map[string]any{
@@ -413,9 +422,14 @@ var _ = Describe("OpenTelemetry Collector", func() {
 										"action":         "insert",
 									},
 									map[string]any{
-										"key":    "loki.resource.labels",
-										"value":  "job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role",
-										"action": "insert",
+										"key":            "namespace_name",
+										"from_attribute": "k8s.namespace.name",
+										"action":         "insert",
+									},
+									map[string]any{
+										"key":    "loki.attribute.labels",
+										"value":  "priority, level, process.command, process.pid, host.name, host.id, service.name, service.namespace, job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role",
+										"action": "upsert",
 									},
 									map[string]any{
 										"key":    "loki.format",
@@ -430,6 +444,13 @@ var _ = Describe("OpenTelemetry Collector", func() {
 						Object: map[string]any{
 							"loki": map[string]any{
 								"endpoint": lokiEndpoint,
+								"default_labels_enabled": map[string]any{
+									"exporter": false,
+									"job":      false,
+								},
+							},
+							"debug/logs": map[string]any{
+								"verbosity": "basic",
 							},
 						},
 					},
@@ -463,7 +484,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 						},
 						Pipelines: map[string]*otelv1beta1.Pipeline{
 							"logs/vali": {
-								Exporters:  []string{"loki"},
+								Exporters:  []string{"loki", "debug/logs"},
 								Receivers:  []string{"otlp"},
 								Processors: []string{"resource/vali", "attributes/vali", "batch"},
 							},

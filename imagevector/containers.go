@@ -41,6 +41,8 @@ const (
 	ContainerImageNameEventLogger = "event-logger"
 	// ContainerImageNameFluentBit is a constant for an image in the image vector with name 'fluent-bit'.
 	ContainerImageNameFluentBit = "fluent-bit"
+	// ContainerImageNameFluentBitPlugin is a constant for an image in the image vector with name 'fluent-bit-plugin'.
+	ContainerImageNameFluentBitPlugin = "fluent-bit-plugin"
 	// ContainerImageNameFluentBitPluginInstaller is a constant for an image in the image vector with name 'fluent-bit-plugin-installer'.
 	ContainerImageNameFluentBitPluginInstaller = "fluent-bit-plugin-installer"
 	// ContainerImageNameFluentOperator is a constant for an image in the image vector with name 'fluent-operator'.

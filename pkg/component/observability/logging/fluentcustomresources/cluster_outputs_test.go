@@ -26,37 +26,22 @@ var _ = Describe("Logging", func() {
 			Expect(fluentBitClusterOutputs).To(Equal(
 				&fluentbitv1alpha2.ClusterOutput{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "journald",
+						Name:   "systemd",
 						Labels: labels,
 					},
 					Spec: fluentbitv1alpha2.OutputSpec{
 						CustomPlugin: &custom.CustomPlugin{
-							Config: `Name gardenervali
-Match journald.*
-Labels {origin="seed-journald"}
-RemoveKeys kubernetes,stream,hostname,unit
-LabelMapPath {"hostname":"host_name","unit":"systemd_component"}
-QueueDir /fluent-bit/buffers
-QueueName seed-journald
-LogLevel info
-Url http://logging.garden.svc:3100/vali/api/v1/push
-BatchWait 5s
-BatchSize 2097152
-MaxRetries 5
-Timeout 10s
-MinBackoff 10s
-MaxBackoff 300s
-LineFormat json
-SortByTimestamp true
-DropSingleKey false
-AutoKubernetesLabels false
-HostnameKeyValue nodename ${NODE_NAME}
-Buffer true
-BufferType dque
-QueueSegmentSize 10000
-QueueSync normal
-NumberOfBatchIDs 5
-`,
+							Config: `Name gardener
+Match                     systemd.*
+SeedType                  otlp_grpc
+LogLevel                  error
+Endpoint                  opentelemetry-collector-collector.garden.svc:4317
+Insecure                  true
+DQueDir                   /var/fluentbit/dque
+DQueName                  systemd
+Origin                    systemd
+HostnameValue             ${NODE_NAME}
+FallbackToTagWhenMetadataIsMissing false`,
 						},
 					},
 				},
@@ -75,50 +60,43 @@ NumberOfBatchIDs 5
 			Expect(fluentBitClusterOutputs).To(Equal(
 				&fluentbitv1alpha2.ClusterOutput{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "gardener-vali",
+						Name:   "opentelemetry",
 						Labels: labels,
 					},
 					Spec: fluentbitv1alpha2.OutputSpec{
 						CustomPlugin: &custom.CustomPlugin{
-							Config: `Name gardenervali
-Match kubernetes.*
-Labels {origin="seed"}
-DropSingleKey false
-LabelSelector gardener.cloud/role:shoot
-DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
-DynamicHostPrefix http://logging.
-DynamicHostSuffix .svc:3100/vali/api/v1/push
-DynamicHostRegex ^shoot-
-QueueDir /fluent-bit/buffers/seed
-QueueName seed-dynamic
-SendDeletedClustersLogsToDefaultClient true
-CleanExpiredClientsPeriod 1h
-ControllerSyncTimeout 120s
-PreservedLabels origin,namespace_name,pod_name
-LogLevel info
-Url http://logging.garden.svc:3100/vali/api/v1/push
-BatchWait 5s
-BatchSize 2097152
-MaxRetries 5
-Timeout 10s
-MinBackoff 10s
-MaxBackoff 300s
-LineFormat json
-SortByTimestamp true
-DropSingleKey false
-AutoKubernetesLabels false
-HostnameKeyValue nodename ${NODE_NAME}
-Buffer true
-BufferType dque
-QueueSegmentSize 10000
-QueueSync normal
-NumberOfBatchIDs 5
-RemoveKeys kubernetes,stream,time,tag,gardenuser,job
-LabelMapPath {"kubernetes": {"container_name":"container_name","container_id":"container_id","namespace_name":"namespace_name","pod_name":"pod_name"},"severity": "severity","job": "job"}
+							Config: `Name gardener
+Match                     kubernetes.*
+LogLevel                  error
+Retry_Limit               10
+SeedType                  otlp_grpc
+ShootType                 otlp_grpc
+Endpoint                  opentelemetry-collector-collector.garden.svc:4317
+Insecure                  true
+Timeout                   15m
+
+DynamicHostPath           {"kubernetes": {"namespace_name": "namespace"}}
+DynamicHostPrefix         opentelemetry-collector-collector.
+DynamicHostSuffix         .svc.cluster.local:4317
+DynamicHostRegex          ^shoot-
+
+DQueDir                   /var/fluentbit/dque
+DQueName                  dynamic
+DQueSync                  normal
+
+DQueBatchProcessorMaxQueueSize    15000
+DQueBatchProcessorMaxBatchSize    500
+DQueBatchProcessorExportInterval  1s
+DQueBatchProcessorExportTimeout   15m
+RetryEnabled              true
+RetryInitialInterval      1s
+RetryMaxInterval          5m
+RetryMaxElapsedTime       15m
+
+HostnameValue          ${NODE_NAME}
+Origin                 seed
 FallbackToTagWhenMetadataIsMissing true
-TagKey tag
-DropLogEntryWithoutK8sMetadata true
-`,
+TagKey                    tag`,
 						},
 					},
 				},
@@ -137,40 +115,22 @@ DropLogEntryWithoutK8sMetadata true
 			Expect(fluentBitClusterOutputs).To(Equal(
 				&fluentbitv1alpha2.ClusterOutput{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "static-vali",
+						Name:   "opentelemetry-static",
 						Labels: labels,
 					},
 					Spec: fluentbitv1alpha2.OutputSpec{
 						CustomPlugin: &custom.CustomPlugin{
-							Config: `Name gardenervali
-Match kubernetes.*
-Labels {origin="garden"}
-QueueDir /fluent-bit/buffers/garden
-QueueName gardener-operator-static
-LogLevel info
-Url http://logging.garden.svc:3100/vali/api/v1/push
-BatchWait 5s
-BatchSize 2097152
-MaxRetries 5
-Timeout 10s
-MinBackoff 10s
-MaxBackoff 300s
-LineFormat json
-SortByTimestamp true
-DropSingleKey false
-AutoKubernetesLabels false
-HostnameKeyValue nodename ${NODE_NAME}
-Buffer true
-BufferType dque
-QueueSegmentSize 10000
-QueueSync normal
-NumberOfBatchIDs 5
-RemoveKeys kubernetes,stream,time,tag,gardenuser,job
-LabelMapPath {"kubernetes": {"container_name":"container_name","container_id":"container_id","namespace_name":"namespace_name","pod_name":"pod_name"},"severity": "severity","job": "job"}
-FallbackToTagWhenMetadataIsMissing true
-TagKey tag
-DropLogEntryWithoutK8sMetadata true
-`,
+							Config: `Name gardener
+Match                     kubernetes.*
+SeedType                  otlp_grpc
+LogLevel                  error
+Endpoint                  opentelemetry-collector-collector.garden.svc:4317
+Insecure                  true
+DQueDir                   /var/fluentbit/dque
+DQueName                  garden
+Origin                    garden
+HostnameValue             ${NODE_NAME}
+FallbackToTagWhenMetadataIsMissing false`,
 						},
 					},
 				},

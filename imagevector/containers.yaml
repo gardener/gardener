@@ -631,6 +631,26 @@ images:
         value:
           - type: 'githubTeam'
             teamname: 'gardener/logging-maintainers'
+  - name: fluent-bit-plugin
+    resourceId:
+      name: fluent-bit-plugin
+    sourceRepository: github.com/gardener/logging
+    repository: europe-docker.pkg.dev/gardener-project/releases/gardener/fluent-bit-plugin
+    tag: "v1.0.0"
+    labels:
+      - name: 'gardener.cloud/cve-categorisation'
+        value:
+          network_exposure: 'private'
+          authentication_enforced: false
+          user_interaction: 'gardener-operator'
+          confidentiality_requirement: 'none'
+          integrity_requirement: 'none'
+          availability_requirement: 'none'
+          comment: no data is stored or processed by the installer
+      - name: 'cloud.gardener.cnudie/responsibles'
+        value:
+          - type: 'githubTeam'
+            teamname: 'gardener/logging-maintainers'
   - name: vali
     sourceRepository: github.com/credativ/vali
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/credativ/vali
