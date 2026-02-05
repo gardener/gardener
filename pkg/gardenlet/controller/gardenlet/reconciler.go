@@ -119,16 +119,12 @@ func (r *Reconciler) deployGardenlet(
 		return fmt.Errorf("failed preparing gardenlet chart values: %w", err)
 	}
 
-	pullSecretNamespace := metav1.NamespaceSystem
-	caBundleSecretNamespace := metav1.NamespaceSystem
+	secretNamespace := metav1.NamespaceSystem
 	if seed != nil {
-		seedGardenNamespace := gardenerutils.ComputeGardenNamespace(seed.Name)
-		pullSecretNamespace = seedGardenNamespace
-		caBundleSecretNamespace = seedGardenNamespace
+		secretNamespace = gardenerutils.ComputeGardenNamespace(seed.Name)
 	}
 
-	subCtx := context.WithValue(ctx, oci.ContextKeyPullSecretNamespace, pullSecretNamespace)
-	subCtx = context.WithValue(subCtx, oci.ContextKeyCABundleSecretNamespace, caBundleSecretNamespace)
+	subCtx := context.WithValue(ctx, oci.ContextKeySecretNamespace, secretNamespace)
 	archive, err := r.HelmRegistry.Pull(subCtx, &gardenlet.Spec.Deployment.Helm.OCIRepository)
 	if err != nil {
 		return fmt.Errorf("failed pulling Helm chart from OCI repository: %w", err)

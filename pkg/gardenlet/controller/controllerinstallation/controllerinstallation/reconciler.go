@@ -288,8 +288,7 @@ func (r *Reconciler) reconcile(
 	archive := controllerDeployment.Helm.RawChart
 	if len(archive) == 0 {
 		var err error
-		seedSubCtx := context.WithValue(seedCtx, oci.ContextKeyPullSecretNamespace, gardenerutils.ComputeGardenNamespace(seed.Name))
-		seedSubCtx = context.WithValue(seedSubCtx, oci.ContextKeyCABundleSecretNamespace, gardenerutils.ComputeGardenNamespace(seed.Name))
+		seedSubCtx := context.WithValue(seedCtx, oci.ContextKeySecretNamespace, gardenerutils.ComputeGardenNamespace(seed.Name))
 		archive, err = r.HelmRegistry.Pull(seedSubCtx, controllerDeployment.Helm.OCIRepository)
 		if err != nil {
 			conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionFalse, "OCIChartCannotBePulled", fmt.Sprintf("chart pulling process failed: %+v", err))

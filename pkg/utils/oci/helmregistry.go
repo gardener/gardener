@@ -32,21 +32,17 @@ const (
 	localRegistryPattern = "registry.local.gardener.cloud:"
 )
 
-type pullSecretNamespace struct{}
-
-type caBundleSecretNamespace struct{}
+type secretNamespace struct{}
 
 var (
-	// ContextKeyPullSecretNamespace is the key to use to pass the pull secret namespace in the context.
-	ContextKeyPullSecretNamespace = pullSecretNamespace{}
-	// ContextKeyCABundleSecretNamespace is the key to use to pass the CA bundle secret namespace in the context.
-	ContextKeyCABundleSecretNamespace = caBundleSecretNamespace{}
+	// ContextKeySecretNamespace is the key to use to pass the secret namespace in the context.
+	ContextKeySecretNamespace = secretNamespace{}
 )
 
 // Interface represents an OCI compatible registry.
 type Interface interface {
 	// Pull from the repository and return the Helm chart.
-	// The context can be used to pass the pull secret namespace with the key ContextKeyPullSecretNamespace.
+	// The context can be used to pass the secret namespace with the key ContextKeySecretNamespace.
 	Pull(ctx context.Context, oci *gardencorev1.OCIRepository) ([]byte, error)
 }
 
@@ -75,18 +71,20 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 		remote.WithContext(ctx),
 	}
 
-	// Configure custom transport with CA bundle if provided
-	if oci.CABundleSecretRef != nil {
-		namespace := v1beta1constants.GardenNamespace
-		if v := ctx.Value(ContextKeyCABundleSecretNamespace); v != nil {
+	secretNamespace := v1beta1constants.GardenNamespace
+	if oci.CABundleSecretRef != nil || oci.PullSecretRef != nil {
+		if v := ctx.Value(ContextKeySecretNamespace); v != nil {
 			s, ok := v.(string)
 			if !ok {
-				return nil, fmt.Errorf("pull secret namespace must be a string, got %T instead", v)
+				return nil, fmt.Errorf("secret namespace must be a string, got %T instead", v)
 			}
-			namespace = s
+			secretNamespace = s
 		}
+	}
 
-		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: oci.CABundleSecretRef.Name}}
+	// Configure custom transport with CA bundle if provided
+	if oci.CABundleSecretRef != nil {
+		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: secretNamespace, Name: oci.CABundleSecretRef.Name}}
 		if err := r.client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 			return nil, fmt.Errorf("failed to get CA bundle secret %s: %w", client.ObjectKeyFromObject(secret), err)
 		}
@@ -112,15 +110,7 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 	}
 
 	if oci.PullSecretRef != nil {
-		namespace := v1beta1constants.GardenNamespace
-		if v := ctx.Value(ContextKeyPullSecretNamespace); v != nil {
-			s, ok := v.(string)
-			if !ok {
-				return nil, fmt.Errorf("pull secret namespace must be a string, got %T instead", v)
-			}
-			namespace = s
-		}
-		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: oci.PullSecretRef.Name}}
+		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: secretNamespace, Name: oci.PullSecretRef.Name}}
 		if err := r.client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 			return nil, fmt.Errorf("failed to get pull secret %s: %w", client.ObjectKeyFromObject(secret), err)
 		}
