@@ -33,7 +33,7 @@ const nodeCriticalDaemonSetName = "e2e-test-node-critical"
 const csiNodeDaemonSetName = "e2e-test-csi-node"
 const waitForCSINodeAnnotation = v1beta1constants.AnnotationPrefixWaitForCSINode + "driver"
 const driverName = "foo.driver.example.org"
-const markMachinesForcefulDeletionLabel = "force-deletion"
+const machineForcefulDeletionLabel = "force-deletion"
 
 // VerifyNodeCriticalComponentsBootstrapping tests the node readiness feature (see docs/usage/advanced/node-readiness.md).
 func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
@@ -55,7 +55,7 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 				g.Expect(machineList.Items).To(Not(BeEmpty()))
 				for _, machine := range machineList.Items {
 					patch := client.MergeFrom(machine.DeepCopy())
-					metav1.SetMetaDataLabel(&machine.ObjectMeta, markMachinesForcefulDeletionLabel, "True")
+					metav1.SetMetaDataLabel(&machine.ObjectMeta, machineForcefulDeletionLabel, "true")
 					g.Expect(s.SeedClient.Patch(ctx, &machine, patch)).To(Succeed())
 				}
 				g.Expect(s.ShootClient.DeleteAllOf(ctx, &corev1.Node{})).To(Succeed())
@@ -260,6 +260,8 @@ func waitForTerminatingNodesToBeDeleted(ctx context.Context, shootClient client.
 	Eventually(ctx, func(g Gomega) {
 		nodeList := &corev1.NodeList{}
 		g.Expect(shootClient.List(ctx, nodeList)).To(Succeed())
-		g.Expect(nodeList.Items).To(HaveLen(1))
+		for _, node := range nodeList.Items {
+			Expect(node.DeletionTimestamp).To(BeNil())
+		}
 	}).Should(Succeed())
 }
