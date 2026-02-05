@@ -28,12 +28,37 @@ var _ = Describe("helmregistry", func() {
 		hr  *HelmRegistry
 		rc  *recordingCache
 		ctx context.Context
+
+		caBundleSecretName = "test-ca-bundle"
+		caBundleSecret     *corev1.Secret
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 		rc = &recordingCache{cache: newCache()}
-		hr = &HelmRegistry{cache: rc}
+
+		caBundleSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      caBundleSecretName,
+				Namespace: v1beta1constants.GardenNamespace,
+			},
+			Data: map[string][]byte{
+				"bundle.crt": testCACert,
+			},
+		}
+		pullSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: v1beta1constants.GardenNamespace,
+				Name:      "pull-secret",
+			},
+			Data: map[string][]byte{
+				corev1.DockerConfigJsonKey: fmt.Appendf(nil, "{\"auths\":{\"%s\":{\"username\":\"foo\",\"password\":\"bar\"}}}", registryAddress),
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithObjects(caBundleSecret, pullSecret).Build()
+		hr = &HelmRegistry{cache: rc, client: fakeClient}
+		authProvider.receivedAuthorization = "" // Reset before test
 	})
 
 	It("should return error if the repository does not exist", func() {
@@ -54,8 +79,9 @@ var _ = Describe("helmregistry", func() {
 
 	It("should pull the chart by tag", func() {
 		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository: ptr.To(registryAddress + "/charts/example"),
-			Tag:        ptr.To("0.1.0"),
+			Repository:        ptr.To(registryAddress + "/charts/example"),
+			Tag:               ptr.To("0.1.0"),
+			CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).NotTo(BeEmpty())
@@ -63,8 +89,9 @@ var _ = Describe("helmregistry", func() {
 
 	It("should pull the chart by digest", func() {
 		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository: ptr.To(registryAddress + "/charts/example"),
-			Digest:     ptr.To(exampleChartDigest),
+			Repository:        ptr.To(registryAddress + "/charts/example"),
+			Digest:            ptr.To(exampleChartDigest),
+			CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).NotTo(BeEmpty())
@@ -72,7 +99,8 @@ var _ = Describe("helmregistry", func() {
 
 	It("should pull the chart with ref", func() {
 		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Ref: ptr.To(fmt.Sprintf("%s/charts/example:0.1.0@%s", registryAddress, exampleChartDigest)),
+			Ref:               ptr.To(fmt.Sprintf("%s/charts/example:0.1.0@%s", registryAddress, exampleChartDigest)),
+			CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).NotTo(BeEmpty())
@@ -80,7 +108,8 @@ var _ = Describe("helmregistry", func() {
 
 	It("should use the cache", func() {
 		oci := &gardencorev1.OCIRepository{
-			Ref: ptr.To(fmt.Sprintf("%s/charts/example:0.1.0@%s", registryAddress, exampleChartDigest)),
+			Ref:               ptr.To(fmt.Sprintf("%s/charts/example:0.1.0@%s", registryAddress, exampleChartDigest)),
+			CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
 		}
 		_, err := hr.Pull(ctx, oci)
 		Expect(err).NotTo(HaveOccurred())
@@ -93,28 +122,29 @@ var _ = Describe("helmregistry", func() {
 
 	It("should use the cache no matter if tag or digest is used", func() {
 		_, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository: ptr.To(registryAddress + "/charts/example"),
-			Digest:     ptr.To(exampleChartDigest),
+			Repository:        ptr.To(registryAddress + "/charts/example"),
+			Digest:            ptr.To(exampleChartDigest),
+			CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rc.cacheHits).To(Equal(0))
 
 		_, err = hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository: ptr.To(registryAddress + "/charts/example"),
-			Tag:        ptr.To("0.1.0"),
+			Repository:        ptr.To(registryAddress + "/charts/example"),
+			Tag:               ptr.To("0.1.0"),
+			CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rc.cacheHits).To(Equal(1))
 	})
 
 	It("should pull the chart with pull secret", func() {
-		hr := newHelmRegistryWithPullSecret(rc, registryAddress)
-
 		out, err := hr.Pull(ctx,
 			&gardencorev1.OCIRepository{
-				Repository:    ptr.To(registryAddress + "/charts/example"),
-				Tag:           ptr.To("0.1.0"),
-				PullSecretRef: &corev1.LocalObjectReference{Name: "pull-secret"},
+				Repository:        ptr.To(registryAddress + "/charts/example"),
+				Tag:               ptr.To("0.1.0"),
+				CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
+				PullSecretRef:     &corev1.LocalObjectReference{Name: "pull-secret"},
 			})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).NotTo(BeEmpty())
@@ -122,32 +152,81 @@ var _ = Describe("helmregistry", func() {
 	})
 
 	It("should pull the chart by tag without pull secret if repository is not matching", func() {
-		hr := newHelmRegistryWithPullSecret(rc, "other-"+registryAddress)
+		hr := &HelmRegistry{
+			cache: rc,
+			client: fake.NewFakeClient(&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: v1beta1constants.GardenNamespace,
+					Name:      "pull-secret",
+				},
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: fmt.Appendf(nil, "{\"auths\":{\"%s\":{\"username\":\"foo\",\"password\":\"bar\"}}}", "other-"+registryAddress),
+				},
+			}, caBundleSecret)}
+
 		out, err := hr.Pull(ctx,
 			&gardencorev1.OCIRepository{
-				Repository:    ptr.To(registryAddress + "/charts/example"),
-				Tag:           ptr.To("0.1.0"),
-				PullSecretRef: &corev1.LocalObjectReference{Name: "pull-secret"},
+				Repository:        ptr.To(registryAddress + "/charts/example"),
+				Tag:               ptr.To("0.1.0"),
+				PullSecretRef:     &corev1.LocalObjectReference{Name: "pull-secret"},
+				CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
 			})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).NotTo(BeEmpty())
 		Expect(authProvider.receivedAuthorization).To(BeEmpty())
 	})
-})
 
-func newHelmRegistryWithPullSecret(cache cacher, registryAddress string) *HelmRegistry {
-	return &HelmRegistry{
-		cache: cache,
-		client: fake.NewFakeClient(&corev1.Secret{
+	It("should return error when CA bundle secret does not exist", func() {
+		_, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
+			Repository:        ptr.To(registryAddress + "/charts/example"),
+			Tag:               ptr.To("0.1.0"),
+			CABundleSecretRef: &corev1.LocalObjectReference{Name: "non-existing-ca-bundle"},
+		})
+		Expect(err).To(MatchError(ContainSubstring("failed to get CA bundle secret")))
+	})
+
+	It("should return error when CA bundle secret contains invalid PEM", func() {
+		invalidCABundleSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
+				Name:      "invalid-ca-bundle",
 				Namespace: v1beta1constants.GardenNamespace,
-				Name:      "pull-secret",
 			},
 			Data: map[string][]byte{
-				corev1.DockerConfigJsonKey: fmt.Appendf(nil, "{\"auths\":{\"%s\":{\"username\":\"foo\",\"password\":\"bar\"}}}", registryAddress),
+				"bundle.crt": []byte("invalid-pem-data"),
 			},
-		})}
-}
+		}
+		fakeClient := fake.NewClientBuilder().WithObjects(invalidCABundleSecret).Build()
+		invalidHr := &HelmRegistry{cache: rc, client: fakeClient}
+
+		_, err := invalidHr.Pull(ctx, &gardencorev1.OCIRepository{
+			Repository:        ptr.To(registryAddress + "/charts/example"),
+			Tag:               ptr.To("0.1.0"),
+			CABundleSecretRef: &corev1.LocalObjectReference{Name: "invalid-ca-bundle"},
+		})
+		Expect(err).To(MatchError("failed to append CA certificates from bundle"))
+	})
+
+	It("should fail without CA bundle for TLS registry", func() {
+		_, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
+			Repository: ptr.To(registryAddress + "/charts/example"),
+			Tag:        ptr.To("0.1.0"),
+		})
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("tls: failed to verify certificate: x509"))
+	})
+
+	It("should work with CA bundle and pull secret together", func() {
+		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
+			Repository:        ptr.To(registryAddress + "/charts/example"),
+			Tag:               ptr.To("0.1.0"),
+			PullSecretRef:     &corev1.LocalObjectReference{Name: "pull-secret"},
+			CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(out).NotTo(BeEmpty())
+		Expect(authProvider.receivedAuthorization).To(Equal(fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("foo:bar")))))
+	})
+})
 
 type recordingCache struct {
 	cache     cacher

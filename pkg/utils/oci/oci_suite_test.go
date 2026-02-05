@@ -5,9 +5,13 @@ package oci
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -20,6 +24,7 @@ import (
 	helmregistry "helm.sh/helm/v3/pkg/registry"
 
 	netutils "github.com/gardener/gardener/pkg/utils/net"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 func TestOCI(t *testing.T) {
@@ -28,22 +33,50 @@ func TestOCI(t *testing.T) {
 }
 
 var (
-	registryAddress    string
-	exampleChartDigest string
-	rawChart           []byte
-	authProvider       *testAuthProvider
+	registryAddress       string
+	exampleChartDigest    string
+	rawChart              []byte
+	authProvider          *testAuthProvider
+	testCACert, testCAKey []byte
 )
 
 var _ = BeforeSuite(func() {
-	var cancel context.CancelFunc
 	ctx, cancel := context.WithCancel(context.Background())
 	DeferCleanup(cancel)
 
-	var err error
-	registryAddress, err = startTestRegistry(ctx)
+	ca, err := (&secretsutils.CertificateSecretConfig{
+		Name:        "test-ca",
+		CommonName:  "TestCA",
+		CertType:    secretsutils.CACert,
+		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+	}).GenerateCertificate()
 	Expect(err).NotTo(HaveOccurred())
 
-	c, err := helmregistry.NewClient()
+	caData := ca.SecretData()
+	testCACert = caData[secretsutils.DataKeyCertificateCA]
+	testCAKey = caData[secretsutils.DataKeyPrivateKeyCA]
+
+	certDir := GinkgoT().TempDir()
+
+	err = os.WriteFile(filepath.Join(certDir, "tls.crt"), testCACert, 0600)
+	Expect(err).NotTo(HaveOccurred())
+	err = os.WriteFile(filepath.Join(certDir, "tls.key"), testCAKey, 0600)
+	Expect(err).NotTo(HaveOccurred())
+
+	certPool := x509.NewCertPool()
+	Expect(certPool.AppendCertsFromPEM(testCACert)).To(BeTrue())
+
+	c, err := helmregistry.NewClient(helmregistry.ClientOptHTTPClient(&http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs:    certPool,
+				MinVersion: tls.VersionTLS12,
+			},
+		},
+	}))
+	Expect(err).NotTo(HaveOccurred())
+
+	registryAddress, err = startTestRegistry(ctx, certDir)
 	Expect(err).NotTo(HaveOccurred())
 	rawChart, err = os.ReadFile("./testdata/example-0.1.0.tgz")
 	Expect(err).NotTo(HaveOccurred())
@@ -52,7 +85,7 @@ var _ = BeforeSuite(func() {
 	exampleChartDigest = res.Manifest.Digest
 })
 
-func startTestRegistry(ctx context.Context) (string, error) {
+func startTestRegistry(ctx context.Context, certDir string) (string, error) {
 	config := &configuration.Configuration{}
 	config.Storage = map[string]configuration.Parameters{"inmemory": map[string]any{}}
 
@@ -63,6 +96,10 @@ func startTestRegistry(ctx context.Context) (string, error) {
 	addr := fmt.Sprintf("%s:%d", host, port)
 	config.HTTP.Addr = addr
 	config.HTTP.DrainTimeout = 3 * time.Second
+
+	// Configure TLS
+	config.HTTP.TLS.Certificate = filepath.Join(certDir, "tls.crt")
+	config.HTTP.TLS.Key = filepath.Join(certDir, "tls.key")
 
 	// setup logger options
 	config.Log.AccessLog.Disabled = true

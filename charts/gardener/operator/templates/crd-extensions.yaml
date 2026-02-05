@@ -79,6 +79,25 @@ spec:
                                 description: OCIRepository defines where to pull the
                                   chart from.
                                 properties:
+                                  caBundleSecretRef:
+                                    description: |-
+                                      CABundleSecretRef is a reference to a secret containing a PEM-encoded certificate authority bundle.
+                                      The CA bundle is used to verify the TLS certificate of the OCI registry.
+                                      The secret must have a data key `bundle.crt` and must be located in the `garden` namespace.
+                                      For usage in the gardenlet, the secret must have the label `gardener.cloud/role=oci-ca-bundle`.
+                                      If not provided, the system's default certificate pool is used.
+                                    properties:
+                                      name:
+                                        default: ""
+                                        description: |-
+                                          Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
+                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        type: string
+                                    type: object
+                                    x-kubernetes-map-type: atomic
                                   digest:
                                     description: |-
                                       Digest of the image to pull, takes precedence over tag.
@@ -132,6 +151,25 @@ spec:
                                 description: OCIRepository defines where to pull the
                                   chart from.
                                 properties:
+                                  caBundleSecretRef:
+                                    description: |-
+                                      CABundleSecretRef is a reference to a secret containing a PEM-encoded certificate authority bundle.
+                                      The CA bundle is used to verify the TLS certificate of the OCI registry.
+                                      The secret must have a data key `bundle.crt` and must be located in the `garden` namespace.
+                                      For usage in the gardenlet, the secret must have the label `gardener.cloud/role=oci-ca-bundle`.
+                                      If not provided, the system's default certificate pool is used.
+                                    properties:
+                                      name:
+                                        default: ""
+                                        description: |-
+                                          Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
+                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        type: string
+                                    type: object
+                                    x-kubernetes-map-type: atomic
                                   digest:
                                     description: |-
                                       Digest of the image to pull, takes precedence over tag.
@@ -180,6 +218,25 @@ spec:
                             description: OCIRepository defines where to pull the chart
                               from.
                             properties:
+                              caBundleSecretRef:
+                                description: |-
+                                  CABundleSecretRef is a reference to a secret containing a PEM-encoded certificate authority bundle.
+                                  The CA bundle is used to verify the TLS certificate of the OCI registry.
+                                  The secret must have a data key `bundle.crt` and must be located in the `garden` namespace.
+                                  For usage in the gardenlet, the secret must have the label `gardener.cloud/role=oci-ca-bundle`.
+                                  If not provided, the system's default certificate pool is used.
+                                properties:
+                                  name:
+                                    default: ""
+                                    description: |-
+                                      Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    type: string
+                                type: object
+                                x-kubernetes-map-type: atomic
                               digest:
                                 description: |-
                                   Digest of the image to pull, takes precedence over tag.

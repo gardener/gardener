@@ -306,6 +306,8 @@ const (
 	GardenRoleShootServiceAccountIssuer = "shoot-service-account-issuer"
 	// GardenRoleHelmPullSecret is the value of the GardenRole key indicating type 'helm-pull-secret'.
 	GardenRoleHelmPullSecret = "helm-pull-secret"
+	// GardenRoleOCICABundle is the value of the GardenRole key indicating type 'oci-ca-bundle'.
+	GardenRoleOCICABundle = "oci-ca-bundle"
 	// GardenRoleObservability is the value of the GardenRole key indicating type 'observability'.
 	GardenRoleObservability = "observability"
 

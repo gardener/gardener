@@ -6,9 +6,12 @@ package oci
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -20,6 +23,7 @@ import (
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 const (
@@ -28,15 +32,17 @@ const (
 	localRegistryPattern = "registry.local.gardener.cloud:"
 )
 
-type pullSecretNamespace struct{}
+type secretNamespace struct{}
 
-// ContextKeyPullSecretNamespace is the key to use to pass the pull secret namespace in the context.
-var ContextKeyPullSecretNamespace = pullSecretNamespace{}
+var (
+	// ContextKeySecretNamespace is the key to use to pass the secret namespace in the context.
+	ContextKeySecretNamespace = secretNamespace{}
+)
 
 // Interface represents an OCI compatible registry.
 type Interface interface {
 	// Pull from the repository and return the Helm chart.
-	// The context can be used to pass the pull secret namespace with the key ContextKeyPullSecretNamespace.
+	// The context can be used to pass the secret namespace with the key ContextKeySecretNamespace.
 	Pull(ctx context.Context, oci *gardencorev1.OCIRepository) ([]byte, error)
 }
 
@@ -65,16 +71,46 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 		remote.WithContext(ctx),
 	}
 
-	if oci.PullSecretRef != nil {
-		namespace := v1beta1constants.GardenNamespace
-		if v := ctx.Value(ContextKeyPullSecretNamespace); v != nil {
+	secretNamespace := v1beta1constants.GardenNamespace
+	if oci.CABundleSecretRef != nil || oci.PullSecretRef != nil {
+		if v := ctx.Value(ContextKeySecretNamespace); v != nil {
 			s, ok := v.(string)
 			if !ok {
-				return nil, errors.New("pull secret namespace must be a string")
+				return nil, fmt.Errorf("secret namespace must be a string, got %T instead", v)
 			}
-			namespace = s
+			secretNamespace = s
 		}
-		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: oci.PullSecretRef.Name}}
+	}
+
+	// Configure custom transport with CA bundle if provided
+	if oci.CABundleSecretRef != nil {
+		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: secretNamespace, Name: oci.CABundleSecretRef.Name}}
+		if err := r.client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+			return nil, fmt.Errorf("failed to get CA bundle secret %s: %w", client.ObjectKeyFromObject(secret), err)
+		}
+		caBundle, ok := secret.Data[secretsutils.DataKeyCertificateBundle]
+		if !ok {
+			return nil, fmt.Errorf("CA bundle secret %s is missing the data key %s", client.ObjectKeyFromObject(secret), secretsutils.DataKeyCertificateBundle)
+		}
+		if len(caBundle) == 0 {
+			return nil, fmt.Errorf("CA bundle secret %s has empty data for key %s", client.ObjectKeyFromObject(secret), secretsutils.DataKeyCertificateBundle)
+		}
+
+		caCertPool := x509.NewCertPool()
+		if !caCertPool.AppendCertsFromPEM(caBundle) {
+			return nil, errors.New("failed to append CA certificates from bundle")
+		}
+
+		transport := remote.DefaultTransport.(*http.Transport).Clone()
+		transport.TLSClientConfig = &tls.Config{
+			RootCAs:    caCertPool,
+			MinVersion: tls.VersionTLS12,
+		}
+		remoteOpts = append(remoteOpts, remote.WithTransport(transport))
+	}
+
+	if oci.PullSecretRef != nil {
+		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: secretNamespace, Name: oci.PullSecretRef.Name}}
 		if err := r.client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 			return nil, fmt.Errorf("failed to get pull secret %s: %w", client.ObjectKeyFromObject(secret), err)
 		}
