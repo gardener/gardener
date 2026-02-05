@@ -90,7 +90,7 @@ type Values struct {
 	WorkloadIdentityKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase
 	// ShootAdminKubeconfigMaxExpiration is the maximum expiration time of the admin kubeconfig.
 	ShootAdminKubeconfigMaxExpiration *metav1.Duration
-	// TargetVersion is the version of the kubernetes apiserver the gardener-apiserver is connecting to.
+	// TargetVersion is the version of the kube-apiserver the gardener-apiserver is connecting to.
 	TargetVersion *semver.Version
 }
 
@@ -232,7 +232,7 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 
 	var endpointsOrEndpointSlice client.Object
 	if version.ConstraintK8sGreaterEqual133.Check(g.GetValues().TargetVersion) {
-		endpointsOrEndpointSlice = g.endpointslice(serviceRuntime.Spec.ClusterIP)
+		endpointsOrEndpointSlice = g.endpointSlice(serviceRuntime.Spec.ClusterIP)
 	} else {
 		endpointsOrEndpointSlice = g.endpoints(serviceRuntime.Spec.ClusterIP)
 	}

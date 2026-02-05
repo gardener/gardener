@@ -28,7 +28,7 @@ func GetAddressType(ip string) discoveryv1.AddressType {
 	}
 }
 
-func (g *gardenerAPIServer) endpointslice(clusterIP string) *discoveryv1.EndpointSlice {
+func (g *gardenerAPIServer) endpointSlice(clusterIP string) *discoveryv1.EndpointSlice {
 	return &discoveryv1.EndpointSlice{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName,
