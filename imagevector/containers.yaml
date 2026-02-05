@@ -926,6 +926,8 @@ images:
             version: '5.1'
           - name: 'yaml-cpp'
             version: '0.8.0'
+          - name: 'c-ares'
+            version: '1.34.6'
   - name: apiserver-proxy-sidecar
     resourceId:
       name: apiserver-proxy
