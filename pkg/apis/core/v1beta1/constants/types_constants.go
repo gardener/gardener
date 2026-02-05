@@ -96,9 +96,12 @@ const (
 	// SecretNameGenericGardenKubeconfig is a constant for the name of the kubeconfig used by the extension
 	// components to authenticate against the garden Kubernetes API server.
 	SecretNameGenericGardenKubeconfig = "generic-garden-kubeconfig"
-	// AnnotationKeyGenericTokenKubeconfigSecretName is a constant for the key of an annotation on
-	// extensions.gardener.cloud/v1alpha1.Cluster resources whose value contains the name of the generic token
+
+	// AnnotationKeyGenericTokenKubeconfigSecretName is a constant for the key of an annotation on:
+	// - extensions.gardener.cloud/v1alpha1.Cluster resources whose value contains the name of the generic token
 	// kubeconfig secret in the seed cluster.
+	// - operator.gardener.cloud/v1alpha1.Garden resources whose value contains the name of the generic token
+	// kubeconfig secret in the garden cluster.
 	AnnotationKeyGenericTokenKubeconfigSecretName = "generic-token-kubeconfig.secret.gardener.cloud/name"
 
 	// ExtensionGardenServiceAccountPrefix is the prefix of the default garden ServiceAccount generated for each
