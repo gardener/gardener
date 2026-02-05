@@ -6257,22 +6257,14 @@ var _ = Describe("validator", func() {
 					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 				})
 
-				It("should forbid shoots with individual maximum over the limit", func() {
+				It("should allow shoots with individual maximum over the limit", func() {
 					shoot.Spec.Provider.Workers[0].Minimum = 1
 					shoot.Spec.Provider.Workers[0].Maximum = limit + 1
 					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, *shoot.Spec.Provider.Workers[0].DeepCopy())
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 
-					err := admissionHandler.Validate(ctx, attrs, nil)
-					Expect(err).To(BeForbiddenError())
-					Expect(err).To(MatchError(And(
-						ContainSubstring("spec.provider.workers[0].maximum"),
-						ContainSubstring("the maximum node count of a worker pool must not exceed the limit of %d configured in the CloudProfile", limit),
-						ContainSubstring("spec.provider.workers[1].maximum"),
-						ContainSubstring("the maximum node count of a worker pool must not exceed the limit of %d configured in the CloudProfile", limit),
-						Not(ContainSubstring("total minimum node count")),
-					)))
+					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 				})
 
 				It("should forbid shoots with total minimum over the limit", func() {
@@ -6286,26 +6278,6 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Validate(ctx, attrs, nil)
 					Expect(err).To(BeForbiddenError())
 					Expect(err).To(MatchError(And(
-						ContainSubstring("spec.provider.workers"),
-						ContainSubstring("total minimum node count"),
-						Not(ContainSubstring("maximum node count of a worker pool")),
-					)))
-				})
-
-				It("should forbid shoots with individual maximum and total minimum over the limit", func() {
-					shoot.Spec.Provider.Workers[0].Minimum = limit
-					shoot.Spec.Provider.Workers[0].Maximum = limit + 1
-					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, *shoot.Spec.Provider.Workers[0].DeepCopy())
-
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-
-					err := admissionHandler.Validate(ctx, attrs, nil)
-					Expect(err).To(BeForbiddenError())
-					Expect(err).To(MatchError(And(
-						ContainSubstring("spec.provider.workers[0].maximum"),
-						ContainSubstring("the maximum node count of a worker pool must not exceed the limit of %d configured in the CloudProfile", limit),
-						ContainSubstring("spec.provider.workers[1].maximum"),
-						ContainSubstring("the maximum node count of a worker pool must not exceed the limit of %d configured in the CloudProfile", limit),
 						ContainSubstring("spec.provider.workers"),
 						ContainSubstring("total minimum node count"),
 					)))
