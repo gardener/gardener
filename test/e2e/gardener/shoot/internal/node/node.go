@@ -52,7 +52,7 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 			machineList := &machinev1alpha1.MachineList{}
 			Eventually(ctx, func(g Gomega) {
 				g.Expect(s.SeedClient.List(ctx, machineList)).To(Succeed())
-				g.Expect(machineList.Items).To(Not(BeEmpty()))
+				g.Expect(machineList.Items).NotTo(BeEmpty())
 				for _, machine := range machineList.Items {
 					patch := client.MergeFrom(machine.DeepCopy())
 					metav1.SetMetaDataLabel(&machine.ObjectMeta, machineForcefulDeletionLabel, "true")
@@ -261,7 +261,7 @@ func waitForTerminatingNodesToBeDeleted(ctx context.Context, shootClient client.
 		nodeList := &corev1.NodeList{}
 		g.Expect(shootClient.List(ctx, nodeList)).To(Succeed())
 		for _, node := range nodeList.Items {
-			Expect(node.DeletionTimestamp).To(BeNil())
+			g.Expect(node.DeletionTimestamp).To(BeNil())
 		}
 	}).Should(Succeed())
 }
