@@ -56,11 +56,11 @@ var _ = Describe("Add", func() {
 		}
 	})
 
-	Describe("OnlyNewlyCreatedObjects", func() {
+	Describe("OnlyRelevantCreatesAndUpdates", func() {
 		var p predicate.Predicate
 
 		BeforeEach(func() {
-			p = reconciler.OnlyNewlyCreatedObjects()
+			p = reconciler.OnlyRelevantCreatesAndUpdates()
 		})
 
 		Describe("#Create", func() {
@@ -92,8 +92,15 @@ var _ = Describe("Add", func() {
 		})
 
 		Describe("#Update", func() {
-			It("should return true", func() {
-				Expect(p.Update(event.UpdateEvent{})).To(BeTrue())
+			It("should return false if resourceVersion has not changed (cache resync)", func() {
+				Expect(p.Update(event.UpdateEvent{ObjectOld: secretSecretBindingRef, ObjectNew: secretSecretBindingRef})).To(BeFalse())
+			})
+
+			It("should return true if resourceVersion has changed", func() {
+				newSecretSecretBindingRef := secretSecretBindingRef.DeepCopy()
+				newSecretSecretBindingRef.ResourceVersion = "new-resource-version"
+
+				Expect(p.Update(event.UpdateEvent{ObjectOld: secretSecretBindingRef, ObjectNew: newSecretSecretBindingRef})).To(BeTrue())
 			})
 		})
 	})
