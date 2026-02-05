@@ -46,6 +46,7 @@ var gardenManagedResourceList = []string{
 	"plutono",
 	"prometheus-operator",
 	"perses-operator",
+	"victoria-operator",
 	"alertmanager-garden",
 	"prometheus-garden",
 	"prometheus-garden-target",

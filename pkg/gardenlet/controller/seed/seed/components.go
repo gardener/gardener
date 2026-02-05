@@ -54,6 +54,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
+	victoriaoperator "github.com/gardener/gardener/pkg/component/observability/logging/victoria/operator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/metricsserver"
@@ -88,6 +89,7 @@ type components struct {
 	fluentCRD        component.DeployWaiter
 	prometheusCRD    component.DeployWaiter
 	persesCRD        component.DeployWaiter
+	victoriaCRD      component.DeployWaiter
 	openTelemetryCRD component.DeployWaiter
 
 	backupBucket            component.DeployWaiter
@@ -121,6 +123,7 @@ type components struct {
 	aggregatePrometheus           component.DeployWaiter
 	alertManager                  component.DeployWaiter
 	persesOperator                component.DeployWaiter
+	victoriaOperator              component.DeployWaiter
 	openTelemetryOperator         component.DeployWaiter
 	openTelemetryCollector        component.Deployer
 }
@@ -173,6 +176,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.persesCRD, err = persesoperator.NewCRDs(r.SeedClientSet.Client())
+	if err != nil {
+		return
+	}
+	c.victoriaCRD, err = victoriaoperator.NewCRDs(r.SeedClientSet.Client())
 	if err != nil {
 		return
 	}
@@ -276,6 +283,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.persesOperator, err = r.newPersesOperator()
+	if err != nil {
+		return
+	}
+	c.victoriaOperator, err = r.newVictoriaOperator()
 	if err != nil {
 		return
 	}
@@ -825,6 +836,14 @@ func (r *Reconciler) newPrometheusOperator() (component.DeployWaiter, error) {
 
 func (r *Reconciler) newPersesOperator() (component.DeployWaiter, error) {
 	return sharedcomponent.NewPersesOperator(
+		r.SeedClientSet.Client(),
+		r.GardenNamespace,
+		v1beta1constants.PriorityClassNameSeedSystem600,
+	)
+}
+
+func (r *Reconciler) newVictoriaOperator() (component.DeployWaiter, error) {
+	return sharedcomponent.NewVictoriaOperator(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
 		v1beta1constants.PriorityClassNameSeedSystem600,

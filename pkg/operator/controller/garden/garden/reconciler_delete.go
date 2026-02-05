@@ -351,6 +351,10 @@ func (r *Reconciler) delete(
 			Name: "Destroying perses-operator",
 			Fn:   component.OpDestroyAndWait(c.persesOperator).Destroy,
 		})
+		destroyVictoriaOperator = g.Add(flow.Task{
+			Name: "Destroying victoria-operator",
+			Fn:   component.OpDestroyAndWait(c.victoriaOperator).Destroy,
+		})
 		syncPointCleanedUp = flow.NewTaskIDs(
 			waitUntilExtensionResourcesDeleted,
 			destroyDNSRecords,
@@ -368,6 +372,7 @@ func (r *Reconciler) delete(
 			destroyBlackboxExporter,
 			destroyGardenerOperatorVPA,
 			destroyPersesOperator,
+			destroyVictoriaOperator,
 		)
 
 		destroyRuntimeSystemResources = g.Add(flow.Task{
@@ -424,6 +429,11 @@ func (r *Reconciler) delete(
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for perses-operator",
 			Fn:           component.OpWait(c.persesCRD).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying custom resource definition for victoria-operator",
+			Fn:           component.OpWait(c.victoriaCRD).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{

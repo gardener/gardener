@@ -493,6 +493,8 @@ spec:
 			"opampbridges.opentelemetry.io",
 			"opentelemetrycollectors.opentelemetry.io",
 			"targetallocators.opentelemetry.io",
+			// victoria-operator
+			"vlsingles.operator.victoriametrics.com",
 		}
 
 		By("Verify that the custom resource definitions have been created")
@@ -589,6 +591,7 @@ spec:
 			"perses-operator",
 			"opentelemetry-operator",
 			"opentelemetry-collector",
+			"victoria-operator",
 		))
 
 		By("Verify that the virtual garden control plane components have been deployed")

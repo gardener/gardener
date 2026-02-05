@@ -258,6 +258,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 					"targetallocators.opentelemetry.io",
 					"opampbridges.opentelemetry.io",
 					"instrumentations.opentelemetry.io",
+					"vlsingles.operator.victoriametrics.com",
 				},
 				Verbs: []string{"delete"},
 			},

@@ -38,6 +38,8 @@ CODE_GEN_DIR=$(go list -m -f '{{.Dir}}' k8s.io/code-generator)
 export CODE_GEN_DIR
 source "${CODE_GEN_DIR}/kube_codegen.sh"
 
+rm -f $(go env GOPATH)/bin/*-gen
+
 CURRENT_DIR=$(dirname $0)
 PROJECT_ROOT="${CURRENT_DIR}"/..
 export PROJECT_ROOT
