@@ -33,6 +33,7 @@ const nodeCriticalDaemonSetName = "e2e-test-node-critical"
 const csiNodeDaemonSetName = "e2e-test-csi-node"
 const waitForCSINodeAnnotation = v1beta1constants.AnnotationPrefixWaitForCSINode + "driver"
 const driverName = "foo.driver.example.org"
+const machineForcefulDeletionLabel = "force-deletion"
 
 // VerifyNodeCriticalComponentsBootstrapping tests the node readiness feature (see docs/usage/advanced/node-readiness.md).
 func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
@@ -48,8 +49,15 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 		}, SpecTimeout(time.Minute))
 
 		It("Delete Nodes and Machines to trigger new Node bootstrap", func(ctx SpecContext) {
+			machineList := &machinev1alpha1.MachineList{}
 			Eventually(ctx, func(g Gomega) {
-				g.Expect(s.SeedClient.DeleteAllOf(ctx, &machinev1alpha1.Machine{}, client.InNamespace(seedNamespace))).To(Succeed())
+				g.Expect(s.SeedClient.List(ctx, machineList)).To(Succeed())
+				g.Expect(machineList.Items).NotTo(BeEmpty())
+				for _, machine := range machineList.Items {
+					patch := client.MergeFrom(machine.DeepCopy())
+					metav1.SetMetaDataLabel(&machine.ObjectMeta, machineForcefulDeletionLabel, "true")
+					g.Expect(s.SeedClient.Patch(ctx, &machine, patch)).To(Succeed(), "for machine "+client.ObjectKeyFromObject(&machine).String())
+				}
 				g.Expect(s.ShootClient.DeleteAllOf(ctx, &corev1.Node{})).To(Succeed())
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
@@ -113,9 +121,10 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 		}, SpecTimeout(5*time.Minute))
 
 		AfterAll(func(ctx SpecContext) {
+			waitForTerminatingNodesToBeDeleted(ctx, s.ShootClient)
 			cleanupNodeCriticalManagedResource(ctx, s.SeedClient, seedNamespace, nodeCriticalDaemonSetName)
 			cleanupNodeCriticalManagedResource(ctx, s.SeedClient, seedNamespace, csiNodeDaemonSetName)
-		}, NodeTimeout(time.Minute))
+		}, NodeTimeout(5*time.Minute))
 	})
 }
 
@@ -241,5 +250,18 @@ func cleanupNodeCriticalManagedResource(ctx context.Context, seedClient client.C
 	Eventually(ctx, func(g Gomega) {
 		g.Expect(seedClient.DeleteAllOf(ctx, &resourcesv1alpha1.ManagedResource{}, client.InNamespace(namespace), client.MatchingLabels(getLabels(name)))).To(Succeed())
 		g.Expect(seedClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(namespace), client.MatchingLabels(getLabels(name)))).To(Succeed())
+	}).Should(Succeed())
+}
+
+func waitForTerminatingNodesToBeDeleted(ctx context.Context, shootClient client.Client) {
+	GinkgoHelper()
+
+	By("Wait for Nodes to be deleted")
+	Eventually(ctx, func(g Gomega) {
+		nodeList := &corev1.NodeList{}
+		g.Expect(shootClient.List(ctx, nodeList)).To(Succeed())
+		for _, node := range nodeList.Items {
+			g.Expect(node.DeletionTimestamp).To(BeNil(), "for node "+client.ObjectKeyFromObject(&node).String())
+		}
 	}).Should(Succeed())
 }
