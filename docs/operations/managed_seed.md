@@ -47,7 +47,11 @@ It is also possible to trigger the renewal on the secret directly, see [Rotate C
 
 ### Enforced Configuration Options
 
-The following configuration options are enforced by Gardener API server for the ManagedSeed resources:
+The following configuration options are enforced by Gardener API server for the `ManagedSeed` resources:
+
+1. A `ManagedSeed` resource must reside in the `garden` namespace (see above) and enforces that the `Shoot` itself must be present in the namespace `garden` as well. \
+   To achieve this, the `Shoot`'s `Project` must specify `spec.namespace=garden`, which requires the labels `project.gardener.cloud/name=garden` and `gardener.cloud/role=project`
+   on the `garden` namespace to be present.
 
 1. The vertical pod autoscaler should be enabled from the Shoot specification.
 
