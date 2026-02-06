@@ -295,7 +295,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 						},
 						Containers: []corev1.Container{
 							{
-								Name:            v1beta1constants.DeploymentNameKubernetesDashboard,
+								Name:            name,
 								Image:           k.values.Image,
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Args: []string{
@@ -496,8 +496,12 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName:    "*",
+							ContainerName:    name,
 							ControlledValues: &controlledValues,
+						},
+						{
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
