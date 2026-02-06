@@ -10,7 +10,6 @@ import (
 	"net"
 
 	"github.com/Masterminds/semver/v3"
-	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -243,7 +242,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 		It("should return the CloudProfile limit if network is not limited", func() {
 			kubernetesClient.EXPECT().Client().Return(seedClient)
-			seedClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&machinev1alpha1.MachineList{}), client.InNamespace(botanist.SeedNamespaceObject.Name))
+			seedClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.InNamespace(botanist.SeedNamespaceObject.Name))
 
 			shoot.Spec.Networking = nil
 			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(*botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal))
@@ -251,7 +250,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 		It("should return the CloudProfile limit if it is lower than the network limit", func() {
 			kubernetesClient.EXPECT().Client().Return(seedClient)
-			seedClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&machinev1alpha1.MachineList{}), client.InNamespace(botanist.SeedNamespaceObject.Name))
+			seedClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.InNamespace(botanist.SeedNamespaceObject.Name))
 
 			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(maxNetworks - 10)
 			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(*botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal))
@@ -259,7 +258,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 		It("should return the network limit if it is lower than the CloudProfile limit", func() {
 			kubernetesClient.EXPECT().Client().Return(seedClient)
-			seedClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&machinev1alpha1.MachineList{}), client.InNamespace(botanist.SeedNamespaceObject.Name))
+			seedClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.InNamespace(botanist.SeedNamespaceObject.Name))
 
 			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(maxNetworks + 10)
 			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(maxNetworks))
@@ -267,9 +266,9 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 		It("should return the current node count if it is higher than the CloudProfile limit", func() {
 			kubernetesClient.EXPECT().Client().Return(seedClient)
-			seedClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&machinev1alpha1.MachineList{}), client.InNamespace(botanist.SeedNamespaceObject.Name)).Do(func(_ context.Context, list *machinev1alpha1.MachineList, inNamespace client.InNamespace) {
+			seedClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.InNamespace(botanist.SeedNamespaceObject.Name)).Do(func(_ context.Context, list *metav1.PartialObjectMetadataList, inNamespace client.InNamespace) {
 				Expect(inNamespace).To(BeEquivalentTo(namespace))
-				(&machinev1alpha1.MachineList{Items: make([]machinev1alpha1.Machine, maxNetworks-50)}).DeepCopyInto(list)
+				(&metav1.PartialObjectMetadataList{Items: make([]metav1.PartialObjectMetadata, maxNetworks-50)}).DeepCopyInto(list)
 			})
 
 			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(maxNetworks - 100)

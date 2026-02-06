@@ -11,6 +11,7 @@ import (
 	"math/big"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -81,11 +82,13 @@ func (b *Botanist) CalculateMaxNodesTotal(ctx context.Context, shoot *gardencore
 
 	var maxLimit int64
 	if limits := b.Shoot.CloudProfile.Spec.Limits; limits != nil && limits.MaxNodesTotal != nil {
-		machineList := &machinev1alpha1.MachineList{}
-		if err := b.SeedClientSet.Client().List(ctx, machineList, client.InNamespace(b.SeedNamespaceObject.Name)); err != nil {
+		var machines metav1.PartialObjectMetadataList
+		machines.SetGroupVersionKind(machinev1alpha1.SchemeGroupVersion.WithKind("MachineList"))
+		if err := b.SeedClientSet.Client().List(ctx, &machines, client.InNamespace(b.SeedNamespaceObject.Name)); err != nil {
 			return 0, fmt.Errorf("failed listing machines: %w", err)
 		}
-		maxLimit = max(int64(len(machineList.Items)), int64(*limits.MaxNodesTotal))
+		maxLimit = max(int64(len(machines.Items)), int64(*limits.MaxNodesTotal))
+		b.Logger.Info("maximum node limit with cloud profile limit and machine count combined", "maxLimit", maxLimit)
 	}
 
 	return utils.MinGreaterThanZero(maxNetworks, maxLimit), nil
