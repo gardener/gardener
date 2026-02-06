@@ -33,9 +33,10 @@ import (
 )
 
 const (
-	admissionController                  = "vpa-admission-controller"
-	admissionControllerServicePort int32 = 443
-	admissionControllerMetricsPort int32 = 8944
+	admissionControllerContainerName       = "admission-controller"
+	admissionController                    = "vpa-admission-controller"
+	admissionControllerServicePort   int32 = 443
+	admissionControllerMetricsPort   int32 = 8944
 
 	volumeMountPathCertificates = "/etc/tls-certs"
 	volumeNameCertificates      = "vpa-tls-certs"
@@ -202,7 +203,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 			Spec: corev1.PodSpec{
 				PriorityClassName: v.values.AdmissionController.PriorityClassName,
 				Containers: []corev1.Container{{
-					Name:            "admission-controller",
+					Name:            admissionControllerContainerName,
 					Image:           v.values.AdmissionController.Image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Args:            v.computeAdmissionControllerArgs(),
@@ -311,8 +312,12 @@ func (v *vpa) reconcileAdmissionControllerVPA(vpa *vpaautoscalingv1.VerticalPodA
 		ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
-					ContainerName:    "*",
+					ContainerName:    admissionControllerContainerName,
 					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+				},
+				{
+					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 				},
 			},
 		},
