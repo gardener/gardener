@@ -146,6 +146,9 @@ The following values are passed to the chart during reconciliation:
 gardener:
   runtimeCluster:
     priorityClassName: <Class to be used for extension admission>
+  virtualCluster:
+    enabled: true
+    namespace: <Extension Namespace name in the virtual cluster (format "extension-<extension-name>")>
 ```
 
 ##### Virtual
@@ -156,6 +159,7 @@ The following values are passed to the chart during reconciliation:
 ```yaml
 gardener:
   virtualCluster:
+    enabled: true
     serviceAccount:
       name: <Name of the service account used to connect to the garden cluster>
       namespace: <Namespace of the service account>
