@@ -1,5 +1,9 @@
 # Deploying Gardener Locally and Enabling Provider-Extensions
 
+> This scenario does not work anymore. It is replaced by the [`getting started remotely`](getting_started_remotely.md) scenario.
+> 
+> All its content is removed from the repository. If you own a running setup, please check out [Gardener@v1.136.0](https://github.com/gardener/gardener/releases/tag/v1.136.0) or earlier to delete it.
+
 This document will walk you through deploying Gardener on your local machine and bootstrapping your own seed clusters on an existing Kubernetes cluster.
 It is supposed to run your local Gardener developments on a real infrastructure. For running Gardener only entirely local, please check the [getting started locally](getting_started_locally.md) documentation.
 If you encounter difficulties, please open an issue so that we can make this process easier.
