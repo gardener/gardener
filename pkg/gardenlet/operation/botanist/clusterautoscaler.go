@@ -84,11 +84,11 @@ func (b *Botanist) CalculateMaxNodesTotal(ctx context.Context, shoot *gardencore
 	if limits := b.Shoot.CloudProfile.Spec.Limits; limits != nil && limits.MaxNodesTotal != nil {
 		var machines metav1.PartialObjectMetadataList
 		machines.SetGroupVersionKind(machinev1alpha1.SchemeGroupVersion.WithKind("MachineList"))
-		if err := b.SeedClientSet.Client().List(ctx, &machines, client.InNamespace(b.SeedNamespaceObject.Name)); err != nil {
+		if err := b.SeedClientSet.Client().List(ctx, &machines, client.InNamespace(b.Shoot.ControlPlaneNamespace)); err != nil {
 			return 0, fmt.Errorf("failed listing machines: %w", err)
 		}
 		maxLimit = max(int64(len(machines.Items)), int64(*limits.MaxNodesTotal))
-		b.Logger.Info("maximum node limit with cloud profile limit and machine count combined", "maxLimit", maxLimit)
+		b.Logger.Info("Setting cluster-autoscaler's maximum node limit based on CloudProfile limit and current machine count", "maxLimit", maxLimit, "cloudProfileLimit", *limits.MaxNodesTotal, "currentMachineCount", len(machines.Items), "maxNetworks", maxNetworks)
 	}
 
 	return utils.MinGreaterThanZero(maxNetworks, maxLimit), nil
