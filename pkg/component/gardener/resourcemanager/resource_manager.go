@@ -1430,6 +1430,7 @@ func NewCRDDeletionProtectionValidatingWebhooks(secretServerCA *corev1.Secret, b
 							"infrastructures",
 							"networks",
 							"operatingsystemconfigs",
+							"selfhostedshootexposures",
 							"workers",
 						},
 					},
