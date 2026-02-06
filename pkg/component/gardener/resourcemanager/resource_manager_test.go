@@ -1682,6 +1682,7 @@ subjects:
 									"infrastructures",
 									"networks",
 									"operatingsystemconfigs",
+									"selfhostedshootexposures",
 									"workers",
 								},
 							},
@@ -1981,6 +1982,32 @@ subjects:
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
 							Path:      ptr.To("/validate-extensions-gardener-cloud-v1alpha1-operatingsystemconfig"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					MatchPolicy:             &matchPolicyExact,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          ptr.To[int32](10),
+				},
+				{
+					Name: "validation.extensions.selfhostedshootexposures.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"extensions.gardener.cloud"},
+								APIVersions: []string{"v1alpha1"},
+								Resources:   []string{"selfhostedshootexposures"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+						},
+					},
+					FailurePolicy:     &failurePolicyFail,
+					NamespaceSelector: &metav1.LabelSelector{},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      ptr.To("/validate-extensions-gardener-cloud-v1alpha1-selfhostedshootexposure"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
