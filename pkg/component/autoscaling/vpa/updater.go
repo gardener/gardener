@@ -32,9 +32,10 @@ import (
 )
 
 const (
-	updater                  = "vpa-updater"
-	updaterPortServer  int32 = 8080
-	updaterPortMetrics int32 = 8943
+	updaterContainerName       = "updater"
+	updater                    = "vpa-updater"
+	updaterPortServer    int32 = 8080
+	updaterPortMetrics   int32 = 8943
 )
 
 // ValuesUpdater is a set of configuration values for the vpa-updater.
@@ -218,7 +219,7 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 			Spec: corev1.PodSpec{
 				PriorityClassName: v.values.Updater.PriorityClassName,
 				Containers: []corev1.Container{{
-					Name:            "updater",
+					Name:            updaterContainerName,
 					Image:           v.values.Updater.Image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Args:            v.computeUpdaterArgs(),
@@ -273,8 +274,12 @@ func (v *vpa) reconcileUpdaterVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, d
 		ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
-					ContainerName:    "*",
+					ContainerName:    updaterContainerName,
 					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+				},
+				{
+					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 				},
 			},
 		},
