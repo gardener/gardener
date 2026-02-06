@@ -32,9 +32,10 @@ import (
 )
 
 const (
-	recommender            = "vpa-recommender"
-	recommenderPortServer  = 8080
-	recommenderPortMetrics = 8942
+	recommenderContainerName = "recommender"
+	recommender              = "vpa-recommender"
+	recommenderPortServer    = 8080
+	recommenderPortMetrics   = 8942
 )
 
 // ValuesRecommender is a set of configuration values for the vpa-recommender.
@@ -261,7 +262,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 			Spec: corev1.PodSpec{
 				PriorityClassName: v.values.Recommender.PriorityClassName,
 				Containers: []corev1.Container{{
-					Name:            "recommender",
+					Name:            recommenderContainerName,
 					Image:           v.values.Recommender.Image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Args:            v.computeRecommenderArgs(),
@@ -316,8 +317,12 @@ func (v *vpa) reconcileRecommenderVPA(vpa *vpaautoscalingv1.VerticalPodAutoscale
 		ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
-					ContainerName:    "*",
+					ContainerName:    recommenderContainerName,
 					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+				},
+				{
+					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 				},
 			},
 		},
