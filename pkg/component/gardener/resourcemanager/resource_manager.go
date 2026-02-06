@@ -1563,6 +1563,15 @@ func NewExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 			path: extensionvalidation.WebhookPathOperatingSystemConfig,
 		},
 		{
+			resource: "selfhostedshootexposures",
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"selfhostedshootexposures"},
+			},
+			path: extensionvalidation.WebhookPathSelfHostedShootExposure,
+		},
+		{
 			resource: "workers",
 			rule: admissionregistrationv1.Rule{
 				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},

@@ -407,6 +407,35 @@ webhooks:
   sideEffects: None
   timeoutSeconds: 10
 - admissionReviewVersions:
+    - v1beta1
+    - v1
+  clientConfig:
+    {{- if .Values.global.config.server.webhooks.ca }}
+    caBundle: {{ b64enc .Values.global.config.server.webhooks.ca }}
+    {{- end }}
+    service:
+      name: gardener-resource-manager
+      namespace: {{ .Release.Namespace }}
+      path: /validate-extensions-gardener-cloud-v1alpha1-selfhostedshootexposure
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: validation.extensions.selfhostedshootexposures.resources.gardener.cloud
+  reinvocationPolicy: Never
+  rules:
+    - apiGroups:
+        - extensions.gardener.cloud
+      apiVersions:
+        - v1alpha1
+      operations:
+        - CREATE
+        - UPDATE
+      resources:
+        - selfhostedshootexposures
+      scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
   - v1beta1
   - v1
   clientConfig:

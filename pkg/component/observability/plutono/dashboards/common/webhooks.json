@@ -575,6 +575,11 @@
           },
           {
             "selected": false,
+            "text": "/validate-extensions-gardener-cloud-v1alpha1-selfhostedshootexposure",
+            "value": "/validate-extensions-gardener-cloud-v1alpha1-selfhostedshootexposure"
+          },
+          {
+            "selected": false,
             "text": "/validate-extensions-gardener-cloud-v1alpha1-worker",
             "value": "/validate-extensions-gardener-cloud-v1alpha1-worker"
           },
