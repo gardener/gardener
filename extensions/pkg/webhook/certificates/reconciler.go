@@ -232,6 +232,9 @@ func (r *reconciler) reconcileSourceWebhookConfig(ctx context.Context, sourceWeb
 	}
 
 	patch := client.MergeFromWithOptions(config.DeepCopyObject().(client.Object), client.MergeFromWithOptimisticLock{})
+	if err := extensionswebhook.OverwriteWebhooks(config, sourceWebhookConfig); err != nil {
+		return err
+	}
 	if err := extensionswebhook.InjectCABundleIntoWebhookConfig(config, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]); err != nil {
 		return err
 	}
