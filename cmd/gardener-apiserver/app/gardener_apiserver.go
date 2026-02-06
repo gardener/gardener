@@ -379,7 +379,7 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
-	return server.GenericAPIServer.PrepareRun().Run(ctx.Done())
+	return server.GenericAPIServer.PrepareRun().RunWithContext(ctx)
 }
 
 // ApplyTo applies the options to the given config.
