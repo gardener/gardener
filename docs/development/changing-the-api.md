@@ -27,7 +27,7 @@ It must be ensured that the API is always backwards-compatible.
 2. If necessary, implement/adapt the conversion logic defined in the versioned APIs (e.g., `pkg/apis/core/v1beta1/conversions*.go`).
 3. If necessary, implement/adapt defaulting logic defined in the versioned APIs (e.g., `pkg/apis/core/v1beta1/defaults*.go`).
 4. Run the code generation: `make generate`
-5. If necessary, implement/adapt validation logic defined in the internal API (e.g., `pkg/apis/core/validation/validation*.go`).
+5. If necessary, implement/adapt validation logic defined in the internal API (e.g., `pkg/api/core/validation/validation*.go`).
 6. If necessary, adapt the exemplary YAML manifests of the Gardener resources defined in `example/*.yaml`.
 7. In most cases, it makes sense to add/adapt the documentation for administrators/operators and/or end-users in the `docs` folder to provide information on purpose and usage of the added/changed fields.
 8. When opening the pull request, always add a release note so that end-users are becoming aware of the changes.
