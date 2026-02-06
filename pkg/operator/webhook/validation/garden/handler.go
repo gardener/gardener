@@ -107,10 +107,5 @@ func (h *Handler) ValidateDelete(_ context.Context, obj runtime.Object) (admissi
 		return nil, fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", obj)
 	}
 
-	warnings, err := GetWarnings(garden)
-	if err != nil {
-		return nil, apierrors.NewInternalError(fmt.Errorf("failed to get API warnings: %w", err))
-	}
-
-	return warnings, gardenerutils.CheckIfDeletionIsConfirmed(garden)
+	return nil, gardenerutils.CheckIfDeletionIsConfirmed(garden)
 }
