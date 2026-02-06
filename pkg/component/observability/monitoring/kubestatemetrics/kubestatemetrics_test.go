@@ -882,11 +882,15 @@ var _ = Describe("KubeStateMetrics", func() {
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 							{
-								ContainerName:    "*",
+								ContainerName:    "kube-state-metrics",
 								ControlledValues: &vpaControlledValues,
 								MinAllowed: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("32Mi"),
 								},
+							},
+							{
+								ContainerName: "*",
+								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 							},
 						},
 					},
