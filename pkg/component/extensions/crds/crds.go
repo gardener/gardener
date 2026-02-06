@@ -36,6 +36,8 @@ var (
 	networkCRD string
 	//go:embed assets/crd-extensions.gardener.cloud_operatingsystemconfigs.yaml
 	operatingSystemConfigCRD string
+	//go:embed assets/crd-extensions.gardener.cloud_selfhostedshootexposures.yaml
+	selfHostedShootExposureCRD string
 	//go:embed assets/crd-extensions.gardener.cloud_workers.yaml
 	workerCRD string
 )
@@ -59,6 +61,7 @@ func NewCRD(client client.Client, includeGeneralCRDs, includeShootCRDs bool) (co
 			infrastructureCRD,
 			networkCRD,
 			operatingSystemConfigCRD,
+			selfHostedShootExposureCRD,
 			workerCRD,
 		}
 	)
