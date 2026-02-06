@@ -31,14 +31,6 @@ type deepMatcher struct {
 	compareFn func(a1, a2 any) bool
 }
 
-func newDeepDerivativeMatcher(expected any) gomegatypes.GomegaMatcher {
-	return &deepMatcher{
-		name:      "deep derivative equal",
-		expected:  expected,
-		compareFn: equality.Semantic.DeepDerivative,
-	}
-}
-
 func newDeepEqualMatcher(expected any) gomegatypes.GomegaMatcher {
 	return &deepMatcher{
 		name:      "deep equal",
