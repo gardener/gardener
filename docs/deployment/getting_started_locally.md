@@ -41,7 +41,7 @@ In these cases, you might want to check out one of the following options that ru
 make kind-up
 ```
 
-> If you want to setup an IPv6 KinD cluster, use `make kind-up IPFAMILY=ipv6` instead.
+> If you want to set up an IPv6 KinD cluster, use `make kind-up IPFAMILY=ipv6` instead.
 
 This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/local/kubeconfig` file.
 
@@ -68,8 +68,8 @@ To avoid recreating the cluster, there is a script that can be used to easily br
 
 > Depending on the cluster you are using for your local dev setup you might have to:
 >  - Replace the value for `--cluster-name` with the name of the kind cluster you are using for your local dev setup.
->  - Add the `--ip-family <ipv4|ipv6|dual>` flag if you want to setup `ipv6` or `dual` stack IPs (`ipv4` is the default value).
->  - Add the `--multi-zonal` flag if you want to setup IPs for a multi-zonal cluster.
+>  - Add the `--ip-family <ipv4|ipv6|dual>` flag if you want to set up `ipv6` or `dual` stack IPs (`ipv4` is the default value).
+>  - Add the `--multi-zonal` flag if you want to set up IPs for a multi-zonal cluster.
 
 ## Setting Up IPv6 Single-Stack Networking (optional)
 
@@ -96,7 +96,7 @@ ip6tables -t nat -A POSTROUTING -o $(ip route | grep '^default') -s fd00:10::/64
 make gardener-up
 ```
 
-> If you want to setup an IPv6 ready Gardener, use `make operator-seed-up IPFAMILY=ipv6` instead.
+> If you want to set up an IPv6 ready Gardener, use `make operator-seed-up IPFAMILY=ipv6` instead.
 
 This will first build the base images (which might take a bit if you do it for the first time).
 Afterwards, the Gardener resources will be deployed into the cluster.
@@ -324,7 +324,7 @@ EOF
 
 To access the `Shoot`, you can acquire a `kubeconfig` by using the [`shoots/adminkubeconfig` subresource](../usage/shoot/shoot_access.md#shootsadminkubeconfig-subresource).
 
-For convenience a [helper script](../../hack/usage/generate-admin-kubeconf.sh) is provided in the `hack` directory. By default the script will generate a kubeconfig for a `Shoot` named "local" in the `garden-local` namespace valid for one hour.
+For convenience a [helper script](../../hack/usage/generate-admin-kubeconf.sh) is provided in the `hack` directory. By default, the script will generate a kubeconfig for a `Shoot` named "local" in the `garden-local` namespace valid for one hour.
 
 ```bash
 ./hack/usage/generate-admin-kubeconf.sh > admin-kubeconf.yaml
