@@ -398,7 +398,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								Resources:   []string{"leases"},
 								Scope:       ptr.To(admissionregistrationv1.AllScopes),
 							},
-							Operations: opUpdateAndDelete,
+							Operations: getEtcdComponentProtectionWebhookLeaseOperations(b.etcdConfig),
 						},
 					},
 				},
@@ -590,6 +590,13 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	}
 
 	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, resources)
+}
+
+func getEtcdComponentProtectionWebhookLeaseOperations(etcdConfig *gardenletconfigv1alpha1.ETCDConfig) []admissionregistrationv1.OperationType {
+	if etcdConfig.ComponentProtectionWebhookIgnoreLeaseUpdates {
+		return []admissionregistrationv1.OperationType{admissionregistrationv1.Delete}
+	}
+	return []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete}
 }
 
 func getDruidDeployArgs(etcdConfig *gardenletconfigv1alpha1.ETCDConfig, namespace string, webhookServerTLSMountPath string) []string {

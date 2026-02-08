@@ -601,6 +601,10 @@ type ETCDConfig struct {
 	// DeltaSnapshotRetentionPeriod defines the duration for which delta snapshots will be retained, excluding the latest snapshot set.
 	// +optional
 	DeltaSnapshotRetentionPeriod *metav1.Duration `json:"deltaSnapshotRetentionPeriod,omitempty"`
+	// ComponentProtectionWebhookIgnoreLeaseUpdates configures the validating webhook for leases to ignore update operations,
+	// effectively matching only delete operations for leases. When unset or false, both update and delete are matched (default behavior).
+	// +optional
+	ComponentProtectionWebhookIgnoreLeaseUpdates bool `json:"componentProtectionWebhookIgnoreLeaseUpdates,omitempty"`
 }
 
 // ETCDController contains config specific to ETCD controller
