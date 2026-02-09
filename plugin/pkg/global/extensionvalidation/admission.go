@@ -319,6 +319,10 @@ func (e *ExtensionValidator) validateShoot(kindToExtensions map[string][]extensi
 		}
 
 		requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.OperatingSystemConfigResource, worker.Machine.Image.Name, fmt.Sprintf("%s operating system type", message), field.NewPath("spec", "provider", "workers").Index(i).Child("machine", "image", "name")})
+
+		if worker.ControlPlane != nil && worker.ControlPlane.Exposure != nil {
+			requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.SelfHostedShootExposureResource, *worker.ControlPlane.Exposure.Extension.Type, fmt.Sprintf("%s networking type", message), field.NewPath("spec", "provider", "workers").Index(i).Child("controlPlane", "exposure", "type")})
+		}
 	}
 
 	if err := requiredExtensions.areRegistered(kindToExtensions, gardencorev1beta1.ClusterTypeShoot); err != nil {
