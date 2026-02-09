@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+sortOptions:
+  order: fifo
+
+components:
+- cloudprofile
+- ../../components/projects/garden
+- ../../components/projects/remote
+- credentials/etcd-backup
+- credentials/domains
+- credentials/credentials-project-garden
+- credentials/credentials-project-remote
