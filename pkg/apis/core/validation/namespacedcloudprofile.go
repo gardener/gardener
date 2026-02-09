@@ -52,7 +52,7 @@ func ValidateNamespacedCloudProfileSpecUpdate(newProfile, oldProfile *core.Names
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newProfile.Parent, oldProfile.Parent, fldPath.Child("parent"))...)
-	allErrs = append(allErrs, validateCloudProfileLimitsUpdate(newProfile.Limits, oldProfile.Limits, fldPath.Child("limits"))...)
+	allErrs = append(allErrs, validateCloudProfileLimits(newProfile.Limits, fldPath.Child("limits"))...)
 
 	return allErrs
 }

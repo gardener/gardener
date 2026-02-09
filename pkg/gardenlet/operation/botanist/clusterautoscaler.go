@@ -10,6 +10,8 @@ import (
 	"math"
 	"math/big"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -51,7 +53,7 @@ func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetNamespaceUID(b.SeedNamespaceObject.UID)
 		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetMachineDeployments(b.Shoot.Components.Extensions.Worker.MachineDeployments())
 
-		maxNodesTotal, err := b.CalculateMaxNodesTotal(b.Shoot.GetInfo())
+		maxNodesTotal, err := b.CalculateMaxNodesTotal(ctx, b.Shoot.GetInfo())
 		if err != nil {
 			return err
 		}
@@ -70,7 +72,9 @@ func (b *Botanist) ScaleClusterAutoscalerToZero(ctx context.Context) error {
 
 // CalculateMaxNodesTotal returns the maximum number of nodes the shoot can have based on the shoot networks and
 // the limit configured in the CloudProfile. It returns 0 if there is no limitation.
-func (b *Botanist) CalculateMaxNodesTotal(shoot *gardencorev1beta1.Shoot) (int64, error) {
+// If the current number of nodes exceeds the CloudProfile limit, the current count is used instead to
+// prevent unintended forceful terminations due to limit decreases.
+func (b *Botanist) CalculateMaxNodesTotal(ctx context.Context, shoot *gardencorev1beta1.Shoot) (int64, error) {
 	maxNetworks, err := b.CalculateMaxNodesForShootNetworks(shoot)
 	if err != nil {
 		return 0, fmt.Errorf("failed to calculate max nodes for shoot networks: %w", err)
@@ -78,7 +82,13 @@ func (b *Botanist) CalculateMaxNodesTotal(shoot *gardencorev1beta1.Shoot) (int64
 
 	var maxLimit int64
 	if limits := b.Shoot.CloudProfile.Spec.Limits; limits != nil && limits.MaxNodesTotal != nil {
-		maxLimit = int64(*limits.MaxNodesTotal)
+		var machines metav1.PartialObjectMetadataList
+		machines.SetGroupVersionKind(machinev1alpha1.SchemeGroupVersion.WithKind("MachineList"))
+		if err := b.SeedClientSet.Client().List(ctx, &machines, client.InNamespace(b.Shoot.ControlPlaneNamespace)); err != nil {
+			return 0, fmt.Errorf("failed listing machines: %w", err)
+		}
+		maxLimit = max(int64(len(machines.Items)), int64(*limits.MaxNodesTotal))
+		b.Logger.Info("Setting cluster-autoscaler's maximum node limit based on CloudProfile limit and current machine count", "maxLimit", maxLimit, "cloudProfileLimit", *limits.MaxNodesTotal, "currentMachineCount", len(machines.Items), "maxNetworks", maxNetworks)
 	}
 
 	return utils.MinGreaterThanZero(maxNetworks, maxLimit), nil
