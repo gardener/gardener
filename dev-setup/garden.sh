@@ -15,6 +15,9 @@ VALID_COMMANDS=("up down")
 
 case "$COMMAND" in
   up)
+    echo "Waiting for Garden CRD to be established..."
+    kubectl wait --for=condition=Established crd/gardens.operator.gardener.cloud --timeout=60s
+
     kubectl apply -k "$(dirname "$0")/garden/overlays/$SCENARIO"
     # We deliberately only wait for the last operation to be 'Reconcile Succeeded' in order to be able to faster deploy
     # the gardenlet.
