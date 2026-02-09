@@ -13,6 +13,8 @@ image_name="$1"
 patch_file="$dir/${2:-.imagevector-overwrite.yaml}"
 ref="$SKAFFOLD_IMAGE"
 
+echo "DEBUG: Updating imagevector overwrite patch file '$patch_file' (pwd: $(pwd) with image '$image_name' and ref '$ref'">&3
+
 if [[ ! -f "$patch_file" ]]; then
   cat <<EOF > "$patch_file"
 images: []
