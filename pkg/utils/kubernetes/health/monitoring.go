@@ -82,15 +82,24 @@ func IsPrometheusHealthy(ctx context.Context, endpoint string, port int) (Promet
 		}
 	}
 
-	slices.Sort(unhealthySamples)
-
 	var (
 		hasUnexpectedSamples          = len(unexpectedSamples) > 0
 		hasMultipleHealthySamples     = len(healthySamples) > 1
 		hasHealthyAndUnhealthySamples = len(healthySamples) > 0 && len(unhealthySamples) > 0
 
 		isHealthy = len(healthySamples) == 1
-		message   = strings.Join(unhealthySamples, ", ")
+
+		buildMessage = func(samples []string) string {
+			slices.Sort(samples)
+			var (
+				msg      = strings.Join(samples, ", ")
+				msgLimit = 500
+			)
+			if len(msg) > msgLimit {
+				msg = msg[:msgLimit-3] + "..."
+			}
+			return msg
+		}
 	)
 
 	if hasUnexpectedSamples || hasMultipleHealthySamples || hasHealthyAndUnhealthySamples {
@@ -98,11 +107,10 @@ func IsPrometheusHealthy(ctx context.Context, endpoint string, port int) (Promet
 		samples = append(samples, healthySamples...)
 		samples = append(samples, unhealthySamples...)
 		samples = append(samples, unexpectedSamples...)
-		slices.Sort(samples)
-		return PrometheusHealthCheckResult{}, fmt.Errorf("query returned inconsistent sample values: %s", strings.Join(samples, ", "))
+		return PrometheusHealthCheckResult{}, fmt.Errorf("query returned inconsistent sample values: %s", buildMessage(samples))
 	}
 
-	return PrometheusHealthCheckResult{IsHealthy: isHealthy, Message: message}, nil
+	return PrometheusHealthCheckResult{IsHealthy: isHealthy, Message: buildMessage(unhealthySamples)}, nil
 }
 
 // CheckPrometheus checks whether the given Prometheus is healthy.
