@@ -10,14 +10,14 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 usage() {
   echo "Usage:"
-  echo "> deploy-registry.sh [ -h | <kubeconfig> <registry> ]"
+  echo "> deploy-registry.sh [ -h | <kubeconfig> <registry> <virtual-garden-kubeconfig (optional)> ]"
   echo
   echo ">> For example: deploy-registry.sh ~/.kube/kubeconfig.yaml registry.gardener.cloud"
 
-  exit 0
+  exit 1
 }
 
-if [ "$1" == "-h" ] || [ "$#" -ne 2 ]; then
+if [ "$1" == "-h" ] || [ "$#" -ne 2 ] && [ "$#" -ne 3 ]; then
   usage
 fi
 
@@ -28,6 +28,7 @@ fi
 
 kubeconfig=$1
 registry=$2
+virtual_garden_kubeconfig=${3:-}
 
 if kubectl --kubeconfig "$kubeconfig" get secrets -n registry registry-password; then
   echo "Container registry password found in seed cluster"
@@ -119,9 +120,18 @@ stringData:
 EOF
 
 echo "Creating pull secret in garden namespace"
-kubectl apply -f "$SCRIPT_DIR"/../../00-namespace-garden.yaml --kubeconfig "$kubeconfig" --server-side=true --force-conflicts
+kubectl create namespace garden --dry-run=client -o yaml |
+  kubectl --kubeconfig "$kubeconfig" --server-side=true apply  -f -
 kubectl create secret docker-registry -n garden gardener-images --docker-server="$registry" --docker-username=gardener --docker-password="$password" --docker-email=gardener@localhost --dry-run=client -o yaml | \
   kubectl --kubeconfig "$kubeconfig" --server-side=true apply  -f -
+
+if [[ -n "$virtual_garden_kubeconfig" ]]; then
+  if kubectl --kubeconfig "$virtual_garden_kubeconfig" get namespace seed-remote >/dev/null 2>&1; then
+    echo "Creating pull secret in seed-remote namespace of virtual garden"
+    kubectl create secret docker-registry -n seed-remote gardener-images --docker-server="$registry" --docker-username=gardener --docker-password="$password" --docker-email=gardener@localhost --dry-run=client -o yaml | \
+      kubectl --kubeconfig "$virtual_garden_kubeconfig" --server-side=true apply  -f -
+  fi
+fi
 
 echo "Deploying container registry $registry"
 kubectl --kubeconfig "$kubeconfig" --server-side=true apply -f "$SCRIPT_DIR"/registry/registry.yaml
@@ -140,6 +150,6 @@ done
 echo "Run docker login for registry $registry"
 docker login "$registry" -u gardener -p "$password"
 
-echo "Saving password in seed cluster"
+echo "Saving password in runtime cluster"
 kubectl create secret generic -n registry registry-password --from-literal=password="$password" --dry-run=client -o yaml | \
   kubectl --kubeconfig "$kubeconfig" --server-side=true apply  -f -
