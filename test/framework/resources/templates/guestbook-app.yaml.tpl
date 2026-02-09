@@ -30,6 +30,7 @@ spec:
               name: redis
               key: redis-password
 ---
+{{- if semverCompare "< 1.35-0" .KubeVersion }}
 kind: Service
 apiVersion: v1
 metadata:
@@ -61,3 +62,18 @@ spec:
               number: 80
         path: /
         pathType: Prefix
+{{- else }}
+kind: Service
+apiVersion: v1
+metadata:
+  name: guestbook
+  namespace: {{ .HelmDeployNamespace }}
+spec:
+  selector:
+    app: guestbook
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: LoadBalancer
+{{- end -}}

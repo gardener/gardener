@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -32,6 +33,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/applications"
 )
@@ -55,14 +57,10 @@ var _ = ginkgo.Describe("Shoot application testing", func() {
 	}, downloadKubeconfigTimeout)
 
 	ginkgo.Context("GuestBook", func() {
-		var (
-			guestBookTest *applications.GuestBookTest
-			err           error
-		)
+		var guestBookTest *applications.GuestBookTest
 
 		f.Default().Release().CIt("should deploy guestbook app successfully", func(ctx context.Context) {
-			guestBookTest, err = applications.NewGuestBookTest(f)
-			framework.ExpectNoError(err)
+			guestBookTest = applications.NewGuestBookTest(f)
 			guestBookTest.DeployGuestBookApp(ctx)
 			guestBookTest.Test(ctx)
 		}, guestbookAppTimeout)
@@ -72,8 +70,17 @@ var _ = ginkgo.Describe("Shoot application testing", func() {
 		}, finalizationTimeout)
 	})
 
+	// TODO(ialidzhikov): Remove the test below when Kubernetes 1.34 is no longer supported.
 	f.Default().Beta().CIt("Dashboard should be available", func(ctx context.Context) {
 		shoot := f.Shoot
+
+		k8sVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
+		framework.ExpectNoError(err)
+
+		if versionutils.ConstraintK8sLess135.Check(k8sVersion) {
+			ginkgo.Skip("The kubernetes-dashboard addon is forbidden starting with Kubernetes 1.35")
+		}
+
 		if shoot.Spec.Addons == nil || !shoot.Spec.Addons.KubernetesDashboard.Enabled {
 			ginkgo.Fail("The test requires .spec.addons.kubernetesDashboard.enabled to be true")
 		}

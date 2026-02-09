@@ -124,10 +124,7 @@ func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *a
 	}
 
 	ginkgo.By("Verify Guest Book Application")
-	initializedApp, err := initGuestBookTest(t)
-	if err != nil {
-		return err
-	}
+	initializedApp := initGuestBookTest(t)
 	*guestBookApp = *initializedApp
 	guestBookApp.DeployGuestBookApp(ctx)
 	guestBookApp.Test(ctx)
@@ -177,7 +174,7 @@ func cleanUp(ctx context.Context, t *ShootMigrationTest, guestBookApp applicatio
 	return nil
 }
 
-func initGuestBookTest(t *ShootMigrationTest) (*applications.GuestBookTest, error) {
+func initGuestBookTest(t *ShootMigrationTest) *applications.GuestBookTest {
 	sFramework := ShootFramework{
 		GardenerFramework: t.GardenerFramework,
 		TestDescription:   NewTestDescription("Guestbook App for CP Migration test"),

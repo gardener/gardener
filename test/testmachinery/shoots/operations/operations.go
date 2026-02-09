@@ -69,8 +69,7 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 	var isShootHibernated bool
 
 	f.Default().Serial().CIt("Testing if Shoot can be hibernated successfully", func(ctx context.Context) {
-		guestBookTest, err := applications.NewGuestBookTest(f)
-		framework.ExpectNoError(err)
+		guestBookTest := applications.NewGuestBookTest(f)
 
 		defer guestBookTest.Cleanup(ctx)
 
@@ -80,7 +79,7 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 
 		ginkgo.By("Hibernate shoot")
 		isShootHibernated = true
-		err = f.HibernateShoot(ctx)
+		err := f.HibernateShoot(ctx)
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Wake up shoot")
