@@ -20,6 +20,14 @@ resourceSelector:
     - groupKind: CloudProfile.core.gardener.cloud
       image:
         - .*
+profiles:
+  - name: remote
+    patches:
+      - op: remove
+        path: /build
+      - op: replace
+        path: /manifests/kustomize/paths/0
+        value: dev-setup/gardenconfig/overlays/remote
 ---
 apiVersion: skaffold/v4beta12
 kind: Config
@@ -749,6 +757,15 @@ profiles:
       - op: replace
         path: /deploy/kubectl/hooks/after/0/host/command/2
         value: "KUBECONFIG=$VIRTUAL_GARDEN_KUBECONFIG hack/usage/wait-for.sh seed local2 GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady"
+  - name: remote
+    manifests:
+      kustomize:
+        paths:
+          - dev-setup/gardenlet/overlays/remote
+    patches:
+      - op: replace
+        path: /deploy/kubectl/hooks/after/0/host/command/2
+        value: "KUBECONFIG=$VIRTUAL_GARDEN_KUBECONFIG hack/usage/wait-for.sh seed remote GardenletReady SeedSystemComponentsHealthy ExtensionsReady"
 deploy:
   kubectl:
     hooks:
