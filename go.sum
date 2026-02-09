@@ -683,8 +683,8 @@ github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10/go.mod h1
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRIccs7FGNTlIRMkT8wgtp5eCXdBlqhYGL6U=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.88.1 h1:K/r+qPGyr/Fx9vbN7biV9q2/PV5ETj+bVVH5RUvqEG8=
-github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.88.1/go.mod h1:IJwk1oNs212afqGbNnE84GAB95OHtJR/BuI1rKESiYk=
+github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.89.0 h1:nZ9Ov2SbA8pWcyWKpf6AbQipG5Negg5CfDKWOEtnnwc=
+github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.89.0/go.mod h1:IJwk1oNs212afqGbNnE84GAB95OHtJR/BuI1rKESiYk=
 github.com/prometheus/alertmanager v0.29.0 h1:/ET4NmAGx2Dv9kStrXIBqBgHyiSgIk4OetY+hoZRfgc=
 github.com/prometheus/alertmanager v0.29.0/go.mod h1:SjI2vhrfdWg10UaRUxTz27rgdJVG3HXrhI5WFjCdBgs=
 github.com/prometheus/blackbox_exporter v0.28.0 h1:5n59xN6d4OtnwANA9nQIoBhwfG90b50cMByshvc/+zA=
