@@ -316,7 +316,7 @@ type CloudProfileStatus struct {
 	Kubernetes *KubernetesStatus `json:"kubernetes,omitempty" protobuf:"bytes,1,name=kubernetes"`
 	// MachineImages contains the statuses of the machine image versions.
 	// +optional
-	MachineImages []MachineImageStatus `json:"machineImages,omitempty" protobuf:"bytes,2,name=machineImageVersions"`
+	MachineImages []MachineImageStatus `json:"machineImages,omitempty" protobuf:"bytes,2,name=machineImages"`
 }
 
 // KubernetesStatus contains the status information for kubernetes.

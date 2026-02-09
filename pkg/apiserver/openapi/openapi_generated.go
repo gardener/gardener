@@ -146,8 +146,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSettings":            schema_pkg_apis_core_v1beta1_MachineControllerManagerSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage":                                schema_pkg_apis_core_v1beta1_MachineImage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageFlavor":                          schema_pkg_apis_core_v1beta1_MachineImageFlavor(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageStatus":                          schema_pkg_apis_core_v1beta1_MachineImageStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageVersion":                         schema_pkg_apis_core_v1beta1_MachineImageVersion(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageVersionStatus":                   schema_pkg_apis_core_v1beta1_MachineImageVersionStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType":                                 schema_pkg_apis_core_v1beta1_MachineType(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineTypeStorage":                          schema_pkg_apis_core_v1beta1_MachineTypeStorage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance":                                 schema_pkg_apis_core_v1beta1_Maintenance(ref),
@@ -2396,26 +2396,18 @@ func schema_pkg_apis_core_v1beta1_CloudProfileStatus(ref common.ReferenceCallbac
 					"kubernetes": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Kubernetes contains the status information for kubernetes.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesStatus"),
-									},
-								},
-							},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesStatus"),
 						},
 					},
-					"machineImageVersions": {
+					"machineImages": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MachineImageVersions contains the statuses of the machine image versions.",
+							Description: "MachineImages contains the statuses of the machine image versions.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageVersionStatus"),
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageStatus"),
 									},
 								},
 							},
@@ -2425,7 +2417,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileStatus(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesStatus", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageVersionStatus"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesStatus", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageStatus"},
 	}
 }
 
@@ -3938,7 +3930,7 @@ func schema_pkg_apis_core_v1beta1_ExpirableVersion(ref common.ReferenceCallback)
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ExpirableVersion contains a version and an expiration date.",
+				Description: "ExpirableVersion contains a version with associated lifecycle information.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"version": {
@@ -4003,12 +3995,13 @@ func schema_pkg_apis_core_v1beta1_ExpirableVersionStatus(ref common.ReferenceCal
 					"classification": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Classification reflects the current state in the classification lifecycle.",
+							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 				},
-				Required: []string{"version"},
+				Required: []string{"version", "classification"},
 			},
 		},
 	}
@@ -5880,7 +5873,8 @@ func schema_pkg_apis_core_v1beta1_LifecycleStage(ref common.ReferenceCallback) c
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
+				Description: "LifecycleStage describes a stage in the versions lifecycle. Each stage defines the classification of the version (e.g. unavailable, preview, supported, deprecated, expired) and the time at which this classification becomes effective.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"classification": {
 						SchemaProps: spec.SchemaProps{
@@ -6114,6 +6108,44 @@ func schema_pkg_apis_core_v1beta1_MachineImageFlavor(ref common.ReferenceCallbac
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_MachineImageStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MachineImageStatus contains the status of a machine image and its version classifications.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name matches the name of the MachineImage the status is represented of.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"versions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Versions contains the statuses of the machine image versions.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersionStatus"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersionStatus"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6217,41 +6249,6 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LifecycleStage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageFlavor", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
-	}
-}
-
-func schema_pkg_apis_core_v1beta1_MachineImageVersionStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Name matches the name of the MachineImage the status is represented of.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"versions": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Versions contains the statuses of the machine image versions.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersionStatus"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersionStatus"},
 	}
 }
 
