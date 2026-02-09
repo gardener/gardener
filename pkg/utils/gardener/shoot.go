@@ -710,6 +710,9 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 				requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.ContainerRuntimeResource, cr.Type))
 			}
 		}
+		if pool.ControlPlane != nil && pool.ControlPlane.Exposure != nil {
+			requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.SelfHostedShootExposureResource, *pool.ControlPlane.Exposure.Extension.Type))
+		}
 	}
 
 	if shoot.Spec.DNS != nil {
