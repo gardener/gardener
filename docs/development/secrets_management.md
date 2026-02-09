@@ -14,9 +14,10 @@ It is built on top of the `ConfigInterface` and `DataInterface` interfaces part 
   If the configuration describes a certificate authority secret then this method automatically generates a bundle secret containing the current and potentially the old certificate.
   Available `GenerateOption`s:
   - `SignedByCA(string, ...SignedByCAOption)`: This is only valid for certificate secrets and automatically retrieves the correct certificate authority in order to sign the provided server or client certificate.
-    - There are two `SignedByCAOption`s:
-      - `UseCurrentCA`. This option will sign server certificates with the new/current CA in case of a CA rotation. For more information, please refer to the ["Certificate Signing"](#certificate-signing) section below.
-      - `UseOldCA`. This option will sign client certificates with the old CA in case of a CA rotation. For more information, please refer to the ["Certificate Signing"](#certificate-signing) section below.
+    - There are three `SignedByCAOption`s:
+      - `UseCurrentCA`: This option will sign server certificates with the new/current CA in case of a CA rotation. For more information, please refer to the ["Certificate Signing"](#certificate-signing) section below.
+      - `UseOldCA`: This option will sign client certificates with the old CA in case of a CA rotation. For more information, please refer to the ["Certificate Signing"](#certificate-signing) section below.
+      - `LoadMissingCAFromCluster(contextx.Context)`: This option allows to load CA secrets directly from the system when they are missing in the internal store because they were not generated upfront. This is helpful when the secrets manager instance generating certificates is not the same managing the CA certificate lifecycle.
   - `Persist()`: This marks the secret such that it gets persisted in the `ShootState` resource in the garden cluster. Consequently, it should only be used for secrets related to a shoot cluster.
   - `Rotate(rotationStrategy)`: This specifies the strategy in case this secret is to be rotated or regenerated (either `InPlace` which immediately forgets about the old secret, or `KeepOld` which keeps the old secret in the system).
   - `IgnoreOldSecrets()`: This specifies that old secrets should not be considered and loaded (contrary to the default behavior). It should be used when old secrets are no longer important and can be "forgotten" (e.g. in ["phase 2" (`t2`) of the CA certificate rotation](../proposals/18-shoot-CA-rotation.md#rotation-sequence-for-cluster-and-client-ca)). Such old secrets will be deleted on `Cleanup()`.

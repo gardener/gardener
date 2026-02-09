@@ -850,6 +850,108 @@ var _ = Describe("Generate", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(clientCert.Certificate.Subject.CommonName).To(Equal(clientConfig.CommonName))
 			})
+
+			It("should fail to generate a new secret because CA was not generated upfront", func() {
+				secret, err := m.Generate(ctx, serverConfig, SignedByCA(caName))
+				Expect(err).To(MatchError(ContainSubstring("not found in internal store")))
+				Expect(secret).To(BeNil())
+			})
+
+			When("signing CA was not generated upfront but must be loaded from system", func() {
+				It("should fail to generate a new secret because CA does not exist in the system", func() {
+					secret, err := m.Generate(ctx, serverConfig, SignedByCA(caName, LoadMissingCAFromCluster(ctx)))
+					Expect(err).To(MatchError(ContainSubstring("not found in cluster")))
+					Expect(secret).To(BeNil())
+				})
+
+				It("should successfully to generate a new secret because CA was loaded from the system", func() {
+					By("Generate a CA certificate without secrets manager")
+					caData, err := (&secretsutils.CertificateSecretConfig{
+						Name:       caName,
+						CommonName: "tmp-fake-ca",
+						CertType:   secretsutils.CACert,
+					}).Generate()
+					Expect(err).NotTo(HaveOccurred())
+
+					By("Create CA secret in the system")
+					Expect(fakeClient.Create(ctx, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      caName,
+							Namespace: namespace,
+							Labels: map[string]string{
+								"managed-by":       "secrets-manager",
+								"manager-identity": identity,
+								"name":             caName,
+							},
+						},
+						Type: corev1.SecretTypeOpaque,
+						Data: caData.SecretData(),
+					})).To(Succeed())
+
+					By("Generate new secret")
+					secret, err := m.Generate(ctx, serverConfig, SignedByCA(caName, LoadMissingCAFromCluster(ctx)))
+					Expect(err).NotTo(HaveOccurred())
+					expectSecretWasCreated(ctx, fakeClient, secret)
+				})
+
+				It("should successfully generate a new secret with the old CA loaded from the system", func() {
+					By("Generate current and old CA certificates without secrets manager")
+					caCurrentData, err := (&secretsutils.CertificateSecretConfig{
+						Name:       caName,
+						CommonName: "tmp-fake-ca-current",
+						CertType:   secretsutils.CACert,
+					}).Generate()
+					Expect(err).NotTo(HaveOccurred())
+					caOldData, err := (&secretsutils.CertificateSecretConfig{
+						Name:       caName,
+						CommonName: "tmp-fake-ca-old",
+						CertType:   secretsutils.CACert,
+					}).Generate()
+					Expect(err).NotTo(HaveOccurred())
+
+					By("Create old CA secret in the system")
+					Expect(fakeClient.Create(ctx, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							CreationTimestamp: metav1.Time{Time: time.Now().Add(-time.Hour)},
+							Name:              caName + "-old",
+							Namespace:         namespace,
+							Labels: map[string]string{
+								"managed-by":       "secrets-manager",
+								"manager-identity": identity,
+								"name":             caName,
+							},
+						},
+						Type: corev1.SecretTypeOpaque,
+						Data: caOldData.SecretData(),
+					})).To(Succeed())
+
+					By("Create current CA secret in the system")
+					Expect(fakeClient.Create(ctx, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							CreationTimestamp: metav1.Now(),
+							Name:              caName,
+							Namespace:         namespace,
+							Labels: map[string]string{
+								"managed-by":       "secrets-manager",
+								"manager-identity": identity,
+								"name":             caName,
+							},
+						},
+						Type: corev1.SecretTypeOpaque,
+						Data: caCurrentData.SecretData(),
+					})).To(Succeed())
+
+					By("Generate new secret")
+					secret, err := m.Generate(ctx, serverConfig, SignedByCA(caName, LoadMissingCAFromCluster(ctx), UseOldCA))
+					Expect(err).NotTo(HaveOccurred())
+					expectSecretWasCreated(ctx, fakeClient, secret)
+
+					By("Verify secret was signed with old CA certificate")
+					cert, err := secretsutils.LoadCertificate("", secret.Data["tls.key"], secret.Data["tls.crt"])
+					Expect(err).NotTo(HaveOccurred())
+					Expect(cert.Certificate.Issuer.CommonName).To(Equal("tmp-fake-ca-old"))
+				})
+			})
 		})
 
 		Context("for RSA Private Key secrets", func() {
