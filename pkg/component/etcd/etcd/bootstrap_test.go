@@ -612,7 +612,7 @@ var _ = Describe("Etcd", func() {
 									Resources:   []string{"leases"},
 									Scope:       ptr.To(admissionregistrationv1.AllScopes),
 								},
-								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete},
+								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Delete},
 							},
 						},
 					},
@@ -777,35 +777,6 @@ var _ = Describe("Etcd", func() {
 					deploymentWithImageVectorOverwrite,
 					configMapImageVectorOverwrite,
 				)
-			})
-		})
-
-		Context("ignoring lease updates for etcd component protection webhook", func() {
-			var validatingWebhookConfigurationWithLeaseDeleteOnly *admissionregistrationv1.ValidatingWebhookConfiguration
-
-			BeforeEach(func() {
-				validatingWebhookConfigurationWithLeaseDeleteOnly = validatingWebhookConfiguration.DeepCopy()
-				// The leases rule is the last rule in the first webhook
-				leasesIdx := len(validatingWebhookConfigurationWithLeaseDeleteOnly.Webhooks[0].Rules) - 1
-				validatingWebhookConfigurationWithLeaseDeleteOnly.Webhooks[0].Rules[leasesIdx].Operations = []admissionregistrationv1.OperationType{admissionregistrationv1.Delete}
-			})
-
-			It("should generate the correct validating webhook configuration", func() {
-				etcdConfig.ComponentProtectionWebhookIgnoreLeaseUpdates = true
-				bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwrite, sm, secretNameCA, priorityClassName, false)
-				Expect(bootstrapper.Deploy(ctx)).To(Succeed())
-
-				expectedResources = []client.Object{
-					serviceAccount,
-					clusterRole,
-					clusterRoleBinding,
-					podDisruption,
-					vpa,
-					service,
-					validatingWebhookConfigurationWithLeaseDeleteOnly,
-					serviceMonitor,
-					deploymentWithoutImageVectorOverwriteFor,
-				}
 			})
 		})
 	})
