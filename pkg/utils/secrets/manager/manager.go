@@ -199,15 +199,15 @@ func New(
 	return m, nil
 }
 
-func (m *manager) listSecrets(ctx context.Context) (*corev1.SecretList, error) {
+func (m *manager) listSecrets(ctx context.Context, listOptions ...client.ListOption) (*corev1.SecretList, error) {
 	secretListAllNamespaces := &corev1.SecretList{}
 
 	for _, namespace := range m.opts.Namespaces {
 		secretList := &corev1.SecretList{}
-		if err := m.client.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
-			LabelKeyManagedBy:       LabelValueSecretsManager,
-			LabelKeyManagerIdentity: m.identity,
-		}); err != nil {
+		if err := m.client.List(ctx, secretList, append([]client.ListOption{
+			client.InNamespace(namespace),
+			client.MatchingLabels{LabelKeyManagedBy: LabelValueSecretsManager, LabelKeyManagerIdentity: m.identity},
+		}, listOptions...)...); err != nil {
 			return nil, fmt.Errorf("failed to list secrets in namespace %q: %w", namespace, err)
 		}
 
