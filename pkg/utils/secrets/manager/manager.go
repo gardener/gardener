@@ -76,9 +76,9 @@ type (
 		store                       secretStore
 		logger                      logr.Logger
 		client                      client.Client
-		namespaces                  []string
 		identity                    string
 		lastRotationInitiationTimes nameToUnixTime
+		opts                        *NewOptions
 	}
 
 	nameToUnixTime map[string]string
@@ -95,15 +95,41 @@ type (
 		lastRotationInitiationTime int64
 	}
 
-	// Config specifies certain configuration options for the manager.
-	Config struct {
+	// NewOptions are options for New calls.
+	NewOptions struct {
+		// Namespaces is the list of namespaces the secrets manager should operate on.
+		Namespaces []string
 		// CASecretAutoRotation states whether CA secrets are considered for automatic rotation (defaults to false).
 		CASecretAutoRotation bool
 		// SecretNamesToTimes is a map whose keys are secret names and whose values are the last rotation initiation
 		// times.
 		SecretNamesToTimes map[string]time.Time
 	}
+	// NewOption is some configuration that configures a secrets manager instance when creating it with [New].
+	NewOption func(*NewOptions)
 )
+
+// WithNamespaces returns a function which sets the 'WithNamespaces' field to true.
+func WithNamespaces(namespaces ...string) NewOption {
+	return func(options *NewOptions) {
+		options.Namespaces = namespaces
+	}
+}
+
+// WithCASecretAutoRotation enables automatic rotation for CA secrets (turned off by default).
+func WithCASecretAutoRotation() NewOption {
+	return func(options *NewOptions) {
+		options.CASecretAutoRotation = true
+	}
+}
+
+// WithSecretNamesToTimes sets a map whose keys are secret names and whose values are the last rotation initiation
+// times.
+func WithSecretNamesToTimes(secretNamesToTimes map[string]time.Time) NewOption {
+	return func(options *NewOptions) {
+		options.SecretNamesToTimes = secretNamesToTimes
+	}
+}
 
 var _ Interface = &manager{}
 
@@ -122,13 +148,17 @@ func New(
 	clock clock.Clock,
 	c client.Client,
 	identity string,
-	rotation Config,
-	namespaces ...string,
+	optionFns ...NewOption,
 ) (
 	Interface,
 	error,
 ) {
-	if len(namespaces) == 0 {
+	opts := &NewOptions{}
+	for _, f := range optionFns {
+		f(opts)
+	}
+
+	if len(opts.Namespaces) == 0 {
 		return nil, errors.New("must specify at least one namespace")
 	}
 
@@ -137,12 +167,12 @@ func New(
 		clock:                       clock,
 		logger:                      logger,
 		client:                      c,
-		namespaces:                  namespaces,
 		identity:                    identity,
+		opts:                        opts,
 		lastRotationInitiationTimes: make(nameToUnixTime),
 	}
 
-	if err := m.initialize(ctx, rotation); err != nil {
+	if err := m.initialize(ctx); err != nil {
 		return nil, err
 	}
 
@@ -152,7 +182,7 @@ func New(
 func (m *manager) listSecrets(ctx context.Context) (*corev1.SecretList, error) {
 	secretListAllNamespaces := &corev1.SecretList{}
 
-	for _, namespace := range m.namespaces {
+	for _, namespace := range m.opts.Namespaces {
 		secretList := &corev1.SecretList{}
 		if err := m.client.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
 			LabelKeyManagedBy:       LabelValueSecretsManager,
@@ -167,7 +197,7 @@ func (m *manager) listSecrets(ctx context.Context) (*corev1.SecretList, error) {
 	return secretListAllNamespaces, nil
 }
 
-func (m *manager) initialize(ctx context.Context, rotation Config) error {
+func (m *manager) initialize(ctx context.Context) error {
 	secretList, err := m.listSecrets(ctx)
 	if err != nil {
 		return err
@@ -187,7 +217,7 @@ func (m *manager) initialize(ctx context.Context, rotation Config) error {
 
 	// Check if the secrets must be automatically renewed because they are about to expire.
 	for name, secret := range nameToNewestSecret {
-		if isCASecret(secret.Data) && !rotation.CASecretAutoRotation {
+		if isCASecret(secret.Data) && !m.opts.CASecretAutoRotation {
 			continue
 		}
 
@@ -203,7 +233,7 @@ func (m *manager) initialize(ctx context.Context, rotation Config) error {
 	}
 
 	// If the user has provided last rotation initiation times then use those.
-	for name, time := range rotation.SecretNamesToTimes {
+	for name, time := range m.opts.SecretNamesToTimes {
 		m.lastRotationInitiationTimes[name] = unixTime(time)
 	}
 

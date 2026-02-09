@@ -42,12 +42,12 @@ var _ = Describe("Manager", func() {
 		})
 
 		It("should fail creating a new instance when no namespace was provided", func() {
-			_, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{})
+			_, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity)
 			Expect(err).To(MatchError(ContainSubstring("must specify at least one namespace")))
 		})
 
 		It("should create a new instance w/ empty last rotation initiation times map", func() {
-			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{}, namespace)
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithNamespaces(namespace))
 			Expect(err).NotTo(HaveOccurred())
 			m = mgr.(*manager)
 
@@ -55,7 +55,7 @@ var _ = Describe("Manager", func() {
 		})
 
 		It("should create a new instance w/ provided last rotation initiation times", func() {
-			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{SecretNamesToTimes: map[string]time.Time{"foo": fakeClock.Now()}}, namespace)
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithSecretNamesToTimes(map[string]time.Time{"foo": fakeClock.Now()}), WithNamespaces(namespace))
 			Expect(err).NotTo(HaveOccurred())
 			m = mgr.(*manager)
 
@@ -91,7 +91,7 @@ var _ = Describe("Manager", func() {
 			}
 			Expect(fakeClient.Create(ctx, existingSecret2)).To(Succeed())
 
-			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{SecretNamesToTimes: map[string]time.Time{"secret1": fakeClock.Now()}}, namespace, namespace2)
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithSecretNamesToTimes(map[string]time.Time{"secret1": fakeClock.Now()}), WithNamespaces(namespace, namespace2))
 			Expect(err).NotTo(HaveOccurred())
 			m = mgr.(*manager)
 
@@ -116,7 +116,7 @@ var _ = Describe("Manager", func() {
 			}
 			Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 
-			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{SecretNamesToTimes: map[string]time.Time{"foo": fakeClock.Now()}}, namespace)
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithSecretNamesToTimes(map[string]time.Time{"foo": fakeClock.Now()}), WithNamespaces(namespace))
 			Expect(err).NotTo(HaveOccurred())
 			m = mgr.(*manager)
 
@@ -145,7 +145,7 @@ var _ = Describe("Manager", func() {
 			}
 			Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 
-			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{}, namespace)
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithNamespaces(namespace))
 			Expect(err).NotTo(HaveOccurred())
 			m = mgr.(*manager)
 
@@ -171,7 +171,7 @@ var _ = Describe("Manager", func() {
 			}
 			Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 
-			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{}, namespace)
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithNamespaces(namespace))
 			Expect(err).NotTo(HaveOccurred())
 			m = mgr.(*manager)
 
@@ -197,7 +197,7 @@ var _ = Describe("Manager", func() {
 			}
 			Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 
-			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{}, namespace)
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithNamespaces(namespace))
 			Expect(err).NotTo(HaveOccurred())
 			m = mgr.(*manager)
 
@@ -251,7 +251,7 @@ var _ = Describe("Manager", func() {
 				Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 			}
 
-			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{}, namespace)
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithNamespaces(namespace))
 			Expect(err).NotTo(HaveOccurred())
 			m = mgr.(*manager)
 
@@ -285,18 +285,18 @@ var _ = Describe("Manager", func() {
 				Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 			})
 
-			It("should create a new instance and auto-renew the CA secret because CASecretAutoRotation=true", func() {
+			It("should create a new instance and auto-renew the CA secret because CASecretAutoRotation was enabled", func() {
 				fakeClock = testclock.NewFakeClock(time.Date(2000, 1, 1, 1, 1, 1, 1, time.UTC))
 
-				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{CASecretAutoRotation: true}, namespace)
+				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithCASecretAutoRotation(), WithNamespaces(namespace))
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
 
 				Expect(m.lastRotationInitiationTimes).To(Equal(nameToUnixTime{"secret1": strconv.FormatInt(fakeClock.Now().Unix(), 10)}))
 			})
 
-			It("should create a new instance and NOT auto-renew the CA secret because CASecretAutoRotation=false", func() {
-				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{CASecretAutoRotation: false}, namespace)
+			It("should create a new instance and NOT auto-renew the CA secret because CASecretAutoRotation was not enabled", func() {
+				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithNamespaces(namespace))
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
 

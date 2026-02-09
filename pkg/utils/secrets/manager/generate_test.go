@@ -46,7 +46,7 @@ var _ = Describe("Generate", func() {
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 
-		mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{}, namespace)
+		mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithNamespaces(namespace))
 		Expect(err).NotTo(HaveOccurred())
 		m = mgr.(*manager)
 	})
@@ -91,7 +91,7 @@ var _ = Describe("Generate", func() {
 				})
 
 				It("should generate a new secret in the overridden namespace", func() {
-					mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{}, namespace, namespace2)
+					mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithNamespaces(namespace, namespace2))
 					Expect(err).NotTo(HaveOccurred())
 					m = mgr.(*manager)
 
@@ -211,7 +211,7 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
 				By("Change last rotation initiation time and generate again")
-				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{SecretNamesToTimes: map[string]time.Time{name: time.Now()}}, namespace)
+				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithSecretNamesToTimes(map[string]time.Time{name: time.Now()}), WithNamespaces(namespace))
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
 
@@ -274,7 +274,7 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
 				By("Change secret config and generating again")
-				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{}, namespace)
+				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithNamespaces(namespace))
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
 
@@ -292,7 +292,7 @@ var _ = Describe("Generate", func() {
 
 				By("Generate secret again after given duration")
 				fakeClock.Step(time.Minute)
-				mgr, err = New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{}, namespace)
+				mgr, err = New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithNamespaces(namespace))
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
 
@@ -352,7 +352,7 @@ var _ = Describe("Generate", func() {
 
 					By("some time later: no new CA should be generated")
 					fakeClock.Step(unchanged)
-					mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{}, namespace)
+					mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithNamespaces(namespace))
 					Expect(err).NotTo(HaveOccurred())
 					m = mgr.(*manager)
 					newSecret, err := m.Generate(ctx, config, options...)
@@ -361,7 +361,7 @@ var _ = Describe("Generate", func() {
 
 					By("after expected renewal time: new secret should be generated")
 					fakeClock.Step(renewed - unchanged)
-					mgr, err = New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{}, namespace)
+					mgr, err = New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithNamespaces(namespace))
 					Expect(err).NotTo(HaveOccurred())
 					m = mgr.(*manager)
 					newSecret, err = m.Generate(ctx, config, options...)
@@ -482,7 +482,7 @@ var _ = Describe("Generate", func() {
 				oldBundleSecret := secretInfos.bundle.obj
 
 				By("Change secret config and generate again")
-				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{SecretNamesToTimes: map[string]time.Time{name: time.Now()}}, namespace)
+				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithSecretNamesToTimes(map[string]time.Time{name: time.Now()}), WithNamespaces(namespace))
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
 
@@ -525,7 +525,7 @@ var _ = Describe("Generate", func() {
 
 					By("some time later: no new CA should be generated")
 					fakeClock.Step(unchanged)
-					mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{CASecretAutoRotation: true}, namespace)
+					mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithCASecretAutoRotation(), WithNamespaces(namespace))
 					Expect(err).NotTo(HaveOccurred())
 					m = mgr.(*manager)
 					config.CommonName = lastCommonName
@@ -535,7 +535,7 @@ var _ = Describe("Generate", func() {
 
 					By("after expected renewal time: new CA should be generated")
 					fakeClock.Step(renewed - unchanged)
-					mgr, err = New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{CASecretAutoRotation: true}, namespace)
+					mgr, err = New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithCASecretAutoRotation(), WithNamespaces(namespace))
 					Expect(err).NotTo(HaveOccurred())
 					m = mgr.(*manager)
 					config.CommonName = lastCommonName
@@ -555,7 +555,7 @@ var _ = Describe("Generate", func() {
 
 					By("after validity of first CA")
 					fakeClock.Step(*validity + 1*time.Hour - renewed)
-					mgr, err = New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{CASecretAutoRotation: true}, namespace)
+					mgr, err = New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithCASecretAutoRotation(), WithNamespaces(namespace))
 					Expect(err).NotTo(HaveOccurred())
 					m = mgr.(*manager)
 					config.CommonName = lastCommonName
@@ -677,7 +677,7 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, serverSecret)
 
 				By("Rotate CA")
-				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{SecretNamesToTimes: map[string]time.Time{name: time.Now()}}, namespace)
+				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithSecretNamesToTimes(map[string]time.Time{name: time.Now()}), WithNamespaces(namespace))
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
 
@@ -706,7 +706,7 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, serverSecret)
 
 				By("Rotate CA")
-				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{SecretNamesToTimes: map[string]time.Time{caName: time.Now()}}, namespace)
+				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithSecretNamesToTimes(map[string]time.Time{caName: time.Now()}), WithNamespaces(namespace))
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
 
@@ -735,7 +735,7 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, clientSecret)
 
 				By("Rotate CA")
-				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{SecretNamesToTimes: map[string]time.Time{caName: time.Now()}}, namespace)
+				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithSecretNamesToTimes(map[string]time.Time{caName: time.Now()}), WithNamespaces(namespace))
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
 
@@ -764,7 +764,7 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, clientSecret)
 
 				By("Rotate CA")
-				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, Config{SecretNamesToTimes: map[string]time.Time{caName: time.Now()}}, namespace)
+				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithSecretNamesToTimes(map[string]time.Time{caName: time.Now()}), WithNamespaces(namespace))
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
 

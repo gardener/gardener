@@ -34,10 +34,10 @@ func (m *manager) Generate(ctx context.Context, config secretsutils.ConfigInterf
 		bundleFor = ptr.To(strings.TrimSuffix(config.GetName(), nameSuffixBundle))
 	}
 
-	namespace := m.namespaces[0]
+	namespace := m.opts.Namespaces[0]
 	if len(options.Namespace) > 0 {
 		namespace = options.Namespace
-		if !slices.Contains(m.namespaces, namespace) {
+		if !slices.Contains(m.opts.Namespaces, namespace) {
 			return nil, fmt.Errorf("namespace %q is not managed by this secrets manager", namespace)
 		}
 	}
