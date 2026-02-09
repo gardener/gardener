@@ -122,8 +122,8 @@ func (r *Reconciler) runReconcileSeedFlow(
 		clock.RealClock{},
 		r.SeedClientSet.Client(),
 		v1beta1constants.SecretManagerIdentityGardenlet,
-		secretsmanager.Config{CASecretAutoRotation: true},
-		r.GardenNamespace,
+		secretsmanager.WithCASecretAutoRotation(),
+		secretsmanager.WithNamespaces(r.GardenNamespace),
 	)
 	if err != nil {
 		return err
