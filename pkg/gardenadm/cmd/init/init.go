@@ -368,7 +368,7 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		deployWorker = g.Add(flow.Task{
 			Name:         "Deploying shoot worker pools",
-			Fn:           b.DeployWorker,
+			Fn:           flow.TaskFn(b.DeployWorker).RetryUntilTimeout(time.Second, time.Minute),
 			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
 			Dependencies: flow.NewTaskIDs(deployMachineControllerManager),
 		})
