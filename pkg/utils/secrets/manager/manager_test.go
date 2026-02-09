@@ -204,6 +204,32 @@ var _ = Describe("Manager", func() {
 			Expect(m.lastRotationInitiationTimes).To(Equal(nameToUnixTime{"secret1": "-100"}))
 		})
 
+		It("should create a new instance and NOT auto-renew a secret even though it is about to expire because auto-renewal was disabled explicitly", func() {
+			fakeClock = testclock.NewFakeClock(time.Date(2000, 1, 1, 1, 1, 1, 1, time.UTC))
+
+			existingSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret1",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"name":                          "secret1",
+						"managed-by":                    "secrets-manager",
+						"manager-identity":              identity,
+						"last-rotation-initiation-time": "-100",
+						"issued-at-time":                strconv.FormatInt(fakeClock.Now().Add(-24*time.Hour).Unix(), 10),
+						"valid-until-time":              strconv.FormatInt(fakeClock.Now().Add(time.Hour).Unix(), 10),
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
+
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithoutAutomaticSecretRenewal(), WithNamespaces(namespace))
+			Expect(err).NotTo(HaveOccurred())
+			m = mgr.(*manager)
+
+			Expect(m.lastRotationInitiationTimes).To(BeEmpty())
+		})
+
 		It("should only consider the last rotation initiation time for the newest secret", func() {
 			secrets := []*corev1.Secret{
 				{

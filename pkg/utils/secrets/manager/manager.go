@@ -104,6 +104,9 @@ type (
 		// SecretNamesToTimes is a map whose keys are secret names and whose values are the last rotation initiation
 		// times.
 		SecretNamesToTimes map[string]time.Time
+		// DisableAutomaticSecretRenewal states whether automatic secret renewal should be disabled even if a secret's
+		// configuration would otherwise require it.
+		DisableAutomaticSecretRenewal bool
 	}
 	// NewOption is some configuration that configures a secrets manager instance when creating it with [New].
 	NewOption func(*NewOptions)
@@ -128,6 +131,15 @@ func WithCASecretAutoRotation() NewOption {
 func WithSecretNamesToTimes(secretNamesToTimes map[string]time.Time) NewOption {
 	return func(options *NewOptions) {
 		options.SecretNamesToTimes = secretNamesToTimes
+	}
+}
+
+// WithoutAutomaticSecretRenewal disables automatic secret renewal (enabled by default).
+// When set, the secrets manager will not list existing secrets or prepare them for automatic renewal, even if a
+// secret's configuration would otherwise require it.
+func WithoutAutomaticSecretRenewal() NewOption {
+	return func(options *NewOptions) {
+		options.DisableAutomaticSecretRenewal = true
 	}
 }
 
@@ -172,8 +184,16 @@ func New(
 		lastRotationInitiationTimes: make(nameToUnixTime),
 	}
 
-	if err := m.initialize(ctx); err != nil {
-		return nil, err
+	if !opts.DisableAutomaticSecretRenewal {
+		if err := m.prepareExpiringSecretsForAutoRenewal(ctx); err != nil {
+			return nil, fmt.Errorf("failed to prepare expiring secrets for auto-renewal: %w", err)
+		}
+	}
+
+	// If the user has provided last rotation initiation times then convert to unix time and store the data in our
+	// internal map.
+	for name, time := range m.opts.SecretNamesToTimes {
+		m.lastRotationInitiationTimes[name] = unixTime(time)
 	}
 
 	return m, nil
@@ -197,7 +217,7 @@ func (m *manager) listSecrets(ctx context.Context) (*corev1.SecretList, error) {
 	return secretListAllNamespaces, nil
 }
 
-func (m *manager) initialize(ctx context.Context) error {
+func (m *manager) prepareExpiringSecretsForAutoRenewal(ctx context.Context) error {
 	secretList, err := m.listSecrets(ctx)
 	if err != nil {
 		return err
@@ -230,11 +250,6 @@ func (m *manager) initialize(ctx context.Context) error {
 			m.logger.Info("Preparing secret for automatic renewal", "secret", client.ObjectKeyFromObject(&secret), "issuedAt", secret.Labels[LabelKeyIssuedAtTime], "validUntil", secret.Labels[LabelKeyValidUntilTime])
 			m.lastRotationInitiationTimes[name] = unixTime(m.clock.Now())
 		}
-	}
-
-	// If the user has provided last rotation initiation times then use those.
-	for name, time := range m.opts.SecretNamesToTimes {
-		m.lastRotationInitiationTimes[name] = unixTime(time)
 	}
 
 	return nil
