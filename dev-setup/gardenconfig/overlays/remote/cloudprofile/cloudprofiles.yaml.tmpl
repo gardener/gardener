@@ -1,0 +1,16 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: CloudProfile
+metadata:
+  labels:
+    # The type of your provider, e.g. <aws|az|gcp|alicloud|...>
+    provider.extensions.gardener.cloud/<provider type>: "true"
+  name: ""
+spec:
+  # Please see https://github.com/gardener/gardener/blob/master/docs/deployment/setup_gardener.md#cloud-profile for
+  # detailed information on how to configure the cloud profile for your chosen provider.
+  kubernetes: {}
+  machineImages: {}
+  providerConfig: {}
+  machineTypes: {}
+  regions: {}
+  providerConfig: {}
