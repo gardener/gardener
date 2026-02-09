@@ -872,10 +872,10 @@ The easiest setup is using a local [KinD](https://kind.sigs.k8s.io/) cluster and
 make kind-multi-zone-up
 ```
 
-This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/multi-zone/kubeconfig` file.
+This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./dev-setup/kubeconfigs/runtime/kubeconfig` file.
 
 > It might be helpful to copy this file to `$HOME/.kube/config`, since you will need to target this KinD cluster multiple times.
-Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/multi-zone/kubeconfig` for all future steps via `export KUBECONFIG=$PWD/example/gardener-local/kind/multi-zone/kubeconfig`.
+Alternatively, make sure to set your `KUBECONFIG` environment variable to `./dev-setup/kubeconfigs/runtime/kubeconfig` for all future steps via `export KUBECONFIG=$PWD/dev-setup/kubeconfigs/runtime/kubeconfig`.
 
 All the following steps assume that you are using this kubeconfig.
 
