@@ -48,8 +48,9 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			}
 
 			s = testContext.ForSeed(&seedList.Items[seedIndex])
-			ItShouldInitializeSeedClient(s)
 		})
+
+		ItShouldInitializeSeedClient(s)
 
 		It("Create gardenlet kubeconfig rotation verifier", func(_ SpecContext) {
 			verifier = rotation.GardenletKubeconfigRotationVerifier{

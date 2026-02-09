@@ -59,7 +59,6 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			}
 
 			s = testContext.ForSeed(&seedList.Items[seedIndex])
-			ItShouldInitializeSeedClient(s)
 
 			seedNamespace = gardenerutils.ComputeGardenNamespace(s.Seed.Name)
 			gardenAccessName = "test-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
@@ -77,6 +76,8 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 				},
 			}
 		})
+
+		ItShouldInitializeSeedClient(s)
 
 		It("Should create garden access secret", func(ctx SpecContext) {
 			Eventually(ctx, func() error {
