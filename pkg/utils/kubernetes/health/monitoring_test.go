@@ -422,6 +422,69 @@ var _ = Describe("Monitoring", func() {
 			Expect(result.Message).To(Equal(""))
 		})
 
+		It("should handle truncated health check failing messages", func() {
+			var failingMetrics []map[string]any
+			for i := range 20 {
+				failingMetrics = append(failingMetrics, map[string]any{
+					"metric": map[string]any{"__name__": "healthcheck:up", "task": fmt.Sprintf("task-%02d", i)},
+					"value":  []any{float64(time.Now().Unix()), "0"},
+				})
+			}
+			response := map[string]any{
+				"status": "success",
+				"data": map[string]any{
+					"resultType": "vector",
+					"result":     failingMetrics,
+				},
+			}
+			responseHandler = createResponseHandler(http.StatusOK, response)
+
+			// show the expectation is truncated to 500 characters
+			expectedMessage := `healthcheck:up{task="task-00"} => 0, healthcheck:up{task="task-01"} => 0, healthcheck:up{task="task-02"} => 0, ` +
+				`healthcheck:up{task="task-03"} => 0, healthcheck:up{task="task-04"} => 0, healthcheck:up{task="task-05"} => 0, ` +
+				`healthcheck:up{task="task-06"} => 0, healthcheck:up{task="task-07"} => 0, healthcheck:up{task="task-08"} => 0, ` +
+				`healthcheck:up{task="task-09"} => 0, healthcheck:up{task="task-10"} => 0, healthcheck:up{task="task-11"} => 0, ` +
+				`healthcheck:up{task="task-12"} => 0, healthcheck:up{t...`
+			Expect(expectedMessage).To(HaveLen(500))
+
+			result := health.IsPrometheusHealthy(context.Background(), endpoint, port)
+			Expect(result.Error).NotTo(HaveOccurred())
+			Expect(result.IsHealthy).To(BeFalse())
+			Expect(result.Message).To(Equal(expectedMessage))
+		})
+
+		It("should handle truncated health check erroring messages", func() {
+			var failingMetrics []map[string]any
+			for i := range 20 {
+				failingMetrics = append(failingMetrics, map[string]any{
+					"metric": map[string]any{"__name__": "healthcheck:up", "task": fmt.Sprintf("task-%02d", i)},
+					"value":  []any{float64(time.Now().Unix()), "2"},
+				})
+			}
+			response := map[string]any{
+				"status": "success",
+				"data": map[string]any{
+					"resultType": "vector",
+					"result":     failingMetrics,
+				},
+			}
+			responseHandler = createResponseHandler(http.StatusOK, response)
+
+			// show the expectation is truncated to 500 characters
+			expectedMessage := `healthcheck:up{task="task-00"} => 2, healthcheck:up{task="task-01"} => 2, healthcheck:up{task="task-02"} => 2, ` +
+				`healthcheck:up{task="task-03"} => 2, healthcheck:up{task="task-04"} => 2, healthcheck:up{task="task-05"} => 2, ` +
+				`healthcheck:up{task="task-06"} => 2, healthcheck:up{task="task-07"} => 2, healthcheck:up{task="task-08"} => 2, ` +
+				`healthcheck:up{task="task-09"} => 2, healthcheck:up{task="task-10"} => 2, healthcheck:up{task="task-11"} => 2, ` +
+				`healthcheck:up{task="task-12"} => 2, healthcheck:up{t...`
+			Expect(expectedMessage).To(HaveLen(500))
+
+			result := health.IsPrometheusHealthy(context.Background(), endpoint, port)
+			Expect(result.Error).To(HaveOccurred())
+			Expect(result.Error.Error()).To(Equal("query returned inconsistent sample values: " + expectedMessage))
+			Expect(result.IsHealthy).To(BeFalse())
+			Expect(result.Message).To(Equal(""))
+		})
+
 		It("should handle timeouts", func() {
 			serverCtx, serverCancel := context.WithCancel(context.Background())
 			defer serverCancel()
