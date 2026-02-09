@@ -9,8 +9,12 @@ set -o pipefail
 function detect_scenario() {
   nodes=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}' | tr ' ' '\n')
   zones=$(kubectl get nodes -o jsonpath='{.items[*].metadata.labels.topology\.kubernetes\.io/zone}' | tr ' ' '\n' | sort -u)
+  provider_ids=$(kubectl get nodes -o jsonpath='{.items[*].spec.providerID}' | tr ' ' '\n')
 
-  if [[ $(echo "$nodes" | wc -l) -eq 1 ]]; then
+  # Check if all providerIDs do NOT start with kind://
+  if [[ -n "$provider_ids" && $(echo "$provider_ids" | grep -cv '^kind://') -eq $(echo "$provider_ids" | wc -l) ]]; then
+    export SCENARIO="remote"
+  elif [[ $(echo "$nodes" | wc -l) -eq 1 ]]; then
     export SCENARIO="single-node"
   elif grep -q "gardener-local-multi-node2" <<< "$nodes"; then
     export SCENARIO="multi-node2"
@@ -57,6 +61,9 @@ function skaffold_profile() {
       ;;
     single-node-dual)
       export SKAFFOLD_PROFILE="single-node-dual"
+      ;;
+    remote)
+      export SKAFFOLD_PROFILE="remote"
       ;;
   esac
 
