@@ -21,11 +21,11 @@ function copy_kubeconfig_from_kubeconfig_env_var() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
     cp $KIND_KUBECONFIG dev-setup/gardenlet/components/kubeconfigs/seed-local/kubeconfig
-    cp $KIND_KUBECONFIG example/gardener-local/kind/multi-zone/kubeconfig
+    cp $KIND_KUBECONFIG dev-setup/kubeconfigs/runtime/kubeconfig
     ;;
   zone)
     cp $KIND_KUBECONFIG dev-setup/gardenlet/components/kubeconfigs/seed-local/kubeconfig
-    cp $KIND_KUBECONFIG example/gardener-local/kind/multi-zone/kubeconfig
+    cp $KIND_KUBECONFIG dev-setup/kubeconfigs/runtime/kubeconfig
     ;;
   *)
     cp $KUBECONFIG example/provider-local/seed-kind/base/kubeconfig

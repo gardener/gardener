@@ -7,7 +7,7 @@
 set -euo pipefail
 
 # TODO(rfranzke): Remove this once we store the kind/runtime cluster kubeconfig at a fixed location.
-RUNTIME_CLUSTER_KUBECONFIG="${1:-"$(dirname "$0")/../../example/gardener-local/kind/multi-zone/kubeconfig"}"
+RUNTIME_CLUSTER_KUBECONFIG="${1:-"$(dirname "$0")/../../dev-setup/kubeconfigs/runtime/kubeconfig"}"
 
 USER_NAME="admin-user"
 CLUSTER_NAME="virtual-garden"

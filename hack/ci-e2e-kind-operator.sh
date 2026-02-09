@@ -19,7 +19,7 @@ make kind-multi-zone-up
 
 # export all container logs and events after test execution
 trap "
-  ( export KUBECONFIG=$PWD/example/gardener-local/kind/multi-zone/kubeconfig; export_artifacts 'gardener-operator-local'; export_resource_yamls_for garden)
+  ( export KUBECONFIG=$PWD/dev-setup/kubeconfigs/runtime/kubeconfig; export_artifacts 'gardener-operator-local'; export_resource_yamls_for garden)
   ( make kind-multi-zone-down )
 " EXIT
 

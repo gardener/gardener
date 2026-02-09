@@ -403,7 +403,7 @@ spec:
             nice make kind-multi-zone-down kind-multi-zone-up && kubectl wait --for=condition=ready pod -A --all --timeout=-1s
           EOF
           new_pane "make operator-up" <<"EOF"
-            export KUBECONFIG=$PWD/example/gardener-local/kind/multi-zone/kubeconfig
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/runtime/kubeconfig
             nice make operator-up
           EOF
           new_window "lifecycle" "Create" <<"EOF"
@@ -461,11 +461,11 @@ spec:
             nice make kind-multi-zone-down kind-multi-zone-up && kubectl wait --for=condition=ready pod -A --all --timeout=-1s
           EOF
           new_pane "make operator-up" <<"EOF"
-            export KUBECONFIG=$PWD/example/gardener-local/kind/multi-zone/kubeconfig
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/runtime/kubeconfig
             nice make operator-up
           EOF
           new_pane "make operator-seed-up" <<"EOF"
-            export KUBECONFIG=$PWD/example/gardener-local/kind/multi-zone/kubeconfig
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/runtime/kubeconfig
             nice make operator-seed-up
           EOF
           new_window "garden" "garden" Enter <<"EOF"
