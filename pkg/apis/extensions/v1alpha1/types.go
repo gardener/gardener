@@ -24,6 +24,7 @@ var AllExtensionKinds = sets.New(
 	InfrastructureResource,
 	NetworkResource,
 	OperatingSystemConfigResource,
+	SelfHostedShootExposureResource,
 	WorkerResource,
 )
 
