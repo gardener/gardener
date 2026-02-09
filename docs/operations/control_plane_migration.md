@@ -30,6 +30,10 @@ If the process is successful, we update the status of the `Shoot` by setting the
 
 The etcd backups will be copied over to the `BackupBucket` of the `Destination Seed` during control plane migration and any future backups will be uploaded there.
 
+> [!NOTE]
+> During the migration phase, the destination seed's `gardenlet` may already have access to the `Shoot` and its related resources in the garden cluster, while the source seed's `gardenlet` is still responsible for shutting down the control plane and persisting the current state to the `ShootState` resource.
+> This overlap is intentional and simplifies the implementation since the destination seed's `gardenlet` will eventually require access to these resources for control plane restoration anyway.
+
 ## Triggering the Migration
 
 For control plane migration, operators with the necessary RBAC can use the [`shoots/binding`](../concepts/scheduler.md#shootsbinding-subresource) subresource to change the `.spec.seedName`, with the following commands:
