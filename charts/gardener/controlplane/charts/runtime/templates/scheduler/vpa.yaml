@@ -13,7 +13,9 @@ spec:
     updateMode: Recreate
   resourcePolicy:
     containerPolicies:
-      - containerName: '*'
+      - containerName: gardener-scheduler
         minAllowed:
           memory: 25Mi
+      - containerName: '*'
+        mode: "Off"
 {{- end }}

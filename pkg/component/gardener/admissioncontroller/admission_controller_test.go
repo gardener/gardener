@@ -836,10 +836,14 @@ func vpa(namespace string) *vpaautoscalingv1.VerticalPodAutoscaler {
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
-						ContainerName: "*",
+						ContainerName: "gardener-admission-controller",
 						MinAllowed: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("25Mi"),
 						},
+					},
+					{
+						ContainerName: "*",
+						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},

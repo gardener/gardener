@@ -300,11 +300,15 @@ var _ = Describe("Fluent Operator", func() {
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName:       vpaautoscalingv1.DefaultContainerResourcePolicy,
+							ContainerName:       name,
 							ControlledResources: &[]corev1.ResourceName{corev1.ResourceMemory},
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("128Mi"),
 							},
+						},
+						{
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},

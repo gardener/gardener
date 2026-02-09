@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/ptr"
 )
 
 func (g *gardenerScheduler) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutoscaler {
@@ -33,10 +34,14 @@ func (g *gardenerScheduler) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPo
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
-						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						ContainerName: containerName,
 						MinAllowed: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("25Mi"),
 						},
+					},
+					{
+						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},

@@ -200,7 +200,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 						},
 						Containers: []corev1.Container{
 							{
-								Name:            daemonSetName,
+								Name:            containerName,
 								Image:           c.values.Image,
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Command: []string{
@@ -341,11 +341,15 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							ContainerName: containerName,
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("20Mi"),
 							},
 							ControlledValues: &controlledValues,
+						},
+						{
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},

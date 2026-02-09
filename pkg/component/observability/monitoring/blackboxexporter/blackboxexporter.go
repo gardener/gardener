@@ -43,7 +43,8 @@ import (
 )
 
 const (
-	labelValue = "blackbox-exporter"
+	labelValue    = "blackbox-exporter"
+	containerName = "blackbox-exporter"
 
 	volumeMountPathConfig = "/etc/blackbox_exporter"
 	dataKeyConfig         = "blackbox.yaml"
@@ -239,7 +240,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 						},
 						Containers: []corev1.Container{
 							{
-								Name:  "blackbox-exporter",
+								Name:  containerName,
 								Image: b.values.Image,
 								Args: []string{
 									fmt.Sprintf("--config.file=%s/%s", volumeMountPathConfig, dataKeyConfig),
@@ -369,9 +370,13 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName:       vpaautoscalingv1.DefaultContainerResourcePolicy,
+							ContainerName:       containerName,
 							ControlledValues:    ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							ControlledResources: &[]corev1.ResourceName{corev1.ResourceMemory},
+						},
+						{
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},

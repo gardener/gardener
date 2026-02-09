@@ -78,7 +78,7 @@ func (g *gardenerDiscoveryServer) deployment(
 					},
 					Containers: []corev1.Container{
 						{
-							Name:            deploymentName,
+							Name:            containerName,
 							Image:           g.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{

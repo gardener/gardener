@@ -17,7 +17,10 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-const deploymentName = "prometheus-operator"
+const (
+	deploymentName = "prometheus-operator"
+	containerName  = "prometheus-operator"
+)
 
 func (p *prometheusOperator) deployment() *appsv1.Deployment {
 	return &appsv1.Deployment{
@@ -47,7 +50,7 @@ func (p *prometheusOperator) deployment() *appsv1.Deployment {
 					},
 					Containers: []corev1.Container{
 						{
-							Name:            "prometheus-operator",
+							Name:            containerName,
 							Image:           p.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{

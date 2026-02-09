@@ -28,6 +28,7 @@ const (
 	ManagedResourceNameVirtual = "gardener-dashboard-virtual"
 
 	deploymentName = "gardener-dashboard"
+	containerName  = "gardener-dashboard"
 	roleName       = "dashboard"
 )
 

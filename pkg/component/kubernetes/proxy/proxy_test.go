@@ -853,7 +853,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 									},
 								},
 								{
-									ContainerName: "conntrack-fix",
+									ContainerName: "*",
 									Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 								},
 							},

@@ -264,10 +264,12 @@ metadata:
 spec:
   resourcePolicy:
     containerPolicies:
-    - containerName: '*'
+    - containerName: node-problem-detector
       controlledValues: RequestsOnly
       minAllowed:
         memory: 20Mi
+    - containerName: '*'
+      mode: "Off"
   targetRef:
     apiVersion: apps/v1
     kind: DaemonSet

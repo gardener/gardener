@@ -331,10 +331,12 @@ metadata:
 spec:
   resourcePolicy:
     containerPolicies:
-    - containerName: '*'
+    - containerName: blackbox-exporter
       controlledResources:
       - memory
       controlledValues: RequestsOnly
+    - containerName: '*'
+      mode: "Off"
   targetRef:
     apiVersion: apps/v1
     kind: Deployment

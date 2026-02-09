@@ -320,11 +320,15 @@ func (k *kubeStateMetrics) verticalPodAutoscaler(deployment *appsv1.Deployment) 
 		ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
-					ContainerName:    "*",
+					ContainerName:    containerName,
 					ControlledValues: &controlledValues,
 					MinAllowed: corev1.ResourceList{
 						corev1.ResourceMemory: resource.MustParse("32Mi"),
 					},
+				},
+				{
+					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 				},
 			},
 		},

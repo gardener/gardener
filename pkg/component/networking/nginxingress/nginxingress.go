@@ -603,7 +603,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
-		updateMode          = vpaautoscalingv1.UpdateModeRecreate
 		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
 		podDisruptionBudget *policyv1.PodDisruptionBudget
 		networkPolicy       *networkingv1.NetworkPolicy
@@ -722,15 +721,19 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					Name:       deploymentController.Name,
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: &updateMode,
+					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							ContainerName: n.getName("Container", false),
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("100Mi"),
 							},
+						},
+						{
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},

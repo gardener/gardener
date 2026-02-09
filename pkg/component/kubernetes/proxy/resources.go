@@ -424,7 +424,7 @@ func (k *kubeProxy) computePoolResourcesDataForMajorMinorVersionOnly(pool Worker
 							ControlledValues: &controlledValues,
 						},
 						{
-							ContainerName: containerNameConntrackFix,
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
 							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},

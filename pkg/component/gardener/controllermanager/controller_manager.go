@@ -26,8 +26,9 @@ const (
 	// DeploymentName is the name of the deployment.
 	DeploymentName = "gardener-controller-manager"
 
-	probePort   = 2718
-	metricsPort = 2719
+	containerName = "gardener-controller-manager"
+	probePort     = 2718
+	metricsPort   = 2719
 
 	// ManagedResourceNameRuntime is the name of the ManagedResource for the runtime resources.
 	ManagedResourceNameRuntime = "gardener-controller-manager-runtime"

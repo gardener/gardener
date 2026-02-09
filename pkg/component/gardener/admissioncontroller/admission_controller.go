@@ -29,7 +29,8 @@ const (
 	// ServiceName is the name of the service.
 	ServiceName = DeploymentName
 
-	roleName = "admission-controller"
+	containerName = "gardener-admission-controller"
+	roleName      = "admission-controller"
 
 	serverPort  = 2719
 	probePort   = 2722
