@@ -21,15 +21,12 @@ BUILD_DATE                                 := $(shell date '+%Y-%m-%dT%H:%M:%S%z
 REPO_ROOT                                  := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 GARDENER_LOCAL_KUBECONFIG                  := $(REPO_ROOT)/example/gardener-local/kind/local/kubeconfig
 GARDENER_LOCAL2_KUBECONFIG                 := $(REPO_ROOT)/example/gardener-local/kind/local2/kubeconfig
-GARDENER_EXTENSIONS_KUBECONFIG             := $(REPO_ROOT)/example/gardener-local/kind/extensions/kubeconfig
 GARDENER_LOCAL_MULTI_ZONE_KUBECONFIG       := $(REPO_ROOT)/dev-setup/kubeconfigs/runtime/kubeconfig
 GARDENER_LOCAL_MULTI_NODE2_KUBECONFIG      := $(REPO_ROOT)/example/gardener-local/kind/multi-node2/kubeconfig
 GARDENER_PREVIOUS_RELEASE                  := ""
 GARDENER_NEXT_RELEASE                      := $(VERSION)
 LOCAL_GARDEN_LABEL                         := local-garden
 REMOTE_GARDEN_LABEL                        := remote-garden
-SEED_NAME                                  := provider-extensions
-SEED_KUBECONFIG                            := $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig
 DEV_SETUP_WITH_WEBHOOKS                    := false
 IPFAMILY                                   ?= ipv4
 PARALLEL_E2E_TESTS                         ?= 5
@@ -38,10 +35,6 @@ DEV_SETUP_WITH_LPP_RESIZE_SUPPORT          ?= false
 DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT   ?= false
 TARGET_PLATFORMS                           ?= linux/$(shell go env GOARCH)
 PRINT_HELP ?=
-
-ifneq ($(SEED_NAME),provider-extensions)
-	SEED_KUBECONFIG := $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig-$(SEED_NAME)
-endif
 
 ifndef ARTIFACTS
 	export ARTIFACTS=/tmp/artifacts
@@ -272,7 +265,6 @@ kind-% kind2-% gardener-% operator-% garden-% seed-% ci-e2e-kind: export IPFAMIL
 kind-up kind-down gardener-up gardener-dev gardener-debug gardener-down: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
 test-e2e-local-simple test-e2e-local-migration test-e2e-local-workerless test-e2e-local ci-e2e-kind ci-e2e-kind-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
-kind-extensions-up kind-extensions-down gardener-extensions-up gardener-extensions-down: export KUBECONFIG = $(GARDENER_EXTENSIONS_KUBECONFIG)
 kind-multi-node2-up kind-multi-node2-down: export KUBECONFIG = $(GARDENER_LOCAL_MULTI_NODE2_KUBECONFIG)
 kind-single-node-up kind-single-node-down kind-multi-node-up kind-multi-node-down kind-multi-zone-up kind-multi-zone-down operator%up operator-dev operator-debug operator%down operator-seed-dev test-e2e-local-operator ci-e2e-kind-operator garden-up garden-down gardenadm-up gardenadm-down seed-up seed-down test-e2e-local-gardenadm% ci-e2e-kind-gardenadm remote-%: export KUBECONFIG = $(GARDENER_LOCAL_MULTI_ZONE_KUBECONFIG)
 garden-up garden-down operator-seed-% test-e2e-local-ha-% ci-e2e-kind-ha-% ci-e2e-kind-ha-%-upgrade test-e2e-local-migration-ha-multi-node seed-% gardenadm-% remote-%: export VIRTUAL_GARDEN_KUBECONFIG = $(REPO_ROOT)/dev-setup/kubeconfigs/virtual-garden/kubeconfig
@@ -311,13 +303,6 @@ kind-down kind2-down kind-multi-node2-down: $(KIND)
 		--cluster-name $(CLUSTER_NAME) \
 		--path-kubeconfig $(KIND_KUBECONFIG) \
 		$(ADDITIONAL_PARAMETERS)
-
-kind-extensions-up: $(KIND) $(KUBECTL)
-	REPO_ROOT=$(REPO_ROOT) ./hack/kind-extensions-up.sh
-kind-extensions-down:
-	docker stop gardener-extensions-control-plane
-kind-extensions-clean: $(KIND)
-	./hack/kind-down.sh --cluster-name gardener-extensions --path-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig
 
 kind-single-node-up kind-multi-node-up kind-multi-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
 	./hack/kind-up.sh \
@@ -365,13 +350,6 @@ gardener-debug: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	$(SKAFFOLD) debug
 gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh
-
-gardener-extensions-%: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-extensions
-
-gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ) $(OIDC_METADATA)
-	./hack/gardener-extensions-up.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(SEED_KUBECONFIG) --seed-name $(SEED_NAME) --with-workload-identity-support $(DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT)
-gardener-extensions-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./hack/gardener-extensions-down.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(SEED_KUBECONFIG) --seed-name $(SEED_NAME) --with-workload-identity-support $(DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT)
 
 gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down: export SKAFFOLD_PREFIX_NAME = kind2
 gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down: export SKAFFOLD_COMMAND_KUBECONFIG := $(GARDENER_LOCAL_KUBECONFIG)
