@@ -63,6 +63,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileList":                            schema_pkg_apis_core_v1beta1_CloudProfileList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference":                       schema_pkg_apis_core_v1beta1_CloudProfileReference(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileSpec":                            schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileStatus":                          schema_pkg_apis_core_v1beta1_CloudProfileStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscaler":                           schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscalerOptions":                    schema_pkg_apis_core_v1beta1_ClusterAutoscalerOptions(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition":                                   schema_pkg_apis_core_v1beta1_Condition(ref),
@@ -99,6 +100,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionProvider":                          schema_pkg_apis_core_v1beta1_EncryptionProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionProviderStatus":                    schema_pkg_apis_core_v1beta1_EncryptionProviderStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion":                            schema_pkg_apis_core_v1beta1_ExpirableVersion(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersionStatus":                      schema_pkg_apis_core_v1beta1_ExpirableVersionStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Exposure":                                    schema_pkg_apis_core_v1beta1_Exposure(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClass":                               schema_pkg_apis_core_v1beta1_ExposureClass(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClassList":                           schema_pkg_apis_core_v1beta1_ExposureClassList(ref),
@@ -133,15 +135,18 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesConfig":                            schema_pkg_apis_core_v1beta1_KubernetesConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesDashboard":                         schema_pkg_apis_core_v1beta1_KubernetesDashboard(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings":                          schema_pkg_apis_core_v1beta1_KubernetesSettings(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesStatus":                            schema_pkg_apis_core_v1beta1_KubernetesStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError":                                   schema_pkg_apis_core_v1beta1_LastError(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastMaintenance":                             schema_pkg_apis_core_v1beta1_LastMaintenance(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation":                               schema_pkg_apis_core_v1beta1_LastOperation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LifecycleStage":                              schema_pkg_apis_core_v1beta1_LifecycleStage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits":                                      schema_pkg_apis_core_v1beta1_Limits(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LoadBalancerServicesProxyProtocol":           schema_pkg_apis_core_v1beta1_LoadBalancerServicesProxyProtocol(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine":                                     schema_pkg_apis_core_v1beta1_Machine(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSettings":            schema_pkg_apis_core_v1beta1_MachineControllerManagerSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage":                                schema_pkg_apis_core_v1beta1_MachineImage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageFlavor":                          schema_pkg_apis_core_v1beta1_MachineImageFlavor(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageStatus":                          schema_pkg_apis_core_v1beta1_MachineImageStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageVersion":                         schema_pkg_apis_core_v1beta1_MachineImageVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType":                                 schema_pkg_apis_core_v1beta1_MachineType(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineTypeStorage":                          schema_pkg_apis_core_v1beta1_MachineTypeStorage(ref),
@@ -2129,11 +2134,18 @@ func schema_pkg_apis_core_v1beta1_CloudProfile(ref common.ReferenceCallback) com
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileSpec"),
 						},
 					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Status contains the current status of the cloud profile.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileStatus"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileSpec", "github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -2371,6 +2383,41 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Bastion", "github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityDefinition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Region", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_CloudProfileStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CloudProfileStatus contains the status of the cloud profile.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kubernetes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kubernetes contains the status information for kubernetes.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesStatus"),
+						},
+					},
+					"machineImages": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineImages contains the statuses of the machine image versions.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageStatus"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesStatus", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageStatus"},
 	}
 }
 
@@ -3883,7 +3930,7 @@ func schema_pkg_apis_core_v1beta1_ExpirableVersion(ref common.ReferenceCallback)
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ExpirableVersion contains a version and an expiration date.",
+				Description: "ExpirableVersion contains a version with associated lifecycle information.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"version": {
@@ -3896,15 +3943,29 @@ func schema_pkg_apis_core_v1beta1_ExpirableVersion(ref common.ReferenceCallback)
 					},
 					"expirationDate": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ExpirationDate defines the time at which this version expires.",
+							Description: "ExpirationDate defines the time at which this version expires. Deprecated: Is replaced by Lifecycle; mutually exclusive with it.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 					"classification": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Classification defines the state of a version (preview, supported, deprecated). To get the currently valid classification, use CurrentLifecycleClassification().",
+							Description: "Classification defines the state of a version (preview, supported, deprecated). Deprecated: Is replaced by Lifecycle. mutually exclusive with it.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"lifecycle": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Lifecycle defines the lifecycle stages for this version. Mutually exclusive with Classification and ExpirationDate. This can only be used when the VersionClassificationLifecycle feature gate is enabled.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LifecycleStage"),
+									},
+								},
+							},
 						},
 					},
 				},
@@ -3912,7 +3973,37 @@ func schema_pkg_apis_core_v1beta1_ExpirableVersion(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.LifecycleStage", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ExpirableVersionStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExpirableVersionStatus defines the current status of an expirable version.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Version is the version identifier.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"classification": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Classification reflects the current state in the classification lifecycle.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"version", "classification"},
+			},
+		},
 	}
 }
 
@@ -5598,6 +5689,35 @@ func schema_pkg_apis_core_v1beta1_KubernetesSettings(ref common.ReferenceCallbac
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_KubernetesStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "KubernetesStatus contains the status information for kubernetes.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"versions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Versions contains the statuses of the kubernetes versions.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersionStatus"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersionStatus"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_LastError(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -5742,6 +5862,36 @@ func schema_pkg_apis_core_v1beta1_LastOperation(ref common.ReferenceCallback) co
 					},
 				},
 				Required: []string{"description", "lastUpdateTime", "progress", "state", "type"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_LifecycleStage(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "LifecycleStage describes a stage in the versions lifecycle. Each stage defines the classification of the version (e.g. unavailable, preview, supported, deprecated, expired) and the time at which this classification becomes effective.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"classification": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Classification is the category of this lifecycle stage (unavailable, preview, supported, deprecated, expired).",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"startTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StartTime defines when this lifecycle stage becomes active. StartTime can be omitted for the first lifecycle stage, implying a start time in the past.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"classification"},
 			},
 		},
 		Dependencies: []string{
@@ -5958,6 +6108,44 @@ func schema_pkg_apis_core_v1beta1_MachineImageFlavor(ref common.ReferenceCallbac
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_MachineImageStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MachineImageStatus contains the status of a machine image and its version classifications.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name matches the name of the MachineImage the status is represented of.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"versions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Versions contains the statuses of the machine image versions.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersionStatus"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersionStatus"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -5975,15 +6163,29 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 					},
 					"expirationDate": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ExpirationDate defines the time at which this version expires.",
+							Description: "ExpirationDate defines the time at which this version expires. Deprecated: Is replaced by Lifecycle; mutually exclusive with it.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 					"classification": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Classification defines the state of a version (preview, supported, deprecated). To get the currently valid classification, use CurrentLifecycleClassification().",
+							Description: "Classification defines the state of a version (preview, supported, deprecated). Deprecated: Is replaced by Lifecycle. mutually exclusive with it.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"lifecycle": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Lifecycle defines the lifecycle stages for this version. Mutually exclusive with Classification and ExpirationDate. This can only be used when the VersionClassificationLifecycle feature gate is enabled.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LifecycleStage"),
+									},
+								},
+							},
 						},
 					},
 					"cri": {
@@ -6046,7 +6248,7 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageFlavor", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LifecycleStage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageFlavor", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

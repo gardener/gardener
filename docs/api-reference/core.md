@@ -537,6 +537,19 @@ During maintenance upgrades, the image that matches most capabilities will be se
 </table>
 </td>
 </tr>
+<tr>
+<td>
+<code>status</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileStatus">
+CloudProfileStatus
+</a>
+</em>
+</td>
+<td>
+<p>Status contains the current status of the cloud profile.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ControllerDeployment">ControllerDeployment
@@ -3876,6 +3889,53 @@ During maintenance upgrades, the image that matches most capabilities will be se
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.CloudProfileStatus">CloudProfileStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfile">CloudProfile</a>)
+</p>
+<p>
+<p>CloudProfileStatus contains the status of the cloud profile.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>kubernetes</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.KubernetesStatus">
+KubernetesStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Kubernetes contains the status information for kubernetes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>machineImages</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MachineImageStatus">
+[]MachineImageStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineImages contains the statuses of the machine image versions.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ClusterAutoscaler">ClusterAutoscaler
 </h3>
 <p>
@@ -5821,7 +5881,7 @@ EncryptionProviderType
 <a href="#core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion</a>)
 </p>
 <p>
-<p>ExpirableVersion contains a version and an expiration date.</p>
+<p>ExpirableVersion contains a version with associated lifecycle information.</p>
 </p>
 <table>
 <thead>
@@ -5853,7 +5913,8 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <em>(Optional)</em>
-<p>ExpirationDate defines the time at which this version expires.</p>
+<p>ExpirationDate defines the time at which this version expires.
+Deprecated: Is replaced by Lifecycle; mutually exclusive with it.</p>
 </td>
 </tr>
 <tr>
@@ -5868,7 +5929,67 @@ VersionClassification
 <td>
 <em>(Optional)</em>
 <p>Classification defines the state of a version (preview, supported, deprecated).
-To get the currently valid classification, use CurrentLifecycleClassification().</p>
+Deprecated: Is replaced by Lifecycle. mutually exclusive with it.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lifecycle</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.LifecycleStage">
+[]LifecycleStage
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Lifecycle defines the lifecycle stages for this version.
+Mutually exclusive with Classification and ExpirationDate.
+This can only be used when the VersionClassificationLifecycle feature gate is enabled.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ExpirableVersionStatus">ExpirableVersionStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.KubernetesStatus">KubernetesStatus</a>, 
+<a href="#core.gardener.cloud/v1beta1.MachineImageStatus">MachineImageStatus</a>)
+</p>
+<p>
+<p>ExpirableVersionStatus defines the current status of an expirable version.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>version</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Version is the version identifier.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>classification</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.VersionClassification">
+VersionClassification
+</a>
+</em>
+</td>
+<td>
+<p>Classification reflects the current state in the classification lifecycle.</p>
 </td>
 </tr>
 </tbody>
@@ -8304,6 +8425,39 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.KubernetesStatus">KubernetesStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileStatus">CloudProfileStatus</a>)
+</p>
+<p>
+<p>KubernetesStatus contains the status information for kubernetes.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>versions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ExpirableVersionStatus">
+[]ExpirableVersionStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Versions contains the statuses of the kubernetes versions.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.LastError">LastError
 </h3>
 <p>
@@ -8547,6 +8701,55 @@ LastOperationType
 <p>
 <p>LastOperationType is a string alias.</p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.LifecycleStage">LifecycleStage
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ExpirableVersion">ExpirableVersion</a>)
+</p>
+<p>
+<p>LifecycleStage describes a stage in the versions lifecycle.
+Each stage defines the classification of the version (e.g. unavailable, preview, supported, deprecated, expired)
+and the time at which this classification becomes effective.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>classification</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.VersionClassification">
+VersionClassification
+</a>
+</em>
+</td>
+<td>
+<p>Classification is the category of this lifecycle stage (unavailable, preview, supported, deprecated, expired).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>startTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>StartTime defines when this lifecycle stage becomes active.
+StartTime can be omitted for the first lifecycle stage, implying a start time in the past.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.Limits">Limits
 </h3>
 <p>
@@ -8873,6 +9076,50 @@ Capabilities
 </em>
 </td>
 <td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.MachineImageStatus">MachineImageStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileStatus">CloudProfileStatus</a>)
+</p>
+<p>
+<p>MachineImageStatus contains the status of a machine image and its version classifications.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name matches the name of the MachineImage the status is represented of.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>versions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ExpirableVersionStatus">
+[]ExpirableVersionStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Versions contains the statuses of the machine image versions.</p>
 </td>
 </tr>
 </tbody>
@@ -14845,7 +15092,9 @@ string
 (<code>string</code> alias)</p></h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.ExpirableVersion">ExpirableVersion</a>)
+<a href="#core.gardener.cloud/v1beta1.ExpirableVersion">ExpirableVersion</a>, 
+<a href="#core.gardener.cloud/v1beta1.ExpirableVersionStatus">ExpirableVersionStatus</a>, 
+<a href="#core.gardener.cloud/v1beta1.LifecycleStage">LifecycleStage</a>)
 </p>
 <p>
 <p>VersionClassification is the logical state of a version.</p>

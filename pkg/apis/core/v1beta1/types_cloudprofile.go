@@ -30,6 +30,8 @@ type CloudProfile struct {
 	// Spec defines the provider environment properties.
 	// +optional
 	Spec CloudProfileSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	// Status contains the current status of the cloud profile.
+	Status CloudProfileStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -159,17 +161,35 @@ type MachineImageVersion struct {
 	CapabilityFlavors []MachineImageFlavor `json:"capabilityFlavors,omitempty" protobuf:"bytes,6,rep,name=capabilityFlavors"`
 }
 
-// ExpirableVersion contains a version and an expiration date.
+// ExpirableVersion contains a version with associated lifecycle information.
 type ExpirableVersion struct {
 	// Version is the version identifier.
 	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
 	// ExpirationDate defines the time at which this version expires.
+	// Deprecated: Is replaced by Lifecycle; mutually exclusive with it.
 	// +optional
 	ExpirationDate *metav1.Time `json:"expirationDate,omitempty" protobuf:"bytes,2,opt,name=expirationDate"`
 	// Classification defines the state of a version (preview, supported, deprecated).
-	// To get the currently valid classification, use CurrentLifecycleClassification().
+	// Deprecated: Is replaced by Lifecycle. mutually exclusive with it.
 	// +optional
 	Classification *VersionClassification `json:"classification,omitempty" protobuf:"bytes,3,opt,name=classification,casttype=VersionClassification"`
+	// Lifecycle defines the lifecycle stages for this version.
+	// Mutually exclusive with Classification and ExpirationDate.
+	// This can only be used when the VersionClassificationLifecycle feature gate is enabled.
+	// +optional
+	Lifecycle []LifecycleStage `json:"lifecycle,omitempty" protobuf:"bytes,4,opt,name=lifecycle"`
+}
+
+// LifecycleStage describes a stage in the versions lifecycle.
+// Each stage defines the classification of the version (e.g. unavailable, preview, supported, deprecated, expired)
+// and the time at which this classification becomes effective.
+type LifecycleStage struct {
+	// Classification is the category of this lifecycle stage (unavailable, preview, supported, deprecated, expired).
+	Classification VersionClassification `json:"classification" protobuf:"bytes,1,opt,name=classification,casttype=VersionClassification"`
+	// StartTime defines when this lifecycle stage becomes active.
+	// StartTime can be omitted for the first lifecycle stage, implying a start time in the past.
+	// +optional
+	StartTime *metav1.Time `json:"startTime,omitempty" protobuf:"bytes,2,opt,name=startTime"`
 }
 
 // MachineType contains certain properties of a machine type.
@@ -287,6 +307,40 @@ type Limits struct {
 	// MaxNodesTotal configures the maximum node count a Shoot cluster can have during runtime.
 	// +optional
 	MaxNodesTotal *int32 `json:"maxNodesTotal,omitempty" protobuf:"varint,1,opt,name=maxNodesTotal"`
+}
+
+// CloudProfileStatus contains the status of the cloud profile.
+type CloudProfileStatus struct {
+	// Kubernetes contains the status information for kubernetes.
+	// +optional
+	Kubernetes *KubernetesStatus `json:"kubernetes,omitempty" protobuf:"bytes,1,name=kubernetes"`
+	// MachineImages contains the statuses of the machine image versions.
+	// +optional
+	MachineImages []MachineImageStatus `json:"machineImages,omitempty" protobuf:"bytes,2,name=machineImages"`
+}
+
+// KubernetesStatus contains the status information for kubernetes.
+type KubernetesStatus struct {
+	// Versions contains the statuses of the kubernetes versions.
+	// +optional
+	Versions []ExpirableVersionStatus `json:"versions,omitempty" protobuf:"bytes,1,name=versions"`
+}
+
+// MachineImageStatus contains the status of a machine image and its version classifications.
+type MachineImageStatus struct {
+	// Name matches the name of the MachineImage the status is represented of.
+	Name string `json:"name" protobuf:"bytes,1,name=name"`
+	// Versions contains the statuses of the machine image versions.
+	// +optional
+	Versions []ExpirableVersionStatus `json:"versions,omitempty" protobuf:"bytes,2,name=versions"`
+}
+
+// ExpirableVersionStatus defines the current status of an expirable version.
+type ExpirableVersionStatus struct {
+	// Version is the version identifier.
+	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
+	// Classification reflects the current state in the classification lifecycle.
+	Classification VersionClassification `json:"classification" protobuf:"bytes,2,opt,name=classification,casttype=VersionClassification"`
 }
 
 const (

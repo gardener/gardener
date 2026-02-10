@@ -403,6 +403,9 @@ message CloudProfile {
   // Spec defines the provider environment properties.
   // +optional
   optional CloudProfileSpec spec = 2;
+
+  // Status contains the current status of the cloud profile.
+  optional CloudProfileStatus status = 3;
 }
 
 // CloudProfileList is a collection of CloudProfiles.
@@ -485,6 +488,17 @@ message CloudProfileSpec {
   // During maintenance upgrades, the image that matches most capabilities will be selected.
   // +optional
   repeated CapabilityDefinition machineCapabilities = 12;
+}
+
+// CloudProfileStatus contains the status of the cloud profile.
+message CloudProfileStatus {
+  // Kubernetes contains the status information for kubernetes.
+  // +optional
+  optional KubernetesStatus kubernetes = 1;
+
+  // MachineImages contains the statuses of the machine image versions.
+  // +optional
+  repeated MachineImageStatus machineImages = 2;
 }
 
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
@@ -1076,19 +1090,35 @@ message EncryptionProviderStatus {
   optional string type = 1;
 }
 
-// ExpirableVersion contains a version and an expiration date.
+// ExpirableVersion contains a version with associated lifecycle information.
 message ExpirableVersion {
   // Version is the version identifier.
   optional string version = 1;
 
   // ExpirationDate defines the time at which this version expires.
+  // Deprecated: Is replaced by Lifecycle; mutually exclusive with it.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationDate = 2;
 
   // Classification defines the state of a version (preview, supported, deprecated).
-  // To get the currently valid classification, use CurrentLifecycleClassification().
+  // Deprecated: Is replaced by Lifecycle. mutually exclusive with it.
   // +optional
   optional string classification = 3;
+
+  // Lifecycle defines the lifecycle stages for this version.
+  // Mutually exclusive with Classification and ExpirationDate.
+  // This can only be used when the VersionClassificationLifecycle feature gate is enabled.
+  // +optional
+  repeated LifecycleStage lifecycle = 4;
+}
+
+// ExpirableVersionStatus defines the current status of an expirable version.
+message ExpirableVersionStatus {
+  // Version is the version identifier.
+  optional string version = 1;
+
+  // Classification reflects the current state in the classification lifecycle.
+  optional string classification = 2;
 }
 
 // Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).
@@ -1875,6 +1905,13 @@ message KubernetesSettings {
   repeated ExpirableVersion versions = 1;
 }
 
+// KubernetesStatus contains the status information for kubernetes.
+message KubernetesStatus {
+  // Versions contains the statuses of the kubernetes versions.
+  // +optional
+  repeated ExpirableVersionStatus versions = 1;
+}
+
 // LastError indicates the last occurred error for an operation on a resource.
 message LastError {
   // A human readable message indicating details about the last error.
@@ -1926,6 +1963,19 @@ message LastOperation {
 
   // Type of the last operation, one of Create, Reconcile, Delete, Migrate, Restore.
   optional string type = 5;
+}
+
+// LifecycleStage describes a stage in the versions lifecycle.
+// Each stage defines the classification of the version (e.g. unavailable, preview, supported, deprecated, expired)
+// and the time at which this classification becomes effective.
+message LifecycleStage {
+  // Classification is the category of this lifecycle stage (unavailable, preview, supported, deprecated, expired).
+  optional string classification = 1;
+
+  // StartTime defines when this lifecycle stage becomes active.
+  // StartTime can be omitted for the first lifecycle stage, implying a start time in the past.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time startTime = 2;
 }
 
 // Limits configures operational limits for Shoot clusters using this CloudProfile.
@@ -2015,6 +2065,16 @@ message MachineImage {
 // This is a workaround as the Protobuf generator can't handle a slice of maps.
 message MachineImageFlavor {
   map<string, CapabilityValues> capabilities = 1;
+}
+
+// MachineImageStatus contains the status of a machine image and its version classifications.
+message MachineImageStatus {
+  // Name matches the name of the MachineImage the status is represented of.
+  optional string name = 1;
+
+  // Versions contains the statuses of the machine image versions.
+  // +optional
+  repeated ExpirableVersionStatus versions = 2;
 }
 
 // MachineImageVersion is an expirable version with list of supported container runtimes and interfaces

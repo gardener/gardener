@@ -53,6 +53,65 @@ func ValidateCloudProfileUpdate(newProfile, oldProfile *core.CloudProfile) field
 	return allErrs
 }
 
+// ValidateCloudProfileSpecUpdate validates the spec update of a CloudProfile
+func ValidateCloudProfileSpecUpdate(new, old *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateCloudProfileLimitsUpdate(new.Limits, old.Limits, fldPath.Child("limits"))...)
+	allErrs = append(allErrs, ValidateCloudProfileExpirableVersionsUpdate(new.Kubernetes.Versions, old.Kubernetes.Versions, fldPath.Child("kubernetes").Child("versions"))...)
+
+	oldMachineImageVersions := map[string]core.MachineImage{}
+	for _, version := range old.MachineImages {
+		oldMachineImageVersions[version.Name] = version
+	}
+
+	for i, newMachineImage := range new.MachineImages {
+		oldMachineImage, ok := oldMachineImageVersions[newMachineImage.Name]
+		if !ok {
+			continue
+		}
+
+		var (
+			oldVersions, newVersions []core.ExpirableVersion
+		)
+
+		for _, oldVersion := range oldMachineImage.Versions {
+			oldVersions = append(oldVersions, oldVersion.ExpirableVersion)
+		}
+		for _, newVersion := range newMachineImage.Versions {
+			newVersions = append(newVersions, newVersion.ExpirableVersion)
+		}
+
+		allErrs = append(allErrs, ValidateCloudProfileExpirableVersionsUpdate(newVersions, oldVersions, fldPath.Child("machineImages").Index(i).Child("versions"))...)
+	}
+
+	return allErrs
+}
+
+// ValidateCloudProfileExpirableVersionsUpdate validates the expirable versions update of a CloudProfile expirable version
+func ValidateCloudProfileExpirableVersionsUpdate(new, old []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	oldVersions := map[string]core.ExpirableVersion{}
+	for _, version := range old {
+		oldVersions[version.Version] = version
+	}
+
+	for i, newVersion := range new {
+		oldVersion, ok := oldVersions[newVersion.Version]
+		if !ok {
+			continue
+		}
+
+		if helper.CurrentLifecycleClassification(oldVersion) != core.ClassificationUnavailable &&
+			helper.CurrentLifecycleClassification(newVersion) == core.ClassificationUnavailable {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i), "a version cannot be turned unavailable if it was already moved into a later lifecycle stage"))
+		}
+	}
+
+	return allErrs
+}
+
 // ValidateCloudProfileSpec validates the specification of a CloudProfile object.
 func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
 	var (
@@ -86,26 +145,26 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 	return allErrs
 }
 
-// ValidateCloudProfileSpecUpdate validates a CloudProfileSpec before an update.
-func ValidateCloudProfileSpecUpdate(newSpec, oldSpec *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	allErrs = append(allErrs, validateCloudProfileLimitsUpdate(newSpec.Limits, oldSpec.Limits, fldPath.Child("limits"))...)
-
-	return allErrs
-}
-
 func validateCloudProfileKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if len(kubernetes.Versions) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("versions"), "must provide at least one Kubernetes version"))
 	}
+
 	latestKubernetesVersion, _, err := helper.DetermineLatestExpirableVersion(kubernetes.Versions, false)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("versions"), latestKubernetesVersion.Version, "failed to determine the latest kubernetes version from the cloud profile"))
 	}
+
 	if latestKubernetesVersion.ExpirationDate != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("versions[]").Child("expirationDate"), latestKubernetesVersion.ExpirationDate, fmt.Sprintf("expiration date of latest kubernetes version ('%s') must not be set", latestKubernetesVersion.Version)))
+	}
+
+	if len(latestKubernetesVersion.Lifecycle) > 0 {
+		lastLifecycle := latestKubernetesVersion.Lifecycle[len(latestKubernetesVersion.Lifecycle)-1].Classification
+		if lastLifecycle == core.ClassificationExpired {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("versions[]").Child("lifecycle"), latestKubernetesVersion.ExpirationDate, fmt.Sprintf("classification %s of latest kubernetes version ('%s') must not be set", core.ClassificationExpired, latestKubernetesVersion.Version)))
+		}
 	}
 
 	allErrs = append(allErrs, validateKubernetesVersions(kubernetes.Versions, fldPath)...)
@@ -121,9 +180,7 @@ func validateCloudProfileKubernetesSettings(kubernetes core.KubernetesSettings, 
 func validateSupportedVersionsConfiguration(version core.ExpirableVersion, allVersions []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// TODO(LucaBernstein): Check whether this behavior should be corrected (i.e. changed) in a later GEP-32-PR.
-	//  The current behavior for nil classifications is treated differently across the codebase.
-	if version.Classification != nil && helper.CurrentLifecycleClassification(version) == core.ClassificationSupported {
+	if helper.VersionIsSupported(version) {
 		currentSemVer, err := semver.NewVersion(version.Version)
 		if err != nil {
 			// check is already performed by caller, avoid duplicate error
@@ -136,13 +193,49 @@ func validateSupportedVersionsConfiguration(version core.ExpirableVersion, allVe
 			return allErrs
 		}
 
-		// do not allow adding multiple supported versions per minor version
+		// do not allow adding multiple overlapping supported versions per minor version
 		if len(filteredVersions) > 0 {
-			allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("unable to add version %q with classification %q. Only one %q version is allowed per minor version", version.Version, core.ClassificationSupported, core.ClassificationSupported)))
+			for _, possibleOverlap := range filteredVersions {
+				if supportedVersionsOverlapping(version, possibleOverlap) {
+					allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("unable to add version %q with classification %q. %q lifecycle stages must not overlap per minor version", version.Version, core.ClassificationSupported, core.ClassificationSupported)))
+				}
+			}
 		}
 	}
 
 	return allErrs
+}
+
+// supportedVersionsOverlapping checks whether supported classifications do overlap. Start time equality is not deemed an overlap in this context.
+func supportedVersionsOverlapping(v1, v2 core.ExpirableVersion) bool {
+	if len(v1.Lifecycle) == 0 || len(v2.Lifecycle) == 0 {
+		return true
+	}
+
+	supportedStage := helper.SupportedLifecycleClassification(v1)
+	nextStage := findLifecycleStageAbove(v1, supportedStage.Classification)
+	supportedStage2 := helper.SupportedLifecycleClassification(v2)
+	nextStage2 := findLifecycleStageAbove(v2, supportedStage2.Classification)
+
+	if supportedStage.Classification != core.ClassificationSupported ||
+		supportedStage.Classification != supportedStage2.Classification {
+		return false
+	}
+	if nextStage == nil && nextStage2 == nil || // Eventually both supported classifications will be supported simultaneously
+		nextStage == nil && (supportedStage.StartTime == nil || supportedStage.StartTime.Before(nextStage2.StartTime)) || // supportedStage has no subsequent classification and starts before nextStage2
+		nextStage2 == nil && (supportedStage2.StartTime == nil || supportedStage2.StartTime.Before(nextStage.StartTime)) { // supportedStage2 has no subsequent classification and starts before nextStage
+		return true
+	}
+	return false
+}
+
+func findLifecycleStageAbove(version core.ExpirableVersion, classification core.VersionClassification) *core.LifecycleStage {
+	for _, stage := range version.Lifecycle {
+		if stage.Classification.Compare(classification) > 0 {
+			return &stage
+		}
+	}
+	return nil
 }
 
 func validateCloudProfileMachineTypes(machineTypes []core.MachineType, capabilities core.Capabilities, fldPath *field.Path) field.ErrorList {
@@ -197,6 +290,7 @@ func ValidateMachineImageAdditionalConfig(machineVersion core.MachineImageVersio
 
 	allErrs = append(allErrs, validateContainerRuntimesInterfaces(machineVersion.CRI, versionsPath.Child("cri"))...)
 	allErrs = append(allErrs, validateSupportedVersionsConfiguration(machineVersion.ExpirableVersion, helper.ToExpirableVersions(image.Versions), versionsPath)...)
+	allErrs = append(allErrs, validateExpirableVersion(machineVersion.ExpirableVersion, versionsPath)...)
 
 	if len(capabilities) == 0 {
 		if len(machineVersion.Architectures) == 0 {

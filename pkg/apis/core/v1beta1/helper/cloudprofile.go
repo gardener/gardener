@@ -25,13 +25,66 @@ import (
 // CurrentLifecycleClassification returns the current lifecycle classification of the given version.
 // An empty classification is interpreted as supported. If the version is expired, it returns ClassificationExpired.
 func CurrentLifecycleClassification(version gardencorev1beta1.ExpirableVersion) gardencorev1beta1.VersionClassification {
-	var currentTime = time.Now()
+	var (
+		currentClassification = gardencorev1beta1.ClassificationUnavailable
+		currentTime           = time.Now()
+	)
 
-	if version.ExpirationDate != nil && !currentTime.Before(version.ExpirationDate.Time) {
-		return gardencorev1beta1.ClassificationExpired
+	if len(version.Lifecycle) == 0 && (version.Classification != nil || version.ExpirationDate != nil) {
+		// Deprecated: legacy classification/expiration fields are used, converting them to lifecycle stages.
+		// Remove once the legacy fields are removed.
+
+		// Add the configured classification stage, default to Supported if unset.
+		version.Lifecycle = append(version.Lifecycle, gardencorev1beta1.LifecycleStage{
+			Classification: ptr.Deref(version.Classification, gardencorev1beta1.ClassificationSupported),
+		})
+
+		// Add an Expired stage if ExpirationDate is set.
+		if version.ExpirationDate != nil {
+			version.Lifecycle = append(version.Lifecycle, gardencorev1beta1.LifecycleStage{
+				Classification: gardencorev1beta1.ClassificationExpired,
+				StartTime:      version.ExpirationDate,
+			})
+		}
 	}
 
-	return ptr.Deref(version.Classification, gardencorev1beta1.ClassificationSupported)
+	if len(version.Lifecycle) == 0 {
+		return gardencorev1beta1.ClassificationSupported
+	}
+
+	for _, stage := range version.Lifecycle {
+		startTime := time.Time{}
+		if stage.StartTime != nil {
+			startTime = stage.StartTime.Time
+		}
+
+		if startTime.Before(currentTime) {
+			currentClassification = stage.Classification
+		}
+	}
+
+	return currentClassification
+}
+
+// VersionIsExpired reports whether the given version is expired.
+func VersionIsExpired(version gardencorev1beta1.ExpirableVersion) bool {
+	return CurrentLifecycleClassification(version) == gardencorev1beta1.ClassificationExpired
+}
+
+// VersionIsActive reports whether the given version is active.
+func VersionIsActive(version gardencorev1beta1.ExpirableVersion) bool {
+	curr := CurrentLifecycleClassification(version)
+	return curr != gardencorev1beta1.ClassificationExpired && curr != gardencorev1beta1.ClassificationUnavailable
+}
+
+// VersionIsSupported reports whether the given version is supported.
+func VersionIsSupported(version gardencorev1beta1.ExpirableVersion) bool {
+	return CurrentLifecycleClassification(version) == gardencorev1beta1.ClassificationSupported
+}
+
+// VersionIsPreview reports whether the given version is in preview.
+func VersionIsPreview(version gardencorev1beta1.ExpirableVersion) bool {
+	return CurrentLifecycleClassification(version) == gardencorev1beta1.ClassificationPreview
 }
 
 // DetermineMachineImageForName finds the cloud specific machine images in the <cloudProfile> for the given <name> and
@@ -521,7 +574,7 @@ func FilterLowerVersion(currentSemVerVersion semver.Version) VersionPredicate {
 // returns true if it is expired
 func FilterExpiredVersion() func(expirableVersion gardencorev1beta1.ExpirableVersion, version *semver.Version) (bool, error) {
 	return func(expirableVersion gardencorev1beta1.ExpirableVersion, _ *semver.Version) (bool, error) {
-		return CurrentLifecycleClassification(expirableVersion) == gardencorev1beta1.ClassificationExpired, nil
+		return VersionIsExpired(expirableVersion), nil
 	}
 }
 

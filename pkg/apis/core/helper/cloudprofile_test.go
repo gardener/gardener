@@ -21,54 +21,139 @@ import (
 )
 
 var _ = Describe("CloudProfile Helper", func() {
-	Describe("#CurrentLifecycleClassification", func() {
-		It("version is implicitly supported", func() {
+	Context("calculate the current lifecycle classification", func() {
+		var now = time.Now()
+
+		It("only version is given", func() {
 			classification := CurrentLifecycleClassification(core.ExpirableVersion{
 				Version: "1.33.0",
 			})
 			Expect(classification).To(Equal(core.ClassificationSupported))
 		})
 
-		It("version is explicitly supported", func() {
+		It("unavailable classification due to scheduled lifecycle start in the future", func() {
 			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Version:        "1.33.0",
-				Classification: ptr.To(core.ClassificationSupported),
+				Version: "1.33.0",
+				Lifecycle: []core.LifecycleStage{
+					{
+						Classification: core.ClassificationSupported,
+						StartTime:      ptr.To(metav1.NewTime(now.Add(3 * time.Hour))),
+					},
+				},
 			})
-			Expect(classification).To(Equal(core.ClassificationSupported))
+			Expect(classification).To(Equal(core.ClassificationUnavailable))
 		})
 
 		It("version is in preview stage", func() {
 			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Version:        "1.33.0",
-				Classification: ptr.To(core.ClassificationPreview),
+				Version: "1.33.0",
+				Lifecycle: []core.LifecycleStage{
+					{
+						Classification: core.ClassificationPreview,
+						StartTime:      ptr.To(metav1.NewTime(now.Add(-1 * time.Hour))),
+					},
+					{
+						Classification: core.ClassificationSupported,
+						StartTime:      ptr.To(metav1.NewTime(now.Add(3 * time.Hour))),
+					},
+				},
 			})
 			Expect(classification).To(Equal(core.ClassificationPreview))
 		})
 
-		It("version is deprecated ", func() {
+		It("full version lifecycle with version currently in supported stage", func() {
 			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Version:        "1.33.0",
-				Classification: ptr.To(core.ClassificationDeprecated),
-			})
-			Expect(classification).To(Equal(core.ClassificationDeprecated))
-		})
-
-		It("supported version will expire in the future", func() {
-			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Version:        "1.33.0",
-				Classification: ptr.To(core.ClassificationSupported),
-				ExpirationDate: ptr.To(metav1.NewTime(time.Now().Add(2 * time.Hour))),
+				Version: "1.33.0",
+				Lifecycle: []core.LifecycleStage{
+					{
+						Classification: core.ClassificationPreview,
+						StartTime:      ptr.To(metav1.NewTime(now.Add(-3 * time.Hour))),
+					},
+					{
+						Classification: core.ClassificationSupported,
+						StartTime:      ptr.To(metav1.NewTime(now.Add(-1 * time.Hour))),
+					},
+					{
+						Classification: core.ClassificationDeprecated,
+						StartTime:      ptr.To(metav1.NewTime(now.Add(5 * time.Hour))),
+					},
+					{
+						Classification: core.ClassificationExpired,
+						StartTime:      ptr.To(metav1.NewTime(now.Add(8 * time.Hour))),
+					},
+				},
 			})
 			Expect(classification).To(Equal(core.ClassificationSupported))
 		})
 
-		It("supported version has already expired", func() {
+		It("version is expired", func() {
 			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Version:        "1.33.0",
-				Classification: ptr.To(core.ClassificationSupported),
-				ExpirationDate: ptr.To(metav1.NewTime(time.Now().Add(-2 * time.Hour))),
+				Version: "1.33.0",
+				Lifecycle: []core.LifecycleStage{
+					{
+						Classification: core.ClassificationSupported,
+						StartTime:      ptr.To(metav1.NewTime(now.Add(-4 * time.Hour))),
+					},
+					{
+						Classification: core.ClassificationDeprecated,
+						StartTime:      ptr.To(metav1.NewTime(now.Add(-3 * time.Hour))),
+					},
+					{
+						Classification: core.ClassificationExpired,
+						StartTime:      ptr.To(metav1.NewTime(now.Add(-1 * time.Hour))),
+					},
+				},
 			})
 			Expect(classification).To(Equal(core.ClassificationExpired))
+		})
+
+		It("first lifecycle start time field is optional", func() {
+			classification := CurrentLifecycleClassification(core.ExpirableVersion{
+				Version: "1.28.5",
+				Lifecycle: []core.LifecycleStage{
+					{
+						Classification: core.ClassificationPreview,
+					},
+					{
+						Classification: core.ClassificationSupported,
+						StartTime:      ptr.To(metav1.NewTime(now.Add(3 * time.Hour))),
+					},
+					{
+						Classification: core.ClassificationDeprecated,
+						StartTime:      ptr.To(metav1.NewTime(now.Add(4 * time.Hour))),
+					},
+					{
+						Classification: core.ClassificationExpired,
+						StartTime:      ptr.To(metav1.NewTime(now.Add(5 * time.Hour))),
+					},
+				},
+			})
+			Expect(classification).To(Equal(core.ClassificationPreview))
+		})
+
+		It("determining supported for deprecated classification field", func() {
+			classification := CurrentLifecycleClassification(core.ExpirableVersion{
+				Classification: ptr.To(core.ClassificationSupported),
+				Version:        "1.28.0",
+			})
+			Expect(classification).To(Equal(core.ClassificationSupported))
+		})
+
+		It("determining expired for deprecated expiration date field", func() {
+			classification := CurrentLifecycleClassification(core.ExpirableVersion{
+				ExpirationDate: ptr.To(metav1.NewTime(now.Add(-1 * time.Hour))),
+				Version:        "1.28.0",
+			})
+			Expect(classification).To(Equal(core.ClassificationExpired))
+		})
+
+		It("determining preview for deprecated classification and expiration date field", func() {
+			classification := CurrentLifecycleClassification(core.ExpirableVersion{
+				Classification: ptr.To(core.ClassificationPreview),
+				Version:        "1.28.0",
+				ExpirationDate: ptr.To(metav1.NewTime(now.Add(3 * time.Hour))),
+			})
+			Expect(classification).To(Equal(core.ClassificationPreview))
 		})
 	})
 
@@ -310,17 +395,17 @@ var _ = Describe("CloudProfile Helper", func() {
 				},
 			}
 
-			removedImages, removedVersions, addedImages, addedVersions := GetMachineImageDiff(versions1, versions2)
+			diff := GetMachineImageDiff(versions1, versions2)
 
-			Expect(removedImages.UnsortedList()).To(ConsistOf("image-1"))
-			Expect(removedVersions).To(BeEquivalentTo(
+			Expect(diff.RemovedImages.UnsortedList()).To(ConsistOf("image-1"))
+			Expect(diff.RemovedVersions).To(BeEquivalentTo(
 				map[string]sets.Set[string]{
 					"image-1": sets.New("version-1", "version-2"),
 					"image-2": sets.New("version-1"),
 				},
 			))
-			Expect(addedImages.UnsortedList()).To(ConsistOf("image-3"))
-			Expect(addedVersions).To(BeEquivalentTo(
+			Expect(diff.AddedImages.UnsortedList()).To(ConsistOf("image-3"))
+			Expect(diff.AddedVersions).To(BeEquivalentTo(
 				map[string]sets.Set[string]{
 					"image-2": sets.New("version-3"),
 					"image-3": sets.New("version-1", "version-2"),
@@ -345,12 +430,13 @@ var _ = Describe("CloudProfile Helper", func() {
 				},
 			}
 
-			removedImages, removedVersions, addedImages, addedVersions := GetMachineImageDiff(nil, versions2)
+			diff := GetMachineImageDiff(nil, versions2)
 
-			Expect(removedImages.UnsortedList()).To(BeEmpty())
-			Expect(removedVersions).To(BeEmpty())
-			Expect(addedImages.UnsortedList()).To(ConsistOf("image-2", "image-3"))
-			Expect(addedVersions).To(BeEquivalentTo(
+			Expect(diff.RemovedImages.UnsortedList()).To(BeEmpty())
+			Expect(diff.RemovedVersions).To(BeEmpty())
+			// TODO(LucaBernstein, vknabel): Add RemovedVersionClassifications case
+			Expect(diff.AddedImages.UnsortedList()).To(ConsistOf("image-2", "image-3"))
+			Expect(diff.AddedVersions).To(BeEquivalentTo(
 				map[string]sets.Set[string]{
 					"image-2": sets.New("version-3"),
 					"image-3": sets.New("version-1", "version-2"),
@@ -375,26 +461,28 @@ var _ = Describe("CloudProfile Helper", func() {
 				},
 			}
 
-			removedImages, removedVersions, addedImages, addedVersions := GetMachineImageDiff(versions1, []core.MachineImage{})
+			diff := GetMachineImageDiff(versions1, []core.MachineImage{})
 
-			Expect(removedImages.UnsortedList()).To(ConsistOf("image-2", "image-3"))
-			Expect(removedVersions).To(BeEquivalentTo(
+			Expect(diff.RemovedImages.UnsortedList()).To(ConsistOf("image-2", "image-3"))
+			Expect(diff.RemovedVersions).To(BeEquivalentTo(
 				map[string]sets.Set[string]{
 					"image-2": sets.New("version-3"),
 					"image-3": sets.New("version-1", "version-2"),
 				},
 			))
-			Expect(addedImages.UnsortedList()).To(BeEmpty())
-			Expect(addedVersions).To(BeEmpty())
+			// TODO(LucaBernstein, vknabel): Add RemovedVersionClassifications case
+			Expect(diff.AddedImages.UnsortedList()).To(BeEmpty())
+			Expect(diff.AddedVersions).To(BeEmpty())
 		})
 
 		It("should return the diff between two empty machine image slices", func() {
-			removedImages, removedVersions, addedImages, addedVersions := GetMachineImageDiff([]core.MachineImage{}, nil)
+			diff := GetMachineImageDiff([]core.MachineImage{}, nil)
 
-			Expect(removedImages.UnsortedList()).To(BeEmpty())
-			Expect(removedVersions).To(BeEmpty())
-			Expect(addedImages.UnsortedList()).To(BeEmpty())
-			Expect(addedVersions).To(BeEmpty())
+			Expect(diff.RemovedImages.UnsortedList()).To(BeEmpty())
+			Expect(diff.RemovedVersions).To(BeEmpty())
+			// TODO(LucaBernstein, vknabel): Add RemovedVersionClassifications case
+			Expect(diff.AddedImages.UnsortedList()).To(BeEmpty())
+			Expect(diff.AddedVersions).To(BeEmpty())
 		})
 	})
 
