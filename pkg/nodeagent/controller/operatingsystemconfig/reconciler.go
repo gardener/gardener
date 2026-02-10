@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"net/http"
 	"os"
 	"os/exec"
@@ -22,6 +23,7 @@ import (
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
+	"github.com/google/go-cmp/cmp"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -47,6 +49,7 @@ import (
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubeletcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
+	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	nodeagentcontainerd "github.com/gardener/gardener/pkg/nodeagent/containerd"
@@ -56,6 +59,7 @@ import (
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -73,17 +77,24 @@ var (
 	retriableErrorPatternRegex    = regexp.MustCompile(`(?i)network problems`)
 	nonRetriableErrorPatternRegex = regexp.MustCompile(`(?i)invalid arguments|system failure`)
 
-	// KubeletHealthCheckRetryInterval is the interval at which the kubelet health check is retried. Exposed for testing.
+	// KubeletHealthCheckRetryInterval is the interval at which the kubelet health check is retried.
+	// Exposed for testing.
 	KubeletHealthCheckRetryInterval = 5 * time.Second
-	// KubeletHealthCheckRetryTimeout is the timeout after which the kubelet health check is considered failed. Exposed for testing.
+	// KubeletHealthCheckRetryTimeout is the timeout after which the kubelet health check is considered failed.
+	// Exposed for testing.
 	KubeletHealthCheckRetryTimeout = 5 * time.Minute
 
 	// OSUpdateRetryInterval is the interval between OS update retries. Exported for testing.
 	OSUpdateRetryInterval = 30 * time.Second
 	// OSUpdateRetryTimeout is the timeout for OS update retries. Exported for testing.
 	OSUpdateRetryTimeout = 5 * time.Minute
-	// RequeueAfterRestart defines whether RequeueAfter is supposed to be triggered on restart of gardener-node-agent. Exposed for testing.
+	// RequeueAfterRestart defines whether RequeueAfter is supposed to be triggered on restart of gardener-node-agent.
+	// Exposed for testing.
 	RequeueAfterRestart time.Duration
+	// RequeueAfterWaitForStaticPods defines when to requeue in case static pods are not yet rolled out, healthy or
+	// ready.
+	// Exposed for testing.
+	RequeueAfterWaitForStaticPods = 5 * time.Second
 )
 
 func init() {
@@ -321,6 +332,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 	if err := r.FS.Remove(nodeagentconfigv1alpha1.BootstrapTokenFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 		return reconcile.Result{}, fmt.Errorf("failed removing bootstrap token file %q: %w", nodeagentconfigv1alpha1.BootstrapTokenFilePath, err)
+	}
+
+	if done, err := r.ensureStaticPodsReconciledAndReady(ctx, log, node, osc); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed ensuring that static pods have been reconciled: %w", err)
+	} else if !done {
+		return reconcile.Result{RequeueAfter: RequeueAfterWaitForStaticPods}, nil
 	}
 
 	r.Recorder.Eventf(node, nil, corev1.EventTypeNormal, "OSCApplied", gardencorev1beta1.EventActionReconcile, "Operating system config has been applied successfully")
@@ -1106,4 +1123,85 @@ func (r *Reconciler) restartNodeAgent(oscChanges *operatingSystemConfigChanges, 
 	}
 	r.CancelContext()
 	return reconcile.Result{RequeueAfter: RequeueAfterRestart}, nil
+}
+
+func (r *Reconciler) ensureStaticPodsReconciledAndReady(ctx context.Context, log logr.Logger, node *corev1.Node, osc *extensionsv1alpha1.OperatingSystemConfig) (done bool, err error) {
+	staticPodNameToDesiredHash, err := r.getDesiredStaticPodHashes(log, osc)
+	if err != nil {
+		return false, fmt.Errorf("failed to retrieve desired static pod hashes from OperatingSystemConfig: %w", err)
+	}
+
+	if len(staticPodNameToDesiredHash) == 0 {
+		return true, nil
+	}
+
+	log.Info("Detected desired static pods in OperatingSystemConfig, ensuring they are rolled out and ready", "numberOfDesiredStaticPods", len(staticPodNameToDesiredHash))
+
+	staticPodNameToActualHash, staticPodList, err := r.getActualStaticPodHashes(ctx, log, node.Name)
+	if err != nil {
+		return false, fmt.Errorf("failed to retrieve actual static pod hashes from cluster: %w", err)
+	}
+
+	if !maps.Equal(staticPodNameToDesiredHash, staticPodNameToActualHash) {
+		log.Info("Not all static pods have been rolled out to the desired state yet, requeuing", "hashDifferences", cmp.Diff(staticPodNameToDesiredHash, staticPodNameToActualHash))
+		return false, nil
+	}
+
+	for _, pod := range staticPodList.Items {
+		if err := health.CheckPod(&pod); err != nil {
+			log.Info("Static pod is not healthy yet, requeuing", "pod", client.ObjectKeyFromObject(&pod))
+			return false, nil //nolint:nilerr
+		}
+
+		if !health.IsPodReady(&pod) {
+			log.Info("Static pod is not ready yet, requeuing", "pod", client.ObjectKeyFromObject(&pod))
+			return false, nil
+		}
+	}
+
+	log.Info("All static pods have been rolled out and are healthy and ready")
+	return true, nil
+}
+
+func (r *Reconciler) getDesiredStaticPodHashes(log logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig) (map[string]string, error) {
+	staticPodFiles := slices.DeleteFunc(append(osc.Spec.Files, osc.Status.ExtensionFiles...), func(file extensionsv1alpha1.File) bool {
+		return !strings.HasPrefix(file.Path, kubeletcomponent.FilePathKubernetesManifests)
+	})
+
+	staticPodNameToHash := make(map[string]string)
+	for _, file := range staticPodFiles {
+		if file.Content.Inline == nil {
+			continue
+		}
+
+		data, err := extensionsv1alpha1helper.Decode(file.Content.Inline.Encoding, []byte(file.Content.Inline.Data))
+		if err != nil {
+			return nil, fmt.Errorf("unable to decode data of file %q: %w", file.Path, err)
+		}
+
+		pod := &corev1.Pod{}
+		if _, _, err := kubernetes.ShootCodec.UniversalDecoder(corev1.SchemeGroupVersion).Decode(data, nil, pod); err != nil {
+			return nil, fmt.Errorf("unable to decode static pod from file data %q: %w", file.Path, err)
+		}
+
+		log.Info("Found static pod in the OperatingSystemConfig", "pod", client.ObjectKeyFromObject(pod), "hash", pod.Annotations[staticpod.AnnotationKeyHash])
+		staticPodNameToHash[pod.Name] = pod.Annotations[staticpod.AnnotationKeyHash]
+	}
+
+	return staticPodNameToHash, nil
+}
+
+func (r *Reconciler) getActualStaticPodHashes(ctx context.Context, log logr.Logger, nodeName string) (map[string]string, *corev1.PodList, error) {
+	staticPodList := &corev1.PodList{}
+	if err := r.Client.List(ctx, staticPodList, client.MatchingFields{indexer.PodNodeName: nodeName}, client.MatchingLabels{staticpod.LabelKeyIsStaticPod: staticpod.LabelValueIsStaticPod}); err != nil {
+		return nil, nil, fmt.Errorf("failed listing static pods for node %s: %w", nodeName, err)
+	}
+
+	staticPodNameToHash := make(map[string]string)
+	for _, pod := range staticPodList.Items {
+		log.Info("Found static pod in the system", "pod", client.ObjectKeyFromObject(&pod), "hash", pod.Annotations[staticpod.AnnotationKeyHash])
+		staticPodNameToHash[strings.TrimSuffix(pod.Name, "-"+pod.Spec.NodeName)] = pod.Annotations[staticpod.AnnotationKeyHash]
+	}
+
+	return staticPodNameToHash, staticPodList, nil
 }
