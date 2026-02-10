@@ -327,6 +327,10 @@ var _ = Describe("OpenTelemetry Operator", func() {
 								corev1.ResourceMemory: resource.MustParse("64Mi"),
 							},
 						},
+						{
+							ContainerName: "*",
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						},
 					},
 				},
 			},

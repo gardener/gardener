@@ -397,6 +397,10 @@ func (o *openTelemetryOperator) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 							corev1.ResourceMemory: resource.MustParse("64Mi"),
 						},
 					},
+					{
+						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+					},
 				},
 			},
 		},
