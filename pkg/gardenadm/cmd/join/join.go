@@ -92,104 +92,100 @@ func run(ctx context.Context, opts *Options) error {
 	b.Shoot = &shootpkg.Shoot{KubernetesVersion: version, ControlPlaneNamespace: metav1.NamespaceSystem}
 	b.Shoot.SetInfo(nil)
 
-	alreadyJoined, err := b.IsGardenerNodeAgentInitialized(ctx)
+	b.Logger.Info("Retrieving short-lived shoot cluster kubeconfig via bootstrap token")
+	shootClientSet, err := cmd.InitializeTemporaryClientSet(ctx, b, bootstrapClientSet)
 	if err != nil {
-		return fmt.Errorf("failed checking if gardener-node-agent was already initialized: %w", err)
+		return fmt.Errorf("failed retrieving short-lived kubeconfig: %w", err)
+	}
+	b.Logger.Info("Successfully retrieved short-lived bootstrap kubeconfig")
+	b.ShootClientSet = shootClientSet
+
+	cluster, err := gardenerextensions.GetCluster(ctx, b.ShootClientSet.Client(), b.Shoot.ControlPlaneNamespace)
+	if err != nil {
+		return fmt.Errorf("failed to read Cluster resource %s: %w", b.Shoot.ControlPlaneNamespace, err)
+	}
+	b.Shoot.SetInfo(cluster.Shoot)
+
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: b.HostName}}
+
+	nodeJoinedAlready := true
+	if err := b.ShootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed retrieving node %s: %w", node.Name, err)
+		}
+		nodeJoinedAlready = false
 	}
 
-	if !alreadyJoined {
-		var (
-			g                       = flow.NewGraph("join")
-			gardenerNodeAgentSecret *corev1.Secret
+	var (
+		g                       = flow.NewGraph("join")
+		gardenerNodeAgentSecret *corev1.Secret
 
-			retrieveShortLivedKubeconfig = g.Add(flow.Task{
-				Name: "Retrieving short-lived shoot cluster kubeconfig to prepare control plane scale-up",
-				Fn: func(ctx context.Context) error {
-					shootClientSet, err := cmd.InitializeTemporaryClientSet(ctx, b, bootstrapClientSet)
-					if err != nil {
-						return fmt.Errorf("failed retrieving short-lived kubeconfig: %w", err)
-					}
-					b.Logger.Info("Successfully retrieved short-lived bootstrap kubeconfig")
-					b.ShootClientSet = shootClientSet
-
-					cluster, err := gardenerextensions.GetCluster(ctx, b.ShootClientSet.Client(), b.Shoot.ControlPlaneNamespace)
-					if err != nil {
-						return fmt.Errorf("failed to read Cluster resource %s: %w", b.Shoot.ControlPlaneNamespace, err)
-					}
-					b.Shoot.SetInfo(cluster.Shoot)
-					return nil
-				},
-			})
-			ensureNoActiveShootReconciliation = g.Add(flow.Task{
-				Name: "Ensuring shoot is not concurrently reconciled by gardenlet when joining control plane node",
-				Fn: func(_ context.Context) error {
-					if lastOperation := b.Shoot.GetInfo().Status.LastOperation; lastOperation != nil && slices.Contains([]gardencorev1beta1.LastOperationState{
-						gardencorev1beta1.LastOperationStateProcessing,
-						gardencorev1beta1.LastOperationStateError,
-						gardencorev1beta1.LastOperationStateAborted,
-					}, lastOperation.State) {
-						return fmt.Errorf("the Shoot's status.lastOperation.state must indicate successful reconciliation before joining a control plane node: %s", lastOperation.State)
-					}
-					return nil
-				},
-				Dependencies: flow.NewTaskIDs(retrieveShortLivedKubeconfig),
-				SkipIf:       !opts.ControlPlane,
-			})
-			determineGardenerNodeAgentSecretName = g.Add(flow.Task{
-				Name: "Determining gardener-node-agent Secret containing the configuration for this node",
-				Fn: func(ctx context.Context) error {
-					var err error
-					gardenerNodeAgentSecret, err = GetGardenerNodeAgentSecret(ctx, opts, b)
-					return err
-				},
-				Dependencies: flow.NewTaskIDs(retrieveShortLivedKubeconfig),
-			})
-			syncPointReadyForGardenerNodeInit = flow.NewTaskIDs(
-				ensureNoActiveShootReconciliation,
-				determineGardenerNodeAgentSecretName,
-			)
-
-			generateGardenerNodeInitConfig = g.Add(flow.Task{
-				Name: "Preparing gardener-node-init configuration",
-				Fn: func(ctx context.Context) error {
-					return b.PrepareGardenerNodeInitConfiguration(ctx, gardenerNodeAgentSecret.Name, opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken)
-				},
-				Dependencies: flow.NewTaskIDs(syncPointReadyForGardenerNodeInit),
-			})
-			applyOperatingSystemConfig = g.Add(flow.Task{
-				Name:         "Applying OperatingSystemConfig using gardener-node-agent's reconciliation logic",
-				Fn:           b.ApplyOperatingSystemConfig,
-				Dependencies: flow.NewTaskIDs(generateGardenerNodeInitConfig),
-			})
-			_ = g.Add(flow.Task{
-				Name: "Waiting for node to join the cluster and become ready",
-				Fn: func(ctx context.Context) error {
-					var (
-						node = &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: b.HostName}}
-						log  = b.Logger.WithValues("nodeName", node.Name)
-					)
-
-					return flow.Sequential(
-						func(ctx context.Context) error {
-							return waitForNodeToJoinCluster(ctx, log, b.ShootClientSet.Client(), node)
-						},
-						func(ctx context.Context) error {
-							return waitForOperatingSystemConfigToBeApplied(ctx, log, b.ShootClientSet.Client(), node, gardenerNodeAgentSecret)
-						},
-						func(ctx context.Context) error {
-							return waitForNodeReadiness(ctx, log, b.ShootClientSet.Client(), node)
-						},
-					)(ctx)
-				},
-				Dependencies: flow.NewTaskIDs(applyOperatingSystemConfig),
-			})
+		ensureNoActiveShootReconciliation = g.Add(flow.Task{
+			Name: "Ensuring shoot is not concurrently reconciled by gardenlet when joining control plane node",
+			Fn: func(_ context.Context) error {
+				if lastOperation := b.Shoot.GetInfo().Status.LastOperation; lastOperation != nil && slices.Contains([]gardencorev1beta1.LastOperationState{
+					gardencorev1beta1.LastOperationStateProcessing,
+					gardencorev1beta1.LastOperationStateError,
+					gardencorev1beta1.LastOperationStateAborted,
+				}, lastOperation.State) {
+					return fmt.Errorf("the Shoot's status.lastOperation.state must indicate successful reconciliation before joining a control plane node: %s", lastOperation.State)
+				}
+				return nil
+			},
+			SkipIf: !opts.ControlPlane,
+		})
+		determineGardenerNodeAgentSecretName = g.Add(flow.Task{
+			Name: "Determining gardener-node-agent Secret containing the configuration for this node",
+			Fn: func(ctx context.Context) error {
+				var err error
+				gardenerNodeAgentSecret, err = GetGardenerNodeAgentSecret(ctx, opts, b)
+				return err
+			},
+		})
+		syncPointReadyForGardenerNodeInit = flow.NewTaskIDs(
+			determineGardenerNodeAgentSecretName,
+			ensureNoActiveShootReconciliation,
 		)
 
-		if err := g.Compile().Run(ctx, flow.Opts{
-			Log: opts.Log,
-		}); err != nil {
-			return flow.Errors(err)
-		}
+		generateGardenerNodeInitConfig = g.Add(flow.Task{
+			Name: "Preparing gardener-node-init configuration",
+			Fn: func(ctx context.Context) error {
+				return b.PrepareGardenerNodeInitConfiguration(ctx, gardenerNodeAgentSecret.Name, opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken)
+			},
+			SkipIf:       nodeJoinedAlready,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForGardenerNodeInit),
+		})
+		applyOperatingSystemConfig = g.Add(flow.Task{
+			Name:         "Applying OperatingSystemConfig using gardener-node-agent's reconciliation logic",
+			Fn:           b.ApplyOperatingSystemConfig,
+			SkipIf:       nodeJoinedAlready,
+			Dependencies: flow.NewTaskIDs(generateGardenerNodeInitConfig),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting for node to join the cluster and become ready",
+			Fn: func(ctx context.Context) error {
+				log := b.Logger.WithValues("nodeName", node.Name)
+
+				return flow.Sequential(
+					func(ctx context.Context) error {
+						return waitForNodeToJoinCluster(ctx, log, b.ShootClientSet.Client(), node)
+					},
+					func(ctx context.Context) error {
+						return waitForOperatingSystemConfigToBeApplied(ctx, log, b.ShootClientSet.Client(), node, gardenerNodeAgentSecret)
+					},
+					func(ctx context.Context) error {
+						return waitForNodeReadiness(ctx, log, b.ShootClientSet.Client(), node)
+					},
+				)(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(applyOperatingSystemConfig),
+		})
+	)
+
+	if err := g.Compile().Run(ctx, flow.Opts{
+		Log: opts.Log,
+	}); err != nil {
+		return flow.Errors(err)
 	}
 
 	if opts.ControlPlane {
