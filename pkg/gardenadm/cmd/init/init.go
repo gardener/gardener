@@ -327,7 +327,7 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		waitUntilControlPlaneDeploymentsReady = g.Add(flow.Task{
 			Name:         "Waiting until control plane components (static pods) are ready",
-			Fn:           b.WaitUntilControlPlaneDeploymentsReady,
+			Fn:           b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools,
 			Dependencies: flow.NewTaskIDs(deployControlPlaneDeployments),
 		})
 		_ = g.Add(flow.Task{
