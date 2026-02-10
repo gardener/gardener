@@ -8,9 +8,12 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -22,7 +25,10 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -93,8 +99,8 @@ func run(ctx context.Context, opts *Options) error {
 
 	if !alreadyJoined {
 		var (
-			g                           = flow.NewGraph("join")
-			gardenerNodeAgentSecretName string
+			g                       = flow.NewGraph("join")
+			gardenerNodeAgentSecret *corev1.Secret
 
 			retrieveShortLivedKubeconfig = g.Add(flow.Task{
 				Name: "Retrieving short-lived shoot cluster kubeconfig to prepare control plane scale-up",
@@ -133,7 +139,7 @@ func run(ctx context.Context, opts *Options) error {
 				Name: "Determining gardener-node-agent Secret containing the configuration for this node",
 				Fn: func(ctx context.Context) error {
 					var err error
-					gardenerNodeAgentSecretName, err = GetGardenerNodeAgentSecretName(ctx, opts, b)
+					gardenerNodeAgentSecret, err = GetGardenerNodeAgentSecret(ctx, opts, b)
 					return err
 				},
 				Dependencies: flow.NewTaskIDs(retrieveShortLivedKubeconfig),
@@ -146,14 +152,36 @@ func run(ctx context.Context, opts *Options) error {
 			generateGardenerNodeInitConfig = g.Add(flow.Task{
 				Name: "Preparing gardener-node-init configuration",
 				Fn: func(ctx context.Context) error {
-					return b.PrepareGardenerNodeInitConfiguration(ctx, gardenerNodeAgentSecretName, opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken)
+					return b.PrepareGardenerNodeInitConfiguration(ctx, gardenerNodeAgentSecret.Name, opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken)
 				},
 				Dependencies: flow.NewTaskIDs(syncPointReadyForGardenerNodeInit),
 			})
-			_ = g.Add(flow.Task{
+			applyOperatingSystemConfig = g.Add(flow.Task{
 				Name:         "Applying OperatingSystemConfig using gardener-node-agent's reconciliation logic",
 				Fn:           b.ApplyOperatingSystemConfig,
 				Dependencies: flow.NewTaskIDs(generateGardenerNodeInitConfig),
+			})
+			_ = g.Add(flow.Task{
+				Name: "Waiting for node to join the cluster and become ready",
+				Fn: func(ctx context.Context) error {
+					var (
+						node = &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: b.HostName}}
+						log  = b.Logger.WithValues("nodeName", node.Name)
+					)
+
+					return flow.Sequential(
+						func(ctx context.Context) error {
+							return waitForNodeToJoinCluster(ctx, log, b.ShootClientSet.Client(), node)
+						},
+						func(ctx context.Context) error {
+							return waitForOperatingSystemConfigToBeApplied(ctx, log, b.ShootClientSet.Client(), node, gardenerNodeAgentSecret)
+						},
+						func(ctx context.Context) error {
+							return waitForNodeReadiness(ctx, log, b.ShootClientSet.Client(), node)
+						},
+					)(ctx)
+				},
+				Dependencies: flow.NewTaskIDs(applyOperatingSystemConfig),
 			})
 		)
 
@@ -190,12 +218,12 @@ logs of kubelet by running 'journalctl -u kubelet'.
 	return nil
 }
 
-// GetGardenerNodeAgentSecretName retrieves the Secret for gardener-node-agent which contains the operating system
+// GetGardenerNodeAgentSecret retrieves the Secret for gardener-node-agent which contains the operating system
 // configuration for this node.
-func GetGardenerNodeAgentSecretName(ctx context.Context, opts *Options, b *botanist.GardenadmBotanist) (string, error) {
+func GetGardenerNodeAgentSecret(ctx context.Context, opts *Options, b *botanist.GardenadmBotanist) (*corev1.Secret, error) {
 	workerPoolName, err := getWorkerPoolName(ctx, opts, b)
 	if err != nil {
-		return "", fmt.Errorf("failed to determine worker pool name in Shoot manifest: %w", err)
+		return nil, fmt.Errorf("failed to determine worker pool name in Shoot manifest: %w", err)
 	}
 
 	secretList := &corev1.SecretList{}
@@ -203,11 +231,11 @@ func GetGardenerNodeAgentSecretName(ctx context.Context, opts *Options, b *botan
 		v1beta1constants.GardenRole:      v1beta1constants.GardenRoleOperatingSystemConfig,
 		v1beta1constants.LabelWorkerPool: workerPoolName,
 	}); err != nil {
-		return "", fmt.Errorf("failed listing gardener-node-agent secrets: %w", err)
+		return nil, fmt.Errorf("failed listing gardener-node-agent secrets: %w", err)
 	}
 
 	if len(secretList.Items) == 0 {
-		return "", fmt.Errorf("no gardener-node-agent secrets found for worker pool %q", workerPoolName)
+		return nil, fmt.Errorf("no gardener-node-agent secrets found for worker pool %q", workerPoolName)
 	}
 
 	gardenerNodeAgentSecret := secretList.Items[0]
@@ -215,7 +243,7 @@ func GetGardenerNodeAgentSecretName(ctx context.Context, opts *Options, b *botan
 		opts.Log.V(1).Info("Multiple gardener-node-agent secrets found, using the first one", "secretName", gardenerNodeAgentSecret.Name)
 	}
 
-	return gardenerNodeAgentSecret.Name, nil
+	return &gardenerNodeAgentSecret, nil
 }
 
 func getWorkerPoolName(ctx context.Context, opts *Options, b *botanist.GardenadmBotanist) (string, error) {
@@ -250,4 +278,61 @@ func getFirstWorkerPoolName(workers []gardencorev1beta1.Worker) (string, error) 
 	}
 
 	return "", fmt.Errorf("no non-control-plane pool found in Shoot manifest")
+}
+
+func waitForNodeToJoinCluster(ctx context.Context, log logr.Logger, c client.Client, node *corev1.Node) error {
+	log.Info("Waiting for node to join the cluster")
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
+	return retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (done bool, err error) {
+		if err := c.Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
+			if apierrors.IsNotFound(err) {
+				return retry.MinorError(fmt.Errorf("node %s did not yet join the cluster: %w", node.Name, err))
+			}
+			return retry.SevereError(fmt.Errorf("failed to get node %s: %w", node.Name, err))
+		}
+		return retry.Ok()
+	})
+}
+
+func waitForOperatingSystemConfigToBeApplied(ctx context.Context, log logr.Logger, c client.Client, node *corev1.Node, gardenerNodeAgentSecret *corev1.Secret) error {
+	log.Info("Waiting for operating system config to be fully applied")
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+
+	return retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (done bool, err error) {
+		if err := c.Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
+			return retry.SevereError(fmt.Errorf("failed to get node %s: %w", node.Name, err))
+		}
+
+		secretChecksum := gardenerNodeAgentSecret.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig]
+		if nodeChecksum, ok := node.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig]; nodeChecksum != secretChecksum {
+			if !ok {
+				return retry.MinorError(fmt.Errorf("the last successfully applied operating system config on node %q hasn't been reported yet", node.Name))
+			} else {
+				return retry.MinorError(fmt.Errorf("the last successfully applied operating system config on node %q is outdated (current: %s, desired: %s)", node.Name, nodeChecksum, secretChecksum))
+			}
+		}
+
+		return retry.Ok()
+	})
+}
+
+func waitForNodeReadiness(ctx context.Context, log logr.Logger, c client.Client, node *corev1.Node) error {
+	log.Info("Waiting for node to get ready")
+	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+
+	return retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (done bool, err error) {
+		if err := c.Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
+			return retry.SevereError(fmt.Errorf("failed to get node %s: %w", node.Name, err))
+		}
+
+		if err := health.CheckNode(node); err != nil {
+			return retry.MinorError(err)
+		}
+
+		return retry.Ok()
+	})
 }
