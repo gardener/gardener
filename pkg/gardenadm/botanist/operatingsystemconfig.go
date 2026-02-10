@@ -8,10 +8,8 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"slices"
 	"time"
 
-	systemddbus "github.com/coreos/go-systemd/v22/dbus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -211,27 +209,6 @@ func (b *GardenadmBotanist) generateGardenerNodeInitOperatingSystemConfig(secret
 			Units: units,
 		},
 	}, nil
-}
-
-// IsGardenerNodeAgentInitialized returns true if the gardener-node-agent systemd unit exists.
-func (b *GardenadmBotanist) IsGardenerNodeAgentInitialized(ctx context.Context) (bool, error) {
-	unitStatuses, err := b.DBus.List(ctx)
-	if err != nil {
-		return false, fmt.Errorf("failed listing systemd units: %w", err)
-	}
-
-	if !slices.ContainsFunc(unitStatuses, func(status systemddbus.UnitStatus) bool {
-		return status.Name == nodeagentconfigv1alpha1.UnitName
-	}) {
-		return false, nil
-	}
-
-	exists, err := b.FS.Exists(nodeagentconfigv1alpha1.BootstrapTokenFilePath)
-	if err != nil {
-		return false, fmt.Errorf("failed checking whether bootstrap token file %s still exists: %w", nodeagentconfigv1alpha1.BootstrapTokenFilePath, err)
-	}
-
-	return !exists, nil
 }
 
 // ControlPlaneBootstrapOperatingSystemConfig creates the deployer for the OperatingSystemConfig custom resource that is

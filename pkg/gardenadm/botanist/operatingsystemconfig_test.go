@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/coreos/go-systemd/v22/dbus"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -105,33 +104,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}),
 				MatchFields(IgnoreExtras, Fields{"Path": Equal(fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion))}),
 			))
-		})
-	})
-
-	Describe("#IsGardenerNodeAgentInitialized", func() {
-		It("should return false because the gardener-node-agent unit was not found", func() {
-			isInitialized, err := b.IsGardenerNodeAgentInitialized(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(isInitialized).To(BeFalse())
-		})
-
-		It("should return false because the bootstrap token file still exists", func() {
-			fakeDBus.AddUnitsToList(dbus.UnitStatus{Name: "gardener-node-agent.service"})
-
-			_, err := fs.Create("/var/lib/gardener-node-agent/credentials/bootstrap-token")
-			Expect(err).NotTo(HaveOccurred())
-
-			isInitialized, err := b.IsGardenerNodeAgentInitialized(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(isInitialized).To(BeFalse())
-		})
-
-		It("should return true because the bootstrap token file does no longer exist", func() {
-			fakeDBus.AddUnitsToList(dbus.UnitStatus{Name: "gardener-node-agent.service"})
-
-			isInitialized, err := b.IsGardenerNodeAgentInitialized(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(isInitialized).To(BeTrue())
 		})
 	})
 })
