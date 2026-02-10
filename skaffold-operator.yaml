@@ -977,6 +977,7 @@ deploy:
           config.featureGates.IstioTLSTermination: true
           config.featureGates.VPAInPlaceUpdates: true
           config.featureGates.PrometheusHealthChecks: true
+          config.featureGates.VictoriaLogsBackend: false
         createNamespace: true
         wait: true
 profiles:

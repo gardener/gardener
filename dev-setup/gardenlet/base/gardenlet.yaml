@@ -16,6 +16,7 @@ spec:
       VPAInPlaceUpdates: true
       VPNBondingModeRoundRobin: true
       PrometheusHealthChecks: true
+      VictoriaLogsBackend: true
     controllers:
       shoot:
         reconcileInMaintenanceOnly: true
