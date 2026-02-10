@@ -20,6 +20,7 @@ const SelfHostedShootExposureResource = "SelfHostedShootExposure"
 // +kubebuilder:printcolumn:name=Status,JSONPath=".status.lastOperation.state",type=string,description="Status of infrastructure resource."
 // +kubebuilder:printcolumn:name=Age,JSONPath=".metadata.creationTimestamp",type=date,description="creation timestamp"
 
+// SelfHostedShootExposure contains the configuration for the exposure of a self-hosted shoot control plane.
 type SelfHostedShootExposure struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
