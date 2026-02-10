@@ -132,6 +132,11 @@ func (r *reconciler) reconcile(
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update status")
 		return reconcilerutils.ReconcileErr(err)
 	}
+
+	if err := r.client.Get(ctx, client.ObjectKeyFromObject(osc), osc); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error re-reading object: %w", err)
+	}
+
 	if err := r.statusUpdater.Success(ctx, log, osc, operationType, "Successfully reconciled OperatingSystemConfig"); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -176,6 +181,12 @@ func (r *reconciler) restore(
 	if err := r.client.Status().Patch(ctx, osc, patch); err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update units and secret ref.")
 		return reconcilerutils.ReconcileErr(err)
+	}
+
+	// Re-read the object to get the latest generation before updating observedGeneration in Success().
+	// This is necessary because the object's spec (and thus generation) might have changed during reconciliation.
+	if err := r.client.Get(ctx, client.ObjectKeyFromObject(osc), osc); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error re-reading object: %w", err)
 	}
 
 	if err := r.statusUpdater.Success(ctx, log, osc, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored OperatingSystemConfig"); err != nil {
