@@ -3243,11 +3243,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
 						AcceptedIssuers: []string{"http://issuer.com"},
 					}
-
 					newShoot := prepareShootForUpdate(shoot)
-					newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-						AcceptedIssuers: []string{"http://issuer.com"},
-					}
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 				})
@@ -3271,6 +3267,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))))
 				})
 
+				It("should allow invalid accepted issuer URLs to be updated with valid ones on shoot update", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+						AcceptedIssuers: []string{"http://issuer.com"},
+					}
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+						AcceptedIssuers: []string{"https://issuer.com"},
+					}
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
 			})
 
 			Context("Autoscaling validation", func() {
@@ -3340,20 +3348,53 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.eventTTL"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.kubernetes.kubeAPIServer.eventTTL"),
+					"Detail": Equal("can not be negative"),
 				}))))
 			})
 
-			It("should not allow to specify an event ttl duration longer than 7d", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour * 24 * 8}
+			It("should not allow to specify an event ttl duration longer than 24h", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour * 24 * 2}
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.eventTTL"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.kubernetes.kubeAPIServer.eventTTL"),
+					"Detail": Equal("can not be longer than 24h"),
 				}))))
+			})
+
+			It("should allow invalid event ttl on shoot update if it is unchanged", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour * 24 * 10}
+				newShoot := prepareShootForUpdate(shoot)
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
+
+			It("should not allow invalid event ttl on shoot update if it is changed", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour * 24 * 10}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour * 24 * 42}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.kubernetes.kubeAPIServer.eventTTL"),
+					"Detail": Equal("can not be longer than 24h"),
+				}))))
+			})
+
+			It("should allow invalid event ttl to be updated with valid one on shoot update", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour * 24 * 10}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour * 24}
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})
 
 			It("should not allow to specify a negative defaultNotReadyTolerationSeconds", func() {

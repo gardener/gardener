@@ -26,6 +26,7 @@ build:
             - pkg/admissioncontroller/apis/config/v1alpha1/validation
             - pkg/admissioncontroller/webhook/admission
             - pkg/api
+            - pkg/api/core/shoot
             - pkg/api/extensions
             - pkg/api/indexer
             - pkg/apis/authentication
@@ -479,6 +480,7 @@ build:
             - pkg/api
             - pkg/api/core/shoot
             - pkg/api/extensions
+            - pkg/api/seedmanagement/managedseedset
             - pkg/apis/authentication
             - pkg/apis/authentication/install
             - pkg/apis/authentication/v1alpha1

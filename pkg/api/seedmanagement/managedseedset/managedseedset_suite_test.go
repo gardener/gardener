@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package shoot_test
+package managedseedset_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestShoot(t *testing.T) {
+func TestManagedSeedSet(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "API Core Shoot Suite")
+	RunSpecs(t, "API Seedmanagement ManagedSeedSet Suite")
 }

@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/shoot"
@@ -270,15 +271,10 @@ var _ = Describe("Warnings", func() {
 			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the operation annotation to rotate-etcd-encryption-key-complete. This annotation has been deprecated and is forbidden to be set starting from Kubernetes 1.34. Instead, use the rotate-etcd-encryption-key annotation, which performs a full rotation of the ETCD encryption key.")))
 		})
 
-		It("should return a warning when enableAnonymousAuthentication is set", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)}
-			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication field. The field is deprecated and will be forbidden starting with Kubernetes v1.35. Gardener sets this field to nil if it is set to false by the user. Use Structured Authentication Configuration instead. See: https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_access.md#configuring-anonymous-authentication")))
-		})
-
-		DescribeTable("shoot.spec.secretBindingName",
-			func(secretBindingName *string, expectedWarning gomegatypes.GomegaMatcher) {
+		DescribeTable("spec.secretBindingName",
+			func(secretBindingName *string, matcher gomegatypes.GomegaMatcher) {
 				shoot.Spec.SecretBindingName = secretBindingName
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(expectedWarning)
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(matcher)
 			},
 
 			Entry("should return a warning when secretBindingName is set", ptr.To("my-secret-binding"),
@@ -286,7 +282,7 @@ var _ = Describe("Warnings", func() {
 			Entry("should not return a warning when secretBindingName is not set", nil, BeEmpty()),
 		)
 
-		Describe("shoot.spec.cloudProfileName", func() {
+		Context("spec.cloudProfileName", func() {
 			It("should not return a warning when cloudProfileName is set and the Kubernetes version is < v1.33", func() {
 				shoot.Spec.Kubernetes.Version = "1.32.3"
 				shoot.Spec.CloudProfileName = ptr.To("local-profile")
@@ -305,7 +301,7 @@ var _ = Describe("Warnings", func() {
 			})
 		})
 
-		Describe("shoot.spec.addons", func() {
+		Describe("spec.addons", func() {
 			It("should print a warning when addons are set", func() {
 				shoot.Spec.Addons = &core.Addons{}
 
@@ -313,7 +309,7 @@ var _ = Describe("Warnings", func() {
 			})
 		})
 
-		Describe("shoot.spec.kubernetes.kubeProxy.mode", func() {
+		Describe("spec.kubernetes.kubeProxy.mode", func() {
 			It("should print a warning when kube-proxy mode is set to 'IPVS' and the Kubernetes version is >= v1.35", func() {
 				shoot.Spec.Kubernetes.Version = "1.35.0"
 				shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
@@ -348,7 +344,7 @@ var _ = Describe("Warnings", func() {
 			})
 		})
 
-		Describe("shoot.spec.kubernetes.kubeScheduler.kubeMaxPDVols", func() {
+		Describe("spec.kubernetes.kubeScheduler.kubeMaxPDVols", func() {
 			It("should print a warning when kubeMaxPDVols is set", func() {
 				shoot.Spec.Kubernetes.KubeScheduler = &core.KubeSchedulerConfig{
 					KubeMaxPDVols: ptr.To("20"),
@@ -358,16 +354,139 @@ var _ = Describe("Warnings", func() {
 			})
 		})
 
-		Describe("shoot.spec.kubernetes.kubeAPIServer.watchCacheSizes.default", func() {
-			It("should print a warning when default is set", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
-					WatchCacheSizes: &core.WatchCacheSizes{
-						Default: ptr.To[int32](50),
-					},
-				}
+		DescribeTable("spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication",
+			func(kubeAPIServerConfig *core.KubeAPIServerConfig, matcher gomegatypes.GomegaMatcher) {
+				shoot.Spec.Kubernetes.KubeAPIServer = kubeAPIServerConfig
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(matcher)
+			},
 
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are setting the spec.kubernetes.kubeAPIServer.watchCacheSizes.default field")))
-			})
-		})
+			Entry("should not return a warning when kubeAPIServerConfig is nil",
+				nil,
+				BeEmpty(),
+			),
+			Entry("should not return a warning when enableAnonymousAuthentication is nil",
+				&core.KubeAPIServerConfig{EventTTL: nil},
+				BeEmpty(),
+			),
+			Entry("should return a warning when enableAnonymousAuthentication is set",
+				&core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)},
+				ContainElement(Equal("you are setting the spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication field. The field is deprecated. Using Kubernetes v1.32 and above, please use anonymous authentication configuration. See: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration")),
+			),
+		)
+
+		DescribeTable("spec.kubernetes.kubeAPIServer.watchCacheSizes.default",
+			func(kubeAPIServerConfig *core.KubeAPIServerConfig, matcher gomegatypes.GomegaMatcher) {
+				shoot.Spec.Kubernetes.KubeAPIServer = kubeAPIServerConfig
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(matcher)
+			},
+
+			Entry("should not return a warning when kubeAPIServerConfig is nil",
+				nil,
+				BeEmpty(),
+			),
+			Entry("should not return a warning when watchCacheSizes is nil",
+				&core.KubeAPIServerConfig{WatchCacheSizes: nil},
+				BeEmpty(),
+			),
+			Entry("should not return a warning when watchCacheSizes.default is nil",
+				&core.KubeAPIServerConfig{WatchCacheSizes: &core.WatchCacheSizes{Default: nil}},
+				BeEmpty(),
+			),
+			Entry("should return a warning when watchCacheSizes.default is set",
+				&core.KubeAPIServerConfig{WatchCacheSizes: &core.WatchCacheSizes{Default: ptr.To[int32](50)}},
+				ContainElement(Equal("you are setting the spec.kubernetes.kubeAPIServer.watchCacheSizes.default field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.35. The cache size is automatically sized by the kube-apiserver.")),
+			),
+		)
+
+		DescribeTable("spec.kubernetes.kubeAPIServer.eventTTL",
+			func(kubeAPIServerConfig *core.KubeAPIServerConfig, matcher gomegatypes.GomegaMatcher) {
+				shoot.Spec.Kubernetes.KubeAPIServer = kubeAPIServerConfig
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(matcher)
+			},
+
+			Entry("should not return a warning when kubeAPIServerConfig is nil",
+				nil,
+				BeEmpty(),
+			),
+			Entry("should not return a warning when eventTTL is nil",
+				&core.KubeAPIServerConfig{EventTTL: nil},
+				BeEmpty(),
+			),
+			Entry("should not return a warning for valid eventTTL duration",
+				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: time.Hour * 24}},
+				BeEmpty(),
+			),
+			Entry("should return a warning for invalid eventTTL duration",
+				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: time.Hour * 24 * 10}},
+				ContainElement(Equal("you are setting the spec.kubernetes.kubeAPIServer.eventTTL field to an invalid value. Invalid value: '240h0m0s', valid values: [0, 24h]. Invalid values for existing resources will be no longer allowed in Gardener v1.142.0. See: https://github.com/gardener/gardener/issues/13825")),
+			),
+		)
+	})
+
+	Describe("#GetKubeAPIServerWarnings", func() {
+		DescribeTable("enableAnonymousAuthentication",
+			func(kubeAPIServerConfig *core.KubeAPIServerConfig, matcher gomegatypes.GomegaMatcher) {
+				Expect(GetKubeAPIServerWarnings(kubeAPIServerConfig, field.NewPath("kubeAPIServer"))).To(matcher)
+			},
+
+			Entry("should not return a warning when kubeAPIServerConfig is nil",
+				nil,
+				BeEmpty(),
+			),
+			Entry("should not return a warning when enableAnonymousAuthentication is nil",
+				&core.KubeAPIServerConfig{EventTTL: nil},
+				BeEmpty(),
+			),
+			Entry("should return a warning when enableAnonymousAuthentication is set",
+				&core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)},
+				ContainElement(Equal("you are setting the kubeAPIServer.enableAnonymousAuthentication field. The field is deprecated. Using Kubernetes v1.32 and above, please use anonymous authentication configuration. See: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration")),
+			),
+		)
+
+		DescribeTable("watchCacheSizes.default",
+			func(kubeAPIServerConfig *core.KubeAPIServerConfig, matcher gomegatypes.GomegaMatcher) {
+				Expect(GetKubeAPIServerWarnings(kubeAPIServerConfig, field.NewPath("kubeAPIServer"))).To(matcher)
+			},
+
+			Entry("should not return a warning when kubeAPIServerConfig is nil",
+				nil,
+				BeEmpty(),
+			),
+			Entry("should not return a warning when watchCacheSizes is nil",
+				&core.KubeAPIServerConfig{WatchCacheSizes: nil},
+				BeEmpty(),
+			),
+			Entry("should not return a warning when watchCacheSizes.default is nil",
+				&core.KubeAPIServerConfig{WatchCacheSizes: &core.WatchCacheSizes{Default: nil}},
+				BeEmpty(),
+			),
+			Entry("should return a warning when watchCacheSizes.default is set",
+				&core.KubeAPIServerConfig{WatchCacheSizes: &core.WatchCacheSizes{Default: ptr.To[int32](50)}},
+				ContainElement(Equal("you are setting the kubeAPIServer.watchCacheSizes.default field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.35. The cache size is automatically sized by the kube-apiserver.")),
+			),
+		)
+
+		DescribeTable("eventTTL",
+			func(kubeAPIServerConfig *core.KubeAPIServerConfig, matcher gomegatypes.GomegaMatcher) {
+				Expect(GetKubeAPIServerWarnings(kubeAPIServerConfig, field.NewPath("kubeAPIServer"))).To(matcher)
+			},
+
+			Entry("should not return a warning when kubeAPIServerConfig is nil",
+				nil,
+				BeEmpty(),
+			),
+			Entry("should not return a warning when eventTTL is nil",
+				&core.KubeAPIServerConfig{EventTTL: nil},
+				BeEmpty(),
+			),
+			Entry("should not return a warning for valid eventTTL duration",
+				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: time.Hour * 24}},
+				BeEmpty(),
+			),
+			Entry("should return a warning for invalid eventTTL duration",
+				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: time.Hour * 24 * 10}},
+				ContainElement(Equal("you are setting the kubeAPIServer.eventTTL field to an invalid value. Invalid value: '240h0m0s', valid values: [0, 24h]. Invalid values for existing resources will be no longer allowed in Gardener v1.142.0. See: https://github.com/gardener/gardener/issues/13825")),
+			),
+		)
 	})
 })
