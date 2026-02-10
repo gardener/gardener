@@ -318,33 +318,12 @@ func (v *vali) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					},
 					{
-						ContainerName:    curatorName,
-						Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-					},
-					{
-						ContainerName:    initLargeDirName,
-						Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},
 		},
-	}
-
-	if v.values.ShootNodeLoggingEnabled {
-		vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies,
-			vpaautoscalingv1.ContainerResourcePolicy{
-				ContainerName:    kubeRBACProxyName,
-				Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-			},
-			vpaautoscalingv1.ContainerResourcePolicy{
-				ContainerName:    telegrafName,
-				Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-			},
-		)
 	}
 
 	return vpa
