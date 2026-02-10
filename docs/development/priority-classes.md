@@ -26,7 +26,7 @@ When using the `gardener-operator` for managing the garden runtime and virtual c
 | `gardener-garden-system-400`      | 999999400 | `virtual-garden-gardener-resource-manager`, `gardener-admission-controller`, Extension Admission Controllers                                                                                                                                                      |
 | `gardener-garden-system-300`      | 999999300 | `virtual-garden-kube-controller-manager`, `vpa-admission-controller`, `etcd-druid`, `nginx-ingress-controller`                                                                                                                                                    |
 | `gardener-garden-system-200`      | 999999200 | `vpa-recommender`, `vpa-updater`, `gardener-scheduler`, `gardener-controller-manager`, `gardener-dashboard`, `terminal-controller-manager`, `gardener-discovery-server`, Extension Controllers                                                                    |
-| `gardener-garden-system-100`      | 999999100 | `fluent-operator`, `fluent-bit`, `gardener-metrics-exporter`, `kube-state-metrics`, `plutono`, `vali`, `prometheus-operator`, `alertmanager-garden`, `prometheus-garden`, `blackbox-exporter`, `prometheus-longterm`, `perses-operator`, `victoria-operator`, `opentelemetry-operator` |
+| `gardener-garden-system-100`      | 999999100 | `fluent-operator`, `fluent-bit`, `gardener-metrics-exporter`, `kube-state-metrics`, `plutono`, `vali`, `prometheus-operator`, `alertmanager-garden`, `prometheus-garden`, `blackbox-exporter`, `prometheus-longterm`, `perses-operator`, `victoria-operator`, `opentelemetry-operator`, `victoria-logs`|
 
 ## Seed Clusters
 
@@ -38,7 +38,7 @@ When using the `gardener-operator` for managing the garden runtime and virtual c
 | `gardener-system-900`              | 999998900 | Extensions                                                                                                                                                                                                                                                                        |
 | `gardener-system-800`              | 999998800 | `dependency-watchdog-endpoint`, `dependency-watchdog-probe`, `etcd-druid`, `vpa-admission-controller`                                                                                                                                                                             |
 | `gardener-system-700`              | 999998700 | `vpa-recommender`, `vpa-updater`                                                                                                                                                                                                                                                  |
-| `gardener-system-600`              | 999998600 | `alertmanager-seed`, `fluent-operator`, `fluent-bit`, `plutono`, `kube-state-metrics`, `nginx-ingress-controller`, `nginx-k8s-backend`, `prometheus-operator`, `prometheus-aggregate`, `prometheus-cache`, `prometheus-seed`, `vali`, `perses-operator`, `victoria-operator`, `opentelemetry-operator` |
+| `gardener-system-600`              | 999998600 | `alertmanager-seed`, `fluent-operator`, `fluent-bit`, `plutono`, `kube-state-metrics`, `nginx-ingress-controller`, `nginx-k8s-backend`, `prometheus-operator`, `prometheus-aggregate`, `prometheus-cache`, `prometheus-seed`, `vali`, `perses-operator`, `victoria-operator`, `opentelemetry-operator`, `victoria-logs` |
 | `gardener-reserve-excess-capacity` | -5        | `reserve-excess-capacity` ([ref](https://github.com/gardener/gardener/pull/6135))                                                                                                                                                                       |
 
 ### `PriorityClass`es for Shoot Control Plane Components
@@ -49,7 +49,7 @@ When using the `gardener-operator` for managing the garden runtime and virtual c
 | `gardener-system-400` | 999998400 | `gardener-resource-manager`                                                                                                                                                            |
 | `gardener-system-300` | 999998300 | `cloud-controller-manager`, `cluster-autoscaler`, `csi-driver-controller`, `kube-controller-manager`, `kube-scheduler`, `machine-controller-manager`, `terraformer`, `vpn-seed-server` |
 | `gardener-system-200` | 999998200 | `csi-snapshot-controller`, `csi-snapshot-validation`, `cert-controller-manager`, `shoot-dns-service`, `vpa-admission-controller`, `vpa-recommender`, `vpa-updater`                     |
-| `gardener-system-100` | 999998100 | `alertmanager-shoot`, `plutono`, `kube-state-metrics`, `prometheus-shoot`, `blackbox-exporter`, `vali`, `event-logger`                                                                 |
+| `gardener-system-100` | 999998100 | `alertmanager-shoot`, `plutono`, `kube-state-metrics`, `prometheus-shoot`, `blackbox-exporter`, `vali`, `event-logger`, `victoria-logs`                                                                 |
 
 ## Shoot Clusters
 
