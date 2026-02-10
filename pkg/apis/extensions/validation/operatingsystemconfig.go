@@ -266,18 +266,28 @@ func ValidateUnits(units []extensionsv1alpha1.Unit, pathsFromFiles sets.Set[stri
 func validateFileDuplicates(osc *extensionsv1alpha1.OperatingSystemConfig) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	paths := sets.New[string]()
+	paths := map[string][]extensionsv1alpha1.File{}
 
 	check := func(files []extensionsv1alpha1.File, fldPath *field.Path) {
 		for i, file := range files {
 			idxPath := fldPath.Index(i)
 
 			if file.Path != "" {
-				if paths.Has(file.Path) {
-					allErrs = append(allErrs, field.Duplicate(idxPath.Child("path"), file.Path))
+				var fileList []extensionsv1alpha1.File
+				if files, ok := paths[file.Path]; ok {
+					for _, f := range files {
+						if file.HostName == nil && f.HostName == nil ||
+							file.HostName != nil && f.HostName != nil && *file.HostName == *f.HostName {
+							allErrs = append(allErrs, field.Duplicate(idxPath.Child("path"), file.Path))
+							break
+						}
+					}
+
+					fileList = files
 				}
 
-				paths.Insert(file.Path)
+				fileList = append(fileList, file)
+				paths[file.Path] = fileList
 			}
 		}
 	}

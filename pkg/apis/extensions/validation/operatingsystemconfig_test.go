@@ -227,6 +227,16 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 					Content:  osc.Spec.Files[0].Content,
 					HostName: ptr.To("-&#39;invalid&#39;"),
 				},
+				{
+					Path:     "path8",
+					Content:  osc.Spec.Files[0].Content,
+					HostName: ptr.To("my-node"),
+				},
+				{
+					Path:     "path8",
+					Content:  osc.Spec.Files[0].Content,
+					HostName: ptr.To("my-node"),
+				},
 			}
 
 			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(
@@ -282,8 +292,39 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("status.extensionFiles[5].hostName"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("status.extensionFiles[7].path"),
 				})),
 			))
+		})
+
+		It("should allow duplicate files as long as host name is different", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.Units = nil
+			oscCopy.Spec.Files = []extensionsv1alpha1.File{
+				{
+					Path:    "path1",
+					Content: osc.Spec.Files[0].Content,
+				},
+				{
+					Path:     "path1",
+					Content:  osc.Spec.Files[0].Content,
+					HostName: ptr.To("my-node"),
+				},
+				{
+					Path:     "path2",
+					Content:  osc.Spec.Files[0].Content,
+					HostName: ptr.To("my-node"),
+				},
+				{
+					Path:     "path2",
+					Content:  osc.Spec.Files[0].Content,
+					HostName: ptr.To("my-node-2"),
+				},
+			}
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(BeEmpty())
 		})
 
 		It("should forbid an empty OperatingSystemConfigs plugin path", func() {
