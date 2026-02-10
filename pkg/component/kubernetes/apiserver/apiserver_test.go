@@ -377,6 +377,10 @@ var _ = Describe("KubeAPIServer", func() {
 								corev1.ResourceMemory: resource.MustParse("200M"),
 							},
 						},
+						{
+							ContainerName: "*",
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						},
 					},
 				),
 				Entry("HA VPN is enabled",
@@ -394,15 +398,7 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						},
 						{
-							ContainerName: "vpn-client-0",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-						},
-						{
-							ContainerName: "vpn-client-1",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-						},
-						{
-							ContainerName: "vpn-path-controller",
+							ContainerName: "*",
 							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
@@ -421,6 +417,10 @@ var _ = Describe("KubeAPIServer", func() {
 								corev1.ResourceMemory: resource.MustParse("200M"),
 							},
 						},
+						{
+							ContainerName: "*",
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						},
 					},
 				),
 				Entry("minAllowed configured",
@@ -436,6 +436,10 @@ var _ = Describe("KubeAPIServer", func() {
 								corev1.ResourceCPU:    resource.MustParse("20m"),
 								corev1.ResourceMemory: resource.MustParse("2Gi"),
 							},
+						},
+						{
+							ContainerName: "*",
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				),

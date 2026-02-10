@@ -6,7 +6,6 @@ package apiserver
 
 import (
 	"context"
-	"fmt"
 	"maps"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -70,21 +69,12 @@ func (k *kubeAPIServer) computeVerticalPodAutoscalerContainerResourcePolicies(ku
 				MinAllowed:       kubeAPIServerMinAllowed,
 				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 			},
+			{
+				ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+				Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+			},
 		}
 	)
-
-	if k.values.VPN.HighAvailabilityEnabled {
-		for i := 0; i < k.values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
-			vpaContainerResourcePolicies = append(vpaContainerResourcePolicies, vpaautoscalingv1.ContainerResourcePolicy{
-				ContainerName: fmt.Sprintf("%s-%d", containerNameVPNSeedClient, i),
-				Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-			})
-		}
-		vpaContainerResourcePolicies = append(vpaContainerResourcePolicies, vpaautoscalingv1.ContainerResourcePolicy{
-			ContainerName: containerNameVPNPathController,
-			Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-		})
-	}
 
 	return vpaContainerResourcePolicies
 }
