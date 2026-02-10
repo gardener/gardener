@@ -590,6 +590,11 @@ var _ = Describe("ShootSystem", func() {
 								Verbs:         []string{"get"},
 								ResourceNames: []string{"kube-system"},
 							},
+							{
+								APIGroups: []string{""},
+								Resources: []string{"nodes"},
+								Verbs:     []string{"get"},
+							},
 						},
 					}
 
