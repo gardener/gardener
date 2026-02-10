@@ -1477,6 +1477,7 @@ OperatingSystemConfigStatus
 <h3 id="extensions.gardener.cloud/v1alpha1.SelfHostedShootExposure">SelfHostedShootExposure
 </h3>
 <p>
+<p>SelfHostedShootExposure contains the configuration for the exposure of a self-hosted shoot control plane.</p>
 </p>
 <table>
 <thead>

@@ -42,6 +42,8 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
+        description: SelfHostedShootExposure contains the configuration for the exposure
+          of a self-hosted shoot control plane.
         properties:
           apiVersion:
             description: |-
