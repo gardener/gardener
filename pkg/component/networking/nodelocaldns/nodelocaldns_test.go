@@ -654,7 +654,7 @@ spec:
     containerPolicies:
     - containerName: node-cache
       controlledValues: RequestsOnly
-    - containerName: coredns-config-adapter
+    - containerName: '*'
       mode: "Off"
   targetRef:
     apiVersion: apps/v1
@@ -731,7 +731,7 @@ spec:
     containerPolicies:
     - containerName: node-cache
       controlledValues: RequestsOnly
-    - containerName: coredns-config-adapter
+    - containerName: '*'
       mode: "Off"
   targetRef:
     apiVersion: apps/v1
@@ -952,6 +952,8 @@ spec:
     containerPolicies:
     - containerName: node-cache
       controlledValues: RequestsOnly
+    - containerName: '*'
+      mode: "Off"
   targetRef:
     apiVersion: apps/v1
     kind: DaemonSet
@@ -1169,7 +1171,7 @@ spec:
     containerPolicies:
     - containerName: node-cache
       controlledValues: RequestsOnly
-    - containerName: coredns-config-adapter
+    - containerName: '*'
       mode: "Off"
   targetRef:
     apiVersion: apps/v1

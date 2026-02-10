@@ -425,15 +425,13 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 								ContainerName:    containerName,
 								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							},
+							{
+								ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							},
 						},
 					},
 				},
-			}
-			if n.values.CustomDNSServerInNodeLocalDNS {
-				vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
-					ContainerName: sideCarName,
-					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-				})
 			}
 			clientObjects = append(clientObjects, vpa)
 		}
