@@ -516,7 +516,7 @@ type GardenVali struct {
 // VictoriaLogs contains configuration for the VictoriaLogs.
 type VictoriaLogs struct {
 	// Enabled is used to enable or disable VictoriaLogs.
-	// If not set, by default VictoriaLogs is enabled when the DeployVictoriaLogs feature gate is enabled.
+	// If not set, by default VictoriaLogs is enabled when the VictoriaLogsBackend feature gate is enabled.
 	// +optional
 	Enabled *bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	// Garden contains configuration for VictoriaLogs in garden namespace.

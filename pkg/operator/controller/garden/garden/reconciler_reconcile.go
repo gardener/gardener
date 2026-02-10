@@ -583,7 +583,7 @@ func (r *Reconciler) reconcile(
 				if err := c.vali.Deploy(ctx); err != nil {
 					return err
 				}
-				if features.DefaultFeatureGate.Enabled(features.DeployVictoriaLogs) {
+				if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
 					if err := c.victoriaLogs.Deploy(ctx); err != nil {
 						return err
 					}

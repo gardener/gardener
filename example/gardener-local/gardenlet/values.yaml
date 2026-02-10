@@ -40,7 +40,7 @@ config:
     NewWorkerPoolHash: true
     IstioTLSTermination: true
     UseUnifiedHTTPProxyPort: true
-    DeployVictoriaLogs: true
+    VictoriaLogsBackend: true
     VPAInPlaceUpdates: true
     VPNBondingModeRoundRobin: true
     PrometheusHealthChecks: true

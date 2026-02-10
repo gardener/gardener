@@ -264,7 +264,7 @@ var _ = Describe("Logging", func() {
 
 			Context("VictoriaLogs feature gate", func() {
 				BeforeEach(func() {
-					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.DeployVictoriaLogs, true))
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, true))
 				})
 
 				It("should successfully deploy all of the components including VictoriaLogs when it is enabled", func() {

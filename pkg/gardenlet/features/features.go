@@ -24,7 +24,7 @@ func GetFeatures() []featuregate.Feature {
 		features.IstioTLSTermination,
 		features.DoNotCopyBackupCredentials,
 		features.OpenTelemetryCollector,
-		features.DeployVictoriaLogs,
+		features.VictoriaLogsBackend,
 		features.UseUnifiedHTTPProxyPort,
 		features.VPAInPlaceUpdates,
 		features.CustomDNSServerInNodeLocalDNS,

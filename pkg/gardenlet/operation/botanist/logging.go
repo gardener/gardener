@@ -56,7 +56,7 @@ func (b *Botanist) DeployLogging(ctx context.Context) error {
 		}
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.DeployVictoriaLogs) {
+	if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
 		if err := b.Shoot.Components.ControlPlane.VictoriaLogs.Deploy(ctx); err != nil {
 			return fmt.Errorf("deploying VictoriaLogs failed: %w", err)
 		}
@@ -165,7 +165,7 @@ func (b *Botanist) DefaultOtelCollector() (collector.Interface, error) {
 			ValiHost:                b.ComputeValiHost(),
 			ClusterType:             component.ClusterTypeShoot,
 			IsGardenCluster:         false,
-			DeployVictoriaLogs:      features.DefaultFeatureGate.Enabled(features.DeployVictoriaLogs),
+			VictoriaLogsBackend:      features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
 		},
 		b.SecretsManager,
 	), nil

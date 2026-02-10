@@ -223,7 +223,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources, destroyFluentBit),
 			SkipIf:       seedIsGarden,
 		})
-		// TODO(rrhubenov): Remove Vali when `DeployVictoriaLogs` feature gate is GA.
+		// TODO(rrhubenov): Remove Vali when `VictoriaLogsBackend` feature gate is GA.
 		destroyVali = g.Add(flow.Task{
 			Name:         "Destroy Vali",
 			Fn:           component.OpDestroyAndWait(c.vali).Destroy,

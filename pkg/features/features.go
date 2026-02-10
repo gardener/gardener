@@ -71,11 +71,11 @@ const (
 	// beta: v1.136.0
 	OpenTelemetryCollector featuregate.Feature = "OpenTelemetryCollector"
 
-	// DeployVictoriaLogs enables the deployment of VictoriaLogs instance in the Control Plane of Shoot clusters.
+	// VictoriaLogsBackend enables the deployment of VictoriaLogs instance in the Control Plane of Shoot clusters.
 	// VictoriaLogs will replace Vali as the log aggregation system.
 	// owner: @rrhubenov
 	// alpha: v1.137.0
-	DeployVictoriaLogs featuregate.Feature = "DeployVictoriaLogs"
+	VictoriaLogsBackend featuregate.Feature = "VictoriaLogsBackend"
 
 	// UseUnifiedHTTPProxyPort enables the gardenlet to set up the unified HTTP proxy network infrastructure.
 	// Gardenlet will also reconfigure the API server proxy and shoot VPN client to connect to the unified port using the new X-Gardener-Destination header.
@@ -138,7 +138,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	CloudProfileCapabilities:       {Default: false, PreRelease: featuregate.Alpha},
 	DoNotCopyBackupCredentials:     {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	OpenTelemetryCollector:         {Default: true, PreRelease: featuregate.Beta},
-	DeployVictoriaLogs:             {Default: false, PreRelease: featuregate.Alpha},
+	VictoriaLogsBackend:            {Default: false, PreRelease: featuregate.Alpha},
 	UseUnifiedHTTPProxyPort:        {Default: false, PreRelease: featuregate.Alpha},
 	VPAInPlaceUpdates:              {Default: false, PreRelease: featuregate.Alpha},
 	CustomDNSServerInNodeLocalDNS:  {Default: true, PreRelease: featuregate.Beta},
