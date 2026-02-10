@@ -214,8 +214,8 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 
 			// TODO(tobschli): See if this removes the flake of grm not getting ready because extension is CLPing.
 			restConfig := restOpts.Completed().Config
-			restConfig.QPS = 10
-			restConfig.Burst = 20
+			restConfig.QPS = 100
+			restConfig.Burst = 200
 
 			mgr, err := manager.New(restConfig, mgrOpts.Completed().Options())
 			if err != nil {
