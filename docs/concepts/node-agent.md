@@ -67,7 +67,23 @@ It writes or update the files and units to the file system, removes no longer ne
 After successful reconciliation, it persists the just applied `OperatingSystemConfig` into a file on the host.
 This file will be used for future reconciliations to compute file/unit changes.
 
-The controller also maintains two annotations on the `Node`:
+#### Static Pod Reconciliation
+
+After applying the operating system configuration, the controller performs additional checks for static pods managed by the `kubelet`.
+Static pods are defined as pod manifests in the `/etc/kubernetes/manifests/` directory.
+
+The controller:
+
+1. **Identifies static pod manifests**: Scans both `.spec.files[]` and `.status.extensionFiles[]` in the `OperatingSystemConfig` for files located in `/etc/kubernetes/manifests/` that contain pod definitions.
+2. **Extracts expected state**: Parses each static pod manifest to determine the pod name and its desired configuration hash (from the `gardener.cloud/config.mirror` annotation).
+3. **Compares with actual state**: Lists all pods on the node with the label `static-pod=true` and compares their hashes with the expected hashes to make sure that the desired specification has been rolled out.
+4. **Waits for convergence**: If the actual pod hashes don't match the expected hashes (indicating kubelet hasn't picked up the new manifests yet), the controller requeues with a delay to check again later.
+5. **Verifies health**: Once all static pods exist with the correct hashes, the controller verifies that each pod passes health checks and is in a ready state.
+6. **Completes reconciliation**: Only after all static pods are present, have the correct configuration, and are healthy does the controller consider the reconciliation complete.
+
+This ensures that changes to static pod configurations are fully applied and the pods are running correctly before marking the node as up-to-date.
+
+After all these steps are complete, the controller maintains two annotations on the `Node`:
 
 - `worker.gardener.cloud/kubernetes-version`, describing the version of the installed `kubelet`.
 - `checksum/cloud-config-data`, describing the checksum of the applied `OperatingSystemConfig` (used in future reconciliations to determine whether it needs to reconcile, and to report that this node is up-to-date).
