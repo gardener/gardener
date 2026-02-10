@@ -212,7 +212,12 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			mgr, err := manager.New(restOpts.Completed().Config, mgrOpts.Completed().Options())
+			// TODO(tobschli): See if this removes the flake of grm not getting ready because extension is CLPing.
+			restConfig := restOpts.Completed().Config
+			restConfig.QPS = 10
+			restConfig.Burst = 20
+
+			mgr, err := manager.New(restConfig, mgrOpts.Completed().Options())
 			if err != nil {
 				return fmt.Errorf("could not instantiate manager: %w", err)
 			}
