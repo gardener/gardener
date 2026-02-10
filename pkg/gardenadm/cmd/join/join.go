@@ -7,6 +7,7 @@ package join
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -82,7 +83,7 @@ func run(ctx context.Context, opts *Options) error {
 	if err != nil {
 		return fmt.Errorf("failed discovering Kubernetes version of cluster: %w", err)
 	}
-	b.Shoot = &shootpkg.Shoot{KubernetesVersion: version}
+	b.Shoot = &shootpkg.Shoot{KubernetesVersion: version, ControlPlaneNamespace: metav1.NamespaceSystem}
 	b.Shoot.SetInfo(nil)
 
 	alreadyJoined, err := b.IsGardenerNodeAgentInitialized(ctx)
@@ -102,11 +103,31 @@ func run(ctx context.Context, opts *Options) error {
 					if err != nil {
 						return fmt.Errorf("failed retrieving short-lived kubeconfig: %w", err)
 					}
-
 					b.Logger.Info("Successfully retrieved short-lived bootstrap kubeconfig")
 					b.ShootClientSet = shootClientSet
+
+					cluster, err := gardenerextensions.GetCluster(ctx, b.ShootClientSet.Client(), b.Shoot.ControlPlaneNamespace)
+					if err != nil {
+						return fmt.Errorf("failed to read Cluster resource %s: %w", b.Shoot.ControlPlaneNamespace, err)
+					}
+					b.Shoot.SetInfo(cluster.Shoot)
 					return nil
 				},
+			})
+			ensureNoActiveShootReconciliation = g.Add(flow.Task{
+				Name: "Ensuring shoot is not concurrently reconciled by gardenlet when joining control plane node",
+				Fn: func(_ context.Context) error {
+					if lastOperation := b.Shoot.GetInfo().Status.LastOperation; lastOperation != nil && slices.Contains([]gardencorev1beta1.LastOperationState{
+						gardencorev1beta1.LastOperationStateProcessing,
+						gardencorev1beta1.LastOperationStateError,
+						gardencorev1beta1.LastOperationStateAborted,
+					}, lastOperation.State) {
+						return fmt.Errorf("the Shoot's status.lastOperation.state must indicate successful reconciliation before joining a control plane node: %s", lastOperation.State)
+					}
+					return nil
+				},
+				Dependencies: flow.NewTaskIDs(retrieveShortLivedKubeconfig),
+				SkipIf:       !opts.ControlPlane,
 			})
 			determineGardenerNodeAgentSecretName = g.Add(flow.Task{
 				Name: "Determining gardener-node-agent Secret containing the configuration for this node",
@@ -118,6 +139,7 @@ func run(ctx context.Context, opts *Options) error {
 				Dependencies: flow.NewTaskIDs(retrieveShortLivedKubeconfig),
 			})
 			syncPointReadyForGardenerNodeInit = flow.NewTaskIDs(
+				ensureNoActiveShootReconciliation,
 				determineGardenerNodeAgentSecretName,
 			)
 
@@ -177,7 +199,7 @@ func GetGardenerNodeAgentSecretName(ctx context.Context, opts *Options, b *botan
 	}
 
 	secretList := &corev1.SecretList{}
-	if err := b.ShootClientSet.Client().List(ctx, secretList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{
+	if err := b.ShootClientSet.Client().List(ctx, secretList, client.InNamespace(b.Shoot.ControlPlaneNamespace), client.MatchingLabels{
 		v1beta1constants.GardenRole:      v1beta1constants.GardenRoleOperatingSystemConfig,
 		v1beta1constants.LabelWorkerPool: workerPoolName,
 	}); err != nil {

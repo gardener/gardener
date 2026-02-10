@@ -24,6 +24,7 @@ import (
 	. "github.com/gardener/gardener/pkg/gardenadm/cmd/join"
 	operationpkg "github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
+	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 )
 
 var _ = Describe("Join", func() {
@@ -45,6 +46,7 @@ var _ = Describe("Join", func() {
 				Botanist: &botanistpkg.Botanist{
 					Operation: &operationpkg.Operation{
 						ShootClientSet: fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build(),
+						Shoot:          &shootpkg.Shoot{ControlPlaneNamespace: "kube-system"},
 					},
 				},
 			}
