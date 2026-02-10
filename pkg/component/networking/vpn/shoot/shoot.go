@@ -500,7 +500,6 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 		if v.values.VPAUpdateDisabled {
 			vpaUpdateMode = vpaautoscalingv1.UpdateModeOff
 		}
-		controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		kind := "Deployment"
 		if _, ok := deploymentOrStatefulSet.(*appsv1.StatefulSet); ok {
 			kind = "StatefulSet"
@@ -520,9 +519,13 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 				MinAllowed: corev1.ResourceList{
 					corev1.ResourceMemory: resource.MustParse("10Mi"),
 				},
-				ControlledValues: &controlledValues,
+				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 			})
 		}
+		containerPolicies = append(containerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
+			ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+			Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+		})
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "vpn-shoot",
