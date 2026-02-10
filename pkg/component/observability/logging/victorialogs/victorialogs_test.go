@@ -113,6 +113,9 @@ var _ = Describe("VictoriaLogs", func() {
 						},
 					},
 				},
+				CommonApplicationDeploymentParams: vmv1beta1.CommonApplicationDeploymentParams{
+					ReplicaCount: ptr.To(int32(0)),
+				},
 				RetentionPeriod: "15d",
 				Storage: &corev1.PersistentVolumeClaimSpec{
 					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
