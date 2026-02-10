@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/afero"
 	"k8s.io/utils/ptr"
 
-	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	. "github.com/gardener/gardener/pkg/nodeagent/bootstrap"
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
 	"github.com/gardener/gardener/pkg/utils/test"

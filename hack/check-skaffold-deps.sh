@@ -23,6 +23,7 @@ function run() {
 run "skaffold.yaml" "gardener-admission-controller"             "controlplane"
 run "skaffold.yaml" "gardener-apiserver"                        "controlplane"
 run "skaffold.yaml" "gardener-controller-manager"               "controlplane"
+run "skaffold.yaml" "gardener-extension-admission-local"        "admission-local"
 run "skaffold.yaml" "gardener-extension-provider-local"         "provider-local"
 run "skaffold.yaml" "gardener-node-agent"                       "gardenlet"
 run "skaffold.yaml" "gardener-resource-manager"                 "gardenlet"
