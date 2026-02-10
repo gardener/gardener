@@ -256,10 +256,14 @@ var _ = Describe("VictoriaOperator", func() {
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName: "*",
+							ContainerName: "victoria-operator",
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("64Mi"),
 							},
+						},
+						{
+							ContainerName: "*",
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
