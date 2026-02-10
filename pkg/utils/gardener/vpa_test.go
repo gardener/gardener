@@ -64,12 +64,18 @@ var _ = Describe("VPA", func() {
 						UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
 					},
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-							ContainerName: name,
-							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("200Mi"),
+						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+							{
+								ContainerName: name,
+								MinAllowed: corev1.ResourceList{
+									corev1.ResourceMemory: resource.MustParse("200Mi"),
+								},
 							},
-						}},
+							{
+								ContainerName: "*",
+								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							},
+						},
 					},
 				},
 			}))
