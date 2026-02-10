@@ -762,6 +762,8 @@ var DefaultControllerSyncPeriod = metav1.Duration{Duration: time.Minute}
 
 // DefaultCentralValiStorage is a default value for garden/vali's storage.
 var DefaultCentralValiStorage = resource.MustParse("100Gi")
+
+// DefaultCentralVictoriaLogsStorage is a default value for garden/victoria-logs's storage.
 var DefaultCentralVictoriaLogsStorage = resource.MustParse("100Gi")
 
 // NodeToleration contains information about node toleration options.
