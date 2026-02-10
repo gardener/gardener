@@ -612,7 +612,7 @@ var _ = Describe("Etcd", func() {
 									Resources:   []string{"leases"},
 									Scope:       ptr.To(admissionregistrationv1.AllScopes),
 								},
-								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete},
+								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Delete},
 							},
 						},
 					},

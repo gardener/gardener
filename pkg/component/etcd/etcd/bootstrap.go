@@ -398,7 +398,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								Resources:   []string{"leases"},
 								Scope:       ptr.To(admissionregistrationv1.AllScopes),
 							},
-							Operations: opUpdateAndDelete,
+							Operations: opDelete,
 						},
 					},
 				},
