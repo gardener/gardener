@@ -21,6 +21,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
@@ -908,6 +909,133 @@ units: {}
 		})
 	})
 
+	Context("static pods", func() {
+		var (
+			filePath            = "/etc/kubernetes/manifests/kube-apiserver.yaml"
+			desiredStaticPodRaw = `apiVersion: v1
+kind: Pod
+metadata:
+  name: foo
+  namespace: default
+  annotations:
+    gardener.cloud/config.mirror: abc
+`
+		)
+
+		BeforeEach(func() {
+			DeferCleanup(test.WithVar(&operatingsystemconfig.RequeueAfterWaitForStaticPods, 500*time.Millisecond))
+		})
+
+		When("desired pod manifest cannot be decoded", func() {
+			BeforeEach(func() {
+				operatingSystemConfig.Spec.Files = append(operatingSystemConfig.Spec.Files, extensionsv1alpha1.File{
+					Path:    filePath,
+					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "{"}},
+				})
+			})
+
+			It("should fail and not update the node's checksum annotation", func() {
+				Eventually(logBuffer).Should(gbytes.Say("unable to decode static pod from file data"))
+				ensureNodeAnnotationCloudConfigIsNotUpdated(node)
+			})
+		})
+
+		When("desired pod manifest is not a Pod", func() {
+			BeforeEach(func() {
+				operatingSystemConfig.Spec.Files = append(operatingSystemConfig.Spec.Files, extensionsv1alpha1.File{
+					Path: filePath,
+					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: `apiVersion: v1
+kind: Node
+metadata:
+  name: foo
+`}},
+				})
+			})
+
+			It("should fail and not update the node's checksum annotation", func() {
+				Eventually(logBuffer).Should(gbytes.Say("unable to decode static pod from file data"))
+				ensureNodeAnnotationCloudConfigIsNotUpdated(node)
+			})
+		})
+
+		When("desired static pods are not yet rolled out in the system", func() {
+			BeforeEach(func() {
+				operatingSystemConfig.Spec.Files = append(operatingSystemConfig.Spec.Files, extensionsv1alpha1.File{
+					Path:    filePath,
+					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: desiredStaticPodRaw}},
+				})
+			})
+
+			It("should requeue and not update the node's checksum annotation", func() {
+				Eventually(logBuffer).Should(gbytes.Say("Not all static pods have been rolled out to the desired state yet, requeuing"))
+				ensureNodeAnnotationCloudConfigIsNotUpdated(node)
+			})
+		})
+
+		When("static pods are rolled out in the system", func() {
+			var staticPod *corev1.Pod
+
+			BeforeEach(func() {
+				operatingSystemConfig.Spec.Files = append(operatingSystemConfig.Spec.Files, extensionsv1alpha1.File{
+					Path:    filePath,
+					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: desiredStaticPodRaw}},
+				})
+
+				staticPod = &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "foo-" + node.Name,
+						Namespace:   "default",
+						Annotations: map[string]string{"gardener.cloud/config.mirror": "abc"},
+						Labels:      map[string]string{"static-pod": "true", testID: testRunID},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "foo-container", Image: "foo"}},
+						NodeName:   node.Name,
+					},
+				}
+			})
+
+			JustBeforeEach(func() {
+				Expect(testClient.Create(ctx, staticPod)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(testClient.Delete(ctx, staticPod, client.GracePeriodSeconds(0))).To(Succeed())
+				})
+			})
+
+			When("static pod is not healthy yet", func() {
+				It("should requeue and not update the node's checksum annotation", func() {
+					Eventually(logBuffer).Should(gbytes.Say("Static pod is not healthy yet, requeuing"))
+					ensureNodeAnnotationCloudConfigIsNotUpdated(node)
+				})
+			})
+
+			When("static pod is not ready yet", func() {
+				JustBeforeEach(func() {
+					staticPod.Status.Phase = corev1.PodRunning
+					Expect(testClient.Status().Update(ctx, staticPod)).To(Succeed())
+				})
+
+				It("should requeue and not update the node's checksum annotation", func() {
+					Eventually(logBuffer).Should(gbytes.Say("Static pod is not ready yet, requeuing"))
+					ensureNodeAnnotationCloudConfigIsNotUpdated(node)
+				})
+			})
+
+			When("static pod is healthy and ready", func() {
+				JustBeforeEach(func() {
+					staticPod.Status.Phase = corev1.PodRunning
+					staticPod.Status.Conditions = []corev1.PodCondition{{Type: corev1.PodReady, Status: corev1.ConditionTrue}}
+					Expect(testClient.Status().Update(ctx, staticPod)).To(Succeed())
+				})
+
+				It("should successfully update the node's checksum annotation", func() {
+					waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
+					waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
+				})
+			})
+		})
+	})
+
 	Context("in-place updates", func() {
 		var (
 			kubeletUnit                    extensionsv1alpha1.Unit
@@ -1321,6 +1449,14 @@ func waitForUpdatedNodeAnnotationCloudConfig(node *corev1.Node, oscSecret *corev
 		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
 		return updatedNode.Annotations
 	}).Should(HaveKeyWithValue("checksum/cloud-config-data", value))
+}
+
+func ensureNodeAnnotationCloudConfigIsNotUpdated(node *corev1.Node) {
+	ConsistentlyWithOffset(1, func(g Gomega) map[string]string {
+		updatedNode := &corev1.Node{}
+		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+		return updatedNode.Annotations
+	}).ShouldNot(HaveKey("checksum/cloud-config-data"))
 }
 
 func waitForUpdatedNodeLabelKubernetesVersion(node *corev1.Node, value string) {
