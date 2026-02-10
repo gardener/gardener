@@ -165,7 +165,7 @@ func (b *Botanist) DefaultOtelCollector() (collector.Interface, error) {
 			ValiHost:                b.ComputeValiHost(),
 			ClusterType:             component.ClusterTypeShoot,
 			IsGardenCluster:         false,
-			VictoriaLogsBackend:      features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
+			VictoriaLogsBackend:     features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
 		},
 		b.SecretsManager,
 	), nil
