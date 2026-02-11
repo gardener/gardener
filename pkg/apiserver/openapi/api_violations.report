@@ -110,6 +110,7 @@ API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1bet
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeControllerManagerConfig,HorizontalPodAutoscalerConfig
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeletConfig,PodPIDsLimit
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineControllerManagerSettings,MachineInPlaceUpdateTimeout
+API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineType,MachineControllerManagerSettings
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineTypeStorage,StorageSize
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,ResourceWatchCacheSize,CacheSize
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootStatus,IsHibernated
