@@ -249,6 +249,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 					"clusters.extensions.gardener.cloud",
 					"controlplanes.extensions.gardener.cloud",
 					"networks.extensions.gardener.cloud",
+					"selfhostedshootexposures.extensions.gardener.cloud",
 					"verticalpodautoscalers.autoscaling.k8s.io",
 					"verticalpodautoscalercheckpoints.autoscaling.k8s.io",
 					"perses.perses.dev",

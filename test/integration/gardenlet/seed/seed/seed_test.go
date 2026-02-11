@@ -519,6 +519,7 @@ var _ = Describe("Seed controller tests", func() {
 						"infrastructures.extensions.gardener.cloud",
 						"networks.extensions.gardener.cloud",
 						"operatingsystemconfigs.extensions.gardener.cloud",
+						"selfhostedshootexposures.extensions.gardener.cloud",
 						"workers.extensions.gardener.cloud",
 					}
 					crdsSharedWithGardenCluster = []string{
