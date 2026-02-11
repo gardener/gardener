@@ -65,9 +65,9 @@ The following is a list of involved components that either need to be newly intr
   - Creates `Bastion` resource in the garden cluster
   - Establishes an `ssh` connection to a shoot node, using a bastion host as proxy
   - Heartbeats / keeps alive the `Bastion` resource during `ssh` connection
-- Gardener extension provider <infra>
+- Gardener extension provider `<infra>`
   - Provider specific bastion controller
-  - Should be added to gardener-extension-provider-<infra> repos, e.g. https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller
+  - Should be added to `gardener-extension-provider-<infra>` repos, e.g. https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller
   - Has the permission to update the `Bastion/status` subresource on the seed cluster
   - Runs on seed (of course)
 - Gardener Controller Manager (`GCM`)
@@ -94,7 +94,7 @@ The following is a list of involved components that either need to be newly intr
     - Watches `Bastion` resource for own seed under api group `operations.gardener.cloud` in the garden cluster.
     - Creates `Bastion` custom resource under api group `extensions.gardener.cloud/v1alpha1` in the seed cluster.
       - Populates bastion user data under field under `spec.userData`, similar to https://github.com/gardener/gardenctl/blob/1e3e5fa1d5603e2161f45046ba7c6b5b4107369e/pkg/cmd/ssh.go#L160-L171. This means that the `spec.sshPublicKey` from the `Bastion` resource in the garden cluster will end up in the `authorized_keys` file on the bastion host.
-4. Gardener extension provider <infra> / Bastion Controller on Seed:
+4. Gardener extension provider `<infra>` / Bastion Controller on Seed:
     - With own `Bastion` Custom Resource Definition in the seed under the api group `extensions.gardener.cloud/v1alpha1`.
     - Watches `Bastion` custom resources that are created by the `gardenlet` in the seed.
     - The controller reads the `cloudprovider` credentials from the seed-shoot namespace.
@@ -117,7 +117,7 @@ The following is a list of involved components that either need to be newly intr
     - Once `status.expirationTimestamp` is reached, the `Bastion` will be marked for deletion.
 8. `gardenlet`:
     - Once the `Bastion` resource in the garden cluster is marked for deletion, it marks the `Bastion` resource in the seed for deletion.
-9. Gardener extension provider <infra> / Bastion Controller on Seed:
+9. Gardener extension provider `<infra>` / Bastion Controller on Seed:
     - All created resources will be cleaned up.
     - On success, removes finalizer on `Bastion` resource in seed.
 10. `gardenlet`:

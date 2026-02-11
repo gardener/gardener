@@ -99,8 +99,8 @@ Each extension will need to address the following concerns:
     2. The installation above should be done by a new kind of extension: ContainerRuntime resource. For each container runtime type (Kata-container/gvisor), a dedicate extension controller will be created.
         1. A label for each container runtime support will be added to every node that belongs to the worker pool. This should be done similarly to the way labels are created today for each node, through kubelet execution parameters (`_kubelet.flags: --node-labels`). When creating the OperatingSystemConfig (original) for the worker, each container runtime support should be mapped to a label on the node.
            For Example:
-           label: `container.runtime.kata-containers=true` (shoot.spec.cloud.<IAAS>.worker.containerRuntimes.kata-container)
-           label: `container.runtime.gvisor=true` (shoot.spec.cloud.<IAAS>.worker.containerRuntimes.gvisor)
+           label: `container.runtime.kata-containers=true` (`shoot.spec.cloud.<IAAS>.worker.containerRuntimes.kata-container`)
+           label: `container.runtime.gvisor=true` (`shoot.spec.cloud.<IAAS>.worker.containerRuntimes.gvisor`)
         1. During the shoot reconciliation (Similar steps to the Extensions today), Gardener will create new ContainerRuntime resource if a container runtime exist in at least one worker spec:
             ```yaml
             apiVersion: extensions.gardener.cloud/v1alpha1
