@@ -92,8 +92,32 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
 		}
 
-		if obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
+		if IsIPv4SingleStack(obj.Spec.Networking.IPFamilies) &&
+			obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
 			obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = calculateDefaultNodeCIDRMaskSize(&obj.Spec)
+		}
+
+		if IsIPv6SingleStack(obj.Spec.Networking.IPFamilies) &&
+			obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil &&
+			obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 == nil {
+			// For IPv6 don't be stingy and allocate larger pod CIDRs per node.
+			// The default is mostly only relevant for the local setup.
+			// For most providers, the values is dependent on the infrastructure.
+			// Either this value is ignored or should be set explicitly by the user.
+			obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To[int32](64)
+		}
+
+		if IsDualStack(obj.Spec.Networking.IPFamilies) {
+			if obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
+				obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = calculateDefaultNodeCIDRMaskSize(&obj.Spec)
+			}
+			if obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 == nil {
+				// For IPv6 don't be stingy and allocate larger pod CIDRs per node.
+				// The default is mostly only relevant for the local setup.
+				// For most providers, the values is dependent on the infrastructure.
+				// Either this value is ignored or should be set explicitly by the user.
+				obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = ptr.To[int32](64)
+			}
 		}
 
 		if obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod == nil {
@@ -413,13 +437,6 @@ func SetDefaults_NginxIngress(obj *NginxIngress) {
 // Helper functions
 
 func calculateDefaultNodeCIDRMaskSize(shoot *ShootSpec) *int32 {
-	if IsIPv6SingleStack(shoot.Networking.IPFamilies) {
-		// If shoot is using IPv6 single-stack, don't be stingy and allocate larger pod CIDRs per node.
-		// We don't calculate a nodeCIDRMaskSize matching the maxPods settings in this case, and simply apply
-		// kube-controller-manager's default value for the --node-cidr-mask-size flag.
-		return ptr.To[int32](64)
-	}
-
 	var maxPods int32 = 110 // default maxPods setting on kubelet
 
 	if shoot != nil && shoot.Kubernetes.Kubelet != nil && shoot.Kubernetes.Kubelet.MaxPods != nil {

@@ -5070,13 +5070,6 @@ func schema_pkg_apis_core_v1beta1_KubeControllerManagerConfig(ref common.Referen
 							Format:      "int32",
 						},
 					},
-					"nodeCIDRMaskSizeIPv6": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NodeCIDRMaskSizeIPv6 defines the mask size for node cidr in cluster (default is 64). This field is immutable.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
 					"podEvictionTimeout": {
 						SchemaProps: spec.SchemaProps{
 							Description: "PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.\n\nDeprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`. The `--pod-eviction-timeout` flag does not have effect when the taint based eviction is enabled. The taint based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence, instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`. Setting this field is forbidden starting from Kubernetes 1.33.",
@@ -5087,6 +5080,13 @@ func schema_pkg_apis_core_v1beta1_KubeControllerManagerConfig(ref common.Referen
 						SchemaProps: spec.SchemaProps{
 							Description: "NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.",
 							Ref:         ref(metav1.Duration{}.OpenAPIModelName()),
+						},
+					},
+					"nodeCIDRMaskSizeIPv6": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NodeCIDRMaskSizeIPv6 defines the mask size for node cidr in cluster (default is 64). This field is immutable.",
+							Type:        []string{"integer"},
+							Format:      "int32",
 						},
 					},
 				},

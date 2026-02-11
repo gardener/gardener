@@ -1544,10 +1544,6 @@ message KubeControllerManagerConfig {
   // +optional
   optional int32 nodeCIDRMaskSize = 3;
 
-  // NodeCIDRMaskSizeIPv6 defines the mask size for node cidr in cluster (default is 64). This field is immutable.
-  // +optional
-  optional int32 nodeCIDRMaskSizeIPv6 = 4;
-
   // PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.
   // +optional
   //
@@ -1564,6 +1560,10 @@ message KubeControllerManagerConfig {
   // NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration nodeMonitorGracePeriod = 6;
+
+  // NodeCIDRMaskSizeIPv6 defines the mask size for node cidr in cluster (default is 64). This field is immutable.
+  // +optional
+  optional int32 nodeCIDRMaskSizeIPv6 = 7;
 }
 
 // KubeProxyConfig contains configuration settings for the kube-proxy.

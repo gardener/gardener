@@ -7272,18 +7272,6 @@ int32
 </tr>
 <tr>
 <td>
-<code>nodeCIDRMaskSizeIPv6</code></br>
-<em>
-int32
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>NodeCIDRMaskSizeIPv6 defines the mask size for node cidr in cluster (default is 64). This field is immutable.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>podEvictionTimeout</code></br>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
@@ -7316,6 +7304,18 @@ Kubernetes meta/v1.Duration
 <td>
 <em>(Optional)</em>
 <p>NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodeCIDRMaskSizeIPv6</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeCIDRMaskSizeIPv6 defines the mask size for node cidr in cluster (default is 64). This field is immutable.</p>
 </td>
 </tr>
 </tbody>

@@ -3466,6 +3466,17 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))))
 				})
 
+				It("should prevent setting nodeCIDRMaskSizeIPv6", func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = ptr.To[int32](80)
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSizeIPv6"),
+						"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
+					}))))
+				})
+
 				It("should prevent setting podEvictionTimeout", func() {
 					shoot.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = &metav1.Duration{Duration: 5 * time.Minute}
 
@@ -3544,6 +3555,23 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			Describe("nodeCIDRMaskSize validation", func() {
+				It("should fail updating immutable NodeCIDRMaskSizeIPv6 field", func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = nil
+					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = ptr.To[int32](80)
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = ptr.To[int32](72)
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSizeIPv6"),
+						"Detail": ContainSubstring(`field is immutable`),
+					}))
+				})
+
 				It("should fail when nodeCIDRMaskSize is out of upper boundary", func() {
 					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To[int32](32)
 
@@ -3649,6 +3677,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should prevent setting the pod eviction timeout for kubernetes versions >= 1.33", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
+				// shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = nil
 				shoot.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = &metav1.Duration{Duration: time.Minute}
 				shoot.Spec.Kubernetes.Version = "1.33.0"
 
@@ -3658,6 +3687,103 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field":  Equal("spec.kubernetes.kubeControllerManager.podEvictionTimeout"),
 					"Detail": ContainSubstring("for Kubernetes versions >= 1.33, podEvictionTimeout field is no longer supported"),
 				}))))
+			})
+
+			Describe("nodeCIDRMaskSizeIPv6 validation", func() {
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = nil
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = nil
+					// Set up dual-stack networking for IPv6 tests
+					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
+				})
+
+				It("should fail when nodeCIDRMaskSizeIPv6 is out of upper boundary", func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = ptr.To[int32](129)
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSizeIPv6"),
+						"Detail": ContainSubstring("nodeCIDRMaskSizeIPv6 must be between 64 and 128"),
+					}))))
+				})
+
+				It("should fail when nodeCIDRMaskSizeIPv6 is out of lower boundary", func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = ptr.To[int32](63)
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSizeIPv6"),
+						"Detail": ContainSubstring("nodeCIDRMaskSizeIPv6 must be between 64 and 128"),
+					}))))
+				})
+
+				It("should succeed when nodeCIDRMaskSizeIPv6 is within boundaries", func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = nil
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = ptr.To[int32](80)
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should fail when both nodeCIDRMaskSize and nodeCIDRMaskSizeIPv6 are set for IPv4 single-stack", func() {
+					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To[int32](24)
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = ptr.To[int32](80)
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSizeIPv6"),
+							"Detail": ContainSubstring("nodeCIDRMaskSizeIPv6 cannot be set for IPv4 single-stack clusters"),
+						})),
+					))
+				})
+
+				It("should fail when both nodeCIDRMaskSize and nodeCIDRMaskSizeIPv6 are set for IPv6 single-stack", func() {
+					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To[int32](24)
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = ptr.To[int32](80)
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+							"Detail": ContainSubstring("nodeCIDRMaskSize must be between 64 and 128"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+							"Detail": ContainSubstring("only one of nodeCIDRMaskSize or nodeCIDRMaskSizeIPv6 can be set for single-stack clusters"),
+						})),
+					))
+				})
+
+				It("should succeed when NodeCIDRMaskSize is set for IPv6 single-stack", func() {
+					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To[int32](80)
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should fail when NodeCIDRMaskSizeIPv6 is set for IPv4 single-stack", func() {
+					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = nil
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = ptr.To[int32](80)
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSizeIPv6"),
+							"Detail": ContainSubstring("nodeCIDRMaskSizeIPv6 cannot be set for IPv4 single-stack clusters"),
+						})),
+					))
+				})
 			})
 
 			It("should prevent setting a negative pod eviction timeout", func() {
@@ -4796,6 +4922,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid specifying unsupported IP family", func() {
+				// shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = nil
 				shoot.Spec.Networking.IPFamilies = []core.IPFamily{"IPv5"}
 
 				errorList := ValidateShoot(shoot)
@@ -4884,6 +5011,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			Context("IPv6", func() {
 				BeforeEach(func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = nil
 					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
 				})
 
@@ -4964,6 +5092,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should allow updating ipfamilies from IPv4 to dual-stack [IPv4, IPv6]", func() {
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = nil
 				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
 
 				newShoot := prepareShootForUpdate(shoot)
@@ -4973,6 +5102,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 			It("should forbid changing ipfamilies from IPv6 to dual-stack [IPv6, IPv4]", func() {
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = nil
 				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6, core.IPFamilyIPv4}
@@ -4984,6 +5114,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 			It("should forbid changing ipfamilies from single-stack IPv4 to dual-stack [IPv6, IPv4]", func() {
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = nil
 				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6, core.IPFamilyIPv4}
@@ -4995,6 +5126,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 			It("should forbid changing ipfamilies from dual-stack [IPv4, IPv6] to single-stack [IPv6]", func() {
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = nil
 				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
 
 				newShoot := prepareShootForUpdate(shoot)
@@ -5018,6 +5150,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Context("dual-stack", func() {
 			BeforeEach(func() {
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = nil
 				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6, core.IPFamilyIPv4}
 			})
 
