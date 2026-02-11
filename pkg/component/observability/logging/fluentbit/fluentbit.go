@@ -382,7 +382,13 @@ func (f *fluentBit) getFluentBit() *fluentbitv1alpha2.FluentBit {
 		},
 		Spec: fluentbitv1alpha2.FluentBitSpec{
 			FluentBitConfigName: fluentBitConfigName,
-			Image:               f.values.Image,
+			EnvVars: []corev1.EnvVar{
+				{
+					Name:  "OTEL_GO_X_OBSERVABILITY",
+					Value: "true",
+				},
+			},
+			Image: f.values.Image,
 			Command: []string{
 				"/fluent-bit/bin/fluent-bit-watcher",
 				"-e",
