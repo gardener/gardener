@@ -180,6 +180,7 @@
     * [`Bastion` resource](extensions/resources/bastion.md)
     * [`ControlPlane` resource](extensions/resources/controlplane.md)
     * [`Infrastructure` resource](extensions/resources/infrastructure.md)
+    * [`SelfHostedShootExposure` resource](extensions/resources/selfhostedshootexposure.md)
     * [`Worker` resource](extensions/resources/worker.md)
   * Network plugin providers
     * [`Network` resource](extensions/resources/network.md)

@@ -6,11 +6,14 @@ package validation
 
 import (
 	"fmt"
+	"net"
 	"strings"
 
 	"github.com/go-test/deep"
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -46,6 +49,39 @@ func ValidateSelfHostedShootExposureSpec(spec *extensionsv1alpha1.SelfHostedShoo
 
 	if len(spec.Endpoints) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("endpoints"), "field is required"))
+	}
+
+	for i, ep := range spec.Endpoints {
+		epPath := fldPath.Child("endpoints").Index(i)
+
+		if ep.Port <= 0 || ep.Port > 65535 {
+			allErrs = append(allErrs, field.Invalid(epPath.Child("port"), ep.Port, "must be between 1 and 65535"))
+		}
+
+		for j, addr := range ep.Addresses {
+			addrPath := epPath.Child("addresses").Index(j)
+
+			if addr.Type != "" {
+				switch addr.Type {
+				case corev1.NodeHostName, corev1.NodeInternalIP, corev1.NodeExternalIP:
+				default:
+					allErrs = append(allErrs, field.Invalid(addrPath.Child("type"), addr.Type, "unknown node address type"))
+				}
+			}
+
+			if len(addr.Address) > 0 {
+				switch addr.Type {
+				case corev1.NodeInternalIP, corev1.NodeExternalIP:
+					if net.ParseIP(addr.Address) == nil {
+						allErrs = append(allErrs, field.Invalid(addrPath.Child("address"), addr.Address, "invalid IP address"))
+					}
+				case corev1.NodeHostName:
+					if errs := k8svalidation.IsDNS1123Subdomain(addr.Address); len(errs) != 0 {
+						allErrs = append(allErrs, field.Invalid(addrPath.Child("address"), addr.Address, strings.Join(errs, ",")))
+					}
+				}
+			}
+		}
 	}
 
 	return allErrs
