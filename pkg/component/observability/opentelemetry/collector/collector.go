@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"time"
 
+	victorialogsconstants "github.com/gardener/gardener/pkg/component/observability/logging/victorialogs/constants"
+	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -458,7 +460,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 							"verbosity": "basic",
 						},
 						"otlphttp/victorialogs": map[string]any{
-							"logs_endpoint": "http://logging-vl:9428/insert/opentelemetry/v1/logs",
+							"logs_endpoint": "http://" + victorialogsconstants.ServiceName + ":" + strconv.Itoa(victorialogsconstants.VictoriaLogsPort) + victorialogsconstants.PushEndpoint,
 						},
 					},
 				},
@@ -743,10 +745,10 @@ func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelRole:  v1beta1constants.LabelObservability,
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleObservability,
-		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
-		gardenerutils.NetworkPolicyLabel("logging-vl", constant.VictoriaLogsPort):                                v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToDNS:                                            v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                               v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelObservabilityApplication:                                      "opentelemetry-collector",
+		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort):                         v1beta1constants.LabelNetworkPolicyAllowed,
+		gardenerutils.NetworkPolicyLabel(victorialogsconstants.ServiceName, victorialogsconstants.VictoriaLogsPort): v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToDNS:                                                                    v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                                                       v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelObservabilityApplication:                                                              "opentelemetry-collector",
 	}
 }

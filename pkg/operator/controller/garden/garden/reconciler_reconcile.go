@@ -578,7 +578,7 @@ func (r *Reconciler) reconcile(
 			Fn:   c.fluentBit.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name: "Deploying Vali",
+			Name: "Deploying Vali/VictoriaLogs",
 			Fn: func(ctx context.Context) error {
 				if err := c.vali.Deploy(ctx); err != nil {
 					return err

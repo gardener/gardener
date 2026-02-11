@@ -56,7 +56,7 @@ var _ = Describe("VictoriaLogs", func() {
 		component component.DeployWaiter
 		consistOf func(...client.Object) types.GomegaMatcher
 
-		customResourcesManagedResourceName   = "victorialogs"
+		customResourcesManagedResourceName   = "victoria-logs"
 		customResourcesManagedResource       *resourcesv1alpha1.ManagedResource
 		customResourcesManagedResourceSecret *corev1.Secret
 
@@ -79,7 +79,7 @@ var _ = Describe("VictoriaLogs", func() {
 	JustBeforeEach(func() {
 		customResourcesManagedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "victorialogs",
+				Name:      "victoria-logs",
 				Namespace: namespace,
 			},
 		}
@@ -135,7 +135,7 @@ var _ = Describe("VictoriaLogs", func() {
 
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "victorialogs-vpa",
+				Name:      "victoria-logs-vpa",
 				Namespace: namespace,
 				Labels:    getLabels(),
 			},
@@ -146,7 +146,7 @@ var _ = Describe("VictoriaLogs", func() {
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
+					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
@@ -160,7 +160,7 @@ var _ = Describe("VictoriaLogs", func() {
 		}
 
 		serviceMonitor = &monitoringv1.ServiceMonitor{
-			ObjectMeta: monitoringutils.ConfigObjectMeta("victorialogs", namespace, shoot.Label),
+			ObjectMeta: monitoringutils.ConfigObjectMeta("victoria-logs", namespace, shoot.Label),
 			Spec: monitoringv1.ServiceMonitorSpec{
 				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
 					"app.kubernetes.io/name":      "vlsingle",
@@ -173,7 +173,7 @@ var _ = Describe("VictoriaLogs", func() {
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							Action:      "replace",
-							Replacement: ptr.To("victorialogs"),
+							Replacement: ptr.To("victoria-logs"),
 							TargetLabel: "job",
 						},
 						{
@@ -186,13 +186,13 @@ var _ = Describe("VictoriaLogs", func() {
 		}
 
 		prometheusRule = &monitoringv1.PrometheusRule{
-			ObjectMeta: monitoringutils.ConfigObjectMeta("victorialogs", namespace, shoot.Label),
+			ObjectMeta: monitoringutils.ConfigObjectMeta("victoria-logs", namespace, shoot.Label),
 			Spec: monitoringv1.PrometheusRuleSpec{
 				Groups: []monitoringv1.RuleGroup{{
-					Name: "victorialogs.rules",
+					Name: "victoria-logs.rules",
 					Rules: []monitoringv1.Rule{{
 						Alert: "VictoriaLogsDown",
-						Expr:  intstr.FromString(`absent(up{job="victorialogs"} == 1)`),
+						Expr:  intstr.FromString(`absent(up{job="victoria-logs"} == 1)`),
 						For:   ptr.To(monitoringv1.Duration("30m")),
 						Labels: map[string]string{
 							"service":    "logging",
@@ -220,7 +220,7 @@ var _ = Describe("VictoriaLogs", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "victorialogs",
+					Name:      "victoria-logs",
 					Namespace: namespace,
 					Labels: map[string]string{
 						v1beta1constants.GardenRole:          "seed-system-component",
@@ -366,6 +366,6 @@ func getLabels() map[string]string {
 		gardenerutils.NetworkPolicyLabel("logging-vl", 9428):  v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelObservabilityApplication:        "victorialogs",
+		v1beta1constants.LabelObservabilityApplication:        "victoria-logs",
 	}
 }

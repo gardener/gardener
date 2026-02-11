@@ -8,7 +8,7 @@ const (
 	// VictoriaLogsPort is the port exposed by VictoriaLogs.
 	VictoriaLogsPort = 9428
 	// ServiceName is the name of the logging service.
-	ServiceName = "logging"
+	ServiceName = "logging-vl"
 	// PushEndpoint is the endpoint used by VictoriaLogs to receive logs.
 	PushEndpoint = "/insert/opentelemetry/v1/logs"
 	// ManagedResourceNameRuntime is the name of the managed resource which deploys VictoriaLogs.

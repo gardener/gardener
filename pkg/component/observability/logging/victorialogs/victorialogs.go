@@ -7,6 +7,7 @@ package victorialogs
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	vmv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
@@ -27,7 +28,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	victorialogsconstants "github.com/gardener/gardener/pkg/component/observability/logging/victorialogs/constants"
+	"github.com/gardener/gardener/pkg/component/observability/logging/victorialogs/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
@@ -37,7 +38,6 @@ import (
 )
 
 const (
-	managedResourceName            = "victorialogs"
 	timeoutWaitForManagedResources = 2 * time.Minute
 )
 
@@ -94,25 +94,25 @@ func (v *victoriaLogs) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeedWithLabels(ctx, v.client, v.namespace, managedResourceName, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, serializedResources)
+	return managedresources.CreateForSeedWithLabels(ctx, v.client, v.namespace, constants.ManagedResourceNameRuntime, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, serializedResources)
 }
 
 func (v *victoriaLogs) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, v.client, v.namespace, managedResourceName)
+	return managedresources.DeleteForSeed(ctx, v.client, v.namespace, constants.ManagedResourceNameRuntime)
 }
 
 func (v *victoriaLogs) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, v.client, v.namespace, managedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, v.client, v.namespace, constants.ManagedResourceNameRuntime)
 }
 
 func (v *victoriaLogs) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, v.client, v.namespace, managedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, v.client, v.namespace, constants.ManagedResourceNameRuntime)
 }
 
 func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *vmv1.VLSingle {
@@ -123,7 +123,7 @@ func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *vmv1.VLSingle {
 
 	vlSingle := &vmv1.VLSingle{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      victorialogsconstants.VLSingleResourceName,
+			Name:      constants.VLSingleResourceName,
 			Namespace: v.namespace,
 			Labels:    getLabels(),
 		},
@@ -135,7 +135,7 @@ func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *vmv1.VLSingle {
 					Repository: imageRepo,
 					Tag:        imageTag,
 				},
-				Port: constants.VictoriaLogsPort,
+				Port: strconv.Itoa(constants.VictoriaLogsPort),
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("10m"),
@@ -159,7 +159,7 @@ func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *vmv1.VLSingle {
 			},
 			ServiceSpec: &vmv1beta1.AdditionalServiceSpec{
 				EmbeddedObjectMetadata: vmv1beta1.EmbeddedObjectMetadata{
-					Name: "logging-vl",
+					Name: constants.ServiceName,
 				},
 			},
 		},
@@ -167,7 +167,6 @@ func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *vmv1.VLSingle {
 
 	// Add network policy annotations to allow Prometheus scraping based on cluster type.
 	// ManagedMetadata propagates annotations to all objects created by the VM operator, including the Service.
-	const metricsPort = 9428
 	managedAnnotations := make(map[string]string)
 	switch v.values.ClusterType {
 	case component.ClusterTypeSeed:
@@ -192,26 +191,26 @@ func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *vmv1.VLSingle {
 
 func getLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelRole:                            v1beta1constants.LabelObservability,
-		v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleObservability,
-		gardenerutils.NetworkPolicyLabel("logging-vl", constants.VictoriaLogsPort):  v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelObservabilityApplication:        "victorialogs",
+		v1beta1constants.LabelRole:  v1beta1constants.LabelObservability,
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleObservability,
+		gardenerutils.NetworkPolicyLabel(constants.ServiceName, constants.VictoriaLogsPort): v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToDNS:                                            v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                               v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelObservabilityApplication:                                      "victoria-logs",
 	}
 }
 
 func (v *victoriaLogs) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "victorialogs-vpa",
+			Name:      "victoria-logs-vpa",
 			Namespace: v.namespace,
 			Labels:    getLabels(),
 		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
 				Kind:       "Deployment",
-				Name:       "vlsingle-" + victorialogsconstants.VLSingleResourceName,
+				Name:       "vlsingle-" + constants.VLSingleResourceName,
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
@@ -241,11 +240,11 @@ func (v *victoriaLogs) getPrometheusLabel() string {
 
 func (v *victoriaLogs) getServiceMonitor() *monitoringv1.ServiceMonitor {
 	return &monitoringv1.ServiceMonitor{
-		ObjectMeta: monitoringutils.ConfigObjectMeta("victorialogs", v.namespace, v.getPrometheusLabel()),
+		ObjectMeta: monitoringutils.ConfigObjectMeta("victoria-logs", v.namespace, v.getPrometheusLabel()),
 		Spec: monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{MatchLabels: map[string]string{
 				"app.kubernetes.io/name":      "vlsingle",
-				"app.kubernetes.io/instance":  victorialogsconstants.VLSingleResourceName,
+				"app.kubernetes.io/instance":  constants.VLSingleResourceName,
 				"app.kubernetes.io/component": "monitoring",
 				"managed-by":                  "vm-operator",
 			}},
@@ -254,7 +253,7 @@ func (v *victoriaLogs) getServiceMonitor() *monitoringv1.ServiceMonitor {
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
-						Replacement: ptr.To("victorialogs"),
+						Replacement: ptr.To("victoria-logs"),
 						TargetLabel: "job",
 					},
 					{
@@ -274,13 +273,13 @@ func (v *victoriaLogs) getPrometheusRule() *monitoringv1.PrometheusRule {
 	}
 
 	return &monitoringv1.PrometheusRule{
-		ObjectMeta: monitoringutils.ConfigObjectMeta("victorialogs", v.namespace, v.getPrometheusLabel()),
+		ObjectMeta: monitoringutils.ConfigObjectMeta("victoria-logs", v.namespace, v.getPrometheusLabel()),
 		Spec: monitoringv1.PrometheusRuleSpec{
 			Groups: []monitoringv1.RuleGroup{{
-				Name: "victorialogs.rules",
+				Name: "victoria-logs.rules",
 				Rules: []monitoringv1.Rule{{
 					Alert: "VictoriaLogsDown",
-					Expr:  intstr.FromString(`absent(up{job="victorialogs"} == 1)`),
+					Expr:  intstr.FromString(`absent(up{job="victoria-logs"} == 1)`),
 					For:   ptr.To(monitoringv1.Duration("30m")),
 					Labels: map[string]string{
 						"service":    "logging",
