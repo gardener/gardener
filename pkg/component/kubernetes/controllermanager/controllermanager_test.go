@@ -1025,12 +1025,10 @@ func commandForKubernetesVersion(
 		if nodeCIDRMaskSize != nil {
 			command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv4=%d", *nodeCIDRMaskSize))
 		}
-		// IPv6 flag is always added in dual-stack mode
-		ipv6MaskSize := int32(64) // default
+		// Only add IPv6 flag if explicitly set (dual-stack or IPv6 single-stack)
 		if nodeCIDRMaskSizeIPv6 != nil {
-			ipv6MaskSize = *nodeCIDRMaskSizeIPv6
+			command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv6=%d", *nodeCIDRMaskSizeIPv6))
 		}
-		command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv6=%d", ipv6MaskSize))
 
 		command = append(command,
 			"--allocate-node-cidrs=true",

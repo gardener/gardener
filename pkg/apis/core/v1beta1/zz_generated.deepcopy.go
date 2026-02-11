@@ -2745,11 +2745,6 @@ func (in *KubeControllerManagerConfig) DeepCopyInto(out *KubeControllerManagerCo
 		*out = new(int32)
 		**out = **in
 	}
-	if in.NodeCIDRMaskSizeIPv6 != nil {
-		in, out := &in.NodeCIDRMaskSizeIPv6, &out.NodeCIDRMaskSizeIPv6
-		*out = new(int32)
-		**out = **in
-	}
 	if in.PodEvictionTimeout != nil {
 		in, out := &in.PodEvictionTimeout, &out.PodEvictionTimeout
 		*out = new(metav1.Duration)
@@ -2758,6 +2753,11 @@ func (in *KubeControllerManagerConfig) DeepCopyInto(out *KubeControllerManagerCo
 	if in.NodeMonitorGracePeriod != nil {
 		in, out := &in.NodeMonitorGracePeriod, &out.NodeMonitorGracePeriod
 		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.NodeCIDRMaskSizeIPv6 != nil {
+		in, out := &in.NodeCIDRMaskSizeIPv6, &out.NodeCIDRMaskSizeIPv6
+		*out = new(int32)
 		**out = **in
 	}
 	return
