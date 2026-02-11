@@ -751,7 +751,7 @@ var _ = Describe("Shoot defaulting", func() {
 		It("should default the encryption provider type", func() {
 			SetObjectDefaults_Shoot(obj)
 
-			Expect(obj.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type).To(PointTo(Equal(EncryptionProviderTypeAESCBC)))
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type).To(PointTo(Equal(EncryptionProviderTypeSecretbox)))
 		})
 
 		It("should not overwrite the already set encryption provider type", func() {
