@@ -16,7 +16,7 @@
   "editable": true,
   "gnetId": 7752,
   "graphTooltip": 1,
-  "iteration": 1769875951079,
+  "iteration": 1770812698113,
   "links": [],
   "panels": [
     {
@@ -478,14 +478,6 @@
           "legendFormat": "{{name}}",
           "queryType": "randomWalk",
           "refId": "A"
-        },
-        {
-          "exemplar": true,
-          "expr": "sum(rate(fluentbit_input_storage_overlimit{pod=~\"$pod\"}[$__rate_interval])) by (name)",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "{{name}}",
-          "refId": "B"
         }
       ],
       "timeFrom": null,
@@ -2554,7 +2546,7 @@
             "h": 8,
             "w": 6,
             "x": 0,
-            "y": 40
+            "y": 4
           },
           "id": 146,
           "options": {
@@ -2615,7 +2607,7 @@
             "h": 8,
             "w": 6,
             "x": 6,
-            "y": 40
+            "y": 4
           },
           "id": 148,
           "options": {
@@ -2694,7 +2686,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 40
+            "y": 4
           },
           "id": 144,
           "options": {
@@ -2781,7 +2773,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 48
+            "y": 12
           },
           "id": 111,
           "options": {
@@ -2860,7 +2852,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 48
+            "y": 12
           },
           "id": 115,
           "options": {
@@ -3000,7 +2992,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 56
+            "y": 20
           },
           "id": 116,
           "options": {
@@ -3022,9 +3014,9 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "sum by (rpc_grpc_status_code,server_address) (rate(output_plugin_otel_sdk_exporter_operation_duration_seconds_count{server_address=~\".+$host.+\"}[$__rate_interval]))",
+              "expr": "sum by (rpc_response_status_code,server_address) (rate(output_plugin_otel_sdk_exporter_operation_duration_seconds_count{server_address=~\".+$host.+\"}[$__rate_interval]))",
               "interval": "",
-              "legendFormat": "{{server_address}} - {{rpc_grpc_status_code}}",
+              "legendFormat": "{{server_address}} - {{rpc_response_status_code}}",
               "refId": "A"
             }
           ],
@@ -3079,7 +3071,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 56
+            "y": 20
           },
           "id": 112,
           "options": {
@@ -3103,119 +3095,13 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "rate(output_plugin_rpc_client_duration_milliseconds_count{pod=~\"$pod\"}[$__rate_interval])",
+              "expr": "rate(output_plugin_rpc_client_call_duration_seconds_count{pod=~\"$pod\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "{{pod}} - {{rpc_method}}",
               "refId": "A"
             }
           ],
           "title": "RPC call Rate",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "description": "Average batch size per rpc method",
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 0,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "graph": false,
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineStyle": {
-                  "fill": "solid"
-                },
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "never",
-                "spanNulls": false
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  }
-                ]
-              },
-              "unit": "bytes"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 64
-          },
-          "id": 113,
-          "options": {
-            "legend": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "multi"
-            },
-            "tooltipOptions": {
-              "mode": "single"
-            }
-          },
-          "pluginVersion": "7.5.42",
-          "targets": [
-            {
-              "exemplar": true,
-              "expr": "sum by (rpc_service, rpc_method) (rate(output_plugin_rpc_client_requests_per_rpc_sum[$__rate_interval]))\n/\nsum by (rpc_service, rpc_method) (\n  rate(output_plugin_rpc_client_requests_per_rpc_count[$__rate_interval]))",
-              "interval": "",
-              "legendFormat": "{{rpc_method}}",
-              "refId": "A"
-            },
-            {
-              "exemplar": true,
-              "expr": "histogram_quantile(0.95, rate(output_plugin_rpc_client_response_size_bytes_bucket{pod=~\"$pod\"}[$__rate_interval]))",
-              "hide": true,
-              "interval": "",
-              "legendFormat": "{{pod}} - response p95",
-              "refId": "B"
-            },
-            {
-              "exemplar": true,
-              "expr": "rate(output_plugin_rpc_client_request_size_bytes_sum{pod=~\"$pod\"}[$__rate_interval]) / rate(output_plugin_rpc_client_request_size_bytes_count{pod=~\"$pod\"}[$__rate_interval])",
-              "hide": true,
-              "interval": "",
-              "legendFormat": "{{pod}} - request avg",
-              "refId": "C"
-            },
-            {
-              "exemplar": true,
-              "expr": "rate(output_plugin_rpc_client_response_size_bytes_sum{pod=~\"$pod\"}[$__rate_interval]) / rate(output_plugin_rpc_client_response_size_bytes_count{pod=~\"$pod\"}[$__rate_interval])",
-              "hide": true,
-              "interval": "",
-              "legendFormat": "{{pod}} - response avg",
-              "refId": "D"
-            }
-          ],
-          "title": "Average batch size",
           "type": "timeseries"
         },
         {
@@ -3269,7 +3155,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 64
+            "y": 28
           },
           "id": 150,
           "options": {
@@ -3287,9 +3173,9 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "\nsum by (rpc_grpc_status_code, server_address) (\n  rate(output_plugin_otel_sdk_exporter_operation_duration_seconds_count{rpc_grpc_status_code!=\"0\"}[$__rate_interval])\n)\nor on (rpc_grpc_status_code, server_address)\n0 * sum by (rpc_grpc_status_code, server_address) (\n  rate(output_plugin_otel_sdk_exporter_operation_duration_seconds_count[$__rate_interval])\n)\n",
+              "expr": "sum by (rpc_response_status_code, server_address) (\n  rate(output_plugin_otel_sdk_exporter_operation_duration_seconds_count{rpc_response_status_code!=\"OK\",rpc_response_status_code=~\".+\",server_address=~\".+$host.+\"}[$__rate_interval])\n)",
               "interval": "",
-              "legendFormat": "{{server_address}} - {{rpc_grpc_status_code}}",
+              "legendFormat": "{{server_address}} - {{rpc_response_status_code}}",
               "refId": "A"
             }
           ],
@@ -3405,5 +3291,5 @@
   "timezone": "",
   "title": "Fluent Bit",
   "uid": "fluentbit",
-  "version": 8
+  "version": 1
 }
