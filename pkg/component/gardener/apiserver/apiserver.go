@@ -231,7 +231,7 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	var endpointsOrEndpointSlice client.Object
-	if version.ConstraintK8sGreaterEqual133.Check(g.GetValues().TargetVersion) {
+	if version.ConstraintK8sGreaterEqual134.Check(g.GetValues().TargetVersion) {
 		endpointsOrEndpointSlice = g.endpointSlice(serviceRuntime.Spec.ClusterIP)
 	} else {
 		endpointsOrEndpointSlice = g.endpoints(serviceRuntime.Spec.ClusterIP)
