@@ -30,7 +30,7 @@ func PrometheusRule(rule *monitoringv1.PrometheusRule, filenameRulesTest string)
 	}()
 
 	var errBuf bytes.Buffer
-	cmd := exec.Command("promtool", "test", "rules", filenameRulesTest)
+	cmd := exec.Command("promtool", "test", "rules", filenameRulesTest) // #nosec: G204 -- Test utility with controlled args.
 	cmd.Stderr = &errBuf
 	ExpectWithOffset(1, cmd.Run()).To(Succeed(), errBuf.String())
 }

@@ -89,7 +89,7 @@ type KubeAPIServerOpenIDConnect struct {
 type OpenIDConnectClientAuthentication struct {
 	// The client Secret for the OpenID Connect client.
 	// +optional
-	Secret *string `json:"secret,omitempty" protobuf:"bytes,1,opt,name=secret"`
+	Secret *string `json:"secret,omitempty" protobuf:"bytes,1,opt,name=secret"` // #nosec: G117 -- Field name for API spec.`
 
 	// Extra configuration added to kubeconfig's auth-provider.
 	// Must not be any of idp-issuer-url, client-id, client-secret, idp-certificate-authority, idp-certificate-authority-data, id-token or refresh-token

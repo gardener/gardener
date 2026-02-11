@@ -132,7 +132,7 @@ const configFile = baseDir + "/config.toml"
 
 // Exec is the execution function to invoke outside binaries. Exposed for testing.
 var Exec = func(ctx context.Context, command string, arg ...string) ([]byte, error) {
-	return exec.CommandContext(ctx, command, arg...).Output()
+	return exec.CommandContext(ctx, command, arg...).Output() // #nosec: G204 -- Command and args are controlled internally.
 }
 
 // ensureContainerdRegistries configures containerd to use the desired image registries.
@@ -236,7 +236,7 @@ func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryC
 					}
 				}
 
-				_, err = httpClient.Do(req)
+				_, err = httpClient.Do(req) // #nosec: G704 -- URL is from registry configuration, not arbitrary user input.
 				if err != nil {
 					return false, fmt.Errorf("failed to reach registry %s for upstream %s: %w", registryHost.URL, registryConfig.Upstream, err)
 				}

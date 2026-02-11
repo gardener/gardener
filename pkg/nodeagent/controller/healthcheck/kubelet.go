@@ -101,7 +101,7 @@ func (k *KubeletHealthChecker) Check(ctx context.Context, node *corev1.Node) err
 		log.Error(err, "Creating request to kubelet health endpoint failed")
 		return err
 	}
-	response, err := k.httpClient.Do(request)
+	response, err := k.httpClient.Do(request) // #nosec: G704 -- URL is kubelet health endpoint, not user input.
 	if err != nil {
 		log.Error(err, "HTTP request to kubelet health endpoint failed")
 	}

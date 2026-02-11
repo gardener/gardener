@@ -26,7 +26,7 @@ func Config() blackboxexporterconfig.Config {
 				},
 				HTTPClientConfig: prometheuscommonconfig.HTTPClientConfig{
 					TLSConfig:       prometheuscommonconfig.TLSConfig{CAFile: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"},
-					BearerTokenFile: "/var/run/secrets/kubernetes.io/serviceaccount/token",
+					BearerTokenFile: "/var/run/secrets/kubernetes.io/serviceaccount/token", // #nosec: G101 -- SA token path.
 				},
 				IPProtocol: "ipv4",
 			},

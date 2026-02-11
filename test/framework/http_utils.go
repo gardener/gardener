@@ -26,7 +26,7 @@ func HTTPGet(ctx context.Context, url string) (*http.Response, error) {
 	}
 
 	httpRequest = httpRequest.WithContext(ctx)
-	return httpClient.Do(httpRequest)
+	return httpClient.Do(httpRequest) // #nosec: G704 -- Test code with controlled URLs.
 }
 
 // TestHTTPEndpointWithBasicAuth validates that a http endpoint can be accessed using basic authentication
@@ -63,7 +63,7 @@ func testHTTPEndpointWith(ctx context.Context, url string, mutator func(*http.Re
 	mutator(httpRequest)
 	httpRequest = httpRequest.WithContext(ctx)
 
-	r, err := httpClient.Do(httpRequest)
+	r, err := httpClient.Do(httpRequest) // #nosec: G704 -- Test code with controlled URLs.
 	if err != nil {
 		return err
 	}

@@ -917,7 +917,7 @@ type OpenIDConnectClientAuthentication struct {
 	// Must not be any of idp-issuer-url, client-id, client-secret, idp-certificate-authority, idp-certificate-authority-data, id-token or refresh-token
 	ExtraConfig map[string]string
 	// The client Secret for the OpenID Connect client.
-	Secret *string
+	Secret *string // #nosec: G117 -- Field name for API spec.
 }
 
 // AdmissionPlugin contains information about a specific admission plugin and its corresponding configuration.

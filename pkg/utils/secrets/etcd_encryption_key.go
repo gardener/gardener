@@ -41,7 +41,7 @@ type ETCDEncryptionKeySecretConfig struct {
 type ETCDEncryptionKey struct {
 	Provider string
 	KeyName  string
-	Secret   []byte
+	Secret   []byte // #nosec: G117 -- This holds the encryption key bytes, field name is intentional.
 }
 
 // GetName returns the name of the secret.
