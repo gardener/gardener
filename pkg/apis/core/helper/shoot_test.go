@@ -5,6 +5,8 @@
 package helper_test
 
 import (
+	"time"
+
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -728,4 +730,43 @@ var _ = Describe("Helper", func() {
 			Expect(ControlPlaneWorkerPoolForShoot(shoot.Spec.Provider.Workers)).To(PointTo(Equal(worker)))
 		})
 	})
+
+	DescribeTable("#IsETCDEncryptionKeyAutoRotationEnabled",
+		func(maintenance *core.Maintenance, expectedResult bool) {
+			Expect(IsETCDEncryptionKeyAutoRotationEnabled(maintenance)).To(Equal(expectedResult))
+		},
+
+		Entry("should return false when maintenance is nil", nil, false),
+		Entry("should return false when AutoRotation is nil", &core.Maintenance{}, false),
+		Entry("should return false when Credentials field is nil", &core.Maintenance{AutoRotation: &core.MaintenanceAutoRotation{}}, false),
+		Entry("should return false when ETCDEncryptionKey field is nil", &core.Maintenance{AutoRotation: &core.MaintenanceAutoRotation{Credentials: &core.MaintenanceCredentialsAutoRotation{}}}, false),
+		Entry("should return false when rotation period is nil",
+			&core.Maintenance{
+				AutoRotation: &core.MaintenanceAutoRotation{
+					Credentials: &core.MaintenanceCredentialsAutoRotation{
+						ETCDEncryptionKey: &core.MaintenanceRotationConfig{},
+					},
+				},
+			}, false),
+		Entry("should return false when rotation period is zero",
+			&core.Maintenance{
+				AutoRotation: &core.MaintenanceAutoRotation{
+					Credentials: &core.MaintenanceCredentialsAutoRotation{
+						ETCDEncryptionKey: &core.MaintenanceRotationConfig{
+							RotationPeriod: &metav1.Duration{Duration: 0},
+						},
+					},
+				},
+			}, false),
+		Entry("should return true when rotation period is not zero",
+			&core.Maintenance{
+				AutoRotation: &core.MaintenanceAutoRotation{
+					Credentials: &core.MaintenanceCredentialsAutoRotation{
+						ETCDEncryptionKey: &core.MaintenanceRotationConfig{
+							RotationPeriod: &metav1.Duration{Duration: 1 * time.Hour},
+						},
+					},
+				},
+			}, true),
+	)
 })
