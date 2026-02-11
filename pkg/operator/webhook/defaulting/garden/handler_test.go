@@ -51,7 +51,7 @@ var _ = Describe("Handler", func() {
 					},
 					EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
 						Provider: gardencorev1beta1.EncryptionProvider{
-							Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeAESCBC),
+							Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeSecretbox),
 						},
 					},
 				},
@@ -59,7 +59,7 @@ var _ = Describe("Handler", func() {
 			defaultGardenAPIServerConfig = &operatorv1alpha1.GardenerAPIServerConfig{
 				EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
 					Provider: gardencorev1beta1.EncryptionProvider{
-						Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeAESCBC),
+						Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeSecretbox),
 					},
 				},
 			}
@@ -67,7 +67,7 @@ var _ = Describe("Handler", func() {
 				Credentials: &operatorv1alpha1.Credentials{
 					EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
 						Provider: operatorv1alpha1.EncryptionProviderStatus{
-							Type: gardencorev1beta1.EncryptionProviderTypeAESCBC,
+							Type: gardencorev1beta1.EncryptionProviderTypeSecretbox,
 						},
 					},
 				},
