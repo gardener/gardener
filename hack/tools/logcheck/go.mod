@@ -1,7 +1,7 @@
 module github.com/gardener/gardener/hack/tools/logcheck
 
 // Version must be kept in sync with Go version of https://github.com/golangci/golangci-lint.
-go 1.24.0
+go 1.25.0
 
 // This is a separate go module to decouple the gardener codebase and production binaries from dependencies that are
 // only needed to build the logcheck tool
