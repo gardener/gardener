@@ -1968,9 +1968,9 @@ func (in *SelfHostedShootExposureList) DeepCopyObject() runtime.Object {
 func (in *SelfHostedShootExposureSpec) DeepCopyInto(out *SelfHostedShootExposureSpec) {
 	*out = *in
 	in.DefaultSpec.DeepCopyInto(&out.DefaultSpec)
-	if in.SecretRef != nil {
-		in, out := &in.SecretRef, &out.SecretRef
-		*out = new(v1.SecretReference)
+	if in.CredentialsRef != nil {
+		in, out := &in.CredentialsRef, &out.CredentialsRef
+		*out = new(v1.ObjectReference)
 		**out = **in
 	}
 	if in.Endpoints != nil {

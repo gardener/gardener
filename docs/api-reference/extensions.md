@@ -1552,16 +1552,16 @@ DefaultSpec
 </tr>
 <tr>
 <td>
-<code>secretRef</code></br>
+<code>credentialsRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#secretreference-v1-core">
-Kubernetes core/v1.SecretReference
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>SecretRef is a reference to a secret that contains the cloud provider credentials.</p>
+<p>CredentialsRef is a reference to the cloud provider credentials.</p>
 </td>
 </tr>
 <tr>
@@ -4751,16 +4751,16 @@ DefaultSpec
 </tr>
 <tr>
 <td>
-<code>secretRef</code></br>
+<code>credentialsRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#secretreference-v1-core">
-Kubernetes core/v1.SecretReference
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>SecretRef is a reference to a secret that contains the cloud provider credentials.</p>
+<p>CredentialsRef is a reference to the cloud provider credentials.</p>
 </td>
 </tr>
 <tr>

@@ -60,9 +60,9 @@ type SelfHostedShootExposureSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
 	DefaultSpec `json:",inline"`
 
-	// SecretRef is a reference to a secret that contains the cloud provider credentials.
+	// CredentialsRef is a reference to the cloud provider credentials.
 	// +optional
-	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
+	CredentialsRef *corev1.ObjectReference `json:"credentialsRef,omitempty"`
 
 	// Endpoints contains a list of healthy control plane nodes to expose.
 	Endpoints []ControlPlaneEndpoint `json:"endpoints"`

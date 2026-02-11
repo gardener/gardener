@@ -31,7 +31,7 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 					Type:           "provider",
 					ProviderConfig: &runtime.RawExtension{},
 				},
-				SecretRef: &corev1.SecretReference{
+				CredentialsRef: &corev1.ObjectReference{
 					Name: "test",
 				},
 				Endpoints: []extensionsv1alpha1.ControlPlaneEndpoint{
@@ -138,14 +138,14 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 
 			newSelfHostedShootExposure := prepareSelfHostedShootExposureForUpdate(exposure)
 			newSelfHostedShootExposure.DeletionTimestamp = &now
-			newSelfHostedShootExposure.Spec.SecretRef.Name = "changed-secretref-name"
+			newSelfHostedShootExposure.Spec.CredentialsRef.Name = "changed-secretref-name"
 
 			errorList := ValidateSelfHostedShootExposureUpdate(newSelfHostedShootExposure, exposure)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal("spec"),
-				"Detail": Equal("cannot update SelfHostedShootExposure spec if deletion timestamp is set. Requested changes: SecretRef.Name: changed-secretref-name != test"),
+				"Detail": Equal("cannot update SelfHostedShootExposure spec if deletion timestamp is set. Requested changes: CredentialsRef.Name: changed-secretref-name != test"),
 			}))))
 		})
 
@@ -163,7 +163,7 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 
 		It("should allow updating the name of the referenced secret, the provider config, or the endpoints", func() {
 			newSelfHostedShootExposure := prepareSelfHostedShootExposureForUpdate(exposure)
-			newSelfHostedShootExposure.Spec.SecretRef.Name = "changed-secretref-name"
+			newSelfHostedShootExposure.Spec.CredentialsRef.Name = "changed-secretref-name"
 			newSelfHostedShootExposure.Spec.ProviderConfig = nil
 			newSelfHostedShootExposure.Spec.Endpoints = []extensionsv1alpha1.ControlPlaneEndpoint{
 				{
