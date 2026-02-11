@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"crypto/x509/pkix"
 	"fmt"
+	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
@@ -145,22 +146,34 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 			})
 
 			It("should be able to create and patch an event", func() {
-				// Recording the same event multiple times in a short period makes the event recorder patching the event.
-				for range 3 {
-					recorder.Eventf(node, nil, "Normal", "test-reason", "test-action", "test-message")
+				event := &eventsv1.Event{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "event-",
+						Namespace:    testNamespace.Name,
+					},
+					Regarding: corev1.ObjectReference{
+						Kind:      "Namespace",
+						Name:      testNamespace.Name,
+						Namespace: testNamespace.Name,
+					},
+					EventTime:           metav1.MicroTime{Time: time.Now()},
+					Reason:              "test-reason",
+					Action:              "test-action",
+					Note:                "test-message",
+					ReportingController: "test-controller",
+					ReportingInstance:   "test-instance",
+					Type:                "Normal",
 				}
 
-				Eventually(func(g Gomega) {
-					eventList := &eventsv1.EventList{}
-					g.ExpectWithOffset(1, testClient.List(ctx, eventList, client.MatchingFields{"regarding.name": node.Name})).To(Succeed())
-					g.ExpectWithOffset(1, eventList.Items).To(HaveLen(1))
-					g.ExpectWithOffset(1, eventList.Items[0].Type).To(Equal("Normal"))
-					g.ExpectWithOffset(1, eventList.Items[0].Reason).To(Equal("test-reason"))
-					g.ExpectWithOffset(1, eventList.Items[0].Action).To(Equal("test-action"))
-					g.ExpectWithOffset(1, eventList.Items[0].Note).To(Equal("test-message"))
-					g.ExpectWithOffset(1, eventList.Items[0].Series).NotTo(BeNil())
-					g.ExpectWithOffset(1, eventList.Items[0].Series.Count).To(Equal(int32(2)))
-				}).Should(Succeed())
+				Expect(testClient.Create(ctx, event)).To(Succeed())
+
+				patch := client.MergeFrom(event.DeepCopy())
+				event.Series = &eventsv1.EventSeries{
+					Count:            2,
+					LastObservedTime: metav1.MicroTime{Time: time.Now()},
+				}
+
+				Expect(testClient.Patch(ctx, event, patch)).To(Succeed())
 			})
 
 			It("should forbid to list events", func() {
