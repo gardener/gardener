@@ -544,7 +544,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				}},
 			},
 		}
-		if version.ConstraintK8sGreaterEqual133.Check(values.TargetVersion) {
+		if version.ConstraintK8sGreaterEqual134.Check(values.TargetVersion) {
 			endpointsOrEndpointSlice = &discoveryv1.EndpointSlice{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gardener-apiserver",
