@@ -70,9 +70,64 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 		})
 
 		It("should allow valid infra resources", func() {
-			errorList := ValidateSelfHostedShootExposure(exposure)
+			Expect(ValidateSelfHostedShootExposure(exposure)).To(BeEmpty())
+		})
 
-			Expect(errorList).To(BeEmpty())
+		It("should forbid endpoints with invalid port", func() {
+			e := prepareSelfHostedShootExposureForUpdate(exposure)
+			e.Spec.Endpoints[0].Port = 70000
+
+			errorList := ValidateSelfHostedShootExposure(e)
+
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.endpoints[0].port"),
+			}))))
+		})
+
+		It("should forbid endpoints with invalid IP address", func() {
+			e := prepareSelfHostedShootExposureForUpdate(exposure)
+			e.Spec.Endpoints[0].Addresses = []corev1.NodeAddress{{
+				Type:    corev1.NodeInternalIP,
+				Address: "not-an-ip",
+			}}
+
+			errorList := ValidateSelfHostedShootExposure(e)
+
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.endpoints[0].addresses[0].address"),
+			}))))
+		})
+
+		It("should forbid endpoints with invalid hostname for NodeHostName type", func() {
+			e := prepareSelfHostedShootExposureForUpdate(exposure)
+			e.Spec.Endpoints[0].Addresses = []corev1.NodeAddress{{
+				Type:    corev1.NodeHostName,
+				Address: "invalid_host!",
+			}}
+
+			errorList := ValidateSelfHostedShootExposure(e)
+
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.endpoints[0].addresses[0].address"),
+			}))))
+		})
+
+		It("should forbid unknown node address types", func() {
+			e := prepareSelfHostedShootExposureForUpdate(exposure)
+			e.Spec.Endpoints[0].Addresses = []corev1.NodeAddress{{
+				Type:    "UnknownType",
+				Address: "1.2.3.4",
+			}}
+
+			errorList := ValidateSelfHostedShootExposure(e)
+
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.endpoints[0].addresses[0].type"),
+			}))))
 		})
 	})
 
