@@ -594,15 +594,15 @@ func (o *operatingSystemConfig) getWantedOSCNames(ctx context.Context) (sets.Set
 		}
 	}
 
-	mdList := &v1alpha1.MachineList{}
-	if err := o.client.List(ctx, mdList, client.InNamespace(o.values.Namespace)); err != nil {
+	machineList := &v1alpha1.MachineList{}
+	if err := o.client.List(ctx, machineList, client.InNamespace(o.values.Namespace)); err != nil {
 		return nil, fmt.Errorf("failed to list Machines: %w", err)
 	}
 
-	for _, machine := range mdList.Items {
+	for _, machine := range machineList.Items {
 		if val, ok := machine.Spec.NodeTemplateSpec.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]; ok {
-			originalVal := val + "-original"
-			initVal := val + "-init"
+			originalVal := generateOSCName(val, "original")
+			initVal := generateOSCName(val, "init")
 
 			o.log.V(1).Info("Found wanted OSC name from existing machine", "init", initVal, "original", originalVal, "machine", machine.Name)
 			wantedOSCNames.Insert(originalVal, initVal)
@@ -1149,4 +1149,8 @@ func keySuffix(version int, machineImage *gardencorev1beta1.ShootMachineImage, p
 		return imagePrefix + "-original"
 	}
 	return ""
+}
+
+func generateOSCName(val, suffix string) string {
+	return fmt.Sprintf("%s-%s", val, suffix)
 }
