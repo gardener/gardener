@@ -13,7 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
-	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
+	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -76,7 +76,7 @@ func ValidateSelfHostedShootExposureSpec(spec *extensionsv1alpha1.SelfHostedShoo
 						allErrs = append(allErrs, field.Invalid(addrPath.Child("address"), addr.Address, "invalid IP address"))
 					}
 				case corev1.NodeHostName:
-					if errs := k8svalidation.IsDNS1123Subdomain(addr.Address); len(errs) != 0 {
+					if errs := utilvalidation.IsDNS1123Subdomain(addr.Address); len(errs) != 0 {
 						allErrs = append(allErrs, field.Invalid(addrPath.Child("address"), addr.Address, strings.Join(errs, ",")))
 					}
 				}
