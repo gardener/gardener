@@ -37,7 +37,6 @@ import (
 	netutils "github.com/gardener/gardener/pkg/utils/net"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -443,10 +442,6 @@ func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 			"batch/v1":                   false,
 			"policy/v1":                  false,
 			"storage.k8s.io/v1/csinodes": false,
-		}
-
-		if versionutils.ConstraintK8sLess134.Check(k.values.Version) {
-			disableAPIs["discovery.k8s.io/v1"] = false
 		}
 
 		// Allow users to explicitly enable disabled APIs via RuntimeConfig.
