@@ -595,6 +595,8 @@ var _ = Describe("VpnSeedServer", func() {
 					"openvpn_server_route_last_reference_time_seconds",
 					"openvpn_status_update_time_seconds",
 					"openvpn_up",
+					"openvpn_netstat_Tcp_OutSegs",
+					"openvpn_netstat_Tcp_RetransSegs",
 				}
 			}
 

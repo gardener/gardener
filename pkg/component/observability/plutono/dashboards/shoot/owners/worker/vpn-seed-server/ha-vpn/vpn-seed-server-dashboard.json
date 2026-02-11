@@ -57,7 +57,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.45",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -167,7 +167,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.45",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -277,7 +277,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.45",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -387,7 +387,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.45",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -489,7 +489,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.45",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -553,6 +553,110 @@
       }
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "Packet loss approximated by tcp segments retransmitted / segments sent.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
+      "hiddenSeries": false,
+      "id": 31,
+      "interval": "1m",
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.45",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "rate(openvpn_netstat_Tcp_RetransSegs[$__rate_interval]) / rate(openvpn_netstat_Tcp_OutSegs[$__rate_interval])",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "1m",
+          "intervalFactor": 1,
+          "legendFormat": "Packet loss of {{service}}",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "VPN Seed Servers Packet Loss",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:2117",
+          "decimals": null,
+          "format": "percentunit",
+          "label": "Packet Loss",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "$$hashKey": "object:2118",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
       "cacheTimeout": null,
       "datasource": null,
       "description": "Traffic sent to clients by OpenVPN server instance (reflects only values of current running server instances)",
@@ -579,7 +683,7 @@
         "h": 6,
         "w": 5,
         "x": 0,
-        "y": 30
+        "y": 36
       },
       "hideTimeOverride": true,
       "id": 19,
@@ -601,7 +705,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.45",
       "targets": [
         {
           "exemplar": true,
@@ -646,7 +750,7 @@
         "h": 6,
         "w": 5,
         "x": 5,
-        "y": 30
+        "y": 36
       },
       "hideTimeOverride": true,
       "id": 30,
@@ -668,7 +772,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.45",
       "targets": [
         {
           "exemplar": true,
@@ -765,7 +869,7 @@
         "h": 13,
         "w": 14,
         "x": 10,
-        "y": 30
+        "y": 36
       },
       "id": 4,
       "links": [],
@@ -778,7 +882,7 @@
           }
         ]
       },
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.45",
       "targets": [
         {
           "exemplar": true,
@@ -948,7 +1052,7 @@
         "h": 7,
         "w": 5,
         "x": 0,
-        "y": 36
+        "y": 42
       },
       "hiddenSeries": false,
       "id": 21,
@@ -969,7 +1073,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.45",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1052,7 +1156,7 @@
         "h": 7,
         "w": 5,
         "x": 5,
-        "y": 36
+        "y": 42
       },
       "hiddenSeries": false,
       "id": 22,
@@ -1073,7 +1177,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.45",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
