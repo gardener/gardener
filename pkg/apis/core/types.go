@@ -89,4 +89,8 @@ type EncryptionProviderType string
 const (
 	// EncryptionProviderTypeAESCBC is the aescbc encryption provider type.
 	EncryptionProviderTypeAESCBC EncryptionProviderType = "aescbc"
+	// EncryptionProviderTypeAESGCM is the aesgcm encryption provider type.
+	EncryptionProviderTypeAESGCM EncryptionProviderType = "aesgcm"
+	// EncryptionProviderTypeSecretbox is the secretbox encryption provider type.
+	EncryptionProviderTypeSecretbox EncryptionProviderType = "secretbox"
 )
