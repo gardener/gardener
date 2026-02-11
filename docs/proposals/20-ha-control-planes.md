@@ -952,9 +952,9 @@ kubectl get po -n <shoot-control-ns> # list of pods in the shoot control plane
 | csi-snapshot-validation-7c99986c85-ft2qp     | 1/1   | Running | ip-10-242-60-155.eu-west-1.compute.internal |
 | etcd-events-0    | 2/2   | Running | ip-10-242-60-155.eu-west-1.compute.internal |
 | etcd-events-1    | 2/2   | Running | ip-10-242-73-89.eu-west-1.compute.internal |
-| etcd-events-2     | 0/2   | Pending | <none> |
+| etcd-events-2     | 0/2   | Pending | &lt;none&gt; |
 | etcd-main-0     | 2/2   | Running | ip-10-242-73-77.eu-west-1.compute.internal |
-| etcd-main-1    | 0/2  | Pending | <none> |
+| etcd-main-1    | 0/2  | Pending | &lt;none&gt; |
 | etcd-main-2    | 2/2   | Running | ip-10-242-53-131.eu-west-1.compute.internal |
 | gardener-resource-manager-7fff9f77f6-8wr5n     | 1/1   | Running | ip-10-242-73-89.eu-west-1.compute.internal |
 | gardener-resource-manager-7fff9f77f6-jwggx     | 1/1   | Running | ip-10-242-73-89.eu-west-1.compute.internal |
