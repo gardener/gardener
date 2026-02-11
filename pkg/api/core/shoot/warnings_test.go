@@ -426,7 +426,7 @@ var _ = Describe("Warnings", func() {
 	Describe("#GetKubeAPIServerWarnings", func() {
 		DescribeTable("enableAnonymousAuthentication",
 			func(kubeAPIServerConfig *core.KubeAPIServerConfig, matcher gomegatypes.GomegaMatcher) {
-				Expect(GetKubeAPIServerWarnings(kubeAPIServerConfig, field.NewPath("kubeAPIServer"))).To(matcher)
+				Expect(GetKubeAPIServerWarnings(kubeAPIServerConfig, false, field.NewPath("kubeAPIServer"))).To(matcher)
 			},
 
 			Entry("should not return a warning when kubeAPIServerConfig is nil",
@@ -445,7 +445,7 @@ var _ = Describe("Warnings", func() {
 
 		DescribeTable("watchCacheSizes.default",
 			func(kubeAPIServerConfig *core.KubeAPIServerConfig, matcher gomegatypes.GomegaMatcher) {
-				Expect(GetKubeAPIServerWarnings(kubeAPIServerConfig, field.NewPath("kubeAPIServer"))).To(matcher)
+				Expect(GetKubeAPIServerWarnings(kubeAPIServerConfig, false, field.NewPath("kubeAPIServer"))).To(matcher)
 			},
 
 			Entry("should not return a warning when kubeAPIServerConfig is nil",
@@ -468,7 +468,7 @@ var _ = Describe("Warnings", func() {
 
 		DescribeTable("eventTTL",
 			func(kubeAPIServerConfig *core.KubeAPIServerConfig, matcher gomegatypes.GomegaMatcher) {
-				Expect(GetKubeAPIServerWarnings(kubeAPIServerConfig, field.NewPath("kubeAPIServer"))).To(matcher)
+				Expect(GetKubeAPIServerWarnings(kubeAPIServerConfig, false, field.NewPath("kubeAPIServer"))).To(matcher)
 			},
 
 			Entry("should not return a warning when kubeAPIServerConfig is nil",
@@ -487,6 +487,32 @@ var _ = Describe("Warnings", func() {
 				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: time.Hour * 24 * 10}},
 				ContainElement(Equal("you are setting the kubeAPIServer.eventTTL field to an invalid value. Invalid value: '240h0m0s', valid values: [0, 24h]. Invalid values for existing resources will be no longer allowed in Gardener v1.142.0. See: https://github.com/gardener/gardener/issues/13825")),
 			),
+		)
+
+		DescribeTable("aesgcm encryption provider type",
+			func(etcdEncryptionKeyAutoRotationEnabled bool, providerType *core.EncryptionProviderType, matcher gomegatypes.GomegaMatcher) {
+				kubeAPIServerConfig := &core.KubeAPIServerConfig{
+					EncryptionConfig: &core.EncryptionConfig{
+						Provider: core.EncryptionProvider{
+							Type: providerType,
+						},
+					},
+				}
+
+				Expect(GetKubeAPIServerWarnings(kubeAPIServerConfig, etcdEncryptionKeyAutoRotationEnabled, field.NewPath("kubeAPIServer"))).To(matcher)
+			},
+
+			Entry("should return a warning when encryption provider type is aesgcm and auto rotation is not enabled",
+				false, ptr.To(core.EncryptionProviderTypeAESGCM),
+				ContainElement(Equal("aesgcm encryption provider type is not recommended to be used without enabling auto encryption key rotation in the maintenance window. For enabling auto rotation, see: https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_maintenance.md#automatic-credentials-rotation"))),
+			Entry("should not return a warning when encryption provider type is aesgcm and auto rotation is enabled",
+				true, ptr.To(core.EncryptionProviderTypeAESGCM), BeEmpty()),
+			Entry("should not return a warning when encryption provider type is not aesgcm and auto rotation is not enabled",
+				false, ptr.To(core.EncryptionProviderTypeSecretbox), BeEmpty()),
+			Entry("should not return a warning when encryption provider type is not aesgcm and auto rotation is enabled",
+				true, ptr.To(core.EncryptionProviderTypeSecretbox), BeEmpty()),
+			Entry("should not return a warning when encryption provider type is not set and auto rotation is not enabled",
+				false, nil, BeEmpty()),
 		)
 	})
 })

@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/api/core/shoot"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 )
 
@@ -20,8 +21,12 @@ func GetWarnings(managedseedset *seedmanagement.ManagedSeedSet) []string {
 	var warnings []string
 
 	if kubeAPIServer := managedseedset.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer; kubeAPIServer != nil {
-		path := field.NewPath("spec", "shootTemplate", "spec", "kubernetes", "kubeAPIServer")
-		warnings = append(warnings, shoot.GetKubeAPIServerWarnings(kubeAPIServer, path)...)
+		var (
+			maintenance = managedseedset.Spec.ShootTemplate.Spec.Maintenance
+			path        = field.NewPath("spec", "shootTemplate", "spec", "kubernetes", "kubeAPIServer")
+		)
+
+		warnings = append(warnings, shoot.GetKubeAPIServerWarnings(kubeAPIServer, helper.IsETCDEncryptionKeyAutoRotationEnabled(maintenance), path)...)
 	}
 
 	return warnings

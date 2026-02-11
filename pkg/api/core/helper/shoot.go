@@ -348,3 +348,13 @@ func GetEncryptionProviderTypeInStatus(status core.ShootStatus) core.EncryptionP
 
 	return ""
 }
+
+// IsETCDEncryptionKeyAutoRotationEnabled checks if automatic rotation of etcd encryption key is enabled in the maintenance window.
+func IsETCDEncryptionKeyAutoRotationEnabled(maintenance *core.Maintenance) bool {
+	return maintenance != nil &&
+		maintenance.AutoRotation != nil &&
+		maintenance.AutoRotation.Credentials != nil &&
+		maintenance.AutoRotation.Credentials.ETCDEncryptionKey != nil &&
+		maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod != nil &&
+		maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod.Duration != 0
+}
