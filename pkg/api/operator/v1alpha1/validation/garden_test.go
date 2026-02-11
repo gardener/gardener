@@ -1986,7 +1986,7 @@ var _ = Describe("Validation Tests", func() {
 								PointTo(MatchFields(IgnoreExtras, Fields{
 									"Type":   Equal(field.ErrorTypeNotSupported),
 									"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.provider.type"),
-									"Detail": Equal("supported values: \"aescbc\""),
+									"Detail": Equal("supported values: \"aescbc\", \"aesgcm\", \"secretbox\""),
 								})),
 							))
 						})

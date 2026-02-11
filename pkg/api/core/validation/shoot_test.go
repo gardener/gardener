@@ -2787,15 +2787,21 @@ var _ = Describe("Shoot Validation Tests", func() {
 					))
 				})
 
-				It("should allow specifying available provider type", func() {
-					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
-						Provider: core.EncryptionProvider{
-							Type: ptr.To(core.EncryptionProviderTypeAESCBC),
-						},
-					}
+				DescribeTable("allowed encryption provider types",
+					func(providerType core.EncryptionProviderType) {
+						shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+							Provider: core.EncryptionProvider{
+								Type: ptr.To(providerType),
+							},
+						}
 
-					Expect(ValidateShoot(shoot)).To(BeEmpty())
-				})
+						Expect(ValidateShoot(shoot)).To(BeEmpty())
+					},
+
+					Entry("aescbc", core.EncryptionProviderTypeAESCBC),
+					Entry("aesgcm", core.EncryptionProviderTypeAESGCM),
+					Entry("secretbox", core.EncryptionProviderTypeSecretbox),
+				)
 
 				It("should deny specifying unavailable provider type", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
@@ -2806,8 +2812,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					Expect(ValidateShoot(shoot)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeNotSupported),
-							"Field": Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.provider.type"),
+							"Type":   Equal(field.ErrorTypeNotSupported),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.provider.type"),
+							"Detail": Equal("supported values: \"aescbc\", \"aesgcm\", \"secretbox\""),
 						})),
 					))
 				})
@@ -2819,6 +2826,29 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "new.fancyresource.io"}
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources"),
+							"Detail": Equal("resources cannot be changed because a previous encryption configuration change is currently being rolled out"),
+						})),
+					))
+				})
+
+				It("should deny changing resources when provider types in the spec and status are not equal", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"configmaps", "deployments.apps"},
+						Provider: core.EncryptionProvider{
+							Type: ptr.To(core.EncryptionProviderTypeAESCBC),
+						},
+					}
+					shoot.Status.Credentials.EncryptionAtRest.Resources = []string{"deployments.apps", "configmaps"}
+					shoot.Status.Credentials.EncryptionAtRest.Provider.Type = core.EncryptionProviderTypeSecretbox
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "new.fancyresource.io"}
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type = ptr.To(core.EncryptionProviderTypeAESCBC)
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -2920,6 +2950,25 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+
+				It("should fail updating immutable provider type field", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Provider: core.EncryptionProvider{
+							Type: ptr.To(core.EncryptionProviderTypeAESCBC),
+						},
+					}
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type = ptr.To(core.EncryptionProviderTypeSecretbox)
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.provider.type"),
+						"Detail": ContainSubstring(`field is immutable`),
+					}))
 				})
 			})
 
