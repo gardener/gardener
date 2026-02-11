@@ -744,7 +744,7 @@ func getLabels() map[string]string {
 		v1beta1constants.LabelRole:  v1beta1constants.LabelObservability,
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleObservability,
 		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
-		gardenerutils.NetworkPolicyLabel("logging-vl", 9428):                                v1beta1constants.LabelNetworkPolicyAllowed,
+		gardenerutils.NetworkPolicyLabel("logging-vl", constant.VictoriaLogsPort):                                v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToDNS:                                            v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                               v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelObservabilityApplication:                                      "opentelemetry-collector",

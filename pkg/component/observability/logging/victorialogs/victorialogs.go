@@ -135,7 +135,7 @@ func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *vmv1.VLSingle {
 					Repository: imageRepo,
 					Tag:        imageTag,
 				},
-				Port: "9428",
+				Port: constants.VictoriaLogsPort,
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("10m"),
@@ -172,12 +172,12 @@ func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *vmv1.VLSingle {
 	switch v.values.ClusterType {
 	case component.ClusterTypeSeed:
 		if v.values.IsGardenCluster {
-			managedAnnotations[resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix+v1beta1constants.LabelNetworkPolicyGardenScrapeTargets+resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix] = fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort)
+			managedAnnotations[resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix+v1beta1constants.LabelNetworkPolicyGardenScrapeTargets+resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix] = fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, constants.VictoriaLogsPort)
 		} else {
-			managedAnnotations[resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix+v1beta1constants.LabelNetworkPolicySeedScrapeTargets+resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix] = fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort)
+			managedAnnotations[resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix+v1beta1constants.LabelNetworkPolicySeedScrapeTargets+resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix] = fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, constants.VictoriaLogsPort)
 		}
 	case component.ClusterTypeShoot:
-		managedAnnotations[resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix+v1beta1constants.LabelNetworkPolicyScrapeTargets+resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix] = fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort)
+		managedAnnotations[resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix+v1beta1constants.LabelNetworkPolicyScrapeTargets+resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix] = fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, constants.VictoriaLogsPort)
 		managedAnnotations[resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias] = v1beta1constants.LabelNetworkPolicyShootNamespaceAlias
 		managedAnnotations[resourcesv1alpha1.NetworkingNamespaceSelectors] = `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`
 	}
@@ -194,7 +194,7 @@ func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelRole:                            v1beta1constants.LabelObservability,
 		v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleObservability,
-		gardenerutils.NetworkPolicyLabel("logging-vl", 9428):  v1beta1constants.LabelNetworkPolicyAllowed,
+		gardenerutils.NetworkPolicyLabel("logging-vl", constants.VictoriaLogsPort):  v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelObservabilityApplication:        "victorialogs",
@@ -215,7 +215,7 @@ func (v *victoriaLogs) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
+				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{

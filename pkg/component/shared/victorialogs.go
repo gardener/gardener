@@ -13,7 +13,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/victorialogs"
 )
 
-// NewVictoriaLogs returns new VictoriaLogs deployer
+// NewVictoriaLogs returns new VictoriaLogs deployer.
 func NewVictoriaLogs(
 	c client.Client,
 	namespace string,
