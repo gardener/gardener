@@ -7,6 +7,7 @@ package helper
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/gardener/gardener/pkg/features"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
@@ -45,6 +46,15 @@ func IsValiEnabled(c *gardenletconfigv1alpha1.GardenletConfiguration) bool {
 		return *c.Logging.Vali.Enabled
 	}
 	return true
+}
+
+func IsVictoriaLogsEnabled(c *gardenletconfigv1alpha1.GardenletConfiguration) bool {
+	enabled := true
+	if c != nil && c.Logging != nil &&
+		c.Logging.VictoriaLogs != nil && c.Logging.VictoriaLogs.Enabled != nil {
+		enabled = *c.Logging.VictoriaLogs.Enabled
+	}
+	return enabled && features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend)
 }
 
 // IsEventLoggingEnabled returns true if the event-logging is enabled.

@@ -90,6 +90,9 @@ var _ = Describe("Logging", func() {
 						Vali: &gardenletconfigv1alpha1.Vali{
 							Enabled: ptr.To(true),
 						},
+						VictoriaLogs: &gardenletconfigv1alpha1.VictoriaLogs{
+							Enabled: ptr.To(true),
+						},
 						ShootNodeLogging: &gardenletconfigv1alpha1.ShootNodeLogging{
 							ShootPurposes: []gardencorev1beta1.ShootPurpose{
 								"development",

@@ -56,7 +56,7 @@ func (b *Botanist) DeployLogging(ctx context.Context) error {
 		}
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
+	if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) && gardenlethelper.IsVictoriaLogsEnabled(b.Config) {
 		if err := b.Shoot.Components.ControlPlane.VictoriaLogs.Deploy(ctx); err != nil {
 			return fmt.Errorf("deploying VictoriaLogs failed: %w", err)
 		}
@@ -94,8 +94,11 @@ func (b *Botanist) DestroySeedLogging(ctx context.Context) error {
 }
 
 func (b *Botanist) isShootNodeLoggingEnabled() bool {
+	isValiEnabled := gardenlethelper.IsValiEnabled(b.Config)
+	isVictoriaLogsEnabled := gardenlethelper.IsVictoriaLogsEnabled(b.Config)
+	isLoggingComponentEnabled := isValiEnabled || isVictoriaLogsEnabled
 	return b.Shoot != nil && !b.Shoot.IsWorkerless && b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) &&
-		gardenlethelper.IsValiEnabled(b.Config) && b.Config != nil &&
+		isLoggingComponentEnabled && b.Config != nil &&
 		b.Config.Logging != nil && b.Config.Logging.ShootNodeLogging != nil &&
 		slices.Contains(b.Config.Logging.ShootNodeLogging.ShootPurposes, b.Shoot.Purpose)
 }
