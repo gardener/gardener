@@ -280,12 +280,20 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 		}
 	}
 
+	etcdEncryptionRotationPhase := helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials)
+
 	// TODO(AleksandarSavchev): Remove the k8s version check in a future release after support for Kubernetes v1.33 is dropped.
 	// It is added to forcefully complete the etcd encryption key rotation, since the annotation to complete the rotation
 	// is forbidden for clusters with k8s >= v1.34.
-	if helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPrepared &&
+	if etcdEncryptionRotationPhase == gardencorev1beta1.RotationPrepared &&
 		(helper.ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(garden.Status.Credentials) || !k8sLess134) {
 		completeRotationETCDEncryptionKey(garden, &now)
+	}
+
+	// Start encryption rotation when encryption provider type is changed.
+	if helper.GetKubeAPIServerEncryptionProviderType(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) != helper.GetEncryptionProviderTypeInStatus(garden.Status) &&
+		(etcdEncryptionRotationPhase == gardencorev1beta1.RotationCompleted || len(etcdEncryptionRotationPhase) == 0) {
+		startRotationETCDEncryptionKey(garden, true, &now)
 	}
 
 	if err := r.RuntimeClientSet.Client().Status().Update(ctx, garden); err != nil {
