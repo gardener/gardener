@@ -6,6 +6,7 @@ package manager
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -18,6 +19,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	operatorv1alpha1helper "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
+	"github.com/gardener/gardener/pkg/utils"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -162,18 +164,14 @@ func lastSecretRotationStartTimesFromCARotation(caRotation *gardencorev1beta1.CA
 
 // filterCAConfigs returns a list of all CA configs contained in the given list.
 func filterCAConfigs(secretConfigs []SecretConfigWithOptions) []SecretConfigWithOptions {
-	var caConfigs []SecretConfigWithOptions
-
-	for _, config := range secretConfigs {
+	return slices.Collect(utils.FilterElements(secretConfigs, func(config SecretConfigWithOptions) bool {
 		switch secretConfig := config.Config.(type) {
 		case *secretsutils.CertificateSecretConfig:
-			if secretConfig.CertType == secretsutils.CACert {
-				caConfigs = append(caConfigs, config)
-			}
+			return secretConfig.CertType == secretsutils.CACert
+		default:
+			return false
 		}
-	}
-
-	return caConfigs
+	}))
 }
 
 // GenerateAllSecrets takes care of generating all secret configs with the given SecretsManager (first CA configs, then

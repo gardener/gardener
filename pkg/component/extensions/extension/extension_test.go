@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/extensions/extension"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 type errorClient struct {
@@ -866,13 +867,12 @@ var _ = Describe("Extension", func() {
 				extensionList := &extensionsv1alpha1.ExtensionList{}
 				Expect(fakeSeedClient.List(ctx, extensionList)).To(Succeed())
 				Expect(extensionList.Items).To(HaveLen(2))
-				Expect(slices.Collect(func(yield func(string) bool) {
-					for _, ext := range extensionList.Items {
-						if !yield(ext.Name) {
-							return
-						}
-					}
-				})).To(ContainElements("garden-def", "garden-after"))
+				Expect(slices.Collect(utils.TransformElements(
+					extensionList.Items,
+					func(ext extensionsv1alpha1.Extension) string {
+						return ext.Name
+					},
+				))).To(ContainElements("garden-def", "garden-after"))
 			})
 		})
 
