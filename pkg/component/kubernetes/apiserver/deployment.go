@@ -445,7 +445,7 @@ func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 			"storage.k8s.io/v1/csinodes": false,
 		}
 
-		if versionutils.ConstraintK8sLess134.Check(k.values.Version) {
+		if versionutils.ConstraintK8sLess133.Check(k.values.Version) {
 			disableAPIs["discovery.k8s.io/v1"] = false
 		}
 
