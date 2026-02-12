@@ -230,14 +230,19 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	var endpointsOrEndpointSlice client.Object
-	if version.ConstraintK8sGreaterEqual133.Check(g.GetValues().TargetVersion) {
-		endpointsOrEndpointSlice = g.endpointSlice(serviceRuntime.Spec.ClusterIP)
+	var endpointsResources []client.Object
+	if version.ConstraintK8sGreaterEqual134.Check(g.GetValues().TargetVersion) {
+		endpointsResources = []client.Object{g.endpointSlice(serviceRuntime.Spec.ClusterIP)}
+	} else if version.ConstraintK8sGreaterEqual133.Check(g.GetValues().TargetVersion) {
+		// For Kubernetes 1.33, we create both Endpoints and EndpointSlice resources. This is required so we can safely
+		// switch to EndpointSlices only in 1.34. Otherwise, there can be unwanted downtime of the Gardener API server if
+		// some issue occurs during the process of removing the Endpoints and creating the EndpointSlice in one go.
+		endpointsResources = []client.Object{g.endpoints(serviceRuntime.Spec.ClusterIP), g.endpointSlice(serviceRuntime.Spec.ClusterIP)}
 	} else {
-		endpointsOrEndpointSlice = g.endpoints(serviceRuntime.Spec.ClusterIP)
+		endpointsResources = []client.Object{g.endpoints(serviceRuntime.Spec.ClusterIP)}
 	}
 
-	virtualResources, err := virtualRegistry.AddAllAndSerialize(endpointsOrEndpointSlice)
+	virtualResources, err := virtualRegistry.AddAllAndSerialize(endpointsResources...)
 	if err != nil {
 		return err
 	}

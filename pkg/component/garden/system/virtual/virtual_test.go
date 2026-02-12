@@ -191,7 +191,7 @@ var _ = Describe("Virtual", func() {
 				},
 				{
 					APIGroups: []string{""},
-					Resources: []string{"events", "namespaces", "resourcequotas", "services", "endpoints"},
+					Resources: []string{"events", "namespaces", "resourcequotas", "services", "endpoints", "endpointslices"},
 					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
@@ -297,7 +297,7 @@ var _ = Describe("Virtual", func() {
 				},
 				{
 					APIGroups: []string{""},
-					Resources: []string{"events", "namespaces", "resourcequotas", "services", "endpoints"},
+					Resources: []string{"events", "namespaces", "resourcequotas", "services", "endpoints", "endpointslices"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{

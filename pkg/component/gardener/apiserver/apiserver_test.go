@@ -105,7 +105,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			}
 		}
 		serviceVirtual                   *corev1.Service
-		endpointsOrEndpointSlice         client.Object
+		endpointsResources               []client.Object
 		clusterRole                      *rbacv1.ClusterRole
 		clusterRoleBinding               *rbacv1.ClusterRoleBinding
 		clusterRoleBindingAuthDelegation *rbacv1.ClusterRoleBinding
@@ -544,46 +544,50 @@ var _ = Describe("GardenerAPIServer", func() {
 				}},
 			},
 		}
-		if version.ConstraintK8sGreaterEqual133.Check(values.TargetVersion) {
-			endpointsOrEndpointSlice = &discoveryv1.EndpointSlice{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gardener-apiserver",
-					Namespace: "kube-system",
-					Labels: map[string]string{
-						"app":                        "gardener",
-						"role":                       "apiserver",
-						"kubernetes.io/service-name": "gardener-apiserver",
-					},
+		endpointSlice := &discoveryv1.EndpointSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-apiserver",
+				Namespace: "kube-system",
+				Labels: map[string]string{
+					"app":                        "gardener",
+					"role":                       "apiserver",
+					"kubernetes.io/service-name": "gardener-apiserver",
 				},
-				AddressType: "IPv4",
-				Ports: []discoveryv1.EndpointPort{{
-					Port:     ptr.To(int32(443)),
-					Protocol: ptr.To(corev1.ProtocolTCP),
+			},
+			AddressType: "IPv4",
+			Ports: []discoveryv1.EndpointPort{{
+				Port:     ptr.To(int32(443)),
+				Protocol: ptr.To(corev1.ProtocolTCP),
+			}},
+			Endpoints: []discoveryv1.Endpoint{{
+				Addresses: []string{clusterIP},
+			}},
+		}
+		endpoints := &corev1.Endpoints{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-apiserver",
+				Namespace: "kube-system",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				},
+			},
+			Subsets: []corev1.EndpointSubset{{
+				Ports: []corev1.EndpointPort{{
+					Port:     443,
+					Protocol: corev1.ProtocolTCP,
 				}},
-				Endpoints: []discoveryv1.Endpoint{{
-					Addresses: []string{clusterIP},
+				Addresses: []corev1.EndpointAddress{{
+					IP: clusterIP,
 				}},
-			}
+			}},
+		}
+		if version.ConstraintK8sGreaterEqual134.Check(values.TargetVersion) {
+			endpointsResources = []client.Object{endpointSlice}
+		} else if version.ConstraintK8sGreaterEqual133.Check(values.TargetVersion) {
+			endpointsResources = []client.Object{endpoints, endpointSlice}
 		} else {
-			endpointsOrEndpointSlice = &corev1.Endpoints{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gardener-apiserver",
-					Namespace: "kube-system",
-					Labels: map[string]string{
-						"app":  "gardener",
-						"role": "apiserver",
-					},
-				},
-				Subsets: []corev1.EndpointSubset{{
-					Ports: []corev1.EndpointPort{{
-						Port:     443,
-						Protocol: corev1.ProtocolTCP,
-					}},
-					Addresses: []corev1.EndpointAddress{{
-						IP: clusterIP,
-					}},
-				}},
-			}
+			endpointsResources = []client.Object{endpoints}
 		}
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1384,7 +1388,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-					Expect(managedResourceVirtual).To(consistOf(
+					expectedVirtualObjects := []client.Object{
 						apiServiceFor("core.gardener.cloud", "v1"),
 						apiServiceFor("core.gardener.cloud", "v1beta1"),
 						apiServiceFor("seedmanagement.gardener.cloud", "v1alpha1"),
@@ -1392,12 +1396,13 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						apiServiceFor("settings.gardener.cloud", "v1alpha1"),
 						apiServiceFor("security.gardener.cloud", "v1alpha1"),
 						serviceVirtual,
-						endpointsOrEndpointSlice,
 						clusterRole,
 						clusterRoleBinding,
 						clusterRoleBindingAuthDelegation,
 						roleBindingAuthReader,
-					))
+					}
+					expectedVirtualObjects = append(expectedVirtualObjects, endpointsResources...)
+					Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
 					Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 					Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
