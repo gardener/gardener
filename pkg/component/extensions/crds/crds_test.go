@@ -187,7 +187,7 @@ var _ = Describe("#CRDs", func() {
 			Entry("Infrastructure", "infrastructures.extensions.gardener.cloud", Succeed()),
 			Entry("Network", "networks.extensions.gardener.cloud", Succeed()),
 			Entry("OperatingSystemConfig", "operatingsystemconfigs.extensions.gardener.cloud", Succeed()),
-			Entry("SelfHostedShootExposure", "selfhostedshootexposures.extensions.gardener.cloud", BeNotFoundError()),
+			Entry("SelfHostedShootExposure", "selfhostedshootexposures.extensions.gardener.cloud", Succeed()),
 			Entry("Worker", "workers.extensions.gardener.cloud", Succeed()),
 		)
 	})
@@ -251,7 +251,7 @@ var _ = Describe("#CRDs", func() {
 			Expect(c.Get(ctx, client.ObjectKey{Name: "infrastructures.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "networks.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "operatingsystemconfigs.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKey{Name: "selfhostedshootexposures.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "selfhostedshootexposures.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "workers.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 		})
 	})
