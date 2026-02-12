@@ -64,6 +64,7 @@ rules:
   - resourcequotas
   - services
   - endpoints
+  - endpointslices
   verbs:
   - create
   - delete
@@ -244,6 +245,7 @@ rules:
   - resourcequotas
   - services
   - endpoints
+  - endpointslices
   verbs:
   - get
   - list
