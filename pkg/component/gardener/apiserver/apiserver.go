@@ -230,14 +230,16 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	var endpointsOrEndpointSlice client.Object
+	var endpointsResources []client.Object
 	if version.ConstraintK8sGreaterEqual134.Check(g.GetValues().TargetVersion) {
-		endpointsOrEndpointSlice = g.endpointSlice(serviceRuntime.Spec.ClusterIP)
+		endpointsResources = []client.Object{g.endpointSlice(serviceRuntime.Spec.ClusterIP)}
+	} else if version.ConstraintK8sGreaterEqual133.Check(g.GetValues().TargetVersion) {
+		endpointsResources = []client.Object{g.endpoints(serviceRuntime.Spec.ClusterIP), g.endpointSlice(serviceRuntime.Spec.ClusterIP)}
 	} else {
-		endpointsOrEndpointSlice = g.endpoints(serviceRuntime.Spec.ClusterIP)
+		endpointsResources = []client.Object{g.endpoints(serviceRuntime.Spec.ClusterIP)}
 	}
 
-	virtualResources, err := virtualRegistry.AddAllAndSerialize(endpointsOrEndpointSlice)
+	virtualResources, err := virtualRegistry.AddAllAndSerialize(endpointsResources...)
 	if err != nil {
 		return err
 	}
