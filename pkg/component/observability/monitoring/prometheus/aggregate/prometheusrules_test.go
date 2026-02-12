@@ -34,16 +34,42 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 				},
 			},
 			{
-				Alert: "TooManyEtcdSnapshotCompactionJobsFailing",
-				Expr:  intstr.FromString(`count(increase(etcddruid_compaction_jobs_total{succeeded="false", failureReason=~"processFailure|unknown"}[3h]) >= 1) / count(increase(etcddruid_compaction_jobs_total[3h])) > 0.1`),
+				Alert: "EtcdSnapshotCompactionJobsFailingForSeed",
+				Expr:  intstr.FromString(`count(count by (etcd_namespace) (increase(etcddruid_compaction_jobs_total{succeeded="false", failureReason=~"processFailure|unknown"}[3h]) >= 1)) / count(count by (etcd_namespace) (increase(etcddruid_compaction_jobs_total[3h]))) > 0.1`),
 				Labels: map[string]string{
 					"severity":   "warning",
 					"type":       "seed",
 					"visibility": "operator",
 				},
 				Annotations: map[string]string{
-					"description": "Seed {{$externalLabels.seed}} has too many etcd snapshot compaction jobs failing in the past 3 hours.",
-					"summary":     "Too many etcd snapshot compaction jobs are failing in the seed.",
+					"description": "Seed {{$externalLabels.seed}} has more than 10 percent of shoot namespaces with at least one etcd snapshot compaction job failure in the past 3 hours.",
+					"summary":     "Too many shoot namespaces have failing etcd snapshot compaction jobs.",
+				},
+			},
+			{
+				Alert: "EtcdSnapshotCompactionJobsFailingForNamespace",
+				Expr:  intstr.FromString(`sum by (etcd_namespace) (increase(etcddruid_compaction_jobs_total{succeeded="false", failureReason=~"processFailure|unknown"}[3h])) / sum by (etcd_namespace) (increase(etcddruid_compaction_jobs_total[3h])) > 0.1`),
+				Labels: map[string]string{
+					"severity":   "warning",
+					"type":       "seed",
+					"visibility": "operator",
+				},
+				Annotations: map[string]string{
+					"description": "Namespace {{$labels.etcd_namespace}} on seed {{$externalLabels.seed}} has more than 10 percent of etcd snapshot compaction jobs failing in the past 3 hours.",
+					"summary":     "Too many etcd snapshot compaction jobs are failing for a specific namespace.",
+				},
+			},
+			{
+				Alert: "EtcdFullSnapshotsFailingForNamespace",
+				Expr:  intstr.FromString(`sum by (etcd_namespace) (increase(etcddruid_compaction_full_snapshot_triggered_total{succeeded="false"}[3h])) / sum by (etcd_namespace) (increase(etcddruid_compaction_full_snapshot_triggered_total[3h])) > 0.1`),
+				Labels: map[string]string{
+					"severity":   "warning",
+					"type":       "seed",
+					"visibility": "operator",
+				},
+				Annotations: map[string]string{
+					"description": "Namespace {{$labels.etcd_namespace}} on seed {{$externalLabels.seed}} has more than 10 percent of etcd full snapshots (triggered by compaction controller) failing in the past 3 hours.",
+					"summary":     "Too many etcd full snapshots are failing for a specific namespace.",
 				},
 			},
 		}
