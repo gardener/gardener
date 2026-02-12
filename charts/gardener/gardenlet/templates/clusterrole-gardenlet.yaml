@@ -271,8 +271,8 @@ rules:
   - infrastructures
   - networks
   - operatingsystemconfigs
-  - workers
   - selfhostedshootexposures
+  - workers
   verbs:
   - create
   - delete
@@ -293,8 +293,8 @@ rules:
   - infrastructures/status
   - networks/status
   - operatingsystemconfigs/status
-  - workers/status
   - selfhostedshootexposures/status
+  - workers/status
   verbs:
   - patch
   - update
