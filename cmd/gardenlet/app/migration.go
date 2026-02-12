@@ -155,8 +155,7 @@ func migrateOTelCollectorAnnotations(ctx context.Context, seedClient client.Clie
 				return fmt.Errorf("failed updating ManagedResource %q: %w", otelCollectorKey, err)
 			}
 
-			twoMinutes := 2 * time.Minute
-			timeoutSeedCtx, cancelSeedCtx := context.WithTimeout(ctx, twoMinutes)
+			timeoutSeedCtx, cancelSeedCtx := context.WithTimeout(ctx, 2*time.Minute)
 			defer cancelSeedCtx()
 			if err = managedresources.WaitUntilHealthy(timeoutSeedCtx, seedClient, otelCollectorManagedResource.Namespace, otelCollectorManagedResource.Name); err != nil {
 				return fmt.Errorf("waiting for ManagedResource %q to become healthy failed: %w", otelCollectorKey, err)
