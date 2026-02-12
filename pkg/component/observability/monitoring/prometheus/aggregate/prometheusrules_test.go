@@ -43,7 +43,7 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 				},
 				Annotations: map[string]string{
 					"description": "Seed {{$externalLabels.seed}} has more than 10 percent of shoot namespaces with at least one etcd snapshot compaction job failure in the past 3 hours.",
-					"summary":     "Too many shoot namespaces have etcd snapshot compaction job failures.",
+					"summary":     "Too many shoot namespaces have failing etcd snapshot compaction jobs.",
 				},
 			},
 			{
