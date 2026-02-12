@@ -593,7 +593,7 @@ var _ = Describe("ShootSystem", func() {
 							{
 								APIGroups: []string{""},
 								Resources: []string{"nodes"},
-								Verbs:     []string{"get"},
+								Verbs:     []string{"get", "list", "watch"},
 							},
 						},
 					}

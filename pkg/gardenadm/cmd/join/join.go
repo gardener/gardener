@@ -13,7 +13,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -25,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	"github.com/gardener/gardener/pkg/nodeagent"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -106,15 +106,11 @@ func run(ctx context.Context, opts *Options) error {
 	}
 	b.Shoot.SetInfo(cluster.Shoot)
 
-	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: b.HostName}}
-
-	nodeJoinedAlready := true
-	if err := b.ShootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("failed retrieving node %s: %w", node.Name, err)
-		}
-		nodeJoinedAlready = false
+	node, err := nodeagent.FetchNodeByHostName(ctx, b.ShootClientSet.Client(), b.HostName)
+	if err != nil {
+		return fmt.Errorf("failed retrieving node for hostname %s: %w", b.HostName, err)
 	}
+	nodeJoinedAlready := node != nil
 
 	var (
 		g                       = flow.NewGraph("join")
@@ -164,11 +160,16 @@ func run(ctx context.Context, opts *Options) error {
 		_ = g.Add(flow.Task{
 			Name: "Waiting for node to join the cluster and become ready",
 			Fn: func(ctx context.Context) error {
-				log := b.Logger.WithValues("nodeName", node.Name)
+				log := b.Logger.WithValues("hostName", b.HostName)
 
 				return flow.Sequential(
 					func(ctx context.Context) error {
-						return waitForNodeToJoinCluster(ctx, log, b.ShootClientSet.Client(), node)
+						node, err = waitForNodeToJoinCluster(ctx, log, b.ShootClientSet.Client(), b.HostName)
+						if err != nil {
+							return err
+						}
+						log = log.WithValues("node", node.Name)
+						return nil
 					},
 					func(ctx context.Context) error {
 						return waitForOperatingSystemConfigToBeApplied(ctx, log, b.ShootClientSet.Client(), node, gardenerNodeAgentSecret)
@@ -190,11 +191,11 @@ func run(ctx context.Context, opts *Options) error {
 
 	if opts.ControlPlane {
 		fmt.Fprintf(opts.Out, `
-Your node has successfully been instructed to join the cluster as a control-plane instance!
+Your node has successfully joined the cluster as a control-plane instance!
 `)
 	} else {
 		fmt.Fprintf(opts.Out, `
-Your node has successfully been instructed to join the cluster as a worker!
+Your node has successfully joined the cluster as a worker!
 `)
 	}
 
@@ -205,10 +206,7 @@ command on any control plane node:
 
   gardenadm token delete %s
 
-Run 'kubectl get nodes' on the control-plane to see this node join the cluster.
-In case it isn't appearing within two minutes, you can check the logs of
-gardener-node-agent by running 'journalctl -u gardener-node-agent', or the
-logs of kubelet by running 'journalctl -u kubelet'.
+Run 'kubectl get nodes' on the control-plane to see this node in the cluster.
 `, opts.BootstrapToken)
 
 	return nil
@@ -276,17 +274,19 @@ func getFirstWorkerPoolName(workers []gardencorev1beta1.Worker) (string, error) 
 	return "", fmt.Errorf("no non-control-plane pool found in Shoot manifest")
 }
 
-func waitForNodeToJoinCluster(ctx context.Context, log logr.Logger, c client.Client, node *corev1.Node) error {
+func waitForNodeToJoinCluster(ctx context.Context, log logr.Logger, c client.Client, hostName string) (*corev1.Node, error) {
 	log.Info("Waiting for node to join the cluster")
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
-	return retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (done bool, err error) {
-		if err := c.Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
-			if apierrors.IsNotFound(err) {
-				return retry.MinorError(fmt.Errorf("node %s did not yet join the cluster: %w", node.Name, err))
-			}
-			return retry.SevereError(fmt.Errorf("failed to get node %s: %w", node.Name, err))
+	var node *corev1.Node
+	return node, retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (done bool, err error) {
+		node, err = nodeagent.FetchNodeByHostName(ctx, c, hostName)
+		if err != nil {
+			return retry.SevereError(fmt.Errorf("failed to get node for hostname %s: %w", hostName, err))
+		}
+		if node == nil {
+			return retry.MinorError(fmt.Errorf("node did not yet join the cluster: %w", err))
 		}
 		return retry.Ok()
 	})
@@ -303,12 +303,10 @@ func waitForOperatingSystemConfigToBeApplied(ctx context.Context, log logr.Logge
 		}
 
 		secretChecksum := gardenerNodeAgentSecret.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig]
-		if nodeChecksum, ok := node.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig]; nodeChecksum != secretChecksum {
-			if !ok {
-				return retry.MinorError(fmt.Errorf("the last successfully applied operating system config on node %q hasn't been reported yet", node.Name))
-			} else {
-				return retry.MinorError(fmt.Errorf("the last successfully applied operating system config on node %q is outdated (current: %s, desired: %s)", node.Name, nodeChecksum, secretChecksum))
-			}
+		if nodeChecksum, ok := node.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig]; !ok {
+			return retry.MinorError(fmt.Errorf("the last successfully applied operating system config on node %q hasn't been reported yet", node.Name))
+		} else if nodeChecksum != secretChecksum {
+			return retry.MinorError(fmt.Errorf("the last successfully applied operating system config on node %q is outdated (current: %s, desired: %s)", node.Name, nodeChecksum, secretChecksum))
 		}
 
 		return retry.Ok()

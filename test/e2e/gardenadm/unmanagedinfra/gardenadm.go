@@ -220,7 +220,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			stdOut, _, err = execute(ctx, 1, append(joinCommand, "--log-level=debug")...)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(ctx, stdOut).Should(gbytes.Say("Your node has successfully been instructed to join the cluster as a worker!"))
+			Eventually(ctx, stdOut).Should(gbytes.Say("Your node has successfully joined the cluster as a worker!"))
 		}, SpecTimeout(time.Minute))
 
 		It("should see the joined node and observe its readiness", func(ctx SpecContext) {

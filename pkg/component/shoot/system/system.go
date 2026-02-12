@@ -503,7 +503,7 @@ func (s *shootSystem) selfHostedShootResources() []client.Object {
 				{
 					APIGroups: []string{corev1.SchemeGroupVersion.Group},
 					Resources: []string{"nodes"},
-					Verbs:     []string{"get"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 			},
 		}
