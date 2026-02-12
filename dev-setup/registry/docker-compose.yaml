@@ -19,6 +19,14 @@ services:
     volumes:
       - ../../dev/local-registry/gcr:/var/lib/registry
       - ./config.yaml:/etc/distribution/config.yml
+  registry-cache-cgr:
+    container_name: registry-cache-cgr
+    image: europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0
+    environment:
+      REGISTRY_PROXY_REMOTEURL: https://cgr.dev
+    volumes:
+      - ../../dev/local-registry/cgr:/var/lib/registry
+      - ./config.yaml:/etc/distribution/config.yml
     networks:
       kind:
         aliases:

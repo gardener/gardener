@@ -1,0 +1,4 @@
+server = "https://cgr.dev"
+
+[host."http://cgr.registry-cache.local.gardener.cloud:5001"]
+  capabilities = ["pull", "resolve"]
