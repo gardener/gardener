@@ -83,7 +83,6 @@ func (b *GardenadmBotanist) deployOperatingSystemConfig(ctx context.Context) (*o
 	if err != nil {
 		return nil, "", fmt.Errorf("failed computing files for static control plane pods: %w", err)
 	}
-	b.staticPodNameToHash = pods.nameToHashMap()
 
 	files, err := b.appendAdminKubeconfigToFiles(pods.allFiles())
 	if err != nil {

@@ -9,15 +9,12 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -37,10 +34,8 @@ import (
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
-	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -167,39 +162,6 @@ func (b *GardenadmBotanist) DeployControlPlaneDeployments(ctx context.Context) e
 	return nil
 }
 
-// WaitUntilControlPlaneDeploymentsReady waits until the control plane deployments are ready. It checks that the
-// operating system config has been updated for all worker pools. In addition, it verifies that the static pod hashes
-// match the desired hashes.
-func (b *GardenadmBotanist) WaitUntilControlPlaneDeploymentsReady(ctx context.Context) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, botanist.GetTimeoutWaitOperatingSystemConfigUpdated(b.Shoot))
-	defer cancel()
-
-	if err := retry.Until(timeoutCtx, botanist.IntervalWaitOperatingSystemConfigUpdated, func(ctx context.Context) (done bool, err error) {
-		staticPodList := &corev1.PodList{}
-		if err := b.SeedClientSet.Client().List(ctx, staticPodList, client.InNamespace(b.Shoot.ControlPlaneNamespace), client.MatchingLabels{staticpod.LabelKeyIsStaticPod: staticpod.LabelValueIsStaticPod}); err != nil {
-			// kube-apiserver might restart, hence, we should tolerate that it is temporarily not available. That's why
-			// we use retry.MinorError here instead of retry.SevereError.
-			return retry.MinorError(fmt.Errorf("failed listing static pods in namespace %q: %w", b.Shoot.ControlPlaneNamespace, err))
-		}
-
-		staticPodNameToHash := make(map[string]string)
-		for _, pod := range staticPodList.Items {
-			staticPodNameToHash[strings.TrimSuffix(pod.Name, "-"+pod.Spec.NodeName)] = pod.Annotations[staticpod.AnnotationKeyHash]
-		}
-
-		if !maps.Equal(staticPodNameToHash, b.staticPodNameToHash) {
-			b.Logger.Info("Waiting for all static pods to be updated to the desired state", "differences", cmp.Diff(staticPodNameToHash, b.staticPodNameToHash))
-			return retry.MinorError(fmt.Errorf("not all static pods have been updated yet"))
-		}
-
-		return retry.Ok()
-	}); err != nil {
-		return fmt.Errorf("failed waiting for all static pods to be updated to the desired state: %w", err)
-	}
-
-	return b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx)
-}
-
 func (b *GardenadmBotanist) deployControlPlaneDeployments(ctx context.Context) error {
 	for _, component := range b.staticControlPlaneComponents() {
 		if err := b.deployControlPlaneComponent(ctx, component.deploy, component.targetObject, component.name); err != nil {
@@ -259,7 +221,6 @@ func (b *GardenadmBotanist) populateStaticAdminTokenToAccessTokenSecret(ctx cont
 type staticPod struct {
 	name  string
 	files []extensionsv1alpha1.File
-	hash  string
 }
 
 type staticPods []staticPod
@@ -272,14 +233,6 @@ func (s staticPods) allFiles() []extensionsv1alpha1.File {
 	return files
 }
 
-func (s staticPods) nameToHashMap() map[string]string {
-	m := make(map[string]string, len(s))
-	for _, pod := range s {
-		m[pod.name] = pod.hash
-	}
-	return m
-}
-
 func (b *GardenadmBotanist) staticControlPlanePods(ctx context.Context) (staticPods, error) {
 	var pods staticPods
 
@@ -288,15 +241,14 @@ func (b *GardenadmBotanist) staticControlPlanePods(ctx context.Context) (staticP
 			return nil, fmt.Errorf("failed reading object for %q: %w", component.name, err)
 		}
 
-		f, hash, err := staticpod.Translate(ctx, b.SeedClientSet.Client(), component.targetObject, component.mutate)
+		files, _, err := staticpod.Translate(ctx, b.SeedClientSet.Client(), component.targetObject, component.mutate)
 		if err != nil {
 			return nil, fmt.Errorf("failed translating object of type %T for %q: %w", component.targetObject, component.name, err)
 		}
 
 		pods = append(pods, staticPod{
 			name:  component.name,
-			files: f,
-			hash:  hash,
+			files: files,
 		})
 	}
 

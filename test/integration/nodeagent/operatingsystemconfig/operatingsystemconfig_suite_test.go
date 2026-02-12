@@ -6,11 +6,13 @@ package operatingsystemconfig_test
 
 import (
 	"context"
+	"io"
 	"testing"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -38,9 +40,10 @@ func TestOperatingSystemConfig(t *testing.T) {
 const testID = "osc-controller-test"
 
 var (
-	ctx   = context.Background()
-	log   logr.Logger
-	codec runtime.Codec
+	ctx       = context.Background()
+	log       logr.Logger
+	logBuffer *gbytes.Buffer
+	codec     runtime.Codec
 
 	restConfig *rest.Config
 	testEnv    *envtest.Environment
@@ -59,7 +62,8 @@ func init() {
 }
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	logBuffer = gbytes.NewBuffer()
+	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(io.MultiWriter(GinkgoWriter, logBuffer))))
 	log = logf.Log.WithName(testID)
 
 	By("Start test environment")
