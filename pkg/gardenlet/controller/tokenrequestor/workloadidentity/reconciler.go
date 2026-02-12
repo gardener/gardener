@@ -23,6 +23,7 @@ import (
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	securityv1alpha1constants "github.com/gardener/gardener/pkg/apis/security/v1alpha1/constants"
 	securityclientset "github.com/gardener/gardener/pkg/client/security/clientset/versioned"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 const (
@@ -34,11 +35,9 @@ type Reconciler struct {
 	SeedClient           client.Client
 	GardenClient         client.Client
 	GardenSecurityClient securityclientset.Interface
-	ConcurrentSyncs      int
+	Config               *gardenletconfigv1alpha1.TokenRequestorWorkloadIdentityControllerConfiguration
 	Clock                clock.Clock
 	JitterFunc           func(time.Duration, float64) time.Duration
-
-	TokenExpirationDuration time.Duration
 }
 
 // Reconcile requests and populates tokens.
@@ -83,7 +82,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	tokenRequest, err := r.GardenSecurityClient.SecurityV1alpha1().WorkloadIdentities(workloadIdentityNamespace).CreateToken(ctx, workloadIdentityName, &securityv1alpha1.TokenRequest{
 		Spec: securityv1alpha1.TokenRequestSpec{
 			ContextObject:     contextObject,
-			ExpirationSeconds: ptr.To((int64(r.TokenExpirationDuration / time.Second))),
+			ExpirationSeconds: ptr.To((int64(r.Config.TokenExpirationDuration.Seconds()))),
 		},
 	}, metav1.CreateOptions{})
 	if err != nil {

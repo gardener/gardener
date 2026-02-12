@@ -464,7 +464,7 @@ type TokenRequestorWorkloadIdentityControllerConfiguration struct {
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 	// TokenExpirationDuration is the duration for which the controller will request tokens.
-	// The Gardener API Server may still issue tokens with a shorter duration based on its configuration.
+	// The Gardener API Server may still issue tokens with a shorter or longer duration based on its configuration.
 	// Defaults to 6h.
 	// +optional
 	TokenExpirationDuration *time.Duration `json:"tokenExpirationDuration,omitempty"`

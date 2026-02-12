@@ -27,6 +27,7 @@ import (
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	securityfake "github.com/gardener/gardener/pkg/client/security/clientset/versioned/fake"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/tokenrequestor/workloadidentity"
 )
 
@@ -95,12 +96,14 @@ var _ = Describe("Reconciler", func() {
 			securityClient = &securityfake.Clientset{Fake: testing.Fake{}}
 
 			ctrl = &workloadidentity.Reconciler{
-				SeedClient:              seedClient,
-				GardenClient:            gardenClient,
-				GardenSecurityClient:    securityClient,
-				Clock:                   fakeClock,
-				JitterFunc:              fakeJitter,
-				TokenExpirationDuration: 6 * time.Hour,
+				SeedClient:           seedClient,
+				GardenClient:         gardenClient,
+				GardenSecurityClient: securityClient,
+				Clock:                fakeClock,
+				JitterFunc:           fakeJitter,
+				Config: &gardenletconfigv1alpha1.TokenRequestorWorkloadIdentityControllerConfiguration{
+					TokenExpirationDuration: ptr.To(6 * time.Hour),
+				},
 			}
 
 			secretName = "cloudsecret"

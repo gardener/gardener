@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -35,6 +36,7 @@ import (
 
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/tokenrequestor/workloadidentity"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -157,9 +159,12 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
 	Expect((&workloadidentity.Reconciler{
-		Clock:           fakeClock,
-		JitterFunc:      func(_ time.Duration, _ float64) time.Duration { return time.Second },
-		ConcurrentSyncs: 5,
+		Clock:      fakeClock,
+		JitterFunc: func(_ time.Duration, _ float64) time.Duration { return time.Second },
+		Config: &gardenletconfigv1alpha1.TokenRequestorWorkloadIdentityControllerConfiguration{
+			ConcurrentSyncs:         ptr.To(5),
+			TokenExpirationDuration: ptr.To(6 * time.Hour),
+		},
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
 	By("Start manager")

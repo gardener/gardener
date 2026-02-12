@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -21,7 +22,6 @@ import (
 	securityv1alpha1constants "github.com/gardener/gardener/pkg/apis/security/v1alpha1/constants"
 	securityclientset "github.com/gardener/gardener/pkg/client/security/clientset/versioned"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 // ControllerName is the name of the controller.
@@ -51,16 +51,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		}
 	}
 
-	if r.TokenExpirationDuration <= 0 {
-		r.TokenExpirationDuration = gardenletconfigv1alpha1.DefaultWorkloadIdentityTokenExpirationDuration
-	}
-
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(&corev1.Secret{}, builder.WithPredicates(r.SecretPredicate())).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: r.ConcurrentSyncs,
+			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		Complete(r)
