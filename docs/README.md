@@ -28,7 +28,7 @@
 
 ### Gardener
 
-* [Gardener Info `ConfigMap`](usage/gardener/gardener_info_configmap.md)
+* [Gardener Info `ConfigMap`](operations/configmap.md)
 
 ### Project
 
@@ -97,7 +97,7 @@
 
 ### Observability
 
-* [Logging](usage/observability/logging.md)
+* [Logging](usage/logging.md)
 
 ### Advanced
 
@@ -111,7 +111,7 @@
 
 ### Reference
 
-* [Well-known labels and annotations](usage/reference/well-known-labels-annotations.md) 
+* [Well-known labels and annotations](operations/well-known-labels-annotations.md) 
 
 ## [API Reference](api-reference/README.md)
 

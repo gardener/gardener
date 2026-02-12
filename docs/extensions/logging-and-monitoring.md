@@ -324,7 +324,7 @@ data:
 
 In Kubernetes clusters, container logs are non-persistent and do not survive stopped and destroyed containers. Gardener addresses this problem for the components hosted in a seed cluster by introducing its own managed logging solution. It is integrated with the Gardener monitoring stack to have all troubleshooting context in one place.
 
-!["Cluster Logging Topology"](../usage/observability/images/logging-architecture.png "Cluster Logging Topology")
+!["Cluster Logging Topology"](../usage/images/logging-architecture.png "Cluster Logging Topology")
 
 Gardener logging consists of components in three roles - log collectors and forwarders, log persistency and exploration/consumption interfaces. All of them live in the seed clusters in multiple instances:
 
