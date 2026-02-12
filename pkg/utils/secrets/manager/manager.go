@@ -112,7 +112,7 @@ type (
 	NewOption func(*NewOptions)
 )
 
-// WithNamespaces returns a function which sets the 'WithNamespaces' field to true.
+// WithNamespaces returns a function which configures the namespaces the secrets manager should operate in.
 func WithNamespaces(namespaces ...string) NewOption {
 	return func(options *NewOptions) {
 		options.Namespaces = namespaces
