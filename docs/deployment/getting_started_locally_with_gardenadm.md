@@ -3,7 +3,7 @@
 > [!CAUTION]
 > The `gardenadm` tool is currently under development and considered highly experimental.
 > Do not use it in production environments.
-> Read more about it in [GEP-28](../proposals/28-self-hosted-shoot-clusters.md).
+> Read more about it in [GEP-0028](https://github.com/gardener/enhancements/tree/main/geps/0028-self-hosted-shoot-clusters).
 
 This document walks you through deploying Self-Hosted Shoot Clusters using `gardenadm` on your local machine.
 This setup can be used for trying out and developing `gardenadm` locally without additional infrastructure.

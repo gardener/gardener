@@ -56,7 +56,7 @@ For this, they reused the shoot cluster CA secret (`ca`) to issue new client cer
 With [gardener/gardener#4661](https://github.com/gardener/gardener/issues/4661) we moved away from using client certificates in favor of short-lived, auto-rotated `ServiceAccount` tokens. These tokens are managed by gardener-resource-manager's [`TokenRequestor`](../concepts/resource-manager.md#tokenrequestor).
 Extensions are supposed to reuse this mechanism for requesting tokens and a `generic-token-kubeconfig` for authenticating against shoot clusters.
 
-With [GEP-18](../proposals/18-shoot-CA-rotation.md) (Shoot cluster CA rotation), a dedicated CA will be used for signing client certificates ([gardener/gardener#5779](https://github.com/gardener/gardener/pull/5779)) which will be rotated when triggered by the shoot owner.
+With [GEP-0018](https://github.com/gardener/enhancements/tree/main/geps/0018-shoot-ca-rotation) (Shoot cluster CA rotation), a dedicated CA will be used for signing client certificates ([gardener/gardener#5779](https://github.com/gardener/gardener/pull/5779)) which will be rotated when triggered by the shoot owner.
 With this, extensions cannot reuse the `ca` secret anymore to issue client certificates.
 Hence, extensions must switch to short-lived `ServiceAccount` tokens in order to support the CA rotation feature.
 
@@ -71,7 +71,7 @@ You can take a look at [CA Rotation in Extensions](./ca-rotation.md) for more de
 Gardener creates several certificate authorities (CA) that are used to create server certificates for various components.
 For example, the shoot's etcd has its own CA, the kube-aggregator has its own CA as well, and both are different to the actual cluster's CA.
 
-With [GEP-18](../proposals/18-shoot-CA-rotation.md) (Shoot cluster CA rotation), extensions are required to do the same and generate dedicated CAs for their components (e.g. for signing a server certificate for cloud-controller-manager). They must not depend on the CA secrets managed by gardenlet.
+With [GEP-0018](https://github.com/gardener/enhancements/tree/main/geps/0018-shoot-ca-rotation) (Shoot cluster CA rotation), extensions are required to do the same and generate dedicated CAs for their components (e.g. for signing a server certificate for cloud-controller-manager). They must not depend on the CA secrets managed by gardenlet.
 
 Please see [CA Rotation in Extensions](./ca-rotation.md) for the exact requirements that extensions need to fulfill in order to support the CA rotation feature.
 

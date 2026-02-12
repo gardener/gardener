@@ -1,7 +1,7 @@
 # Local Provider Extension
 
 The "local provider" extension is used to allow the usage of seed and shoot clusters which run entirely locally without any real infrastructure or cloud provider involved.
-It implements Gardener's extension contract ([GEP-1](../proposals/01-extensibility.md)) and thus comprises several controllers and webhooks acting on resources in seed and shoot clusters.
+It implements Gardener's extension contract ([GEP-0001](https://github.com/gardener/enhancements/tree/main/geps/0001-gardener-extensibility)) and thus comprises several controllers and webhooks acting on resources in seed and shoot clusters.
 
 The code is maintained in [`pkg/provider-local`](../../pkg/provider-local).
 
@@ -68,7 +68,7 @@ It contains a static configuration to resolve the DNS names based on `local.gard
 By default, provider-local doesn't require any cloud provider credentials in the shoot's `{Secret,Credentials}Binding` as all infrastructure resources are deployed in the cluster where it runs.
 For this, provider-local uses its in-cluster config to connect to the Kubernetes API server of the seed/bootstrap cluster.
 However, provider-local also supports overwriting the credentials by specifying a `kubeconfig` in the shoot credentials secret.
-This is used in the local setup for [self-hosted shoots with managed infrastructure](../proposals/28-self-hosted-shoot-clusters.md#managed-infrastructure).
+This is used in the local setup for [self-hosted shoots with managed infrastructure](https://github.com/gardener/enhancements/tree/main/geps/0028-self-hosted-shoot-clusters#managed-infrastructure).
 Here, provider-local initially creates the infrastructure resources (e.g., Service, NetworkPolicies, machine Pods, etc.) in the kind cluster (during `gardenadm bootstrap`).
 Later on, `gardenadm init` restores the extension resources within the self-hosted shoot cluster itself, and provider-local – running in the shoot cluster now – needs credentials to access the kind cluster API server to keep managing those resources.
 

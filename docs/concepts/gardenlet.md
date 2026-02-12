@@ -507,7 +507,7 @@ This reconciler periodically (default: every `6h`) performs backups of the state
 It is only started in case the `gardenlet` is responsible for an unmanaged `Seed`, i.e. a `Seed` which is not backed by a `seedmanagement.gardener.cloud/v1alpha1.ManagedSeed` object.
 Alternatively, it can be disabled by setting the `concurrentSyncs=0` for the controller in the `gardenlet`'s component configuration.
 
-Please refer to [GEP-22: Improved Usage of the `ShootState` API](../proposals/22-improved-usage-of-shootstate-api.md) for all information.
+Please refer to [GEP-0022: Improved Usage of the `ShootState` API](https://github.com/gardener/enhancements/tree/main/geps/0022-improved-shootstate-usage) for all information.
 
 ### ["Status" Reconciler](../../pkg/gardenlet/controller/shoot/status)
 
@@ -531,7 +531,7 @@ After the association is made, the `gardenlet` requests a token for the specific
 The `gardenlet` is responsible to keep this token valid by refreshing it periodically.
 The token is then used by components running in the seed cluster in order to present the said `WorkloadIdentity` before external systems, e.g. by calling cloud provider APIs.
 
-Please refer to [GEP-26: Workload Identity - Trust Based Authentication](../proposals/26-workload-identity.md) for more details.
+Please refer to [GEP-0026: Workload Identity - Trust Based Authentication](https://github.com/gardener/enhancements/tree/main/geps/0026-workload-identity) for more details.
 
 ### [`VPAEvictionRequirements` Controller](../../pkg/gardenlet/controller/vpaevictionrequirements)
 

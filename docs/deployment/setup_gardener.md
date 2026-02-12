@@ -129,7 +129,7 @@ For this example, the following choices are made:
 
 Reference documentation:
 - [Extension Contract](../extensions/resources/extension.md#contract-extension-resource)
-- [GEP 01 Extensibility](../proposals/01-extensibility.md)
+- [GEP 0001 Extensibility](https://github.com/gardener/enhancements/tree/main/geps/0001-gardener-extensibility)
 - [Extension Library](../../extensions/README.md#known-extension-implementations)
 
 #### How to install an extension

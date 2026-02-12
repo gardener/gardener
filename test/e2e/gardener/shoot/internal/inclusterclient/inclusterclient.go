@@ -59,7 +59,7 @@ var labels = map[string]string{"e2e-test": "in-cluster-client"}
 // - one pod uses the injected env var
 // - one pod disables injection and relies on the default service link env vars
 // - one pod explicitly overwrites the env var
-// See docs/usage/networking/shoot_kubernetes_service_host_injection.md and docs/proposals/08-shoot-apiserver-via-sni.md
+// See docs/usage/networking/shoot_kubernetes_service_host_injection.md and https://github.com/gardener/enhancements/tree/main/geps/0008-shoot-apiserver-via-sni
 func VerifyInClusterAccessToAPIServer(s *ShootContext) {
 	GinkgoHelper()
 

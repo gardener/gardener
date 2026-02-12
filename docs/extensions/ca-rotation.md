@@ -4,7 +4,7 @@ title: CA Rotation
 
 # CA Rotation in Extensions
 
-[GEP-18](../proposals/18-shoot-CA-rotation.md) proposes adding support for automated rotation of Shoot cluster certificate authorities (CAs).
+[GEP-0018](https://github.com/gardener/enhancements/tree/main/geps/0018-shoot-ca-rotation) proposes adding support for automated rotation of Shoot cluster certificate authorities (CAs).
 This document outlines all the requirements that Gardener extensions need to fulfill in order to support the CA rotation feature.
 
 ## Requirements for Shoot Cluster CA Rotation
@@ -13,7 +13,7 @@ This document outlines all the requirements that Gardener extensions need to ful
 - Extensions cannot issue or use client certificates for authenticating against shoot API servers. Instead, they should use short-lived auto-rotated `ServiceAccount` tokens via gardener-resource-manager's `TokenRequestor`. Also see [Conventions](./conventions.md) and [`TokenRequestor`](../concepts/resource-manager.md#tokenrequestor) documents.
 - Extensions need to generate dedicated CAs for signing server certificates (e.g. `cloud-controller-manager`). There should be one CA per controller and purpose in order to bind the lifecycle to the reconciliation cycle of the respective object for which it is created.
 - CAs managed by extensions should be rotated in lock-step with the shoot cluster CA.
-  When the user triggers a rotation, the gardenlet writes phase and initiation time to `Shoot.status.credentials.rotation.certificateAuthorities.{phase,lastInitiationTime}`. See [GEP-18](../proposals/18-shoot-CA-rotation.md#rotation-sequence-for-cluster-and-client-ca) for a detailed description on what needs to happen in each phase.
+  When the user triggers a rotation, the gardenlet writes phase and initiation time to `Shoot.status.credentials.rotation.certificateAuthorities.{phase,lastInitiationTime}`. See [GEP-0018](https://github.com/gardener/enhancements/tree/main/geps/0018-shoot-ca-rotation#rotation-sequence-for-cluster-and-client-ca) for a detailed description on what needs to happen in each phase.
   Extensions can retrieve this information from [`Cluster.shoot.status`](./cluster.md).
 
 ## Utilities for Secrets Management

@@ -49,7 +49,7 @@ const (
 	// alpha: v1.117.0
 	CloudProfileCapabilities featuregate.Feature = "CloudProfileCapabilities"
 
-	// VersionClassificationLifecycle enables the features introduced by GEP-32,
+	// VersionClassificationLifecycle enables the features introduced by GEP-0032,
 	// including lifecycle-based classification for Kubernetes and machine image versions.
 	// owner: @rapsnx
 	// alpha: v1.136.0

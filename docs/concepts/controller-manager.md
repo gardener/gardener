@@ -32,7 +32,7 @@ The controller also deletes `Bastion`s in case the referenced `Shoot`:
 The deletion of `Bastion`s triggers the `gardenlet` to perform the necessary cleanups in the Seed cluster, so some time can pass between deletion and the `Bastion` actually disappearing.
 Clients like `gardenctl` are advised to not re-use `Bastion`s whose deletion timestamp has been set already.
 
-Refer to [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md) for more information on the lifecycle of
+Refer to [GEP-0015](https://github.com/gardener/enhancements/tree/main/geps/0015-bastion-management) for more information on the lifecycle of
 `Bastion` resources.
 
 ### [`CertificateSigningRequest` Controller](../../pkg/controllermanager/controller/certificatesigningrequest)
@@ -178,7 +178,7 @@ In case a `Lease` is not renewed for the configured amount in `config.controller
 ### [`ManagedSeedSet` Controller](../../pkg/controllermanager/controller/managedseedset)
 
 `ManagedSeedSet` objects maintain a stable set of replicas of `ManagedSeed`s, i.e. they guarantee the availability of a specified number of identical `ManagedSeed`s on an equal number of identical `Shoot`s.
-The `ManagedSeedSet` controller creates and deletes `ManagedSeed`s and `Shoot`s in response to changes to the replicas and selector fields. For more information, refer to the [`ManagedSeedSet` proposal document](../proposals/13-automated-seed-management.md#managedseedsets).
+The `ManagedSeedSet` controller creates and deletes `ManagedSeed`s and `Shoot`s in response to changes to the replicas and selector fields. For more information, refer to the [`ManagedSeedSet` proposal document](https://github.com/gardener/enhancements/tree/main/geps/0013-automated-seed-management/README.md#managedseedsets).
 
 1. The reconciler first gets all the replicas of the given `ManagedSeedSet` in the `ManagedSeedSet`'s namespace and with the matching selector. Each replica is a struct that contains a `ManagedSeed`, its corresponding `Seed` and `Shoot` objects.
 1. Then the pending replica is retrieved, if it exists.

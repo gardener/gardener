@@ -13,7 +13,7 @@ In the first VPN solution, connection establishment was initiated by a VPN clien
 Due to several issues with this solution, the tunnel establishment direction has been reverted.
 The client is deployed in the shoot and initiates the connection from there. This way, there is no need to deploy a special purpose
 loadbalancer for the sake of addressing the data-plane, in addition to saving costs, this is considered the more secure alternative.
-For more information on how this is achieved, please have a look at the following [GEP](../proposals/14-reversed-cluster-vpn.md).
+For more information on how this is achieved, please have a look at the following [GEP-0014](https://github.com/gardener/enhancements/tree/main/geps/0014-reversed-cluster-vpn).
 
 Connection establishment with a reversed tunnel:
 
@@ -75,4 +75,4 @@ If the tunnel controller detects a new kube-apiserver this way, it creates a new
 
 ![Four possible routing paths](content/vpn-ha-routing-paths.png)
 
-For general information about HA control-plane, see [GEP-20](../proposals/20-ha-control-planes.md). 
+For general information about HA control-plane, see [GEP-0020](https://github.com/gardener/enhancements/tree/main/geps/0020-ha-control-planes).

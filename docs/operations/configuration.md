@@ -75,7 +75,7 @@ When the `gardenlet` starts, it scans the `garden` namespace of the garden clust
 * **Global monitoring secrets** (optional) - contains basic authentication credentials for the Prometheus aggregating metrics for all clusters.
   * These secrets are synced to each seed cluster and used to gain access to the aggregate monitoring components.
 
-* **Shoot Service Account Issuer secret** (optional) - contains the configuration needed to centrally configure gardenlets in order to implement [GEP-24](../proposals/24-shoot-oidc-issuer.md). Please see [the example configuration](../../example/10-secret-shoot-service-account-issuer.yaml) for more details.
+* **Shoot Service Account Issuer secret** (optional) - contains the configuration needed to centrally configure gardenlets in order to implement [GEP-0024](https://github.com/gardener/enhancements/tree/main/geps/0024-shoot-oidc-issuer). Please see [the example configuration](../../example/10-secret-shoot-service-account-issuer.yaml) for more details.
   * This secret contains the hostname which will be used to configure the shoot's managed issuer, therefore the value of the hostname should not be changed once configured.
 
 > [!CAUTION]

@@ -16,7 +16,7 @@ When creating or updating a `Shoot`, the cloud profile reference can be set to p
 The modification of a `Shoot`'s cloud profile reference is restricted to switching within the same profile hierarchy, i.e. from a `CloudProfile` to a descendant `NamespacedCloudProfile`, from a `NamespacedCloudProfile` to its parent `CloudProfile` and between `NamespacedCloudProfile`s having the same `CloudProfile` parent.
 Changing the reference from one `CloudProfile` or descendant `NamespacedCloudProfile` to another `CloudProfile` or descendant `NamespacedCloudProfile` is not allowed.
 
-Please see [this](../../../example/35-namespacedcloudprofile.yaml) example manifest and [GEP-25](../../proposals/25-namespaced-cloud-profiles.md) for additional information.
+Please see [this](../../../example/35-namespacedcloudprofile.yaml) example manifest and [GEP-0025](https://github.com/gardener/enhancements/tree/main/geps/0025-namespaced-cloudprofiles) for additional information.
 
 ## Field Modification Restrictions
 

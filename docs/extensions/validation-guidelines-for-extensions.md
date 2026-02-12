@@ -4,7 +4,7 @@ This document provides general developer guidelines on validation practices and 
 
 ## Validation of Provider Configuration
 
-With the implementation of [GEP-01](../proposals/01-extensibility.md) the cloud provider, operating system and networking specific knowledge is extracted to external extension controllers.
+With the implementation of [GEP-0001](https://github.com/gardener/enhancements/tree/main/geps/0001-gardener-extensibility) the cloud provider, operating system and networking specific knowledge is extracted to external extension controllers.
 Gardener itself is provider-agnostic.
 The API resources contain provider configurations.
 The Gardener API Server does not understand these provider configurations and cannot validate them.

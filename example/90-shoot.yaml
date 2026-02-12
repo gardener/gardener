@@ -150,7 +150,7 @@ spec:
     # sysctls: # optional, allows to specify kernel settings to override defaults
     #   net.ipv4.tcp_wmem: "4096 131072 16777216"
     #   net.ipv4.tcp_rmem: "4096 131072 16777216"
-    # controlPlane: # mark the shoot as "self-hosted shoot cluster", see GEP-28
+    # controlPlane: # mark the shoot as "self-hosted shoot cluster", see GEP-0028
     #   backup:
     #     provider: <provider-name> # e.g., aws, azure, gcp, ...
     #     providerConfig:
@@ -400,7 +400,7 @@ spec:
     #   <some-networking-provider-specific-config>
     #   https://github.com/gardener/gardener-extension-networking-calico/blob/master/example/20-network.yaml#L46-L56
     #   https://github.com/gardener/gardener-extension-networking-cilium/blob/master/example/20-network.yaml#L42-L57
-    #   For networking extensibility see also: https://github.com/gardener/gardener/blob/master/docs/proposals/03-networking-extensibility.md
+    #   For networking extensibility see also: https://github.com/gardener/enhancements/tree/main/geps/0003-networking-extensibility
   maintenance:
     timeWindow:
       begin: 220000+0100

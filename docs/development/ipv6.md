@@ -4,8 +4,8 @@
 
 ## IPv6 Single-Stack Networking
 
-[GEP-21](../proposals/21-ipv6-singlestack-local.md) proposes IPv6 Single-Stack Support in the local Gardener environment.
-This documentation will be enhanced while implementing GEP-21, see [gardener/gardener#7051](https://github.com/gardener/gardener/issues/7051).
+[GEP-0021](https://github.com/gardener/enhancements/tree/main/geps/0021-ipv6-singlestack-local) proposes IPv6 Single-Stack Support in the local Gardener environment.
+This documentation will be enhanced while implementing GEP-0021, see [gardener/gardener#7051](https://github.com/gardener/gardener/issues/7051).
 
 For real infrastructure providers, please check the corresponding provider documentation for IPv6 support.
 Furthermore, please check the documentation of your preferred networking extension for IPv6 support.

@@ -19,7 +19,7 @@ It is built on top of the `ConfigInterface` and `DataInterface` interfaces part 
       - `UseOldCA`. This option will sign client certificates with the old CA in case of a CA rotation. For more information, please refer to the ["Certificate Signing"](#certificate-signing) section below.
   - `Persist()`: This marks the secret such that it gets persisted in the `ShootState` resource in the garden cluster. Consequently, it should only be used for secrets related to a shoot cluster.
   - `Rotate(rotationStrategy)`: This specifies the strategy in case this secret is to be rotated or regenerated (either `InPlace` which immediately forgets about the old secret, or `KeepOld` which keeps the old secret in the system).
-  - `IgnoreOldSecrets()`: This specifies that old secrets should not be considered and loaded (contrary to the default behavior). It should be used when old secrets are no longer important and can be "forgotten" (e.g. in ["phase 2" (`t2`) of the CA certificate rotation](../proposals/18-shoot-CA-rotation.md#rotation-sequence-for-cluster-and-client-ca)). Such old secrets will be deleted on `Cleanup()`.
+  - `IgnoreOldSecrets()`: This specifies that old secrets should not be considered and loaded (contrary to the default behavior). It should be used when old secrets are no longer important and can be "forgotten" (e.g. in ["phase 2" (`t2`) of the CA certificate rotation](https://github.com/gardener/enhancements/tree/main/geps/0018-shoot-ca-rotation#rotation-sequence-for-cluster-and-client-ca)). Such old secrets will be deleted on `Cleanup()`.
   - `IgnoreOldSecretsAfter(time.Duration)`: This specifies that old secrets should not be considered and loaded once a given duration after rotation has passed. It can be used to clean up old secrets after automatic rotation (e.g. the Seed cluster CA is automatically rotated when its validity will soon end and the old CA will be cleaned up 24 hours after triggering the rotation).
   - `Validity(time.Duration)`: This specifies how long the secret should be valid. For certificate secret configurations, the manager will automatically deduce this information from the generated certificate.
   - `RenewAfterValidityPercentage(int)`: This specifies the percentage of validity for renewal. The secret will be renewed based on whichever comes first: The specified percentage of validity or 10 days before end of validity. If not specified, the default percentage is `80`.
@@ -81,7 +81,7 @@ As explained above, this returns the bundle secret for the CA `my-ca` which migh
 #### Default Behaviour
 
 By default, client certificates are signed by the current CA while server certificate are signed by the old CA (if it exists).
-This is to ensure a smooth exchange of certificate during a CA rotation (typically has two phases, ref [GEP-18](../proposals/18-shoot-CA-rotation.md#rotation-sequence-for-cluster-and-client-ca)):
+This is to ensure a smooth exchange of certificate during a CA rotation (typically has two phases, ref [GEP-0018](https://github.com/gardener/enhancements/tree/main/geps/0018-shoot-ca-rotation#rotation-sequence-for-cluster-and-client-ca)):
 
 - Client certificates:
   - In phase 1, clients get new certificates as soon as possible to ensure that all clients have been adapted before phase 2.

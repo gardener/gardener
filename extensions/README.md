@@ -4,7 +4,7 @@
 
 Project Gardener implements the automated management and operation of [Kubernetes](https://kubernetes.io/) clusters as a service. Its main principle is to leverage Kubernetes concepts for all of its tasks.
 
-Recently, most of the vendor specific logic has been developed [in-tree](https://github.com/gardener/gardener). However, the project has grown to a size where it is very hard to extend, maintain, and test. With [GEP-1](https://github.com/gardener/gardener/blob/master/docs/proposals/01-extensibility.md) we have proposed how the architecture can be changed in a way to support external controllers that contain their very own vendor specifics. This way, we can keep Gardener core clean and independent.
+Recently, most of the vendor specific logic has been developed [in-tree](https://github.com/gardener/gardener). However, the project has grown to a size where it is very hard to extend, maintain, and test. With [GEP-0001](https://github.com/gardener/enhancements/tree/main/geps/0001-gardener-extensibility) we have proposed how the architecture can be changed in a way to support external controllers that contain their very own vendor specifics. This way, we can keep Gardener core clean and independent.
 
 This directory contains utilities functions and common libraries meant to ease writing the actual extension controllers.
 Please consult https://github.com/gardener/gardener/tree/master/docs/extensions to get more information about the extension contracts.
@@ -92,5 +92,5 @@ Please find further resources about out project here:
 * [Our landing page gardener.cloud](https://gardener.cloud/)
 * ["Gardener, the Kubernetes Botanist" blog on kubernetes.io](https://kubernetes.io/blog/2018/05/17/gardener/)
 * ["Gardener Project Update" blog on kubernetes.io](https://kubernetes.io/blog/2019/12/02/gardener-project-update/)
-* [GEP-1 (Gardener Enhancement Proposal) on extensibility](https://github.com/gardener/gardener/blob/master/docs/proposals/01-extensibility.md)
+* [GEP-0001 (Gardener Enhancement Proposal) on extensibility](https://github.com/gardener/enhancements/tree/main/geps/0001-gardener-extensibility)
 * [Extensibility API documentation](https://github.com/gardener/gardener/tree/master/docs/extensions)

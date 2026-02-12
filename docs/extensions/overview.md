@@ -2,7 +2,7 @@
 
 Initially, everything was developed in-tree in the Gardener project. All cloud providers and the configuration for all the supported operating systems were released together with the Gardener core itself.
 But as the project grew, it got more and more difficult to add new providers and maintain the existing code base.
-As a consequence and in order to become agile and flexible again, we proposed [GEP-1](../proposals/01-extensibility.md) (Gardener Enhancement Proposal) and later [gardener/gardener#9635](https://github.com/gardener/gardener/issues/9635) as an enhancement.
+As a consequence and in order to become agile and flexible again, we proposed [GEP-0001](https://github.com/gardener/enhancements/tree/main/geps/0001-gardener-extensibility) (Gardener Enhancement Proposal) and later [gardener/gardener#9635](https://github.com/gardener/gardener/issues/9635) as an enhancement.
 The document describes an out-of-tree extension architecture that keeps the Gardener core logic independent of provider-specific knowledge (similar to what Kubernetes has achieved with [out-of-tree cloud providers](https://github.com/kubernetes/enhancements/issues/88) or with [CSI volume plugins](https://github.com/kubernetes/community/pull/1258)).
 
 ## Basic Concepts
@@ -180,7 +180,7 @@ Of course, it would have needed to create a `ConfigMap` containing the cloud con
 (Please note for this special example: The Kubernetes community is also working on making the `kube-controller-manager` provider-independent.
 However, there will most probably be still components other than the `kube-controller-manager` which need to be adapted by extensions.)
 
-If you are interested in writing an extension, or generally in digging deeper to find out the nitty-gritty details of the extension concepts, please read [GEP-1](../proposals/01-extensibility.md).
+If you are interested in writing an extension, or generally in digging deeper to find out the nitty-gritty details of the extension concepts, please read [GEP-0001](https://github.com/gardener/enhancements/tree/main/geps/0001-gardener-extensibility).
 We are truly looking forward to your feedback!
 
 ## Known Extensions

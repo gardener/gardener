@@ -722,7 +722,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						Expect(errorList).To(BeEmpty())
 					})
 
-					// NOTE:(rapsn) End of GEP-32 featuregate
+					// NOTE:(rapsn) End of GEP-0032 featuregate
 				})
 
 				// NOTE:(rapsn) K8S
