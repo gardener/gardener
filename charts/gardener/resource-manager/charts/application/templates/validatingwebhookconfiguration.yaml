@@ -81,6 +81,7 @@ webhooks:
     - infrastructures
     - networks
     - operatingsystemconfigs
+    - selfhostedshootexposures
     - workers
     scope: '*'
   sideEffects: None

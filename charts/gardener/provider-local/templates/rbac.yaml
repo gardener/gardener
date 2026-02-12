@@ -24,6 +24,8 @@ rules:
   - infrastructures/status
   - operatingsystemconfigs
   - operatingsystemconfigs/status
+  - selfhostedshootexposures
+  - selfhostedshootexposures/status
   - workers
   - workers/status
   verbs:
