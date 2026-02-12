@@ -173,77 +173,62 @@ func migrateOTelCollectorAnnotations(ctx context.Context, seedClient client.Clie
 func ensureOtelColPipelineConfiguration(collector *otelv1beta1.OpenTelemetryCollector, log logr.Logger) {
 	log.Info("Applying otelcol pipeline configuration", "collector", collector.Name)
 
-	// Set receivers configuration
-	if collector.Spec.Config.Receivers.Object == nil {
-		collector.Spec.Config.Receivers.Object = make(map[string]any)
-	}
-	collector.Spec.Config.Receivers.Object["otlp"] = map[string]any{
-		"protocols": map[string]any{
-			"grpc": map[string]any{
-				"endpoint": "[::]:4317",
+	collector.Spec.Config.Receivers.Object = map[string]any{
+		"otlp": map[string]any{
+			"protocols": map[string]any{
+				"grpc": map[string]any{
+					"endpoint": "[::]:4317",
+				},
 			},
 		},
 	}
 
-	// Set processors configuration
-	if collector.Spec.Config.Processors == nil {
-		collector.Spec.Config.Processors = &otelv1beta1.AnyConfig{Object: make(map[string]any)}
-	}
-	if collector.Spec.Config.Processors.Object == nil {
-		collector.Spec.Config.Processors.Object = make(map[string]any)
-	}
-
-	collector.Spec.Config.Processors.Object["batch"] = map[string]any{
-		"timeout": "10s",
-	}
-
-	collector.Spec.Config.Processors.Object["resource/vali"] = map[string]any{
-		"attributes": []any{
-			map[string]any{"action": "insert", "from_attribute": "k8s.node.name", "key": "nodename"},
-			map[string]any{"action": "insert", "from_attribute": "k8s.pod.name", "key": "pod_name"},
-			map[string]any{"action": "insert", "from_attribute": "k8s.container.name", "key": "container_name"},
-			map[string]any{"action": "insert", "from_attribute": "k8s.namespace.name", "key": "namespace_name"},
-			map[string]any{"action": "insert", "key": "loki.resource.labels", "value": "job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role"},
-			map[string]any{"action": "insert", "key": "loki.format", "value": "raw"},
+	collector.Spec.Config.Processors = &otelv1beta1.AnyConfig{
+		Object: map[string]any{
+			"batch": map[string]any{
+				"timeout": "10s",
+			},
+			"resource/vali": map[string]any{
+				"attributes": []any{
+					map[string]any{"action": "insert", "from_attribute": "k8s.node.name", "key": "nodename"},
+					map[string]any{"action": "insert", "from_attribute": "k8s.pod.name", "key": "pod_name"},
+					map[string]any{"action": "insert", "from_attribute": "k8s.container.name", "key": "container_name"},
+					map[string]any{"action": "insert", "from_attribute": "k8s.namespace.name", "key": "namespace_name"},
+					map[string]any{"action": "insert", "key": "loki.resource.labels", "value": "job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role"},
+					map[string]any{"action": "insert", "key": "loki.format", "value": "raw"},
+				},
+			},
+			"attributes/vali": map[string]any{
+				"actions": []any{
+					map[string]any{"action": "insert", "from_attribute": "k8s.node.name", "key": "nodename"},
+					map[string]any{"action": "insert", "from_attribute": "k8s.pod.name", "key": "pod_name"},
+					map[string]any{"action": "insert", "from_attribute": "k8s.container.name", "key": "container_name"},
+					map[string]any{"action": "insert", "from_attribute": "k8s.namespace.name", "key": "namespace_name"},
+					map[string]any{"action": "upsert", "key": "loki.attribute.labels", "value": "priority, level, process.command, process.pid, host.name, host.id, service.name, service.namespace, job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role"},
+					map[string]any{"action": "insert", "key": "loki.format", "value": "raw"},
+				},
+			},
 		},
 	}
 
-	collector.Spec.Config.Processors.Object["attributes/vali"] = map[string]any{
-		"actions": []any{
-			map[string]any{"action": "insert", "from_attribute": "k8s.node.name", "key": "nodename"},
-			map[string]any{"action": "insert", "from_attribute": "k8s.pod.name", "key": "pod_name"},
-			map[string]any{"action": "insert", "from_attribute": "k8s.container.name", "key": "container_name"},
-			map[string]any{"action": "insert", "from_attribute": "k8s.namespace.name", "key": "namespace_name"},
-			map[string]any{"action": "upsert", "key": "loki.attribute.labels", "value": "priority, level, process.command, process.pid, host.name, host.id, service.name, service.namespace, job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role"},
-			map[string]any{"action": "insert", "key": "loki.format", "value": "raw"},
+	collector.Spec.Config.Exporters.Object = map[string]any{
+		"loki": map[string]any{
+			"endpoint": "http://logging:3100/vali/api/v1/push",
+			"default_labels_enabled": map[string]any{
+				"exporter": false,
+				"job":      false,
+			},
+		},
+		"debug/logs": map[string]any{
+			"verbosity": "basic",
 		},
 	}
 
-	// Set exporters configuration
-	if collector.Spec.Config.Exporters.Object == nil {
-		collector.Spec.Config.Exporters.Object = make(map[string]any)
-	}
-
-	collector.Spec.Config.Exporters.Object["loki"] = map[string]any{
-		"endpoint": "http://logging:3100/vali/api/v1/push",
-		"default_labels_enabled": map[string]any{
-			"exporter": false,
-			"job":      false,
+	collector.Spec.Config.Service.Pipelines = map[string]*otelv1beta1.Pipeline{
+		"logs/vali": {
+			Receivers:  []string{"otlp"},
+			Processors: []string{"resource/vali", "attributes/vali", "batch"},
+			Exporters:  []string{"loki", "debug/logs"},
 		},
-	}
-
-	collector.Spec.Config.Exporters.Object["debug/logs"] = map[string]any{
-		"verbosity": "basic",
-	}
-
-	// Set service pipelines configuration
-	if collector.Spec.Config.Service.Pipelines == nil {
-		collector.Spec.Config.Service.Pipelines = make(map[string]*otelv1beta1.Pipeline)
-	}
-
-	collector.Spec.Config.Service.Pipelines["logs/vali"] = &otelv1beta1.Pipeline{
-		Receivers:  []string{"otlp"},
-		Processors: []string{"resource/vali", "attributes/vali", "batch"},
-		Exporters:  []string{"loki", "debug/logs"},
 	}
 }
