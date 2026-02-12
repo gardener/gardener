@@ -21,7 +21,8 @@ patches:
     - op: add
       path: /spec/provider/workers/1/machine/image/version
       value: 1.0.0
-    - op: add
-      path: /spec/provider/workers/0/controlPlane/exposure
-      value: 
-        extension: {}
+# TODO: Add once implemented in provider local
+#    - op: add
+#      path: /spec/provider/workers/0/controlPlane/exposure
+#      value:
+#        extension: {}

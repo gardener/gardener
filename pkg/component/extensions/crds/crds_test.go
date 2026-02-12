@@ -164,7 +164,7 @@ var _ = Describe("#CRDs", func() {
 			Entry("Infrastructure", "infrastructures.extensions.gardener.cloud", Succeed()),
 			Entry("Network", "networks.extensions.gardener.cloud", Succeed()),
 			Entry("OperatingSystemConfig", "operatingsystemconfigs.extensions.gardener.cloud", Succeed()),
-			Entry("SelfHostedShootExposure", "selfhostedshootexposures.extensions.gardener.cloud", BeNotFoundError()),
+			Entry("SelfHostedShootExposure", "selfhostedshootexposures.extensions.gardener.cloud", Succeed()),
 			Entry("Worker", "workers.extensions.gardener.cloud", Succeed()),
 		)
 
