@@ -75,7 +75,7 @@ func (i IpifyDetector) getPublicIP(parentCtx context.Context, log logr.Logger, i
 		i.Client = http.DefaultClient
 	}
 
-	resp, err := i.Client.Do(req)
+	resp, err := i.Client.Do(req) // #nosec: G704 -- URL is from ipify.org API configuration, not user input.
 	if err != nil {
 		return nil, fmt.Errorf("error determining public %s address: %w", ipFamily, err)
 	}

@@ -456,7 +456,7 @@ func (h *httpConnectTransport) RoundTrip(req *http.Request) (*http.Response, err
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", h.bearerToken))
 	}
 
-	return h.httpConnectClient.Do(req)
+	return h.httpConnectClient.Do(req) // #nosec: G704 -- Test code with controlled URLs.
 }
 
 type injectHeaderTransport struct {

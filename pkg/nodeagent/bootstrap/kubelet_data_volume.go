@@ -26,7 +26,7 @@ var (
 	// ExecScript is a function for executing the formatting script.
 	// Exposed for testing.
 	ExecScript = func(scriptPath string) ([]byte, error) {
-		return exec.Command("/usr/bin/env", "bash", scriptPath).CombinedOutput()
+		return exec.Command("/usr/bin/env", "bash", scriptPath).CombinedOutput() // #nosec: G204 -- Script path is controlled internally.
 	}
 )
 

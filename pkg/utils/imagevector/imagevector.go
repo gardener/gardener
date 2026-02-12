@@ -47,7 +47,7 @@ func Read(buf []byte) (ImageVector, error) {
 
 // ReadFile reads an ImageVector from the file with the given name.
 func ReadFile(name string) (ImageVector, error) {
-	buf, err := os.ReadFile(name) // #nosec: G304 -- ImageVectorOverwrite is a feature. In reality files can be read from the Pod's file system only.
+	buf, err := os.ReadFile(name) // #nosec: G304,G703 -- ImageVectorOverwrite is a feature. In reality files can be read from the Pod's file system only.
 	if err != nil {
 		return nil, err
 	}

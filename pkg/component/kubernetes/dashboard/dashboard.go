@@ -350,6 +350,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 							{
 								Name: "kubernetes-dashboard-certs",
 								VolumeSource: corev1.VolumeSource{
+									// #nosec: G101 -- This references a secret name, not a credential.
 									Secret: &corev1.SecretVolumeSource{
 										SecretName: "kubernetes-dashboard-certs",
 									},

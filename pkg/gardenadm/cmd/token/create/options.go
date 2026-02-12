@@ -42,7 +42,7 @@ type Token struct {
 	// ID is the token id.
 	ID string
 	// Secret is the token secret.
-	Secret string
+	Secret string // #nosec: G117 -- Field name for token structure.
 	// Combined is the token in the form '<id>.<secret>'.
 	Combined string
 }

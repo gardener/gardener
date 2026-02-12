@@ -786,7 +786,7 @@ func (r *Reconciler) checkKubeletHealth(ctx context.Context, log logr.Logger, no
 	}
 
 	if err := retryutils.UntilTimeout(ctx, KubeletHealthCheckRetryInterval, KubeletHealthCheckRetryTimeout, func(_ context.Context) (bool, error) {
-		if response, err2 := httpClient.Do(request); err2 != nil {
+		if response, err2 := httpClient.Do(request); err2 != nil { // #nosec: G704 -- URL is kubelet health endpoint, not user input.
 			return retryutils.MinorError(fmt.Errorf("HTTP request to kubelet health endpoint failed: %w", err2))
 		} else if response.StatusCode == http.StatusOK {
 			log.Info("Kubelet is healthy after in-place update")
@@ -1021,7 +1021,7 @@ var GetOSVersion = func(inPlaceUpdates *extensionsv1alpha1.InPlaceUpdates, fs af
 
 // ExecCommandCombinedOutput executes the given command with the given arguments and returns the combined output. Exposed for testing.
 var ExecCommandCombinedOutput = func(ctx context.Context, command string, args ...string) ([]byte, error) {
-	return exec.CommandContext(ctx, command, args...).CombinedOutput()
+	return exec.CommandContext(ctx, command, args...).CombinedOutput() // #nosec: G204 -- Command and args are controlled internally.
 }
 
 func (r *Reconciler) updateOSInPlace(ctx context.Context, log logr.Logger, oscChanges *operatingSystemConfigChanges, osc *extensionsv1alpha1.OperatingSystemConfig, node *corev1.Node) error {

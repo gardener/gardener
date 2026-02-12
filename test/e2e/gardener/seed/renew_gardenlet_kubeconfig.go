@@ -52,6 +52,7 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 		})
 
 		It("Create gardenlet kubeconfig rotation verifier", func(_ SpecContext) {
+			// #nosec: G101 -- This is a secret name reference, not a hardcoded credential.
 			verifier = rotation.GardenletKubeconfigRotationVerifier{
 				GardenReader:                       s.GardenClient,
 				SeedReader:                         s.SeedClient,

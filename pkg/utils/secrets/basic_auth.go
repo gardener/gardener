@@ -43,7 +43,7 @@ type BasicAuth struct {
 	Name string
 
 	Username string
-	Password string
+	Password string // #nosec: G117 -- Field name for basic auth password.
 	auth     []byte
 }
 

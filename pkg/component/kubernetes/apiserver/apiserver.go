@@ -254,7 +254,7 @@ type TLSSNIConfig struct {
 	Certificate []byte
 	// PrivateKey is the TLS certificate. Either both this and Certificate, or SecretName must be specified. If both is
 	// provided, SecretName is taking precedence.
-	PrivateKey []byte
+	PrivateKey []byte // #nosec: G117 -- Field name for TLS private key bytes.
 	// DomainPatterns is an optional list of domain patterns which are fully qualified domain names, possibly with
 	// prefixed wildcard segments. The domain patterns also allow IP addresses, but IPs should only be used if the
 	// apiserver has visibility to the IP address requested by a client. If no domain patterns are provided, the names

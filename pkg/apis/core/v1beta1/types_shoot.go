@@ -1200,7 +1200,7 @@ type OpenIDConnectClientAuthentication struct {
 	ExtraConfig map[string]string `json:"extraConfig,omitempty" protobuf:"bytes,1,rep,name=extraConfig"`
 	// The client Secret for the OpenID Connect client.
 	// +optional
-	Secret *string `json:"secret,omitempty" protobuf:"bytes,2,opt,name=secret"`
+	Secret *string `json:"secret,omitempty" protobuf:"bytes,2,opt,name=secret"` // #nosec: G117 -- Field name for API spec.
 }
 
 // AdmissionPlugin contains information about a specific admission plugin and its corresponding configuration.
