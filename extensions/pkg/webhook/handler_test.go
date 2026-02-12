@@ -176,8 +176,9 @@ var _ = Describe("Handler", func() {
 				AdmissionResponse: admissionv1.AdmissionResponse{
 					Allowed: false,
 					Result: &metav1.Status{
-						Code:    http.StatusUnprocessableEntity,
+						Code:    http.StatusForbidden,
 						Message: "test error",
+						Reason:  metav1.StatusReasonForbidden,
 					},
 				},
 			}))
