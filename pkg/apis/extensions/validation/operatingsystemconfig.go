@@ -266,28 +266,49 @@ func ValidateUnits(units []extensionsv1alpha1.Unit, pathsFromFiles sets.Set[stri
 func validateFileDuplicates(osc *extensionsv1alpha1.OperatingSystemConfig) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	paths := map[string][]extensionsv1alpha1.File{}
+	type fileScope struct {
+		isGlobal  bool
+		hostNames sets.Set[string]
+	}
+
+	filePathToScope := make(map[string]*fileScope)
 
 	check := func(files []extensionsv1alpha1.File, fldPath *field.Path) {
 		for i, file := range files {
-			idxPath := fldPath.Index(i)
+			if len(file.Path) == 0 {
+				continue
+			}
 
-			if file.Path != "" {
-				var fileList []extensionsv1alpha1.File
-				if files, ok := paths[file.Path]; ok {
-					for _, f := range files {
-						if file.HostName == nil && f.HostName == nil ||
-							file.HostName != nil && f.HostName != nil && *file.HostName == *f.HostName {
-							allErrs = append(allErrs, field.Duplicate(idxPath.Child("path"), file.Path))
-							break
-						}
-					}
-
-					fileList = files
+			scope, ok := filePathToScope[file.Path]
+			// New file path cannot have conflicts.
+			if !ok {
+				scope = &fileScope{
+					isGlobal:  file.HostName == nil,
+					hostNames: sets.New[string](),
 				}
+				if file.HostName != nil {
+					scope.hostNames.Insert(*file.HostName)
+				}
+				filePathToScope[file.Path] = scope
+				continue
+			}
 
-				fileList = append(fileList, file)
-				paths[file.Path] = fileList
+			// Global file (no hostName) conflicts with any other entry for same path.
+			if file.HostName == nil {
+				allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("path"), file.Path))
+				continue
+			}
+
+			// Host-specific file conflicts with global file.
+			if scope.isGlobal {
+				allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("path"), file.Path))
+				continue
+			}
+
+			// Host-specific file duplicate for same host and same path.
+			if scope.hostNames.Has(*file.HostName) {
+				allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("path"), file.Path))
+				continue
 			}
 		}
 	}

@@ -3264,7 +3264,8 @@ string
 <td>
 <em>(Optional)</em>
 <p>HostName contains the name of the host for host-specific configurations.
-If HostName is not empty the corresponding file will only be rolled out to the host with the specified name.</p>
+If HostName is not empty the corresponding file will only be rolled out to the host with the specified name.
+Duplicate paths are only allowed if HostName is specified for all of them, none is nil and all values differ.</p>
 </td>
 </tr>
 </tbody>

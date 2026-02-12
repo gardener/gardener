@@ -512,8 +512,8 @@ func mergeUnits(specUnits, statusUnits []extensionsv1alpha1.Unit) []extensionsv1
 
 // CollectAllFiles returns the list of all files from spec and status of the given OSC, optionally filtered for the given node.
 func CollectAllFiles(osc *extensionsv1alpha1.OperatingSystemConfig, hostName string) []extensionsv1alpha1.File {
-	clone := slices.Clone(append(osc.Spec.Files, osc.Status.ExtensionFiles...))
-	return slices.DeleteFunc(clone, func(file extensionsv1alpha1.File) bool {
+	allFiles := slices.Clone(append(osc.Spec.Files, osc.Status.ExtensionFiles...))
+	return slices.DeleteFunc(allFiles, func(file extensionsv1alpha1.File) bool {
 		return file.HostName != nil && *file.HostName != hostName
 	})
 }

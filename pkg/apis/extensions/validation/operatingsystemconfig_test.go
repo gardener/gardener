@@ -237,6 +237,15 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 					Content:  osc.Spec.Files[0].Content,
 					HostName: ptr.To("my-node"),
 				},
+				{
+					Path:    "path9",
+					Content: osc.Spec.Files[0].Content,
+				},
+				{
+					Path:     "path9",
+					Content:  osc.Spec.Files[0].Content,
+					HostName: ptr.To("my-node"),
+				},
 			}
 
 			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(
@@ -295,6 +304,9 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
 					"Field": Equal("status.extensionFiles[7].path"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("status.extensionFiles[9].path"),
 				})),
 			))
 		})
@@ -304,21 +316,12 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			oscCopy.Spec.Units = nil
 			oscCopy.Spec.Files = []extensionsv1alpha1.File{
 				{
-					Path:    "path1",
-					Content: osc.Spec.Files[0].Content,
-				},
-				{
 					Path:     "path1",
 					Content:  osc.Spec.Files[0].Content,
 					HostName: ptr.To("my-node"),
 				},
 				{
-					Path:     "path2",
-					Content:  osc.Spec.Files[0].Content,
-					HostName: ptr.To("my-node"),
-				},
-				{
-					Path:     "path2",
+					Path:     "path1",
 					Content:  osc.Spec.Files[0].Content,
 					HostName: ptr.To("my-node-2"),
 				},
