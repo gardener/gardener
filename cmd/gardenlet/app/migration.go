@@ -146,8 +146,7 @@ func migrateOTelCollectorAnnotations(ctx context.Context, seedClient client.Clie
 
 			otelCollectorRegistry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-			var otelCollectorManagedResources map[string][]byte
-			otelCollectorManagedResources, err = otelCollectorRegistry.AddAllAndSerialize(migratedOtelCollectorManagedResourceObjects...)
+			otelCollectorManagedResources, err := otelCollectorRegistry.AddAllAndSerialize(migratedOtelCollectorManagedResourceObjects...)
 			if err != nil {
 				return fmt.Errorf("failed serializing objects for ManagedResource %q: %w", otelCollectorKey, err)
 			}
