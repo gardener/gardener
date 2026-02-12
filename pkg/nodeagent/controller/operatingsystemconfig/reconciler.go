@@ -1148,7 +1148,7 @@ func (r *Reconciler) ensureStaticPodsReconciledAndReady(ctx context.Context, log
 	}
 
 	for _, pod := range staticPodList.Items {
-		if err := health.CheckPod(&pod); err != nil {
+		if health.CheckPod(&pod) != nil {
 			log.Info("Static pod is not healthy yet, requeuing", "pod", client.ObjectKeyFromObject(&pod))
 			return false, nil //nolint:nilerr
 		}
