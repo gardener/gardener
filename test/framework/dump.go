@@ -117,14 +117,15 @@ func (f *GardenerFramework) dumpGardenerExtensionsInNamespace(ctx context.Contex
 	var result *multierror.Error
 
 	for kind, objList := range map[string]client.ObjectList{
-		"Infrastructure":        &extensionsv1alpha1.InfrastructureList{},
-		"ControlPlane":          &extensionsv1alpha1.ControlPlaneList{},
-		"OperatingSystemConfig": &extensionsv1alpha1.OperatingSystemConfigList{},
-		"Worker":                &extensionsv1alpha1.WorkerList{},
-		"BackupBucket":          &extensionsv1alpha1.BackupBucketList{},
-		"BackupEntry":           &extensionsv1alpha1.BackupEntryList{},
-		"Bastion":               &extensionsv1alpha1.BastionList{},
-		"Network":               &extensionsv1alpha1.NetworkList{},
+		"Infrastructure":          &extensionsv1alpha1.InfrastructureList{},
+		"ControlPlane":            &extensionsv1alpha1.ControlPlaneList{},
+		"OperatingSystemConfig":   &extensionsv1alpha1.OperatingSystemConfigList{},
+		"Worker":                  &extensionsv1alpha1.WorkerList{},
+		"BackupBucket":            &extensionsv1alpha1.BackupBucketList{},
+		"BackupEntry":             &extensionsv1alpha1.BackupEntryList{},
+		"Bastion":                 &extensionsv1alpha1.BastionList{},
+		"Network":                 &extensionsv1alpha1.NetworkList{},
+		"SelfHostedShootExposure": &extensionsv1alpha1.SelfHostedShootExposureList{},
 	} {
 		extensionLog := log.WithValues("kind", kind)
 		extensionLog.Info("Dumping extensions.gardener.cloud/v1alpha1 resources")

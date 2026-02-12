@@ -39,6 +39,8 @@ const (
 	WebhookPathNetwork = "/validate-extensions-gardener-cloud-v1alpha1-network"
 	// WebhookPathOperatingSystemConfig is the HTTP handler path for this admission webhook handler for OperatingSystemConfig.
 	WebhookPathOperatingSystemConfig = "/validate-extensions-gardener-cloud-v1alpha1-operatingsystemconfig"
+	// WebhookPathSelfHostedShootExposure is the HTTP handler path for this admission webhook handler for SelfHostedShootExposure.
+	WebhookPathSelfHostedShootExposure = "/validate-extensions-gardener-cloud-v1alpha1-selfhostedshootexposure"
 	// WebhookPathWorker is the HTTP handler path for this admission webhook handler for Worker.
 	WebhookPathWorker = "/validate-extensions-gardener-cloud-v1alpha1-worker"
 )
@@ -46,18 +48,19 @@ const (
 // AddToManager add the validators to the given managers.
 func AddToManager(mgr manager.Manager) error {
 	for obj, validator := range map[client.Object]admission.CustomValidator{
-		&extensionsv1alpha1.BackupBucket{}:          &backupBucketValidator{},
-		&extensionsv1alpha1.BackupEntry{}:           &backupEntryValidator{},
-		&extensionsv1alpha1.Bastion{}:               &bastionValidator{},
-		&extensionsv1alpha1.ContainerRuntime{}:      &containerRuntimeValidator{},
-		&extensionsv1alpha1.ControlPlane{}:          &controlPlaneValidator{},
-		&extensionsv1alpha1.DNSRecord{}:             &dnsRecordValidator{},
-		&druidcorev1alpha1.Etcd{}:                   &etcdValidator{},
-		&extensionsv1alpha1.Extension{}:             &extensionValidator{},
-		&extensionsv1alpha1.Infrastructure{}:        &infrastructureValidator{},
-		&extensionsv1alpha1.Network{}:               &networkValidator{},
-		&extensionsv1alpha1.OperatingSystemConfig{}: &operatingSystemConfigValidator{},
-		&extensionsv1alpha1.Worker{}:                &workerValidator{},
+		&extensionsv1alpha1.BackupBucket{}:            &backupBucketValidator{},
+		&extensionsv1alpha1.BackupEntry{}:             &backupEntryValidator{},
+		&extensionsv1alpha1.Bastion{}:                 &bastionValidator{},
+		&extensionsv1alpha1.ContainerRuntime{}:        &containerRuntimeValidator{},
+		&extensionsv1alpha1.ControlPlane{}:            &controlPlaneValidator{},
+		&extensionsv1alpha1.DNSRecord{}:               &dnsRecordValidator{},
+		&druidcorev1alpha1.Etcd{}:                     &etcdValidator{},
+		&extensionsv1alpha1.Extension{}:               &extensionValidator{},
+		&extensionsv1alpha1.Infrastructure{}:          &infrastructureValidator{},
+		&extensionsv1alpha1.Network{}:                 &networkValidator{},
+		&extensionsv1alpha1.OperatingSystemConfig{}:   &operatingSystemConfigValidator{},
+		&extensionsv1alpha1.SelfHostedShootExposure{}: &selfHostedShootExposureValidator{},
+		&extensionsv1alpha1.Worker{}:                  &workerValidator{},
 	} {
 		// RecoverPanic is defaulted to true.
 		if err := builder.

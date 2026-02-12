@@ -80,6 +80,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		{extensionsv1alpha1.InfrastructureResource, &extensionsv1alpha1.Infrastructure{}, func() client.ObjectList { return &extensionsv1alpha1.InfrastructureList{} }},
 		{extensionsv1alpha1.NetworkResource, &extensionsv1alpha1.Network{}, func() client.ObjectList { return &extensionsv1alpha1.NetworkList{} }},
 		{extensionsv1alpha1.OperatingSystemConfigResource, &extensionsv1alpha1.OperatingSystemConfig{}, func() client.ObjectList { return &extensionsv1alpha1.OperatingSystemConfigList{} }},
+		{extensionsv1alpha1.SelfHostedShootExposureResource, &extensionsv1alpha1.SelfHostedShootExposure{}, func() client.ObjectList { return &extensionsv1alpha1.SelfHostedShootExposureList{} }},
 		{extensionsv1alpha1.WorkerResource, &extensionsv1alpha1.Worker{}, func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} }},
 	} {
 		eventHandler := handler.EnqueueRequestsFromMapFunc(r.MapObjectKindToControllerInstallations(

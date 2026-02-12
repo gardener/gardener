@@ -16,7 +16,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
-// ValidateInfrastructure validates a Infrastructure object.
+// ValidateInfrastructure validates an Infrastructure object.
 func ValidateInfrastructure(infra *extensionsv1alpha1.Infrastructure) field.ErrorList {
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&infra.ObjectMeta, true, apivalidation.NameIsDNSSubdomain, field.NewPath("metadata"))...)
@@ -25,7 +25,7 @@ func ValidateInfrastructure(infra *extensionsv1alpha1.Infrastructure) field.Erro
 	return allErrs
 }
 
-// ValidateInfrastructureUpdate validates a Infrastructure object before an update.
+// ValidateInfrastructureUpdate validates an Infrastructure object before an update.
 func ValidateInfrastructureUpdate(new, old *extensionsv1alpha1.Infrastructure) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -36,7 +36,7 @@ func ValidateInfrastructureUpdate(new, old *extensionsv1alpha1.Infrastructure) f
 	return allErrs
 }
 
-// ValidateInfrastructureSpec validates the specification of a Infrastructure object.
+// ValidateInfrastructureSpec validates the specification of an Infrastructure object.
 func ValidateInfrastructureSpec(spec *extensionsv1alpha1.InfrastructureSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -55,7 +55,7 @@ func ValidateInfrastructureSpec(spec *extensionsv1alpha1.InfrastructureSpec, fld
 	return allErrs
 }
 
-// ValidateInfrastructureSpecUpdate validates the spec of a Infrastructure object before an update.
+// ValidateInfrastructureSpecUpdate validates the spec of an Infrastructure object before an update.
 func ValidateInfrastructureSpecUpdate(new, old *extensionsv1alpha1.InfrastructureSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
