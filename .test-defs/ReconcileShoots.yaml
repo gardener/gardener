@@ -14,6 +14,6 @@ spec:
     go test -timeout=0 ./test/testmachinery/system/complete_reconcile
     --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color --verbose=debug
     -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
-    -version=$GARDENER_VERSION
+    -gardener-version=$GARDENER_VERSION
 
   image: golang:1.25.7
