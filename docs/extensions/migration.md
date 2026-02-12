@@ -1,6 +1,6 @@
 # Control Plane Migration
 
-*Control Plane Migration* is a new Gardener feature that has been recently implemented as proposed in [GEP-7 Shoot Control Plane Migration](../proposals/07-shoot-control-plane-migration.md). It should be properly supported by all extensions controllers. This document outlines some important points that extension maintainers should keep in mind to properly support migration in their extensions.
+*Control Plane Migration* is a new Gardener feature that has been recently implemented as proposed in [GEP-0007 Shoot Control Plane Migration](https://github.com/gardener/enhancements/tree/main/geps/0007-shoot-control-plane-migration). It should be properly supported by all extensions controllers. This document outlines some important points that extension maintainers should keep in mind to properly support migration in their extensions.
 
 ## Overall Principles
 
@@ -89,13 +89,13 @@ In such cases, the `Migrate` and `Restore` methods might need to be overridden a
 #### `Worker` State
 
 Note that the machine state is handled specially by `gardenlet` (i.e., all relevant objects in the `machine.sapcloud.io/v1alpha1` API are directly persisted by `gardenlet` and **NOT** by the generic actuators).
-In the past, they were persisted to the `Worker`'s `.status.state` field by the so-called "worker state reconciler", however, this reconciler was dropped and changed as part of [GEP-22](../proposals/22-improved-usage-of-shootstate-api.md#eliminating-the-worker-state-reconciler).
+In the past, they were persisted to the `Worker`'s `.status.state` field by the so-called "worker state reconciler", however, this reconciler was dropped and changed as part of [GEP-0022](https://github.com/gardener/enhancements/tree/main/geps/0022-improved-shootstate-usage#eliminating-the-worker-state-reconciler).
 
 Gardener directly writes the machine state to the `ShootState` resource during the `Migrate` phase of a `Shoot` (without requiring the extension to popluate the `Worker.status.state` field).
 On restoration, Gardener copies the machine state back to the `Worker.status.state` field for the extension to pick it up and restore the relevant `machine.sapcloud.io/v1alpha1` resources.
 
 Previously, the extension controller would read the machine state directly from the `ShootState` in the garden cluster (see [this document](garden-api-access.md)) during the `restore` operation.
-However, for supporting self-hosted shoots with managed infrastructure [GEP-28](../proposals/28-self-hosted-shoot-clusters.md#managed-infrastructure), the extension controller must read the machine state from the `Worker.status.state` field instead of the `ShootState` resource from the garden cluster, as the garden cluster might not exist when running `gardenadm bootstrap`.
+However, for supporting self-hosted shoots with managed infrastructure [GEP-0028](https://github.com/gardener/enhancements/tree/main/geps/0028-self-hosted-shoot-clusters#managed-infrastructure), the extension controller must read the machine state from the `Worker.status.state` field instead of the `ShootState` resource from the garden cluster, as the garden cluster might not exist when running `gardenadm bootstrap`.
 
 This flow is implemented in the [generic `Worker` actuator](../../extensions/pkg/controller/worker/genericactuator/actuator_restore.go).
 As a result, Extension controllers using this generic actuator do not need to implement any custom logic.

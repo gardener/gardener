@@ -470,7 +470,7 @@ func checkImageSupport(bastionImageName string, imageVersions []core.MachineImag
 			archSupported = true
 		}
 
-		// TODO(LucaBernstein): Check whether this behavior should be corrected (i.e. changed) in a later GEP-32-PR.
+		// TODO(LucaBernstein): Check whether this behavior should be corrected (i.e. changed) in a later GEP-0032-PR.
 		//  The current behavior for nil classifications is treated differently across the codebase.
 		if version.Classification != nil && helper.CurrentLifecycleClassification(version.ExpirableVersion) == core.ClassificationSupported {
 			validClassification = true

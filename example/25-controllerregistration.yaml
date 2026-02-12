@@ -1,5 +1,5 @@
 # ControllerRegistration object allows to register external controllers.
-# See https://github.com/gardener/gardener/blob/master/docs/proposals/01-extensibility.md.
+# See https://github.com/gardener/enhancements/tree/main/geps/0001-gardener-extensibility.
 ---
 apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerRegistration

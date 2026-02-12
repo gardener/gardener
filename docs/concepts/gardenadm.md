@@ -6,7 +6,7 @@ description: Bootstrapping and management of self-hosted shoot clusters.
 > [!CAUTION]
 > This tool is currently under development and considered highly experimental.
 > Do not use it in production environments.
-> Read more about it in [GEP-28](../proposals/28-self-hosted-shoot-clusters.md).
+> Read more about it in [GEP-0028](https://github.com/gardener/enhancements/tree/main/geps/0028-self-hosted-shoot-clusters).
 
 <img src="../../logo/gardenadm-large.png" alt="gardenadm" width="100"/>
 
@@ -18,7 +18,7 @@ Self-hosted shoot clusters can be bootstrapped without an existing Gardener inst
 Hence, they can host a Gardener installation itself and/or serve as the initial seed cluster of a Gardener installation.
 Furthermore, self-hosted shoot clusters can only be created by the `gardenadm` tool and not via an API of an existing Gardener system.
 
-![Architectural overview](../proposals/assets/28-overview.png)
+![Architectural overview](images/gardenadm-overview.png)
 
 Such self-hosted shoot clusters are meant to operate autonomously, but not to exist completely independently of Gardener.
 Hence, after their initial creation, they are connected to an existing Gardener system such that the established cluster management functionality via the `Shoot` API can be applied.

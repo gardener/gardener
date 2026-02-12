@@ -82,7 +82,7 @@ func AddToManager(
 	}
 
 	// If gardenlet is responsible for an unmanaged seed we want to add the state reconciler which performs periodic
-	// backups of shoot states (see GEP-22).
+	// backups of shoot states (see GEP-0022).
 	if shootStateControllerEnabled {
 		mgr.GetLogger().Info("Adding shoot state reconciler since gardenlet is responsible for an unmanaged seed")
 

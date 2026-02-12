@@ -189,7 +189,7 @@ Above listed `NetworkPolicy`s ensure that the traffic for the shoot system compo
 ### Webhook Servers in Shoot Clusters
 
 Shoot components serving webhook handlers must be reached by `kube-apiserver`s of the shoot cluster.
-However, the control plane components, e.g. `kube-apiserver`, run on the seed cluster decoupled by a [VPN connection](../proposals/14-reversed-cluster-vpn.md).
+However, the control plane components, e.g. `kube-apiserver`, run on the seed cluster decoupled by a [VPN connection](https://github.com/gardener/enhancements/tree/main/geps/0014-reversed-cluster-vpn).
 Therefore, shoot components serving webhook handlers need to allow the VPN endpoints in the shoot cluster as clients to allow `kube-apiserver`s to call them.
 
 For the `kube-system` namespace, the network policy `gardener.cloud--allow-from-seed` fulfils the purpose to allow pods to mark themselves as targets for such calls, allowing corresponding traffic to pass through.
