@@ -687,7 +687,9 @@ spec:
 
                                       Supported types:
                                         - "aescbc"
-                                      Defaults to aescbc.
+                                        - "aesgcm"
+                                        - "secretbox"
+                                      Defaults to secretbox.
                                     type: string
                                 type: object
                               resources:
@@ -1584,7 +1586,9 @@ spec:
 
                                       Supported types:
                                         - "aescbc"
-                                      Defaults to aescbc.
+                                        - "aesgcm"
+                                        - "secretbox"
+                                      Defaults to secretbox.
                                     type: string
                                 type: object
                               resources:
