@@ -40,8 +40,8 @@ import (
 )
 
 var (
-	newControlPlaneKubernetesVersion = flag.String("version", "", "the version to use for .spec.kubernetes.version and .spec.provider.workers[].kubernetes.version (only when nil or equal to .spec.kubernetes.version)")
-	newWorkerPoolKubernetesVersion   = flag.String("version-worker-pools", "", "the version to use for .spec.provider.workers[].kubernetes.version (only when not equal to .spec.kubernetes.version)")
+	newControlPlaneKubernetesVersion = flag.String("k8s-version-control-plane", "", "the version to use for .spec.kubernetes.version and .spec.provider.workers[].kubernetes.version (only when nil or equal to .spec.kubernetes.version)")
+	newWorkerPoolKubernetesVersion   = flag.String("k8s-version-worker-pools", "", "the version to use for .spec.provider.workers[].kubernetes.version (only when not equal to .spec.kubernetes.version)")
 )
 
 const UpdateKubernetesVersionTimeout = 45 * time.Minute

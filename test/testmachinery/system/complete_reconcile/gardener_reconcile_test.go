@@ -28,7 +28,7 @@ import (
 	shootoperation "github.com/gardener/gardener/test/utils/shoots/operation"
 )
 
-var gardenerVersion = flag.String("version", "", "current gardener version")
+var gardenerVersion = flag.String("gardener-version", "", "current gardener version")
 
 const ReconcileShootsTimeout = 1 * time.Hour
 
