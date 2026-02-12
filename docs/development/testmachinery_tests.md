@@ -54,14 +54,13 @@ test
    │  └── shoot
    └── system     # suites that are used for building a full test flow
       ├── complete_reconcile
-      ├── managed_seed_creation
-      ├── managed_seed_deletion
       ├── shoot_cp_migration
       ├── shoot_creation
       ├── shoot_deletion
       ├── shoot_hibernation
       ├── shoot_hibernation_wakeup
-      └── shoot_update
+      ├── shoot_kubernetes_update
+      └── shoot_machine_image_update
 ```
 
 A suite can be executed by running the suite definition with ginkgo's `focus` and `skip` flags 
@@ -290,12 +289,12 @@ If there is no available newer version, this test is a noop.
 **Example Run**
 
 ```console
-go test  -timeout=0 ./test/testmachinery/system/shoot_update \
+go test  -timeout=0 ./test/testmachinery/system/shoot_kubernetes_update \
   --v -ginkgo.v -ginkgo.show-node-events \
   -kubecfg=$HOME/.kube/config \
   -shoot-name=$SHOOT_NAME \
   -project-namespace=$PROJECT_NAMESPACE \
-  -version=$K8S_VERSION
+  -k8s-version-control-plane=$K8S_VERSION
 ```
 
 #### Gardener Full Reconcile Test
@@ -309,7 +308,7 @@ go test  -timeout=0 ./test/testmachinery/system/complete_reconcile \
   --v -ginkgo.v -ginkgo.show-node-events \
   -kubecfg=$HOME/.kube/config \
   -project-namespace=$PROJECT_NAMESPACE \
-  -gardenerVersion=$GARDENER_VERSION # needed to validate the last acted gardener version of a shoot
+  -gardener-version=$GARDENER_VERSION # needed to validate the last acted gardener version of a shoot
 ```
 
 ## Container Images
