@@ -1,4 +1,4 @@
-# Gardener Info ConfigMap
+# Gardener Info `ConfigMap`
 
 ## Overview
 
