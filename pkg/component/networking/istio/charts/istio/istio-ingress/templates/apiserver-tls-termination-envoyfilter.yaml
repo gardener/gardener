@@ -67,9 +67,10 @@ spec:
                   end
                 end
 
-                -- Route timeouts to upstream have to be disabled. Otherwise, watches would be terminated after 15 seconds.
+                -- Route timeouts to upstream have a high timeout of 1d. This allows long sessions but, also prevents
+                -- leaking connections like forgotten kubectl port-forward or exec commands.
                 -- See https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts#route-timeouts
-                request_handle:headers():add("x-envoy-upstream-rq-timeout-ms", "0")
-                request_handle:headers():add("x-envoy-upstream-rq-per-try-timeout-ms", "0")
+                request_handle:headers():add("x-envoy-upstream-rq-timeout-ms", "86400000")
+                request_handle:headers():add("x-envoy-upstream-rq-per-try-timeout-ms", "86400000")
               end
 {{ end -}}
