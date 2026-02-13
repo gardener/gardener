@@ -947,8 +947,6 @@ deploy:
         setValueTemplates:
           env[0].name: GARDENER_OPERATOR_LOCAL
           env[0].value: "true"
-          hostAliases[0].hostnames[0]: api.virtual-garden.local.gardener.cloud
-          hostAliases[0].ip: 10.2.10.2
           image.repository: '{{.IMAGE_REPO_local_skaffold_gardener_operator}}'
           image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_operator}}@{{.IMAGE_DIGEST_local_skaffold_gardener_operator}}'
           imageVectorOverwrite: |
