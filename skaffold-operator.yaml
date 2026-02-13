@@ -1103,8 +1103,6 @@ build:
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/kubernetes/apiserver/constants
             - pkg/component/kubernetes/proxy
-            - pkg/component/networking/coredns
-            - pkg/component/networking/coredns/constants
             - pkg/component/nodemanagement/machinecontrollermanager
             - pkg/component/observability/monitoring/alertmanager
             - pkg/component/observability/monitoring/prometheus/shoot
@@ -1145,7 +1143,6 @@ build:
             - pkg/provider-local/machine-provider/api/validation
             - pkg/provider-local/machine-provider/local
             - pkg/provider-local/webhook/controlplane
-            - pkg/provider-local/webhook/dnsconfig
             - pkg/provider-local/webhook/networkpolicy
             - pkg/provider-local/webhook/node
             - pkg/provider-local/webhook/prometheus

@@ -33,7 +33,6 @@ import (
 	servicecontroller "github.com/gardener/gardener/pkg/provider-local/controller/service"
 	workercontroller "github.com/gardener/gardener/pkg/provider-local/controller/worker"
 	controlplanewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/controlplane"
-	dnsconfigwebhook "github.com/gardener/gardener/pkg/provider-local/webhook/dnsconfig"
 	networkpolicywebhook "github.com/gardener/gardener/pkg/provider-local/webhook/networkpolicy"
 	nodewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/node"
 	prometheuswebhook "github.com/gardener/gardener/pkg/provider-local/webhook/prometheus"
@@ -68,7 +67,6 @@ func WebhookSwitchOptions() *extensionscmdwebhook.SwitchOptions {
 	return extensionscmdwebhook.NewSwitchOptions(
 		extensionscmdwebhook.Switch(extensionscontrolplanewebhook.WebhookName, controlplanewebhook.AddToManager),
 		extensionscmdwebhook.Switch(extensionsshootwebhook.WebhookName, shootwebhook.AddToManager),
-		extensionscmdwebhook.Switch(dnsconfigwebhook.WebhookName, dnsconfigwebhook.AddToManager),
 		extensionscmdwebhook.Switch(rolloutspeedupwebhook.WebhookName, rolloutspeedupwebhook.AddToManager),
 		extensionscmdwebhook.Switch(networkpolicywebhook.WebhookName, networkpolicywebhook.AddToManager),
 		extensionscmdwebhook.Switch(nodewebhook.WebhookName, nodewebhook.AddToManager),

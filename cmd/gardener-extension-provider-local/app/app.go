@@ -16,14 +16,7 @@ import (
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/spf13/cobra"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/clock"
@@ -58,7 +51,6 @@ import (
 	localworker "github.com/gardener/gardener/pkg/provider-local/controller/worker"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	prometheuswebhook "github.com/gardener/gardener/pkg/provider-local/webhook/prometheus"
-	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 var hostIP string
@@ -327,13 +319,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			localcontrolplane.DefaultAddOptions.ShootWebhookConfig = atomicShootWebhookConfig
 			localcontrolplane.DefaultAddOptions.WebhookServerNamespace = webhookOptions.Server.Namespace
 
-			// Send empty patches on start-up to trigger webhooks
-			if !webhookSwitches.Completed().Disabled {
-				if err := mgr.Add(&webhookTriggerer{client: mgr.GetClient()}); err != nil {
-					return fmt.Errorf("error adding runnable for triggering DNS config webhook: %w", err)
-				}
-			}
-
 			if err := controllerSwitches.Completed().AddToManager(ctx, mgr); err != nil {
 				return fmt.Errorf("could not add controllers to manager: %w", err)
 			}
@@ -375,58 +360,4 @@ func verifyGardenAccess(ctx context.Context, log logr.Logger, c client.Client, s
 
 	log.Info("Garden access successfully verified")
 	return nil
-}
-
-type webhookTriggerer struct {
-	client client.Client
-}
-
-func (w *webhookTriggerer) NeedLeaderElection() bool {
-	return true
-}
-
-func (w *webhookTriggerer) Start(ctx context.Context) error {
-	// Wait for the reconciler to populate the webhook CA into the configurations before triggering the webhooks.
-	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-
-	if err := retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (bool, error) {
-		webhookConfig := &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-extension-" + local.Name}}
-		if err := w.client.Get(ctx, client.ObjectKeyFromObject(webhookConfig), webhookConfig); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return retry.SevereError(err)
-			}
-			return retry.MinorError(fmt.Errorf("webhook was not yet created"))
-		}
-
-		for _, webhook := range webhookConfig.Webhooks {
-			// We can return when we find the first webhook w/o CA bundle since the reconciler would populate it into
-			// all webhooks at the same time.
-			if len(webhook.ClientConfig.CABundle) == 0 {
-				return retry.MinorError(fmt.Errorf("CA bundle was not yet populated to all webhooks"))
-			}
-		}
-
-		return retry.Ok()
-	}); err != nil {
-		return err
-	}
-
-	return w.trigger(ctx, w.client, w.client, nil, &appsv1.DeploymentList{}, client.MatchingLabels{"app": "dependency-watchdog-prober"})
-}
-
-func (w *webhookTriggerer) trigger(ctx context.Context, reader client.Reader, writer client.Writer, statusWriter client.StatusWriter, objectList client.ObjectList, opts ...client.ListOption) error {
-	if err := reader.List(ctx, objectList, opts...); err != nil {
-		return err
-	}
-
-	return meta.EachListItem(objectList, func(obj runtime.Object) error {
-		switch object := obj.(type) {
-		case *appsv1.Deployment:
-			return writer.Patch(ctx, object, client.RawPatch(types.StrategicMergePatchType, []byte("{}")))
-		case *corev1.Node:
-			return statusWriter.Patch(ctx, object, client.RawPatch(types.StrategicMergePatchType, []byte("{}")))
-		}
-		return nil
-	})
 }
