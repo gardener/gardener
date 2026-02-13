@@ -6,7 +6,7 @@ services:
       - "5001:5001"
     volumes:
       - ../../dev/local-registry/localhost:/var/lib/registry
-      - ./config.yaml:/etc/distribution/config.yml
+      - ./registry/config.yaml:/etc/distribution/config.yml
     networks:
       kind:
         aliases:
@@ -18,7 +18,7 @@ services:
       REGISTRY_PROXY_REMOTEURL: https://gcr.io
     volumes:
       - ../../dev/local-registry/gcr:/var/lib/registry
-      - ./config.yaml:/etc/distribution/config.yml
+      - ./registry/config.yaml:/etc/distribution/config.yml
     networks:
       kind:
         aliases:
@@ -30,7 +30,7 @@ services:
       REGISTRY_PROXY_REMOTEURL: https://registry.k8s.io
     volumes:
       - ../../dev/local-registry/k8s:/var/lib/registry
-      - ./config.yaml:/etc/distribution/config.yml
+      - ./registry/config.yaml:/etc/distribution/config.yml
     networks:
       kind:
         aliases:
@@ -42,7 +42,7 @@ services:
       REGISTRY_PROXY_REMOTEURL: https://quay.io
     volumes:
       - ../../dev/local-registry/quay:/var/lib/registry
-      - ./config.yaml:/etc/distribution/config.yml
+      - ./registry/config.yaml:/etc/distribution/config.yml
     networks:
       kind:
         aliases:
@@ -54,7 +54,7 @@ services:
       REGISTRY_PROXY_REMOTEURL: https://europe-docker.pkg.dev
     volumes:
       - ../../dev/local-registry/europe-docker-pkg-dev:/var/lib/registry
-      - ./config.yaml:/etc/distribution/config.yml
+      - ./registry/config.yaml:/etc/distribution/config.yml
     networks:
       kind:
         aliases:
