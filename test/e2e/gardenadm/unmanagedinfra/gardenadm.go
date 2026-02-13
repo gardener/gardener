@@ -102,7 +102,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 				stdOut, _, err := execute(ctx, 0, "cat", "/etc/kubernetes/admin.conf")
 				g.Expect(err).NotTo(HaveOccurred())
 
-				kubeconfig := strings.ReplaceAll(string(stdOut.Contents()), fmt.Sprintf("api.%s.%s.local.gardener.cloud", shootName, shootNamespace), fmt.Sprintf("localhost:%d", localPort))
+				kubeconfig := strings.ReplaceAll(string(stdOut.Contents()), fmt.Sprintf("api.%s.%s.external.local.gardener.cloud", shootName, shootNamespace), fmt.Sprintf("localhost:%d", localPort))
 				return os.WriteFile(adminKubeconfigFile, []byte(kubeconfig), 0600)
 			}).Should(Succeed())
 
