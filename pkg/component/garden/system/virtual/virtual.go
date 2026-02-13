@@ -14,6 +14,7 @@ import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -170,7 +171,12 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				},
 				{
 					APIGroups: []string{corev1.GroupName},
-					Resources: []string{"events", "namespaces", "resourcequotas", "services", "endpoints", "endpointslices"},
+					Resources: []string{"events", "namespaces", "resourcequotas", "services", "endpoints"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+				},
+				{
+					APIGroups: []string{discoveryv1.GroupName},
+					Resources: []string{"endpointslices"},
 					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
@@ -276,7 +282,12 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				},
 				{
 					APIGroups: []string{corev1.GroupName},
-					Resources: []string{"events", "namespaces", "resourcequotas", "services", "endpoints", "endpointslices"},
+					Resources: []string{"events", "namespaces", "resourcequotas", "services", "endpoints"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{discoveryv1.GroupName},
+					Resources: []string{"endpointslices"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
