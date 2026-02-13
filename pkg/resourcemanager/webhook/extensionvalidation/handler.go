@@ -194,23 +194,21 @@ func (infrastructureValidator) ValidateDelete(_ context.Context, _ *extensionsv1
 	return nil, nil
 }
 
-func (selfHostedShootExposureValidator) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	object := obj.(*extensionsv1alpha1.SelfHostedShootExposure)
-	if errs := validation.ValidateSelfHostedShootExposure(object); len(errs) > 0 {
-		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.SelfHostedShootExposureResource), object.GetName(), errs)
+func (selfHostedShootExposureValidator) ValidateCreate(_ context.Context, obj *extensionsv1alpha1.SelfHostedShootExposure) (admission.Warnings, error) {
+	if errs := validation.ValidateSelfHostedShootExposure(obj); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.SelfHostedShootExposureResource), obj.GetName(), errs)
 	}
 	return nil, nil
 }
 
-func (selfHostedShootExposureValidator) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	object := newObj.(*extensionsv1alpha1.SelfHostedShootExposure)
-	if errs := validation.ValidateSelfHostedShootExposureUpdate(object, oldObj.(*extensionsv1alpha1.SelfHostedShootExposure)); len(errs) > 0 {
-		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.SelfHostedShootExposureResource), object.GetName(), errs)
+func (selfHostedShootExposureValidator) ValidateUpdate(_ context.Context, oldObj, newObj *extensionsv1alpha1.SelfHostedShootExposure) (admission.Warnings, error) {
+	if errs := validation.ValidateSelfHostedShootExposureUpdate(newObj, oldObj); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.SelfHostedShootExposureResource), newObj.GetName(), errs)
 	}
 	return nil, nil
 }
 
-func (selfHostedShootExposureValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (selfHostedShootExposureValidator) ValidateDelete(_ context.Context, _ *extensionsv1alpha1.SelfHostedShootExposure) (admission.Warnings, error) {
 	return nil, nil
 }
 

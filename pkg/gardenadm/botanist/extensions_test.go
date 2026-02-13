@@ -34,18 +34,20 @@ var _ = Describe("Extensions", func() {
 		var (
 			shoot *gardencorev1beta1.Shoot
 
-			controllerRegistrationControlPlane *gardencorev1beta1.ControllerRegistration
-			controllerRegistrationInfraWorker  *gardencorev1beta1.ControllerRegistration
-			controllerRegistrationNetwork      *gardencorev1beta1.ControllerRegistration
-			controllerRegistrationOSC          *gardencorev1beta1.ControllerRegistration
-			controllerRegistrationDNS          *gardencorev1beta1.ControllerRegistration
-			controllerRegistrationUnused       *gardencorev1beta1.ControllerRegistration
+			controllerRegistrationControlPlane            *gardencorev1beta1.ControllerRegistration
+			controllerRegistrationInfraWorker             *gardencorev1beta1.ControllerRegistration
+			controllerRegistrationNetwork                 *gardencorev1beta1.ControllerRegistration
+			controllerRegistrationOSC                     *gardencorev1beta1.ControllerRegistration
+			controllerRegistrationDNS                     *gardencorev1beta1.ControllerRegistration
+			controllerRegistrationSelfHostedShootExposure *gardencorev1beta1.ControllerRegistration
+			controllerRegistrationUnused                  *gardencorev1beta1.ControllerRegistration
 
-			controllerDeploymentControlPlane *gardencorev1.ControllerDeployment
-			controllerDeploymentInfraWorker  *gardencorev1.ControllerDeployment
-			controllerDeploymentNetwork      *gardencorev1.ControllerDeployment
-			controllerDeploymentOSC          *gardencorev1.ControllerDeployment
-			controllerDeploymentDNS          *gardencorev1.ControllerDeployment
+			controllerDeploymentControlPlane            *gardencorev1.ControllerDeployment
+			controllerDeploymentInfraWorker             *gardencorev1.ControllerDeployment
+			controllerDeploymentNetwork                 *gardencorev1.ControllerDeployment
+			controllerDeploymentOSC                     *gardencorev1.ControllerDeployment
+			controllerDeploymentDNS                     *gardencorev1.ControllerDeployment
+			controllerDeploymentSelfHostedShootExposure *gardencorev1.ControllerDeployment
 
 			controllerRegistrations []*gardencorev1beta1.ControllerRegistration
 			controllerDeployments   []*gardencorev1.ControllerDeployment
@@ -59,7 +61,14 @@ var _ = Describe("Extensions", func() {
 					Provider: gardencorev1beta1.Provider{
 						Type: "ext1",
 						Workers: []gardencorev1beta1.Worker{{
-							ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+							ControlPlane: &gardencorev1beta1.WorkerControlPlane{
+								Exposure: &gardencorev1beta1.Exposure{
+									Extension: &gardencorev1beta1.ExtensionExposure{
+										Type: ptr.To("ext-selfhostedshootexposure"),
+									},
+								},
+							},
+
 							Machine: gardencorev1beta1.Machine{
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name: "ext-osc",
@@ -160,6 +169,19 @@ var _ = Describe("Extensions", func() {
 					},
 				},
 			}
+			controllerRegistrationSelfHostedShootExposure = &gardencorev1beta1.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{Name: "ext-selfhostedshootexposure"},
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
+						DeploymentRefs: []gardencorev1beta1.DeploymentRef{
+							{Name: "ext-selfhostedshootexposure"},
+						},
+					},
+					Resources: []gardencorev1beta1.ControllerResource{
+						{Kind: "SelfHostedShootExposure", Type: "ext-selfhostedshootexposure"},
+					},
+				},
+			}
 			controllerRegistrationUnused = &gardencorev1beta1.ControllerRegistration{
 				ObjectMeta: metav1.ObjectMeta{Name: "ext-unused"},
 			}
@@ -179,6 +201,9 @@ var _ = Describe("Extensions", func() {
 			controllerDeploymentDNS = &gardencorev1.ControllerDeployment{
 				ObjectMeta: metav1.ObjectMeta{Name: "dns-clouddns"},
 			}
+			controllerDeploymentSelfHostedShootExposure = &gardencorev1.ControllerDeployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "ext-selfhostedshootexposure"},
+			}
 
 			controllerRegistrations = []*gardencorev1beta1.ControllerRegistration{
 				controllerRegistrationControlPlane,
@@ -186,6 +211,7 @@ var _ = Describe("Extensions", func() {
 				controllerRegistrationNetwork,
 				controllerRegistrationOSC,
 				controllerRegistrationDNS,
+				controllerRegistrationSelfHostedShootExposure,
 				controllerRegistrationUnused,
 			}
 			controllerDeployments = []*gardencorev1.ControllerDeployment{
@@ -194,6 +220,7 @@ var _ = Describe("Extensions", func() {
 				controllerDeploymentNetwork,
 				controllerDeploymentOSC,
 				controllerDeploymentDNS,
+				controllerDeploymentSelfHostedShootExposure,
 			}
 
 			resources = gardenadm.Resources{
@@ -254,6 +281,10 @@ var _ = Describe("Extensions", func() {
 							HaveField("ControllerRegistration.Name", controllerRegistrationNetwork.Name),
 							HaveField("ControllerDeployment.Name", controllerDeploymentNetwork.Name),
 						),
+						And(
+							HaveField("ControllerRegistration.Name", controllerRegistrationSelfHostedShootExposure.Name),
+							HaveField("ControllerDeployment.Name", controllerDeploymentSelfHostedShootExposure.Name),
+						),
 					))
 				})
 			})
@@ -281,6 +312,10 @@ var _ = Describe("Extensions", func() {
 							HaveField("ControllerRegistration.Name", controllerRegistrationDNS.Name),
 							HaveField("ControllerDeployment.Name", controllerDeploymentDNS.Name),
 						),
+						And(
+							HaveField("ControllerRegistration.Name", controllerRegistrationSelfHostedShootExposure.Name),
+							HaveField("ControllerDeployment.Name", controllerDeploymentSelfHostedShootExposure.Name),
+						),
 					))
 				})
 			})
@@ -300,6 +335,10 @@ var _ = Describe("Extensions", func() {
 					And(
 						HaveField("ControllerRegistration.Name", controllerRegistrationDNS.Name),
 						HaveField("ControllerDeployment.Name", controllerDeploymentDNS.Name),
+					),
+					And(
+						HaveField("ControllerRegistration.Name", controllerRegistrationSelfHostedShootExposure.Name),
+						HaveField("ControllerDeployment.Name", controllerDeploymentSelfHostedShootExposure.Name),
 					),
 				))
 			})

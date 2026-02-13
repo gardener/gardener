@@ -307,7 +307,7 @@ func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*garden
 			metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionOperatingSystemConfigTypePrefix+pool.Machine.Image.Name, "true")
 		}
 		if pool.ControlPlane != nil && pool.ControlPlane.Exposure != nil {
-			metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+*pool.ControlPlane.Exposure.Extension.Type, "true")
+			metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionSelfHostedShootExposureTypePrefix+*pool.ControlPlane.Exposure.Extension.Type, "true")
 		}
 	}
 
@@ -353,6 +353,7 @@ func removeLabels(objectMeta *metav1.ObjectMeta) {
 		v1beta1constants.LabelExtensionNetworkingTypePrefix,
 		v1beta1constants.LabelExtensionOperatingSystemConfigTypePrefix,
 		v1beta1constants.LabelExtensionContainerRuntimeTypePrefix,
+		v1beta1constants.LabelExtensionSelfHostedShootExposureTypePrefix,
 	}
 	for k := range objectMeta.Labels {
 		for _, label := range extensionLabels {

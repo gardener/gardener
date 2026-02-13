@@ -47,41 +47,43 @@ const (
 func AddToManager(mgr manager.Manager) error {
 	for _, register := range []func() error{
 		func() error {
-			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.BackupBucket{}).WithValidator(            &backupBucketValidator{}).Complete()
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.BackupBucket{}).WithValidator(&backupBucketValidator{}).Complete()
 		},
 		func() error {
-			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.BackupEntry{}).WithValidator(             &backupEntryValidator{}).Complete()
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.BackupEntry{}).WithValidator(&backupEntryValidator{}).Complete()
 		},
 		func() error {
-			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.Bastion{}).WithValidator(                 &bastionValidator{}).Complete()
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.Bastion{}).WithValidator(&bastionValidator{}).Complete()
 		},
 		func() error {
-			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.ContainerRuntime{}).WithValidator(        &containerRuntimeValidator{}).Complete()
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.ContainerRuntime{}).WithValidator(&containerRuntimeValidator{}).Complete()
 		},
 		func() error {
-			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.ControlPlane{}).WithValidator(            &controlPlaneValidator{}).Complete()
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.ControlPlane{}).WithValidator(&controlPlaneValidator{}).Complete()
 		},
 		func() error {
-			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.DNSRecord{}).WithValidator(               &dnsRecordValidator{}).Complete()
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.DNSRecord{}).WithValidator(&dnsRecordValidator{}).Complete()
 		},
 		func() error {
-			return builder.WebhookManagedBy(mgr, &druidcorev1alpha1.Etcd{}).WithValidator(                     &etcdValidator{}).Complete()
+			return builder.WebhookManagedBy(mgr, &druidcorev1alpha1.Etcd{}).WithValidator(&etcdValidator{}).Complete()
 		},
 		func() error {
-			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.Extension{}).WithValidator(               &extensionValidator{}).Complete()
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.Extension{}).WithValidator(&extensionValidator{}).Complete()
 		},
 		func() error {
-			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.Infrastructure{}).WithValidator(          &infrastructureValidator{}).Complete()
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.Infrastructure{}).WithValidator(&infrastructureValidator{}).Complete()
 		},
 		func() error {
-			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.Network{}).WithValidator(                 &networkValidator{}).Complete()
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.Network{}).WithValidator(&networkValidator{}).Complete()
 		},
 		func() error {
-			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.OperatingSystemConfig{}).WithValidator(   &operatingSystemConfigValidator{}).Complete()
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.OperatingSystemConfig{}).WithValidator(&operatingSystemConfigValidator{}).Complete()
 		},
 		func() error {
-			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.SelfHostedShootExposure{}: &selfHostedShootExposureValidator{},
-		&extensionsv1alpha1.Worker{}).WithValidator(                  &workerValidator{}).Complete()
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.SelfHostedShootExposure{}).WithValidator(&selfHostedShootExposureValidator{}).Complete()
+		},
+		func() error {
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.Worker{}).WithValidator(&workerValidator{}).Complete()
 		},
 	} {
 		if err := register(); err != nil {

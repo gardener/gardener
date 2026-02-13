@@ -32,6 +32,7 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 					ProviderConfig: &runtime.RawExtension{},
 				},
 				CredentialsRef: &corev1.ObjectReference{
+					Kind: "Secret",
 					Name: "test",
 				},
 				Endpoints: []extensionsv1alpha1.ControlPlaneEndpoint{
@@ -69,7 +70,7 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 			}))))
 		})
 
-		It("should allow valid infra resources", func() {
+		It("should allow valid selfhostedshootexposure resources", func() {
 			Expect(ValidateSelfHostedShootExposure(exposure)).To(BeEmpty())
 		})
 
@@ -129,6 +130,36 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 				"Field": Equal("spec.endpoints[0].addresses[0].type"),
 			}))))
 		})
+
+		It("should require kind and name if credentialsRef is set", func() {
+			e := prepareSelfHostedShootExposureForUpdate(exposure)
+			e.Spec.CredentialsRef = &corev1.ObjectReference{}
+
+			errorList := ValidateSelfHostedShootExposure(e)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.credentialsRef.name"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.credentialsRef.kind"),
+			}))))
+		})
+
+		It("should require kind to be Secret if credentialsRef is set", func() {
+			e := prepareSelfHostedShootExposureForUpdate(exposure)
+			e.Spec.CredentialsRef = &corev1.ObjectReference{
+				Name: "foo",
+				Kind: "ConfigMap",
+			}
+
+			errorList := ValidateSelfHostedShootExposure(e)
+
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.credentialsRef.kind"),
+			}))))
+		})
 	})
 
 	Describe("#ValidSelfHostedShootExposureUpdate", func() {
@@ -171,7 +202,8 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 					Port:     443,
 					Addresses: []corev1.NodeAddress{
 						{
-							Type: corev1.NodeInternalIP,
+							Type:    corev1.NodeInternalIP,
+							Address: "1.2.3.4",
 						},
 					},
 				},

@@ -529,6 +529,8 @@ const (
 	LabelExtensionOperatingSystemConfigTypePrefix = "operatingsystemconfig.extensions.gardener.cloud/"
 	// LabelExtensionContainerRuntimeTypePrefix is used to prefix extension label for ContainerRuntime types.
 	LabelExtensionContainerRuntimeTypePrefix = "containerruntime.extensions.gardener.cloud/"
+	// LabelExtensionSelfHostedShootExposureTypePrefix is used to prefix extension label for SelfHostedShootExposure types.
+	LabelExtensionSelfHostedShootExposureTypePrefix = "selfhostedshootexposure.extensions.gardener.cloud/"
 
 	// LabelExtensionProviderMutatedByControlplaneWebhook is used to specify extension provider controlplane webhook targets
 	LabelExtensionProviderMutatedByControlplaneWebhook = LabelExtensionProviderTypePrefix + "mutated-by-controlplane-webhook"
