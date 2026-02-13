@@ -35,7 +35,7 @@ parse_flags() {
 
 parse_flags "$@"
 
-LOOPBACK_IP_ADDRESSES=(172.18.255.1 172.18.255.100)
+LOOPBACK_IP_ADDRESSES=(172.18.255.1 172.18.255.53 172.18.255.100)
 if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
   LOOPBACK_IP_ADDRESSES+=(::1)
 fi
