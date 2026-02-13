@@ -46,26 +46,36 @@ parse_flags() {
   done
 }
 
-check_local_dns_records() {
-  local local_registry_ip_address
-  local_registry_ip_address=""
+SUDO=""
+if [[ "$(id -u)" != "0" ]]; then
+  SUDO="sudo "
+fi
+
+setup_local_dns_resolver() {
+  local dns_ip=172.18.255.53
+  local dns_ipv6=fd00:ff::53
 
   if [[ "$OSTYPE" == "darwin"* ]]; then
-    # Suppress exit code using "|| true"
-    local_registry_ip_address=$(dscacheutil -q host -a name registry.local.gardener.cloud | grep "ip_address" | head -n 1| cut -d' ' -f2 || true)
-  elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    # Suppress exit code using "|| true"
-    local_registry_ip_address="$(getent ahosts registry.local.gardener.cloud || true)"
+    local desired_resolver_config="nameserver $dns_ip"
+    if ! grep -q "$desired_resolver_config" /etc/resolver/local.gardener.cloud ; then
+      echo "Configuring macOS to resolve the local.gardener.cloud zone using the local setup's DNS server"
+      ${SUDO}mkdir -p /etc/resolver
+      echo "$desired_resolver_config" | ${SUDO}tee /etc/resolver/local.gardener.cloud
+    fi
+  elif [[ "$OSTYPE" == "linux"* && -d /etc/systemd/resolved.conf.d ]]; then
+    if ! grep -q "$dns_ip" /etc/systemd/resolved.conf.d/gardener-local.conf || ! grep -q "$dns_ipv6" /etc/systemd/resolved.conf.d/gardener-local.conf ; then
+      echo "Configuring systemd-resolved to resolve the local.gardener.cloud zone using the local setup's DNS server"
+      cat <<EOF | ${SUDO}tee /etc/systemd/resolved.conf.d/gardener-local.conf
+[Resolve]
+DNS=$dns_ip $dns_ipv6
+Domains=~local.gardener.cloud
+EOF
+      echo "restarting systemd-resolved"
+      ${SUDO}systemctl restart systemd-resolved
+    fi
   else
-    echo "Warning: Unknown OS. Make sure registry.local.gardener.cloud resolves to 127.0.0.1"
+    echo "Warning: Unknown OS. Make sure your host resolves the local.gardener.cloud zone using the local setup's DNS server at $dns_ip or $dns_ipv6 respectively."
     return 0
-  fi
-
-  if ! echo "$local_registry_ip_address" | grep -q "127.0.0.1" ; then
-      echo "Error: registry.local.gardener.cloud does not resolve to 127.0.0.1. Please add a line for it in /etc/hosts"
-      echo "Command output: $local_registry_ip_address"
-      echo "Content of '/etc/hosts':\n$(cat /etc/hosts)"
-      exit 1
   fi
 }
 
@@ -267,7 +277,7 @@ check_shell_dependencies() {
 }
 
 check_shell_dependencies
-check_local_dns_records
+setup_local_dns_resolver
 
 parse_flags "$@"
 
