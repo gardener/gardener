@@ -16,7 +16,7 @@ PATH_KUBECONFIG=""
 MULTI_ZONAL=false
 CHART=$(dirname "$0")/../example/gardener-local/kind/cluster
 ADDITIONAL_ARGS=""
-REGISTRY_COMPOSE_FILE="$(dirname "$0")/../dev-setup/registry/docker-compose.yaml"
+INFRA_COMPOSE_FILE="$(dirname "$0")/../dev-setup/infra/docker-compose.yaml"
 
 parse_flags() {
   while test $# -gt 0; do
@@ -142,9 +142,9 @@ change_registry_upstream_urls_to_prow_caches() {
     return
   fi
 
-  local mutated_compose_file="${REGISTRY_COMPOSE_FILE%.yaml}-prow.yaml"
-  cp "$REGISTRY_COMPOSE_FILE" "$mutated_compose_file"
-  REGISTRY_COMPOSE_FILE="$mutated_compose_file"
+  local mutated_compose_file="${INFRA_COMPOSE_FILE%.yaml}-prow.yaml"
+  cp "$INFRA_COMPOSE_FILE" "$mutated_compose_file"
+  INFRA_COMPOSE_FILE="$mutated_compose_file"
 
   declare -A prow_registry_cache_urls=(
     [gcr]="http://registry-gcr-io.kube-system.svc.cluster.local:5001"
@@ -169,7 +169,7 @@ change_registry_upstream_urls_to_prow_caches() {
     fi
 
     echo "Using $key registry cache in prow cluster ($registry_cache_dns) as upstream for local registry cache."
-    yq -i ".services.registry-cache-${key}.environment.REGISTRY_PROXY_REMOTEURL = \"${registry_cache_url}\"" "$REGISTRY_COMPOSE_FILE"
+    yq -i ".services.registry-cache-${key}.environment.REGISTRY_PROXY_REMOTEURL = \"${registry_cache_url}\"" "$INFRA_COMPOSE_FILE"
   done
 }
 
@@ -285,7 +285,7 @@ setup_kind_network
 
 change_registry_upstream_urls_to_prow_caches
 
-docker compose -f "$REGISTRY_COMPOSE_FILE" up -d
+docker compose -f "$INFRA_COMPOSE_FILE" up -d
 
 if [[ "$IPFAMILY" == "ipv6" ]]; then
   ADDITIONAL_ARGS="$ADDITIONAL_ARGS --values $CHART/values-ipv6.yaml"
