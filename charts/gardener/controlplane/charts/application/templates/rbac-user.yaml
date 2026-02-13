@@ -64,6 +64,18 @@ rules:
   - resourcequotas
   - services
   - endpoints
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - discovery.k8s.io
+  resources:
   - endpointslices
   verbs:
   - create
@@ -245,6 +257,13 @@ rules:
   - resourcequotas
   - services
   - endpoints
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
   - endpointslices
   verbs:
   - get
