@@ -92,6 +92,12 @@ container_ip() {
 }
 
 for ip_func in "ip" "container_ip"; do
+  if [[ ${ip_func} == "container_ip" ]] && docker info | grep -q 'Operating System: Docker Desktop' ; then
+    # For Docker Desktop, we don't need to add the IP addresses to the loopback device inside the VM, as Docker Desktop
+    # automatically mirrors the IPs of the host's loopback device into the VM.
+    continue
+  fi
+
   LOOPBACK_DEVICE=$(${ip_func} address | grep LOOPBACK | sed "s/^[0-9]\+: //g" | awk '{print $1}' | sed "s/:$//g")
   echo "Checking loopback device ${LOOPBACK_DEVICE} with ${ip_func}..."
 
