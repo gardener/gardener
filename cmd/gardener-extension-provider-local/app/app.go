@@ -45,7 +45,6 @@ import (
 	localextensionshootcontroller "github.com/gardener/gardener/pkg/provider-local/controller/extension/shoot"
 	localhealthcheck "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
 	localinfrastructure "github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
-	localingress "github.com/gardener/gardener/pkg/provider-local/controller/ingress"
 	localoperatingsystemconfig "github.com/gardener/gardener/pkg/provider-local/controller/operatingsystemconfig"
 	localservice "github.com/gardener/gardener/pkg/provider-local/controller/service"
 	localworker "github.com/gardener/gardener/pkg/provider-local/controller/worker"
@@ -106,11 +105,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 
 		// options for the extension controllers
 		extensionCtrlOpts = &extensionscmdcontroller.ControllerOptions{
-			MaxConcurrentReconciles: 5,
-		}
-
-		// options for the ingress controller
-		ingressCtrlOpts = &localingress.ControllerOptions{
 			MaxConcurrentReconciles: 5,
 		}
 
@@ -177,7 +171,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			extensionscmdcontroller.PrefixOption("extension-", extensionCtrlOpts),
 			extensionscmdcontroller.PrefixOption("infrastructure-", infraCtrlOpts),
 			extensionscmdcontroller.PrefixOption("worker-", workerCtrlOpts),
-			extensionscmdcontroller.PrefixOption("ingress-", ingressCtrlOpts),
 			extensionscmdcontroller.PrefixOption("service-", serviceCtrlOpts),
 			extensionscmdcontroller.PrefixOption("backupbucket-", localBackupBucketOptions),
 			extensionscmdcontroller.PrefixOption("operatingsystemconfig-", operatingSystemConfigCtrlOpts),
@@ -278,7 +271,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			healthCheckCtrlOpts.Completed().Apply(&localhealthcheck.DefaultAddOptions.Controller)
 			infraCtrlOpts.Completed().Apply(&localinfrastructure.DefaultAddOptions.Controller)
 			operatingSystemConfigCtrlOpts.Completed().Apply(&localoperatingsystemconfig.DefaultAddOptions.Controller)
-			ingressCtrlOpts.Completed().Apply(&localingress.DefaultAddOptions)
 			serviceCtrlOpts.Completed().Apply(&localservice.DefaultAddOptions)
 			workerCtrlOpts.Completed().Apply(&localworker.DefaultAddOptions.Controller)
 			localworker.DefaultAddOptions.GardenCluster = gardenCluster

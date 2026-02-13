@@ -30,8 +30,6 @@ controllers:
     concurrentSyncs: 5
   operatingsystemconfig:
     concurrentSyncs: 5
-  ingress:
-    concurrentSyncs: 5
   service:
     concurrentSyncs: 5
     hostIP: "172.18.255.1"
