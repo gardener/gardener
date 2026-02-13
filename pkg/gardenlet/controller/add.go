@@ -116,6 +116,23 @@ func AddToManager(
 			return fmt.Errorf("failed adding ShootState controller: %w", err)
 		}
 
+		if err := networkpolicy.AddToManager(ctx, mgr, gardenletCancel, seedCluster, *cfg.Controllers.NetworkPolicy, cfg.SeedConfig.Spec.Networks, nil); err != nil {
+			return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
+		}
+
+		// if err := (&networkpolicycontroller.Reconciler{
+		// 	RuntimeClient: seedCluster.GetClient(),
+		// 	Resolver:      hostnameresolver.NewNoOpProvider(),
+		// 	RuntimeNetworks: networkpolicycontroller.RuntimeNetworkConfig{
+		// 		IPFamilies: cfg.SeedConfig.Spec.Networks.IPFamilies,
+		// 		Pods:       []string{cfg.SeedConfig.Spec.Networks.Pods},
+		// 		Services:   []string{cfg.SeedConfig.Spec.Networks.Services},
+		// 		Nodes:      []string{ptr.Deref(cfg.SeedConfig.Spec.Networks.Nodes, "")},
+		// 	},
+		// }).AddToManager(mgr, gardenCluster); err != nil {
+		// 	return fmt.Errorf("failed adding NetworkPolicy reconciler for garden cluster: %w", err)
+		// }
+
 		if err := vpaevictionrequirements.AddToManager(ctx, mgr, gardenletCancel, *cfg.Controllers.VPAEvictionRequirements, seedCluster); err != nil {
 			return fmt.Errorf("failed adding VPAEvictionRequirements controller: %w", err)
 		}

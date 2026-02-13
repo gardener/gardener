@@ -123,7 +123,33 @@ func run(ctx context.Context, opts *Options) error {
 						b.Shoot.GetInfo(),
 						nil,
 						&seedmanagementv1alpha1.GardenletDeployment{},
-						&runtime.RawExtension{Object: &gardenletconfigv1alpha1.GardenletConfiguration{}},
+						&runtime.RawExtension{Object: &gardenletconfigv1alpha1.GardenletConfiguration{
+							SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+								SeedTemplate: gardencorev1beta1.SeedTemplate{
+									Spec: gardencorev1beta1.SeedSpec{
+										// TODO(tobschli): Add blockCIDRs
+										Networks: gardencorev1beta1.SeedNetworks{
+											Nodes:      b.Shoot.GetInfo().Spec.Networking.Nodes,
+											Pods:       ptr.Deref(b.Shoot.GetInfo().Spec.Networking.Pods, ""),
+											Services:   ptr.Deref(b.Shoot.GetInfo().Spec.Networking.Services, ""),
+											IPFamilies: b.Shoot.GetInfo().Spec.Networking.IPFamilies,
+										},
+										DNS: gardencorev1beta1.SeedDNS{
+											Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+												Type:   "local",
+												Domain: ptr.Deref(b.Shoot.GetInfo().Spec.DNS.Domain, ""),
+												CredentialsRef: corev1.ObjectReference{
+													APIVersion: corev1.SchemeGroupVersion.Version,
+													Kind:       "Secret",
+													Name:       "local",
+													Namespace:  "garden",
+												},
+											},
+										},
+									},
+								},
+							},
+						}},
 						seedmanagementv1alpha1.BootstrapToken,
 						false,
 					)
