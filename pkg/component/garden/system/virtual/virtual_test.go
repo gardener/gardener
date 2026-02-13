@@ -191,7 +191,12 @@ var _ = Describe("Virtual", func() {
 				},
 				{
 					APIGroups: []string{""},
-					Resources: []string{"events", "namespaces", "resourcequotas", "services", "endpoints", "endpointslices"},
+					Resources: []string{"events", "namespaces", "resourcequotas", "services", "endpoints"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"discovery.k8s.io"},
+					Resources: []string{"endpointslices"},
 					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
@@ -297,7 +302,12 @@ var _ = Describe("Virtual", func() {
 				},
 				{
 					APIGroups: []string{""},
-					Resources: []string{"events", "namespaces", "resourcequotas", "services", "endpoints", "endpointslices"},
+					Resources: []string{"events", "namespaces", "resourcequotas", "services", "endpoints"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"discovery.k8s.io"},
+					Resources: []string{"endpointslices"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
