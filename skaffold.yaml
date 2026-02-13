@@ -568,6 +568,9 @@ build:
             variant: AbbrevCommitSha
 deploy:
   helm:
+    flags:
+      global:
+        - --debug
     releases:
       - name: gardener-controlplane
         chartPath: charts/gardener/controlplane
@@ -1661,6 +1664,9 @@ build:
             variant: AbbrevCommitSha
 deploy:
   helm:
+    flags:
+        global:
+            - --debug
     releases:
       - name: gardener-gardenlet
         chartPath: charts/gardener/gardenlet
@@ -1849,6 +1855,9 @@ build:
             variant: AbbrevCommitSha
 deploy:
   helm:
+    flags:
+      global:
+        - --debug
     releases:
       - name: gardener-extension-admission-local-application
         chartPath: charts/gardener/admission-local/charts/application
