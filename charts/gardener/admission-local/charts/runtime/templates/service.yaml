@@ -19,7 +19,7 @@ spec:
   selector:
 {{ include "labels" . | indent 4 }}
   ports:
-  - port: 443
+  - port: {{ .Values.webhookConfig.servicePort }}
     protocol: TCP
     targetPort: {{ .Values.webhookConfig.serverPort }}
   {{- if and .Values.service.topologyAwareRouting.enabled (semverCompare ">= 1.31-0" .Capabilities.KubeVersion.Version) (semverCompare "< 1.34-0" .Capabilities.KubeVersion.Version) }}
