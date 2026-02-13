@@ -48,6 +48,12 @@ parse_flags() {
 
 setup_local_dns_resolver() {
   local dns_ip=172.18.255.53
+  if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
+    echo "> Setting $dns_ip as nameserver in /etc/resolv.conf..."
+    echo -e "nameserver $dns_ip\noptions ndots:0" | tee /etc/resolv.conf
+    return 0
+  fi
+
   if [[ "$OSTYPE" == "darwin"* ]]; then
     local desired_resolver_config="nameserver $dns_ip"
     if ! grep -q "$desired_resolver_config" /etc/resolver/local.gardener.cloud ; then
@@ -270,7 +276,6 @@ check_shell_dependencies() {
 }
 
 check_shell_dependencies
-setup_local_dns_resolver
 
 parse_flags "$@"
 
@@ -289,6 +294,8 @@ setup_kind_network
 change_registry_upstream_urls_to_prow_caches
 
 docker compose -f "$INFRA_COMPOSE_FILE" up -d
+
+setup_local_dns_resolver
 
 if [[ "$IPFAMILY" == "ipv6" ]]; then
   ADDITIONAL_ARGS="$ADDITIONAL_ARGS --values $CHART/values-ipv6.yaml"
