@@ -18,3 +18,8 @@
   containerPath: /etc/gardener/local-backupbuckets
 {{- end -}}
 {{- end -}}
+
+{{- define "extraMounts.resolveConfig" -}}
+- hostPath: {{.Values.gardener.repositoryRoot}}/example/gardener-local/kind/resolv.conf
+  containerPath: /etc/resolv.conf
+{{- end -}}
