@@ -79,8 +79,6 @@ There are no demo `CloudProfiles` yet. Thus, please copy `CloudProfiles` from an
 
 ## Setting Up the KinD Cluster
 
-> First, you will need to add `127.0.0.1 registry.local.gardener.cloud` to your /etc/hosts.
-
 ```bash
 make kind-extensions-up
 ```
