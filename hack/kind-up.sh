@@ -367,17 +367,6 @@ if [[ "$CLUSTER_NAME" == "gardener-operator-local" ]] ; then
   sed "s/127\.0\.0\.1:[0-9]\+/$CLUSTER_NAME-control-plane:6443/g" "$PATH_KUBECONFIG" > "$(dirname "$0")/../dev-setup/gardenconfig/components/credentials/secret-project-garden-with-kind-kubeconfig/kubeconfig"
 fi
 
-# Prepare garden.local.gardener.cloud hostname that can be used everywhere to talk to the garden cluster (which is the
-# first kind cluster in the local setup not using the gardener-operator, i.e., no virtual garden).
-# Historically, we used the docker container name for this, but this differs between clusters with different names
-# and doesn't work in IPv6 kind clusters: https://github.com/kubernetes-sigs/kind/issues/3114
-# Hence, we "manually" inject a host configuration into the cluster that always resolves to the kind container's IP,
-# that serves our garden cluster API.
-# This works in
-# - the first and the second kind cluster
-# - in IPv4 and IPv6 kind clusters
-# - in ManagedSeeds
-
 garden_cluster="$CLUSTER_NAME"
 if [[ "$CLUSTER_NAME" == "gardener-local2" ]] ; then
   # garden-local2 is used as a second seed cluster, the first kind cluster runs the gardener control plane
@@ -394,47 +383,6 @@ if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]] ; then
 fi
 
 garden_cluster_ip="$(docker inspect "$garden_cluster"-control-plane | yq ".[].NetworkSettings.Networks.kind.$ip_address_field")"
-
-# Inject garden.local.gardener.cloud into all nodes
-for node in $nodes; do
-  docker exec "$node" sh -c "echo $garden_cluster_ip garden.local.gardener.cloud >> /etc/hosts"
-
-  # Create a systemd service to automatically re-add the garden.local.gardener.cloud entry to /etc/hosts on node startup.
-  docker exec "$node" sh -c "cat <<EOF > /etc/systemd/system/gardener-local-kind-add-hosts.service
-[Unit]
-Description=Gardener Local Kind: Add garden.local.gardener.cloud to /etc/hosts
-After=etc-hosts.mount
-
-[Service]
-Type=oneshot
-ExecStart=/bin/sh -c 'echo $garden_cluster_ip garden.local.gardener.cloud >> /etc/hosts'
-
-[Install]
-WantedBy=multi-user.target
-EOF"
-  docker exec "$node" sh -c "systemctl enable gardener-local-kind-add-hosts.service"
-done
-
-local_address_virtual_garden="172.18.255.3"
-if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-  local_address_virtual_garden="::3"
-fi
-
-# Inject garden.local.gardener.cloud into coredns config (after ready plugin, before kubernetes plugin)
-kubectl -n kube-system get configmap coredns -ojson | \
-  yq '.data.Corefile' | \
-  sed '0,/ready.*$/s//&'"\n\
-    hosts {\n\
-      $garden_cluster_ip garden.local.gardener.cloud\n\
-      $local_address_virtual_garden gardener.virtual-garden.local.gardener.cloud\n\
-      $local_address_virtual_garden api.virtual-garden.local.gardener.cloud\n\
-      $local_address_virtual_garden dashboard.ingress.runtime-garden.local.gardener.cloud\n\
-      $local_address_virtual_garden discovery.ingress.runtime-garden.local.gardener.cloud\n\
-      fallthrough\n\
-    }\
-"'/' | \
-  kubectl -n kube-system create configmap coredns --from-file Corefile=/dev/stdin --dry-run=client -oyaml | \
-  kubectl -n kube-system patch configmap coredns --patch-file /dev/stdin
 
 if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
   # The CoreDNS pods in the kind cluster can only talk via IPv6, but the nameserver in the kind cluster is set to the
