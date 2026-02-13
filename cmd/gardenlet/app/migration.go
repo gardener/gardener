@@ -102,6 +102,12 @@ func migrateOTelCollectorAnnotations(ctx context.Context, seedClient client.Clie
 				return nil
 			}
 
+			// Cast to OpenTelemetryCollector type
+			otelCollectorTyped, ok := otelCollector.(*otelv1beta1.OpenTelemetryCollector)
+			if !ok {
+				return fmt.Errorf("failed to cast object to OpenTelemetryCollector")
+			}
+
 			// Check if the annotations are present.
 			annotations := otelCollector.GetAnnotations()
 			if annotations == nil {
@@ -109,13 +115,11 @@ func migrateOTelCollectorAnnotations(ctx context.Context, seedClient client.Clie
 			}
 
 			var (
-				needsUpdate                = false
 				expectedNamespaceSelectors = `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`
 			)
 
 			// Check NetworkingPodLabelSelectorNamespaceAlias annotation
 			if val, exists := annotations[resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias]; !exists || val != v1beta1constants.LabelNetworkPolicyShootNamespaceAlias {
-				needsUpdate = true
 				log.Info("Annotation missing or incorrect, will patch",
 					"annotation", resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias,
 					"expected", v1beta1constants.LabelNetworkPolicyShootNamespaceAlias,
@@ -126,7 +130,6 @@ func migrateOTelCollectorAnnotations(ctx context.Context, seedClient client.Clie
 
 			// Check NetworkingNamespaceSelectors annotation
 			if val, exists := annotations[resourcesv1alpha1.NetworkingNamespaceSelectors]; !exists || val != expectedNamespaceSelectors {
-				needsUpdate = true
 				log.Info("Annotation missing or incorrect, will patch",
 					"annotation", resourcesv1alpha1.NetworkingNamespaceSelectors,
 					"expected", expectedNamespaceSelectors,
@@ -135,36 +138,96 @@ func migrateOTelCollectorAnnotations(ctx context.Context, seedClient client.Clie
 				annotations[resourcesv1alpha1.NetworkingNamespaceSelectors] = expectedNamespaceSelectors
 			}
 
-			// Perform patch if needed
-			if needsUpdate {
-				otelCollector.SetAnnotations(annotations)
-				migratedOtelCollectorManagedResourceObjects = append(migratedOtelCollectorManagedResourceObjects, otelCollector)
+			// patch the OpenTelemetry Collector pipeline configuration
+			ensureOtelColPipelineConfiguration(otelCollectorTyped, log)
 
-				otelCollectorRegistry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+			otelCollector.SetAnnotations(annotations)
+			migratedOtelCollectorManagedResourceObjects = append(migratedOtelCollectorManagedResourceObjects, otelCollector)
 
-				var otelCollectorManagedResources map[string][]byte
-				otelCollectorManagedResources, err = otelCollectorRegistry.AddAllAndSerialize(migratedOtelCollectorManagedResourceObjects...)
-				if err != nil {
-					return fmt.Errorf("failed serializing objects for ManagedResource %q: %w", otelCollectorKey, err)
-				}
-				if err = managedresources.CreateForSeedWithLabels(ctx, seedClient, otelCollectorManagedResource.Namespace, otelCollectorManagedResource.Name, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, otelCollectorManagedResources); err != nil {
-					return fmt.Errorf("failed updating ManagedResource %q: %w", otelCollectorKey, err)
-				}
+			otelCollectorRegistry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-				twoMinutes := 2 * time.Minute
-				timeoutSeedCtx, cancelSeedCtx := context.WithTimeout(ctx, twoMinutes)
-				defer cancelSeedCtx()
-				if err = managedresources.WaitUntilHealthy(timeoutSeedCtx, seedClient, otelCollectorManagedResource.Namespace, otelCollectorManagedResource.Name); err != nil {
-					return fmt.Errorf("waiting for ManagedResource %q to become healthy failed: %w", otelCollectorKey, err)
-				}
-
-				log.Info("Successfully migrated collector annotations", "collector", otelCollector.GetName())
-			} else {
-				log.Info("Collector already has correct annotations, skipping migration", "collector", otelCollector.GetName())
+			otelCollectorManagedResources, err := otelCollectorRegistry.AddAllAndSerialize(migratedOtelCollectorManagedResourceObjects...)
+			if err != nil {
+				return fmt.Errorf("failed serializing objects for ManagedResource %q: %w", otelCollectorKey, err)
 			}
+			if err = managedresources.CreateForSeedWithLabels(ctx, seedClient, otelCollectorManagedResource.Namespace, otelCollectorManagedResource.Name, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, otelCollectorManagedResources); err != nil {
+				return fmt.Errorf("failed updating ManagedResource %q: %w", otelCollectorKey, err)
+			}
+
+			timeoutSeedCtx, cancelSeedCtx := context.WithTimeout(ctx, 2*time.Minute)
+			defer cancelSeedCtx()
+			if err = managedresources.WaitUntilHealthy(timeoutSeedCtx, seedClient, otelCollectorManagedResource.Namespace, otelCollectorManagedResource.Name); err != nil {
+				return fmt.Errorf("waiting for ManagedResource %q to become healthy failed: %w", otelCollectorKey, err)
+			}
+			log.Info("Successfully migrated collector annotations", "collector", otelCollector.GetName())
 
 			return nil
 		})
 	}
 	return flow.Parallel(tasks...)(ctx)
+}
+
+// ensureOtelColPipelineConfiguration ensures the OpenTelemetry Collector has the required pipeline configuration.
+// Always applies the expected configuration.
+func ensureOtelColPipelineConfiguration(collector *otelv1beta1.OpenTelemetryCollector, log logr.Logger) {
+	log.Info("Applying otelcol pipeline configuration", "collector", collector.Name)
+
+	collector.Spec.Config.Receivers.Object = map[string]any{
+		"otlp": map[string]any{
+			"protocols": map[string]any{
+				"grpc": map[string]any{
+					"endpoint": "[::]:4317",
+				},
+			},
+		},
+	}
+
+	collector.Spec.Config.Processors = &otelv1beta1.AnyConfig{
+		Object: map[string]any{
+			"batch": map[string]any{
+				"timeout": "10s",
+			},
+			"resource/vali": map[string]any{
+				"attributes": []any{
+					map[string]any{"action": "insert", "from_attribute": "k8s.node.name", "key": "nodename"},
+					map[string]any{"action": "insert", "from_attribute": "k8s.pod.name", "key": "pod_name"},
+					map[string]any{"action": "insert", "from_attribute": "k8s.container.name", "key": "container_name"},
+					map[string]any{"action": "insert", "from_attribute": "k8s.namespace.name", "key": "namespace_name"},
+					map[string]any{"action": "insert", "key": "loki.resource.labels", "value": "job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role"},
+					map[string]any{"action": "insert", "key": "loki.format", "value": "raw"},
+				},
+			},
+			"attributes/vali": map[string]any{
+				"actions": []any{
+					map[string]any{"action": "insert", "from_attribute": "k8s.node.name", "key": "nodename"},
+					map[string]any{"action": "insert", "from_attribute": "k8s.pod.name", "key": "pod_name"},
+					map[string]any{"action": "insert", "from_attribute": "k8s.container.name", "key": "container_name"},
+					map[string]any{"action": "insert", "from_attribute": "k8s.namespace.name", "key": "namespace_name"},
+					map[string]any{"action": "upsert", "key": "loki.attribute.labels", "value": "priority, level, process.command, process.pid, host.name, host.id, service.name, service.namespace, job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role"},
+					map[string]any{"action": "insert", "key": "loki.format", "value": "raw"},
+				},
+			},
+		},
+	}
+
+	collector.Spec.Config.Exporters.Object = map[string]any{
+		"loki": map[string]any{
+			"endpoint": "http://logging:3100/vali/api/v1/push",
+			"default_labels_enabled": map[string]any{
+				"exporter": false,
+				"job":      false,
+			},
+		},
+		"debug/logs": map[string]any{
+			"verbosity": "basic",
+		},
+	}
+
+	collector.Spec.Config.Service.Pipelines = map[string]*otelv1beta1.Pipeline{
+		"logs/vali": {
+			Receivers:  []string{"otlp"},
+			Processors: []string{"resource/vali", "attributes/vali", "batch"},
+			Exporters:  []string{"loki", "debug/logs"},
+		},
+	}
 }
