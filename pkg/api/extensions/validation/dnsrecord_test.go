@@ -163,6 +163,17 @@ var _ = Describe("DNSRecord validation tests", func() {
 			}))))
 		})
 
+		It("should forbid ttl exceeding max uint32", func() {
+			dns.Spec.TTL = ptr.To(int64(1 << 32))
+
+			errorList := ValidateDNSRecord(dns)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.ttl"),
+			}))))
+		})
+
 		It("should allow valid resources (type A)", func() {
 			errorList := ValidateDNSRecord(dns)
 

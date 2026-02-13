@@ -27,7 +27,6 @@ import (
 	localextensionshootafterworkercontroller "github.com/gardener/gardener/pkg/provider-local/controller/extension/shootafterworker"
 	healthcheckcontroller "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
 	infrastructurecontroller "github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
-	ingresscontroller "github.com/gardener/gardener/pkg/provider-local/controller/ingress"
 	networkpolicycontroller "github.com/gardener/gardener/pkg/provider-local/controller/networkpolicy"
 	operatingsystemconfigcontroller "github.com/gardener/gardener/pkg/provider-local/controller/operatingsystemconfig"
 	servicecontroller "github.com/gardener/gardener/pkg/provider-local/controller/service"
@@ -50,7 +49,6 @@ func ControllerSwitchOptions() *extensionscmdcontroller.SwitchOptions {
 		extensionscmdcontroller.Switch(extensionsdnsrecordcontroller.ControllerName, dnsrecordcontroller.AddToManager),
 		extensionscmdcontroller.Switch(extensionsinfrastructurecontroller.ControllerName, infrastructurecontroller.AddToManager),
 		extensionscmdcontroller.Switch(extensionsworkercontroller.ControllerName, workercontroller.AddToManager),
-		extensionscmdcontroller.Switch(ingresscontroller.ControllerName, ingresscontroller.AddToManager),
 		extensionscmdcontroller.Switch(servicecontroller.ControllerName, servicecontroller.AddToManager),
 		extensionscmdcontroller.Switch(extensionshealthcheckcontroller.ControllerName, healthcheckcontroller.AddToManager),
 		extensionscmdcontroller.Switch(extensionsoperatingsystemconfigcontroller.ControllerName, operatingsystemconfigcontroller.AddToManager),

@@ -128,13 +128,6 @@ This controller implements the `Bastion.extensions.gardener.cloud` resource by d
 
 Note that this controller does not respect the `Bastion.spec.ingress` configuration as there is no way to perform client IP restrictions in the local setup.
 
-#### `Ingress`
-
-The gardenlet creates a wildcard DNS record for the Seed's ingress domain pointing to the `nginx-ingress-controller`'s LoadBalancer.
-This domain is commonly used by all `Ingress` objects created in the Seed for Seed and Shoot components.
-As provider-local implements the `DNSRecord` extension API (see the [`DNSRecord`section](#dnsrecord)), this controller reconciles all `Ingress`s and creates `DNSRecord`s of type `local` for each host included in `spec.rules`.
-This only happens for shoot namespaces (`gardener.cloud/role=shoot` label) to make `Ingress` domains resolvable on the machine pods.
-
 #### `Service`
 
 This controller reconciles `Services` of type `LoadBalancer` in the local `Seed` cluster.
