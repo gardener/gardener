@@ -35,7 +35,7 @@ parse_flags() {
 
 parse_flags "$@"
 
-LOOPBACK_IP_ADDRESSES=(172.18.255.1)
+LOOPBACK_IP_ADDRESSES=(172.18.255.1 172.18.255.53 fd00:ff::53)
 if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
   LOOPBACK_IP_ADDRESSES+=(fd00:ff::1)
 fi
@@ -77,14 +77,14 @@ fi
 
 # In some scenarios a developer might run the kind cluster with a docker daemon that is running inside a VM.
 #
-# Most people are using Docker Desktop which is able to mirror the IP addresses 
+# Most people are using Docker Desktop which is able to mirror the IP addresses
 # added to the loopback device on the host into it's managed VM running the docker daemon.
 #
 # However if people are not using this approach,
 # docker might not be able to start the kind containers as the IP
 # is not visible for it since it's only attached to the loopback device on the host.
 #
-# We test the loopback devices by checking on the host directly as well as checking 
+# We test the loopback devices by checking on the host directly as well as checking
 # the loopback on the docker host using an container that is running in the host network.
 
 container_ip() {
@@ -102,7 +102,7 @@ for ip_func in "ip" "container_ip"; do
       echo "Adding IP address $address to ${LOOPBACK_DEVICE}..."
       if [[ ${ip_func} == "ip" ]]; then
         sudo_ip_func=${SUDO}${ip_func}
-      else 
+      else
         sudo_ip_func=${ip_func}
       fi
       ${sudo_ip_func} address add "$address" dev "${LOOPBACK_DEVICE}"
