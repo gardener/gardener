@@ -1,7 +1,33 @@
 services:
+  bind9:
+    container_name: bind9
+    image: europe-docker.pkg.dev/gardener-project/releases/3rd/ubuntu/bind9:9.18-22.04_beta
+    restart: unless-stopped
+    ports:
+      - "172.18.255.53:53:53/tcp"
+      - "172.18.255.53:53:53/udp"
+      - "[fd00:ff::53]:53:53/tcp"
+      - "[fd00:ff::53]:53:53/udp"
+    volumes:
+      # Mount the config as read-only.
+      - ./bind:/etc/bind:ro
+      # Mount the volume storing the zone state (ensure persistence across container restarts).
+      # We don't want bind to update our zone files on the host (resulting in git changes and persistence after stopping
+      # the local setup). Instead, we copy the zone file to the volume on start up and destroy the volume when running
+      # `docker compose down`.
+      # This way, we persist the zone state until – and only until – the local setup is stopped.
+      - bind9-zones:/var/lib/bind
+    command: >
+      /bin/sh -c
+      "cp /etc/bind/db.local.gardener.cloud /var/lib/bind/db.local.gardener.cloud &&
+      chown bind:bind /var/lib/bind/db.local.gardener.cloud &&
+      /usr/sbin/named -g -u bind"
+    networks:
+      kind:
   registry:
     container_name: registry
     image: europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0
+    restart: unless-stopped
     ports:
       - "5001:5001"
     volumes:
@@ -14,6 +40,7 @@ services:
   registry-cache-gcr:
     container_name: registry-cache-gcr
     image: europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0
+    restart: unless-stopped
     environment:
       REGISTRY_PROXY_REMOTEURL: https://gcr.io
     volumes:
@@ -26,6 +53,7 @@ services:
   registry-cache-k8s:
     container_name: registry-cache-k8s
     image: europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0
+    restart: unless-stopped
     environment:
       REGISTRY_PROXY_REMOTEURL: https://registry.k8s.io
     volumes:
@@ -38,6 +66,7 @@ services:
   registry-cache-quay:
     container_name: registry-cache-quay
     image: europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0
+    restart: unless-stopped
     environment:
       REGISTRY_PROXY_REMOTEURL: https://quay.io
     volumes:
@@ -50,6 +79,7 @@ services:
   registry-cache-europe-docker-pkg-dev:
     container_name: registry-cache-europe-docker-pkg-dev
     image: europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0
+    restart: unless-stopped
     environment:
       REGISTRY_PROXY_REMOTEURL: https://europe-docker.pkg.dev
     volumes:
@@ -62,3 +92,5 @@ services:
 networks:
   kind:
     external: true
+volumes:
+  bind9-zones:
