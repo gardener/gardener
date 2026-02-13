@@ -35,7 +35,7 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockrecord "github.com/gardener/gardener/third_party/mock/client-go/tools/record"
+	mockevents "github.com/gardener/gardener/third_party/mock/client-go/tools/events"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
@@ -55,7 +55,7 @@ var _ = Describe("Interface", func() {
 		vh                *mockgardenletdepoyer.MockValuesHelper
 		shootClient       *mockclient.MockClient
 		shootChartApplier *kubernetesmock.MockChartApplier
-		recorder          *mockrecord.MockEventRecorder
+		recorder          *mockevents.MockEventRecorder
 
 		log      logr.Logger
 		actuator *Actuator
@@ -86,7 +86,7 @@ var _ = Describe("Interface", func() {
 		shootClientSet = kubernetesmock.NewMockInterface(ctrl)
 		vh = mockgardenletdepoyer.NewMockValuesHelper(ctrl)
 		shootChartApplier = kubernetesmock.NewMockChartApplier(ctrl)
-		recorder = mockrecord.NewMockEventRecorder(ctrl)
+		recorder = mockevents.NewMockEventRecorder(ctrl)
 
 		shootClientSet.EXPECT().Client().Return(shootClient).AnyTimes()
 		shootClientSet.EXPECT().ChartApplier().Return(shootChartApplier).AnyTimes()
@@ -539,11 +539,11 @@ seedConfig:
 				expectVerifyExistingGardenletNotFound()
 				expectGetSeed(false)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(true)
 				expectGetGardenletChartValues(true, false, false)
@@ -580,10 +580,10 @@ seedConfig:
 				expectVerifyExistingGardenletNotFound()
 				expectGetSeed(false)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Reconciling seed secrets")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(true)
 				expectGetGardenletChartValues(true, false, false)
@@ -601,13 +601,13 @@ seedConfig:
 			It("should return error when backup secret does not exist", func() {
 				expectVerifyExistingGardenletNotFound()
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Reconciling seed secrets")
 
 				gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: backupSecretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(corev1.Resource("secret"), backupSecretName))
 
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, gomock.Any())
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, gardencorev1beta1.EventActionReconcile, gomock.Any())
 
 				_, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
 				Expect(err).To(HaveOccurred())
@@ -620,9 +620,9 @@ seedConfig:
 				expectVerifyExistingGardenletNotFound()
 				expectGetSeed(false)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Reconciling seed secrets")
 
 				gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: backupSecretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).SetArg(2, *backupSecret).Return(nil)
 				gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: backupSecretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).SetArg(2, *backupSecret).Return(nil)
@@ -632,7 +632,7 @@ seedConfig:
 					return nil
 				})
 
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(true)
 				expectGetGardenletChartValues(true, false, false)
@@ -654,11 +654,11 @@ seedConfig:
 				expectVerifyExistingGardenletNotFound()
 				expectGetSeed(true)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(true)
 				expectGetGardenletChartValues(true, false, false)
@@ -681,11 +681,11 @@ seedConfig:
 				expectDeleteKubeconfigSecret()
 				expectGetSeed(true)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(false)
 				expectGetGardenletChartValues(true, false, false)
@@ -708,7 +708,7 @@ seedConfig:
 				}
 
 				expectVerifyExistingGardenletNotFound()
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Renewing gardenlet kubeconfig secret due to operation annotation")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Renewing gardenlet kubeconfig secret due to operation annotation")
 				expectDeleteKubeconfigSecret()
 				gardenClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
 					Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"annotations":null}}`))
@@ -716,11 +716,11 @@ seedConfig:
 				})
 				expectGetSeed(true)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(false)
 				expectGetGardenletChartValues(true, false, false)
@@ -742,11 +742,11 @@ seedConfig:
 				expectVerifyExistingGardenletNotFound()
 				expectGetSeed(false)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectGetGardenletChartValues(false, false, false)
 				expectApplyGardenletChart()
@@ -779,9 +779,9 @@ seedConfig:
 
 			It("should deploy the gardenlet", func() {
 				expectVerifyExistingGardenletNotFound()
-				recorder.EXPECT().Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
+				recorder.EXPECT().Eventf(shoot, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
+				recorder.EXPECT().Eventf(shoot, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Deploying gardenlet into target cluster")
 				shootClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: "gardenlet-kubeconfig"}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 					func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret, _ ...client.GetOption) error {
 						return apierrors.NewNotFound(corev1.Resource("secret"), "gardenlet-kubeconfig")
@@ -814,11 +814,11 @@ seedConfig:
 				expectVerifyExistingGardenletNotFound()
 				expectGetSeed(false)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(true)
 				expectGetGardenletChartValues(true, true, false)
@@ -843,11 +843,11 @@ seedConfig:
 				expectVerifyExistingGardenletNotFound()
 				expectGetSeed(true)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(true)
 				expectGetGardenletChartValues(true, true, false)
@@ -873,11 +873,11 @@ seedConfig:
 				expectDeleteKubeconfigSecret()
 				expectGetSeed(true)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(false)
 				expectGetGardenletChartValues(true, true, false)
@@ -903,7 +903,7 @@ seedConfig:
 				}
 
 				expectVerifyExistingGardenletNotFound()
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Renewing gardenlet kubeconfig secret due to operation annotation")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Renewing gardenlet kubeconfig secret due to operation annotation")
 				expectDeleteKubeconfigSecret()
 				gardenClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
 					Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"annotations":null}}`))
@@ -911,11 +911,11 @@ seedConfig:
 				})
 				expectGetSeed(true)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(false)
 				expectGetGardenletChartValues(true, true, false)
@@ -940,11 +940,11 @@ seedConfig:
 				expectVerifyExistingGardenletNotFound()
 				expectGetSeed(false)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectGetGardenletChartValues(false, true, false)
 				expectApplyGardenletChart()
@@ -960,7 +960,7 @@ seedConfig:
 
 			It("should return error when existing gardenlet uses different seed name", func() {
 				expectVerifyExistingGardenletWithDifferentSeed("other-seed")
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, gomock.Any())
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, gardencorev1beta1.EventActionReconcile, gomock.Any())
 
 				_, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
 				Expect(err).To(HaveOccurred())
@@ -980,7 +980,7 @@ seedConfig:
 
 			It("should delete the seed if it still exists", func() {
 				expectGetSeed(true)
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed %s", name)
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, gardencorev1beta1.EventActionDelete, "Deleting seed %s", name)
 				expectDeleteSeed()
 
 				conditions, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
@@ -998,7 +998,7 @@ seedConfig:
 				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).Return(nil)
 				expectGetSeed(false)
 				expectGetGardenletDeployment(true)
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting gardenlet from target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, gardencorev1beta1.EventActionDelete, "Deleting gardenlet from target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(true)
 				expectGetGardenletChartValues(true, false, false)
@@ -1019,7 +1019,7 @@ seedConfig:
 				expectGetSeed(false)
 				expectGetGardenletDeployment(false)
 				expectGetSeedSecrets(true)
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed secrets")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, gardencorev1beta1.EventActionDelete, "Deleting seed secrets")
 				expectDeleteSeedSecrets()
 
 				conditions, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
@@ -1071,7 +1071,7 @@ seedConfig:
 				expectGetGardenletDeployment(false)
 				expectGetSeedSecrets(false)
 				expectGetGardenNamespace(true)
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting garden namespace from target cluster")
+				recorder.EXPECT().Eventf(managedSeed, nil, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, gardencorev1beta1.EventActionDelete, "Deleting garden namespace from target cluster")
 				expectDeleteGardenNamespace()
 
 				conditions, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)

@@ -74,6 +74,8 @@ var (
 
 	testRunID     string
 	testNamespace *corev1.Namespace
+
+	mgrNode manager.Manager
 )
 
 var _ = BeforeSuite(func() {
@@ -206,7 +208,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	mgrNode, err := manager.New(testRestConfig, manager.Options{
+	mgrNode, err = manager.New(testRestConfig, manager.Options{
 		WebhookServer: webhook.NewServer(webhook.Options{
 			Port:    webhookPortNodeAgentNode,
 			Host:    testEnv.WebhookInstallOptions.LocalServingHost,

@@ -14,7 +14,7 @@ import (
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -77,7 +77,7 @@ func (b *GardenadmBotanist) ReconcileBackupBucket(ctx context.Context) error {
 		GardenClient:    b.GardenClient,
 		SeedClient:      b.SeedClientSet.Client(),
 		Clock:           b.Clock,
-		Recorder:        &record.FakeRecorder{},
+		Recorder:        &events.FakeRecorder{},
 		GardenNamespace: b.Shoot.ControlPlaneNamespace,
 	}
 
@@ -117,7 +117,7 @@ func (b *GardenadmBotanist) ReconcileBackupEntry(ctx context.Context) error {
 		GardenClient:    b.GardenClient,
 		SeedClient:      b.SeedClientSet.Client(),
 		Clock:           b.Clock,
-		Recorder:        &record.FakeRecorder{},
+		Recorder:        &events.FakeRecorder{},
 		GardenNamespace: b.Shoot.ControlPlaneNamespace,
 	}
 

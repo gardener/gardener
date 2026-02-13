@@ -35,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	v1helper "k8s.io/component-helpers/scheduling/corev1"
 	"k8s.io/component-helpers/scheduling/corev1/nodeaffinity"
+	"k8s.io/klog/v2"
 )
 
 // NodeShouldRunDaemonPod checks a set of preconditions against a (node,daemonset) and returns a
@@ -48,7 +49,7 @@ import (
 //
 // Copied from https://github.com/kubernetes/kubernetes/blob/v1.35.0/pkg/controller/daemon/daemon_controller.go#L1275-L1306
 // First if block semantically equally changed due to golangci-lint finding QF1001.
-func NodeShouldRunDaemonPod(node *corev1.Node, ds *appsv1.DaemonSet) (bool, bool) {
+func NodeShouldRunDaemonPod(logger klog.Logger, node *corev1.Node, ds *appsv1.DaemonSet) (bool, bool) {
 	pod := NewPod(ds, node.Name)
 
 	// If the daemon set specifies a node name, check that it matches with node.Name.
@@ -57,20 +58,16 @@ func NodeShouldRunDaemonPod(node *corev1.Node, ds *appsv1.DaemonSet) (bool, bool
 	}
 
 	taints := node.Spec.Taints
-	fitsNodeName, fitsNodeAffinity, fitsTaints := predicates(pod, node, taints)
+	fitsNodeName, fitsNodeAffinity, fitsTaints := predicates(logger, pod, node, taints)
 	if !fitsNodeName || !fitsNodeAffinity {
 		return false, false
 	}
 
 	if !fitsTaints {
 		// Scheduled daemon pods should continue running if they tolerate NoExecute taint.
-		_, hasUntoleratedTaint := v1helper.FindMatchingUntoleratedTaint(taints, pod.Spec.Tolerations, func(t *corev1.Taint) bool {
+		_, hasUntoleratedTaint := v1helper.FindMatchingUntoleratedTaint(logger, taints, pod.Spec.Tolerations, func(t *corev1.Taint) bool {
 			return t.Effect == corev1.TaintEffectNoExecute
-		})
-		// TODO(rfranzke): When k8s.io/component-helpers is updated to v1.35, replace above block with below lines.
-		// _, hasUntoleratedTaint := v1helper.FindMatchingUntoleratedTaint(log, taints, pod.Spec.Tolerations, func(t *corev1.Taint) bool {
-		// 	return t.Effect == corev1.TaintEffectNoExecute
-		// }, false)
+		}, false)
 		return false, !hasUntoleratedTaint
 	}
 
@@ -79,17 +76,13 @@ func NodeShouldRunDaemonPod(node *corev1.Node, ds *appsv1.DaemonSet) (bool, bool
 
 // predicates checks if a DaemonSet's pod can run on a node.
 // Copied from https://github.com/kubernetes/kubernetes/blob/v1.35.0/pkg/controller/daemon/daemon_controller.go#L1318-L1328
-func predicates(pod *corev1.Pod, node *corev1.Node, taints []corev1.Taint) (fitsNodeName, fitsNodeAffinity, fitsTaints bool) {
+func predicates(logger klog.Logger, pod *corev1.Pod, node *corev1.Node, taints []corev1.Taint) (fitsNodeName, fitsNodeAffinity, fitsTaints bool) {
 	fitsNodeName = len(pod.Spec.NodeName) == 0 || pod.Spec.NodeName == node.Name
 	// Ignore parsing errors for backwards compatibility.
 	fitsNodeAffinity, _ = nodeaffinity.GetRequiredNodeAffinity(pod).Match(node)
-	_, hasUntoleratedTaint := v1helper.FindMatchingUntoleratedTaint(taints, pod.Spec.Tolerations, func(t *corev1.Taint) bool {
+	_, hasUntoleratedTaint := v1helper.FindMatchingUntoleratedTaint(logger, taints, pod.Spec.Tolerations, func(t *corev1.Taint) bool {
 		return t.Effect == corev1.TaintEffectNoExecute || t.Effect == corev1.TaintEffectNoSchedule
-	})
-	// TODO(rfranzke): When k8s.io/component-helpers is updated to v1.35, replace above block with below lines.
-	// _, hasUntoleratedTaint := v1helper.FindMatchingUntoleratedTaint(log, taints, pod.Spec.Tolerations, func(t *corev1.Taint) bool {
-	// 	return t.Effect == corev1.TaintEffectNoExecute || t.Effect == corev1.TaintEffectNoSchedule
-	// }, false)
+	}, false)
 	fitsTaints = !hasUntoleratedTaint
 	return
 }

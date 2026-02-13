@@ -509,7 +509,7 @@ var _ = Describe("Project Validation Tests", func() {
 					"Type":     Equal(field.ErrorTypeInvalid),
 					"Field":    Equal("spec.tolerations.defaults[8].key"),
 					"BadValue": Equal(strings.Repeat("n", 64)),
-					"Detail":   Equal("name part must be no more than 63 characters"),
+					"Detail":   Equal("name part must be no more than 63 bytes"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -541,7 +541,7 @@ var _ = Describe("Project Validation Tests", func() {
 					"Type":     Equal(field.ErrorTypeInvalid),
 					"Field":    Equal("spec.tolerations.whitelist[8].key"),
 					"BadValue": Equal(strings.Repeat("n", 64)),
-					"Detail":   Equal("name part must be no more than 63 characters"),
+					"Detail":   Equal("name part must be no more than 63 bytes"),
 				})),
 			))
 		})

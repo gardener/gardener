@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -54,7 +54,7 @@ type Reconciler struct {
 	GardenNamespace  string
 	HelmRegistry     oci.Interface
 	Clock            clock.Clock
-	Recorder         record.EventRecorder
+	Recorder         events.EventRecorder
 
 	admission              admission.Interface
 	controllerRegistration controllerregistration.Interface

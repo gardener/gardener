@@ -45,7 +45,7 @@ func NewGardenletInformer(client versioned.Interface, namespace string, resyncPe
 // one. This reduces memory footprint and number of connections to the server.
 func NewFilteredGardenletInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
-		&cache.ListWatch{
+		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
@@ -70,7 +70,7 @@ func NewFilteredGardenletInformer(client versioned.Interface, namespace string, 
 				}
 				return client.SeedmanagementV1alpha1().Gardenlets(namespace).Watch(ctx, options)
 			},
-		},
+		}, client),
 		&apisseedmanagementv1alpha1.Gardenlet{},
 		resyncPeriod,
 		indexers,

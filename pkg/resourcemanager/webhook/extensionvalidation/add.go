@@ -7,9 +7,7 @@ package extensionvalidation
 import (
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
@@ -45,26 +43,45 @@ const (
 
 // AddToManager add the validators to the given managers.
 func AddToManager(mgr manager.Manager) error {
-	for obj, validator := range map[client.Object]admission.CustomValidator{
-		&extensionsv1alpha1.BackupBucket{}:          &backupBucketValidator{},
-		&extensionsv1alpha1.BackupEntry{}:           &backupEntryValidator{},
-		&extensionsv1alpha1.Bastion{}:               &bastionValidator{},
-		&extensionsv1alpha1.ContainerRuntime{}:      &containerRuntimeValidator{},
-		&extensionsv1alpha1.ControlPlane{}:          &controlPlaneValidator{},
-		&extensionsv1alpha1.DNSRecord{}:             &dnsRecordValidator{},
-		&druidcorev1alpha1.Etcd{}:                   &etcdValidator{},
-		&extensionsv1alpha1.Extension{}:             &extensionValidator{},
-		&extensionsv1alpha1.Infrastructure{}:        &infrastructureValidator{},
-		&extensionsv1alpha1.Network{}:               &networkValidator{},
-		&extensionsv1alpha1.OperatingSystemConfig{}: &operatingSystemConfigValidator{},
-		&extensionsv1alpha1.Worker{}:                &workerValidator{},
+	for _, register := range []func() error{
+		func() error {
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.BackupBucket{}).WithValidator(&backupBucketValidator{}).Complete()
+		},
+		func() error {
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.BackupEntry{}).WithValidator(&backupEntryValidator{}).Complete()
+		},
+		func() error {
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.Bastion{}).WithValidator(&bastionValidator{}).Complete()
+		},
+		func() error {
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.ContainerRuntime{}).WithValidator(&containerRuntimeValidator{}).Complete()
+		},
+		func() error {
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.ControlPlane{}).WithValidator(&controlPlaneValidator{}).Complete()
+		},
+		func() error {
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.DNSRecord{}).WithValidator(&dnsRecordValidator{}).Complete()
+		},
+		func() error {
+			return builder.WebhookManagedBy(mgr, &druidcorev1alpha1.Etcd{}).WithValidator(&etcdValidator{}).Complete()
+		},
+		func() error {
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.Extension{}).WithValidator(&extensionValidator{}).Complete()
+		},
+		func() error {
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.Infrastructure{}).WithValidator(&infrastructureValidator{}).Complete()
+		},
+		func() error {
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.Network{}).WithValidator(&networkValidator{}).Complete()
+		},
+		func() error {
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.OperatingSystemConfig{}).WithValidator(&operatingSystemConfigValidator{}).Complete()
+		},
+		func() error {
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.Worker{}).WithValidator(&workerValidator{}).Complete()
+		},
 	} {
-		// RecoverPanic is defaulted to true.
-		if err := builder.
-			WebhookManagedBy(mgr).
-			WithValidator(validator).
-			For(obj).
-			Complete(); err != nil {
+		if err := register(); err != nil {
 			return err
 		}
 	}

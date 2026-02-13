@@ -15,7 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -147,7 +147,7 @@ func (b *GardenadmBotanist) ApplyOperatingSystemConfig(ctx context.Context) erro
 		},
 		ConfigDir:             nodeagentconfigv1alpha1.BaseDir,
 		CancelContext:         cancelFunc,
-		Recorder:              &record.FakeRecorder{},
+		Recorder:              &events.FakeRecorder{},
 		Extractor:             registry.NewExtractor(),
 		HostName:              b.HostName,
 		NodeName:              ptr.Deref(node, corev1.Node{}).Name,

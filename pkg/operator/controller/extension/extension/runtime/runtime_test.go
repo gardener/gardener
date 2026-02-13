@@ -17,7 +17,7 @@ import (
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -70,7 +70,7 @@ var _ = Describe("Deployment", func() {
 		runtimeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
 		runtimeClientSet = fakekubernetes.NewClientSetBuilder().WithChartRenderer(chartRenderer).WithClient(runtimeClient).Build()
 
-		runtime = New(runtimeClientSet, &record.FakeRecorder{}, "garden", ociRegistry)
+		runtime = New(runtimeClientSet, &events.FakeRecorder{}, "garden", ociRegistry)
 
 		gardenNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{

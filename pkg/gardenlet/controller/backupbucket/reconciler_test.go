@@ -14,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -118,7 +118,7 @@ var _ = Describe("Controller", func() {
 		reconciler = &Reconciler{
 			GardenClient: gardenClient,
 			SeedClient:   seedClient,
-			Recorder:     &record.FakeRecorder{},
+			Recorder:     &events.FakeRecorder{},
 			Config: gardenletconfigv1alpha1.BackupBucketControllerConfiguration{
 				ConcurrentSyncs: ptr.To(5),
 			},

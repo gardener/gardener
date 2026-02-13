@@ -14,7 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -37,7 +37,7 @@ const finalizerName = "gardener.cloud/credentialsbinding"
 type Reconciler struct {
 	Client   client.Client
 	Config   controllermanagerconfigv1alpha1.CredentialsBindingControllerConfiguration
-	Recorder record.EventRecorder
+	Recorder events.EventRecorder
 }
 
 // Reconcile reconciles CredentialsBinding.
@@ -188,7 +188,7 @@ func (r *Reconciler) delete(ctx context.Context, credentialsBinding *securityv1a
 
 	if len(associatedShoots) != 0 {
 		message := fmt.Sprintf("Cannot delete CredentialsBinding, because the following Shoots are still referencing it: %+v", associatedShoots)
-		r.Recorder.Event(credentialsBinding, corev1.EventTypeWarning, v1beta1constants.EventResourceReferenced, message)
+		r.Recorder.Eventf(credentialsBinding, nil, corev1.EventTypeWarning, v1beta1constants.EventResourceReferenced, gardencorev1beta1.EventActionDelete, message)
 		return errors.New(message)
 	}
 

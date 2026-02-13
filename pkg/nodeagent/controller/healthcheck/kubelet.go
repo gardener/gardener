@@ -15,11 +15,12 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 )
@@ -47,14 +48,14 @@ type KubeletHealthChecker struct {
 	httpClient            *http.Client
 	firstFailure          *time.Time
 	dbus                  dbus.DBus
-	recorder              record.EventRecorder
+	recorder              events.EventRecorder
 	lastInternalIP        netip.Addr
 	getAddresses          func() ([]net.Addr, error)
 	kubeletHealthEndpoint string
 }
 
 // NewKubeletHealthChecker create an instance of a kubelet health check.
-func NewKubeletHealthChecker(client client.Client, clock clock.Clock, dbus dbus.DBus, recorder record.EventRecorder, getAddresses func() ([]net.Addr, error)) *KubeletHealthChecker {
+func NewKubeletHealthChecker(client client.Client, clock clock.Clock, dbus dbus.DBus, recorder events.EventRecorder, getAddresses func() ([]net.Addr, error)) *KubeletHealthChecker {
 	return &KubeletHealthChecker{
 		client:                  client,
 		httpClient:              &http.Client{Timeout: 10 * time.Second},
@@ -108,7 +109,7 @@ func (k *KubeletHealthChecker) Check(ctx context.Context, node *corev1.Node) err
 	if err == nil && response.StatusCode == http.StatusOK {
 		if k.firstFailure != nil {
 			log.Info("Kubelet is healthy again", "statusCode", response.StatusCode)
-			k.recorder.Event(node, corev1.EventTypeNormal, "kubelet", "Kubelet is healthy")
+			k.recorder.Eventf(node, nil, corev1.EventTypeNormal, "kubelet", gardencorev1beta1.EventActionHealthCheck, "Kubelet is healthy")
 			k.firstFailure = nil
 		}
 		return nil
@@ -118,7 +119,7 @@ func (k *KubeletHealthChecker) Check(ctx context.Context, node *corev1.Node) err
 		k.firstFailure = &now
 
 		log.Error(err, "Kubelet is unhealthy")
-		k.recorder.Eventf(node, corev1.EventTypeWarning, "kubelet", "Kubelet is unhealthy, health check error: %s", err.Error())
+		k.recorder.Eventf(node, nil, corev1.EventTypeWarning, "kubelet", gardencorev1beta1.EventActionHealthCheck, "Kubelet is unhealthy, health check error: %s", err.Error())
 	}
 
 	if time.Since(*k.firstFailure).Abs() < maxFailureDuration {
@@ -126,7 +127,7 @@ func (k *KubeletHealthChecker) Check(ctx context.Context, node *corev1.Node) err
 	}
 
 	log.Error(err, "Kubelet is unhealthy, restarting it", "failureDuration", maxFailureDuration)
-	k.recorder.Eventf(node, corev1.EventTypeWarning, "kubelet", "Kubelet is unhealthy for more than %s, restarting it. Health check error: %s", maxFailureDuration, err.Error())
+	k.recorder.Eventf(node, nil, corev1.EventTypeWarning, "kubelet", gardencorev1beta1.EventActionHealthCheck, "Kubelet is unhealthy for more than %s, restarting it. Health check error: %s", maxFailureDuration, err.Error())
 	err = k.dbus.Restart(ctx, k.recorder, node, v1beta1constants.OperatingSystemConfigUnitNameKubeletService)
 	if err == nil {
 		k.firstFailure = nil
@@ -156,9 +157,9 @@ func (k *KubeletHealthChecker) ensureNodeInternalIP(ctx context.Context, node *c
 
 	if externalIP == "" && internalIP == "" {
 		if k.lastInternalIP.IsValid() {
-			k.recorder.Eventf(node, corev1.EventTypeWarning, "kubelet", "Node status does neither have an internal nor an external IP, try to recover from last known internal IP:%s", k.lastInternalIP)
+			k.recorder.Eventf(node, nil, corev1.EventTypeWarning, "kubelet", gardencorev1beta1.EventActionHealthCheck, "Node status does neither have an internal nor an external IP, try to recover from last known internal IP: %s", k.lastInternalIP)
 		} else {
-			k.recorder.Event(node, corev1.EventTypeWarning, "kubelet", "Node status does neither have an internal nor an external IP")
+			k.recorder.Eventf(node, nil, corev1.EventTypeWarning, "kubelet", gardencorev1beta1.EventActionHealthCheck, "Node status does neither have an internal nor an external IP")
 		}
 		addresses, err := k.getAddresses()
 		if err != nil {
@@ -187,14 +188,14 @@ func (k *KubeletHealthChecker) ensureNodeInternalIP(ctx context.Context, node *c
 			if err != nil {
 				if !apierrors.IsConflict(err) {
 					log.Error(err, "Unable to update node status with internal IP")
-					k.recorder.Eventf(node, corev1.EventTypeWarning, "kubelet", "Unable to update node status with internal IP: %s", err.Error())
+					k.recorder.Eventf(node, nil, corev1.EventTypeWarning, "kubelet", gardencorev1beta1.EventActionHealthCheck, "Unable to update node status with internal IP: %s", err.Error())
 					return k.dbus.Restart(ctx, k.recorder, node, v1beta1constants.OperatingSystemConfigUnitNameKubeletService)
 				}
 				return err
 			}
 
 			log.Info("Updated internal IP address of node status", "ip", k.lastInternalIP.String())
-			k.recorder.Eventf(node, corev1.EventTypeNormal, "kubelet", "Updated the lost internal IP address of node status to the previous known: %s ", k.lastInternalIP.String())
+			k.recorder.Eventf(node, nil, corev1.EventTypeNormal, "kubelet", gardencorev1beta1.EventActionHealthCheck, "Updated the lost internal IP address of node status to the previous known: %s ", k.lastInternalIP.String())
 		}
 	} else if internalIP != "" {
 		var err error
@@ -214,7 +215,7 @@ func (k *KubeletHealthChecker) verifyNodeReady(log logr.Logger, node *corev1.Nod
 		log.Info("Kubelet became Ready", "readinessChanges", len(k.KubeletReadinessToggles), "timespan", toggleTimeSpan)
 		if createEvent {
 			// Do not reboot the node, but create an event instead.
-			k.recorder.Eventf(node, corev1.EventTypeWarning, "kubelet", "Kubelet toggled between NotReady and Ready at least %d times in a %s time window. Rebooting the node might help", maxToggles, toggleTimeSpan)
+			k.recorder.Eventf(node, nil, corev1.EventTypeWarning, "kubelet", gardencorev1beta1.EventActionHealthCheck, "Kubelet toggled between NotReady and Ready at least %d times in a %s time window. Rebooting the node might help", maxToggles, toggleTimeSpan)
 		}
 	}
 	k.NodeReady = isNodeReady(node)

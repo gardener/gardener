@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
@@ -82,7 +82,7 @@ var _ = Describe("Reconciler", func() {
 			GardenClient:    gardenClient,
 			Config:          cfg,
 			Clock:           fakeClock,
-			Recorder:        &record.FakeRecorder{},
+			Recorder:        &events.FakeRecorder{},
 		}
 		Actuator = actuator
 		DeferCleanup(func() { Actuator = nil })

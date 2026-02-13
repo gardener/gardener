@@ -51,7 +51,7 @@ func (r *Reconciler) AddToManager(
 		r.Clock = clock.RealClock{}
 	}
 	if r.Recorder == nil {
-		r.Recorder = gardenCluster.GetEventRecorderFor(ControllerName + "-controller")
+		r.Recorder = gardenCluster.GetEventRecorder(ControllerName + "-controller")
 	}
 	if r.GardenNamespaceGarden == "" {
 		r.GardenNamespaceGarden = v1beta1constants.GardenNamespace

@@ -18,12 +18,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/criticalcomponents/helper"
@@ -35,7 +36,7 @@ import (
 type Reconciler struct {
 	TargetClient client.Client
 	Config       resourcemanagerconfigv1alpha1.NodeCriticalComponentsControllerConfig
-	Recorder     record.EventRecorder
+	Recorder     events.EventRecorder
 }
 
 // Reconcile checks if the critical components not ready taint can be removed from the Node object.
@@ -96,7 +97,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	log.Info("All node-critical components got ready, removing taint")
-	r.Recorder.Event(node, corev1.EventTypeNormal, "NodeCriticalComponentsReady", "All node-critical components got ready, removing taint")
+	r.Recorder.Eventf(node, nil, corev1.EventTypeNormal, "NodeCriticalComponentsReady", gardencorev1beta1.EventActionReconcile, "All node-critical components got ready, removing taint")
 	return reconcile.Result{}, RemoveTaint(ctx, r.TargetClient, node)
 }
 
@@ -104,7 +105,7 @@ var daemonSetGVK = appsv1.SchemeGroupVersion.WithKind("DaemonSet")
 
 // AllNodeCriticalDaemonPodsAreScheduled returns true if all node-critical DaemonSets that should be scheduled to the
 // given node have been scheduled. It uses ownerReferences of the given node-critical pods on the node for this check.
-func AllNodeCriticalDaemonPodsAreScheduled(log logr.Logger, recorder record.EventRecorder, node *corev1.Node, daemonSets []appsv1.DaemonSet, nodeCriticalPods []corev1.Pod) bool {
+func AllNodeCriticalDaemonPodsAreScheduled(log logr.Logger, recorder events.EventRecorder, node *corev1.Node, daemonSets []appsv1.DaemonSet, nodeCriticalPods []corev1.Pod) bool {
 	// collect a set of all scheduled DaemonSets on the node
 	scheduledDaemonSets := sets.New[types.UID]()
 	for _, pod := range nodeCriticalPods {
@@ -124,7 +125,7 @@ func AllNodeCriticalDaemonPodsAreScheduled(log logr.Logger, recorder record.Even
 		}
 
 		// determine whether DaemonSet needs to be scheduled to the node at all
-		if shouldRun, _ := helper.NodeShouldRunDaemonPod(node, &daemonSet); !shouldRun {
+		if shouldRun, _ := helper.NodeShouldRunDaemonPod(log, node, &daemonSet); !shouldRun {
 			continue
 		}
 
@@ -137,7 +138,7 @@ func AllNodeCriticalDaemonPodsAreScheduled(log logr.Logger, recorder record.Even
 
 	if len(unscheduledDaemonSets) > 0 {
 		log.Info("Node-critical DaemonSets found that were not scheduled to Node yet", "daemonSets", unscheduledDaemonSets)
-		recorder.Eventf(node, corev1.EventTypeWarning, "UnscheduledNodeCriticalDaemonSets", "Node-critical DaemonSets found that were not scheduled to Node yet: %s", objectKeysToString(unscheduledDaemonSets))
+		recorder.Eventf(node, nil, corev1.EventTypeWarning, "UnscheduledNodeCriticalDaemonSets", gardencorev1beta1.EventActionReconcile, "Node-critical DaemonSets found that were not scheduled to Node yet: %s", objectKeysToString(unscheduledDaemonSets))
 		return false
 	}
 
@@ -145,7 +146,7 @@ func AllNodeCriticalDaemonPodsAreScheduled(log logr.Logger, recorder record.Even
 }
 
 // AllNodeCriticalPodsAreReady returns true if all the given pods are ready by checking their Ready conditions.
-func AllNodeCriticalPodsAreReady(log logr.Logger, recorder record.EventRecorder, node *corev1.Node, nodeCriticalPods []corev1.Pod) bool {
+func AllNodeCriticalPodsAreReady(log logr.Logger, recorder events.EventRecorder, node *corev1.Node, nodeCriticalPods []corev1.Pod) bool {
 	var unreadyPods []client.ObjectKey
 	for _, pod := range nodeCriticalPods {
 		if !health.IsPodReady(&pod) {
@@ -155,7 +156,7 @@ func AllNodeCriticalPodsAreReady(log logr.Logger, recorder record.EventRecorder,
 
 	if len(unreadyPods) > 0 {
 		log.Info("Unready node-critical Pods found on Node", "pods", unreadyPods)
-		recorder.Eventf(node, corev1.EventTypeWarning, "UnreadyNodeCriticalPods", "Unready node-critical Pods found on Node: %s", objectKeysToString(unreadyPods))
+		recorder.Eventf(node, nil, corev1.EventTypeWarning, "UnreadyNodeCriticalPods", gardencorev1beta1.EventActionReconcile, "Unready node-critical Pods found on Node: %s", objectKeysToString(unreadyPods))
 		return false
 	}
 
@@ -203,11 +204,11 @@ func GetExistingDriversFromCSINode(ctx context.Context, client client.Client, cs
 // that are specified by csi-driver-node pods) with a set of existing drivers
 // (i.e. drivers for which the CSINode object had information stored in spec).
 // Either set could be empty.
-func AllCSINodeDriversAreReady(log logr.Logger, recorder record.EventRecorder, node *corev1.Node, requiredDrivers, existingDrivers sets.Set[string]) bool {
+func AllCSINodeDriversAreReady(log logr.Logger, recorder events.EventRecorder, node *corev1.Node, requiredDrivers, existingDrivers sets.Set[string]) bool {
 	unreadyDrivers := requiredDrivers.Difference(existingDrivers)
 	if unreadyDrivers.Len() >= 1 {
 		log.Info("Unready required CSI drivers for Node", "drivers", unreadyDrivers.UnsortedList())
-		recorder.Eventf(node, corev1.EventTypeWarning, "UnreadyRequiredCSIDrivers", "Unready required CSI drivers for Node: %s", unreadyDrivers.UnsortedList())
+		recorder.Eventf(node, nil, corev1.EventTypeWarning, "UnreadyRequiredCSIDrivers", gardencorev1beta1.EventActionReconcile, "Unready required CSI drivers for Node: %s", unreadyDrivers.UnsortedList())
 	}
 	return unreadyDrivers.Len() == 0
 }

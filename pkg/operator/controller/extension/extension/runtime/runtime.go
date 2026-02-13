@@ -15,11 +15,12 @@ import (
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -44,7 +45,7 @@ type Interface interface {
 
 type deployer struct {
 	runtimeClientSet kubernetes.Interface
-	recorder         record.EventRecorder
+	recorder         events.EventRecorder
 
 	gardenNamespace string
 	helmRegistry    oci.Interface
@@ -69,7 +70,7 @@ func (d *deployer) Reconcile(ctx context.Context, log logr.Logger, extension *op
 	if err := d.createOrUpdateResources(ctx, extension); err != nil {
 		return reconcile.Result{}, err
 	}
-	d.recorder.Event(extension, corev1.EventTypeNormal, "Reconciliation", "Extension applied successfully in runtime cluster")
+	d.recorder.Eventf(extension, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, gardencorev1beta1.EventActionReconcile, "Extension applied successfully in runtime cluster")
 	return reconcile.Result{}, nil
 }
 
@@ -80,7 +81,7 @@ func (d *deployer) Delete(ctx context.Context, log logr.Logger, extension *opera
 		return reconcile.Result{}, err
 	}
 
-	d.recorder.Event(extension, corev1.EventTypeNormal, "Deletion", "Extension deployment deleted successfully in runtime cluster")
+	d.recorder.Eventf(extension, nil, corev1.EventTypeNormal, gardencorev1beta1.EventDeleted, gardencorev1beta1.EventActionDelete, "Extension deployment deleted successfully in runtime cluster")
 	return reconcile.Result{}, nil
 }
 
@@ -200,7 +201,7 @@ func extensionDeploymentSpecified(extension *operatorv1alpha1.Extension) bool {
 }
 
 // New creates a new runtime deployer.
-func New(runtimeClientSet kubernetes.Interface, recorder record.EventRecorder, gardenNamespace string, registry oci.Interface) Interface {
+func New(runtimeClientSet kubernetes.Interface, recorder events.EventRecorder, gardenNamespace string, registry oci.Interface) Interface {
 	return &deployer{
 		runtimeClientSet: runtimeClientSet,
 		recorder:         recorder,

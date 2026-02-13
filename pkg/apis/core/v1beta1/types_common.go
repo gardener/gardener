@@ -145,6 +145,15 @@ const (
 	EventMigrationPrepared = "MigrationPrepared"
 	// EventMigrationPreparationFailed indicates that the Migration preparation failed.
 	EventMigrationPreparationFailed = "MigrationPreparationFailed"
+
+	// EventActionReconcile describes an event action for reconciliation.
+	EventActionReconcile = "Reconcile"
+	// EventActionDelete describes an event action for deletion.
+	EventActionDelete = "Delete"
+	// EventActionMigrate describes an event action for migration.
+	EventActionMigrate = "Migrate"
+	// EventActionHealthCheck describes an event action for health checks.
+	EventActionHealthCheck = "HealthCheck"
 )
 
 // HighAvailability specifies the configuration settings for high availability for a resource. Typical

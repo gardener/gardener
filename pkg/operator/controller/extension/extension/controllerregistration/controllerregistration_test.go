@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -64,7 +64,7 @@ var _ = Describe("ControllerRegistration", func() {
 		ociRef = "test-extension:v1.2.3"
 		extensionKind = "worker"
 
-		controllerRegistration = New(c, &record.FakeRecorder{}, gardenNamespace)
+		controllerRegistration = New(c, &events.FakeRecorder{}, gardenNamespace)
 
 		extension = &operatorv1alpha1.Extension{
 			ObjectMeta: metav1.ObjectMeta{

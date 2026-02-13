@@ -39,7 +39,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		r.Client = mgr.GetClient()
 	}
 	if r.Recorder == nil {
-		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
+		r.Recorder = mgr.GetEventRecorder(ControllerName + "-controller")
 	}
 
 	shootMeta := &metav1.PartialObjectMetadata{}

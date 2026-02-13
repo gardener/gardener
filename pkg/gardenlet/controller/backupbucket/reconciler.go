@@ -16,7 +16,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -51,7 +51,7 @@ type Reconciler struct {
 	SeedClient      client.Client
 	Config          gardenletconfigv1alpha1.BackupBucketControllerConfiguration
 	Clock           clock.Clock
-	Recorder        record.EventRecorder
+	Recorder        events.EventRecorder
 	GardenNamespace string
 	SeedName        string
 
@@ -111,7 +111,7 @@ func (r *Reconciler) reconcileBackupBucket(
 	backupCredentials, err := kubernetesutils.GetCredentialsByObjectReference(gardenCtx, r.GardenClient, *backupBucket.Spec.CredentialsRef)
 	if err != nil {
 		log.Error(err, "Failed to get backup credentials", "credentialsRef", backupBucket.Spec.CredentialsRef)
-		r.Recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "Failed to get backup credentials from reference %v: %w", backupBucket.Spec.CredentialsRef, err)
+		r.Recorder.Eventf(backupBucket, nil, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, gardencorev1beta1.EventActionReconcile, "Failed to get backup credentials from reference %v: %w", backupBucket.Spec.CredentialsRef, err)
 		return err
 	}
 
@@ -243,7 +243,7 @@ func (r *Reconciler) reconcileBackupBucket(
 			Description: lastObservedError.Error(),
 		}
 
-		r.Recorder.Event(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, reconcileErr.Description)
+		r.Recorder.Eventf(backupBucket, nil, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, gardencorev1beta1.EventActionReconcile, reconcileErr.Description)
 
 		if updateErr := r.updateBackupBucketStatusError(gardenCtx, backupBucket, reconcileErr.Description, reconcileErr); updateErr != nil {
 			return fmt.Errorf("could not update status after reconciliation error: %w", updateErr)
@@ -317,7 +317,7 @@ func (r *Reconciler) deleteBackupBucket(
 		}
 	} else if err == nil {
 		if lastError := extensionBackupBucket.Status.LastError; lastError != nil {
-			r.Recorder.Event(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastError.Description)
+			r.Recorder.Eventf(backupBucket, nil, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, gardencorev1beta1.EventActionDelete, lastError.Description)
 
 			if updateErr := r.updateBackupBucketStatusError(gardenCtx, backupBucket, lastError.Description+" Operation will be retried.", lastError); updateErr != nil {
 				return reconcile.Result{}, fmt.Errorf("could not update status after deletion error: %w", updateErr)

@@ -45,7 +45,7 @@ func NewManagedSeedSetInformer(client versioned.Interface, namespace string, res
 // one. This reduces memory footprint and number of connections to the server.
 func NewFilteredManagedSeedSetInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
-		&cache.ListWatch{
+		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
@@ -70,7 +70,7 @@ func NewFilteredManagedSeedSetInformer(client versioned.Interface, namespace str
 				}
 				return client.SeedmanagementV1alpha1().ManagedSeedSets(namespace).Watch(ctx, options)
 			},
-		},
+		}, client),
 		&apisseedmanagementv1alpha1.ManagedSeedSet{},
 		resyncPeriod,
 		indexers,

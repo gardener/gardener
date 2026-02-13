@@ -18,7 +18,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
@@ -59,7 +59,7 @@ var RequeueDurationWhenResourceDeletionStillPresent = 5 * time.Second
 type Reconciler struct {
 	GardenClient    client.Client
 	SeedClient      client.Client
-	Recorder        record.EventRecorder
+	Recorder        events.EventRecorder
 	Config          gardenletconfigv1alpha1.BackupEntryControllerConfiguration
 	Clock           clock.Clock
 	SeedName        string
@@ -149,7 +149,7 @@ func (r *Reconciler) reconcileBackupEntry(
 			Description: err.Error(),
 		}
 
-		r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, reconcileErr.Description)
+		r.Recorder.Eventf(backupEntry, nil, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, gardencorev1beta1.EventActionReconcile, reconcileErr.Description)
 
 		if updateErr := r.updateBackupEntryStatusError(gardenCtx, backupEntry, operationType, reconcileErr.Description, reconcileErr); updateErr != nil {
 			return fmt.Errorf("could not update status after reconciliation error: %w", updateErr)
@@ -264,7 +264,7 @@ func (r *Reconciler) reconcileBackupEntry(
 			Description: lastObservedError.Error(),
 		}
 
-		r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, reconcileErr.Description)
+		r.Recorder.Eventf(backupEntry, nil, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, gardencorev1beta1.EventActionReconcile, reconcileErr.Description)
 
 		if updateErr := r.updateBackupEntryStatusError(gardenCtx, backupEntry, operationType, reconcileErr.Description, reconcileErr); updateErr != nil {
 			return fmt.Errorf("could not update status after reconciliation error: %w", updateErr)
@@ -329,7 +329,7 @@ func (r *Reconciler) deleteBackupEntry(
 				Description: err.Error(),
 			}
 
-			r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, reconcileErr.Description)
+			r.Recorder.Eventf(backupEntry, nil, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, gardencorev1beta1.EventActionDelete, reconcileErr.Description)
 
 			if updateErr := r.updateBackupEntryStatusError(gardenCtx, backupEntry, operationType, reconcileErr.Description, reconcileErr); updateErr != nil {
 				return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation error: %w", updateErr)
@@ -365,7 +365,7 @@ func (r *Reconciler) deleteBackupEntry(
 			}
 		} else if err == nil {
 			if lastError := extensionBackupEntry.Status.LastError; lastError != nil {
-				r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastError.Description)
+				r.Recorder.Eventf(backupEntry, nil, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, gardencorev1beta1.EventActionDelete, lastError.Description)
 
 				if updateErr := r.updateBackupEntryStatusError(gardenCtx, backupEntry, operationType, lastError.Description, lastError); updateErr != nil {
 					return reconcile.Result{}, fmt.Errorf("could not update status after deletion error: %w", updateErr)
@@ -461,7 +461,7 @@ func (r *Reconciler) migrateBackupEntry(
 					Description: lastError.Error(),
 				}
 
-				r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, migrateError.Description)
+				r.Recorder.Eventf(backupEntry, nil, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, gardencorev1beta1.EventActionMigrate, migrateError.Description)
 
 				description := migrateError.Description
 				if updateErr := r.updateBackupEntryStatusError(gardenCtx, backupEntry, gardencorev1beta1.LastOperationTypeMigrate, description, migrateError); updateErr != nil {
@@ -480,7 +480,7 @@ func (r *Reconciler) migrateBackupEntry(
 			}
 		case gardencorev1beta1.LastOperationTypeDelete:
 			if lastError := extensionBackupEntry.Status.LastError; lastError != nil {
-				r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastError.Description)
+				r.Recorder.Eventf(backupEntry, nil, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, gardencorev1beta1.EventActionDelete, lastError.Description)
 
 				if updateErr := r.updateBackupEntryStatusError(gardenCtx, backupEntry, gardencorev1beta1.LastOperationTypeDelete, lastError.Description, lastError); updateErr != nil {
 					return reconcile.Result{}, fmt.Errorf("could not update status after deletion error: %w", updateErr)

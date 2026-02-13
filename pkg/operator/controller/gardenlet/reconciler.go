@@ -14,7 +14,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -44,7 +44,7 @@ type Reconciler struct {
 	VirtualClient               client.Client
 	Config                      operatorconfigv1alpha1.GardenletDeployerControllerConfig
 	Clock                       clock.Clock
-	Recorder                    record.EventRecorder
+	Recorder                    events.EventRecorder
 	HelmRegistry                oci.Interface
 	GardenNamespace             string
 	GardenNamespaceTarget       string

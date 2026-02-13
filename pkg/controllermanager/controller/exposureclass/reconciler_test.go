@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -39,7 +39,7 @@ var _ = Describe("Controller", func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 
 		exposureClassName = "test-exposureclass"
-		reconciler = &Reconciler{Client: fakeClient, Recorder: &record.FakeRecorder{}}
+		reconciler = &Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
 		exposureClass = &gardencorev1beta1.ExposureClass{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: exposureClassName,

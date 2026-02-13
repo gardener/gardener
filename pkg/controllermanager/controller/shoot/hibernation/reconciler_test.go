@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/robfig/cron"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/component-base/version"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
@@ -185,7 +185,7 @@ var _ = Describe("Shoot Hibernation", func() {
 				reconciler := &Reconciler{
 					Client:   c,
 					Config:   config,
-					Recorder: record.NewFakeRecorder(1),
+					Recorder: events.NewFakeRecorder(1),
 					Clock:    fakeClock,
 				}
 

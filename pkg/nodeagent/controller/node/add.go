@@ -26,7 +26,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.P
 	}
 
 	if r.Recorder == nil {
-		r.Recorder = mgr.GetEventRecorderFor(ControllerName)
+		r.Recorder = mgr.GetEventRecorder(ControllerName)
 	}
 
 	if r.DBus == nil {

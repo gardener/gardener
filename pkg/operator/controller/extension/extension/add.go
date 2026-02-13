@@ -63,7 +63,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	}
 
 	if r.Recorder == nil {
-		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
+		r.Recorder = mgr.GetEventRecorder(ControllerName + "-controller")
 	}
 
 	if r.HelmRegistry == nil {

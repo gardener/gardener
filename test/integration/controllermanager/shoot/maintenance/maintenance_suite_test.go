@@ -119,7 +119,7 @@ var _ = BeforeSuite(func() {
 			ConcurrentSyncs: ptr.To(5),
 		},
 		Clock:    fakeClock,
-		Recorder: mgr.GetEventRecorderFor("shoot-maintenance-controller"),
+		Recorder: mgr.GetEventRecorder("shoot-maintenance-controller"),
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")

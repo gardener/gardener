@@ -6,7 +6,7 @@ package test
 
 import (
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -18,7 +18,7 @@ type FakeManager struct {
 
 	Client        client.Client
 	Cache         cache.Cache
-	EventRecorder record.EventRecorder
+	EventRecorder events.EventRecorder
 	APIReader     client.Reader
 	Scheme        *runtime.Scheme
 }
@@ -33,8 +33,8 @@ func (f FakeManager) GetCache() cache.Cache {
 	return f.Cache
 }
 
-// GetEventRecorderFor returns the eventRecorder of the FakeManager.
-func (f FakeManager) GetEventRecorderFor(_ string) record.EventRecorder {
+// GetEventRecorder returns the eventRecorder of the FakeManager.
+func (f FakeManager) GetEventRecorder(_ string) events.EventRecorder {
 	return f.EventRecorder
 }
 

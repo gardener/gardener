@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -66,7 +66,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 		sw = mockclient.NewMockStatusWriter(ctrl)
 
 		fakeErr = errors.New("fake err")
-		reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: c, Recorder: &record.FakeRecorder{}}
+		reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: c, Recorder: &events.FakeRecorder{}}
 
 		namespaceName = "test-namespace"
 		cloudProfileName = "test-cloudprofile"
@@ -700,7 +700,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					core.NamespacedCloudProfileParentRefName,
 					indexer.NamespacedCloudProfileParentRefNameIndexerFunc,
 				).Build()
-			reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &record.FakeRecorder{}}
+			reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
 
 			namespaceName = "garden-test"
 

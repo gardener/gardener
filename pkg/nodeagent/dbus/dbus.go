@@ -15,7 +15,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 )
 
 // DBus is an interface for interacting with systemd via dbus.
@@ -27,11 +27,11 @@ type DBus interface {
 	// Disable the given units, same as executing "systemctl disable unit".
 	Disable(ctx context.Context, unitNames ...string) error
 	// Start the given unit and record an event to the node object, same as executing "systemctl start unit".
-	Start(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error
+	Start(ctx context.Context, recorder events.EventRecorder, node runtime.Object, unitName string) error
 	// Stop the given unit and record an event to the node object, same as executing "systemctl stop unit".
-	Stop(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error
+	Stop(ctx context.Context, recorder events.EventRecorder, node runtime.Object, unitName string) error
 	// Restart the given unit and record an event to the node object, same as executing "systemctl restart unit".
-	Restart(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error
+	Restart(ctx context.Context, recorder events.EventRecorder, node runtime.Object, unitName string) error
 	// List lists all units and returns the output.
 	List(ctx context.Context) ([]dbus.UnitStatus, error)
 	// Reboot this machines, is the same as executing "systemctl reboot".
@@ -79,7 +79,7 @@ func (*db) Disable(ctx context.Context, unitNames ...string) error {
 	return err
 }
 
-func (d *db) Stop(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error {
+func (d *db) Stop(ctx context.Context, recorder events.EventRecorder, node runtime.Object, unitName string) error {
 	dbc, err := dbus.NewWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)
@@ -89,7 +89,7 @@ func (d *db) Stop(ctx context.Context, recorder record.EventRecorder, node runti
 	return d.runCommand(ctx, recorder, node, unitName, dbc.StopUnitContext, "SystemDUnitStop", "stop")
 }
 
-func (d *db) Start(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error {
+func (d *db) Start(ctx context.Context, recorder events.EventRecorder, node runtime.Object, unitName string) error {
 	dbc, err := dbus.NewWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)
@@ -99,7 +99,7 @@ func (d *db) Start(ctx context.Context, recorder record.EventRecorder, node runt
 	return d.runCommand(ctx, recorder, node, unitName, dbc.StartUnitContext, "SystemDUnitStart", "start")
 }
 
-func (d *db) Restart(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error {
+func (d *db) Restart(ctx context.Context, recorder events.EventRecorder, node runtime.Object, unitName string) error {
 	dbc, err := dbus.NewWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)
@@ -135,7 +135,7 @@ func (*db) DaemonReload(ctx context.Context) error {
 
 func (d *db) runCommand(
 	ctx context.Context,
-	recorder record.EventRecorder,
+	recorder events.EventRecorder,
 	node runtime.Object,
 	unitName string,
 	f func(context.Context, string, string, chan<- string) (int, error),
@@ -168,7 +168,7 @@ func (d *db) runCommand(
 	return err
 }
 
-func recordEvent(recorder record.EventRecorder, node runtime.Object, err error, unitName, reason, operation string) {
+func recordEvent(recorder events.EventRecorder, node runtime.Object, err error, unitName, reason, operation string) {
 	if recorder != nil && node != nil && !reflect.ValueOf(node).IsNil() { // nil is not nil :(
 		var (
 			eventType = corev1.EventTypeNormal
@@ -180,6 +180,6 @@ func recordEvent(recorder record.EventRecorder, node runtime.Object, err error, 
 			message += fmt.Sprintf(" failed with error %+v", err)
 		}
 
-		recorder.Eventf(node, eventType, reason, message)
+		recorder.Eventf(node, nil, eventType, reason, operation, message)
 	}
 }

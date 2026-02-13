@@ -15,9 +15,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
@@ -40,7 +41,7 @@ type Interface interface {
 
 type deployment struct {
 	runtimeClientSet kubernetes.Interface
-	recorder         record.EventRecorder
+	recorder         events.EventRecorder
 
 	gardenNamespace string
 	helmRegistry    oci.Interface
@@ -54,12 +55,12 @@ func (d *deployment) Reconcile(ctx context.Context, log logr.Logger, virtualClus
 		if err := d.createOrUpdateAdmissionVirtualClusterResources(ctx, virtualClusterClientSet, extension); err != nil {
 			return err
 		}
-		d.recorder.Event(extension, corev1.EventTypeNormal, "Reconciliation", "Admission deployment applied successfully in virtual cluster")
+		d.recorder.Eventf(extension, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, gardencorev1beta1.EventActionReconcile, "Admission deployment applied successfully in virtual cluster")
 	} else {
 		if err := d.deleteAdmissionVirtualClusterResources(ctx, log, extension); err != nil {
 			return err
 		}
-		d.recorder.Event(extension, corev1.EventTypeNormal, "Deletion", "Admission deployment deleted successfully in virtual cluster")
+		d.recorder.Eventf(extension, nil, corev1.EventTypeNormal, gardencorev1beta1.EventDeleted, gardencorev1beta1.EventActionReconcile, "Admission deployment deleted successfully in virtual cluster")
 	}
 
 	if runtimeDeploymentSpecified(extension) {
@@ -67,12 +68,12 @@ func (d *deployment) Reconcile(ctx context.Context, log logr.Logger, virtualClus
 		if err := d.createOrUpdateAdmissionRuntimeClusterResources(ctx, genericTokenKubeconfigSecretName, extension); err != nil {
 			return err
 		}
-		d.recorder.Event(extension, corev1.EventTypeNormal, "Reconciliation", "Admission deployment applied successfully in runtime cluster")
+		d.recorder.Eventf(extension, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, gardencorev1beta1.EventActionReconcile, "Admission deployment applied successfully in runtime cluster")
 	} else {
 		if err := d.deleteAdmissionRuntimeClusterResources(ctx, log, extension); err != nil {
 			return err
 		}
-		d.recorder.Event(extension, corev1.EventTypeNormal, "Deletion", "Admission deployment deleted successfully in runtime cluster")
+		d.recorder.Eventf(extension, nil, corev1.EventTypeNormal, gardencorev1beta1.EventDeleted, gardencorev1beta1.EventActionReconcile, "Admission deployment deleted successfully in runtime cluster")
 	}
 
 	return nil
@@ -287,7 +288,7 @@ func virtualNamespace(extension *operatorv1alpha1.Extension) *corev1.Namespace {
 }
 
 // New creates a new admission deployer.
-func New(runtimeClientSet kubernetes.Interface, recorder record.EventRecorder, gardenNamespace string, registry oci.Interface) Interface {
+func New(runtimeClientSet kubernetes.Interface, recorder events.EventRecorder, gardenNamespace string, registry oci.Interface) Interface {
 	return &deployment{
 		runtimeClientSet: runtimeClientSet,
 		recorder:         recorder,

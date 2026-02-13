@@ -44,7 +44,7 @@ func (r *Reconciler) AddToManager(
 		r.SeedClientSet = seedClientSet
 	}
 	if r.Recorder == nil {
-		r.Recorder = gardenCluster.GetEventRecorderFor(ControllerName + "-controller")
+		r.Recorder = gardenCluster.GetEventRecorder(ControllerName + "-controller")
 	}
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}

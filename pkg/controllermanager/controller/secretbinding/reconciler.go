@@ -13,7 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -32,7 +32,7 @@ const finalizerName = "gardener.cloud/secretbinding"
 type Reconciler struct {
 	Client   client.Client
 	Config   controllermanagerconfigv1alpha1.SecretBindingControllerConfiguration
-	Recorder record.EventRecorder
+	Recorder events.EventRecorder
 }
 
 // Reconcile reconciles SecretBindings.
@@ -130,7 +130,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 
 		message := fmt.Sprintf("Cannot delete SecretBinding, because the following Shoots are still referencing it: %+v", associatedShoots)
-		r.Recorder.Event(secretBinding, corev1.EventTypeWarning, v1beta1constants.EventResourceReferenced, message)
+		r.Recorder.Eventf(secretBinding, nil, corev1.EventTypeWarning, v1beta1constants.EventResourceReferenced, gardencorev1beta1.EventActionReconcile, message)
 		return reconcile.Result{}, errors.New(message)
 	}
 

@@ -59,7 +59,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenClientMap clientmap
 		r.Clock = clock.RealClock{}
 	}
 	if r.Recorder == nil {
-		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
+		r.Recorder = mgr.GetEventRecorder(ControllerName + "-controller")
 	}
 	if r.GardenNamespace == "" {
 		r.GardenNamespace = v1beta1constants.GardenNamespace

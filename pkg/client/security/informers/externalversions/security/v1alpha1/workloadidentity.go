@@ -45,7 +45,7 @@ func NewWorkloadIdentityInformer(client versioned.Interface, namespace string, r
 // one. This reduces memory footprint and number of connections to the server.
 func NewFilteredWorkloadIdentityInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
-		&cache.ListWatch{
+		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
@@ -70,7 +70,7 @@ func NewFilteredWorkloadIdentityInformer(client versioned.Interface, namespace s
 				}
 				return client.SecurityV1alpha1().WorkloadIdentities(namespace).Watch(ctx, options)
 			},
-		},
+		}, client),
 		&apissecurityv1alpha1.WorkloadIdentity{},
 		resyncPeriod,
 		indexers,

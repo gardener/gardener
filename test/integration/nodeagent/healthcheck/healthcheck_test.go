@@ -77,11 +77,11 @@ var _ = Describe("Healthcheck controller tests", func() {
 		nodeName = testRunID
 
 		kubeletHealthcheck = healthcheck.NewKubeletHealthChecker(
-			mgr.GetClient(), clock, fakeDBus, mgr.GetEventRecorderFor(healthcheck.ControllerName), getAddresses,
+			mgr.GetClient(), clock, fakeDBus, mgr.GetEventRecorder(healthcheck.ControllerName), getAddresses,
 		)
 
 		containerdHealthcheck := healthcheck.NewContainerdHealthChecker(
-			mgr.GetClient(), containerdClient, clock, fakeDBus, mgr.GetEventRecorderFor(healthcheck.ControllerName),
+			mgr.GetClient(), containerdClient, clock, fakeDBus, mgr.GetEventRecorder(healthcheck.ControllerName),
 		)
 
 		By("Register controller")

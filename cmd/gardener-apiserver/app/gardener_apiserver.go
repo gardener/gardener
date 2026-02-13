@@ -263,7 +263,15 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 
 	if initializers, err := o.Recommended.ExtraAdmissionInitializers(gardenerAPIServerConfig); err != nil {
 		return nil, err
-	} else if err := o.Recommended.Admission.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.SharedInformerFactory, gardenerKubeClient, gardenerDynamicClient, features.DefaultFeatureGate, initializers...); err != nil {
+	} else if err := o.Recommended.Admission.ApplyTo(
+		&gardenerAPIServerConfig.Config,
+		gardenerAPIServerConfig.SharedInformerFactory,
+		gardenerKubeClient,
+		gardenerDynamicClient,
+		features.DefaultFeatureGate,
+		gardenerAPIServerConfig.EffectiveVersion,
+		initializers...,
+	); err != nil {
 		return nil, err
 	}
 
