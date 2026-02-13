@@ -32,6 +32,7 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 					ProviderConfig: &runtime.RawExtension{},
 				},
 				CredentialsRef: &corev1.ObjectReference{
+					Kind: "Secret",
 					Name: "test",
 				},
 				Endpoints: []extensionsv1alpha1.ControlPlaneEndpoint{

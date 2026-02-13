@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	"k8s.io/apimachinery/pkg/util/sets"
 	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
@@ -62,22 +63,30 @@ func ValidateSelfHostedShootExposureSpec(spec *extensionsv1alpha1.SelfHostedShoo
 			addrPath := epPath.Child("addresses").Index(j)
 
 			if addr.Type != "" {
-				switch addr.Type {
-				case corev1.NodeHostName, corev1.NodeInternalIP, corev1.NodeExternalIP:
-				default:
+				var supportedAddressTypes = sets.New(corev1.NodeHostName, corev1.NodeInternalIP, corev1.NodeExternalIP, corev1.NodeInternalDNS, corev1.NodeExternalDNS)
+				if !supportedAddressTypes.Has(addr.Type) {
 					allErrs = append(allErrs, field.Invalid(addrPath.Child("type"), addr.Type, "unknown node address type"))
 				}
 			}
 
-			if len(addr.Address) > 0 {
+			if len(addr.Address) == 0 {
+				allErrs = append(allErrs, field.Required(addrPath.Child("address"), "field is required"))
+			} else {
 				switch addr.Type {
 				case corev1.NodeInternalIP, corev1.NodeExternalIP:
-					if net.ParseIP(addr.Address) == nil {
-						allErrs = append(allErrs, field.Invalid(addrPath.Child("address"), addr.Address, "invalid IP address"))
+					if errs := utilvalidation.IsValidIPForLegacyField(addrPath.Child("address"), addr.Address, false, nil); errs != nil {
+						allErrs = append(allErrs, errs...)
 					}
-				case corev1.NodeHostName:
+				case corev1.NodeHostName, corev1.NodeInternalDNS, corev1.NodeExternalDNS:
 					if errs := utilvalidation.IsDNS1123Subdomain(addr.Address); len(errs) != 0 {
 						allErrs = append(allErrs, field.Invalid(addrPath.Child("address"), addr.Address, strings.Join(errs, ",")))
+					}
+				default:
+					// If type is not set or unknown, still attempt basic validation: allow IPs or DNS names
+					if net.ParseIP(addr.Address) == nil {
+						if errs := utilvalidation.IsDNS1123Subdomain(addr.Address); len(errs) != 0 {
+							allErrs = append(allErrs, field.Invalid(addrPath.Child("address"), addr.Address, "address must be a valid IP or DNS name"))
+						}
 					}
 				}
 			}

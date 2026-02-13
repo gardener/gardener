@@ -19,8 +19,8 @@ const SelfHostedShootExposureResource = "SelfHostedShootExposure"
 // +kubebuilder:resource:scope=Namespaced,path=selfhostedshootexposures,shortName=exp,singular=selfhostedshootexposure
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name=Type,JSONPath=".spec.type",type=string,description="The type of the cloud provider for this resource."
-// +kubebuilder:printcolumn:name=IP,JSONPath=".spec.region",type=string,description="The IPs of the Ingresses."
-// +kubebuilder:printcolumn:name=Hostname,JSONPath=".spec.region",type=string,description="The Hostnames of the Ingresses."
+// +kubebuilder:printcolumn:name=IP,JSONPath=".status.ingress[0].ip",type=string,description="The IP of the first LoadBalancer ingress."
+// +kubebuilder:printcolumn:name=Hostname,JSONPath=".status.ingress[0].hostname",type=string,description="The Hostname of the first LoadBalancer ingress."
 // +kubebuilder:printcolumn:name=Status,JSONPath=".status.lastOperation.state",type=string,description="Status of infrastructure resource."
 // +kubebuilder:printcolumn:name=Age,JSONPath=".metadata.creationTimestamp",type=date,description="creation timestamp"
 
