@@ -124,6 +124,7 @@
         '/.*gardener/machine-controller-manager$/',
         '/.*gardener/terminal-controller-manager$/',
         '/.*open-telemetry/opentelemetry-operator$/',
+        '/sigs\\.k8s\\.io/controller-tools/',
       ],
     },
     {
