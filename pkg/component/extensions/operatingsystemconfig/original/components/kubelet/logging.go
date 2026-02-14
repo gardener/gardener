@@ -43,6 +43,7 @@ func generateClusterInputs() []*fluentbitv1alpha2.ClusterInput {
 				Tag:           getKubeletTag(),
 				ReadFromTail:  "on",
 				SystemdFilter: []string{"_SYSTEMD_UNIT=kubelet.service"},
+				Path:          "/var/log/journal",
 			},
 		},
 	}

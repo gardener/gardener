@@ -34,6 +34,7 @@ var _ = Describe("Logging", func() {
 								Tag:           "systemd.kubelet",
 								ReadFromTail:  "on",
 								SystemdFilter: []string{"_SYSTEMD_UNIT=kubelet.service"},
+								Path:          "/var/log/journal",
 							},
 						},
 					},

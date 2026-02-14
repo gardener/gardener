@@ -40,6 +40,7 @@ func generateClusterInputs() []*fluentbitv1alpha2.ClusterInput {
 				Tag:           getGardenerNodeAgentTag(),
 				ReadFromTail:  "on",
 				SystemdFilter: []string{"_SYSTEMD_UNIT=gardener-node-agent.service"},
+				Path:          "/var/log/journal",
 			},
 		},
 	}
