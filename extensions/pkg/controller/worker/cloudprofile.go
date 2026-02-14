@@ -10,6 +10,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // CapabilitiesAccessor defines an interface for retrieving Capabilities.
@@ -44,13 +45,9 @@ func filterCompatibleImageFlavors[T CapabilitiesAccessor](
 	machineCapabilities v1beta1.Capabilities,
 	capabilityDefinitions []v1beta1.CapabilityDefinition,
 ) []T {
-	var compatibleFlavors []T
-	for _, imageFlavor := range imageFlavors {
-		if v1beta1helper.AreCapabilitiesCompatible(imageFlavor.GetCapabilities(), machineCapabilities, capabilityDefinitions) {
-			compatibleFlavors = append(compatibleFlavors, imageFlavor)
-		}
-	}
-	return compatibleFlavors
+	return slices.Collect(utils.FilterElements(imageFlavors, func(imageFlavor T) bool {
+		return v1beta1helper.AreCapabilitiesCompatible(imageFlavor.GetCapabilities(), machineCapabilities, capabilityDefinitions)
+	}))
 }
 
 // selectBestImageFlavor selects the most appropriate image flavor based on the priority

@@ -26,6 +26,7 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
@@ -247,13 +248,12 @@ func addMetaDataLabelsSeed(seed *core.Seed, controllerRegistrations []*gardencor
 	}
 
 	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{
-		Items: slices.Collect(func(yield func(gardencorev1beta1.ControllerRegistration) bool) {
-			for _, registration := range controllerRegistrations {
-				if !yield(*registration) {
-					return
-				}
-			}
-		}),
+		Items: slices.Collect(utils.TransformElements(
+			controllerRegistrations,
+			func(registration *gardencorev1beta1.ControllerRegistration) gardencorev1beta1.ControllerRegistration {
+				return *registration
+			},
+		)),
 	}
 
 	for extensionType := range gardenerutils.ComputeEnabledTypesForKindExtensionSeed(v1beta1Seed, controllerRegistrationList) {
@@ -286,13 +286,11 @@ func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*garden
 	}
 
 	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{
-		Items: slices.Collect(func(yield func(gardencorev1beta1.ControllerRegistration) bool) {
-			for _, registration := range controllerRegistrations {
-				if !yield(*registration) {
-					return
-				}
-			}
-		}),
+		Items: slices.Collect(utils.TransformElements(
+			controllerRegistrations,
+			func(registration *gardencorev1beta1.ControllerRegistration) gardencorev1beta1.ControllerRegistration {
+				return *registration
+			})),
 	}
 
 	for extensionType := range gardenerutils.ComputeEnabledTypesForKindExtensionShoot(v1beta1Shoot, controllerRegistrationList) {
