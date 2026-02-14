@@ -1030,6 +1030,9 @@ build:
             variant: AbbrevCommitSha
 deploy:
   helm:
+    flags:
+      global:
+        - --debug
     releases:
       - name: gardener-operator
         chartPath: charts/gardener/operator
