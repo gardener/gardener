@@ -136,39 +136,39 @@ var _ = Describe("helper", func() {
 		})
 	})
 
-	Describe("#ValiConfiguration", func() {
+	Describe("#VictoriaLogsConfiguration", func() {
 		It("should return true when the GardenletConfiguration is nil", func() {
-			Expect(IsValiEnabled(nil)).To(BeTrue())
+			Expect(IsVictoriaLogsEnabled(nil)).To(BeTrue())
 		})
 
 		It("should return true when the logging is nil", func() {
 			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{}
 
-			Expect(IsValiEnabled(gardenletConfig)).To(BeTrue())
+			Expect(IsVictoriaLogsEnabled(gardenletConfig)).To(BeTrue())
 		})
 
-		It("should return false when the vali is not enabled", func() {
+		It("should return false when victorialogs is not enabled", func() {
 			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
 				Logging: &gardenletconfigv1alpha1.Logging{
-					Vali: &gardenletconfigv1alpha1.Vali{
+					VictoriaLogs: &gardenletconfigv1alpha1.VictoriaLogs{
 						Enabled: ptr.To(false),
 					},
 				},
 			}
 
-			Expect(IsValiEnabled(gardenletConfig)).To(BeFalse())
+			Expect(IsVictoriaLogsEnabled(gardenletConfig)).To(BeFalse())
 		})
 
-		It("should return true when the vali is enabled", func() {
+		It("should return true when victorialogs is enabled", func() {
 			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
 				Logging: &gardenletconfigv1alpha1.Logging{
-					Vali: &gardenletconfigv1alpha1.Vali{
+					VictoriaLogs: &gardenletconfigv1alpha1.VictoriaLogs{
 						Enabled: ptr.To(true),
 					},
 				},
 			}
 
-			Expect(IsValiEnabled(gardenletConfig)).To(BeTrue())
+			Expect(IsVictoriaLogsEnabled(gardenletConfig)).To(BeTrue())
 		})
 	})
 

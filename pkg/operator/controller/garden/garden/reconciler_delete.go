@@ -347,13 +347,19 @@ func (r *Reconciler) delete(
 			Fn:           component.OpDestroyAndWait(c.vali).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyFluentOperatorCustomResources),
 		})
+		destroyVictoriaLogs = g.Add(flow.Task{
+			Name:         "Destroying VictoriaLogs",
+			Fn:           component.OpDestroyAndWait(c.victoriaLogs).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyFluentOperatorCustomResources),
+		})
 		destroyPersesOperator = g.Add(flow.Task{
 			Name: "Destroying perses-operator",
 			Fn:   component.OpDestroyAndWait(c.persesOperator).Destroy,
 		})
 		destroyVictoriaOperator = g.Add(flow.Task{
-			Name: "Destroying victoria-operator",
-			Fn:   component.OpDestroyAndWait(c.victoriaOperator).Destroy,
+			Name:         "Destroying victoria-operator",
+			Fn:           component.OpDestroyAndWait(c.victoriaOperator).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyVictoriaLogs),
 		})
 		syncPointCleanedUp = flow.NewTaskIDs(
 			waitUntilExtensionResourcesDeleted,
@@ -373,6 +379,7 @@ func (r *Reconciler) delete(
 			destroyGardenerOperatorVPA,
 			destroyPersesOperator,
 			destroyVictoriaOperator,
+			destroyVictoriaLogs,
 		)
 
 		destroyRuntimeSystemResources = g.Add(flow.Task{

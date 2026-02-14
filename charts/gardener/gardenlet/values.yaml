@@ -199,6 +199,14 @@ config:
 #     etcdConnectionTimeout: 5s
 # logging:
 #   enabled: false
+#   vali:
+#     enabled: true
+#     garden:
+#       storage: "100Gi"
+#   victoriaLogs:
+#     enabled: true
+#     garden:
+#       storage: "100Gi"
 # monitoring:
 #   shoot:
 #     remoteWrite:

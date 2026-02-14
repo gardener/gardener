@@ -806,6 +806,12 @@ func ComputeExpectedGardenletConfiguration(
 					Storage: &gardenletconfigv1alpha1.DefaultCentralValiStorage,
 				},
 			},
+			VictoriaLogs: &gardenletconfigv1alpha1.VictoriaLogs{
+				Enabled: ptr.To(false),
+				Garden: &gardenletconfigv1alpha1.GardenVictoriaLogs{
+					Storage: &gardenletconfigv1alpha1.DefaultCentralVictoriaLogsStorage,
+				},
+			},
 			ShootEventLogging: &gardenletconfigv1alpha1.ShootEventLogging{
 				Enabled: ptr.To(false),
 			},

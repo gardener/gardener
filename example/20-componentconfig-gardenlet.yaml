@@ -127,6 +127,8 @@ logging:
   enabled: true
   vali:
     enabled: true
+  victoriaLogs:
+    enabled: true
   shootNodeLogging:
     shootPurposes:
     - "infrastructure"
@@ -136,6 +138,10 @@ logging:
 # logging:
 #   enabled: false
 #   vali:
+#     enabled: true
+#     garden:
+#       storage: "100Gi"
+#   victoriaLogs:
 #     enabled: true
 #     garden:
 #       storage: "100Gi"

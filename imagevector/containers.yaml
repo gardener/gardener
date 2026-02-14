@@ -191,6 +191,23 @@ images:
     sourceRepository: github.com/gardener/opentelemetry-collector
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/observability/opentelemetry-collector
     tag: "v0.0.1"
+  - name: victoria-logs
+    sourceRepository: github.com/VictoriaMetrics/VictoriaLogs
+    repository: europe-docker.pkg.dev/gardener-project/releases/3rd/victoriametrics/victoria-logs
+    tag: "v1.37.2"
+    labels:
+      - name: 'gardener.cloud/cve-categorisation'
+        value:
+          network_exposure: 'private'
+          authentication_enforced: false
+          user_interaction: 'gardener-operator'
+          confidentiality_requirement: 'none'
+          integrity_requirement: 'high'
+          availability_requirement: 'low'
+      - name: 'cloud.gardener.cnudie/responsibles'
+        value:
+          - type: 'githubTeam'
+            teamname: 'gardener/logging-maintainers'
   # Monitoring
   - name: prometheus-operator
     sourceRepository: github.com/prometheus-operator/prometheus-operator

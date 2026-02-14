@@ -145,6 +145,9 @@ var _ = Describe("Seed controller tests", func() {
 					Vali: &gardenletconfigv1alpha1.Vali{
 						Enabled: ptr.To(true),
 					},
+					VictoriaLogs: &gardenletconfigv1alpha1.VictoriaLogs{
+						Enabled: ptr.To(true),
+					},
 				},
 				ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
 					BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{

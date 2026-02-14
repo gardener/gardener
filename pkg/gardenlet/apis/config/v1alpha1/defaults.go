@@ -486,6 +486,18 @@ func SetDefaults_Logging(obj *Logging) {
 	if obj.Vali.Garden.Storage == nil {
 		obj.Vali.Garden.Storage = &DefaultCentralValiStorage
 	}
+	if obj.VictoriaLogs == nil {
+		obj.VictoriaLogs = &VictoriaLogs{}
+	}
+	if obj.VictoriaLogs.Enabled == nil {
+		obj.VictoriaLogs.Enabled = obj.Enabled
+	}
+	if obj.VictoriaLogs.Garden == nil {
+		obj.VictoriaLogs.Garden = &GardenVictoriaLogs{}
+	}
+	if obj.VictoriaLogs.Garden.Storage == nil {
+		obj.VictoriaLogs.Garden.Storage = &DefaultCentralVictoriaLogsStorage
+	}
 	if obj.ShootEventLogging == nil {
 		obj.ShootEventLogging = &ShootEventLogging{}
 	}
