@@ -446,14 +446,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(mcm_cloud_api_requests_total{name=\"${controlloop}\"}[1m])",
+          "expr": "rate(mcm_cloud_api_requests_total[2m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{provider}} / {{service}} ({{pod}})",
           "refId": "A"
         },
         {
-          "expr": "rate(mcm_cloud_api_requests_failed_total{name=\"${controlloop}\"}[1m])",
+          "expr": "rate(mcm_cloud_api_requests_failed_total[2m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Error: {{provider}} / {{service}} ({{pod}})",
