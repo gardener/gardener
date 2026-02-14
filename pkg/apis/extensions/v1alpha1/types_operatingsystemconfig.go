@@ -146,6 +146,11 @@ type File struct {
 	Permissions *uint32 `json:"permissions,omitempty"`
 	// Content describe the file's content.
 	Content FileContent `json:"content"`
+	// HostName contains the name of the host for host-specific configurations.
+	// If HostName is not empty the corresponding file will only be rolled out to the host with the specified name.
+	// Duplicate paths are only allowed if HostName is specified for all of them, none is nil and all values differ.
+	// +optional
+	HostName *string `json:"hostName,omitempty"`
 }
 
 // FileContent can either reference a secret or contain inline configuration.

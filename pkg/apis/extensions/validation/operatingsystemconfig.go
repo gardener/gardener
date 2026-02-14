@@ -266,18 +266,49 @@ func ValidateUnits(units []extensionsv1alpha1.Unit, pathsFromFiles sets.Set[stri
 func validateFileDuplicates(osc *extensionsv1alpha1.OperatingSystemConfig) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	paths := sets.New[string]()
+	type fileScope struct {
+		isGlobal  bool
+		hostNames sets.Set[string]
+	}
+
+	filePathToScope := make(map[string]*fileScope)
 
 	check := func(files []extensionsv1alpha1.File, fldPath *field.Path) {
 		for i, file := range files {
-			idxPath := fldPath.Index(i)
+			if len(file.Path) == 0 {
+				continue
+			}
 
-			if file.Path != "" {
-				if paths.Has(file.Path) {
-					allErrs = append(allErrs, field.Duplicate(idxPath.Child("path"), file.Path))
+			scope, ok := filePathToScope[file.Path]
+			// New file path cannot have conflicts.
+			if !ok {
+				scope = &fileScope{
+					isGlobal:  file.HostName == nil,
+					hostNames: sets.New[string](),
 				}
+				if file.HostName != nil {
+					scope.hostNames.Insert(*file.HostName)
+				}
+				filePathToScope[file.Path] = scope
+				continue
+			}
 
-				paths.Insert(file.Path)
+			// Global file (no hostName) conflicts with any other entry for same path.
+			if file.HostName == nil {
+				allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("path"), file.Path))
+				continue
+			}
+
+			// Host-specific file conflicts with global file.
+			if scope.isGlobal {
+				allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("path"), file.Path))
+				continue
+			}
+
+			// Host-specific file duplicate for same host and same path.
+			if scope.hostNames.Has(*file.HostName) {
+				allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("path"), file.Path))
+				continue
 			}
 		}
 	}
@@ -339,6 +370,12 @@ func ValidateFiles(files []extensionsv1alpha1.File, fldPath *field.Path) field.E
 			}
 			if len(file.Content.ImageRef.FilePathInImage) == 0 {
 				allErrs = append(allErrs, field.Required(idxPath.Child("content", "imageRef", "filePathInImage"), "field is required"))
+			}
+		}
+
+		if file.HostName != nil {
+			for _, msg := range apivalidation.NameIsDNSSubdomain(*file.HostName, false) {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("hostName"), *file.HostName, msg))
 			}
 		}
 	}

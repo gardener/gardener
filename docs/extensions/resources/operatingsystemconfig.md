@@ -263,6 +263,44 @@ status:
 - `command`: Specifies the path to the OS update utility or script to be executed on the node.
 - `args`: Provides optional flags or arguments to customize the update behavior.
 
+### Host-specific OS Configurations
+
+Usually, the same configuration is applied to all nodes of a worker pool.
+However, there are cases, most notably the control plane worker pool of [self-hosted shoot clusters](../../proposals/28-self-hosted-shoot-clusters.md), where you need to apply slightly different configurations to different nodes of the same worker pool.
+The `OperatingSystemConfig` resource allows you to achieve this by setting the `.spec.files[].hostName` or `.status.extensionFiles[].hostName` to the corresponding name of the host.
+
+```yaml
+spec:
+  files:
+    - path: /etc/some/file
+      permissions: 0644
+      content:
+        inline:
+          data: |
+            # File content specific for worker-0
+            name: worker-0
+      hostName: worker-0
+status:
+  extensionFiles:
+    - path: /etc/some/other/file
+      permissions: 0644
+      content:
+        inline:
+          data: |
+            # File content specific for worker-1
+            name: worker-1
+      hostName: worker-1
+```
+
+For example, this allows to have node-specific certificates to be distributed to the nodes of a worker pool.
+
+If the `hostName` field is not set, the file will be applied to all nodes of the worker pool as usual.
+
+:information_source: Files need to be unique per `OperatingSystemConfig` resource, meaning that you cannot have two files with the same `path`.
+The rule is enforced by the `OperatingSystemConfig` validation.
+The only exception to this rule are host-specific files.
+You can have duplicate `path` entries in the same `OperatingSystemConfig` if `hostName` is set for all of them and the values of the `hostName` fields are different.
+
 ## CRI Support
 
 Gardener supports specifying a Container Runtime Interface (CRI) configuration in the `OperatingSystemConfig` resource. If the `.spec.cri` section exists, then the `name` property is mandatory. The only supported value for `cri.name` at the moment is: `containerd`.
