@@ -41,7 +41,7 @@ Please see [this documentation section](getting_started_locally.md#alternative-w
 All following steps assume that you are using the kubeconfig for this KinD cluster:
 
 ```shell
-export KUBECONFIG=$PWD/example/gardener-local/kind/multi-zone/kubeconfig
+export KUBECONFIG=$PWD/dev-setup/kubeconfigs/runtime/kubeconfig
 ```
 
 ## "Unmanaged Infrastructure" Scenario

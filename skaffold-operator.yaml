@@ -1084,6 +1084,18 @@ profiles:
     activation:
       - env: SCENARIO=multi-zone
       - env: SCENARIO=multi-zone-ipv6
+  - name: remote
+    activation:
+      - env: SCENARIO=remote
+    patches:
+      - op: remove
+        path: /deploy/helm/releases/0/setValueTemplates/env[0].name
+      - op: remove
+        path: /deploy/helm/releases/0/setValueTemplates/env[0].value
+      - op: remove
+        path: /deploy/helm/releases/0/setValueTemplates/hostAliases[0].hostnames[0]
+      - op: remove
+        path: /deploy/helm/releases/0/setValueTemplates/hostAliases[0].ip
   - name: debug
     activation:
       - command: debug
@@ -1519,6 +1531,16 @@ profiles:
       kustomize:
         paths:
           - dev-setup/extensions/provider-local/overlays/operator-dual
+  - name: remote
+    activation:
+      - env: SCENARIO=remote
+    patches:
+      - op: remove
+        path: /build
+      - op: remove
+        path: /manifests
+      - op: remove
+        path: /deploy
 resourceSelector:
   # instruct skaffold to inject the built image reference into the image fields in our Extension object
   allow:
@@ -1540,3 +1562,12 @@ manifests:
       - dev-setup/extensions/networking-cilium/overlays/operator
 deploy:
   kubectl: {}
+profiles:
+  - name: remote
+    activation:
+      - env: SCENARIO=remote
+    patches:
+      - op: add
+        path: /manifests/rawYaml
+        value:
+          - dev-setup/extensions/remote/*.yaml

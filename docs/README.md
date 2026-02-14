@@ -205,6 +205,7 @@
 * [Getting started locally](deployment/getting_started_locally.md)
 * [Getting started locally with extensions](deployment/getting_started_locally_with_extensions.md)
 * [Getting started locally with Self-Hosted Shoot Clusters](deployment/getting_started_locally_with_gardenadm.md)
+* [Getting started remotely](deployment/getting_started_remotely.md)
 * [Setup Gardener on a Kubernetes cluster](deployment/setup_gardener.md)
 * [Version Skew Policy](deployment/version_skew_policy.md)
 * [Deploying Gardenlets](deployment/deploy_gardenlet.md)
