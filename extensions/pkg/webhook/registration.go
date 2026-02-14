@@ -368,6 +368,7 @@ func BuildClientConfigFor(webhookPath string, namespace, componentName string, d
 			Namespace: namespace,
 			Name:      PrefixedName(componentName, doNotPrefixComponentName),
 			Path:      &path,
+			Port:      ptr.To(int32(servicePort)), // #nosec: G115 - Port is validated on Kubernetes level
 		}
 	}
 

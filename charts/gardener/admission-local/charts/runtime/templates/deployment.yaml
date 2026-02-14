@@ -36,6 +36,7 @@ spec:
         imagePullPolicy: {{ .Values.imagePullPolicy }}
         args:
         - --webhook-config-server-port={{ .Values.webhookConfig.serverPort }}
+        - --webhook-config-service-port={{ .Values.webhookConfig.servicePort }}
         - --webhook-config-mode={{ .Values.webhookConfig.mode }}
 {{- if eq .Values.webhookConfig.mode "url" }}
         - --webhook-config-url={{ printf "%s.%s" (include "name" .) (.Release.Namespace) }}

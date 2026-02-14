@@ -201,6 +201,7 @@ var _ = Describe("Registration", func() {
 								Name:      "gardener-extension-" + providerName,
 								Namespace: namespace,
 								Path:      ptr.To("/" + path),
+								Port:      ptr.To(int32(servicePort)),
 							}
 						}
 
