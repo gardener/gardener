@@ -864,25 +864,19 @@ func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
 			UpdateMode: vpaUpdateMode,
 		}
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
-			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-				{
-					ContainerName: deploymentName,
-					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-				},
-			},
+			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{},
 		}
 
-		if v.values.HighAvailabilityEnabled {
-			vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
-				ContainerName: openVPNExporterContainerName,
-				Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-			})
-		} else {
+		if !v.values.HighAvailabilityEnabled {
 			vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
 				ContainerName:    envoyProxyContainerName,
 				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 			})
 		}
+		vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
+			ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+			Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+		})
 		return nil
 	})
 	return err

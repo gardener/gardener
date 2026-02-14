@@ -18,3 +18,5 @@ spec:
       - containerName: discovery
         minAllowed:
           memory: 128Mi
+      - containerName: '*'
+        mode: "Off"

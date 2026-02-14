@@ -36,6 +36,7 @@ const (
 	name = "victoria-operator"
 
 	// Resource names
+	containerName           = name
 	managedResourceName     = name
 	serviceAccountName      = name
 	deploymentName          = name
@@ -151,7 +152,7 @@ func (v *victoriaOperator) deployment() *appsv1.Deployment {
 					},
 					Containers: []corev1.Container{
 						{
-							Name:            "victoria-operator",
+							Name:            containerName,
 							Image:           v.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
@@ -255,10 +256,14 @@ func (v *victoriaOperator) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
-						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						ContainerName: containerName,
 						MinAllowed: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("64Mi"),
 						},
+					},
+					{
+						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},

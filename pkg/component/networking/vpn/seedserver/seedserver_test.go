@@ -665,24 +665,19 @@ var _ = Describe("VpnSeedServer", func() {
 				targetKindRef = "StatefulSet"
 			}
 
-			containerPolicies := []vpaautoscalingv1.ContainerResourcePolicy{
-				{
-					ContainerName: "vpn-seed-server",
-					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-				},
-			}
+			containerPolicies := []vpaautoscalingv1.ContainerResourcePolicy{}
 
-			if highAvailabilityEnabled {
-				containerPolicies = append(containerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
-					ContainerName: "openvpn-exporter",
-					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-				})
-			} else {
+			if !highAvailabilityEnabled {
 				containerPolicies = append(containerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
 					ContainerName:    "envoy-proxy",
 					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 				})
 			}
+
+			containerPolicies = append(containerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
+				ContainerName: "*",
+				Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+			})
 
 			return &vpaautoscalingv1.VerticalPodAutoscaler{
 				ObjectMeta: metav1.ObjectMeta{

@@ -329,6 +329,10 @@ var _ = Describe("VPNShoot", func() {
 									corev1.ResourceMemory: resource.MustParse("10Mi"),
 								},
 							},
+							{
+								ContainerName: "*",
+								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							},
 						},
 					},
 				},
@@ -380,6 +384,10 @@ var _ = Describe("VPNShoot", func() {
 								MinAllowed: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("10Mi"),
 								},
+							},
+							{
+								ContainerName: "*",
+								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 							},
 						},
 					},

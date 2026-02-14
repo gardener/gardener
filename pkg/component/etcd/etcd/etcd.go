@@ -792,11 +792,6 @@ func (e *etcd) emptyVerticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutosca
 }
 
 func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler, minAllowedETCD corev1.ResourceList) error {
-	vpaUpdateMode := vpaautoscalingv1.UpdateModeRecreate
-	containerPolicyOff := vpaautoscalingv1.ContainerScalingModeOff
-	containerPolicyAuto := vpaautoscalingv1.ContainerScalingModeAuto
-	controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, vpa, func() error {
 		var evictionRequirement *string
 
@@ -822,20 +817,19 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 				Name:       e.etcd.Name,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: &vpaUpdateMode,
+				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
 						ContainerName:    containerNameEtcd,
 						MinAllowed:       minAllowedETCD,
-						ControlledValues: &controlledValues,
-						Mode:             &containerPolicyAuto,
+						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+						Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeAuto),
 					},
 					{
-						ContainerName:    containerNameBackupRestore,
-						Mode:             &containerPolicyOff,
-						ControlledValues: &controlledValues,
+						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},

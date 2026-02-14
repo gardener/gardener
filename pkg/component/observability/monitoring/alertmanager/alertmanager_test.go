@@ -207,12 +207,6 @@ var _ = Describe("Alertmanager", func() {
 			},
 		}
 
-		var (
-			vpaUpdateMode                   = vpaautoscalingv1.UpdateModeRecreate
-			vpaControlledValuesRequestsOnly = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-			vpaContainerScalingModeOff      = vpaautoscalingv1.ContainerScalingModeOff
-		)
-
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "alertmanager-" + name,
@@ -231,7 +225,7 @@ var _ = Describe("Alertmanager", func() {
 					Name:       name,
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: &vpaUpdateMode,
+					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
@@ -243,12 +237,12 @@ var _ = Describe("Alertmanager", func() {
 							MaxAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("200Mi"),
 							},
-							ControlledValues:    &vpaControlledValuesRequestsOnly,
+							ControlledValues:    ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							ControlledResources: &[]corev1.ResourceName{corev1.ResourceMemory},
 						},
 						{
-							ContainerName: "config-reloader",
-							Mode:          &vpaContainerScalingModeOff,
+							ContainerName: "*",
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},

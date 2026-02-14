@@ -8,9 +8,11 @@ spec:
   {{- if .Values.vpa.resourcePolicy }}
   resourcePolicy:
     containerPolicies:
-    - containerName: '*'
+    - containerName: {{ include "name" . }}
       minAllowed:
         memory: {{ required ".Values.vpa.resourcePolicy.minAllowed.memory is required" .Values.vpa.resourcePolicy.minAllowed.memory }}
+    - containerName: '*'
+      mode: "Off"
   {{- end }}
   targetRef:
     apiVersion: apps/v1

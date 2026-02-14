@@ -8,7 +8,7 @@ spec:
   {{- if .Values.vpa.resourcePolicy }}
   resourcePolicy:
     containerPolicies:
-    - containerName: '*'
+    - containerName: {{ include "name" . }}
       {{- if .Values.vpa.resourcePolicy.minAllowed }}
       minAllowed:
         memory: {{ required ".Values.vpa.resourcePolicy.minAllowed.memory is required" .Values.vpa.resourcePolicy.minAllowed.memory }}
@@ -18,6 +18,8 @@ spec:
         cpu: {{ required ".Values.vpa.resourcePolicy.maxAllowed.cpu is required" .Values.vpa.resourcePolicy.maxAllowed.cpu }}
         memory: {{ required ".Values.vpa.resourcePolicy.maxAllowed.memory is required" .Values.vpa.resourcePolicy.maxAllowed.memory }}
       {{- end }}
+    - containerName: '*'
+      mode: "Off"
   {{- end }}
   targetRef:
     apiVersion: apps/v1
