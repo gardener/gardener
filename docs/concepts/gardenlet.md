@@ -531,6 +531,12 @@ After the association is made, the `gardenlet` requests a token for the specific
 The `gardenlet` is responsible to keep this token valid by refreshing it periodically.
 The token is then used by components running in the seed cluster in order to present the said `WorkloadIdentity` before external systems, e.g. by calling cloud provider APIs.
 
+> [!NOTE]
+>
+> By default, tokens are valid for 6 hours and are renewed after 50% of their lifetime has passed (approximately 3 hours).
+> However, gardenlets cap token validity at 24 hours for renewal calculation purposes, even if tokens are issued with greater validity.
+> This means that tokens with validity longer than 24 hours will be renewed after 12 hours (50% of the 24-hour cap).
+
 Please refer to [GEP-0026: Workload Identity - Trust Based Authentication](https://github.com/gardener/enhancements/tree/main/geps/0026-workload-identity) for more details.
 
 ### [`VPAEvictionRequirements` Controller](../../pkg/gardenlet/controller/vpaevictionrequirements)

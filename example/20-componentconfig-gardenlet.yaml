@@ -93,6 +93,7 @@ controllers:
     concurrentSyncs: 5
   tokenRequestorWorkloadIdentity:
     concurrentSyncs: 5
+  # tokenExpirationDuration: 6h
   vpaEvictionRequirements:
     concurrentSyncs: 5
 resources:

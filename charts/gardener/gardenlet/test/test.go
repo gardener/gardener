@@ -768,7 +768,8 @@ func ComputeExpectedGardenletConfiguration(
 				ConcurrentSyncs: &five,
 			},
 			TokenRequestorWorkloadIdentity: &gardenletconfigv1alpha1.TokenRequestorWorkloadIdentityControllerConfiguration{
-				ConcurrentSyncs: &five,
+				ConcurrentSyncs:         &five,
+				TokenExpirationDuration: ptr.To(6 * time.Hour),
 			},
 			VPAEvictionRequirements: &gardenletconfigv1alpha1.VPAEvictionRequirementsControllerConfiguration{
 				ConcurrentSyncs: &five,

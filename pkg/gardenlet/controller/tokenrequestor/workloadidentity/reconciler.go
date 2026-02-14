@@ -23,11 +23,11 @@ import (
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	securityv1alpha1constants "github.com/gardener/gardener/pkg/apis/security/v1alpha1/constants"
 	securityclientset "github.com/gardener/gardener/pkg/client/security/clientset/versioned"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 const (
 	maxExpirationDuration = 24 * time.Hour
-	expirationDuration    = 6 * time.Hour // short enough to be secure and long enough to be resilient to disruptions
 )
 
 // Reconciler requests and refreshes tokens via the TokenRequest API.
@@ -35,7 +35,7 @@ type Reconciler struct {
 	SeedClient           client.Client
 	GardenClient         client.Client
 	GardenSecurityClient securityclientset.Interface
-	ConcurrentSyncs      int
+	Config               *gardenletconfigv1alpha1.TokenRequestorWorkloadIdentityControllerConfiguration
 	Clock                clock.Clock
 	JitterFunc           func(time.Duration, float64) time.Duration
 }
@@ -82,7 +82,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	tokenRequest, err := r.GardenSecurityClient.SecurityV1alpha1().WorkloadIdentities(workloadIdentityNamespace).CreateToken(ctx, workloadIdentityName, &securityv1alpha1.TokenRequest{
 		Spec: securityv1alpha1.TokenRequestSpec{
 			ContextObject:     contextObject,
-			ExpirationSeconds: ptr.To((int64(expirationDuration / time.Second))),
+			ExpirationSeconds: ptr.To((int64(r.Config.TokenExpirationDuration.Seconds()))),
 		},
 	}, metav1.CreateOptions{})
 	if err != nil {
@@ -136,7 +136,10 @@ func (r *Reconciler) computeRequeueAfterDuration(secret *corev1.Secret) (time.Du
 }
 
 func (r *Reconciler) renewDuration(expirationTimestamp time.Time) time.Duration {
-	expirationDuration := min(expirationTimestamp.UTC().Sub(r.Clock.Now().UTC()), maxExpirationDuration)
+	expirationDuration := min(
+		expirationTimestamp.UTC().Sub(r.Clock.Now().UTC()),
+		maxExpirationDuration,
+	)
 
-	return r.JitterFunc(expirationDuration*80/100, 0.05)
+	return r.JitterFunc(expirationDuration*50/100, 0.05)
 }
