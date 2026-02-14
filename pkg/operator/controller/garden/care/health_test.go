@@ -11,6 +11,7 @@ import (
 	"time"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -31,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/garden/care"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -51,6 +53,7 @@ var (
 
 var _ = Describe("Garden health", func() {
 	var (
+		log             logr.Logger
 		ctx             context.Context
 		runtimeClient   client.Client
 		gardenClientSet kubernetes.Interface
@@ -133,7 +136,7 @@ var _ = Describe("Garden health", func() {
 					fakeClock,
 					nil,
 					gardenNamespace,
-					healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
+					healthchecker.NewHealthChecker(log, runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 				).Check(ctx, gardenConditions)
 
 				Expect(updatedConditions).ToNot(BeEmpty())
@@ -156,7 +159,7 @@ var _ = Describe("Garden health", func() {
 							fakeClock,
 							nil,
 							gardenNamespace,
-							healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
+							healthchecker.NewHealthChecker(log, runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 						).Check(ctx, gardenConditions)
 
 						Expect(updatedConditions).ToNot(BeEmpty())
@@ -186,7 +189,8 @@ var _ = Describe("Garden health", func() {
 								fakeClock,
 								conditionThresholds,
 								gardenNamespace,
-								healthchecker.NewHealthChecker(runtimeClient,
+								healthchecker.NewHealthChecker(log,
+									runtimeClient,
 									fakeClock,
 									healthchecker.WithConditionThresholds(conditionThresholds),
 									healthchecker.WithLastOperation(garden.Status.LastOperation)),
@@ -220,7 +224,8 @@ var _ = Describe("Garden health", func() {
 								fakeClock,
 								conditionThresholds,
 								gardenNamespace,
-								healthchecker.NewHealthChecker(runtimeClient,
+								healthchecker.NewHealthChecker(log,
+									runtimeClient,
 									fakeClock,
 									healthchecker.WithConditionThresholds(conditionThresholds),
 									healthchecker.WithLastOperation(garden.Status.LastOperation)),
@@ -254,7 +259,7 @@ var _ = Describe("Garden health", func() {
 								fakeClock,
 								conditionThresholds,
 								gardenNamespace,
-								healthchecker.NewHealthChecker(runtimeClient,
+								healthchecker.NewHealthChecker(log, runtimeClient,
 									fakeClock,
 									healthchecker.WithConditionThresholds(conditionThresholds),
 									healthchecker.WithLastOperation(garden.Status.LastOperation)),
@@ -281,7 +286,7 @@ var _ = Describe("Garden health", func() {
 								fakeClock,
 								conditionThresholds,
 								gardenNamespace,
-								healthchecker.NewHealthChecker(runtimeClient,
+								healthchecker.NewHealthChecker(log, runtimeClient,
 									fakeClock,
 									healthchecker.WithConditionThresholds(conditionThresholds),
 									healthchecker.WithLastOperation(garden.Status.LastOperation)),
@@ -380,7 +385,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
-						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
+						healthchecker.NewHealthChecker(log, runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
@@ -408,7 +413,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
-						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
+						healthchecker.NewHealthChecker(log, runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
@@ -433,7 +438,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
-						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
+						healthchecker.NewHealthChecker(log, runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
@@ -458,7 +463,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
-						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
+						healthchecker.NewHealthChecker(log, runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
@@ -483,7 +488,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
-						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
+						healthchecker.NewHealthChecker(log, runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
@@ -500,7 +505,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
-						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
+						healthchecker.NewHealthChecker(log, runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
@@ -517,7 +522,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
-						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
+						healthchecker.NewHealthChecker(log, runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
@@ -537,7 +542,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
-						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
+						healthchecker.NewHealthChecker(log, runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
@@ -550,9 +555,15 @@ var _ = Describe("Garden health", func() {
 			var (
 				prometheus *monitoringv1.Prometheus
 
-				healthy   = func(_ context.Context, _ string, _ int) (bool, error) { return true, nil }
-				unhealthy = func(_ context.Context, _ string, _ int) (bool, error) { return false, nil }
-				erroring  = func(_ context.Context, _ string, _ int) (bool, error) { return false, errors.New("test error") }
+				healthy = func(_ context.Context, _ string, _ int) health.PrometheusHealthCheckResult {
+					return health.PrometheusHealthCheckResult{IsHealthy: true}
+				}
+				unhealthy = func(_ context.Context, _ string, _ int) health.PrometheusHealthCheckResult {
+					return health.PrometheusHealthCheckResult{IsHealthy: false, Message: "foo is unhealthy"}
+				}
+				erroring = func(_ context.Context, _ string, _ int) health.PrometheusHealthCheckResult {
+					return health.PrometheusHealthCheckResult{Error: errors.New("test error")}
+				}
 			)
 
 			BeforeEach(func() {
@@ -577,7 +588,7 @@ var _ = Describe("Garden health", func() {
 					fakeClock,
 					nil,
 					gardenNamespace,
-					healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(unhealthy)),
+					healthchecker.NewHealthChecker(log, runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(unhealthy)),
 				).Check(ctx, gardenConditions)
 
 				Expect(updatedConditions).To(ContainElements(
@@ -585,7 +596,7 @@ var _ = Describe("Garden health", func() {
 						operatorv1alpha1.ObservabilityComponentsHealthy,
 						gardencorev1beta1.ConditionFalse,
 						"PrometheusHealthCheckDown",
-						`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "healthcheck" for more details.`)))
+						`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "healthcheck:up" for more details: foo is unhealthy`)))
 			})
 
 			It("should set ObservabilityComponentsHealthy condition to false if Prometheus health check is erroring", func() {
@@ -596,7 +607,7 @@ var _ = Describe("Garden health", func() {
 					fakeClock,
 					nil,
 					gardenNamespace,
-					healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(erroring)),
+					healthchecker.NewHealthChecker(log, runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(erroring)),
 				).Check(ctx, gardenConditions)
 
 				Expect(updatedConditions).To(ContainElements(
@@ -615,7 +626,7 @@ var _ = Describe("Garden health", func() {
 					fakeClock,
 					nil,
 					gardenNamespace,
-					healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(healthy)),
+					healthchecker.NewHealthChecker(log, runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(healthy)),
 				).Check(ctx, gardenConditions)
 
 				expectHealthyObservabilityComponents(updatedConditions)
@@ -631,7 +642,7 @@ var _ = Describe("Garden health", func() {
 					fakeClock,
 					nil,
 					gardenNamespace,
-					healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(unhealthy)),
+					healthchecker.NewHealthChecker(log, runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(unhealthy)),
 				).Check(ctx, gardenConditions)
 
 				expectHealthyObservabilityComponents(updatedConditions)
@@ -646,7 +657,7 @@ var _ = Describe("Garden health", func() {
 				// Starting from an unhealthy Prometheus that sets the condition to unhealthy, make sure the condition
 				// is set to healthy if the Prometheus resource is filtered out.
 				BeforeEach(func() {
-					healthChecker = healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(unhealthy))
+					healthChecker = healthchecker.NewHealthChecker(log, runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(unhealthy))
 					conditions = NewHealth(
 						garden,
 						runtimeClient,
@@ -662,7 +673,7 @@ var _ = Describe("Garden health", func() {
 							operatorv1alpha1.ObservabilityComponentsHealthy,
 							gardencorev1beta1.ConditionFalse,
 							"PrometheusHealthCheckDown",
-							`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "healthcheck" for more details.`)))
+							`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "healthcheck:up" for more details: foo is unhealthy`)))
 				})
 
 				It("should ignore the Prometheus resource if it doesn't have the right health-check-by label", func() {

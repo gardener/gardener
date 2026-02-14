@@ -67,6 +67,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		r.Clock,
 		r.Namespace,
 		checker.NewHealthChecker(
+			log,
 			r.SeedClient,
 			r.Clock,
 			checker.WithConditionThresholds(r.conditionThresholdsToProgressingMapping())),

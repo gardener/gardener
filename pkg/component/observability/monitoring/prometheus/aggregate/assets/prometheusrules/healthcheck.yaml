@@ -66,6 +66,6 @@ spec:
         # - a value == 1:   this state is healthy. The healthcheck rules are working and there are no issues.
         - record: healthcheck:up
           expr: |2
-              count(healthcheck) * 0
-            or
+              count by (task, job, scrape_job) (healthcheck) * 0
+            or on()
               vector(1)
