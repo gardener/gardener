@@ -46,7 +46,7 @@ git_abbrev_commit_sha=$(git rev-parse --short=10 HEAD)
 for patch_file in "${patch_files[@]}"; do
   # Check if the patch file contains the expected version pattern: `<Gardener version>-<Git commit abbreviated SHA>` -> e.g. `v1.113.0-dev-215797c884`.
   # The gardenadm image references use an unpredictable, full 64 character hash, e.g. `v1.120.0-dev-d31a82d927f943360a385ea5d646bb61ddf6996183ebbe3a614a800556934dbc`.
-  if ! grep -q -E "(tag: |ref: .+)$gardener_version-($git_abbrev_commit_sha|[a-z0-9]{64}$)" "$patch_file"; then
+  if [[ ! -f "$patch_file" ]] || ! grep -q -E "(tag: |ref: .+)$gardener_version-($git_abbrev_commit_sha|[a-z0-9]{64}$)" "$patch_file"; then
     # The patch file does not exist or does not contain the expected version pattern.
     # Skaffold should not cache artifacts.
     echo "false"
