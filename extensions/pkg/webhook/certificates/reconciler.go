@@ -256,8 +256,8 @@ func (r *reconciler) newSecretsManager(ctx context.Context, log logr.Logger, c c
 		r.Clock,
 		c,
 		r.Identity,
-		secretsmanager.Config{CASecretAutoRotation: true},
-		r.Namespace,
+		secretsmanager.WithCASecretAutoRotation(),
+		secretsmanager.WithNamespaces(r.Namespace),
 	)
 }
 

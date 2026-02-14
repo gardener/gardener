@@ -103,11 +103,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		r.Clock,
 		r.RuntimeClientSet.Client(),
 		operatorv1alpha1.SecretManagerIdentityOperator,
-		secretsmanager.Config{
-			CASecretAutoRotation: true,
-			SecretNamesToTimes:   lastSecretRotationStartTimes(garden),
-		},
-		r.GardenNamespace,
+		secretsmanager.WithCASecretAutoRotation(),
+		secretsmanager.WithSecretNamesToTimes(lastSecretRotationStartTimes(garden)),
+		secretsmanager.WithNamespaces(r.GardenNamespace),
 	)
 	if err != nil {
 		return reconcile.Result{}, r.updateStatusOperationError(ctx, garden, err, operationType)

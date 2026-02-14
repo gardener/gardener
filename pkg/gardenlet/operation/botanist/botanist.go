@@ -57,11 +57,8 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		clock.RealClock{},
 		b.SeedClientSet.Client(),
 		secretsManagerIdentity,
-		secretsmanager.Config{
-			CASecretAutoRotation: false,
-			SecretNamesToTimes:   b.lastSecretRotationStartTimes(),
-		},
-		namespaces...,
+		secretsmanager.WithSecretNamesToTimes(b.lastSecretRotationStartTimes()),
+		secretsmanager.WithNamespaces(namespaces...),
 	)
 	if err != nil {
 		return nil, err
