@@ -500,6 +500,11 @@ func (s *shootSystem) selfHostedShootResources() []client.Object {
 					Verbs:         []string{"get"},
 					ResourceNames: []string{metav1.NamespaceSystem},
 				},
+				{
+					APIGroups: []string{corev1.SchemeGroupVersion.Group},
+					Resources: []string{"nodes"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
 			},
 		}
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
