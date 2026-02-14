@@ -1037,8 +1037,6 @@ deploy:
         setValueTemplates:
           env[0].name: GARDENER_OPERATOR_LOCAL
           env[0].value: "true"
-          hostAliases[0].hostnames[0]: api.virtual-garden.local.gardener.cloud
-          hostAliases[0].ip: 10.2.10.2
           image.repository: '{{.IMAGE_REPO_local_skaffold_gardener_operator}}'
           image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_operator}}@{{.IMAGE_DIGEST_local_skaffold_gardener_operator}}'
           imageVectorOverwrite: |
@@ -1195,8 +1193,6 @@ build:
             - pkg/component/kubernetes/proxy
             - pkg/component/kubernetes/proxy/resources/cleanup.sh
             - pkg/component/kubernetes/proxy/resources/conntrack-fix.sh
-            - pkg/component/networking/coredns
-            - pkg/component/networking/coredns/constants
             - pkg/component/nodemanagement/machinecontrollermanager
             - pkg/component/nodemanagement/machinecontrollermanager/templates/crd-machine.sapcloud.io_machineclasses.yaml
             - pkg/component/nodemanagement/machinecontrollermanager/templates/crd-machine.sapcloud.io_machinedeployments.yaml
@@ -1255,7 +1251,6 @@ build:
             - pkg/provider-local/machine-provider/api/validation
             - pkg/provider-local/machine-provider/local
             - pkg/provider-local/webhook/controlplane
-            - pkg/provider-local/webhook/dnsconfig
             - pkg/provider-local/webhook/networkpolicy
             - pkg/provider-local/webhook/node
             - pkg/provider-local/webhook/prometheus

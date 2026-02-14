@@ -16,7 +16,7 @@ PATH_KUBECONFIG=""
 MULTI_ZONAL=false
 CHART=$(dirname "$0")/../example/gardener-local/kind/cluster
 ADDITIONAL_ARGS=""
-REGISTRY_COMPOSE_FILE="$(dirname "$0")/../dev-setup/registry/docker-compose.yaml"
+INFRA_COMPOSE_FILE="$(dirname "$0")/../dev-setup/infra/docker-compose.yaml"
 
 parse_flags() {
   while test $# -gt 0; do
@@ -46,26 +46,35 @@ parse_flags() {
   done
 }
 
-check_local_dns_records() {
-  local local_registry_ip_address
-  local_registry_ip_address=""
-
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    # Suppress exit code using "|| true"
-    local_registry_ip_address=$(dscacheutil -q host -a name registry.local.gardener.cloud | grep "ip_address" | head -n 1| cut -d' ' -f2 || true)
-  elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    # Suppress exit code using "|| true"
-    local_registry_ip_address="$(getent ahosts registry.local.gardener.cloud || true)"
-  else
-    echo "Warning: Unknown OS. Make sure registry.local.gardener.cloud resolves to 127.0.0.1"
+setup_local_dns_resolver() {
+  local dns_ip=172.18.255.53
+  if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
+    echo "> Setting $dns_ip as nameserver in /etc/resolv.conf..."
+    echo -e "nameserver $dns_ip\noptions ndots:0" | tee /etc/resolv.conf
     return 0
   fi
 
-  if ! echo "$local_registry_ip_address" | grep -q "127.0.0.1" ; then
-      echo "Error: registry.local.gardener.cloud does not resolve to 127.0.0.1. Please add a line for it in /etc/hosts"
-      echo "Command output: $local_registry_ip_address"
-      echo "Content of '/etc/hosts':\n$(cat /etc/hosts)"
-      exit 1
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    local desired_resolver_config="nameserver $dns_ip"
+    if ! grep -q "$desired_resolver_config" /etc/resolver/local.gardener.cloud ; then
+      echo "Configuring macOS to resolve the local.gardener.cloud zone using the local setup's DNS server"
+      sudo mkdir -p /etc/resolver
+      echo "$desired_resolver_config" | sudo tee /etc/resolver/local.gardener.cloud
+    fi
+  elif [[ "$OSTYPE" == "linux"* && -d /etc/systemd/resolved.conf.d ]]; then
+    if ! grep -q "$dns_ip" /etc/systemd/resolved.conf.d/gardener-local.conf ; then
+      echo "Configuring systemd-resolved to resolve the local.gardener.cloud zone using the local setup's DNS server"
+      cat <<EOF | sudo tee /etc/systemd/resolved.conf.d/gardener-local.conf
+[Resolve]
+DNS=$dns_ip
+Domains=~local.gardener.cloud
+EOF
+      echo "restarting systemd-resolved"
+      sudo systemctl restart systemd-resolved
+    fi
+  else
+    echo "Warning: Unknown OS. Make sure your host resolves the local.gardener.cloud zone using the local setup's DNS server at $dns_ip."
+    return 0
   fi
 }
 
@@ -142,9 +151,9 @@ change_registry_upstream_urls_to_prow_caches() {
     return
   fi
 
-  local mutated_compose_file="${REGISTRY_COMPOSE_FILE%.yaml}-prow.yaml"
-  cp "$REGISTRY_COMPOSE_FILE" "$mutated_compose_file"
-  REGISTRY_COMPOSE_FILE="$mutated_compose_file"
+  local mutated_compose_file="${INFRA_COMPOSE_FILE%.yaml}-prow.yaml"
+  cp "$INFRA_COMPOSE_FILE" "$mutated_compose_file"
+  INFRA_COMPOSE_FILE="$mutated_compose_file"
 
   declare -A prow_registry_cache_urls=(
     [gcr]="http://registry-gcr-io.kube-system.svc.cluster.local:5001"
@@ -169,7 +178,7 @@ change_registry_upstream_urls_to_prow_caches() {
     fi
 
     echo "Using $key registry cache in prow cluster ($registry_cache_dns) as upstream for local registry cache."
-    yq -i ".services.registry-cache-${key}.environment.REGISTRY_PROXY_REMOTEURL = \"${registry_cache_url}\"" "$REGISTRY_COMPOSE_FILE"
+    yq -i ".services.registry-cache-${key}.environment.REGISTRY_PROXY_REMOTEURL = \"${registry_cache_url}\"" "$INFRA_COMPOSE_FILE"
   done
 }
 
@@ -267,7 +276,6 @@ check_shell_dependencies() {
 }
 
 check_shell_dependencies
-check_local_dns_records
 
 parse_flags "$@"
 
@@ -285,7 +293,9 @@ setup_kind_network
 
 change_registry_upstream_urls_to_prow_caches
 
-docker compose -f "$REGISTRY_COMPOSE_FILE" up -d
+docker compose -f "$INFRA_COMPOSE_FILE" up -d
+
+setup_local_dns_resolver
 
 if [[ "$IPFAMILY" == "ipv6" ]]; then
   ADDITIONAL_ARGS="$ADDITIONAL_ARGS --values $CHART/values-ipv6.yaml"
@@ -357,17 +367,6 @@ if [[ "$CLUSTER_NAME" == "gardener-operator-local" ]] ; then
   sed "s/127\.0\.0\.1:[0-9]\+/$CLUSTER_NAME-control-plane:6443/g" "$PATH_KUBECONFIG" > "$(dirname "$0")/../dev-setup/gardenconfig/components/credentials/secret-project-garden-with-kind-kubeconfig/kubeconfig"
 fi
 
-# Prepare garden.local.gardener.cloud hostname that can be used everywhere to talk to the garden cluster (which is the
-# first kind cluster in the local setup not using the gardener-operator, i.e., no virtual garden).
-# Historically, we used the docker container name for this, but this differs between clusters with different names
-# and doesn't work in IPv6 kind clusters: https://github.com/kubernetes-sigs/kind/issues/3114
-# Hence, we "manually" inject a host configuration into the cluster that always resolves to the kind container's IP,
-# that serves our garden cluster API.
-# This works in
-# - the first and the second kind cluster
-# - in IPv4 and IPv6 kind clusters
-# - in ManagedSeeds
-
 garden_cluster="$CLUSTER_NAME"
 if [[ "$CLUSTER_NAME" == "gardener-local2" ]] ; then
   # garden-local2 is used as a second seed cluster, the first kind cluster runs the gardener control plane
@@ -384,47 +383,6 @@ if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]] ; then
 fi
 
 garden_cluster_ip="$(docker inspect "$garden_cluster"-control-plane | yq ".[].NetworkSettings.Networks.kind.$ip_address_field")"
-
-# Inject garden.local.gardener.cloud into all nodes
-for node in $nodes; do
-  docker exec "$node" sh -c "echo $garden_cluster_ip garden.local.gardener.cloud >> /etc/hosts"
-
-  # Create a systemd service to automatically re-add the garden.local.gardener.cloud entry to /etc/hosts on node startup.
-  docker exec "$node" sh -c "cat <<EOF > /etc/systemd/system/gardener-local-kind-add-hosts.service
-[Unit]
-Description=Gardener Local Kind: Add garden.local.gardener.cloud to /etc/hosts
-After=etc-hosts.mount
-
-[Service]
-Type=oneshot
-ExecStart=/bin/sh -c 'echo $garden_cluster_ip garden.local.gardener.cloud >> /etc/hosts'
-
-[Install]
-WantedBy=multi-user.target
-EOF"
-  docker exec "$node" sh -c "systemctl enable gardener-local-kind-add-hosts.service"
-done
-
-local_address_virtual_garden="172.18.255.3"
-if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-  local_address_virtual_garden="::3"
-fi
-
-# Inject garden.local.gardener.cloud into coredns config (after ready plugin, before kubernetes plugin)
-kubectl -n kube-system get configmap coredns -ojson | \
-  yq '.data.Corefile' | \
-  sed '0,/ready.*$/s//&'"\n\
-    hosts {\n\
-      $garden_cluster_ip garden.local.gardener.cloud\n\
-      $local_address_virtual_garden gardener.virtual-garden.local.gardener.cloud\n\
-      $local_address_virtual_garden api.virtual-garden.local.gardener.cloud\n\
-      $local_address_virtual_garden dashboard.ingress.runtime-garden.local.gardener.cloud\n\
-      $local_address_virtual_garden discovery.ingress.runtime-garden.local.gardener.cloud\n\
-      fallthrough\n\
-    }\
-"'/' | \
-  kubectl -n kube-system create configmap coredns --from-file Corefile=/dev/stdin --dry-run=client -oyaml | \
-  kubectl -n kube-system patch configmap coredns --patch-file /dev/stdin
 
 if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
   # The CoreDNS pods in the kind cluster can only talk via IPv6, but the nameserver in the kind cluster is set to the

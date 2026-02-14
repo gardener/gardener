@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/test/e2e"
 	_ "github.com/gardener/gardener/test/e2e/gardener/managedseed"
 	_ "github.com/gardener/gardener/test/e2e/gardener/project"
 	_ "github.com/gardener/gardener/test/e2e/gardener/seed"
@@ -31,9 +30,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestE2E(t *testing.T) {
-	if os.Getenv("USE_PROVIDER_LOCAL_COREDNS_SERVER") == "true" {
-		e2e.UseProviderLocalCoreDNSServer()
-	}
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Test E2E Gardener Suite")
 }

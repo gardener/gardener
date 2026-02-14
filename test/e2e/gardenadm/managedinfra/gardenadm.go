@@ -197,7 +197,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			Eventually(ctx, session.Err).Should(gbytes.Say("Writing kubeconfig of the self-hosted shoot to file"))
 
 			// #nosec G304 -- kubeconfigOutputFile is controlled by the test
-			Expect(os.ReadFile(kubeconfigOutputFile)).To(ContainSubstring("server: https://api.root.garden.local.gardener.cloud"))
+			Expect(os.ReadFile(kubeconfigOutputFile)).To(ContainSubstring("server: https://api.root.garden.external.local.gardener.cloud"))
 		}, SpecTimeout(time.Minute))
 
 		var kubeconfig string
@@ -205,7 +205,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			kubeconfigSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kubeconfig", Namespace: technicalID}}
 			Eventually(ctx, Object(kubeconfigSecret)).Should(HaveField("Data", HaveKey("kubeconfig")))
 
-			kubeconfig = strings.ReplaceAll(string(kubeconfigSecret.Data["kubeconfig"]), "api.root.garden.local.gardener.cloud", fmt.Sprintf("localhost:%d", localPort))
+			kubeconfig = strings.ReplaceAll(string(kubeconfigSecret.Data["kubeconfig"]), "api.root.garden.external.local.gardener.cloud", fmt.Sprintf("localhost:%d", localPort))
 		}, SpecTimeout(time.Minute))
 
 		var (
