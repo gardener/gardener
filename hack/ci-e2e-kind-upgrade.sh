@@ -235,6 +235,7 @@ kind_up
 # export all container logs and events after test execution
 trap "
   ( rm -rf "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases" )
+  ( export_artifacts_host )
   ( export_artifacts "$CLUSTER_NAME" )
   ( kind_down )
 " EXIT
