@@ -182,7 +182,18 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 	if err := mgr.Add(&controllerutils.ControlledRunner{
 		Manager: mgr,
 		BootstrapRunnables: []manager.Runnable{
-			&bootstrappers.KubeletBootstrapKubeconfig{Log: log.WithName("kubelet-bootstrap-kubeconfig-creator"), FS: fs, APIServerConfig: cfg.APIServer},
+			&bootstrappers.KubeletBootstrapKubeconfig{
+				Log:             log.WithName("kubelet-bootstrap-kubeconfig-creator"),
+				FS:              fs,
+				APIServerConfig: cfg.APIServer,
+			},
+			&bootstrappers.OSCChecker{
+				Log:      log.WithName("bootstrapper-file-checker"),
+				FS:       fs,
+				Client:   mgr.GetClient(),
+				Recorder: mgr.GetEventRecorderFor("osc-checker"),
+				NodeName: nodeName,
+			},
 		},
 		ActualRunnables: []manager.Runnable{
 			manager.RunnableFunc(func(ctx context.Context) error {
