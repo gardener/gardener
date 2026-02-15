@@ -6,6 +6,18 @@
 
 set -o errexit
 
+export_artifacts_host() {
+  echo "> Exporting logs of host services"
+  cp /var/log/{docker,dnsmasq}.log "${ARTIFACTS:-}/" || true
+
+  echo "> Exporting logs of local infrastructure managed via docker compose"
+  mkdir -p "${ARTIFACTS:-}/infra"
+  # In Docker, container logs are not stored in /var/log but in /var/lib/docker/containers.
+  # However, this directory also holds a lot of other files, so we use `docker compose logs` to get only the logs of the
+  # relevant containers. This mixes logs of all containers, but avoids exporting unnecessary files.
+  docker compose -f ./dev-setup/infra/docker-compose.yaml logs --timestamps > "${ARTIFACTS:-}/infra/infra.log" || true
+}
+
 export_artifacts() {
   cluster_name="${1}"
   echo "> Exporting logs of kind cluster '$cluster_name'"

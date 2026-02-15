@@ -18,6 +18,7 @@ if [[ -n "$IPFAMILY" ]] && [[ "$IPFAMILY" == "ipv6" ]]; then
 
   # export all container logs and events after test execution
   trap "
+    ( export_artifacts_host )
     ( export_artifacts "gardener-operator-local"; export_resource_yamls_for garden )
     ( make kind-single-node-down )
   " EXIT
@@ -34,6 +35,7 @@ make kind-up
 
 # export all container logs and events after test execution
 trap "
+  ( export_artifacts_host )
   ( export_artifacts "gardener-local" )
   ( make kind-down )
 " EXIT
