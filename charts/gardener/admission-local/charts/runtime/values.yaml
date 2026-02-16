@@ -18,6 +18,7 @@ vpa:
 webhookConfig:
   mode: url
   serverPort: 10250
+  servicePort: 443
 service:
   topologyAwareRouting:
     enabled: false

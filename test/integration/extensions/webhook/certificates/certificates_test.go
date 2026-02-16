@@ -372,7 +372,7 @@ var _ = Describe("Certificates tests", func() {
 						Name:      "gardener-extension-" + extensionName,
 						Namespace: extensionNamespace.Name,
 						Path:      ptr.To("/" + seedWebhookPath),
-						Port:      ptr.To[int32](443),
+						Port:      ptr.To[int32](12345),
 					},
 				},
 				Rules: []admissionregistrationv1.RuleWithOperations{
