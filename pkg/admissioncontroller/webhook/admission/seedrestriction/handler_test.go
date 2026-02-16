@@ -23,6 +23,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
@@ -65,14 +66,7 @@ var _ = Describe("handler", func() {
 		gardenletUser authenticationv1.UserInfo
 		extensionUser authenticationv1.UserInfo
 
-		responseAllowed = admission.Response{
-			AdmissionResponse: admissionv1.AdmissionResponse{
-				Allowed: true,
-				Result: &metav1.Status{
-					Code: int32(http.StatusOK),
-				},
-			},
-		}
+		responseAllowed admission.Response
 	)
 
 	BeforeEach(func() {
@@ -99,6 +93,15 @@ var _ = Describe("handler", func() {
 		extensionUser = authenticationv1.UserInfo{
 			Username: extensionUserInfo.GetName(),
 			Groups:   extensionUserInfo.GetGroups(),
+		}
+
+		responseAllowed = admission.Response{
+			AdmissionResponse: admissionv1.AdmissionResponse{
+				Allowed: true,
+				Result: &metav1.Status{
+					Code: int32(http.StatusOK),
+				},
+			},
 		}
 	})
 
@@ -137,6 +140,29 @@ var _ = Describe("handler", func() {
 						},
 					},
 				}))
+			})
+		})
+
+		Context("when resource already exists and operation is CREATE", func() {
+			It("should allow the request", func() {
+				request.UserInfo = gardenletUser
+				request.Operation = admissionv1.Create
+				request.Kind = metav1.GroupVersionKind{
+					Group:   gardencorev1beta1.SchemeGroupVersion.Group,
+					Version: gardencorev1beta1.SchemeGroupVersion.Version,
+					Kind:    "BackupEntry",
+				}
+				request.Resource = metav1.GroupVersionResource{
+					Group:    gardencorev1beta1.SchemeGroupVersion.Group,
+					Resource: "backupentries",
+				}
+				request.Name = "foo"
+				request.Namespace = "bar"
+
+				mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: request.Name, Namespace: request.Namespace}, gomock.AssignableToTypeOf(&unstructured.Unstructured{})).Return(nil)
+
+				responseAllowed.Result.Message = "object already exists"
+				Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 			})
 		})
 
