@@ -12,6 +12,7 @@ report_fname='gosec-report.sarif'
 gosec_report="false"
 gosec_report_parse_flags=""
 exclude_dirs="hack"
+concurrency="${GOSEC_CONCURRENCY:-4}"
 
 parse_flags() {
   while test $# -gt 1; do
@@ -27,6 +28,9 @@ parse_flags() {
         ;;
       --exclude-dirs)
         shift; exclude_dirs="$1"
+        ;;
+      --concurrency)
+        shift; concurrency="$1"
         ;;
       *)
         echo "Unknown argument: $1"
@@ -54,4 +58,4 @@ fi
 # Thus, generated code is excluded from gosec scan.
 # Nested go modules are not supported by gosec (see https://github.com/securego/gosec/issues/501), so the ./hack folder
 # is excluded too. It does not contain productive code anyway.
-gosec -exclude-generated $(echo "$exclude_dirs" | awk -v RS=',' '{printf "-exclude-dir %s ", $1}') $gosec_report_parse_flags ./...
+gosec -concurrency="$concurrency" -exclude-generated $(echo "$exclude_dirs" | awk -v RS=',' '{printf "-exclude-dir %s ", $1}') $gosec_report_parse_flags ./...
