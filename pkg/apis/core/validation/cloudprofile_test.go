@@ -1044,6 +1044,35 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					}))))
 				})
 
+				It("should allow nil classification with same semver, but different flavor", func() {
+					cloudProfile.Spec.MachineImages = []core.MachineImage{
+						{
+							Name: machineImageName,
+							Versions: []core.MachineImageVersion{
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        "3.4.6",
+										Classification: &supportedClassification,
+									},
+									CRI:           []core.CRI{{Name: "containerd"}},
+									Architectures: []string{"amd64"},
+								},
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version: "3.4.6-flavor",
+									},
+									CRI:           []core.CRI{{Name: "containerd"}},
+									Architectures: []string{"amd64"},
+								},
+							},
+							UpdateStrategy: &updateStrategyMajor,
+						},
+					}
+					errorList := ValidateCloudProfile(cloudProfile)
+
+					Expect(errorList).To(BeEmpty())
+				})
+
 				It("should forbid duplicate names in list of machine images", func() {
 					cloudProfile.Spec.MachineImages = []core.MachineImage{
 						{

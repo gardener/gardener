@@ -180,7 +180,9 @@ func validateCloudProfileKubernetesSettings(kubernetes core.KubernetesSettings, 
 func validateSupportedVersionsConfiguration(version core.ExpirableVersion, allVersions []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if helper.VersionIsSupported(version) {
+	// NOTE: Lifecycle classifications treat nil classifications as default, which differs in old classification.
+	// Keep skipping old classifications if they are nil.
+	if (version.Classification != nil || len(version.Lifecycle) > 0) && helper.VersionIsSupported(version) {
 		currentSemVer, err := semver.NewVersion(version.Version)
 		if err != nil {
 			// check is already performed by caller, avoid duplicate error
