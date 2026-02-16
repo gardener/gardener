@@ -1,0 +1,129 @@
+receivers:
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'kubelet'
+          # TODO(bobi-wan): should we?
+          # honor_labels: true
+          scrape_interval: 30s
+          scheme: https
+          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+          tls_config:
+            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            # TODO(bobi-wan): can we avoid skipping, how do I get kubelet CA file?
+            insecure_skip_verify: true
+          metrics_path: /metrics
+          kubernetes_sd_configs:
+            - role: node
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_node_name]
+              action: replace
+              target_label: instance
+            - source_labels: [__meta_kubernetes_node_name]
+              action: replace
+              target_label: node
+
+        - job_name: 'cadvisor'
+          scrape_interval: 30s
+          scheme: https
+          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+          tls_config:
+            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            insecure_skip_verify: true
+          metrics_path: /metrics/cadvisor
+          kubernetes_sd_configs:
+            - role: node
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_node_name]
+              action: replace
+              target_label: instance
+            - source_labels: [__meta_kubernetes_node_name]
+              action: replace
+              target_label: node
+
+        - job_name: 'node-exporter'
+          tls_config:
+            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            insecure_skip_verify: true
+          scrape_interval: 30s
+          kubernetes_sd_configs:
+            - role: endpoints
+              namespaces:
+                names:
+                  - kube-system
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_service_name]
+              action: keep
+              regex: node-exporter
+            - source_labels: [__meta_kubernetes_endpoint_port_name]
+              action: keep
+              regex: metrics
+            - source_labels: [__meta_kubernetes_pod_node_name]
+              action: replace
+              target_label: instance
+            - source_labels: [__meta_kubernetes_pod_node_name]
+              action: replace
+              target_label: node
+
+processors:
+  batch:
+    timeout: 10s
+    send_batch_size: 1000
+  filter:
+    metrics:
+      include:
+        match_type: regexp
+        metric_names:
+          # kubelet metrics
+          - ^kubelet_running_pods$
+          - ^kubelet_volume_stats_.*
+          - ^kubelet_image_pull_duration_seconds_.*
+          # cadvisor metrics
+          - ^container_cpu_.*
+          - ^container_fs_.*
+          - ^container_memory_working_set_bytes$
+          - ^container_network_.*
+          - ^container_last_seen$
+          # node-exporter metrics
+          - ^node_boot_time_seconds$
+          - ^node_cpu_seconds_total$
+          - ^node_disk_read_bytes_total$
+          - ^node_disk_written_bytes_total$
+          - ^node_disk_io_time_weighted_seconds_total$
+          - ^node_disk_io_time_seconds_total$
+          - ^node_disk_write_time_seconds_total$
+          - ^node_disk_writes_completed_total$
+          - ^node_disk_read_time_seconds_total$
+          - ^node_disk_reads_completed_total$
+          - ^node_filesystem_avail_bytes$
+          - ^node_filesystem_files$
+          - ^node_filesystem_files_free$
+          - ^node_filesystem_free_bytes$
+          - ^node_filesystem_readonly$
+          - ^node_filesystem_size_bytes$
+          - ^node_load1$
+          - ^node_load5$
+          - ^node_load15$
+          - ^node_memory_.*
+          - ^node_nf_conntrack_.*
+          - ^node_scrape_collector_duration_seconds$
+          - ^node_scrape_collector_success$
+          - ^process_max_fds$
+          - ^process_open_fds$
+          # OTEL collector internal metrics
+          - ^otelcol_.+
+          - ^up$
+
+exporters:
+  prometheus:
+    endpoint: "0.0.0.0:8080"
+    # namespace: ""
+    send_timestamps: true
+    metric_expiration: 5m
+
+service:
+  pipelines:
+    metrics:
+      receivers: [prometheus]
+      processors: [batch, filter]
+      exporters: [prometheus]

@@ -42,6 +42,7 @@ config:
     VictoriaLogsBackend: true
     VPNBondingModeRoundRobin: true
     PrometheusHealthChecks: true
+    OpenTelemetryDataplaneCollector: true
   etcdConfig:
     featureGates:
       UpgradeEtcdVersion: false

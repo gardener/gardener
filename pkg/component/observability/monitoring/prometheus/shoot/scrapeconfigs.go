@@ -80,6 +80,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 				}},
 				SampleLimit: ptr.To(uint64(500)),
 				RelabelConfigs: []monitoringv1.RelabelConfig{
+					//TODO(bobi-wan): use JobName here as well?
 					{
 						Action:      "replace",
 						Replacement: ptr.To("annotated-seed-service-endpoints"),
@@ -114,11 +115,16 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						Regex:  `__meta_kubernetes_service_label_(.+)`,
 					},
 					{
+						//TODO(bobi-wan): aren't service_name labels populated 
+						// only with role="service" in service discovery? This
+						// one uses role="endpoint" discovery.
+						// Also, why relabel the "job" label a second time?
 						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name"},
 						Action:       "replace",
 						TargetLabel:  "job",
 					},
 					{
+						//TODO(bobi-wan): why relabel the "job" label a third time?
 						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_annotation_prometheus_io_name"},
 						Action:       "replace",
 						Regex:        `(.+)`,
@@ -165,135 +171,28 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 	}
 
 	if !isWorkerless {
-		out = append(out,
-			&monitoringv1alpha1.ScrapeConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "cadvisor",
-				},
-				Spec: monitoringv1alpha1.ScrapeConfigSpec{
-					HonorLabels:     ptr.To(false),
-					HonorTimestamps: ptr.To(false),
-					Scheme:          ptr.To(monitoringv1.SchemeHTTPS),
-					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
-						Key:                  resourcesv1alpha1.DataKeyToken,
-					}},
-					TLSConfig: &monitoringv1.SafeTLSConfig{CA: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: clusterCASecretName},
-						Key:                  secretsutils.DataKeyCertificateBundle,
-					}}},
-					KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-						Role:            monitoringv1alpha1.KubernetesRoleNode,
-						APIServer:       ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
-						Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
-						FollowRedirects: ptr.To(false),
-						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
-							Key:                  resourcesv1alpha1.DataKeyToken,
-						}},
-						TLSConfig: &monitoringv1.SafeTLSConfig{CA: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{Name: clusterCASecretName},
-							Key:                  secretsutils.DataKeyCertificateBundle,
-						}}},
-					}},
-					RelabelConfigs: []monitoringv1.RelabelConfig{
-						{
-							Action:      "replace",
-							Replacement: ptr.To("cadvisor"),
-							TargetLabel: "job",
-						},
-						{
-							Action: "labelmap",
-							Regex:  `__meta_kubernetes_node_label_(.+)`,
-						},
-						{
-							TargetLabel: "__address__",
-							Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
-						},
-						{
-							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
-							Regex:        `(.+)`,
-							Replacement:  ptr.To(`/api/v1/nodes/${1}/proxy/metrics/cadvisor`),
-							TargetLabel:  "__metrics_path__",
-						},
-						{
-							TargetLabel: "type",
-							Replacement: ptr.To("shoot"),
-						},
-					},
-					MetricRelabelConfigs: []monitoringv1.RelabelConfig{
-						// get system services
-						{
-							SourceLabels: []monitoringv1.LabelName{"id"},
-							Action:       "replace",
-							Regex:        `^/system\.slice/(.+)\.service$`,
-							TargetLabel:  "systemd_service_name",
-						},
-						{
-							SourceLabels: []monitoringv1.LabelName{"id"},
-							Action:       "replace",
-							Regex:        `^/system\.slice/(.+)\.service$`,
-							Replacement:  ptr.To(`$1`),
-							TargetLabel:  "container",
-						},
-						monitoringutils.StandardMetricRelabelConfig(
-							"container_cpu_cfs_periods_total",
-							"container_cpu_cfs_throttled_seconds_total",
-							"container_cpu_cfs_throttled_periods_total",
-							"container_cpu_usage_seconds_total",
-							"container_fs_inodes_total",
-							"container_fs_limit_bytes",
-							"container_fs_usage_bytes",
-							"container_fs_reads_total",
-							"container_fs_writes_total",
-							"container_last_seen",
-							"container_memory_working_set_bytes",
-							"container_network_receive_bytes_total",
-							"container_network_transmit_bytes_total",
-						)[0],
-						// We want to keep only metrics in kube-system namespace
-						{
-							SourceLabels: []monitoringv1.LabelName{"namespace"},
-							Action:       "keep",
-							// systemd containers don't have namespaces
-							Regex: `(^$|^kube-system$)`,
-						},
-						{
-							SourceLabels: []monitoringv1.LabelName{"container", "__name__"},
-							Action:       "drop",
-							// The system container POD is used for networking
-							Regex: `POD;(container_cpu_cfs_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_cfs_throttled_periods_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_last_seen|container_memory_working_set_bytes)`,
-						},
-						{
-							SourceLabels: []monitoringv1.LabelName{"__name__", "container", "interface", "id"},
-							Action:       "keep",
-							Regex:        `container_network.+;;(eth0;/.+|(en.+|tunl0|eth0);/)|.+;.+;.*;.*`,
-						},
-						{
-							SourceLabels: []monitoringv1.LabelName{"__name__", "container", "interface"},
-							Action:       "drop",
-							Regex:        `container_network.+;POD;(.{5,}|tun0|en.+)`,
-						},
-						{
-							SourceLabels: []monitoringv1.LabelName{"__name__", "id"},
-							Regex:        `container_network.+;/`,
-							Replacement:  ptr.To("true"),
-							TargetLabel:  "host_network",
-						},
-						{
-							Regex:  `^id$`,
-							Action: "labeldrop",
-						},
-					},
-				},
+		cadvisorConfig := &monitoringv1alpha1.ScrapeConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "cadvisor",
 			},
-			&monitoringv1alpha1.ScrapeConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "kube-kubelet",
-				},
-				Spec: monitoringv1alpha1.ScrapeConfigSpec{
-					HonorLabels: ptr.To(false),
-					Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				HonorLabels:     ptr.To(false),
+				HonorTimestamps: ptr.To(false),
+				Scheme:          ptr.To(monitoringv1.SchemeHTTPS),
+				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
+					Key:                  resourcesv1alpha1.DataKeyToken,
+				}},
+				TLSConfig: &monitoringv1.SafeTLSConfig{CA: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: clusterCASecretName},
+					Key:                  secretsutils.DataKeyCertificateBundle,
+				}}},
+				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+					//TODO(bobi-wan): why do we have a "node" role + a namespace configured?
+					Role:            monitoringv1alpha1.KubernetesRoleNode,
+					APIServer:       ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
+					Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
+					FollowRedirects: ptr.To(false),
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
 						Key:                  resourcesv1alpha1.DataKeyToken,
@@ -302,68 +201,181 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						LocalObjectReference: corev1.LocalObjectReference{Name: clusterCASecretName},
 						Key:                  secretsutils.DataKeyCertificateBundle,
 					}}},
-					KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-						Role:            monitoringv1alpha1.KubernetesRoleNode,
-						APIServer:       ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
-						FollowRedirects: ptr.To(true),
-						Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
-						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
-							Key:                  resourcesv1alpha1.DataKeyToken,
-						}},
-						TLSConfig: &monitoringv1.SafeTLSConfig{CA: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{Name: clusterCASecretName},
-							Key:                  secretsutils.DataKeyCertificateBundle,
-						}}},
-					}},
-					RelabelConfigs: []monitoringv1.RelabelConfig{
-						{
-							Action:      "replace",
-							Replacement: ptr.To("kube-kubelet"),
-							TargetLabel: "job",
-						},
-						{
-							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_address_InternalIP"},
-							TargetLabel:  "instance",
-						},
-						{
-							Action: "labelmap",
-							Regex:  `__meta_kubernetes_node_label_(.+)`,
-						},
-						{
-							TargetLabel: "__address__",
-							Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
-						},
-						{
-							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
-							Regex:        `(.+)`,
-							Replacement:  ptr.To(`/api/v1/nodes/${1}/proxy/metrics`),
-							TargetLabel:  "__metrics_path__",
-						},
-						{
-							TargetLabel: "type",
-							Replacement: ptr.To("shoot"),
-						},
+				}},
+				RelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						Action:      "replace",
+						Replacement: ptr.To("cadvisor"),
+						TargetLabel: "job",
 					},
-					MetricRelabelConfigs: append(monitoringutils.StandardMetricRelabelConfig(
-						"kubelet_running_pods",
-						"process_max_fds",
-						"process_open_fds",
-						"kubelet_volume_stats_available_bytes",
-						"kubelet_volume_stats_capacity_bytes",
-						"kubelet_volume_stats_used_bytes",
-						"kubelet_image_pull_duration_seconds_bucket",
-						"kubelet_image_pull_duration_seconds_sum",
-						"kubelet_image_pull_duration_seconds_count",
-					), monitoringv1.RelabelConfig{
+					{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_node_label_(.+)`,
+					},
+					{
+						TargetLabel: "__address__",
+						Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
+						Regex:        `(.+)`,
+						Replacement:  ptr.To(`/api/v1/nodes/${1}/proxy/metrics/cadvisor`),
+						TargetLabel:  "__metrics_path__",
+					},
+					{
+						TargetLabel: "type",
+						Replacement: ptr.To("shoot"),
+					},
+				},
+				MetricRelabelConfigs: []monitoringv1.RelabelConfig{
+					// get system services
+					{
+						SourceLabels: []monitoringv1.LabelName{"id"},
+						Action:       "replace",
+						Regex:        `^/system\.slice/(.+)\.service$`,
+						TargetLabel:  "systemd_service_name",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"id"},
+						Action:       "replace",
+						Regex:        `^/system\.slice/(.+)\.service$`,
+						Replacement:  ptr.To(`$1`),
+						TargetLabel:  "container",
+					},
+					monitoringutils.StandardMetricRelabelConfig(
+						"container_cpu_cfs_periods_total",
+						"container_cpu_cfs_throttled_seconds_total",
+						"container_cpu_cfs_throttled_periods_total",
+						"container_cpu_usage_seconds_total",
+						"container_fs_inodes_total",
+						"container_fs_limit_bytes",
+						"container_fs_usage_bytes",
+						"container_fs_reads_total",
+						"container_fs_writes_total",
+						"container_last_seen",
+						"container_memory_working_set_bytes",
+						"container_network_receive_bytes_total",
+						"container_network_transmit_bytes_total",
+					)[0],
+					// We want to keep only metrics in kube-system namespace
+					{
 						SourceLabels: []monitoringv1.LabelName{"namespace"},
 						Action:       "keep",
-						// Not all kubelet metrics have a namespace label. That's why we also need to match empty namespace (^$).
-						Regex: `(^$|^` + metav1.NamespaceSystem + `$)`,
-					}),
+						// systemd containers don't have namespaces
+						Regex: `(^$|^kube-system$)`,
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"container", "__name__"},
+						Action:       "drop",
+						// The system container POD is used for networking
+						Regex: `POD;(container_cpu_cfs_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_cfs_throttled_periods_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_last_seen|container_memory_working_set_bytes)`,
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__name__", "container", "interface", "id"},
+						Action:       "keep",
+						Regex:        `container_network.+;;(eth0;/.+|(en.+|tunl0|eth0);/)|.+;.+;.*;.*`,
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__name__", "container", "interface"},
+						Action:       "drop",
+						Regex:        `container_network.+;POD;(.{5,}|tun0|en.+)`,
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__name__", "id"},
+						Regex:        `container_network.+;/`,
+						Replacement:  ptr.To("true"),
+						TargetLabel:  "host_network",
+					},
+					{
+						Regex:  `^id$`,
+						Action: "labeldrop",
+					},
 				},
 			},
-		)
+		}
+
+		kubeletConfig := &monitoringv1alpha1.ScrapeConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "kube-kubelet",
+			},
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				HonorLabels: ptr.To(false),
+				Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
+				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
+					Key:                  resourcesv1alpha1.DataKeyToken,
+				}},
+				TLSConfig: &monitoringv1.SafeTLSConfig{CA: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: clusterCASecretName},
+					Key:                  secretsutils.DataKeyCertificateBundle,
+				}}},
+				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+					Role:            monitoringv1alpha1.KubernetesRoleNode,
+					APIServer:       ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
+					FollowRedirects: ptr.To(true),
+					Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
+					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
+						Key:                  resourcesv1alpha1.DataKeyToken,
+					}},
+					TLSConfig: &monitoringv1.SafeTLSConfig{CA: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: clusterCASecretName},
+						Key:                  secretsutils.DataKeyCertificateBundle,
+					}}},
+				}},
+				RelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						Action:      "replace",
+						Replacement: ptr.To("kube-kubelet"),
+						TargetLabel: "job",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_address_InternalIP"},
+						TargetLabel:  "instance",
+					},
+					{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_node_label_(.+)`,
+					},
+					{
+						TargetLabel: "__address__",
+						Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
+						Regex:        `(.+)`,
+						Replacement:  ptr.To(`/api/v1/nodes/${1}/proxy/metrics`),
+						TargetLabel:  "__metrics_path__",
+					},
+					{
+						TargetLabel: "type",
+						Replacement: ptr.To("shoot"),
+					},
+				},
+				MetricRelabelConfigs: append(monitoringutils.StandardMetricRelabelConfig(
+					"kubelet_running_pods",
+					"process_max_fds",
+					"process_open_fds",
+					"kubelet_volume_stats_available_bytes",
+					"kubelet_volume_stats_capacity_bytes",
+					"kubelet_volume_stats_used_bytes",
+					"kubelet_image_pull_duration_seconds_bucket",
+					"kubelet_image_pull_duration_seconds_sum",
+					"kubelet_image_pull_duration_seconds_count",
+				), monitoringv1.RelabelConfig{
+					SourceLabels: []monitoringv1.LabelName{"namespace"},
+					Action:       "keep",
+					// Not all kubelet metrics have a namespace label. That's why we also need to match empty namespace (^$).
+					Regex: `(^$|^` + metav1.NamespaceSystem + `$)`,
+				}),
+			},
+		}
+
+		// Only add cadvisor and kube-kubelet scrape configs if OTEL dataplane collector is not enabled.
+		// Otherwise, it scrapes these targets already.
+		if !features.DefaultFeatureGate.Enabled(features.OpenTelemetryDataplaneCollector) {
+			out = append(out, cadvisorConfig, kubeletConfig)
+		}
 
 		if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
 			nodeMetricsURL := fmt.Sprintf("/api/v1/nodes/${1}:%d/proxy/metrics", otelcomponent.MetricsPort)
@@ -387,6 +399,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 							Role:            monitoringv1alpha1.KubernetesRoleNode,
 							APIServer:       ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
 							FollowRedirects: ptr.To(true),
+							//TODO(bobi-wan): role="node" + namespace filter again
 							Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
 							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
@@ -399,6 +412,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						}},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
+								//TODO(bobi-wan): again - static job name
 								Action:      "replace",
 								Replacement: ptr.To("opentelemetry-collector-nodes"),
 								TargetLabel: "job",
@@ -435,6 +449,71 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						), monitoringv1.RelabelConfig{
 							Action: "keep",
 						}),
+					},
+				},
+			)
+		}
+
+		if features.DefaultFeatureGate.Enabled(features.OpenTelemetryDataplaneCollector) {
+			out = append(out,
+				&monitoringv1alpha1.ScrapeConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "otel-collector-dataplane",
+					},
+					Spec: monitoringv1alpha1.ScrapeConfigSpec{
+						HonorLabels: ptr.To(true),
+						Scheme:      ptr.To(monitoringv1.SchemeHTTP),
+						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
+							Key:                  resourcesv1alpha1.DataKeyToken,
+						}},
+						TLSConfig: &monitoringv1.SafeTLSConfig{CA: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{Name: clusterCASecretName},
+							Key:                  secretsutils.DataKeyCertificateBundle,
+						}}},
+						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+							Role:            monitoringv1alpha1.KubernetesRoleEndpoint,
+							APIServer:       ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
+							FollowRedirects: ptr.To(true),
+							Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
+							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
+								Key:                  resourcesv1alpha1.DataKeyToken,
+							}},
+							TLSConfig: &monitoringv1.SafeTLSConfig{CA: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: clusterCASecretName},
+								Key:                  secretsutils.DataKeyCertificateBundle,
+							}}},
+						}},
+						RelabelConfigs: []monitoringv1.RelabelConfig{
+							{
+								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name"},
+								Action:       "keep",
+								Regex:        "otel-collector-dataplane-deployment",
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_endpoint_port_name"},
+								Action:       "keep",
+								Regex:        "metrics",
+							},
+							{
+								Action:      "replace",
+								Replacement: ptr.To("otel-collector-dataplane"),
+								TargetLabel: "job",
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name"},
+								TargetLabel:  "pod",
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_node_name"},
+								TargetLabel:  "instance",
+							},
+							{
+								Action: "labelmap",
+								Regex:  `__meta_kubernetes_pod_label_(.+)`,
+							},
+						},
 					},
 				},
 			)

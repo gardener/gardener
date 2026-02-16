@@ -208,6 +208,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		if err != nil {
 			return nil, err
 		}
+		o.Shoot.Components.SystemComponents.OtelDataplaneDeployment, err = b.DefaultOtelDataplaneDeployment()
+		if err != nil {
+			return nil, err
+		}
 		o.Shoot.Components.SystemComponents.KubeProxy, err = b.DefaultKubeProxy()
 		if err != nil {
 			return nil, err

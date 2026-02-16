@@ -112,6 +112,12 @@ const (
 	// owner: @rrhubenov
 	// alpha: v1.140.0
 	RemoveVali featuregate.Feature = "RemoveVali"
+
+	// OpenTelemetryDataplaneCollector enables an OpenTelemetry Collector deployment in the shoot cluster's data plane
+	// for collecting metrics using kubernetes service discovery.
+	// owner: @bobi-wan
+	// alpha: v1.136.0
+	OpenTelemetryDataplaneCollector featuregate.Feature = "OpenTelemetryDataplaneCollector"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -154,6 +160,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	PrometheusHealthChecks:         {Default: false, PreRelease: featuregate.Alpha},
 	VersionClassificationLifecycle: {Default: false, PreRelease: featuregate.Alpha},
 	RemoveVali:                     {Default: false, PreRelease: featuregate.Alpha},
+	OpenTelemetryDataplaneCollector: {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

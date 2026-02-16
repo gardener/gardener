@@ -388,7 +388,7 @@ func (s *AccessSecret) WithKubeconfig(kubeconfigRaw *clientcmdv1.Config) *Access
 	return s
 }
 
-// WithTargetSecret sets the kubeconfig field of the AccessSecret.
+// WithTargetSecret sets the target secret name and target secret namespace fields of the AccessSecret.
 func (s *AccessSecret) WithTargetSecret(name, namespace string) *AccessSecret {
 	s.targetSecretName = name
 	s.targetSecretNamespace = namespace

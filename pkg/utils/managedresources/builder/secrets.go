@@ -26,6 +26,7 @@ type Secret struct {
 	client            client.Client
 	createIfNotExists bool
 
+	//TODO(1): remove this?
 	keyValues map[string]string
 	secret    *corev1.Secret
 }
@@ -35,6 +36,7 @@ func NewSecret(client client.Client) *Secret {
 	return &Secret{
 		client:            client,
 		createIfNotExists: true,
+		//TODO(1): and this?
 		keyValues:         make(map[string]string),
 		secret:            &corev1.Secret{},
 	}
@@ -58,6 +60,7 @@ func (s *Secret) WithNamespacedName(namespace, name string) *Secret {
 // if it already exists in the current labels.
 func (s *Secret) WithLabels(labels map[string]string) *Secret {
 	if s.secret.Labels == nil {
+		//TODO: what is going on here? Can't we just copy over the map?
 		s.secret.Labels = utils.MergeStringMaps(labels)
 		return s
 	}

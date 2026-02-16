@@ -418,10 +418,19 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			SkipIf:       botanist.Shoot.IsWorkerless || !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForCleanup),
 		})
+		deleteOtelDataplaneDeployment = g.Add(flow.Task{
+			Name: "Deleting OTEL dataplane collector deployment from shoot cluster",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.Shoot.Components.SystemComponents.OtelDataplaneDeployment.Destroy(ctx)
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       botanist.Shoot.IsWorkerless || !cleanupShootResources,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForCleanup),
+		})
 		syncPointCleanedKubernetesResources = flow.NewTaskIDs(
 			cleanupWebhooks,
 			cleanExtendedAPIs,
 			cleanKubernetesResources,
+			deleteOtelDataplaneDeployment,
 			deleteMetricsServer,
 		)
 

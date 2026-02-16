@@ -1,0 +1,65 @@
+apiVersion: resources.gardener.cloud/v1alpha1
+kind: ManagedResource
+metadata:
+  annotations:
+    reference.resources.gardener.cloud/secret-aec15018: managedresource-logging-target-60f5ba46
+  creationTimestamp: "2025-11-03T21:37:15Z"
+  finalizers:
+  - resources.gardener.cloud/gardener-resource-manager
+  generation: 2
+  labels:
+    origin: gardener
+  name: logging-target
+  namespace: shoot--inventory--inv-dev-01
+  resourceVersion: "4535252148"
+  uid: 28a8cc23-27ce-45b6-b785-ffa1310bc639
+spec:
+  injectLabels:
+    shoot.gardener.cloud/no-cleanup: "true"
+  keepObjects: false
+  secretRefs:
+  - name: managedresource-logging-target-60f5ba46
+status:
+  conditions:
+  - lastTransitionTime: "2025-11-10T21:13:51Z"
+    lastUpdateTime: "2025-11-10T21:13:51Z"
+    message: All resources are healthy.
+    reason: ResourcesHealthy
+    status: "True"
+    type: ResourcesHealthy
+  - lastTransitionTime: "2025-11-10T21:13:51Z"
+    lastUpdateTime: "2025-11-10T21:13:51Z"
+    message: All resources have been fully rolled out.
+    reason: ResourcesRolledOut
+    status: "False"
+    type: ResourcesProgressing
+  - lastTransitionTime: "2026-01-01T22:50:10Z"
+    lastUpdateTime: "2026-01-01T22:50:10Z"
+    message: All resources are applied.
+    reason: ApplySucceeded
+    status: "True"
+    type: ResourcesApplied
+  observedGeneration: 2
+  resources:
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    labels:
+      app: gardener-opentelemetry-collector
+      resources.gardener.cloud/managed-by: gardener
+      shoot.gardener.cloud/no-cleanup: "true"
+    name: gardener.cloud:logging:opentelemetry-collector
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    labels:
+      app: gardener-opentelemetry-collector
+      resources.gardener.cloud/managed-by: gardener
+      shoot.gardener.cloud/no-cleanup: "true"
+    name: gardener.cloud:logging:opentelemetry-collector
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    labels:
+      app: rbac-proxy
+      resources.gardener.cloud/managed-by: gardener
+      shoot.gardener.cloud/no-cleanup: "true"
+    name: gardener.cloud:logging:rbac-proxy
+  secretsDataChecksum: 38e79b6e191b6589f212d0e9ce69e400b3dacbdbcecd5a18e21c189467046aa6

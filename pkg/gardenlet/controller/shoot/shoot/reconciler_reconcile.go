@@ -763,6 +763,14 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
 				waitUntilGardenerResourceManagerReady, initializeShootClients, ensureShootClusterIdentity, deployKubeScheduler, waitUntilShootNamespacesReady),
 		})
+		deployOtelDataplaneCollector = g.Add(flow.Task{
+			Name: "Deploying OTEL dataplane collector to shoot cluster",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.ReconcileOtelDataplaneDeployment(ctx)
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, initializeShootClients, ensureShootClusterIdentity, deployKubeScheduler, waitUntilShootNamespacesReady),
+		})
 		deployKubernetesDashboard = g.Add(flow.Task{
 			Name:   "Deploying addon Kubernetes Dashboard",
 			Fn:     flow.TaskFn(botanist.DeployKubernetesDashboard).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -790,6 +798,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			deployShootSystemResources,
 			deployCoreDNS,
 			deployNodeExporter,
+			deployOtelDataplaneCollector,
 			deployNodeLocalDNS,
 			deployMetricsServer,
 			deployVPNShoot,

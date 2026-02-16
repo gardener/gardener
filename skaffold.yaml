@@ -1116,6 +1116,7 @@ build:
             - pkg/component/observability/monitoring/utils
             - pkg/component/observability/opentelemetry/collector
             - pkg/component/observability/opentelemetry/collector/constants
+            - pkg/component/observability/opentelemetry/dataplanedeployment
             - pkg/component/observability/opentelemetry/operator
             - pkg/component/observability/plutono
             - pkg/component/seed/system

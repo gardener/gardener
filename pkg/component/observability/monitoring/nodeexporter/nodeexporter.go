@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -78,45 +79,55 @@ type nodeExporter struct {
 }
 
 func (n *nodeExporter) Deploy(ctx context.Context) error {
-	scrapeConfig := n.emptyScrapeConfig()
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, n.client, scrapeConfig, func() error {
-		metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
-		scrapeConfig.Spec = shoot.ClusterComponentScrapeConfigSpec(
-			name,
-			shoot.KubernetesServiceDiscoveryConfig{
-				Role:             monitoringv1alpha1.KubernetesRoleEndpoint,
-				ServiceName:      name,
-				EndpointPortName: portNameMetrics,
-			},
-			"node_boot_time_seconds",
-			"node_cpu_seconds_total",
-			"node_disk_read_bytes_total",
-			"node_disk_written_bytes_total",
-			"node_disk_io_time_weighted_seconds_total",
-			"node_disk_io_time_seconds_total",
-			"node_disk_write_time_seconds_total",
-			"node_disk_writes_completed_total",
-			"node_disk_read_time_seconds_total",
-			"node_disk_reads_completed_total",
-			"node_filesystem_avail_bytes",
-			"node_filesystem_files",
-			"node_filesystem_files_free",
-			"node_filesystem_free_bytes",
-			"node_filesystem_readonly",
-			"node_filesystem_size_bytes",
-			"node_load1",
-			"node_load15",
-			"node_load5",
-			"node_memory_.+",
-			"node_nf_conntrack_.+",
-			"node_scrape_collector_duration_seconds",
-			"node_scrape_collector_success",
-			"process_max_fds",
-			"process_open_fds",
-		)
-		return nil
-	}); err != nil {
-		return err
+	// When the OTEL dataplane collector is enabled, it handles scraping node-exporter metrics
+	// locally in the shoot cluster, so we skip creating the direct scrape config to avoid
+	// duplicate traffic.
+	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryDataplaneCollector) {
+		// Delete the scrape config if it exists (cleanup from previous state)
+		if err := kubernetesutils.DeleteObjects(ctx, n.client, n.emptyScrapeConfig()); err != nil {
+			return err
+		}
+	} else {
+		scrapeConfig := n.emptyScrapeConfig()
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, n.client, scrapeConfig, func() error {
+			metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
+			scrapeConfig.Spec = shoot.ClusterComponentScrapeConfigSpec(
+				name,
+				shoot.KubernetesServiceDiscoveryConfig{
+					Role:             monitoringv1alpha1.KubernetesRoleEndpoint,
+					ServiceName:      name,
+					EndpointPortName: portNameMetrics,
+				},
+				"node_boot_time_seconds",
+				"node_cpu_seconds_total",
+				"node_disk_read_bytes_total",
+				"node_disk_written_bytes_total",
+				"node_disk_io_time_weighted_seconds_total",
+				"node_disk_io_time_seconds_total",
+				"node_disk_write_time_seconds_total",
+				"node_disk_writes_completed_total",
+				"node_disk_read_time_seconds_total",
+				"node_disk_reads_completed_total",
+				"node_filesystem_avail_bytes",
+				"node_filesystem_files",
+				"node_filesystem_files_free",
+				"node_filesystem_free_bytes",
+				"node_filesystem_readonly",
+				"node_filesystem_size_bytes",
+				"node_load1",
+				"node_load15",
+				"node_load5",
+				"node_memory_.+",
+				"node_nf_conntrack_.+",
+				"node_scrape_collector_duration_seconds",
+				"node_scrape_collector_success",
+				"process_max_fds",
+				"process_open_fds",
+			)
+			return nil
+		}); err != nil {
+			return err
+		}
 	}
 
 	prometheusRule := n.emptyPrometheusRule()

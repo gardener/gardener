@@ -1,0 +1,674 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    cni.projectcalico.org/containerID: bdd6f53048c95a65cad347c65f6004eac293d0986870cb16955e9b20f3771a64
+    cni.projectcalico.org/podIP: 10.64.2.201/32
+    cni.projectcalico.org/podIPs: 10.64.2.201/32
+    kubectl.kubernetes.io/default-container: prometheus
+    oidc-application-controller/component: prometheus-shoot-0
+    oidc-application-controller/host: prometheus-shoot-shoot--inventory--inv-dev-01.ingress.cc-ha.seed.dev.k8s.ondemand.com
+    oidc-application-controller/oauth2-secret-checksum: dcb8d4dd949fe65c44d4ab4808d9c4c515128ab70a6b9acf7ddce88ffcb3b053
+    oidc-application-controller/suffix: 39c54d
+    oidc-application-controller/target: protocol=http, port=0
+    vpaObservedContainers: prometheus, config-reloader, oauth2-proxy, kube-rbac-proxy
+    vpaUpdates: 'Pod resources updated by prometheus-shoot: container 0: memory request,
+      cpu request; container 1: ; container 2: ; container 3: '
+  creationTimestamp: "2026-02-05T08:05:53Z"
+  generateName: prometheus-shoot-
+  generation: 1
+  labels:
+    app.kubernetes.io/instance: shoot
+    app.kubernetes.io/managed-by: prometheus-operator
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/version: 3.9.1
+    apps.kubernetes.io/pod-index: "0"
+    controller-revision-hash: prometheus-shoot-5cfdf6bf88
+    networking.gardener.cloud/to-dns: allowed
+    networking.gardener.cloud/to-private-networks: allowed
+    networking.gardener.cloud/to-public-networks: allowed
+    networking.gardener.cloud/to-runtime-apiserver: allowed
+    networking.resources.gardener.cloud/to-all-scrape-targets: allowed
+    networking.resources.gardener.cloud/to-garden-alertmanager-seed-tcp-9093: allowed
+    networking.resources.gardener.cloud/to-garden-prometheus-cache-tcp-9090: allowed
+    observability.gardener.cloud/app: prometheus-shoot
+    oidc-application-controller/component: pod
+    operator.prometheus.io/name: shoot
+    operator.prometheus.io/shard: "0"
+    prometheus: shoot
+    statefulset.kubernetes.io/pod-name: prometheus-shoot-0
+  name: prometheus-shoot-0
+  namespace: shoot--inventory--inv-dev-01
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: StatefulSet
+    name: prometheus-shoot
+    uid: 2828f0e0-93f5-4952-a8eb-c4325eb44d57
+  resourceVersion: "4853083229"
+  uid: ebe7b2d9-82ef-43db-8163-92690e8c85ec
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: topology.kubernetes.io/zone
+            operator: In
+            values:
+            - eu-de-1b
+  automountServiceAccountToken: true
+  containers:
+  - args:
+    - --config.file=/etc/prometheus/config_out/prometheus.env.yaml
+    - --web.enable-lifecycle
+    - --web.max-connections=1024
+    - --web.external-url=https://p-inventory--inv-dev-01.ingress.cc-ha.seed.dev.k8s.ondemand.com
+    - --web.route-prefix=/
+    - --storage.tsdb.retention.time=30d
+    - --storage.tsdb.retention.size=15GB
+    - --storage.tsdb.path=/prometheus
+    - --web.config.file=/etc/prometheus/web_config/web-config.yaml
+    env:
+    - name: KUBERNETES_SERVICE_HOST
+      value: api.cc-ha.garden.internal.dev.k8s.ondemand.com
+    image: europe-docker.pkg.dev/sap-se-gcp-k8s-delivery/releases-public/quay_io/prometheus/prometheus@sha256:4152343f22927752a3852587559f9c7472144b2e8b7a50c0be5bc8755b009712
+    imagePullPolicy: IfNotPresent
+    livenessProbe:
+      failureThreshold: 6
+      httpGet:
+        path: /-/healthy
+        port: web
+        scheme: HTTP
+      periodSeconds: 5
+      successThreshold: 1
+      timeoutSeconds: 3
+    name: prometheus
+    ports:
+    - containerPort: 9090
+      name: web
+      protocol: TCP
+    readinessProbe:
+      failureThreshold: 3
+      httpGet:
+        path: /-/ready
+        port: web
+        scheme: HTTP
+      periodSeconds: 5
+      successThreshold: 1
+      timeoutSeconds: 3
+    resources:
+      requests:
+        cpu: 150m
+        memory: "613227118"
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      readOnlyRootFilesystem: true
+    startupProbe:
+      failureThreshold: 60
+      httpGet:
+        path: /-/ready
+        port: web
+        scheme: HTTP
+      periodSeconds: 15
+      successThreshold: 1
+      timeoutSeconds: 3
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: FallbackToLogsOnError
+    volumeMounts:
+    - mountPath: /etc/prometheus/config_out
+      name: config-out
+      readOnly: true
+    - mountPath: /etc/prometheus/certs
+      name: tls-assets
+      readOnly: true
+    - mountPath: /prometheus
+      name: prometheus-db
+      subPath: prometheus-db
+    - mountPath: /etc/prometheus/rules/prometheus-shoot-rulefiles-0
+      name: prometheus-shoot-rulefiles-0
+      readOnly: true
+    - mountPath: /etc/prometheus/rules/prometheus-shoot-rulefiles-1
+      name: prometheus-shoot-rulefiles-1
+      readOnly: true
+    - mountPath: /etc/prometheus/rules/prometheus-shoot-rulefiles-2
+      name: prometheus-shoot-rulefiles-2
+      readOnly: true
+    - mountPath: /etc/prometheus/web_config/web-config.yaml
+      name: web-config
+      readOnly: true
+      subPath: web-config.yaml
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-h96xx
+      readOnly: true
+  - args:
+    - --listen-address=:8080
+    - --web-config-file=/etc/prometheus/web_config/web-config.yaml
+    - --reload-url=http://localhost:9090/-/reload
+    - --config-file=/etc/prometheus/config/prometheus.yaml.gz
+    - --config-envsubst-file=/etc/prometheus/config_out/prometheus.env.yaml
+    - --watched-dir=/etc/prometheus/rules/prometheus-shoot-rulefiles-0
+    - --watched-dir=/etc/prometheus/rules/prometheus-shoot-rulefiles-1
+    - --watched-dir=/etc/prometheus/rules/prometheus-shoot-rulefiles-2
+    command:
+    - /bin/prometheus-config-reloader
+    env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.name
+    - name: SHARD
+      value: "0"
+    - name: KUBERNETES_SERVICE_HOST
+      value: api.cc-ha.garden.internal.dev.k8s.ondemand.com
+    image: quay.io/prometheus-operator/prometheus-config-reloader@sha256:27da7b23b862e83581872d464a39a9477de705e86e46e3da18cf55d560caaa79
+    imagePullPolicy: IfNotPresent
+    name: config-reloader
+    ports:
+    - containerPort: 8080
+      name: reloader-web
+      protocol: TCP
+    resources:
+      requests:
+        memory: 20M
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      readOnlyRootFilesystem: true
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: FallbackToLogsOnError
+    volumeMounts:
+    - mountPath: /etc/prometheus/config
+      name: config
+    - mountPath: /etc/prometheus/config_out
+      name: config-out
+    - mountPath: /etc/prometheus/web_config/web-config.yaml
+      name: web-config
+      readOnly: true
+      subPath: web-config.yaml
+    - mountPath: /etc/prometheus/rules/prometheus-shoot-rulefiles-0
+      name: prometheus-shoot-rulefiles-0
+    - mountPath: /etc/prometheus/rules/prometheus-shoot-rulefiles-1
+      name: prometheus-shoot-rulefiles-1
+    - mountPath: /etc/prometheus/rules/prometheus-shoot-rulefiles-2
+      name: prometheus-shoot-rulefiles-2
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-h96xx
+      readOnly: true
+  - args:
+    - --provider=oidc
+    - --config=/etc/oauth2-proxy/oauth2-proxy.cfg
+    - --code-challenge-method=S256
+    - --pass-authorization-header=true
+    - --cookie-secret=5ioy39rmn150n0j5
+    - --cookie-refresh=3600s
+    - --http-address=0.0.0.0:8000
+    - --email-domain=*
+    - --reverse-proxy=true
+    - --skip-provider-button=true
+    - --skip-jwt-bearer-tokens=true
+    - --upstream=http://127.0.0.1:8100
+    - --redirect-url=https://prometheus-shoot-shoot--inventory--inv-dev-01-0.ingress.cc-ha.seed.dev.k8s.ondemand.com/oauth2/callback
+    image: europe-docker.pkg.dev/sap-se-gcp-k8s-delivery/releases-public/quay_io/oauth2-proxy/oauth2-proxy@sha256:3073c4f72e86cc6270f6be756bff5eaae4d4ed99d42beb871ed34c434024adda
+    imagePullPolicy: IfNotPresent
+    name: oauth2-proxy
+    ports:
+    - containerPort: 8000
+      name: oauth2
+      protocol: TCP
+    resources:
+      requests:
+        cpu: 5m
+        memory: 32Mi
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      readOnlyRootFilesystem: true
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /etc/oauth2-proxy
+      name: oauth2-proxy
+      readOnly: true
+  - args:
+    - --insecure-listen-address=0.0.0.0:8100
+    - --oidc-clientID=a6da5f69-a7e2-4554-9f76-4f3b5657946f
+    - --oidc-issuer=https://gardenerobservability.accounts.ondemand.com
+    - --upstream=http://localhost:9090
+    - --config-file=/etc/kube-rbac-proxy/config-file.yaml
+    - --kubeconfig=/etc/kube-rbac-proxy/kubeconfig
+    image: europe-docker.pkg.dev/sap-se-gcp-k8s-delivery/releases-public/europe-docker_pkg_dev/gardener-project/releases/gardener/extensions/kube-rbac-proxy-watcher@sha256:ed984d719a9492c18af541d95b2212fcb5c71795542a8873329dac1cb052372a
+    imagePullPolicy: IfNotPresent
+    name: kube-rbac-proxy
+    ports:
+    - containerPort: 8100
+      name: rbac
+      protocol: TCP
+    resources:
+      requests:
+        cpu: 5m
+        memory: 32Mi
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      readOnlyRootFilesystem: true
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /etc/kube-rbac-proxy
+      name: kube-rbac-proxy
+      readOnly: true
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-h96xx
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  hostname: prometheus-shoot-0
+  initContainers:
+  - args:
+    - --watch-interval=0
+    - --listen-address=:8081
+    - --config-file=/etc/prometheus/config/prometheus.yaml.gz
+    - --config-envsubst-file=/etc/prometheus/config_out/prometheus.env.yaml
+    - --watched-dir=/etc/prometheus/rules/prometheus-shoot-rulefiles-0
+    - --watched-dir=/etc/prometheus/rules/prometheus-shoot-rulefiles-1
+    - --watched-dir=/etc/prometheus/rules/prometheus-shoot-rulefiles-2
+    command:
+    - /bin/prometheus-config-reloader
+    env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.name
+    - name: SHARD
+      value: "0"
+    - name: KUBERNETES_SERVICE_HOST
+      value: api.cc-ha.garden.internal.dev.k8s.ondemand.com
+    image: quay.io/prometheus-operator/prometheus-config-reloader@sha256:27da7b23b862e83581872d464a39a9477de705e86e46e3da18cf55d560caaa79
+    imagePullPolicy: IfNotPresent
+    name: init-config-reloader
+    ports:
+    - containerPort: 8081
+      name: reloader-init
+      protocol: TCP
+    resources:
+      requests:
+        memory: 20M
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      readOnlyRootFilesystem: true
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: FallbackToLogsOnError
+    volumeMounts:
+    - mountPath: /etc/prometheus/config
+      name: config
+    - mountPath: /etc/prometheus/config_out
+      name: config-out
+    - mountPath: /etc/prometheus/web_config/web-config.yaml
+      name: web-config
+      readOnly: true
+      subPath: web-config.yaml
+    - mountPath: /etc/prometheus/rules/prometheus-shoot-rulefiles-0
+      name: prometheus-shoot-rulefiles-0
+    - mountPath: /etc/prometheus/rules/prometheus-shoot-rulefiles-1
+      name: prometheus-shoot-rulefiles-1
+    - mountPath: /etc/prometheus/rules/prometheus-shoot-rulefiles-2
+      name: prometheus-shoot-rulefiles-2
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-h96xx
+      readOnly: true
+  nodeName: shoot--garden--cc-ha-cpu-4-16-z2-db7df-fqpd5
+  preemptionPolicy: PreemptLowerPriority
+  priority: 999998100
+  priorityClassName: gardener-system-100
+  restartPolicy: Always
+  schedulerName: bin-packing-scheduler
+  securityContext:
+    runAsUser: 0
+    seccompProfile:
+      type: RuntimeDefault
+  serviceAccount: prometheus-shoot
+  serviceAccountName: prometheus-shoot
+  shareProcessNamespace: false
+  subdomain: prometheus-operated
+  terminationGracePeriodSeconds: 600
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 60
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 60
+  volumes:
+  - name: prometheus-db
+    persistentVolumeClaim:
+      claimName: prometheus-db-prometheus-shoot-0
+  - name: config
+    secret:
+      defaultMode: 420
+      secretName: prometheus-shoot
+  - name: tls-assets
+    projected:
+      defaultMode: 420
+      sources:
+      - secret:
+          name: prometheus-shoot-tls-assets-0
+  - emptyDir:
+      medium: Memory
+    name: config-out
+  - configMap:
+      defaultMode: 420
+      name: prometheus-shoot-rulefiles-0
+      optional: true
+    name: prometheus-shoot-rulefiles-0
+  - configMap:
+      defaultMode: 420
+      name: prometheus-shoot-rulefiles-1
+      optional: true
+    name: prometheus-shoot-rulefiles-1
+  - configMap:
+      defaultMode: 420
+      name: prometheus-shoot-rulefiles-2
+      optional: true
+    name: prometheus-shoot-rulefiles-2
+  - name: web-config
+    secret:
+      defaultMode: 420
+      secretName: prometheus-shoot-web-config
+  - name: kube-api-access-h96xx
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+  - name: oauth2-proxy
+    projected:
+      defaultMode: 420
+      sources:
+      - secret:
+          name: oauth2-proxy-4f0701
+          optional: false
+  - name: kube-rbac-proxy
+    projected:
+      defaultMode: 420
+      sources:
+      - secret:
+          name: resource-attributes-4f0701
+          optional: false
+      - secret:
+          name: kubeconfig-4f0701
+          optional: false
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2026-02-05T08:06:07Z"
+    observedGeneration: 1
+    status: "True"
+    type: PodReadyToStartContainers
+  - lastProbeTime: null
+    lastTransitionTime: "2026-02-05T08:06:07Z"
+    observedGeneration: 1
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2026-02-05T08:06:19Z"
+    observedGeneration: 1
+    status: "True"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2026-02-05T08:06:19Z"
+    observedGeneration: 1
+    status: "True"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2026-02-05T08:05:53Z"
+    observedGeneration: 1
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - allocatedResources:
+      memory: 20M
+    containerID: containerd://87e247a39ff3dca7698e9fa35de9ff7c134236af40b8916e891cd9331bb43c2b
+    image: sha256:c616df2c8d9ce8557297cdff3f037386f239b088245ffa3f3b9a75531b4f95aa
+    imageID: quay.io/prometheus-operator/prometheus-config-reloader@sha256:27da7b23b862e83581872d464a39a9477de705e86e46e3da18cf55d560caaa79
+    lastState: {}
+    name: config-reloader
+    ready: true
+    resources:
+      requests:
+        memory: 20M
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2026-02-05T08:06:07Z"
+    user:
+      linux:
+        gid: 0
+        supplementalGroups:
+        - 0
+        - 10
+        uid: 0
+    volumeMounts:
+    - mountPath: /etc/prometheus/config
+      name: config
+    - mountPath: /etc/prometheus/config_out
+      name: config-out
+    - mountPath: /etc/prometheus/web_config/web-config.yaml
+      name: web-config
+      readOnly: true
+      recursiveReadOnly: Disabled
+    - mountPath: /etc/prometheus/rules/prometheus-shoot-rulefiles-0
+      name: prometheus-shoot-rulefiles-0
+    - mountPath: /etc/prometheus/rules/prometheus-shoot-rulefiles-1
+      name: prometheus-shoot-rulefiles-1
+    - mountPath: /etc/prometheus/rules/prometheus-shoot-rulefiles-2
+      name: prometheus-shoot-rulefiles-2
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-h96xx
+      readOnly: true
+      recursiveReadOnly: Disabled
+  - allocatedResources:
+      cpu: 5m
+      memory: 32Mi
+    containerID: containerd://84c5e5ac2460a27592fd8c87fca6eb81069c494f0709eeb66db342da7cd18cce
+    image: sha256:1539752ce8c07cc4cce52eec8aed338237c513f55757339e60436873c3bf58d8
+    imageID: europe-docker.pkg.dev/sap-se-gcp-k8s-delivery/releases-public/europe-docker_pkg_dev/gardener-project/releases/gardener/extensions/kube-rbac-proxy-watcher@sha256:ed984d719a9492c18af541d95b2212fcb5c71795542a8873329dac1cb052372a
+    lastState: {}
+    name: kube-rbac-proxy
+    ready: true
+    resources:
+      requests:
+        cpu: 5m
+        memory: 32Mi
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2026-02-05T08:06:08Z"
+    user:
+      linux:
+        gid: 0
+        supplementalGroups:
+        - 0
+        uid: 0
+    volumeMounts:
+    - mountPath: /etc/kube-rbac-proxy
+      name: kube-rbac-proxy
+      readOnly: true
+      recursiveReadOnly: Disabled
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-h96xx
+      readOnly: true
+      recursiveReadOnly: Disabled
+  - allocatedResources:
+      cpu: 5m
+      memory: 32Mi
+    containerID: containerd://a4a27101eeae344247ef517e8497ee1163ead54e32e70e7dfa149d804f586446
+    image: sha256:df6282d26c40710f49ee9972001d39a287fe581797a04d4182828caea8ed23d5
+    imageID: europe-docker.pkg.dev/sap-se-gcp-k8s-delivery/releases-public/quay_io/oauth2-proxy/oauth2-proxy@sha256:3073c4f72e86cc6270f6be756bff5eaae4d4ed99d42beb871ed34c434024adda
+    lastState: {}
+    name: oauth2-proxy
+    ready: true
+    resources:
+      requests:
+        cpu: 5m
+        memory: 32Mi
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2026-02-05T08:06:07Z"
+    user:
+      linux:
+        gid: 0
+        supplementalGroups:
+        - 0
+        uid: 0
+    volumeMounts:
+    - mountPath: /etc/oauth2-proxy
+      name: oauth2-proxy
+      readOnly: true
+      recursiveReadOnly: Disabled
+  - allocatedResources:
+      cpu: 150m
+      memory: "613227118"
+    containerID: containerd://0b5d968f74c5dabe2823a6f5b654f2137d0279c163bdf96e31e8c823f6535c6d
+    image: sha256:8c43adebde168e63b801d89cca8ad56ec49622e4fc309c9ebbffdd5379d22399
+    imageID: europe-docker.pkg.dev/sap-se-gcp-k8s-delivery/releases-public/quay_io/prometheus/prometheus@sha256:4152343f22927752a3852587559f9c7472144b2e8b7a50c0be5bc8755b009712
+    lastState: {}
+    name: prometheus
+    ready: true
+    resources:
+      requests:
+        cpu: 150m
+        memory: "613227118"
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2026-02-05T08:06:07Z"
+    user:
+      linux:
+        gid: 0
+        supplementalGroups:
+        - 0
+        - 10
+        uid: 0
+    volumeMounts:
+    - mountPath: /etc/prometheus/config_out
+      name: config-out
+      readOnly: true
+      recursiveReadOnly: Disabled
+    - mountPath: /etc/prometheus/certs
+      name: tls-assets
+      readOnly: true
+      recursiveReadOnly: Disabled
+    - mountPath: /prometheus
+      name: prometheus-db
+    - mountPath: /etc/prometheus/rules/prometheus-shoot-rulefiles-0
+      name: prometheus-shoot-rulefiles-0
+      readOnly: true
+      recursiveReadOnly: Disabled
+    - mountPath: /etc/prometheus/rules/prometheus-shoot-rulefiles-1
+      name: prometheus-shoot-rulefiles-1
+      readOnly: true
+      recursiveReadOnly: Disabled
+    - mountPath: /etc/prometheus/rules/prometheus-shoot-rulefiles-2
+      name: prometheus-shoot-rulefiles-2
+      readOnly: true
+      recursiveReadOnly: Disabled
+    - mountPath: /etc/prometheus/web_config/web-config.yaml
+      name: web-config
+      readOnly: true
+      recursiveReadOnly: Disabled
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-h96xx
+      readOnly: true
+      recursiveReadOnly: Disabled
+  hostIP: 10.254.3.121
+  hostIPs:
+  - ip: 10.254.3.121
+  initContainerStatuses:
+  - allocatedResources:
+      memory: 20M
+    containerID: containerd://e340d51d93db263b24b990f749e6a4105480a74b3aecb4390eec812e1742a3e0
+    image: sha256:c616df2c8d9ce8557297cdff3f037386f239b088245ffa3f3b9a75531b4f95aa
+    imageID: quay.io/prometheus-operator/prometheus-config-reloader@sha256:27da7b23b862e83581872d464a39a9477de705e86e46e3da18cf55d560caaa79
+    lastState: {}
+    name: init-config-reloader
+    ready: true
+    resources:
+      requests:
+        memory: 20M
+    restartCount: 0
+    started: false
+    state:
+      terminated:
+        containerID: containerd://e340d51d93db263b24b990f749e6a4105480a74b3aecb4390eec812e1742a3e0
+        exitCode: 0
+        finishedAt: "2026-02-05T08:06:07Z"
+        reason: Completed
+        startedAt: "2026-02-05T08:06:07Z"
+    user:
+      linux:
+        gid: 0
+        supplementalGroups:
+        - 0
+        - 10
+        uid: 0
+    volumeMounts:
+    - mountPath: /etc/prometheus/config
+      name: config
+    - mountPath: /etc/prometheus/config_out
+      name: config-out
+    - mountPath: /etc/prometheus/web_config/web-config.yaml
+      name: web-config
+      readOnly: true
+      recursiveReadOnly: Disabled
+    - mountPath: /etc/prometheus/rules/prometheus-shoot-rulefiles-0
+      name: prometheus-shoot-rulefiles-0
+    - mountPath: /etc/prometheus/rules/prometheus-shoot-rulefiles-1
+      name: prometheus-shoot-rulefiles-1
+    - mountPath: /etc/prometheus/rules/prometheus-shoot-rulefiles-2
+      name: prometheus-shoot-rulefiles-2
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-h96xx
+      readOnly: true
+      recursiveReadOnly: Disabled
+  observedGeneration: 1
+  phase: Running
+  podIP: 10.64.2.201
+  podIPs:
+  - ip: 10.64.2.201
+  qosClass: Burstable
+  startTime: "2026-02-05T08:05:53Z"
