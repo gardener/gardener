@@ -221,6 +221,18 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 			},
 		},
 		{
+			Alert:  "GardenLastOperationStuckProcessing",
+			Expr:   intstr.FromString(`garden_garden_last_operation{state="Processing"} == 1`),
+			For:    ptr.To(monitoringv1.Duration("30m")),
+			Labels: getLabels("warning"),
+			Annotations: map[string]string{
+				"summary": "Garden runtime last operation {{$labels.type}} stuck in Processing state",
+				"description": "Garden {{$labels.name}} in landscape " +
+					"{{$externalLabels.landscape}} has last operation {{$labels.type}} stuck in Processing state" +
+					" for 30 minutes.",
+			},
+		},
+		{
 			Alert:  "GardenKubeStateMetricsDown",
 			Expr:   intstr.FromString(`absent(up{job="kube-state-metrics"} == 1)`),
 			For:    ptr.To(monitoringv1.Duration("10m")),
