@@ -492,10 +492,10 @@ func (g *garden) Start(ctx context.Context) error {
 	if err := controllerutils.AddAllRunnables(g.mgr, runnables...); err != nil {
 		return err
 	}
-
+	var shoot *gardencorev1beta1.Shoot
 	if gardenlet.IsResponsibleForSelfHostedShoot() {
+		shoot = &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: g.selfHostedShootInfo.Meta.Name, Namespace: g.selfHostedShootInfo.Meta.Namespace}}
 		if err := retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
-			shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: g.selfHostedShootInfo.Meta.Name, Namespace: g.selfHostedShootInfo.Meta.Namespace}}
 			if err := gardenCluster.GetClient().Get(ctx, client.ObjectKeyFromObject(shoot), shoot); err != nil {
 				if !apierrors.IsNotFound(err) {
 					return retry.SevereError(err)
@@ -520,6 +520,7 @@ func (g *garden) Start(ctx context.Context) error {
 		shootClientMap,
 		g.config,
 		g.healthManager,
+		shoot,
 	); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}
