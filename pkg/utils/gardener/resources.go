@@ -17,6 +17,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	securityv1alpha1constants "github.com/gardener/gardener/pkg/apis/security/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -58,7 +59,11 @@ func PrepareReferencedResourcesForSeedCopy(ctx context.Context, cl client.Client
 		unstructuredObj.SetName(v1beta1constants.ReferencedResourcesPrefix + unstructuredObj.GetName())
 
 		// We don't want to keep user-defined annotations or labels when copying the resource to the seed.
-		unstructuredObj.SetAnnotations(nil)
+		// Set the annotation to trigger deletion of the resource in case an invalid update is applied, such as changing an immutable field of a Secret or ConfigMap while keeping the resource name the same.
+		// Users can do this by deleting and re-creating the resource with the same name; therefore, the resource will be deleted and re-created.
+		unstructuredObj.SetAnnotations(map[string]string{
+			resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
+		})
 		unstructuredObj.SetLabels(nil)
 
 		unstructuredObjs = append(unstructuredObjs, unstructuredObj)
