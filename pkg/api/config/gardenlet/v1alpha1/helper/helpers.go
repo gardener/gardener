@@ -48,6 +48,7 @@ func IsValiEnabled(c *gardenletconfigv1alpha1.GardenletConfiguration) bool {
 	return true
 }
 
+// IsVictoriaLogsEnabled returns true if victoria-logs is enabled
 func IsVictoriaLogsEnabled(c *gardenletconfigv1alpha1.GardenletConfiguration) bool {
 	enabled := true
 	if c != nil && c.Logging != nil &&
