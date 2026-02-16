@@ -25,6 +25,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/extension/care"
+	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -126,6 +127,9 @@ var _ = Describe("Extension health", func() {
 					fakeClock,
 					nil,
 					gardenNamespace,
+					healthchecker.NewHealthChecker(
+						runtimeClient,
+						fakeClock),
 				).Check(ctx, extensionConditions)
 
 				Expect(updatedConditions).ToNot(BeEmpty())
@@ -148,6 +152,9 @@ var _ = Describe("Extension health", func() {
 							fakeClock,
 							nil,
 							gardenNamespace,
+							healthchecker.NewHealthChecker(
+								runtimeClient,
+								fakeClock),
 						).Check(ctx, extensionConditions)
 
 						Expect(updatedConditions).ToNot(BeEmpty())
@@ -166,16 +173,21 @@ var _ = Describe("Extension health", func() {
 						It("should set ExtensionComponentsRunning condition to Progressing if time is within threshold duration", func() {
 							fakeClock.Step(30 * time.Second)
 
+							conditionThresholds := map[gardencorev1beta1.ConditionType]time.Duration{
+								operatorv1alpha1.ExtensionHealthy:          time.Minute,
+								operatorv1alpha1.ExtensionAdmissionHealthy: time.Minute,
+							}
 							updatedConditions := NewHealth(
 								extension,
 								runtimeClient,
 								virtualClient,
 								fakeClock,
-								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.ExtensionHealthy:          time.Minute,
-									operatorv1alpha1.ExtensionAdmissionHealthy: time.Minute,
-								},
+								conditionThresholds,
 								gardenNamespace,
+								healthchecker.NewHealthChecker(
+									runtimeClient,
+									fakeClock,
+									healthchecker.WithConditionThresholds(conditionThresholds)),
 							).Check(ctx, extensionConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
@@ -195,16 +207,21 @@ var _ = Describe("Extension health", func() {
 						It("should set ExtensionComponentsRunning condition to Progressing if time is within threshold duration", func() {
 							fakeClock.Step(30 * time.Second)
 
+							conditionThresholds := map[gardencorev1beta1.ConditionType]time.Duration{
+								operatorv1alpha1.ExtensionHealthy:          time.Minute,
+								operatorv1alpha1.ExtensionAdmissionHealthy: time.Minute,
+							}
 							updatedConditions := NewHealth(
 								extension,
 								runtimeClient,
 								virtualClient,
 								fakeClock,
-								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.ExtensionHealthy:          time.Minute,
-									operatorv1alpha1.ExtensionAdmissionHealthy: time.Minute,
-								},
+								conditionThresholds,
 								gardenNamespace,
+								healthchecker.NewHealthChecker(
+									runtimeClient,
+									fakeClock,
+									healthchecker.WithConditionThresholds(conditionThresholds)),
 							).Check(ctx, extensionConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
@@ -224,16 +241,21 @@ var _ = Describe("Extension health", func() {
 						It("should not set ExtensionComponentsRunning condition to Progressing if Progressing threshold duration has not expired", func() {
 							fakeClock.Step(30 * time.Second)
 
+							conditionThresholds := map[gardencorev1beta1.ConditionType]time.Duration{
+								operatorv1alpha1.ExtensionHealthy:          time.Minute,
+								operatorv1alpha1.ExtensionAdmissionHealthy: time.Minute,
+							}
 							updatedConditions := NewHealth(
 								extension,
 								runtimeClient,
 								virtualClient,
 								fakeClock,
-								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.ExtensionHealthy:          time.Minute,
-									operatorv1alpha1.ExtensionAdmissionHealthy: time.Minute,
-								},
+								conditionThresholds,
 								gardenNamespace,
+								healthchecker.NewHealthChecker(
+									runtimeClient,
+									fakeClock,
+									healthchecker.WithConditionThresholds(conditionThresholds)),
 							).Check(ctx, extensionConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
@@ -246,16 +268,21 @@ var _ = Describe("Extension health", func() {
 						It("should set ExtensionComponentsRunning condition to false if Progressing threshold duration has expired", func() {
 							fakeClock.Step(90 * time.Second)
 
+							conditionThresholds := map[gardencorev1beta1.ConditionType]time.Duration{
+								operatorv1alpha1.ExtensionHealthy:          time.Minute,
+								operatorv1alpha1.ExtensionAdmissionHealthy: time.Minute,
+							}
 							updatedConditions := NewHealth(
 								extension,
 								runtimeClient,
 								virtualClient,
 								fakeClock,
-								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.ExtensionHealthy:          time.Minute,
-									operatorv1alpha1.ExtensionAdmissionHealthy: time.Minute,
-								},
+								conditionThresholds,
 								gardenNamespace,
+								healthchecker.NewHealthChecker(
+									runtimeClient,
+									fakeClock,
+									healthchecker.WithConditionThresholds(conditionThresholds)),
 							).Check(ctx, extensionConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
@@ -329,6 +356,9 @@ var _ = Describe("Extension health", func() {
 							fakeClock,
 							nil,
 							gardenNamespace,
+							healthchecker.NewHealthChecker(
+								runtimeClient,
+								fakeClock),
 						).Check(ctx, extensionConditions)
 
 						Expect(updatedConditions).ToNot(BeEmpty())
@@ -345,15 +375,20 @@ var _ = Describe("Extension health", func() {
 						It("should set ControllerInstallationsRunning condition to Progressing if time is within threshold duration", func() {
 							fakeClock.Step(30 * time.Second)
 
+							conditionThresholds := map[gardencorev1beta1.ConditionType]time.Duration{
+								operatorv1alpha1.ControllerInstallationsHealthy: time.Minute,
+							}
 							updatedConditions := NewHealth(
 								extension,
 								runtimeClient,
 								virtualClient,
 								fakeClock,
-								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.ControllerInstallationsHealthy: time.Minute,
-								},
+								conditionThresholds,
 								gardenNamespace,
+								healthchecker.NewHealthChecker(
+									runtimeClient,
+									fakeClock,
+									healthchecker.WithConditionThresholds(conditionThresholds)),
 							).Check(ctx, extensionConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
@@ -371,15 +406,20 @@ var _ = Describe("Extension health", func() {
 						It("should set ControllerInstallationsRunning condition to Progressing if time is within threshold duration", func() {
 							fakeClock.Step(30 * time.Second)
 
+							conditionThresholds := map[gardencorev1beta1.ConditionType]time.Duration{
+								operatorv1alpha1.ControllerInstallationsHealthy: time.Minute,
+							}
 							updatedConditions := NewHealth(
 								extension,
 								runtimeClient,
 								virtualClient,
 								fakeClock,
-								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.ControllerInstallationsHealthy: time.Minute,
-								},
+								conditionThresholds,
 								gardenNamespace,
+								healthchecker.NewHealthChecker(
+									runtimeClient,
+									fakeClock,
+									healthchecker.WithConditionThresholds(conditionThresholds)),
 							).Check(ctx, extensionConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
@@ -397,15 +437,20 @@ var _ = Describe("Extension health", func() {
 						It("should not set ExtensionComponentsRunning condition to Progressing if Progressing threshold duration has not expired", func() {
 							fakeClock.Step(30 * time.Second)
 
+							conditionThresholds := map[gardencorev1beta1.ConditionType]time.Duration{
+								operatorv1alpha1.ControllerInstallationsHealthy: time.Minute,
+							}
 							updatedConditions := NewHealth(
 								extension,
 								runtimeClient,
 								virtualClient,
 								fakeClock,
-								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.ControllerInstallationsHealthy: time.Minute,
-								},
+								conditionThresholds,
 								gardenNamespace,
+								healthchecker.NewHealthChecker(
+									runtimeClient,
+									fakeClock,
+									healthchecker.WithConditionThresholds(conditionThresholds)),
 							).Check(ctx, extensionConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
@@ -417,16 +462,21 @@ var _ = Describe("Extension health", func() {
 						It("should set ControllerInstallationsRunning condition to false if Progressing threshold duration has expired", func() {
 							fakeClock.Step(90 * time.Second)
 
+							conditionThresholds := map[gardencorev1beta1.ConditionType]time.Duration{
+								operatorv1alpha1.ControllerInstallationsHealthy: time.Minute,
+								operatorv1alpha1.ExtensionAdmissionHealthy:      time.Minute,
+							}
 							updatedConditions := NewHealth(
 								extension,
 								runtimeClient,
 								virtualClient,
 								fakeClock,
-								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.ControllerInstallationsHealthy: time.Minute,
-									operatorv1alpha1.ExtensionAdmissionHealthy:      time.Minute,
-								},
+								conditionThresholds,
 								gardenNamespace,
+								healthchecker.NewHealthChecker(
+									runtimeClient,
+									fakeClock,
+									healthchecker.WithConditionThresholds(conditionThresholds)),
 							).Check(ctx, extensionConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
