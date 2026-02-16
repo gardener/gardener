@@ -43,7 +43,17 @@ func (k *kubeAPIServer) reconcileVerticalPodAutoscaler(ctx context.Context, vert
 				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-				ContainerPolicies: k.computeVerticalPodAutoscalerContainerResourcePolicies(kubeAPIServerMinAllowed),
+				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+					{
+						ContainerName:    ContainerNameKubeAPIServer,
+						MinAllowed:       kubeAPIServerMinAllowed,
+						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					},
+					{
+						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+					},
+				},
 			},
 		}
 
@@ -59,22 +69,4 @@ func (k *kubeAPIServer) reconcileVerticalPodAutoscaler(ctx context.Context, vert
 	})
 
 	return err
-}
-
-func (k *kubeAPIServer) computeVerticalPodAutoscalerContainerResourcePolicies(kubeAPIServerMinAllowed corev1.ResourceList) []vpaautoscalingv1.ContainerResourcePolicy {
-	var (
-		vpaContainerResourcePolicies = []vpaautoscalingv1.ContainerResourcePolicy{
-			{
-				ContainerName:    ContainerNameKubeAPIServer,
-				MinAllowed:       kubeAPIServerMinAllowed,
-				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-			},
-			{
-				ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-				Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-			},
-		}
-	)
-
-	return vpaContainerResourcePolicies
 }
