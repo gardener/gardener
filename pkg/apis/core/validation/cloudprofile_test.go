@@ -1044,7 +1044,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					}))))
 				})
 
-				It("allow nil classification with same semver, but different flavor", func() {
+				It("should allow nil classification with same semver, but different flavor", func() {
 					cloudProfile.Spec.MachineImages = []core.MachineImage{
 						{
 							Name: machineImageName,

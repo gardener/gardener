@@ -181,7 +181,7 @@ func validateSupportedVersionsConfiguration(version core.ExpirableVersion, allVe
 	allErrs := field.ErrorList{}
 
 	// NOTE: Lifecycle classifications treat nil classifications as default, which differs in old classification.
-	// Keep skipping old classifications if they nil.
+	// Keep skipping old classifications if they are nil.
 	if (version.Classification != nil || len(version.Lifecycle) > 0) && helper.VersionIsSupported(version) {
 		currentSemVer, err := semver.NewVersion(version.Version)
 		if err != nil {
