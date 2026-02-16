@@ -180,8 +180,9 @@ var _ = Describe("Resources", func() {
 				[]client.Object{
 					&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "ref-" + secret.Name,
-							Namespace: controlPlaneNamespace,
+							Name:        "ref-" + secret.Name,
+							Namespace:   controlPlaneNamespace,
+							Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
 						},
 						Type: secret.Type,
 						Data: secret.Data,

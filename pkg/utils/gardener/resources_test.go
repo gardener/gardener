@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
@@ -137,7 +138,7 @@ var _ = Describe("Resources", func() {
 
 			for _, unstructuredObj := range unstructuredObjs {
 				Expect(unstructuredObj.GetNamespace()).To(Equal(targetNamespace), unstructuredObj.GetName()+" should have target namespace "+targetNamespace)
-				Expect(unstructuredObj.GetAnnotations()).To(BeEmpty(), unstructuredObj.GetName()+" should have no annotations")
+				Expect(unstructuredObj.GetAnnotations()).To(Equal(map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"}), unstructuredObj.GetName()+" should have resources.gardener.cloud/delete-on-invalid-update annotation")
 				Expect(unstructuredObj.GetLabels()).To(BeEmpty(), unstructuredObj.GetName()+" should have no labels")
 				Expect(unstructuredObj.GetFinalizers()).To(BeEmpty(), unstructuredObj.GetName()+" should have no finalizers")
 				Expect(unstructuredObj.Object).To(HaveKey("data"), unstructuredObj.GetName()+" should have data field")
