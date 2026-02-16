@@ -83,7 +83,7 @@ YQ_VERSION ?= v4.52.4
 # renovate: datasource=github-releases depName=ironcore-dev/vgopath
 VGOPATH_VERSION ?= v0.1.10
 # renovate: datasource=github-releases depName=crate-ci/typos
-TYPOS_VERSION ?= v1.43.4
+TYPOS_VERSION ?= v1.43.5
 
 # tool versions from go.mod
 CONTROLLER_GEN_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-tools)
