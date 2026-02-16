@@ -28,6 +28,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/worker"
@@ -695,10 +696,13 @@ var _ = Describe("Worker", func() {
 			obj.Status.LastError = &gardencorev1beta1.LastError{
 				Description:    "Some error",
 				LastUpdateTime: &metav1.Time{Time: now.UTC()},
+				Codes:          []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraUnauthorized},
 			}
 			Expect(c.Create(ctx, obj)).To(Succeed(), "creating worker succeeds")
 
-			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(HaveOccurred(), "worker indicates error")
+			err := defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)
+			Expect(err).To(HaveOccurred(), "worker indicates error")
+			Expect(v1beta1helper.ExtractErrorCodes(err)).To(ConsistOf(gardencorev1beta1.ErrorInfraUnauthorized))
 		})
 
 		It("should return error if we haven't observed the latest timestamp annotation", func() {
