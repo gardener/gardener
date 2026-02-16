@@ -452,7 +452,7 @@ func (w *worker) checkWorkerStatusMachineDeploymentsUpdated(o client.Object) err
 	}
 
 	if obj.Status.LastError != nil && obj.Status.LastError.LastUpdateTime != nil && (w.machineDeploymentsLastUpdateTime == nil || obj.Status.LastError.LastUpdateTime.After(w.machineDeploymentsLastUpdateTime.Time)) {
-		return errors.New(obj.Status.LastError.Description)
+		return v1beta1helper.NewErrorWithCodes(errors.New(obj.Status.LastError.Description), obj.Status.LastError.Codes...)
 	}
 
 	if obj.Status.MachineDeploymentsLastUpdateTime != nil && (w.machineDeploymentsLastUpdateTime == nil || obj.Status.MachineDeploymentsLastUpdateTime.After(w.machineDeploymentsLastUpdateTime.Time)) {
