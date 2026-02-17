@@ -270,6 +270,7 @@ func (r *Reconciler) instantiateComponents(
 
 	// gardener control plane components
 	discoveryServerDomain := discoveryServerDomain(garden)
+	discoveryServerTLSSecretName := discoveryServerTLSSecretName(garden, wildcardCertSecretName)
 	workloadIdentityTokenIssuer := workloadIdentityTokenIssuerURL(garden)
 	c.gardenerAPIServer, err = r.newGardenerAPIServer(ctx, garden, secretsManager, workloadIdentityTokenIssuer, targetVersion)
 	if err != nil {
@@ -295,7 +296,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.gardenerDiscoveryServer, err = r.newGardenerDiscoveryServer(secretsManager, discoveryServerDomain, wildcardCertSecretName, workloadIdentityTokenIssuer)
+	c.gardenerDiscoveryServer, err = r.newGardenerDiscoveryServer(secretsManager, discoveryServerDomain, discoveryServerTLSSecretName, workloadIdentityTokenIssuer)
 	if err != nil {
 		return
 	}
@@ -1557,7 +1558,7 @@ func (r *Reconciler) newVictoriaOperator() (component.DeployWaiter, error) {
 func (r *Reconciler) newGardenerDiscoveryServer(
 	secretsManager secretsmanager.Interface,
 	domain string,
-	wildcardCertSecretName *string,
+	tlsSecretName *string,
 	workloadIdentityTokenIssuer string,
 ) (component.DeployWaiter, error) {
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerDiscoveryServer)
@@ -1572,7 +1573,7 @@ func (r *Reconciler) newGardenerDiscoveryServer(
 		gardenerdiscoveryserver.Values{
 			Image:                       image.String(),
 			Domain:                      domain,
-			TLSSecretName:               wildcardCertSecretName,
+			TLSSecretName:               tlsSecretName,
 			WorkloadIdentityTokenIssuer: workloadIdentityTokenIssuer,
 		},
 	), nil
@@ -1663,8 +1664,21 @@ func (r *Reconciler) newExtensions(log logr.Logger, garden *operatorv1alpha1.Gar
 }
 
 func discoveryServerDomain(garden *operatorv1alpha1.Garden) string {
+	if config := garden.Spec.VirtualCluster.Gardener.DiscoveryServer; config != nil && config.Domain != nil {
+		//TODO(jamand): Add validation to the field (no protocol, etc.)
+		return *config.Domain
+	}
 	return "discovery." + garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
 }
+
+
+func discoveryServerTLSSecretName(garden *operatorv1alpha1.Garden, wildcardCertSecretName *string) *string {
+	if config := garden.Spec.VirtualCluster.Gardener.DiscoveryServer; config != nil && config.TLSSecretName != nil {
+		return config.TLSSecretName
+	}
+	return wildcardCertSecretName
+}
+
 
 func workloadIdentityTokenIssuerURL(garden *operatorv1alpha1.Garden) string {
 	return "https://" + discoveryServerDomain(garden) + "/garden/workload-identity/issuer"
