@@ -33,7 +33,7 @@ import (
 //	DeferCleanup(WithVar(&v, "bar"))
 func WithVar(dst, src any) func() {
 	dstValue := reflect.ValueOf(dst)
-	if dstValue.Type().Kind() != reflect.Ptr {
+	if dstValue.Type().Kind() != reflect.Pointer {
 		ginkgo.Fail(fmt.Sprintf("destination value %T is not a pointer", dst))
 	}
 

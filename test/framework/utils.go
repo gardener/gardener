@@ -29,7 +29,7 @@ func Must(err error) {
 }
 
 func checkPtr(v reflect.Value) error {
-	if v.Type().Kind() != reflect.Ptr {
+	if v.Type().Kind() != reflect.Pointer {
 		return fmt.Errorf("value has to be a pointer-type but got %T", v.Interface())
 	}
 	return nil
