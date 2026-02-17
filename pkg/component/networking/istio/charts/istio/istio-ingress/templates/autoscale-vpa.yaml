@@ -20,4 +20,6 @@ spec:
       controlledValues: RequestsOnly
       controlledResources:
       - memory
+    - containerName: '*'
+      mode: "Off"
 {{- end }}

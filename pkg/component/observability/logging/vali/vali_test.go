@@ -178,7 +178,7 @@ var _ = Describe("Vali", func() {
 				Expect(managedResource).To(consistOf(
 					getTelegrafConfigMap(),
 					getValiConfigMap(),
-					getVPA(true),
+					getVPA(),
 					getIngress("/vali/api/v1/push", "logging", 8080),
 					getService(true, "shoot"),
 					getStatefulSet(true),
@@ -278,7 +278,7 @@ var _ = Describe("Vali", func() {
 				Expect(managedResource).To(DeepEqual(expectedMr))
 				Expect(managedResource).To(consistOf(
 					getValiConfigMap(),
-					getVPA(true),
+					getVPA(),
 					getService(true, "shoot"),
 					getStatefulSet(false),
 					getServiceMonitor("shoot", true),
@@ -349,7 +349,7 @@ var _ = Describe("Vali", func() {
 			Expect(managedResource).To(consistOf(
 				getValiConfigMap(),
 				getService(false, "seed"),
-				getVPA(false),
+				getVPA(),
 				getStatefulSet(false),
 				getServiceMonitor("aggregate", false),
 				getPrometheusRule("aggregate"),
@@ -1081,7 +1081,7 @@ wait
 	return configMap
 }
 
-func getVPA(isRBACProxyEnabled bool) *vpaautoscalingv1.VerticalPodAutoscaler {
+func getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	vpa := &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      valiName + "-vpa",
@@ -1106,33 +1106,12 @@ func getVPA(isRBACProxyEnabled bool) *vpaautoscalingv1.VerticalPodAutoscaler {
 						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					},
 					{
-						ContainerName:    "curator",
-						Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-					},
-					{
-						ContainerName:    "init-large-dir",
-						Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+						ContainerName: "*",
+						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},
 		},
-	}
-
-	if isRBACProxyEnabled {
-		vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies,
-			vpaautoscalingv1.ContainerResourcePolicy{
-				ContainerName:    "kube-rbac-proxy",
-				Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-			},
-			vpaautoscalingv1.ContainerResourcePolicy{
-				ContainerName:    "telegraf",
-				Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-			},
-		)
 	}
 
 	return vpa

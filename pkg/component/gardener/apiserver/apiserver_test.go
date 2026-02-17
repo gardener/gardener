@@ -258,6 +258,10 @@ var _ = Describe("GardenerAPIServer", func() {
 							},
 							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
+						{
+							ContainerName: "*",
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						},
 					},
 				},
 			},

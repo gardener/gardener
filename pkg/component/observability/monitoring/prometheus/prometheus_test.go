@@ -411,7 +411,7 @@ honor_labels: true`
 							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
 						{
-							ContainerName: "config-reloader",
+							ContainerName: "*",
 							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
@@ -1168,11 +1168,6 @@ query_range:
 						Port:       81,
 						TargetPort: intstr.FromInt32(9091),
 						Protocol:   corev1.ProtocolTCP,
-					})
-
-					vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
-						ContainerName: "cortex",
-						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 					})
 
 					prometheusRule.Namespace = namespace

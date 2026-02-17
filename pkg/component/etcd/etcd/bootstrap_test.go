@@ -244,6 +244,10 @@ var _ = Describe("Etcd", func() {
 								},
 								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							},
+							{
+								ContainerName: "*",
+								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							},
 						},
 					},
 					TargetRef: &autoscalingv1.CrossVersionObjectReference{

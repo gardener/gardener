@@ -113,12 +113,8 @@ var _ = Describe("Etcd", func() {
 		backupLeaderElectionEtcdConnectionTimeout = &metav1.Duration{Duration: 10 * time.Second}
 		backupLeaderElectionReelectionPeriod      = &metav1.Duration{Duration: 11 * time.Second}
 
-		vpaUpdateMode       = vpaautoscalingv1.UpdateModeRecreate
-		containerPolicyOff  = vpaautoscalingv1.ContainerScalingModeOff
-		containerPolicyAuto = vpaautoscalingv1.ContainerScalingModeAuto
-		controlledValues    = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		metricsBasic        = druidcorev1alpha1.Basic
-		metricsExtensive    = druidcorev1alpha1.Extensive
+		metricsBasic     = druidcorev1alpha1.Basic
+		metricsExtensive = druidcorev1alpha1.Extensive
 
 		etcdName string
 		vpaName  string
@@ -413,20 +409,19 @@ var _ = Describe("Etcd", func() {
 						Name:       etcdName,
 					},
 					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-						UpdateMode: &vpaUpdateMode,
+						UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
 					},
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 							{
 								ContainerName:    "etcd",
 								MinAllowed:       minAllowedConfig,
-								ControlledValues: &controlledValues,
-								Mode:             &containerPolicyAuto,
+								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+								Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeAuto),
 							},
 							{
-								ContainerName:    "backup-restore",
-								Mode:             &containerPolicyOff,
-								ControlledValues: &controlledValues,
+								ContainerName: "*",
+								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 							},
 						},
 					},

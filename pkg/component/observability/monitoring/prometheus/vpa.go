@@ -45,19 +45,12 @@ func (p *prometheus) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					},
 					{
-						ContainerName: "config-reloader",
+						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
 						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},
 		},
-	}
-
-	if p.values.Cortex != nil {
-		obj.Spec.ResourcePolicy.ContainerPolicies = append(obj.Spec.ResourcePolicy.ContainerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
-			ContainerName: containerNameCortex,
-			Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-		})
 	}
 
 	return obj

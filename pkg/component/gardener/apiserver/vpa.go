@@ -44,6 +44,10 @@ func (g *gardenerAPIServer) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPo
 						},
 						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					},
+					{
+						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+					},
 				},
 			},
 		},

@@ -268,13 +268,18 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 					UpdateMode: &vpaUpdateMode,
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-						ContainerName: Druid,
-						MinAllowed: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("100M"),
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName: Druid,
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceMemory: resource.MustParse("100M"),
+							},
+							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
-						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-					}},
+						{
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						}},
 				},
 			},
 		}
