@@ -743,10 +743,10 @@ var _ = Describe("HealthChecker", func() {
 				prometheuses                *monitoringv1.PrometheusList
 				testPrometheusHealthChecker health.PrometheusHealthChecker
 
-				healthy = func() (health.PrometheusHealthCheckResult, error) {
+				healthy = func() (health.PrometheusHealthCheckResult, error) { // nolint:unparam
 					return health.PrometheusHealthCheckResult{IsHealthy: true}, nil
 				}
-				unhealthy = func() (health.PrometheusHealthCheckResult, error) {
+				unhealthy = func() (health.PrometheusHealthCheckResult, error) { // nolint:unparam
 					return health.PrometheusHealthCheckResult{IsHealthy: false}, nil
 				}
 				erroring = func() (health.PrometheusHealthCheckResult, error) {
