@@ -34,6 +34,7 @@ var _ = Describe("Logging", func() {
 								Tag:           "systemd.gardener-node-agent",
 								ReadFromTail:  "on",
 								SystemdFilter: []string{"_SYSTEMD_UNIT=gardener-node-agent.service"},
+								Path:          "/var/log/journal",
 							},
 						},
 					},

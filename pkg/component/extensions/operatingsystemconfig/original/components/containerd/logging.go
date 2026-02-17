@@ -44,6 +44,7 @@ func generateClusterInputs() []*fluentbitv1alpha2.ClusterInput {
 					Tag:           getContainerdTag(),
 					ReadFromTail:  "on",
 					SystemdFilter: []string{"_SYSTEMD_UNIT=containerd.service"},
+					Path:          "/var/log/journal",
 				},
 			},
 		},

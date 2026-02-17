@@ -34,6 +34,7 @@ var _ = Describe("Logging", func() {
 								Tag:           "systemd.containerd",
 								ReadFromTail:  "on",
 								SystemdFilter: []string{"_SYSTEMD_UNIT=containerd.service"},
+								Path:          "/var/log/journal",
 							},
 						},
 					},
