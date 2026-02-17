@@ -578,6 +578,10 @@ spec:
                     description: Specify the key where the source address will be
                       injected.
                     type: string
+                  tag:
+                    description: Specify a tag to route incoming logs through different
+                      parsers to different outputs.
+                    type: string
                   tls:
                     description: Specify TLS connector options.
                     properties:

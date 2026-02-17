@@ -426,6 +426,11 @@ spec:
                           description: Inline LUA code instead of loading from a path
                             via script.
                           type: string
+                        enable_flb_null:
+                          description: |-
+                            If enabled, null will be converted to flb_null in Lua.
+                            This helps prevent removing key/value since nil is a special value to remove key/value from map in Lua. Default value: false.
+                          type: boolean
                         protectedMode:
                           description: |-
                             If enabled, Lua script will be executed in protected mode.
