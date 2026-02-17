@@ -74,6 +74,8 @@ func WaitUntilObjectReadyWithHealthFunction(
 		namespace = obj.GetNamespace()
 	)
 
+	log = log.WithValues("object", client.ObjectKeyFromObject(obj), "kind", kind)
+
 	// If the object has been reconciled successfully before we triggered a new reconciliation and our cache
 	// is not updated fast enough with our reconciliation trigger (i.e. adding the reconcile annotation), we might
 	// falsy return early from waiting for the object to be ready (as the last state already was "ready").
