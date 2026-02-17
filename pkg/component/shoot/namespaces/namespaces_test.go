@@ -139,6 +139,30 @@ status: {}
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 		})
+
+		It("should only use zones from the control plane worker pool for self-hosted shoots", func() {
+			selfHostedWorkerPools := append(workerPools, gardencorev1beta1.Worker{
+				Name:             "control-plane",
+				ControlPlane:     &gardencorev1beta1.WorkerControlPlane{},
+				Maximum:          1,
+				Zones:            []string{"cp-zone-a", "cp-zone-b"},
+				SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true},
+			})
+
+			namespaces = New(fakeClient, namespace, selfHostedWorkerPools)
+			Expect(namespaces.Deploy(ctx)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+			managedResourceSecret := &corev1.Secret{}
+			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+			managedResourceSecret.Namespace = namespace
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+
+			Expect(managedResourceSecret.Data).To(HaveKey("data.yaml.br"))
+			data, err := test.BrotliDecompression(managedResourceSecret.Data["data.yaml.br"])
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(data)).To(ContainSubstring("high-availability-config.resources.gardener.cloud/zones: cp-zone-a,cp-zone-b"))
+		})
 	})
 
 	Describe("#Destroy", func() {
