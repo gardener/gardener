@@ -57,7 +57,7 @@ spec:
 		})
 	})
 
-	createShootManifest := func(credentialsBindingName string, zones []string) {
+	createShootManifest := func(credentialsBindingName string, zones []string, isControlPlane bool) {
 		var shootManifest strings.Builder
 		shootManifest.WriteString(`apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
@@ -74,10 +74,13 @@ spec:`)
     type: local
     workers:
     - name: control-plane
-      controlPlane:
-        highAvailability: {}
       minimum: 1
       maximum: 1`)
+		if isControlPlane {
+			shootManifest.WriteString(`
+      controlPlane:
+        highAvailability: {}`)
+		}
 		if len(zones) > 0 {
 			shootManifest.WriteString(`
       zones:`)
@@ -111,9 +114,17 @@ spec:`)
 			Expect(err.Error()).To(ContainSubstring("failed loading resources for zone validation"))
 		})
 
+		It("should fail when control plane worker pool is not found", func() {
+			createShootManifest("", nil, false)
+
+			err := options.Validate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("shoot doesn't have a control plane worker pool configured"))
+		})
+
 		Context("zone validation with managed infrastructure", func() {
 			BeforeEach(func() {
-				createShootManifest("test-credentials", nil)
+				createShootManifest("test-credentials", nil, true)
 			})
 
 			It("should reject zone when provided for managed infrastructure", func() {
@@ -135,7 +146,7 @@ spec:`)
 		Context("zone validation with unmanaged infrastructure", func() {
 			Context("worker with no zones configured", func() {
 				BeforeEach(func() {
-					createShootManifest("", nil)
+					createShootManifest("", nil, true)
 				})
 
 				It("should reject zone when worker has no zones configured", func() {
@@ -156,7 +167,7 @@ spec:`)
 
 			Context("worker with single zone configured", func() {
 				BeforeEach(func() {
-					createShootManifest("", []string{"zone-1"})
+					createShootManifest("", []string{"zone-1"}, true)
 				})
 
 				It("should auto-apply the single zone when not provided", func() {
@@ -184,7 +195,7 @@ spec:`)
 
 			Context("worker with multiple zones configured", func() {
 				BeforeEach(func() {
-					createShootManifest("", []string{"zone-1", "zone-2", "zone-3"})
+					createShootManifest("", []string{"zone-1", "zone-2", "zone-3"}, true)
 				})
 
 				It("should require zone flag when not provided", func() {
