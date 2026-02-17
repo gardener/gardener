@@ -73,8 +73,8 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alph
 systemctl daemon-reload
 `)
 	for _, unit := range osc.Spec.Units {
-		script.WriteString(fmt.Sprintf(`systemctl enable '%s' && systemctl restart --no-block '%s'
-`, unit.Name, unit.Name))
+		fmt.Fprintf(&script, `systemctl enable '%s' && systemctl restart --no-block '%s'
+`, unit.Name, unit.Name)
 	}
 
 	return operatingsystemconfig.WrapProvisionOSCIntoOneshotScript(script.String()), nil

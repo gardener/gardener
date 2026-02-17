@@ -73,7 +73,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		var errorMsg strings.Builder
 		errorMsg.WriteString("The following BackupBuckets have issues:")
 		for _, bb := range erroneousBackupBuckets {
-			errorMsg.WriteString(fmt.Sprintf("\n* %s", bb))
+			fmt.Fprintf(&errorMsg, "\n* %s", bb)
 		}
 		conditionBackupBucketsReady = utils.SetToProgressingOrFalse(r.Clock, conditionThreshold, conditionBackupBucketsReady, "BackupBucketsError", errorMsg.String())
 		if updateErr := utils.PatchSeedCondition(ctx, log, r.Client.Status(), seed, conditionBackupBucketsReady); updateErr != nil {

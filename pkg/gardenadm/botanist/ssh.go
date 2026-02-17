@@ -179,7 +179,7 @@ func ImageVectorOverrideEnv() string {
 
 	for env, filePath := range envToOverrideFile {
 		if os.Getenv(env) != "" {
-			out.WriteString(fmt.Sprintf("%s=%q ", env, filePath))
+			fmt.Fprintf(&out, "%s=%q ", env, filePath)
 		}
 	}
 

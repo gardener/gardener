@@ -235,7 +235,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, log logr.Log
 				if len(result.progressingChecks) == 1 {
 					details.WriteString(ensureTrailingDot(check.detail))
 				} else {
-					details.WriteString(fmt.Sprintf("%d) %s ", index+1, ensureTrailingDot(check.detail)))
+					fmt.Fprintf(&details, "%d) %s ", index+1, ensureTrailingDot(check.detail))
 				}
 
 				if check.threshold != nil && (threshold == nil || *threshold > *check.threshold) {

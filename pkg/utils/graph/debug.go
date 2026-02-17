@@ -63,9 +63,9 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	out.WriteString(`
 <form action="` + DebugHandlerPath + `" method="GET">
   <select name="kind">`)
-	out.WriteString(fmt.Sprintf(`<option value=""%s>&lt;all&gt;</option>`, selected("", kind)))
+	fmt.Fprintf(&out, `<option value=""%s>&lt;all&gt;</option>`, selected("", kind))
 	for _, vt := range VertexTypes {
-		out.WriteString(fmt.Sprintf(`<option value="%s"%s>%s</option>`, vt.Kind, selected(vt.Kind, kind), vt.Kind))
+		fmt.Fprintf(&out, `<option value="%s"%s>%s</option>`, vt.Kind, selected(vt.Kind, kind), vt.Kind)
 	}
 	out.WriteString(`
   </select>
