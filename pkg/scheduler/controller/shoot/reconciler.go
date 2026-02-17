@@ -90,6 +90,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *Reconciler) reportFailedScheduling(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot, err error) {
+	// Conflict errors are likely to occur during scheduling but will be retried by the controller.
+	// Skip reporting the event and updating the status, the error will still be logged.
+	if apierrors.IsConflict(err) {
+		return
+	}
+
 	description := "Failed to schedule Shoot: " + err.Error()
 	r.reportEvent(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventSchedulingFailed, gardencorev1beta1.EventActionReconcile, description)
 
