@@ -74,7 +74,7 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 
 	log := h.Logger.WithValues("seedName", seedName, "userType", userType)
 
-	// For CREATE operations, if the object already exists, allow the request since the CREATE was already processed previously.
+	// For CREATE operations, if the object already exists, allow the request since the CREATE must have already been processed by this code previously.
 	// This avoids re-validating the object against CREATE-specific logic that may no longer apply to the current state of the object.
 	if request.Operation == admissionv1.Create {
 		obj := &unstructured.Unstructured{}
