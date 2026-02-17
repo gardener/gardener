@@ -40,7 +40,7 @@ gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --zone zone-
       --control-plane                Create a new control plane instance on this node
   -h, --help                         help for join
   -w, --worker-pool-name string      Name of the worker pool to assign the joining node.
-  -z, --zone string                  Zone of the node in which this new node is being joined. Required when the worker pool has multiple zones configured, optional when a single zone is configured (automatically applied), and optional when no zones are configured.
+  -z, --zone string                  Zone in which this new node is being joined. Required when the worker pool has multiple zones configured, optional when a single zone is configured (automatically applied), and optional when no zones are configured.
 ```
 
 ### Options inherited from parent commands

@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/pflag"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/gardenadm"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 )
@@ -62,14 +63,12 @@ func (o *Options) validateZone() error {
 	}
 
 	// init command is only for control plane node, therefore we look for the control plane worker
-	var worker gardencorev1beta1.Worker
-	for _, w := range resources.Shoot.Spec.Provider.Workers {
-		if w.ControlPlane != nil {
-			worker = w
-		}
+	var controlPlaneWorkerPool *gardencorev1beta1.Worker
+	if controlPlaneWorkerPool = v1beta1helper.ControlPlaneWorkerPoolForShoot(resources.Shoot.Spec.Provider.Workers); controlPlaneWorkerPool == nil {
+		return fmt.Errorf("zone validation failed, shoot doesn't have a control plane worker pool configured")
 	}
 
-	effectiveZone, err := cmd.ValidateZone(worker, o.Zone)
+	effectiveZone, err := cmd.ValidateZone(*controlPlaneWorkerPool, o.Zone)
 	if err != nil {
 		return err
 	}
@@ -86,5 +85,5 @@ func (o *Options) Complete() error {
 func (o *Options) addFlags(fs *pflag.FlagSet) {
 	o.ManifestOptions.AddFlags(fs)
 	fs.BoolVar(&o.UseBootstrapEtcd, "use-bootstrap-etcd", false, "If set, the control plane continues using the bootstrap etcd instead of transitioning to etcd-druid. This is useful for testing purposes to save time.")
-	fs.StringVarP(&o.Zone, "zone", "z", "", "Zone of the node in which this new node is being initialized. Required when the control plane worker pool has multiple zones configured, optional when a single zone is configured (automatically applied), and optional when no zones are configured.")
+	fs.StringVarP(&o.Zone, "zone", "z", "", "Zone in which this new node is being initialized. Required when the control plane worker pool has multiple zones configured, optional when a single zone is configured (automatically applied), and optional when no zones are configured.")
 }

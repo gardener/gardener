@@ -26,7 +26,7 @@ gardenadm init --config-dir /path/to/manifests --zone zone-a
   -d, --config-dir string    Path to a directory containing the Gardener configuration files for the init command, i.e., files containing resources like CloudProfile, Shoot, etc. The files must be in YAML/JSON and have .{yaml,yml,json} file extensions to be considered.
   -h, --help                 help for init
       --use-bootstrap-etcd   If set, the control plane continues using the bootstrap etcd instead of transitioning to etcd-druid. This is useful for testing purposes to save time.
-  -z, --zone string          Zone of the node in which this new node is being initialized. Required when the control plane worker pool has multiple zones configured, optional when a single zone is configured (automatically applied), and optional when no zones are configured.
+  -z, --zone string          Zone in which this new node is being initialized. Required when the control plane worker pool has multiple zones configured, optional when a single zone is configured (automatically applied), and optional when no zones are configured.
 ```
 
 ### Options inherited from parent commands
