@@ -82,6 +82,8 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 
 		if err := h.Client.Get(ctx, client.ObjectKey{Name: request.Name, Namespace: request.Namespace}, obj); err == nil {
 			return admissionwebhook.Allowed("object already exists")
+		} else if !apierrors.IsNotFound(err) {
+			log.Error(err, "Failed to get object, continuing with normal admission checks", "requestName", request.Name, "requestNamespace", request.Namespace, "requestGroup", request.Kind.Group, "requestVersion", request.Kind.Version, "requestKind", request.Kind.Kind)
 		}
 	}
 
