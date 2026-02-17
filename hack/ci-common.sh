@@ -6,6 +6,28 @@
 
 set -o errexit
 
+# Increase system limits for CI to prevent resource exhaustion during parallel builds.
+# These settings help avoid "context cancelled" errors in skaffold caused by inotify/fd limits.
+increase_system_limits() {
+  if [[ -n "${CI:-}" ]]; then
+    echo "> Increasing system limits for CI..."
+    
+    # Increase inotify watches - needed for watching many files during builds
+    sysctl -w fs.inotify.max_user_watches=524288 || true
+    
+    # Increase inotify instances - needed for parallel container builds
+    sysctl -w fs.inotify.max_user_instances=512 || true
+    
+    # Increase file descriptor limit
+    ulimit -n 65535 || true
+    
+    echo "> System limits after increase:"
+    echo "  fs.inotify.max_user_watches=$(cat /proc/sys/fs/inotify/max_user_watches 2>/dev/null || echo 'N/A')"
+    echo "  fs.inotify.max_user_instances=$(cat /proc/sys/fs/inotify/max_user_instances 2>/dev/null || echo 'N/A')"
+    echo "  ulimit -n=$(ulimit -n 2>/dev/null || echo 'N/A')"
+  fi
+}
+
 export_artifacts() {
   cluster_name="${1}"
   echo "> Exporting logs of kind cluster '$cluster_name'"
