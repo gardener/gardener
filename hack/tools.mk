@@ -51,6 +51,7 @@ SKAFFOLD                   := $(TOOLS_BIN_DIR)/skaffold
 YQ                         := $(TOOLS_BIN_DIR)/yq
 VGOPATH                    := $(TOOLS_BIN_DIR)/vgopath
 TYPOS                      := $(TOOLS_BIN_DIR)/typos
+GOBUILDCACHE               := $(TOOLS_BIN_DIR)/gobuildcache
 
 # default tool versions
 # renovate: datasource=github-releases depName=golangci/golangci-lint
@@ -84,6 +85,7 @@ YQ_VERSION ?= v4.52.4
 VGOPATH_VERSION ?= v0.1.10
 # renovate: datasource=github-releases depName=crate-ci/typos
 TYPOS_VERSION ?= v1.43.5
+GOBUILDCACHE_VERSION ?= 83bfeb837b93a786ff37b33d0be108bcc74b089f
 
 # tool versions from go.mod
 CONTROLLER_GEN_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-tools)
@@ -138,7 +140,7 @@ ifeq ($(shell if [ -d $(TOOLS_BIN_SOURCE_DIR) ]; then echo "found"; fi),found)
 endif
 
 .PHONY: create-tools-bin
-create-tools-bin: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GINKGO) $(GOIMPORTS) $(GOIMPORTSREVISER) $(GOSEC) $(GO_ADD_LICENSE) $(GO_APIDIFF) $(GO_VULN_CHECK) $(GO_TO_PROTOBUF) $(HELM) $(IMPORT_BOSS) $(KIND) $(KUBECTL) $(MOCKGEN) $(OPENAPI_GEN) $(PROMTOOL) $(PROTOC) $(PROTOC_GEN_GOGO) $(SETUP_ENVTEST) $(SKAFFOLD) $(YQ) $(KUSTOMIZE) $(TYPOS)
+create-tools-bin: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GINKGO) $(GOIMPORTS) $(GOIMPORTSREVISER) $(GOSEC) $(GO_ADD_LICENSE) $(GO_APIDIFF) $(GO_VULN_CHECK) $(GO_TO_PROTOBUF) $(HELM) $(IMPORT_BOSS) $(KIND) $(KUBECTL) $(MOCKGEN) $(OPENAPI_GEN) $(PROMTOOL) $(PROTOC) $(PROTOC_GEN_GOGO) $(SETUP_ENVTEST) $(SKAFFOLD) $(YQ) $(KUSTOMIZE) $(TYPOS) $(GOBUILDCACHE)
 
 #########################################
 # Tools                                 #
@@ -267,3 +269,6 @@ $(YQ): $(call tool_version_file,$(YQ),$(YQ_VERSION))
 # TODO(LucaBernstein): Remove VGOPATH after gardener/gardener@v1.142 has been released.
 $(VGOPATH): $(call tool_version_file,$(VGOPATH),$(VGOPATH_VERSION))
 	go build -o $(VGOPATH) github.com/ironcore-dev/vgopath
+
+$(GOBUILDCACHE): $(call tool_version_file,$(GOBUILDCACHE),$(GOBUILDCACHE_VERSION))
+	GOBIN=$(abspath $(TOOLS_BIN_DIR)) go install github.com/saracen/gobuildcache@$(GOBUILDCACHE_VERSION)
