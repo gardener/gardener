@@ -298,7 +298,7 @@ var _ = Describe("Add", func() {
 		)
 
 		BeforeEach(func() {
-			p = (&Reconciler{}).NodeReadyForUpdate()
+			p = (&Reconciler{}).NodeReadyForInPlaceUpdate()
 
 			node = &corev1.Node{
 				Status: corev1.NodeStatus{

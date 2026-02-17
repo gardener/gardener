@@ -65,7 +65,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		Watches(
 			&corev1.Node{},
 			handler.EnqueueRequestsFromMapFunc(r.NodeToSecretMapper()),
-			builder.WithPredicates(r.NodeReadyForUpdate()),
+			builder.WithPredicates(r.NodeReadyForInPlaceUpdate()),
 		).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
@@ -155,11 +155,11 @@ func (r *Reconciler) NodeToSecretMapper() handler.MapFunc {
 	}
 }
 
-// NodeReadyForUpdate returns a predicate that returns
+// NodeReadyForInPlaceUpdate returns a predicate that returns
 // - true for Create event if the new node has the InPlaceUpdate condition with the reason ReadyForUpdate.
 // - true for Update event if the new node has the InPlaceUpdate condition with the reason ReadyForUpdate and old node doesn't.
 // - false for Delete and Generic events.
-func (r *Reconciler) NodeReadyForUpdate() predicate.Predicate {
+func (r *Reconciler) NodeReadyForInPlaceUpdate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			node, ok := e.Object.(*corev1.Node)

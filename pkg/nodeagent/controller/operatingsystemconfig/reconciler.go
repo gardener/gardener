@@ -126,7 +126,8 @@ type Reconciler struct {
 	// actual OSC, or not reconcile them at all.
 	SkipWritingStateFiles bool
 
-	// Channel and TokenSecretSyncConfigs are used by the reconciler to trigger events for the token reconciler during an in-place service-account-key rotation.
+	// Channel and TokenSecretSyncConfigs are used by the reconciler to trigger events for the token reconciler during
+	// an in-place service-account-key rotation.
 	Channel                chan event.TypedGenericEvent[*corev1.Secret]
 	TokenSecretSyncConfigs []nodeagentconfigv1alpha1.TokenSecretSyncConfig
 }
