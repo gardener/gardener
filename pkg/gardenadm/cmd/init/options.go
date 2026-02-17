@@ -86,5 +86,5 @@ func (o *Options) Complete() error {
 func (o *Options) addFlags(fs *pflag.FlagSet) {
 	o.ManifestOptions.AddFlags(fs)
 	fs.BoolVar(&o.UseBootstrapEtcd, "use-bootstrap-etcd", false, "If set, the control plane continues using the bootstrap etcd instead of transitioning to etcd-druid. This is useful for testing purposes to save time.")
-	fs.StringVarP(&o.Zone, "zone", "z", "", "Zone of the node in which this new node is being initialized")
+	fs.StringVarP(&o.Zone, "zone", "z", "", "Zone of the node in which this new node is being initialized. Required when the control plane worker pool has multiple zones configured, optional when a single zone is configured (automatically applied), and optional when no zones are configured.")
 }

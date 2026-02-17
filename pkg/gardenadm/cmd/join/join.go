@@ -40,11 +40,17 @@ It ensures that the necessary configurations are applied and the node is properl
 		Example: `# Bootstrap a control plane node and join it to the cluster
 gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --control-plane <control-plane-address>
 
+# Bootstrap a control plane node in a specific zone and join it to the cluster
+gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --control-plane --zone zone-a <control-plane-address>
+
 # Bootstrap a worker node and join it to the cluster (by default, it is assigned to the first worker pool in the Shoot manifest)
 gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> <control-plane-address>
 
 # Bootstrap a worker node in a specific worker pool and join it to the cluster
-gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --worker-pool-name <pool-name> <control-plane-address>`,
+gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --worker-pool-name <pool-name> <control-plane-address>
+
+# Bootstrap a worker node in a specific zone and join it to the cluster
+gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --zone zone-b <control-plane-address>`,
 
 		Args: cobra.ExactArgs(1),
 
