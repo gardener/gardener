@@ -299,9 +299,7 @@ func (h *Handler) admitConfigMapForGardens(ctx context.Context, request admissio
 		return admissionwebhook.Allowed("config map is not referenced by garden resource, nothing to validate")
 	}
 
-	isReferenced := slices.Contains(configMapNames, request.Name)
-
-	if !isReferenced {
+	if !slices.Contains(configMapNames, request.Name) {
 		return admissionwebhook.Allowed("config map is not referenced by garden resource, nothing to validate")
 	}
 
