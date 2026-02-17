@@ -337,7 +337,7 @@ var _ = Describe("Authorizer", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionDeny))
-				Expect(reason).To(Equal(fmt.Sprintf("this gardener-node-agent can only access lease \"gardener-node-agent-%s\" in \"kube-system\" namespace", nodeName)))
+				Expect(reason).To(Equal(fmt.Sprintf("this gardener-node-agent can only access leases [gardener-node-agent-%s] in \"kube-system\" namespace", nodeName)))
 			})
 
 			DescribeTable("should deny accessing a lease for a machine without a node label", func(verb string) {
@@ -399,13 +399,64 @@ var _ = Describe("Authorizer", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionDeny))
-				Expect(reason).To(Equal(fmt.Sprintf("this gardener-node-agent can only access lease \"gardener-node-agent-%s\" in \"kube-system\" namespace", nodeName)))
+				Expect(reason).To(Equal(fmt.Sprintf("this gardener-node-agent can only access leases [gardener-node-agent-%s] in \"kube-system\" namespace", nodeName)))
 			},
 				Entry("get", "get"),
 				Entry("update", "update"),
 				Entry("list", "list"),
 				Entry("watch", "watch"),
 			)
+
+			When("node is labeled with gardener-node-agent secret name", func() {
+				BeforeEach(func() {
+					metav1.SetMetaDataLabel(&node.ObjectMeta, "worker.gardener.cloud/gardener-node-agent-secret-name", "foo-bar-node-agent-secret-bar-foo")
+					Expect(targetClient.Update(ctx, node)).To(Succeed())
+				})
+
+				DescribeTable("should allow accessing the lease for rollout coordination", func(verb string) {
+					attrs := &auth.AttributesRecord{
+						User:            nodeAgentUser,
+						Name:            "foo-bar-node-agent-secret-bar-foo",
+						Namespace:       "kube-system",
+						APIGroup:        "coordination.k8s.io",
+						Resource:        "leases",
+						ResourceRequest: true,
+						Verb:            verb,
+					}
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				},
+					Entry("get", "get"),
+					Entry("update", "update"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+				)
+
+				DescribeTable("should deny accessing a different lease", func(verb string) {
+					attrs := &auth.AttributesRecord{
+						User:            nodeAgentUser,
+						Name:            "another-lease",
+						Namespace:       "kube-system",
+						APIGroup:        "coordination.k8s.io",
+						Resource:        "leases",
+						ResourceRequest: true,
+						Verb:            verb,
+					}
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionDeny))
+					Expect(reason).To(Equal(fmt.Sprintf("this gardener-node-agent can only access leases [gardener-node-agent-%s foo-bar-node-agent-secret-bar-foo] in \"kube-system\" namespace", nodeName)))
+				},
+					Entry("get", "get"),
+					Entry("update", "update"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+				)
+			})
 
 			DescribeTable("should deny accessing a lease in a different namespace", func(verb string) {
 				attrs := &auth.AttributesRecord{
@@ -421,7 +472,7 @@ var _ = Describe("Authorizer", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionDeny))
-				Expect(reason).To(Equal(fmt.Sprintf("this gardener-node-agent can only access lease \"gardener-node-agent-%s\" in \"kube-system\" namespace", nodeName)))
+				Expect(reason).To(Equal(fmt.Sprintf("this gardener-node-agent can only access leases [gardener-node-agent-%s] in \"kube-system\" namespace", nodeName)))
 			},
 				Entry("get", "get"),
 				Entry("update", "update"),
