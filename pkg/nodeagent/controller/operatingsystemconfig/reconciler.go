@@ -179,13 +179,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
+	if node != nil && node.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig] == oscChecksum {
+		log.Info("Configuration on this node is up to date, nothing to be done")
+		return reconcile.Result{}, nil
+	}
+
 	log.Info("Applying containerd configuration")
 	if err := r.ReconcileContainerdConfig(ctx, log, osc); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
 	}
 
-	var osVersion *string
-	osVersion, err = GetOSVersion(osc.Spec.InPlaceUpdates, r.FS)
+	osVersion, err := GetOSVersion(osc.Spec.InPlaceUpdates, r.FS)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed getting OS version: %w", err)
 	}
@@ -193,11 +197,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	oscChanges, err := computeOperatingSystemConfigChanges(log, r.FS, osc, oscChecksum, osVersion, r.SkipWritingStateFiles, r.HostName)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed calculating the OSC changes: %w", err)
-	}
-
-	if node != nil && node.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig] == oscChecksum {
-		log.Info("Configuration on this node is up to date, nothing to be done")
-		return reconcile.Result{}, nil
 	}
 
 	// If the node-agent has restarted after OS update, we need to persist the change in oscChanges.
