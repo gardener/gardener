@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -298,13 +299,7 @@ func (h *Handler) admitConfigMapForGardens(ctx context.Context, request admissio
 		return admissionwebhook.Allowed("config map is not referenced by garden resource, nothing to validate")
 	}
 
-	isReferenced := false
-	for _, configMapName := range configMapNames {
-		if configMapName == request.Name {
-			isReferenced = true
-			break
-		}
-	}
+	isReferenced := slices.Contains(configMapNames, request.Name)
 
 	if !isReferenced {
 		return admissionwebhook.Allowed("config map is not referenced by garden resource, nothing to validate")
