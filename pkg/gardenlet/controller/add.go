@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -40,6 +41,7 @@ import (
 )
 
 // AddToManager adds all gardenlet controllers to the given manager.
+// selfHostedShoot is only needed to be non-nil when running in self-hosted shoot mode.
 func AddToManager(
 	ctx context.Context,
 	mgr manager.Manager,
@@ -49,6 +51,7 @@ func AddToManager(
 	shootClientMap clientmap.ClientMap,
 	cfg *gardenletconfigv1alpha1.GardenletConfiguration,
 	healthManager healthz.Manager,
+	selfHostedShoot *gardencorev1beta1.Shoot,
 ) error {
 	identity, err := gardenerutils.DetermineIdentity()
 	if err != nil {
@@ -80,6 +83,8 @@ func AddToManager(
 	if err != nil {
 		return fmt.Errorf("failed creating seed clientset: %w", err)
 	}
+
+	seedNetworks := networkConfigForNetworkPolicyController(cfg, selfHostedShoot)
 
 	if gardenletutils.IsResponsibleForSelfHostedShoot() {
 		mgr.GetLogger().Info("Running in self-hosted shoot, registering minimal set of controllers")
@@ -114,6 +119,10 @@ func AddToManager(
 			Config: *cfg.Controllers.ShootState,
 		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 			return fmt.Errorf("failed adding ShootState controller: %w", err)
+		}
+
+		if err := networkpolicy.AddToManager(ctx, mgr, gardenletCancel, seedCluster, *cfg.Controllers.NetworkPolicy, seedNetworks, nil); err != nil {
+			return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
 		}
 
 		if err := vpaevictionrequirements.AddToManager(ctx, mgr, gardenletCancel, *cfg.Controllers.VPAEvictionRequirements, seedCluster); err != nil {
@@ -166,7 +175,7 @@ func AddToManager(
 		return fmt.Errorf("failed adding ManagedSeed controller: %w", err)
 	}
 
-	if err := networkpolicy.AddToManager(ctx, mgr, gardenletCancel, seedCluster, *cfg.Controllers.NetworkPolicy, cfg.SeedConfig.Spec.Networks, nil); err != nil {
+	if err := networkpolicy.AddToManager(ctx, mgr, gardenletCancel, seedCluster, *cfg.Controllers.NetworkPolicy, seedNetworks, nil); err != nil {
 		return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
 	}
 
@@ -197,4 +206,16 @@ func AddToManager(
 	}
 
 	return nil
+}
+
+func networkConfigForNetworkPolicyController(cfg *gardenletconfigv1alpha1.GardenletConfiguration, selfHostedShoot *gardencorev1beta1.Shoot) gardencorev1beta1.SeedNetworks {
+	if selfHostedShoot != nil {
+		return gardencorev1beta1.SeedNetworks{
+			Nodes:      selfHostedShoot.Spec.Networking.Nodes,
+			Pods:       ptr.Deref(selfHostedShoot.Spec.Networking.Pods, ""),
+			Services:   ptr.Deref(selfHostedShoot.Spec.Networking.Services, ""),
+			IPFamilies: selfHostedShoot.Spec.Networking.IPFamilies,
+		}
+	}
+	return cfg.SeedConfig.Spec.Networks
 }
