@@ -74,6 +74,18 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 			Expect(ValidateSelfHostedShootExposure(exposure)).To(BeEmpty())
 		})
 
+		It("should forbid endpoints with missing nodeName", func() {
+			e := prepareSelfHostedShootExposureForUpdate(exposure)
+			e.Spec.Endpoints[0].NodeName = ""
+
+			errorList := ValidateSelfHostedShootExposure(e)
+
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.endpoints[0].nodeName"),
+			}))))
+		})
+
 		It("should forbid endpoints with invalid port", func() {
 			e := prepareSelfHostedShootExposureForUpdate(exposure)
 			e.Spec.Endpoints[0].Port = 70000
@@ -126,7 +138,7 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 			errorList := ValidateSelfHostedShootExposure(e)
 
 			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
+				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("spec.endpoints[0].addresses[0].type"),
 			}))))
 		})

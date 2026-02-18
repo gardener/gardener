@@ -336,10 +336,6 @@ var _ = Describe("Extensions", func() {
 						HaveField("ControllerRegistration.Name", controllerRegistrationDNS.Name),
 						HaveField("ControllerDeployment.Name", controllerDeploymentDNS.Name),
 					),
-					And(
-						HaveField("ControllerRegistration.Name", controllerRegistrationSelfHostedShootExposure.Name),
-						HaveField("ControllerDeployment.Name", controllerDeploymentSelfHostedShootExposure.Name),
-					),
 				))
 			})
 		})

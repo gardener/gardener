@@ -26,18 +26,18 @@ metadata:
   name: self-hosted-exposure
   namespace: shoot--my-project--my-shoot
 spec:
-  type: provider-stackit
+  type: stackit
   endpoints:
   - nodeName: node-1
     addresses:
     - type: InternalIP
       address: 10.0.1.10
-    port: 6443
+    port: 443
   - nodeName: node-2
     addresses:
     - type: InternalIP
       address: 10.0.1.11
-    port: 6443
+    port: 443
 status:
   ingress:
   - ip: 203.0.113.10

@@ -6,7 +6,6 @@ package validation
 
 import (
 	"fmt"
-	"net"
 	"strings"
 
 	"github.com/go-test/deep"
@@ -66,6 +65,10 @@ func ValidateSelfHostedShootExposureSpec(spec *extensionsv1alpha1.SelfHostedShoo
 	for i, ep := range spec.Endpoints {
 		epPath := fldPath.Child("endpoints").Index(i)
 
+		if len(ep.NodeName) == 0 {
+			allErrs = append(allErrs, field.Required(epPath.Child("nodeName"), "field is required"))
+		}
+
 		if errs := utilvalidation.IsValidPortNum(int(ep.Port)); len(errs) > 0 {
 			allErrs = append(allErrs, field.Invalid(epPath.Child("port"), ep.Port, strings.Join(errs, ",")))
 		}
@@ -76,7 +79,7 @@ func ValidateSelfHostedShootExposureSpec(spec *extensionsv1alpha1.SelfHostedShoo
 			if addr.Type != "" {
 				var supportedAddressTypes = sets.New(corev1.NodeHostName, corev1.NodeInternalIP, corev1.NodeExternalIP, corev1.NodeInternalDNS, corev1.NodeExternalDNS)
 				if !supportedAddressTypes.Has(addr.Type) {
-					allErrs = append(allErrs, field.Invalid(addrPath.Child("type"), addr.Type, "unknown node address type"))
+					allErrs = append(allErrs, field.NotSupported(addrPath.Child("type"), addr.Type, sets.List(supportedAddressTypes)))
 				}
 			}
 
@@ -91,13 +94,6 @@ func ValidateSelfHostedShootExposureSpec(spec *extensionsv1alpha1.SelfHostedShoo
 				case corev1.NodeHostName, corev1.NodeInternalDNS, corev1.NodeExternalDNS:
 					if errs := utilvalidation.IsDNS1123Subdomain(addr.Address); len(errs) != 0 {
 						allErrs = append(allErrs, field.Invalid(addrPath.Child("address"), addr.Address, strings.Join(errs, ",")))
-					}
-				default:
-					// If type is not set or unknown, still attempt basic validation: allow IPs or DNS names
-					if net.ParseIP(addr.Address) == nil {
-						if errs := utilvalidation.IsDNS1123Subdomain(addr.Address); len(errs) != 0 {
-							allErrs = append(allErrs, field.Invalid(addrPath.Child("address"), addr.Address, "address must be a valid IP or DNS name"))
-						}
 					}
 				}
 			}
