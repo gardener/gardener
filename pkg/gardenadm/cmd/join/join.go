@@ -286,7 +286,7 @@ func waitForNodeToJoinCluster(ctx context.Context, log logr.Logger, c client.Cli
 			return retry.SevereError(fmt.Errorf("failed to get node for hostname %s: %w", hostName, err))
 		}
 		if node == nil {
-			return retry.MinorError(fmt.Errorf("node did not yet join the cluster: %w", err))
+			return retry.MinorError(fmt.Errorf("node did not yet join the cluster"))
 		}
 		return retry.Ok()
 	})
