@@ -63,9 +63,19 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	out.WriteString(`
 <form action="` + DebugHandlerPath + `" method="GET">
   <select name="kind">`)
-	fmt.Fprintf(&out, `<option value=""%s>&lt;all&gt;</option>`, selected("", kind))
+	fmt.Fprintf(&out, `<option value=""%s>&lt;all&gt;</option>`, func() string {
+		if kind == "" {
+			return " selected"
+		}
+		return ""
+	}())
 	for _, vt := range VertexTypes {
-		fmt.Fprintf(&out, `<option value="%s"%s>%s</option>`, vt.Kind, selected(vt.Kind, kind), vt.Kind)
+		fmt.Fprintf(&out, `<option value="%s"%s>%s</option>`, vt.Kind, func() string {
+			if kind == vt.Kind {
+				return " selected"
+			}
+			return ""
+		}(), vt.Kind)
 	}
 	out.WriteString(`
   </select>
@@ -166,11 +176,4 @@ func link(v *Vertex) string {
 	out += fmt.Sprintf(`<a href="%s">%s</a>`, path, v.Name)
 
 	return out
-}
-
-func selected(name, selected string) string {
-	if selected == name {
-		return " selected"
-	}
-	return ""
 }
