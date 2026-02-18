@@ -62,7 +62,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	slices.Sort(keys)
 	var fileContent strings.Builder
 	for _, key := range keys {
-		fileContent.WriteString(fmt.Sprintf("%s = %s\n", key, newData[key]))
+		fmt.Fprintf(&fileContent, "%s = %s\n", key, newData[key])
 	}
 
 	kernelSettingsFile := extensionsv1alpha1.File{

@@ -258,7 +258,7 @@ func MapStringBoolToCommandLineParameter(m map[string]bool, param string) string
 	var out strings.Builder
 	out.WriteString(param)
 	for _, key := range keys {
-		out.WriteString(fmt.Sprintf("%s=%s,", key, strconv.FormatBool(m[key])))
+		fmt.Fprintf(&out, "%s=%s,", key, strconv.FormatBool(m[key]))
 	}
 	return strings.TrimSuffix(out.String(), ",")
 }
