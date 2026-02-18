@@ -16,7 +16,7 @@ increase_system_limits() {
     sysctl -w fs.inotify.max_user_watches=524288 || true
     
     # Increase inotify instances - needed for parallel container builds
-    sysctl -w fs.inotify.max_user_instances=512 || true
+    sysctl -w fs.inotify.max_user_instances=8192 || true
     
     # Increase file descriptor limit
     ulimit -n 65535 || true
