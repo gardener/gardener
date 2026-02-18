@@ -3659,6 +3659,39 @@ CapabilityValues
 <p>CapabilityValues contains capability values.
 This is a workaround as the Protobuf generator can&rsquo;t handle a map with slice values.</p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.CloudProfileMachineControllerManagerSettings">CloudProfileMachineControllerManagerSettings
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.MachineType">MachineType</a>)
+</p>
+<p>
+<p>CloudProfileMachineControllerManagerSettings contains a subset of the MachineControllerManagerSettings which can be defaulted for a machine type in a CloudProfile.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>machineCreationTimeout</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineCreationTimeout is the period after which creation of a machine of this machine type is declared failed.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.CloudProfileReference">CloudProfileReference
 </h3>
 <p>
@@ -9356,6 +9389,20 @@ Capabilities
 <td>
 <em>(Optional)</em>
 <p>Capabilities contains the machine type capabilities.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>machineControllerManager</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileMachineControllerManagerSettings">
+CloudProfileMachineControllerManagerSettings
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineControllerManagerSettings contains a subset of the MachineControllerManagerSettings which can be defaulted for a machine type in a CloudProfile.</p>
 </td>
 </tr>
 </tbody>

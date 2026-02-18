@@ -94,6 +94,10 @@ func (m *CloudProfile) Reset() { *m = CloudProfile{} }
 
 func (m *CloudProfileList) Reset() { *m = CloudProfileList{} }
 
+func (m *CloudProfileMachineControllerManagerSettings) Reset() {
+	*m = CloudProfileMachineControllerManagerSettings{}
+}
+
 func (m *CloudProfileReference) Reset() { *m = CloudProfileReference{} }
 
 func (m *CloudProfileSpec) Reset() { *m = CloudProfileSpec{} }
@@ -1906,6 +1910,41 @@ func (m *CloudProfileList) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	}
 	i--
 	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *CloudProfileMachineControllerManagerSettings) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CloudProfileMachineControllerManagerSettings) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CloudProfileMachineControllerManagerSettings) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.MachineCreationTimeout != nil {
+		{
+			size, err := m.MachineCreationTimeout.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -7116,6 +7155,18 @@ func (m *MachineType) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.MachineControllerManager != nil {
+		{
+			size, err := m.MachineControllerManager.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x4a
+	}
 	if len(m.Capabilities) > 0 {
 		keysForCapabilities := make([]string, 0, len(m.Capabilities))
 		for k := range m.Capabilities {
@@ -14000,6 +14051,19 @@ func (m *CloudProfileList) Size() (n int) {
 	return n
 }
 
+func (m *CloudProfileMachineControllerManagerSettings) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.MachineCreationTimeout != nil {
+		l = m.MachineCreationTimeout.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
+	return n
+}
+
 func (m *CloudProfileReference) Size() (n int) {
 	if m == nil {
 		return 0
@@ -15989,6 +16053,10 @@ func (m *MachineType) Size() (n int) {
 			mapEntrySize := 1 + len(k) + sovGenerated(uint64(len(k))) + 1 + l + sovGenerated(uint64(l))
 			n += mapEntrySize + 1 + sovGenerated(uint64(mapEntrySize))
 		}
+	}
+	if m.MachineControllerManager != nil {
+		l = m.MachineControllerManager.Size()
+		n += 1 + l + sovGenerated(uint64(l))
 	}
 	return n
 }
@@ -18705,6 +18773,16 @@ func (this *CloudProfileList) String() string {
 	}, "")
 	return s
 }
+func (this *CloudProfileMachineControllerManagerSettings) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&CloudProfileMachineControllerManagerSettings{`,
+		`MachineCreationTimeout:` + strings.Replace(fmt.Sprintf("%v", this.MachineCreationTimeout), "Duration", "v11.Duration", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func (this *CloudProfileReference) String() string {
 	if this == nil {
 		return "nil"
@@ -20027,6 +20105,7 @@ func (this *MachineType) String() string {
 		`Usable:` + valueToStringGenerated(this.Usable) + `,`,
 		`Architecture:` + valueToStringGenerated(this.Architecture) + `,`,
 		`Capabilities:` + mapStringForCapabilities + `,`,
+		`MachineControllerManager:` + strings.Replace(this.MachineControllerManager.String(), "CloudProfileMachineControllerManagerSettings", "CloudProfileMachineControllerManagerSettings", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -25816,6 +25895,92 @@ func (m *CloudProfileList) Unmarshal(dAtA []byte) error {
 			}
 			m.Items = append(m.Items, CloudProfile{})
 			if err := m.Items[len(m.Items)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CloudProfileMachineControllerManagerSettings) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CloudProfileMachineControllerManagerSettings: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CloudProfileMachineControllerManagerSettings: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MachineCreationTimeout", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.MachineCreationTimeout == nil {
+				m.MachineCreationTimeout = &v11.Duration{}
+			}
+			if err := m.MachineCreationTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -41334,6 +41499,42 @@ func (m *MachineType) Unmarshal(dAtA []byte) error {
 				}
 			}
 			m.Capabilities[mapkey] = *mapvalue
+			iNdEx = postIndex
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MachineControllerManager", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.MachineControllerManager == nil {
+				m.MachineControllerManager = &CloudProfileMachineControllerManagerSettings{}
+			}
+			if err := m.MachineControllerManager.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

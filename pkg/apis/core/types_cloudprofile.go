@@ -171,6 +171,12 @@ type LifecycleStage struct {
 	StartTime *metav1.Time
 }
 
+// CloudProfileMachineControllerManagerSettings contains a subset of the MachineControllerManagerSettings which can be defaulted for a machine type in a CloudProfile.
+type CloudProfileMachineControllerManagerSettings struct {
+	// MachineCreationTimeout is the period after which creation of a machine of this machine type is declared failed.
+	MachineCreationTimeout *metav1.Duration
+}
+
 // MachineType contains certain properties of a machine type.
 type MachineType struct {
 	// CPU is the number of CPUs for this machine type.
@@ -189,6 +195,8 @@ type MachineType struct {
 	Architecture *string
 	// Capabilities contains the machine type capabilities.
 	Capabilities Capabilities
+	// MachineControllerManager contains a subset of the MachineControllerManagerSettings which can be defaulted for a machine type in a CloudProfile.
+	MachineControllerManager *CloudProfileMachineControllerManagerSettings
 }
 
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.

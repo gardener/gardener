@@ -107,6 +107,36 @@ var _ = Describe("Worker", func() {
 		worker2UserDataSecretName        = "user-data-secret-name-w2"
 		worker2Arch                      = ptr.To("arm64")
 
+		machineTypes []gardencorev1beta1.MachineType
+
+		workerPool1NodeTemplate *extensionsv1alpha1.NodeTemplate
+		workerPool2NodeTemplate *extensionsv1alpha1.NodeTemplate
+
+		w, empty *extensionsv1alpha1.Worker
+		wSpec    extensionsv1alpha1.WorkerSpec
+
+		defaultDepWaiter worker.Interface
+		values           *worker.Values
+
+		emptyAutoscalerOptions = &extensionsv1alpha1.ClusterAutoscalerOptions{}
+		kubeletConfig          = &gardencorev1beta1.KubeletConfig{
+			CPUManagerPolicy: ptr.To("static"),
+		}
+		workerKubeletConfig = &gardencorev1beta1.KubeletConfig{
+			CPUManagerPolicy: ptr.To("none"),
+		}
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		mockNow = mocktime.NewMockNow(ctrl)
+		now = time.Now()
+		metav1Now = metav1.NewTime(now)
+
+		s := runtime.NewScheme()
+		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
+		c = fake.NewClientBuilder().WithScheme(s).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build()
+
 		machineTypes = []gardencorev1beta1.MachineType{
 			{
 				Name:   worker1MachineType,
@@ -137,31 +167,6 @@ var _ = Describe("Worker", func() {
 				"memory": machineTypes[1].Memory,
 			},
 		}
-
-		w, empty *extensionsv1alpha1.Worker
-		wSpec    extensionsv1alpha1.WorkerSpec
-
-		defaultDepWaiter worker.Interface
-		values           *worker.Values
-
-		emptyAutoscalerOptions = &extensionsv1alpha1.ClusterAutoscalerOptions{}
-		kubeletConfig          = &gardencorev1beta1.KubeletConfig{
-			CPUManagerPolicy: ptr.To("static"),
-		}
-		workerKubeletConfig = &gardencorev1beta1.KubeletConfig{
-			CPUManagerPolicy: ptr.To("none"),
-		}
-	)
-
-	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		mockNow = mocktime.NewMockNow(ctrl)
-		now = time.Now()
-		metav1Now = metav1.NewTime(now)
-
-		s := runtime.NewScheme()
-		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
-		c = fake.NewClientBuilder().WithScheme(s).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build()
 
 		values = &worker.Values{
 			Name:                         name,
@@ -486,7 +491,7 @@ var _ = Describe("Worker", func() {
 			}))
 		})
 
-		It("should successfully deploy the Worker resource with cluster autoscaker options when present", func() {
+		It("should successfully deploy the Worker resource with cluster autoscaler options when present", func() {
 			defer test.WithVars(&worker.TimeNow, mockNow.Do)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
@@ -538,6 +543,54 @@ var _ = Describe("Worker", func() {
 						"gardener.cloud/timestamp": now.UTC().Format(time.RFC3339Nano),
 					},
 					ResourceVersion: "2",
+				},
+				Spec: *expectedWorkerSpec,
+			}))
+		})
+
+		It("should use a set machineCreationTimeout in the cloud profile if no value is provided in the worker pool", func() {
+			defer test.WithVars(&worker.TimeNow, mockNow.Do)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			newValues := *values
+			workerWithCreationTimeout := values.Workers[0]
+			workerWithCreationTimeout.MachineControllerManagerSettings.MachineCreationTimeout = &metav1.Duration{Duration: 1 * time.Minute}
+			newValues.Workers = []gardencorev1beta1.Worker{
+				workerWithCreationTimeout,
+				values.Workers[1],
+			}
+			machineTypes[0].MachineControllerManager = &gardencorev1beta1.CloudProfileMachineControllerManagerSettings{
+				MachineCreationTimeout: &metav1.Duration{Duration: 15 * time.Minute},
+			}
+			machineTypes[1].MachineControllerManager = &gardencorev1beta1.CloudProfileMachineControllerManagerSettings{
+				MachineCreationTimeout: &metav1.Duration{Duration: 30 * time.Minute},
+			}
+			newValues.MachineTypes = machineTypes
+
+			expectedWorkerSpec := wSpec.DeepCopy()
+			expectedWorkerSpec.Pools = []extensionsv1alpha1.WorkerPool{
+				wSpec.Pools[0],
+				wSpec.Pools[1],
+			}
+			expectedWorkerSpec.Pools[0].MachineControllerManagerSettings.MachineCreationTimeout = &metav1.Duration{Duration: 1 * time.Minute}
+			expectedWorkerSpec.Pools[1].MachineControllerManagerSettings = &gardencorev1beta1.MachineControllerManagerSettings{
+				MachineCreationTimeout: &metav1.Duration{Duration: 30 * time.Minute},
+			}
+
+			defaultDepWaiter = worker.New(log, c, &newValues, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+			obj := &extensionsv1alpha1.Worker{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj)).To(Succeed())
+			Expect(obj).To(DeepEqual(&extensionsv1alpha1.Worker{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+					Annotations: map[string]string{
+						"gardener.cloud/operation": "reconcile",
+						"gardener.cloud/timestamp": now.UTC().Format(time.RFC3339Nano),
+					},
+					ResourceVersion: "1",
 				},
 				Spec: *expectedWorkerSpec,
 			}))

@@ -71,6 +71,8 @@ func (*CloudProfile) ProtoMessage() {}
 
 func (*CloudProfileList) ProtoMessage() {}
 
+func (*CloudProfileMachineControllerManagerSettings) ProtoMessage() {}
+
 func (*CloudProfileReference) ProtoMessage() {}
 
 func (*CloudProfileSpec) ProtoMessage() {}

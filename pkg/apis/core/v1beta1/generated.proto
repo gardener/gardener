@@ -418,6 +418,13 @@ message CloudProfileList {
   repeated CloudProfile items = 2;
 }
 
+// CloudProfileMachineControllerManagerSettings contains a subset of the MachineControllerManagerSettings which can be defaulted for a machine type in a CloudProfile.
+message CloudProfileMachineControllerManagerSettings {
+  // MachineCreationTimeout is the period after which creation of a machine of this machine type is declared failed.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration machineCreationTimeout = 1;
+}
+
 // CloudProfileReference holds the information about a CloudProfile or a NamespacedCloudProfile.
 message CloudProfileReference {
   // Kind contains a CloudProfile kind.
@@ -2136,6 +2143,10 @@ message MachineType {
   // Capabilities contains the machine type capabilities.
   // +optional
   map<string, CapabilityValues> capabilities = 8;
+
+  // MachineControllerManagerSettings contains a subset of the MachineControllerManagerSettings which can be defaulted for a machine type in a CloudProfile.
+  // +optional
+  optional CloudProfileMachineControllerManagerSettings machineControllerManager = 9;
 }
 
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.
