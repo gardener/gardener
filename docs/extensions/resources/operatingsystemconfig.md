@@ -296,7 +296,8 @@ For example, this allows to have node-specific certificates to be distributed to
 
 If the `hostName` field is not set, the file will be applied to all nodes of the worker pool as usual.
 
-:information_source: Files need to be unique per `OperatingSystemConfig` resource, meaning that you cannot have two files with the same `path`.
+> [!NOTE]
+> Files need to be unique per `OperatingSystemConfig` resource, meaning that you cannot have two files with the same `path`.
 The rule is enforced by the `OperatingSystemConfig` validation.
 The only exception to this rule are host-specific files.
 You can have duplicate `path` entries in the same `OperatingSystemConfig` if `hostName` is set for all of them and the values of the `hostName` fields are different.
