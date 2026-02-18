@@ -197,26 +197,27 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 				kubeletConfig = workerPool.Kubernetes.Kubelet
 			}
 		}
-		machineDetails := v1beta1helper.FindMachineTypeByName(w.values.MachineTypes, workerPool.Machine.Type)
-		if machineDetails != nil && machineDetails.MachineControllerManagerSettings != nil && machineDetails.MachineControllerManagerSettings.MachineCreationTimeout != nil {
+
+		machineType := v1beta1helper.FindMachineTypeByName(w.values.MachineTypes, workerPool.Machine.Type)
+		if machineType != nil && machineType.MachineControllerManager != nil && machineType.MachineControllerManager.MachineCreationTimeout != nil {
 			// A MachineCreationTimeout set in the cloud profile will be used if no value is specified in the worker pool.
 			if workerPool.MachineControllerManagerSettings == nil {
 				workerPool.MachineControllerManagerSettings = &gardencorev1beta1.MachineControllerManagerSettings{}
 			}
 			if workerPool.MachineControllerManagerSettings.MachineCreationTimeout == nil {
-				workerPool.MachineControllerManagerSettings.MachineCreationTimeout = machineDetails.MachineControllerManagerSettings.MachineCreationTimeout
+				workerPool.MachineControllerManagerSettings.MachineCreationTimeout = machineType.MachineControllerManager.MachineCreationTimeout
 			}
 		}
 
-		nodeTemplate, machineType := w.findNodeTemplateAndMachineTypeByPoolName(obj, workerPool.Name)
-		if nodeTemplate == nil || machineType != workerPool.Machine.Type {
+		nodeTemplate, machineTypeName := w.findNodeTemplateAndMachineTypeByPoolName(obj, workerPool.Name)
+		if nodeTemplate == nil || machineTypeName != workerPool.Machine.Type {
 			// initializing nodeTemplate by fetching details from cloudprofile, if present there
-			if machineDetails != nil {
+			if machineType != nil {
 				nodeTemplate = &extensionsv1alpha1.NodeTemplate{
 					Capacity: corev1.ResourceList{
-						corev1.ResourceCPU:    machineDetails.CPU,
-						"gpu":                 machineDetails.GPU,
-						corev1.ResourceMemory: machineDetails.Memory,
+						corev1.ResourceCPU:    machineType.CPU,
+						"gpu":                 machineType.GPU,
+						corev1.ResourceMemory: machineType.Memory,
 					},
 				}
 			} else {

@@ -192,7 +192,7 @@ type LifecycleStage struct {
 	StartTime *metav1.Time `json:"startTime,omitempty" protobuf:"bytes,2,opt,name=startTime"`
 }
 
-// CloudProfileMachineControllerManagerSettings contains a subset of the MachineControllerManagerSettings with configurations for a machine type, e.g., MachineCreationTimeout.
+// CloudProfileMachineControllerManagerSettings contains a subset of the MachineControllerManagerSettings which can be defaulted for a machine type in a CloudProfile.
 type CloudProfileMachineControllerManagerSettings struct {
 	// MachineCreationTimeout is the period after which creation of a machine of this machine type is declared failed.
 	// +optional
@@ -221,9 +221,9 @@ type MachineType struct {
 	// Capabilities contains the machine type capabilities.
 	// +optional
 	Capabilities Capabilities `json:"capabilities,omitempty" protobuf:"bytes,8,rep,name=capabilities,casttype=Capabilities"`
-	// MachineControllerManagerSettings contains a subset of the MachineControllerManagerSettings with configurations for a machine type, e.g., MachineCreationTimeout.
+	// MachineControllerManagerSettings contains a subset of the MachineControllerManagerSettings which can be defaulted for a machine type in a CloudProfile.
 	// +optional
-	MachineControllerManagerSettings *CloudProfileMachineControllerManagerSettings `json:"machineControllerManager,omitempty" protobuf:"bytes,9,opt,name=machineControllerManager"`
+	MachineControllerManager *CloudProfileMachineControllerManagerSettings `json:"machineControllerManager,omitempty" protobuf:"bytes,9,opt,name=machineControllerManager"`
 }
 
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.

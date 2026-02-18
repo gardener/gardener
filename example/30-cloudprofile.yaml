@@ -87,6 +87,8 @@ spec:
       # architecture: amd64 # optional
       # capabilities: # CloudProfileCapabilities feature gate enabled
       #   architecture: [amd64]
+      # machineControllerManager:
+      #   machineCreationTimeout: 20m # optional, can be overridden by shoot.spec.provider.workers.machineControllerManager.machineCreationTimeout if set there
   volumeTypes: # optional (not needed in every environment, may only be specified if no machineType has a `storage` field)
     - name: gp3
       class: standard

@@ -559,10 +559,10 @@ var _ = Describe("Worker", func() {
 				workerWithCreationTimeout,
 				values.Workers[1],
 			}
-			machineTypes[0].MachineControllerManagerSettings = &gardencorev1beta1.CloudProfileMachineControllerManagerSettings{
+			machineTypes[0].MachineControllerManager = &gardencorev1beta1.CloudProfileMachineControllerManagerSettings{
 				MachineCreationTimeout: &metav1.Duration{Duration: 15 * time.Minute},
 			}
-			machineTypes[1].MachineControllerManagerSettings = &gardencorev1beta1.CloudProfileMachineControllerManagerSettings{
+			machineTypes[1].MachineControllerManager = &gardencorev1beta1.CloudProfileMachineControllerManagerSettings{
 				MachineCreationTimeout: &metav1.Duration{Duration: 30 * time.Minute},
 			}
 			newValues.MachineTypes = machineTypes
