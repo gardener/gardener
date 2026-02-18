@@ -62,6 +62,9 @@ func ValidateGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfig
 		if cfg.Controllers.NetworkPolicy != nil {
 			allErrs = append(allErrs, validateNetworkPolicyControllerConfiguration(cfg.Controllers.NetworkPolicy, fldPath.Child("controllers", "networkPolicy"))...)
 		}
+		if cfg.Controllers.TokenRequestorWorkloadIdentity != nil {
+			allErrs = append(allErrs, validateTokenRequestorWorkloadIdentityControllerConfiguration(cfg.Controllers.TokenRequestorWorkloadIdentity, fldPath.Child("controllers", "tokenRequestorWorkloadIdentity"))...)
+		}
 	}
 
 	if cfg.LogLevel != "" {
@@ -315,6 +318,16 @@ func validateBastionControllerConfiguration(cfg *gardenletconfigv1alpha1.Bastion
 
 	if cfg.ConcurrentSyncs != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*cfg.ConcurrentSyncs), fldPath.Child("concurrentSyncs"))...)
+	}
+
+	return allErrs
+}
+
+func validateTokenRequestorWorkloadIdentityControllerConfiguration(cfg *gardenletconfigv1alpha1.TokenRequestorWorkloadIdentityControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if cfg.TokenExpirationDuration != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*cfg.TokenExpirationDuration), fldPath.Child("tokenExpirationDuration"))...)
 	}
 
 	return allErrs

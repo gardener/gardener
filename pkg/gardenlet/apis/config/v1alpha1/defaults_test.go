@@ -534,15 +534,20 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
 			Expect(obj.Controllers.TokenRequestorWorkloadIdentity.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration).To(PointTo(Equal(6 * time.Hour)))
 		})
 
 		It("should not overwrite already set values for the token requestor controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				TokenRequestorWorkloadIdentity: &TokenRequestorWorkloadIdentityControllerConfiguration{ConcurrentSyncs: ptr.To(10)},
+				TokenRequestorWorkloadIdentity: &TokenRequestorWorkloadIdentityControllerConfiguration{
+					ConcurrentSyncs:         ptr.To(10),
+					TokenExpirationDuration: ptr.To(12 * time.Hour),
+				},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
 			Expect(obj.Controllers.TokenRequestorWorkloadIdentity.ConcurrentSyncs).To(PointTo(Equal(10)))
+			Expect(obj.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration).To(PointTo(Equal(12 * time.Hour)))
 		})
 	})
 

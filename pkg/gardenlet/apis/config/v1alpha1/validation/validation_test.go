@@ -126,9 +126,7 @@ var _ = Describe("GardenletConfiguration", func() {
 
 	Describe("#ValidateGardenletConfiguration", func() {
 		It("should allow valid configurations", func() {
-			errorList := ValidateGardenletConfiguration(cfg, nil)
-
-			Expect(errorList).To(BeEmpty())
+			Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 		})
 
 		Context("client connection configuration", func() {
@@ -515,6 +513,37 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 		})
 
+		Context("token requestor workload identity controller", func() {
+			BeforeEach(func() {
+				cfg.Controllers.TokenRequestorWorkloadIdentity = &gardenletconfigv1alpha1.TokenRequestorWorkloadIdentityControllerConfiguration{}
+			})
+
+			It("should allow valid configuration", func() {
+				cfg.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration = ptr.To(6 * time.Hour)
+
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
+			})
+
+			It("should allow configuration with nil tokenExpirationDuration", func() {
+				cfg.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration = nil
+
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
+			})
+
+			It("should forbid negative tokenExpirationDuration", func() {
+				cfg.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration = ptr.To(-1 * time.Hour)
+
+				errorList := ValidateGardenletConfiguration(cfg, nil)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.tokenRequestorWorkloadIdentity.tokenExpirationDuration"),
+					})),
+				))
+			})
+		})
+
 		Context("seed config", func() {
 			It("should not require a seedConfig", func() {
 				cfg.SeedConfig = nil
@@ -580,8 +609,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			It("should pass as sni config contains a valid external service ip", func() {
 				cfg.SNI.Ingress.ServiceExternalIP = ptr.To("1.1.1.1")
 
-				errorList := ValidateGardenletConfiguration(cfg, nil)
-				Expect(errorList).To(BeEmpty())
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 			})
 
 			It("should forbid as sni config contains an empty external service ip", func() {
@@ -619,8 +647,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should pass valid exposureClassHandler", func() {
-				errorList := ValidateGardenletConfiguration(cfg, nil)
-				Expect(errorList).To(BeEmpty())
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 			})
 
 			It("should fail as exposureClassHandler name is no DNS1123 label with zero length", func() {
@@ -693,17 +720,13 @@ var _ = Describe("GardenletConfiguration", func() {
 				It("should allow to use an external service ip as loadbalancer ip is valid", func() {
 					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = ptr.To("1.1.1.1")
 
-					errorList := ValidateGardenletConfiguration(cfg, nil)
-
-					Expect(errorList).To(BeEmpty())
+					Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 				})
 
 				It("should allow to use an external service ip", func() {
 					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = ptr.To("1.1.1.1")
 
-					errorList := ValidateGardenletConfiguration(cfg, nil)
-
-					Expect(errorList).To(BeEmpty())
+					Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 				})
 
 				It("should forbid to use an empty external service ip", func() {

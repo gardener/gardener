@@ -27,6 +27,7 @@ import (
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	securityfake "github.com/gardener/gardener/pkg/client/security/clientset/versioned/fake"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/tokenrequestor/workloadidentity"
 )
 
@@ -100,12 +101,15 @@ var _ = Describe("Reconciler", func() {
 				GardenSecurityClient: securityClient,
 				Clock:                fakeClock,
 				JitterFunc:           fakeJitter,
+				Config: &gardenletconfigv1alpha1.TokenRequestorWorkloadIdentityControllerConfiguration{
+					TokenExpirationDuration: ptr.To(6 * time.Hour),
+				},
 			}
 
 			secretName = "cloudsecret"
 			workloadIdentityName = "foo-cloud"
 			workloadIdentityNamespace = "garden-foo"
-			expectedRenewDuration = 6 * time.Hour * 80 / 100
+			expectedRenewDuration = 6 * time.Hour * 50 / 100
 			token = "foo"
 
 			secret = &corev1.Secret{
@@ -215,7 +219,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should always renew the token after 24h", func() {
-			expectedRenewDuration = 24 * time.Hour * 80 / 100
+			expectedRenewDuration = 24 * time.Hour * 50 / 100
 			fakeCreateWorkloadIdentityToken(ptr.To[int64](3600 * 100))
 
 			Expect(seedClient.Create(ctx, secret)).To(Succeed())
