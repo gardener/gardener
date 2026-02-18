@@ -41,7 +41,7 @@ import (
 )
 
 // AddToManager adds all gardenlet controllers to the given manager.
-// shootCluster is only needed to be non-nil when running in self-hosted shoot mode.
+// selfHostedShoot is only needed to be non-nil when running in self-hosted shoot mode.
 func AddToManager(
 	ctx context.Context,
 	mgr manager.Manager,
@@ -51,7 +51,7 @@ func AddToManager(
 	shootClientMap clientmap.ClientMap,
 	cfg *gardenletconfigv1alpha1.GardenletConfiguration,
 	healthManager healthz.Manager,
-	shootCluster *gardencorev1beta1.Shoot,
+	selfHostedShoot *gardencorev1beta1.Shoot,
 ) error {
 	identity, err := gardenerutils.DetermineIdentity()
 	if err != nil {
@@ -84,7 +84,7 @@ func AddToManager(
 		return fmt.Errorf("failed creating seed clientset: %w", err)
 	}
 
-	seedNetworks := getSeedNetworks(cfg, shootCluster)
+	seedNetworks := networkConfigForNetworkPolicyController(cfg, selfHostedShoot)
 
 	if gardenletutils.IsResponsibleForSelfHostedShoot() {
 		mgr.GetLogger().Info("Running in self-hosted shoot, registering minimal set of controllers")
@@ -208,13 +208,13 @@ func AddToManager(
 	return nil
 }
 
-func getSeedNetworks(cfg *gardenletconfigv1alpha1.GardenletConfiguration, shoot *gardencorev1beta1.Shoot) gardencorev1beta1.SeedNetworks {
-	if shoot != nil {
+func networkConfigForNetworkPolicyController(cfg *gardenletconfigv1alpha1.GardenletConfiguration, selfHostedShoot *gardencorev1beta1.Shoot) gardencorev1beta1.SeedNetworks {
+	if selfHostedShoot != nil {
 		return gardencorev1beta1.SeedNetworks{
-			Nodes:      shoot.Spec.Networking.Nodes,
-			Pods:       ptr.Deref(shoot.Spec.Networking.Pods, ""),
-			Services:   ptr.Deref(shoot.Spec.Networking.Services, ""),
-			IPFamilies: shoot.Spec.Networking.IPFamilies,
+			Nodes:      selfHostedShoot.Spec.Networking.Nodes,
+			Pods:       ptr.Deref(selfHostedShoot.Spec.Networking.Pods, ""),
+			Services:   ptr.Deref(selfHostedShoot.Spec.Networking.Services, ""),
+			IPFamilies: selfHostedShoot.Spec.Networking.IPFamilies,
 		}
 	}
 	return cfg.SeedConfig.Spec.Networks

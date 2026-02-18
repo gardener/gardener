@@ -492,6 +492,7 @@ func (g *garden) Start(ctx context.Context) error {
 	if err := controllerutils.AddAllRunnables(g.mgr, runnables...); err != nil {
 		return err
 	}
+
 	var shoot *gardencorev1beta1.Shoot
 	if gardenlet.IsResponsibleForSelfHostedShoot() {
 		shoot = &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: g.selfHostedShootInfo.Meta.Name, Namespace: g.selfHostedShootInfo.Meta.Namespace}}
