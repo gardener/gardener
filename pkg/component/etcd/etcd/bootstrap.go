@@ -141,577 +141,67 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", b.secretNameServerCA)
 	}
 
-	serverSecret, err := b.secretsManager.Generate(ctx,
-		&secretsutils.CertificateSecretConfig{
-			Name:                        "etcd-druid-webhook",
-			CommonName:                  fmt.Sprintf("%s.%s.svc", druidServiceName, b.namespace),
-			DNSNames:                    kubernetesutils.DNSNamesForService(druidServiceName, b.namespace),
-			CertType:                    secretsutils.ServerCert,
-			SkipPublishingCACertificate: true,
-		},
-		secretsmanager.SignedByCA(b.secretNameServerCA, secretsmanager.UseCurrentCA),
-		secretsmanager.Rotate(secretsmanager.InPlace),
-		secretsmanager.Namespace(b.namespace),
-	)
+	serverSecret, err := b.generateServerSecret(ctx)
 	if err != nil {
 		return err
 	}
 
-	labels := func() map[string]string { return map[string]string{v1beta1constants.GardenRole: Druid} }
-
-	etcdOperatorConfig := getEtcdOperatorConfig(b.etcdConfig, b.namespace, webhookServerTLSCertMountPath)
-	etcdOperatorConfigYAML, err := runtime.Encode(druidConfigEncoder, etcdOperatorConfig)
+	operatorConfigConfigMap, err := b.getOperatorConfigConfigMap()
 	if err != nil {
-		return fmt.Errorf("could not encode etcd-druid operator configuration: %w", err)
+		return err
 	}
 
-	configMapOperatorConfig := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      druidConfigMapOperatorConfigNamePrefix,
-			Namespace: b.namespace,
-			Labels:    labels(),
-		},
-		Data: map[string]string{druidConfigMapOperatorConfigDataKey: string(etcdOperatorConfigYAML)},
-	}
-	utilruntime.Must(kubernetesutils.MakeUnique(configMapOperatorConfig))
+	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	var (
-		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-
-		serviceAccount = &corev1.ServiceAccount{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      druidServiceAccountName,
-				Namespace: b.namespace,
-				Labels:    labels(),
-			},
-			AutomountServiceAccountToken: ptr.To(false),
-		}
-
-		clusterRole = &rbacv1.ClusterRole{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   druidRBACName,
-				Labels: labels(),
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups: []string{corev1.GroupName},
-					Resources: []string{"pods"},
-					Verbs:     []string{"get", "list", "watch", "delete", "deletecollection"},
-				},
-				{
-					APIGroups: []string{corev1.GroupName},
-					Resources: []string{"secrets", "endpoints"},
-					Verbs:     []string{"get", "list", "patch", "update", "watch"},
-				},
-				{
-					APIGroups: []string{corev1.GroupName},
-					Resources: []string{"events"},
-					Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
-				},
-				{
-					APIGroups: []string{corev1.GroupName},
-					Resources: []string{"serviceaccounts"},
-					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-				},
-				{
-					APIGroups: []string{rbacv1.GroupName},
-					Resources: []string{"roles", "rolebindings"},
-					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-				},
-				{
-					APIGroups: []string{corev1.GroupName},
-					Resources: []string{"services", "configmaps"},
-					Verbs:     []string{"get", "list", "patch", "update", "watch", "create", "delete"},
-				},
-				{
-					APIGroups: []string{appsv1.GroupName},
-					Resources: []string{"statefulsets"},
-					Verbs:     []string{"get", "list", "patch", "update", "watch", "create", "delete"},
-				},
-				{
-					APIGroups: []string{batchv1.GroupName},
-					Resources: []string{"jobs"},
-					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-				},
-				{
-					APIGroups: []string{druidcorev1alpha1.SchemeGroupVersion.Group},
-					Resources: []string{"etcds", "etcdcopybackupstasks", "etcdopstasks"},
-					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-				},
-				{
-					APIGroups: []string{druidcorev1alpha1.SchemeGroupVersion.Group},
-					Resources: []string{"etcds/status", "etcds/finalizers", "etcdcopybackupstasks/status", "etcdcopybackupstasks/finalizers", "etcdopstasks/status", "etcdopstasks/finalizers"},
-					Verbs:     []string{"get", "update", "patch", "create"},
-				},
-				{
-					APIGroups: []string{coordinationv1.GroupName},
-					Resources: []string{"leases"},
-					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"},
-				},
-				{
-					APIGroups: []string{corev1.GroupName},
-					Resources: []string{"persistentvolumeclaims"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
-				{
-					APIGroups: []string{policyv1beta1.GroupName},
-					Resources: []string{"poddisruptionbudgets"},
-					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-				},
-			},
-		}
-
-		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   druidRBACName,
-				Labels: labels(),
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     druidRBACName,
-			},
-			Subjects: []rbacv1.Subject{
-				{
-					Kind:      rbacv1.ServiceAccountKind,
-					Name:      druidServiceAccountName,
-					Namespace: b.namespace,
-				},
-			},
-		}
-
-		configMapImageVectorOverwrite = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      druidConfigMapImageVectorOverwriteNamePrefix,
-				Namespace: b.namespace,
-				Labels:    labels(),
-			},
-		}
-
-		vpaUpdateMode = vpaautoscalingv1.UpdateModeRecreate
-		vpa           = &vpaautoscalingv1.VerticalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      druidVPAName,
-				Namespace: b.namespace,
-				Labels:    labels(),
-			},
-			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
-				TargetRef: &autoscalingv1.CrossVersionObjectReference{
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-					Kind:       "Deployment",
-					Name:       druidDeploymentName,
-				},
-				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: &vpaUpdateMode,
-				},
-				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-						{
-							ContainerName: Druid,
-							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("100M"),
-							},
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-						},
-						{
-							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-						}},
-				},
-			},
-		}
-
-		service = &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      druidServiceName,
-				Namespace: b.namespace,
-				Labels: utils.MergeStringMaps(map[string]string{
-					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
-				}, labels()),
-			},
-			Spec: corev1.ServiceSpec{
-				Type:     corev1.ServiceTypeClusterIP,
-				Selector: labels(),
-				Ports: []corev1.ServicePort{
-					{
-						Name:       metricsPortName,
-						Protocol:   corev1.ProtocolTCP,
-						Port:       metricsPort,
-						TargetPort: intstr.FromInt32(metricsPort),
-					},
-					{
-						Name:       webhookServerPortName,
-						Protocol:   corev1.ProtocolTCP,
-						Port:       webhookServerServicePort,
-						TargetPort: intstr.FromInt32(webhookServerPort),
-					},
-				},
-			},
-		}
-
-		opUpdateAndDelete = []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete}
-		opDelete          = []admissionregistrationv1.OperationType{admissionregistrationv1.Delete}
-		clientConfig      = admissionregistrationv1.WebhookClientConfig{
-			Service: &admissionregistrationv1.ServiceReference{
-				Name:      druidServiceName,
-				Namespace: b.namespace,
-				Path:      ptr.To("/webhooks/etcdcomponents"),
-				Port:      ptr.To[int32](webhookServerServicePort),
-			},
-			CABundle: caSecret.Data[secretsutils.DataKeyCertificateBundle],
-		}
-		validatingWebhookConfiguration = &admissionregistrationv1.ValidatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      druidWebhookName,
-				Namespace: b.namespace,
-				Labels:    labels(),
-			},
-			Webhooks: []admissionregistrationv1.ValidatingWebhook{
-				{
-					Name:                    "etcdcomponents.webhooks.druid.gardener.cloud",
-					ClientConfig:            clientConfig,
-					FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-					MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
-					SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
-					TimeoutSeconds:          ptr.To[int32](10),
-					AdmissionReviewVersions: []string{"v1", "v1beta1"},
-					ObjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-						druidcorev1alpha1.LabelManagedByKey: druidcorev1alpha1.LabelManagedByValue,
-					}},
-					Rules: []admissionregistrationv1.RuleWithOperations{
-						{
-							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{corev1.GroupName},
-								APIVersions: []string{"v1"},
-								Resources:   []string{"serviceaccounts", "services", "configmaps"},
-								Scope:       ptr.To(admissionregistrationv1.AllScopes),
-							},
-							Operations: opUpdateAndDelete,
-						},
-						{
-							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{corev1.GroupName},
-								APIVersions: []string{"v1"},
-								Resources:   []string{"persistentvolumeclaims"},
-								Scope:       ptr.To(admissionregistrationv1.AllScopes),
-							},
-							Operations: opDelete,
-						},
-						{
-							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{rbacv1.GroupName},
-								APIVersions: []string{"v1"},
-								Resources:   []string{"roles", "rolebindings"},
-								Scope:       ptr.To(admissionregistrationv1.AllScopes),
-							},
-							Operations: opUpdateAndDelete,
-						},
-						{
-							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{appsv1.GroupName},
-								APIVersions: []string{"v1"},
-								Resources:   []string{"statefulsets"},
-								Scope:       ptr.To(admissionregistrationv1.AllScopes),
-							},
-							Operations: opUpdateAndDelete,
-						},
-						{
-							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{policyv1.GroupName},
-								APIVersions: []string{"v1"},
-								Resources:   []string{"poddisruptionbudgets"},
-								Scope:       ptr.To(admissionregistrationv1.AllScopes),
-							},
-							Operations: opUpdateAndDelete,
-						},
-						{
-							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{batchv1.GroupName},
-								APIVersions: []string{"v1"},
-								Resources:   []string{"jobs"},
-								Scope:       ptr.To(admissionregistrationv1.AllScopes),
-							},
-							Operations: opUpdateAndDelete,
-						},
-						{
-							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{coordinationv1.GroupName},
-								APIVersions: []string{"v1"},
-								Resources:   []string{"leases"},
-								Scope:       ptr.To(admissionregistrationv1.AllScopes),
-							},
-							Operations: opDelete,
-						},
-					},
-				},
-
-				// This webhook is required for specially handling statefulsets/scale subresource,
-				// because an `objectSelector` does not work for subresources.
-				// Refer https://github.com/kubernetes/kubernetes/issues/113594#issuecomment-1332573990.
-				{
-					Name:                    "stsscale.etcdcomponents.webhooks.druid.gardener.cloud",
-					ClientConfig:            clientConfig,
-					FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-					MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
-					SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
-					TimeoutSeconds:          ptr.To[int32](10),
-					AdmissionReviewVersions: []string{"v1", "v1beta1"},
-					Rules: []admissionregistrationv1.RuleWithOperations{
-						{
-							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{appsv1.GroupName},
-								APIVersions: []string{"v1"},
-								Resources:   []string{"statefulsets/scale"},
-								Scope:       ptr.To(admissionregistrationv1.AllScopes),
-							},
-							Operations: opUpdateAndDelete,
-						},
-					},
-				},
-			},
-		}
-
-		deployment = &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      druidDeploymentName,
-				Namespace: b.namespace,
-				Labels: utils.MergeStringMaps(map[string]string{
-					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
-				}, labels()),
-			},
-			Spec: appsv1.DeploymentSpec{
-				Replicas:             ptr.To[int32](1),
-				RevisionHistoryLimit: ptr.To[int32](1),
-				Selector: &metav1.LabelSelector{
-					MatchLabels: labels(),
-				},
-				Template: corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: utils.MergeStringMaps(labels(), map[string]string{
-							v1beta1constants.LabelNetworkPolicyToDNS:                                      v1beta1constants.LabelNetworkPolicyAllowed,
-							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                         v1beta1constants.LabelNetworkPolicyAllowed,
-							"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080": v1beta1constants.LabelNetworkPolicyAllowed,
-						}),
-					},
-					Spec: corev1.PodSpec{
-						Tolerations:        []corev1.Toleration{{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists}},
-						PriorityClassName:  b.priorityClassName,
-						ServiceAccountName: druidServiceAccountName,
-						Containers: []corev1.Container{
-							{
-								Name:            Druid,
-								Image:           b.image,
-								ImagePullPolicy: corev1.PullIfNotPresent,
-								Args:            []string{fmt.Sprintf("--config=%s", druidDeploymentVolumeMountPathOperatorConfig+"/"+druidConfigMapOperatorConfigDataKey)},
-								Resources: corev1.ResourceRequirements{
-									Requests: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("50m"),
-										corev1.ResourceMemory: resource.MustParse("128Mi"),
-									},
-								},
-								Ports: []corev1.ContainerPort{{
-									ContainerPort: metricsPort,
-								}},
-								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
-								},
-								VolumeMounts: []corev1.VolumeMount{
-									{
-										Name:      webhookServerTLSCertVolumeName,
-										MountPath: webhookServerTLSCertMountPath,
-										ReadOnly:  true,
-									},
-									{
-										Name:      druidDeploymentVolumeNameOperatorConfig,
-										MountPath: druidDeploymentVolumeMountPathOperatorConfig,
-										ReadOnly:  true,
-									},
-								},
-							},
-						},
-						Volumes: []corev1.Volume{
-							{
-								Name: webhookServerTLSCertVolumeName,
-								VolumeSource: corev1.VolumeSource{
-									Secret: &corev1.SecretVolumeSource{
-										SecretName:  serverSecret.Name,
-										DefaultMode: ptr.To[int32](420),
-									},
-								},
-							},
-							{
-								Name: druidDeploymentVolumeNameOperatorConfig,
-								VolumeSource: corev1.VolumeSource{
-									ConfigMap: &corev1.ConfigMapVolumeSource{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: configMapOperatorConfig.Name,
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		}
-
-		podDisruptionBudget = &policyv1.PodDisruptionBudget{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      druidDeploymentName,
-				Namespace: deployment.Namespace,
-				Labels:    labels(),
-			},
-			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
-				Selector:                   deployment.Spec.Selector,
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
-			},
-		}
-
-		serviceMonitor = &monitoringv1.ServiceMonitor{
-			ObjectMeta: monitoringutils.ConfigObjectMeta(druidServiceName, b.namespace, cache.Label),
-			Spec: monitoringv1.ServiceMonitorSpec{
-				Selector: metav1.LabelSelector{MatchLabels: labels()},
-				Endpoints: []monitoringv1.Endpoint{{
-					Port: metricsPortName,
-					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
-						"etcddruid_compaction_jobs_total",
-						"etcddruid_compaction_full_snapshot_triggered_total",
-						"etcddruid_compaction_jobs_current",
-						"etcddruid_compaction_job_duration_seconds_bucket",
-						"etcddruid_compaction_job_duration_seconds_sum",
-						"etcddruid_compaction_job_duration_seconds_count",
-						"etcddruid_compaction_num_delta_events",
-					),
-				}},
-			},
-		}
-
-		resourcesToAdd = []client.Object{
-			configMapOperatorConfig,
-			serviceAccount,
-			clusterRole,
-			clusterRoleBinding,
-			vpa,
-			serviceMonitor,
-			validatingWebhookConfiguration,
-		}
-	)
-
-	resourcesToAdd = append(resourcesToAdd, podDisruptionBudget)
+	serviceAccount := b.getServiceAccount()
+	clusterRole := b.getClusterRole()
+	clusterRoleBinding := b.getClusterRoleBinding(serviceAccount, clusterRole)
+	vpa := b.getVPA()
+	service := b.getService()
+	validatingWebhookConfiguration := b.getValidatingWebhookConfiguration(caSecret.Data[secretsutils.DataKeyCertificateBundle])
+	deployment := b.getDeployment(serverSecret.Name, operatorConfigConfigMap.Name)
+	podDisruptionBudget := b.getPDB(deployment)
+	serviceMonitor := b.getServiceMonitor()
 
 	portMetrics := networkingv1.NetworkPolicyPort{
 		Port:     ptr.To(intstr.FromInt32(metricsPort)),
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}
-
 	metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, webhookServerPort))
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, portMetrics))
-
-	resourcesToAdd = append(resourcesToAdd, service)
 
 	if b.managedbyGardenerOperator {
 		deployment.Spec.Template.Labels["networking.resources.gardener.cloud/to-virtual-garden-etcd-main-client-tcp-8080"] = v1beta1constants.LabelNetworkPolicyAllowed
 	}
 
-	if b.imageVectorOverwrite != nil {
-		configMapImageVectorOverwrite.Data = map[string]string{druidConfigMapImageVectorOverwriteDataKey: *b.imageVectorOverwrite}
-		utilruntime.Must(kubernetesutils.MakeUnique(configMapImageVectorOverwrite))
-		resourcesToAdd = append(resourcesToAdd, configMapImageVectorOverwrite)
+	resourcesToAdd := []client.Object{
+		operatorConfigConfigMap,
+		serviceAccount,
+		clusterRole,
+		clusterRoleBinding,
+		vpa,
+		serviceMonitor,
+		validatingWebhookConfiguration,
+		service,
+		podDisruptionBudget,
+	}
 
-		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: druidDeploymentVolumeNameImageVectorOverwrite,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: configMapImageVectorOverwrite.Name,
-					},
-				},
-			},
-		})
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      druidDeploymentVolumeNameImageVectorOverwrite,
-			MountPath: druidDeploymentVolumeMountPathImageVectorOverwrite,
-			ReadOnly:  true,
-		})
-		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
-			Name:  imagevector.OverrideEnv,
-			Value: druidDeploymentVolumeMountPathImageVectorOverwrite + "/" + druidConfigMapImageVectorOverwriteDataKey,
-		})
+	if b.imageVectorOverwrite != nil {
+		imageVectorOverwriteConfigMap := b.getImageVectorOverwriteConfigMap()
+		utilruntime.Must(kubernetesutils.MakeUnique(imageVectorOverwriteConfigMap))
+		resourcesToAdd = append(resourcesToAdd, imageVectorOverwriteConfigMap)
+		b.injectImageVectorOverwrite(deployment, imageVectorOverwriteConfigMap.Name)
 	}
 
 	utilruntime.Must(references.InjectAnnotations(deployment))
+	resourcesToAdd = append(resourcesToAdd, deployment)
 
-	resources, err := registry.AddAllAndSerialize(append(resourcesToAdd, deployment)...)
+	resources, err := registry.AddAllAndSerialize(resourcesToAdd...)
 	if err != nil {
 		return err
 	}
 
 	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, resources)
-}
-
-func getEtcdOperatorConfig(etcdConfig *gardenletconfigv1alpha1.ETCDConfig, namespace string, webhookServerTLSMountPath string) *druidconfigv1alpha1.OperatorConfiguration {
-	etcdOperatorConfig := &druidconfigv1alpha1.OperatorConfiguration{
-		LeaderElection: druidconfigv1alpha1.LeaderElectionConfiguration{
-			Enabled: true,
-		},
-		Server: druidconfigv1alpha1.ServerConfiguration{
-			Webhooks: &druidconfigv1alpha1.TLSServer{
-				Server: druidconfigv1alpha1.Server{
-					Port: webhookServerPort,
-				},
-				ServerCertDir: webhookServerTLSMountPath,
-			},
-		},
-		Controllers: druidconfigv1alpha1.ControllerConfiguration{
-			Etcd: druidconfigv1alpha1.EtcdControllerConfiguration{
-				ConcurrentSyncs:                    ptr.To(int(*etcdConfig.ETCDController.Workers)),
-				DisableEtcdServiceAccountAutomount: true,
-				EnableEtcdSpecAutoReconcile:        false,
-			},
-			Compaction: druidconfigv1alpha1.CompactionControllerConfiguration{
-				Enabled:         *etcdConfig.BackupCompactionController.EnableBackupCompaction,
-				ConcurrentSyncs: ptr.To(int(*etcdConfig.BackupCompactionController.Workers)),
-				EventsThreshold: *etcdConfig.BackupCompactionController.EventsThreshold,
-			},
-			EtcdCopyBackupsTask: druidconfigv1alpha1.EtcdCopyBackupsTaskControllerConfiguration{
-				// Preserve backwards-compatibility with CLI flags, where it is enabled by default.
-				Enabled: true,
-			},
-			EtcdOpsTask: druidconfigv1alpha1.EtcdOpsTaskControllerConfiguration{
-				ConcurrentSyncs: ptr.To(3),
-				RequeueInterval: &metav1.Duration{Duration: 15 * time.Second},
-			},
-		},
-		Webhooks: druidconfigv1alpha1.WebhookConfiguration{
-			EtcdComponentProtection: druidconfigv1alpha1.EtcdComponentProtectionWebhookConfiguration{
-				Enabled: true,
-				ExemptServiceAccounts: []string{
-					"system:serviceaccount:kube-system:generic-garbage-collector",
-				},
-				// `AutomountServiceAccountToken` is set to false for the etcd-druid controller deployment,
-				// but GRM has a mutating webhook to mount the service account token as a projected volume.
-				// So, it is safe to provide this service account configuration to the etcd-druid controller.
-				ServiceAccountInfo: &druidconfigv1alpha1.ServiceAccountInfo{
-					Name:      druidServiceAccountName,
-					Namespace: namespace,
-				},
-			},
-		},
-	}
-	if etcdConfig.BackupCompactionController.MetricsScrapeWaitDuration != nil {
-		etcdOperatorConfig.Controllers.Compaction.MetricsScrapeWaitDuration = metav1.Duration{Duration: etcdConfig.BackupCompactionController.MetricsScrapeWaitDuration.Duration}
-	}
-	if etcdConfig.BackupCompactionController.ActiveDeadlineDuration != nil {
-		etcdOperatorConfig.Controllers.Compaction.ActiveDeadlineDuration = metav1.Duration{Duration: etcdConfig.BackupCompactionController.ActiveDeadlineDuration.Duration}
-	}
-	if etcdConfig.FeatureGates != nil {
-		etcdOperatorConfig.FeatureGates = etcdConfig.FeatureGates
-	}
-
-	druidconfigv1alpha1.SetObjectDefaults_OperatorConfiguration(etcdOperatorConfig)
-
-	return etcdOperatorConfig
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {
@@ -753,4 +243,556 @@ func (b *bootstrapper) WaitCleanup(ctx context.Context) error {
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, b.client, b.namespace, managedResourceControlName)
+}
+
+func (b *bootstrapper) labels() map[string]string {
+	return map[string]string{v1beta1constants.GardenRole: Druid}
+}
+
+func (b *bootstrapper) generateServerSecret(ctx context.Context) (*corev1.Secret, error) {
+	return b.secretsManager.Generate(ctx,
+		&secretsutils.CertificateSecretConfig{
+			Name:                        "etcd-druid-webhook",
+			CommonName:                  fmt.Sprintf("%s.%s.svc", druidServiceName, b.namespace),
+			DNSNames:                    kubernetesutils.DNSNamesForService(druidServiceName, b.namespace),
+			CertType:                    secretsutils.ServerCert,
+			SkipPublishingCACertificate: true,
+		},
+		secretsmanager.SignedByCA(b.secretNameServerCA, secretsmanager.UseCurrentCA),
+		secretsmanager.Rotate(secretsmanager.InPlace),
+		secretsmanager.Namespace(b.namespace),
+	)
+}
+
+func (b *bootstrapper) getOperatorConfigConfigMap() (*corev1.ConfigMap, error) {
+	etcdOperatorConfig := b.getEtcdOperatorConfig()
+	etcdOperatorConfigYAML, err := runtime.Encode(druidConfigEncoder, etcdOperatorConfig)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode etcd-druid operator configuration: %w", err)
+	}
+
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      druidConfigMapOperatorConfigNamePrefix,
+			Namespace: b.namespace,
+			Labels:    b.labels(),
+		},
+		Data: map[string]string{druidConfigMapOperatorConfigDataKey: string(etcdOperatorConfigYAML)},
+	}
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
+	return configMap, nil
+}
+
+func (b *bootstrapper) getEtcdOperatorConfig() *druidconfigv1alpha1.OperatorConfiguration {
+	etcdOperatorConfig := &druidconfigv1alpha1.OperatorConfiguration{
+		LeaderElection: druidconfigv1alpha1.LeaderElectionConfiguration{
+			Enabled: true,
+		},
+		Server: druidconfigv1alpha1.ServerConfiguration{
+			Webhooks: &druidconfigv1alpha1.TLSServer{
+				Server: druidconfigv1alpha1.Server{
+					Port: webhookServerPort,
+				},
+				ServerCertDir: webhookServerTLSCertMountPath,
+			},
+		},
+		Controllers: druidconfigv1alpha1.ControllerConfiguration{
+			Etcd: druidconfigv1alpha1.EtcdControllerConfiguration{
+				ConcurrentSyncs:                    ptr.To(int(*b.etcdConfig.ETCDController.Workers)),
+				DisableEtcdServiceAccountAutomount: true,
+				EnableEtcdSpecAutoReconcile:        false,
+			},
+			Compaction: druidconfigv1alpha1.CompactionControllerConfiguration{
+				Enabled:         *b.etcdConfig.BackupCompactionController.EnableBackupCompaction,
+				ConcurrentSyncs: ptr.To(int(*b.etcdConfig.BackupCompactionController.Workers)),
+				EventsThreshold: *b.etcdConfig.BackupCompactionController.EventsThreshold,
+			},
+			EtcdCopyBackupsTask: druidconfigv1alpha1.EtcdCopyBackupsTaskControllerConfiguration{
+				// Preserve backwards-compatibility with CLI flags, where it is enabled by default.
+				Enabled: true,
+			},
+			EtcdOpsTask: druidconfigv1alpha1.EtcdOpsTaskControllerConfiguration{
+				ConcurrentSyncs: ptr.To(3),
+				RequeueInterval: &metav1.Duration{Duration: 15 * time.Second},
+			},
+		},
+		Webhooks: druidconfigv1alpha1.WebhookConfiguration{
+			EtcdComponentProtection: druidconfigv1alpha1.EtcdComponentProtectionWebhookConfiguration{
+				Enabled: true,
+				ExemptServiceAccounts: []string{
+					"system:serviceaccount:kube-system:generic-garbage-collector",
+				},
+				// `AutomountServiceAccountToken` is set to false for the etcd-druid controller deployment,
+				// but GRM has a mutating webhook to mount the service account token as a projected volume.
+				// So, it is safe to provide this service account configuration to the etcd-druid controller.
+				ServiceAccountInfo: &druidconfigv1alpha1.ServiceAccountInfo{
+					Name:      druidServiceAccountName,
+					Namespace: b.namespace,
+				},
+			},
+		},
+	}
+	if b.etcdConfig.BackupCompactionController.MetricsScrapeWaitDuration != nil {
+		etcdOperatorConfig.Controllers.Compaction.MetricsScrapeWaitDuration = metav1.Duration{Duration: b.etcdConfig.BackupCompactionController.MetricsScrapeWaitDuration.Duration}
+	}
+	if b.etcdConfig.BackupCompactionController.ActiveDeadlineDuration != nil {
+		etcdOperatorConfig.Controllers.Compaction.ActiveDeadlineDuration = metav1.Duration{Duration: b.etcdConfig.BackupCompactionController.ActiveDeadlineDuration.Duration}
+	}
+	if b.etcdConfig.FeatureGates != nil {
+		etcdOperatorConfig.FeatureGates = b.etcdConfig.FeatureGates
+	}
+
+	druidconfigv1alpha1.SetObjectDefaults_OperatorConfiguration(etcdOperatorConfig)
+
+	return etcdOperatorConfig
+}
+
+func (b *bootstrapper) getServiceAccount() *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      druidServiceAccountName,
+			Namespace: b.namespace,
+			Labels:    b.labels(),
+		},
+		AutomountServiceAccountToken: ptr.To(false),
+	}
+}
+
+func (b *bootstrapper) getClusterRole() *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   druidRBACName,
+			Labels: b.labels(),
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{"pods"},
+				Verbs:     []string{"get", "list", "watch", "delete", "deletecollection"},
+			},
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{"secrets", "endpoints"},
+				Verbs:     []string{"get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{"events"},
+				Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{"serviceaccounts"},
+				Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
+			},
+			{
+				APIGroups: []string{rbacv1.GroupName},
+				Resources: []string{"roles", "rolebindings"},
+				Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
+			},
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{"services", "configmaps"},
+				Verbs:     []string{"get", "list", "patch", "update", "watch", "create", "delete"},
+			},
+			{
+				APIGroups: []string{appsv1.GroupName},
+				Resources: []string{"statefulsets"},
+				Verbs:     []string{"get", "list", "patch", "update", "watch", "create", "delete"},
+			},
+			{
+				APIGroups: []string{batchv1.GroupName},
+				Resources: []string{"jobs"},
+				Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
+			},
+			{
+				APIGroups: []string{druidcorev1alpha1.SchemeGroupVersion.Group},
+				Resources: []string{"etcds", "etcdcopybackupstasks", "etcdopstasks"},
+				Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
+			},
+			{
+				APIGroups: []string{druidcorev1alpha1.SchemeGroupVersion.Group},
+				Resources: []string{"etcds/status", "etcds/finalizers", "etcdcopybackupstasks/status", "etcdcopybackupstasks/finalizers", "etcdopstasks/status", "etcdopstasks/finalizers"},
+				Verbs:     []string{"get", "update", "patch", "create"},
+			},
+			{
+				APIGroups: []string{coordinationv1.GroupName},
+				Resources: []string{"leases"},
+				Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"},
+			},
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{"persistentvolumeclaims"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{policyv1beta1.GroupName},
+				Resources: []string{"poddisruptionbudgets"},
+				Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
+			},
+		},
+	}
+}
+
+func (b *bootstrapper) getClusterRoleBinding(serviceAccount *corev1.ServiceAccount, clusterRole *rbacv1.ClusterRole) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   druidRBACName,
+			Labels: b.labels(),
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     clusterRole.Name,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
+			},
+		},
+	}
+}
+
+func (b *bootstrapper) getImageVectorOverwriteConfigMap() *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      druidConfigMapImageVectorOverwriteNamePrefix,
+			Namespace: b.namespace,
+			Labels:    b.labels(),
+		},
+		Data: map[string]string{druidConfigMapImageVectorOverwriteDataKey: *b.imageVectorOverwrite},
+	}
+}
+
+func (b *bootstrapper) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
+	updateMode := vpaautoscalingv1.UpdateModeRecreate
+	return &vpaautoscalingv1.VerticalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      druidVPAName,
+			Namespace: b.namespace,
+			Labels:    b.labels(),
+		},
+		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+			TargetRef: &autoscalingv1.CrossVersionObjectReference{
+				APIVersion: appsv1.SchemeGroupVersion.String(),
+				Kind:       "Deployment",
+				Name:       druidDeploymentName,
+			},
+			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+				UpdateMode: &updateMode,
+			},
+			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+					ContainerName: Druid,
+					MinAllowed: corev1.ResourceList{
+						corev1.ResourceMemory: resource.MustParse("100M"),
+					},
+					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+				}, {
+					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+				}},
+			},
+		},
+	}
+}
+
+func (b *bootstrapper) getService() *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      druidServiceName,
+			Namespace: b.namespace,
+			Labels: utils.MergeStringMaps(map[string]string{
+				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+			}, b.labels()),
+		},
+		Spec: corev1.ServiceSpec{
+			Type:     corev1.ServiceTypeClusterIP,
+			Selector: b.labels(),
+			Ports: []corev1.ServicePort{
+				{
+					Name:       metricsPortName,
+					Protocol:   corev1.ProtocolTCP,
+					Port:       metricsPort,
+					TargetPort: intstr.FromInt32(metricsPort),
+				},
+				{
+					Name:       webhookServerPortName,
+					Protocol:   corev1.ProtocolTCP,
+					Port:       webhookServerServicePort,
+					TargetPort: intstr.FromInt32(webhookServerPort),
+				},
+			},
+		},
+	}
+}
+
+func (b *bootstrapper) getValidatingWebhookConfiguration(caBundle []byte) *admissionregistrationv1.ValidatingWebhookConfiguration {
+	opUpdateAndDelete := []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete}
+	opDelete := []admissionregistrationv1.OperationType{admissionregistrationv1.Delete}
+	clientConfig := admissionregistrationv1.WebhookClientConfig{
+		Service: &admissionregistrationv1.ServiceReference{
+			Name:      druidServiceName,
+			Namespace: b.namespace,
+			Path:      ptr.To("/webhooks/etcdcomponents"),
+			Port:      ptr.To[int32](webhookServerServicePort),
+		},
+		CABundle: caBundle,
+	}
+
+	return &admissionregistrationv1.ValidatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      druidWebhookName,
+			Namespace: b.namespace,
+			Labels:    b.labels(),
+		},
+		Webhooks: []admissionregistrationv1.ValidatingWebhook{
+			{
+				Name:                    "etcdcomponents.webhooks.druid.gardener.cloud",
+				ClientConfig:            clientConfig,
+				FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+				MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
+				SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+				TimeoutSeconds:          ptr.To[int32](10),
+				AdmissionReviewVersions: []string{"v1", "v1beta1"},
+				ObjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+					druidcorev1alpha1.LabelManagedByKey: druidcorev1alpha1.LabelManagedByValue,
+				}},
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{corev1.GroupName},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"serviceaccounts", "services", "configmaps"},
+							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+						},
+						Operations: opUpdateAndDelete,
+					},
+					{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{corev1.GroupName},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"persistentvolumeclaims"},
+							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+						},
+						Operations: opDelete,
+					},
+					{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{rbacv1.GroupName},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"roles", "rolebindings"},
+							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+						},
+						Operations: opUpdateAndDelete,
+					},
+					{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{appsv1.GroupName},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"statefulsets"},
+							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+						},
+						Operations: opUpdateAndDelete,
+					},
+					{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{policyv1.GroupName},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"poddisruptionbudgets"},
+							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+						},
+						Operations: opUpdateAndDelete,
+					},
+					{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{batchv1.GroupName},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"jobs"},
+							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+						},
+						Operations: opUpdateAndDelete,
+					},
+					{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{coordinationv1.GroupName},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"leases"},
+							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+						},
+						Operations: opDelete,
+					},
+				},
+			},
+			{
+				// This webhook is required for specially handling statefulsets/scale subresource,
+				// because an `objectSelector` does not work for subresources.
+				// Refer https://github.com/kubernetes/kubernetes/issues/113594#issuecomment-1332573990.
+				Name:                    "stsscale.etcdcomponents.webhooks.druid.gardener.cloud",
+				ClientConfig:            clientConfig,
+				FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+				MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
+				SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+				TimeoutSeconds:          ptr.To[int32](10),
+				AdmissionReviewVersions: []string{"v1", "v1beta1"},
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{appsv1.GroupName},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"statefulsets/scale"},
+							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+						},
+						Operations: opUpdateAndDelete,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (b *bootstrapper) getDeployment(serverSecretName string, operatorConfigMapName string) *appsv1.Deployment {
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      druidDeploymentName,
+			Namespace: b.namespace,
+			Labels: utils.MergeStringMaps(map[string]string{
+				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+			}, b.labels()),
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas:             ptr.To[int32](1),
+			RevisionHistoryLimit: ptr.To[int32](1),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: b.labels(),
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: utils.MergeStringMaps(b.labels(), map[string]string{
+						v1beta1constants.LabelNetworkPolicyToDNS:                                      v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                         v1beta1constants.LabelNetworkPolicyAllowed,
+						"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080": v1beta1constants.LabelNetworkPolicyAllowed,
+					}),
+				},
+				Spec: corev1.PodSpec{
+					Tolerations:        []corev1.Toleration{{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists}},
+					PriorityClassName:  b.priorityClassName,
+					ServiceAccountName: druidServiceAccountName,
+					Containers: []corev1.Container{
+						{
+							Name:            Druid,
+							Image:           b.image,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Args:            []string{fmt.Sprintf("--config=%s", druidDeploymentVolumeMountPathOperatorConfig+"/"+druidConfigMapOperatorConfigDataKey)},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("50m"),
+									corev1.ResourceMemory: resource.MustParse("128Mi"),
+								},
+							},
+							Ports: []corev1.ContainerPort{{
+								ContainerPort: metricsPort,
+							}},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      webhookServerTLSCertVolumeName,
+									MountPath: webhookServerTLSCertMountPath,
+									ReadOnly:  true,
+								},
+								{
+									Name:      druidDeploymentVolumeNameOperatorConfig,
+									MountPath: druidDeploymentVolumeMountPathOperatorConfig,
+									ReadOnly:  true,
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: webhookServerTLSCertVolumeName,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  serverSecretName,
+									DefaultMode: ptr.To[int32](420),
+								},
+							},
+						},
+						{
+							Name: druidDeploymentVolumeNameOperatorConfig,
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: operatorConfigMapName,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func (b *bootstrapper) injectImageVectorOverwrite(deployment *appsv1.Deployment, configMapName string) {
+	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+		Name: druidDeploymentVolumeNameImageVectorOverwrite,
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: configMapName,
+				},
+			},
+		},
+	})
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+		Name:      druidDeploymentVolumeNameImageVectorOverwrite,
+		MountPath: druidDeploymentVolumeMountPathImageVectorOverwrite,
+		ReadOnly:  true,
+	})
+	deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+		Name:  imagevector.OverrideEnv,
+		Value: druidDeploymentVolumeMountPathImageVectorOverwrite + "/" + druidConfigMapImageVectorOverwriteDataKey,
+	})
+}
+
+func (b *bootstrapper) getPDB(deployment *appsv1.Deployment) *policyv1.PodDisruptionBudget {
+	return &policyv1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      druidDeploymentName,
+			Namespace: deployment.Namespace,
+			Labels:    b.labels(),
+		},
+		Spec: policyv1.PodDisruptionBudgetSpec{
+			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			Selector:                   deployment.Spec.Selector,
+			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+		},
+	}
+}
+
+func (b *bootstrapper) getServiceMonitor() *monitoringv1.ServiceMonitor {
+	return &monitoringv1.ServiceMonitor{
+		ObjectMeta: monitoringutils.ConfigObjectMeta(druidServiceName, b.namespace, cache.Label),
+		Spec: monitoringv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{MatchLabels: b.labels()},
+			Endpoints: []monitoringv1.Endpoint{{
+				Port: metricsPortName,
+				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+					"etcddruid_compaction_jobs_total",
+					"etcddruid_compaction_full_snapshot_triggered_total",
+					"etcddruid_compaction_jobs_current",
+					"etcddruid_compaction_job_duration_seconds_bucket",
+					"etcddruid_compaction_job_duration_seconds_sum",
+					"etcddruid_compaction_job_duration_seconds_count",
+					"etcddruid_compaction_num_delta_events",
+				),
+			}},
+		},
+	}
 }
