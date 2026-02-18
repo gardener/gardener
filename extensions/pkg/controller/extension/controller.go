@@ -19,6 +19,7 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
@@ -69,6 +70,10 @@ func add(mgr manager.Manager, args AddArgs) error {
 	predicates := []predicate.Predicate{predicateutils.HasType(args.Type)}
 	predicates = append(predicates, predicateutils.HasClass(args.ExtensionClasses...))
 	predicates = append(predicates, args.Predicates...)
+
+	if args.ControllerOptions.ReconciliationTimeout == 0 {
+		args.ControllerOptions.ReconciliationTimeout = controllerutils.DefaultReconciliationTimeout
+	}
 
 	c, err := builder.
 		ControllerManagedBy(mgr).
