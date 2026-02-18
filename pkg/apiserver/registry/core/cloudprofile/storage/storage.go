@@ -5,6 +5,9 @@
 package storage
 
 import (
+	"context"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
@@ -22,19 +25,21 @@ type REST struct {
 // CloudProfileStorage implements the storage for CloudProfiles.
 type CloudProfileStorage struct {
 	CloudProfile *REST
+	Status       *StatusREST
 }
 
 // NewStorage creates a new CloudProfileStorage object.
 func NewStorage(optsGetter generic.RESTOptionsGetter) CloudProfileStorage {
-	cloudProfileRest := NewREST(optsGetter)
+	cloudProfileRest, cloudProfileStatusRest := NewREST(optsGetter)
 
 	return CloudProfileStorage{
 		CloudProfile: cloudProfileRest,
+		Status:       cloudProfileStatusRest,
 	}
 }
 
 // NewREST returns a RESTStorage object that will work with CloudProfile objects.
-func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
+func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	store := &genericregistry.Store{
 		NewFunc:                   func() runtime.Object { return &core.CloudProfile{} },
 		NewListFunc:               func() runtime.Object { return &core.CloudProfileList{} },
@@ -52,7 +57,10 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err)
 	}
-	return &REST{store}
+
+	statusStore := *store
+	statusStore.UpdateStrategy = cloudprofile.StatusStrategy
+	return &REST{store}, &StatusREST{store: &statusStore}
 }
 
 // Implement ShortNamesProvider
@@ -61,4 +69,35 @@ var _ rest.ShortNamesProvider = &REST{}
 // ShortNames implements the ShortNamesProvider interface. Returns a list of short names for a resource.
 func (r *REST) ShortNames() []string {
 	return []string{"cprofile", "cpfl"}
+}
+
+// StatusREST implements the REST endpoint for changing the status of a CloudProfile.
+type StatusREST struct {
+	store *genericregistry.Store
+}
+
+var (
+	_ rest.Storage = &StatusREST{}
+	_ rest.Getter  = &StatusREST{}
+	_ rest.Updater = &StatusREST{}
+)
+
+// New creats a new (empty) internal CloudProfile object.
+func (r *StatusREST) New() runtime.Object {
+	return &core.CloudProfile{}
+}
+
+// Destroy cleans up its resources on shutdown.
+func (r *StatusREST) Destroy() {
+	// Given that underlying store is shared with REST,
+	// we don't destroy it here explicitly.
+}
+
+func (r *StatusREST) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
+	return r.store.Get(ctx, name, options)
+}
+
+// Update alters the status subset of an object.
+func (r *StatusREST) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc, forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
+	return r.store.Update(ctx, name, objInfo, createValidation, updateValidation, forceAllowCreate, options)
 }

@@ -81,6 +81,7 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 
 	cloudprofileStorage := cloudprofilestore.NewStorage(restOptionsGetter)
 	storage["cloudprofiles"] = cloudprofileStorage.CloudProfile
+	storage["cloudprofiles/status"] = cloudprofileStorage.Status
 
 	namespacedcloudprofileStorage := namespacedcloudprofilestore.NewStorage(restOptionsGetter)
 	storage["namespacedcloudprofiles"] = namespacedcloudprofileStorage.NamespacedCloudProfile
