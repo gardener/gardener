@@ -96,6 +96,8 @@ RetryMaxElapsedTime       15m
 HostnameValue          ${NODE_NAME}
 Origin                 seed
 FallbackToTagWhenMetadataIsMissing true
+SendLogsToSeedWhenShootIsInHibernatedState false
+SendLogsToShootWhenIsInDeletionState false
 TagKey                    tag`,
 						},
 					},

@@ -597,7 +597,7 @@ images:
   - name: fluent-operator
     sourceRepository: github.com/fluent/fluent-operator
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/fluent-operator/fluent-operator
-    tag: "v3.5.0"
+    tag: "v3.6.0"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
@@ -614,7 +614,7 @@ images:
   - name: fluent-bit
     sourceRepository: github.com/fluent/fluent-operator
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/fluent-operator/fluent-bit
-    tag: "v4.1.1"
+    tag: "v4.2.2"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
@@ -653,7 +653,7 @@ images:
       name: fluent-bit-plugin
     sourceRepository: github.com/gardener/logging
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/fluent-bit-plugin
-    tag: "v1.0.0"
+    tag: "v1.1.0"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:

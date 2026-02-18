@@ -15,7 +15,7 @@ require (
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/docker/cli v29.2.1+incompatible
 	github.com/elliotchance/orderedmap/v3 v3.1.0
-	github.com/fluent/fluent-operator/v3 v3.5.0
+	github.com/fluent/fluent-operator/v3 v3.6.0
 	github.com/gardener/cert-management v0.19.0
 	github.com/gardener/dependency-watchdog v1.6.0
 	github.com/gardener/etcd-druid/api v0.35.0
@@ -159,7 +159,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
-	github.com/go-openapi/errors v0.22.3 // indirect
+	github.com/go-openapi/errors v0.22.6 // indirect
 	github.com/go-openapi/jsonpointer v0.22.1 // indirect
 	github.com/go-openapi/jsonreference v0.21.2 // indirect
 	github.com/go-openapi/swag v0.25.1 // indirect
