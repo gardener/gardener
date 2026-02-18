@@ -231,14 +231,23 @@ var _ = Describe("Strategy", func() {
 		)
 
 		BeforeEach(func() {
-			newCloudProfile = &core.CloudProfile{
-				Spec: core.CloudProfileSpec{
-					Regions: []core.Region{{
-						Name: "local",
-					}},
+			oldCloudProfile = &core.CloudProfile{}
+			newCloudProfile = &core.CloudProfile{}
+		})
+
+		It("should not allow editing the status", func() {
+			k8sStatus := core.KubernetesStatus{
+				Versions: []core.ExpirableVersionStatus{
+					{
+						Version: "foo",
+					},
 				},
 			}
-			oldCloudProfile = newCloudProfile.DeepCopy()
+			newCloudProfile.Status.Kubernetes = &k8sStatus
+
+			strategy.PrepareForUpdate(ctx, newCloudProfile, oldCloudProfile)
+
+			Expect(newCloudProfile.Status).To(Equal(oldCloudProfile.Status))
 		})
 
 		It("should correctly sync the architecture fields on migration to Capabilities", func() {
@@ -280,6 +289,7 @@ var _ = Describe("Strategy", func() {
 			}))
 		})
 	})
+
 	Describe("#Canonicalize", func() {
 		It("should sync architecture capabilities to empty architecture fields", func() {
 			cloudProfile := &core.CloudProfile{
@@ -302,5 +312,29 @@ var _ = Describe("Strategy", func() {
 			Expect(cloudProfile.Spec.MachineTypes[0].Architecture).To(PointTo(Equal("amd64")))
 			Expect(cloudProfile.Spec.MachineImages[0].Versions[0].Architectures).To(ConsistOf("amd64"))
 		})
+	})
+
+	Describe("StatusStrategy", func() {
+		BeforeEach(func() {
+			strategy = cloudprofile.StatusStrategy
+		})
+
+		var (
+			newCloudProfile *core.CloudProfile
+			oldCloudProfile *core.CloudProfile
+		)
+
+		BeforeEach(func() {
+			oldCloudProfile = &core.CloudProfile{}
+			newCloudProfile = &core.CloudProfile{}
+		})
+
+		It("should not allow editing the spec", func() {
+			newCloudProfile.Spec.Type = "foo"
+			strategy.PrepareForUpdate(ctx, newCloudProfile, oldCloudProfile)
+
+			Expect(newCloudProfile.Status).To(Equal(oldCloudProfile.Status))
+		})
+
 	})
 })
