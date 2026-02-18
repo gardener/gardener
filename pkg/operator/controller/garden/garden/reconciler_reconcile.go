@@ -594,7 +594,9 @@ func (r *Reconciler) reconcile(
 				}
 				return nil
 			},
-			// TODO(rrhubenov): Is a `victoriaLogsEnabled` needed here?
+			// TODO(rrhubenov): the `enableVali` flag is false only if the runtime cluster is running in an IPv6 environment.
+			// When we completely remove `Vali`, this needs to be reviewed and VictoriaLogs introduced to IPv6 environments as well.
+			// For now, IPv6 clusters remain without a logging backend.
 			SkipIf: !enableVali,
 		})
 		_ = g.Add(flow.Task{
