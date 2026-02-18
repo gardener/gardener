@@ -107,7 +107,7 @@ func (w *WatchBuilder) AddToController(ctrl controller.Controller) error {
 // The argument to this method _has_ to be a pointer, otherwise it panics.
 func UnsafeGuessKind(obj runtime.Object) string {
 	t := reflect.TypeOf(obj)
-	if t.Kind() != reflect.Ptr {
+	if t.Kind() != reflect.Pointer {
 		panic(fmt.Sprintf("kind of obj %T is not pointer", obj))
 	}
 
