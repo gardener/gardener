@@ -53,6 +53,13 @@ func ValidateCloudProfileUpdate(newProfile, oldProfile *core.CloudProfile) field
 	return allErrs
 }
 
+// ValidateCloudProfileStatusUpdate validates the status field of a cloudProfile object.
+func ValidateCloudProfileStatusUpdate(_, _ *core.CloudProfileStatus) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	return allErrs
+}
+
 // ValidateCloudProfileSpecUpdate validates the spec update of a CloudProfile
 func ValidateCloudProfileSpecUpdate(new, old *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
