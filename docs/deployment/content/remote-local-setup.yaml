@@ -90,10 +90,12 @@ spec:
           echo neat            && krew install neat
           echo node-shell      && krew install node-shell
 
-          # Resolve e.g. gu-local--e2e-rot{ate{-wl},-noroll}.ingress.$seed_name. ... to 127.0.0.1 for the e2e tests:
+          # Resolve local.gardener.cloud domains using local DNS server (conditional forwarding to bind9)
+          mkdir -p /etc/dnsmasq.d
           echo '
-          address=/.seed.local.gardener.cloud/127.0.0.1
-          address=/.garden.external.local.gardener.cloud/127.0.0.1
+          listen-address=127.0.0.1
+          bind-interfaces
+          address=/.local.gardener.cloud/172.18.255.53
           ' > /etc/dnsmasq.d/gardener.conf
           sed '1inameserver 127.0.0.1' /etc/resolv.conf > /tmp/resolv.conf && cat /tmp/resolv.conf > /etc/resolv.conf
           nice dnsmasq --no-daemon --log-debug --log-queries 2>&1 | ts > ~/.dnsmasq.log &
