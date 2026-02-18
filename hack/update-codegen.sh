@@ -40,15 +40,6 @@ source "${CODE_GEN_DIR}/kube_codegen.sh"
 
 rm -f $(go env GOPATH)/bin/*-gen
 
-# Pre-build generator binaries to avoid race conditions when running in parallel
-echo "> Pre-building code generator binaries..."
-go install k8s.io/code-generator/cmd/conversion-gen
-go install k8s.io/code-generator/cmd/deepcopy-gen
-go install k8s.io/code-generator/cmd/defaulter-gen
-go install k8s.io/code-generator/cmd/client-gen
-go install k8s.io/code-generator/cmd/lister-gen
-go install k8s.io/code-generator/cmd/informer-gen
-
 CURRENT_DIR=$(dirname $0)
 PROJECT_ROOT="${CURRENT_DIR}"/..
 export PROJECT_ROOT

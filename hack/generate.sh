@@ -75,7 +75,18 @@ run_target() {
       $REPO_ROOT/hack/update-protobuf.sh
       ;;
     codegen)
-      local mode="${MODE:-parallel}"
+      # Default to sequential mode in CI to avoid race conditions with go install.
+      # kube_codegen.sh functions (gen_helpers, gen_client) internally run 'go install'
+      # for code generators. When running in parallel, multiple processes race to write
+      # the same binaries, causing "already exists and is not an object file" errors.
+      local mode="$MODE"
+      if [[ -z "$mode" ]]; then
+        if [[ -n "${CI:-}" ]]; then
+          mode="sequential"
+        else
+          mode="parallel"
+        fi
+      fi
       $REPO_ROOT/hack/update-codegen.sh --groups "$CODEGEN_GROUPS" --mode "$mode"
       ;;
     manifests)
