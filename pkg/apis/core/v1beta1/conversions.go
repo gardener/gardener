@@ -8,11 +8,13 @@ package v1beta1
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 func addConversionFuncs(scheme *runtime.Scheme) error {
@@ -232,14 +234,9 @@ func Convert_core_ProjectMember_To_v1beta1_ProjectMember(in *core.ProjectMember,
 }
 
 func removeRoleFromRoles(roles []string, role string) []string {
-	var newRoles []string
-
-	for _, r := range roles {
-		if r != role {
-			newRoles = append(newRoles, r)
-		}
-	}
-	return newRoles
+	return slices.Collect(utils.FilterElements(roles, func(r string) bool {
+		return r != role
+	}))
 }
 
 func Convert_v1beta1_ControllerDeployment_To_core_ControllerDeployment(in *ControllerDeployment, out *core.ControllerDeployment, s conversion.Scope) error {
