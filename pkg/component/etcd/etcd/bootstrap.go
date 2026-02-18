@@ -23,8 +23,6 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -151,22 +149,25 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	var (
+		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	serviceAccount := b.getServiceAccount()
-	clusterRole := b.getClusterRole()
-	clusterRoleBinding := b.getClusterRoleBinding(serviceAccount, clusterRole)
-	vpa := b.getVPA()
-	service := b.getService()
-	validatingWebhookConfiguration := b.getValidatingWebhookConfiguration(caSecret.Data[secretsutils.DataKeyCertificateBundle])
-	deployment := b.getDeployment(serverSecret.Name, operatorConfigConfigMap.Name)
-	podDisruptionBudget := b.getPDB(deployment)
-	serviceMonitor := b.getServiceMonitor()
+		serviceAccount                 = b.getServiceAccount()
+		clusterRole                    = b.getClusterRole()
+		clusterRoleBinding             = b.getClusterRoleBinding(serviceAccount, clusterRole)
+		vpa                            = b.getVPA()
+		service                        = b.getService()
+		validatingWebhookConfiguration = b.getValidatingWebhookConfiguration(caSecret.Data[secretsutils.DataKeyCertificateBundle])
+		deployment                     = b.getDeployment(serverSecret.Name, operatorConfigConfigMap.Name)
+		podDisruptionBudget            = b.getPDB(deployment)
+		serviceMonitor                 = b.getServiceMonitor()
 
-	portMetrics := networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(metricsPort)),
-		Protocol: ptr.To(corev1.ProtocolTCP),
-	}
+		portMetrics = networkingv1.NetworkPolicyPort{
+			Port:     ptr.To(intstr.FromInt32(metricsPort)),
+			Protocol: ptr.To(corev1.ProtocolTCP),
+		}
+	)
+
 	metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, webhookServerPort))
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, portMetrics))
 
@@ -205,23 +206,16 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {
-	etcdList := &druidcorev1alpha1.EtcdList{}
-	// Need to check for both error types. The DynamicRestMapper can hold a stale cache returning a path to a non-existing api-resource leading to a NotFound error.
-	if err := b.client.List(ctx, etcdList); err != nil && !meta.IsNoMatchError(err) && !apierrors.IsNotFound(err) {
+	if etcdsExist, err := kubernetesutils.ResourcesExist(ctx, b.client, &druidcorev1alpha1.EtcdList{}, b.client.Scheme()); err != nil {
 		return err
+	} else if etcdsExist {
+		return errors.New("cannot destroy etcd-druid because there are still druidcorev1alpha1.Etcd resources left in the cluster")
 	}
 
-	if len(etcdList.Items) > 0 {
-		return errors.New("cannot debootstrap etcd-druid because there are still druidcorev1alpha1.Etcd resources left in the cluster")
-	}
-
-	etcdCopyBackupsTaskList := &druidcorev1alpha1.EtcdCopyBackupsTaskList{}
-	if err := b.client.List(ctx, etcdCopyBackupsTaskList); err != nil && !meta.IsNoMatchError(err) && !apierrors.IsNotFound(err) {
+	if etcdCopyBackupsTasksExist, err := kubernetesutils.ResourcesExist(ctx, b.client, &druidcorev1alpha1.EtcdCopyBackupsTaskList{}, b.client.Scheme()); err != nil {
 		return err
-	}
-
-	if len(etcdCopyBackupsTaskList.Items) > 0 {
-		return errors.New("cannot debootstrap etcd-druid because there are still druidcorev1alpha1.EtcdCopyBackupsTask resources left in the cluster")
+	} else if etcdCopyBackupsTasksExist {
+		return errors.New("cannot destroy etcd-druid because there are still druidcorev1alpha1.EtcdCopyBackupsTask resources left in the cluster")
 	}
 
 	return managedresources.DeleteForSeed(ctx, b.client, b.namespace, managedResourceControlName)
