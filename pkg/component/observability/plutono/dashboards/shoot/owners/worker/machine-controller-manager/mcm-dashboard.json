@@ -143,7 +143,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"machine-controller-manager-(.+)\"}[5m])) by (pod)",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"machine-controller-manager-(.+)\"}[$__rate_interval])) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Current ({{pod}})",
@@ -414,7 +414,7 @@
       "dashLength": 10,
       "dashes": false,
       "decimals": null,
-      "description": "Average per Second rate over 1m of IaaS provider api calls split by services. \n\nShows also the rate of failed iaas calls if at least one failed.",
+      "description": "Rate of IaaS provider API calls split by services. \n\nShows also the rate of failed IaaS provider API calls if at least one failed.",
       "fill": 0,
       "gridPos": {
         "h": 6,
@@ -446,14 +446,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(mcm_cloud_api_requests_total{name=\"${controlloop}\"}[1m])",
+          "expr": "rate(mcm_cloud_api_requests_total[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{provider}} / {{service}} ({{pod}})",
           "refId": "A"
         },
         {
-          "expr": "rate(mcm_cloud_api_requests_failed_total{name=\"${controlloop}\"}[1m])",
+          "expr": "rate(mcm_cloud_api_requests_failed_total[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Error: {{provider}} / {{service}} ({{pod}})",
@@ -876,7 +876,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "description": "Average per second rate over 5m of workqueue item adds.",
+      "description": "Rate of workqueue item adds.",
       "fill": 1,
       "gridPos": {
         "h": 6,
@@ -908,7 +908,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(mcm_workqueue_adds_total{name=\"${controlloop}\"}[5m])",
+          "expr": "rate(mcm_workqueue_adds_total{name=\"${controlloop}\"}[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "${controlloop} ({{pod}})",
@@ -961,7 +961,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "description": "Average per second rate over 5m of workqueue item retries.",
+      "description": "Rate of workqueue item retries.",
       "fill": 1,
       "gridPos": {
         "h": 6,
@@ -993,7 +993,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(mcm_workqueue_retries_total{name=\"${controlloop}\"}[5m])",
+          "expr": "rate(mcm_workqueue_retries_total{name=\"${controlloop}\"}[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "${controlloop} ({{pod}})",
