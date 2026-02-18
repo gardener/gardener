@@ -42,6 +42,15 @@ func defaultGarden(backupSecret *corev1.Secret, specifyBackupBucket bool) *opera
 			Name: name,
 		},
 		Spec: operatorv1alpha1.GardenSpec{
+			DNS: &operatorv1alpha1.DNSManagement{
+				Providers: []operatorv1alpha1.DNSProvider{{
+					Name: "primary",
+					Type: "local",
+					SecretRef: corev1.LocalObjectReference{
+						Name: "garden-dns-local",
+					},
+				}},
+			},
 			Extensions: []operatorv1alpha1.GardenExtension{{
 				Type: "local-ext-shoot",
 			}},
@@ -52,7 +61,10 @@ func defaultGarden(backupSecret *corev1.Secret, specifyBackupBucket bool) *opera
 					Services: []string{"10.2.0.0/16"},
 				},
 				Ingress: operatorv1alpha1.Ingress{
-					Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.runtime-garden.local.gardener.cloud"}},
+					Domains: []operatorv1alpha1.DNSDomain{{
+						Name:     "ingress.runtime-garden.local.gardener.cloud",
+						Provider: ptr.To("primary"),
+					}},
 					Controller: gardencorev1beta1.IngressController{
 						Kind: "nginx",
 					},
@@ -75,7 +87,10 @@ func defaultGarden(backupSecret *corev1.Secret, specifyBackupBucket bool) *opera
 					HighAvailability: &operatorv1alpha1.HighAvailability{},
 				},
 				DNS: operatorv1alpha1.DNS{
-					Domains: []operatorv1alpha1.DNSDomain{{Name: "virtual-garden.local.gardener.cloud"}},
+					Domains: []operatorv1alpha1.DNSDomain{{
+						Name:     "virtual-garden.local.gardener.cloud",
+						Provider: ptr.To("primary"),
+					}},
 				},
 				ETCD: &operatorv1alpha1.ETCD{
 					Main: &operatorv1alpha1.ETCDMain{
