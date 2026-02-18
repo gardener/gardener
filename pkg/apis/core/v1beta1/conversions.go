@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/apis/utils"
 )
 
 func addConversionFuncs(scheme *runtime.Scheme) error {
