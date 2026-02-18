@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -26,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -33,6 +35,7 @@ import (
 
 var _ = Describe("Seed health", func() {
 	var (
+		log       logr.Logger
 		ctx       context.Context
 		c         client.Client
 		fakeClock *testclock.FakeClock
@@ -86,7 +89,7 @@ var _ = Describe("Seed health", func() {
 			})
 
 			It("should set SeedSystemComponentsHealthy condition to true", func() {
-				healthCheck := NewHealth(seed, c, fakeClock, nil, checker.NewHealthChecker(c, fakeClock))
+				healthCheck := NewHealth(seed, c, fakeClock, nil, checker.NewHealthChecker(log, c, fakeClock))
 				conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
 					Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 				})
@@ -99,9 +102,15 @@ var _ = Describe("Seed health", func() {
 			var (
 				prometheus *monitoringv1.Prometheus
 
-				healthy   = func(_ context.Context, _ string, _ int) (bool, error) { return true, nil }
-				unhealthy = func(_ context.Context, _ string, _ int) (bool, error) { return false, nil }
-				erroring  = func(_ context.Context, _ string, _ int) (bool, error) { return false, errors.New("test error") }
+				healthy = func(_ context.Context, _ string, _ int) (health.PrometheusHealthCheckResult, error) {
+					return health.PrometheusHealthCheckResult{IsHealthy: true}, nil
+				}
+				unhealthy = func(_ context.Context, _ string, _ int) (health.PrometheusHealthCheckResult, error) {
+					return health.PrometheusHealthCheckResult{IsHealthy: false, Message: "foo is unhealthy"}, nil
+				}
+				erroring = func(_ context.Context, _ string, _ int) (health.PrometheusHealthCheckResult, error) {
+					return health.PrometheusHealthCheckResult{}, errors.New("test error")
+				}
 			)
 
 			BeforeEach(func() {
@@ -119,7 +128,7 @@ var _ = Describe("Seed health", func() {
 			})
 
 			It("should set SeedSystemComponentsHealthy condition to false if Prometheus health check is down", func() {
-				healthChecker := checker.NewHealthChecker(c, fakeClock, checker.WithPrometheusHealthChecker(unhealthy))
+				healthChecker := checker.NewHealthChecker(log, c, fakeClock, checker.WithPrometheusHealthChecker(unhealthy))
 
 				healthCheck := NewHealth(seed, c, fakeClock, nil, healthChecker)
 				conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
@@ -133,11 +142,11 @@ var _ = Describe("Seed health", func() {
 					gardencorev1beta1.SeedSystemComponentsHealthy,
 					gardencorev1beta1.ConditionFalse,
 					"PrometheusHealthCheckDown",
-					`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "healthcheck" for more details.`))
+					`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "healthcheck:up" for more details: foo is unhealthy`))
 			})
 
 			It("should set SeedSystemComponentsHealthy condition to false if Prometheus health check is erroring", func() {
-				healthChecker := checker.NewHealthChecker(c, fakeClock, checker.WithPrometheusHealthChecker(erroring))
+				healthChecker := checker.NewHealthChecker(log, c, fakeClock, checker.WithPrometheusHealthChecker(erroring))
 
 				healthCheck := NewHealth(seed, c, fakeClock, nil, healthChecker)
 				conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
@@ -155,7 +164,7 @@ var _ = Describe("Seed health", func() {
 			})
 
 			It("should set SeedSystemComponentsHealthy condition to true if Prometheus is healthy", func() {
-				healthChecker := checker.NewHealthChecker(c, fakeClock, checker.WithPrometheusHealthChecker(healthy))
+				healthChecker := checker.NewHealthChecker(log, c, fakeClock, checker.WithPrometheusHealthChecker(healthy))
 
 				healthCheck := NewHealth(seed, c, fakeClock, nil, healthChecker)
 				conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
@@ -168,7 +177,7 @@ var _ = Describe("Seed health", func() {
 			It("should set SeedSystemComponentsHealthy condition to true if Prometheus health check is down but the PrometheusHealthChecks feature gate is disabled", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.PrometheusHealthChecks, false))
 
-				healthChecker := checker.NewHealthChecker(c, fakeClock, checker.WithPrometheusHealthChecker(unhealthy))
+				healthChecker := checker.NewHealthChecker(log, c, fakeClock, checker.WithPrometheusHealthChecker(unhealthy))
 
 				healthCheck := NewHealth(seed, c, fakeClock, nil, healthChecker)
 				conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
@@ -189,7 +198,7 @@ var _ = Describe("Seed health", func() {
 				// Starting from an unhealthy Prometheus that sets the condition to unhealthy, make sure the condition
 				// is set to healthy if the Prometheus resource is filtered out.
 				BeforeEach(func() {
-					healthChecker = checker.NewHealthChecker(c, fakeClock, checker.WithPrometheusHealthChecker(unhealthy))
+					healthChecker = checker.NewHealthChecker(log, c, fakeClock, checker.WithPrometheusHealthChecker(unhealthy))
 					healthCheck = NewHealth(seed, c, fakeClock, nil, healthChecker)
 					conditions = NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
 						Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
@@ -202,7 +211,7 @@ var _ = Describe("Seed health", func() {
 						gardencorev1beta1.SeedSystemComponentsHealthy,
 						gardencorev1beta1.ConditionFalse,
 						"PrometheusHealthCheckDown",
-						`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "healthcheck" for more details.`))
+						`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "healthcheck:up" for more details: foo is unhealthy`))
 				})
 
 				It("should ignore the Prometheus resource if it doesn't have the right health-check-by label", func() {
@@ -218,7 +227,7 @@ var _ = Describe("Seed health", func() {
 			var (
 				tests = func(reason, message string) {
 					It("should set SeedSystemComponentsHealthy condition to False if there is no Progressing threshold duration mapping", func() {
-						healthCheck := NewHealth(seed, c, fakeClock, nil, checker.NewHealthChecker(c, fakeClock))
+						healthCheck := NewHealth(seed, c, fakeClock, nil, checker.NewHealthChecker(log, c, fakeClock))
 						conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
 							Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 						})
@@ -234,6 +243,7 @@ var _ = Describe("Seed health", func() {
 						fakeClock.Step(30 * time.Second)
 
 						healthChecker := checker.NewHealthChecker(
+							log,
 							c,
 							fakeClock,
 							checker.WithConditionThresholds(map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute}))
@@ -253,6 +263,7 @@ var _ = Describe("Seed health", func() {
 						fakeClock.Step(30 * time.Second)
 
 						healthChecker := checker.NewHealthChecker(
+							log,
 							c,
 							fakeClock,
 							checker.WithConditionThresholds(map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute}))
@@ -272,6 +283,7 @@ var _ = Describe("Seed health", func() {
 						fakeClock.Step(30 * time.Second)
 
 						healthChecker := checker.NewHealthChecker(
+							log,
 							c,
 							fakeClock,
 							checker.WithConditionThresholds(map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute}))
@@ -291,6 +303,7 @@ var _ = Describe("Seed health", func() {
 						fakeClock.Step(90 * time.Second)
 
 						healthChecker := checker.NewHealthChecker(
+							log,
 							c,
 							fakeClock,
 							checker.WithConditionThresholds(map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute}))

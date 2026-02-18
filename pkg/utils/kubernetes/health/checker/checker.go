@@ -12,6 +12,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -53,6 +54,7 @@ var (
 
 // HealthChecker contains the condition thresholds.
 type HealthChecker struct {
+	log                     logr.Logger
 	reader                  client.Reader
 	clock                   clock.Clock
 	conditionThresholds     map[gardencorev1beta1.ConditionType]time.Duration
@@ -61,8 +63,9 @@ type HealthChecker struct {
 }
 
 // NewHealthChecker creates a new health checker.
-func NewHealthChecker(reader client.Reader, clock clock.Clock, opts ...option) *HealthChecker {
+func NewHealthChecker(log logr.Logger, reader client.Reader, clock clock.Clock, opts ...option) *HealthChecker {
 	healthChecker := &HealthChecker{
+		log:                     log,
 		reader:                  reader,
 		clock:                   clock,
 		prometheusHealthChecker: health.IsPrometheusHealthy,
@@ -597,14 +600,16 @@ func (h *HealthChecker) checkPrometheusReplicaHealth(ctx context.Context, condit
 		endpoint    = fmt.Sprintf("prometheus-%s-%d.%s.%s.svc.cluster.local", prometheus.Name, replica, serviceName, prometheus.Namespace)
 	)
 
-	isPrometheusHealthy, err := h.prometheusHealthChecker(ctx, endpoint, 9090)
+	result, err := h.prometheusHealthChecker(ctx, endpoint, 9090)
 	if err != nil {
+		h.log.Error(err, "Prometheus health check errored", "endpoint", endpoint)
 		msg := fmt.Sprintf(`Querying Prometheus pod "%s/prometheus-%s-%d" for health checking returned an error: %v`, prometheus.Namespace, prometheus.Name, replica, err)
 		return ptr.To(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "PrometheusHealthCheckError", msg))
 	}
 
-	if !isPrometheusHealthy {
-		msg := fmt.Sprintf(`There are health issues in Prometheus pod "%s/prometheus-%s-%d". Access Prometheus UI and query for "healthcheck" for more details.`, prometheus.Namespace, prometheus.Name, replica)
+	if !result.IsHealthy {
+		h.log.Info("Prometheus health check failed", "endpoint", endpoint, "message", result.Message)
+		msg := fmt.Sprintf(`There are health issues in Prometheus pod "%s/prometheus-%s-%d". Access Prometheus UI and query for "healthcheck:up" for more details: %s`, prometheus.Namespace, prometheus.Name, replica, result.Message)
 		return ptr.To(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "PrometheusHealthCheckDown", msg))
 	}
 

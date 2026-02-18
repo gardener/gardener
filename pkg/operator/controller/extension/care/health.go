@@ -42,6 +42,7 @@ func NewHealth(
 	clock clock.Clock,
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
 	gardenNamespace string,
+	healthChecker *healthchecker.HealthChecker,
 ) HealthCheck {
 	return &health{
 		extension:           extension,
@@ -50,10 +51,7 @@ func NewHealth(
 		virtualClient:       virtualClient,
 		clock:               clock,
 		conditionThresholds: conditionThresholds,
-		healthChecker: healthchecker.NewHealthChecker(
-			runtimeClient,
-			clock,
-			healthchecker.WithConditionThresholds(conditionThresholds)),
+		healthChecker:       healthChecker,
 	}
 }
 

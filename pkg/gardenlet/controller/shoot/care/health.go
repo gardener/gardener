@@ -112,6 +112,7 @@ func NewHealth(
 		controllerRegistrationToLastHeartbeatTime: map[string]*metav1.MicroTime{},
 		conditionThresholds:                       conditionThresholds,
 		healthChecker: healthchecker.NewHealthChecker(
+			log,
 			seedClientSet.Client(),
 			clock,
 			healthchecker.WithConditionThresholds(conditionThresholds),
