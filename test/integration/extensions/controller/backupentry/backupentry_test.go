@@ -459,7 +459,6 @@ var _ = Describe("BackupEntry", func() {
 				})
 			})
 		})
-
 	})
 
 	Describe("Delete", func() {
@@ -531,7 +530,7 @@ var _ = Describe("BackupEntry", func() {
 		When("deletion takes a long time and Secret for BackupEntry is modified", Ordered, func() {
 			It("should add annotation to BackupEntry so that Secret is modified during deletion ", func() {
 				Expect(patchBackupEntryObject(ctx, testClient, backupEntry, func() {
-					metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, extensionsintegrationtest.AnnotationKeyDesiredOperation, "ModifySecretDuringDeletion")
+					metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, extensionsintegrationtest.AnnotationKeyDesiredOperation, annotationValueModifySecretDuringDeletion)
 				})).To(Succeed())
 			})
 
