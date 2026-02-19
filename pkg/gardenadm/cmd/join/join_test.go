@@ -28,7 +28,7 @@ import (
 )
 
 var _ = Describe("Join", func() {
-	Describe("#GetGardenerNodeAgentSecretName", func() {
+	Describe("#GetGardenerNodeAgentSecret", func() {
 		var (
 			ctx = context.Background()
 
@@ -67,9 +67,9 @@ var _ = Describe("Join", func() {
 
 		When("Cluster object does not exist", func() {
 			It("should fail when worker pool name is not set", func() {
-				secretName, err := GetGardenerNodeAgentSecretName(ctx, options, b)
+				secret, err := GetGardenerNodeAgentSecret(ctx, options, b)
 				Expect(err).To(MatchError(ContainSubstring(`clusters.extensions.gardener.cloud "kube-system" not found`)))
-				Expect(secretName).To(BeEmpty())
+				Expect(secret).To(BeNil())
 			})
 
 			When("worker pool name is set", func() {
@@ -78,9 +78,9 @@ var _ = Describe("Join", func() {
 				})
 
 				It("should fail because there are no gardener-node-agent secrets", func() {
-					secretName, err := GetGardenerNodeAgentSecretName(ctx, options, b)
+					secret, err := GetGardenerNodeAgentSecret(ctx, options, b)
 					Expect(err).To(MatchError(ContainSubstring("no gardener-node-agent secrets found")))
-					Expect(secretName).To(BeEmpty())
+					Expect(secret).To(BeNil())
 				})
 
 				It("should succeed when there are gardener-node-agent secrets", func() {
@@ -95,9 +95,9 @@ var _ = Describe("Join", func() {
 
 					Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-					secretName, err := GetGardenerNodeAgentSecretName(ctx, options, b)
+					secret, err := GetGardenerNodeAgentSecret(ctx, options, b)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(secretName).To(Equal(secret.Name))
+					Expect(secret.Name).To(Equal(secret.Name))
 				})
 			})
 		})
@@ -113,9 +113,9 @@ var _ = Describe("Join", func() {
 				})
 
 				It("should fail when there is no control plane pool in the Shoot spec", func() {
-					secretName, err := GetGardenerNodeAgentSecretName(ctx, options, b)
+					secret, err := GetGardenerNodeAgentSecret(ctx, options, b)
 					Expect(err).To(MatchError(ContainSubstring("no control plane worker pool found in Shoot manifest")))
-					Expect(secretName).To(BeEmpty())
+					Expect(secret).To(BeNil())
 				})
 
 				When("control plane pool is in Shoot spec", func() {
@@ -130,9 +130,9 @@ var _ = Describe("Join", func() {
 					})
 
 					It("should fail because there are no gardener-node-agent secrets", func() {
-						secretName, err := GetGardenerNodeAgentSecretName(ctx, options, b)
+						secret, err := GetGardenerNodeAgentSecret(ctx, options, b)
 						Expect(err).To(MatchError(ContainSubstring("no gardener-node-agent secrets found")))
-						Expect(secretName).To(BeEmpty())
+						Expect(secret).To(BeNil())
 					})
 
 					It("should succeed when there are gardener-node-agent secrets", func() {
@@ -147,18 +147,18 @@ var _ = Describe("Join", func() {
 
 						Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-						secretName, err := GetGardenerNodeAgentSecretName(ctx, options, b)
+						secret, err := GetGardenerNodeAgentSecret(ctx, options, b)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(secretName).To(Equal(secret.Name))
+						Expect(secret.Name).To(Equal(secret.Name))
 					})
 				})
 			})
 
 			When("worker node should be joined", func() {
 				It("should fail when there is no non-control-plane pool in Shoot manifest", func() {
-					secretName, err := GetGardenerNodeAgentSecretName(ctx, options, b)
+					secret, err := GetGardenerNodeAgentSecret(ctx, options, b)
 					Expect(err).To(MatchError(ContainSubstring("no non-control-plane pool found in Shoot manifest")))
-					Expect(secretName).To(BeEmpty())
+					Expect(secret).To(BeNil())
 				})
 
 				When("there are non-control-plane pools in Shoot manifest", func() {
@@ -176,9 +176,9 @@ var _ = Describe("Join", func() {
 					})
 
 					It("should fail because there are no gardener-node-agent secrets", func() {
-						secretName, err := GetGardenerNodeAgentSecretName(ctx, options, b)
+						secret, err := GetGardenerNodeAgentSecret(ctx, options, b)
 						Expect(err).To(MatchError(ContainSubstring("no gardener-node-agent secrets found")))
-						Expect(secretName).To(BeEmpty())
+						Expect(secret).To(BeNil())
 					})
 
 					It("should succeed when there are gardener-node-agent secrets", func() {
@@ -193,9 +193,9 @@ var _ = Describe("Join", func() {
 
 						Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-						secretName, err := GetGardenerNodeAgentSecretName(ctx, options, b)
+						secret, err := GetGardenerNodeAgentSecret(ctx, options, b)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(secretName).To(Equal(secret.Name))
+						Expect(secret.Name).To(Equal(secret.Name))
 					})
 				})
 			})
