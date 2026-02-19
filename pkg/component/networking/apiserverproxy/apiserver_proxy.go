@@ -330,9 +330,6 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 										corev1.ResourceCPU:    resource.MustParse("20m"),
 										corev1.ResourceMemory: resource.MustParse("20Mi"),
 									},
-									Limits: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("200Mi"),
-									},
 								},
 								SecurityContext: &corev1.SecurityContext{
 									AllowPrivilegeEscalation: ptr.To(false),
@@ -357,9 +354,6 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("5m"),
 										corev1.ResourceMemory: resource.MustParse("15Mi"),
-									},
-									Limits: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("90Mi"),
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
@@ -387,9 +381,6 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("5m"),
 										corev1.ResourceMemory: resource.MustParse("30Mi"),
-									},
-									Limits: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("1Gi"),
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
