@@ -1033,6 +1033,35 @@ metadata:
 					waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 				})
 			})
+
+			When("static pods for other hosts should be ignored", func() {
+				BeforeEach(func() {
+					operatingSystemConfig.Spec.Files[len(operatingSystemConfig.Spec.Files)-1].HostName = &hostName
+					operatingSystemConfig.Spec.Files = append(operatingSystemConfig.Spec.Files, extensionsv1alpha1.File{
+						Path: filePath,
+						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: `apiVersion: v1
+kind: Pod
+metadata:
+  name: bar
+  namespace: default
+  annotations:
+    gardener.cloud/config.mirror: abc
+`}},
+						HostName: ptr.To("some-other-hostname"),
+					})
+				})
+
+				JustBeforeEach(func() {
+					staticPod.Status.Phase = corev1.PodRunning
+					staticPod.Status.Conditions = []corev1.PodCondition{{Type: corev1.PodReady, Status: corev1.ConditionTrue}}
+					Expect(testClient.Status().Update(ctx, staticPod)).To(Succeed())
+				})
+
+				It("should successfully update the node's checksum annotation", func() {
+					waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
+					waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
+				})
+			})
 		})
 	})
 

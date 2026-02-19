@@ -1165,7 +1165,8 @@ func (r *Reconciler) ensureStaticPodsReconciledAndReady(ctx context.Context, log
 
 func (r *Reconciler) getDesiredStaticPodHashes(log logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig) (map[string]string, error) {
 	staticPodFiles := slices.DeleteFunc(append(osc.Spec.Files, osc.Status.ExtensionFiles...), func(file extensionsv1alpha1.File) bool {
-		return !strings.HasPrefix(file.Path, kubeletcomponent.FilePathKubernetesManifests)
+		return !strings.HasPrefix(file.Path, kubeletcomponent.FilePathKubernetesManifests) ||
+			(file.HostName != nil && *file.HostName != r.HostName)
 	})
 
 	staticPodNameToHash := make(map[string]string)
