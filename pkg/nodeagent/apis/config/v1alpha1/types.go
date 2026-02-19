@@ -30,6 +30,8 @@ const (
 	KubeconfigFilePath = CredentialsDir + "/kubeconfig"
 	// MachineNameFilePath is the file path on the worker node that contains the machine name.
 	MachineNameFilePath = BaseDir + "/machine-name"
+	// ZoneFilePath is the file path on the worker node that contains the zone name for the node.
+	ZoneFilePath = BaseDir + "/zone"
 
 	// UnitName is the name of the gardener-node-agent systemd service.
 	UnitName = "gardener-node-agent.service"

@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -39,11 +40,17 @@ It ensures that the necessary configurations are applied and the node is properl
 		Example: `# Bootstrap a control plane node and join it to the cluster
 gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --control-plane <control-plane-address>
 
+# Bootstrap a control plane node in a specific zone and join it to the cluster
+gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --control-plane --zone zone-a <control-plane-address>
+
 # Bootstrap a worker node and join it to the cluster (by default, it is assigned to the first worker pool in the Shoot manifest)
 gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> <control-plane-address>
 
 # Bootstrap a worker node in a specific worker pool and join it to the cluster
-gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --worker-pool-name <pool-name> <control-plane-address>`,
+gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --worker-pool-name <pool-name> <control-plane-address>
+
+# Bootstrap a worker node in a specific zone and join it to the cluster
+gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --zone zone-b <control-plane-address>`,
 
 		Args: cobra.ExactArgs(1),
 
@@ -129,6 +136,21 @@ func run(ctx context.Context, opts *Options) error {
 				Dependencies: flow.NewTaskIDs(retrieveShortLivedKubeconfig),
 				SkipIf:       !opts.ControlPlane,
 			})
+			validateZone = g.Add(flow.Task{
+				Name: "Validate zone configuration",
+				Fn: func(ctx context.Context) error {
+					effectiveZone, err := ValidateZone(ctx, opts, b)
+					if err != nil {
+						return err
+					}
+
+					if effectiveZone != "" {
+						b.Zone = ptr.To(effectiveZone)
+					}
+					return nil
+				},
+				Dependencies: flow.NewTaskIDs(retrieveShortLivedKubeconfig),
+			})
 			determineGardenerNodeAgentSecretName = g.Add(flow.Task{
 				Name: "Determining gardener-node-agent Secret containing the configuration for this node",
 				Fn: func(ctx context.Context) error {
@@ -136,7 +158,7 @@ func run(ctx context.Context, opts *Options) error {
 					gardenerNodeAgentSecretName, err = GetGardenerNodeAgentSecretName(ctx, opts, b)
 					return err
 				},
-				Dependencies: flow.NewTaskIDs(retrieveShortLivedKubeconfig),
+				Dependencies: flow.NewTaskIDs(validateZone),
 			})
 			syncPointReadyForGardenerNodeInit = flow.NewTaskIDs(
 				ensureNoActiveShootReconciliation,
@@ -228,26 +250,63 @@ func getWorkerPoolName(ctx context.Context, opts *Options, b *botanist.Gardenadm
 		return "", fmt.Errorf("failed reading extensions.gardener.cloud/v1alpha1.Cluster object: %w", err)
 	}
 
+	worker, err := getWorker(opts, cluster.Shoot.Spec.Provider.Workers)
+	if err != nil {
+		return "", err
+	}
+
+	return worker.Name, nil
+}
+
+func getWorker(opts *Options, workers []gardencorev1beta1.Worker) (gardencorev1beta1.Worker, error) {
 	if opts.ControlPlane {
-		return getControlPlaneWorkerPoolName(cluster.Shoot.Spec.Provider.Workers)
-	}
-	return getFirstWorkerPoolName(cluster.Shoot.Spec.Provider.Workers)
-}
-
-func getControlPlaneWorkerPoolName(workers []gardencorev1beta1.Worker) (string, error) {
-	if pool := helper.ControlPlaneWorkerPoolForShoot(workers); pool != nil {
-		return pool.Name, nil
+		if pool := helper.ControlPlaneWorkerPoolForShoot(workers); pool != nil {
+			return *pool, nil
+		}
+		return gardencorev1beta1.Worker{}, fmt.Errorf("no control plane worker pool found in Shoot manifest")
 	}
 
-	return "", fmt.Errorf("no control plane worker pool found in Shoot manifest")
-}
+	if opts.WorkerPoolName != "" {
+		for _, worker := range workers {
+			if worker.Name == opts.WorkerPoolName {
+				return worker, nil
+			}
+		}
+		return gardencorev1beta1.Worker{}, fmt.Errorf("worker pool %q not found in Shoot manifest", opts.WorkerPoolName)
+	}
 
-func getFirstWorkerPoolName(workers []gardencorev1beta1.Worker) (string, error) {
 	for _, worker := range workers {
 		if worker.ControlPlane == nil {
-			return worker.Name, nil
+			return worker, nil
 		}
 	}
 
-	return "", fmt.Errorf("no non-control-plane pool found in Shoot manifest")
+	return gardencorev1beta1.Worker{}, fmt.Errorf("no non-control-plane pool found in Shoot manifest")
+}
+
+// ValidateZone validates the zone configuration against the shoot specification.
+func ValidateZone(ctx context.Context, opts *Options, b *botanist.GardenadmBotanist) (effectiveZone string, err error) {
+	cluster, err := gardenerextensions.GetCluster(ctx, b.ShootClientSet.Client(), metav1.NamespaceSystem)
+	if err != nil {
+		return "", fmt.Errorf("failed reading extensions.gardener.cloud/v1alpha1.Cluster object: %w", err)
+	}
+
+	if cluster.Shoot.Spec.CredentialsBindingName != nil || cluster.Shoot.Spec.SecretBindingName != nil {
+		if opts.Zone != "" {
+			return "", fmt.Errorf("zone can't be configured for shoot with managed infrastrcture")
+		}
+		return "", nil
+	}
+
+	worker, err := getWorker(opts, cluster.Shoot.Spec.Provider.Workers)
+	if err != nil {
+		return "", err
+	}
+
+	effectiveZone, err = cmd.ValidateZone(worker, opts.Zone)
+	if err != nil {
+		return "", fmt.Errorf("zone validation failed: %w", err)
+	}
+
+	return effectiveZone, nil
 }

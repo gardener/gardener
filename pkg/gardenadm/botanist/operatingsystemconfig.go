@@ -125,6 +125,13 @@ func (b *GardenadmBotanist) ApplyOperatingSystemConfig(ctx context.Context) erro
 		return fmt.Errorf("failed ensuring gardener-node-agent directories exist: %w", err)
 	}
 
+	// Write zone file if zone is configured.
+	if b.Zone != nil {
+		if err := b.FS.WriteFile(nodeagentconfigv1alpha1.ZoneFilePath, []byte(*b.Zone), 0600); err != nil {
+			return fmt.Errorf("failed writing zone file: %w", err)
+		}
+	}
+
 	node, err := nodeagent.FetchNodeByHostName(ctx, b.SeedClientSet.Client(), b.HostName)
 	if err != nil {
 		return fmt.Errorf("failed fetching node object by hostname %q: %w", b.HostName, err)

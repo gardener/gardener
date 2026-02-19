@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -28,32 +29,47 @@ import (
 )
 
 var _ = Describe("Join", func() {
-	Describe("#GetGardenerNodeAgentSecretName", func() {
-		var (
-			ctx = context.Background()
+	var (
+		ctx = context.Background()
 
-			fakeClient client.Client
-			b          *botanist.GardenadmBotanist
-			options    *Options
+		fakeClient client.Client
+		b          *botanist.GardenadmBotanist
+		options    *Options
 
-			shoot   *gardencorev1beta1.Shoot
-			cluster *extensionsv1alpha1.Cluster
-		)
+		shoot   *gardencorev1beta1.Shoot
+		cluster *extensionsv1alpha1.Cluster
+	)
 
-		BeforeEach(func() {
-			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-			b = &botanist.GardenadmBotanist{
-				Botanist: &botanistpkg.Botanist{
-					Operation: &operationpkg.Operation{
-						ShootClientSet: fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build(),
-						Shoot:          &shootpkg.Shoot{ControlPlaneNamespace: "kube-system"},
-					},
+	BeforeEach(func() {
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		b = &botanist.GardenadmBotanist{
+			Botanist: &botanistpkg.Botanist{
+				Operation: &operationpkg.Operation{
+					ShootClientSet: fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build(),
+					Shoot:          &shootpkg.Shoot{ControlPlaneNamespace: "kube-system"},
 				},
-			}
-			options = &Options{}
+			},
+		}
+		options = &Options{}
 
-			shoot = &gardencorev1beta1.Shoot{}
+		shoot = &gardencorev1beta1.Shoot{}
+	})
 
+	createCluster := func() {
+		shootRaw, err := runtime.Encode(&json.Serializer{}, shoot)
+		Expect(err).NotTo(HaveOccurred())
+
+		cluster = &extensionsv1alpha1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{Name: "kube-system"},
+			Spec: extensionsv1alpha1.ClusterSpec{
+				Shoot: runtime.RawExtension{Raw: shootRaw},
+			},
+		}
+		Expect(fakeClient.Create(ctx, cluster)).To(Succeed())
+	}
+
+	Describe("#GetGardenerNodeAgentSecretName", func() {
+		BeforeEach(func() {
 			shootRaw, err := runtime.Encode(&json.Serializer{}, shoot)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -197,6 +213,192 @@ var _ = Describe("Join", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(secretName).To(Equal(secret.Name))
 					})
+				})
+			})
+		})
+	})
+
+	Describe("#validateZone", func() {
+		When("cluster object does not exist", func() {
+			It("should fail", func() {
+				effectiveZone, err := ValidateZone(ctx, options, b)
+				Expect(err).To(MatchError(ContainSubstring(`clusters.extensions.gardener.cloud "kube-system" not found`)))
+				Expect(effectiveZone).To(BeEmpty())
+			})
+		})
+
+		Context("zone validation with managed infrastructure", func() {
+			BeforeEach(func() {
+				shoot.Spec.CredentialsBindingName = ptr.To("test-credentials")
+				shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+					{
+						Name:         "control-plane",
+						Minimum:      1,
+						Maximum:      1,
+						ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+					},
+				}
+				createCluster()
+			})
+
+			It("should reject zone when provided for managed infrastructure", func() {
+				options.Zone = "us-east-1a"
+
+				effectiveZone, err := ValidateZone(ctx, options, b)
+				Expect(err).To(MatchError(ContainSubstring("zone can't be configured for shoot with managed infrastrcture")))
+				Expect(effectiveZone).To(BeEmpty())
+			})
+
+			It("should allow empty zone for managed infrastructure", func() {
+				options.Zone = ""
+
+				effectiveZone, err := ValidateZone(ctx, options, b)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(effectiveZone).To(BeEmpty())
+			})
+		})
+
+		Context("zone validation with unmanaged infrastructure", func() {
+			Context("worker with no zones configured", func() {
+				BeforeEach(func() {
+					shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+						{
+							Name:    "worker1",
+							Minimum: 1,
+							Maximum: 1,
+						},
+					}
+					createCluster()
+				})
+
+				It("should reject zone when worker has no zones configured", func() {
+					options.Zone = "custom-zone"
+
+					effectiveZone, err := ValidateZone(ctx, options, b)
+					Expect(err).To(MatchError("zone validation failed: worker \"worker1\" has no zones configured, but zone \"custom-zone\" was provided"))
+					Expect(effectiveZone).To(BeEmpty())
+				})
+
+				It("should allow empty zone when worker has no zones", func() {
+					options.Zone = ""
+
+					effectiveZone, err := ValidateZone(ctx, options, b)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(effectiveZone).To(BeEmpty())
+				})
+			})
+
+			Context("worker with single zone configured", func() {
+				BeforeEach(func() {
+					shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+						{
+							Name:    "worker1",
+							Minimum: 1,
+							Maximum: 1,
+							Zones:   []string{"zone-1"},
+						},
+					}
+					createCluster()
+				})
+
+				It("should auto-apply the single zone when not provided", func() {
+					options.Zone = ""
+
+					effectiveZone, err := ValidateZone(ctx, options, b)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(effectiveZone).To(Equal("zone-1"))
+				})
+
+				It("should accept matching zone when provided", func() {
+					options.Zone = "zone-1"
+
+					effectiveZone, err := ValidateZone(ctx, options, b)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(effectiveZone).To(Equal("zone-1"))
+				})
+
+				It("should reject non-matching zone when provided", func() {
+					options.Zone = "zone-2"
+
+					effectiveZone, err := ValidateZone(ctx, options, b)
+					Expect(err).To(MatchError("zone validation failed: provided zone \"zone-2\" does not match the configured zones [zone-1] for worker \"worker1\""))
+					Expect(effectiveZone).To(BeEmpty())
+				})
+			})
+
+			Context("worker with multiple zones configured", func() {
+				BeforeEach(func() {
+					shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+						{
+							Name:    "worker1",
+							Minimum: 1,
+							Maximum: 1,
+							Zones:   []string{"zone-1", "zone-2", "zone-3"},
+						},
+					}
+					createCluster()
+				})
+
+				It("should require zone flag when not provided", func() {
+					options.Zone = ""
+
+					effectiveZone, err := ValidateZone(ctx, options, b)
+					Expect(err).To(MatchError("zone validation failed: worker \"worker1\" has multiple zones configured [zone-1 zone-2 zone-3], --zone flag is required"))
+					Expect(effectiveZone).To(BeEmpty())
+				})
+
+				It("should accept valid zone when provided", func() {
+					options.Zone = "zone-2"
+
+					effectiveZone, err := ValidateZone(ctx, options, b)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(effectiveZone).To(Equal("zone-2"))
+				})
+
+				It("should reject invalid zone when provided", func() {
+					options.Zone = "zone-4"
+
+					effectiveZone, err := ValidateZone(ctx, options, b)
+					Expect(err).To(MatchError("zone validation failed: provided zone \"zone-4\" does not match the configured zones [zone-1 zone-2 zone-3] for worker \"worker1\""))
+					Expect(effectiveZone).To(BeEmpty())
+				})
+			})
+
+			Context("specific worker pool selection", func() {
+				BeforeEach(func() {
+					shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+						{
+							Name:    "worker1",
+							Minimum: 1,
+							Maximum: 3,
+							Zones:   []string{"zone-a"},
+						},
+						{
+							Name:    "worker2",
+							Minimum: 1,
+							Maximum: 3,
+							Zones:   []string{"zone-b", "zone-c"},
+						},
+					}
+					createCluster()
+				})
+
+				It("should validate against specific worker pool when name is provided", func() {
+					options.WorkerPoolName = "worker2"
+					options.Zone = "zone-b"
+
+					effectiveZone, err := ValidateZone(ctx, options, b)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(effectiveZone).To(Equal("zone-b"))
+				})
+
+				It("should reject zone not in specific worker pool", func() {
+					options.WorkerPoolName = "worker2"
+					options.Zone = "zone-a"
+
+					effectiveZone, err := ValidateZone(ctx, options, b)
+					Expect(err).To(MatchError("zone validation failed: provided zone \"zone-a\" does not match the configured zones [zone-b zone-c] for worker \"worker2\""))
+					Expect(effectiveZone).To(BeEmpty())
 				})
 			})
 		})

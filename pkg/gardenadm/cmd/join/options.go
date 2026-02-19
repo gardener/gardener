@@ -28,6 +28,11 @@ type Options struct {
 	WorkerPoolName string
 	// ControlPlane indicates whether the node should be joined as a control plane node.
 	ControlPlane bool
+	// Zone is the availability zone in which the new node is being initialized.
+	// For shoot's worker with multiple zones configured, this flag is required.
+	// For shoot's worker with a single zone configured, this zone is automatically applied.
+	// For shoot's worker with no zones, this flag is optional.
+	Zone string
 }
 
 // ParseArgs parses the arguments to the options.
@@ -60,4 +65,5 @@ func (o *Options) addFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.BootstrapToken, "bootstrap-token", "", "Bootstrap token for joining the cluster (create it with 'gardenadm token' on a control plane node)")
 	fs.StringVarP(&o.WorkerPoolName, "worker-pool-name", "w", "", "Name of the worker pool to assign the joining node.")
 	fs.BoolVar(&o.ControlPlane, "control-plane", false, "Create a new control plane instance on this node")
+	fs.StringVarP(&o.Zone, "zone", "z", "", "Zone in which this new node is being joined. Required when the worker pool has multiple zones configured, optional when a single zone is configured (automatically applied), and optional when no zones are configured.")
 }

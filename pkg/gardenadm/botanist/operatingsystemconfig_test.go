@@ -7,6 +7,8 @@ package botanist_test
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"unsafe"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/coreos/go-systemd/v22/dbus"
@@ -15,9 +17,11 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/component-base/version"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -40,6 +44,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 		fakeDBus   *fakedbus.DBus
 		fakeClient client.Client
 		clientSet  kubernetes.Interface
+
+		node *corev1.Node
+		zone string
 	)
 
 	BeforeEach(func() {
@@ -132,6 +139,73 @@ var _ = Describe("OperatingSystemConfig", func() {
 			isInitialized, err := b.IsGardenerNodeAgentInitialized(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(isInitialized).To(BeTrue())
+		})
+	})
+
+	Describe("#ApplyOperatingSystemConfig - Zone file handling", func() {
+		BeforeEach(func() {
+			node = &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-node",
+					Labels: map[string]string{
+						corev1.LabelHostname: b.HostName,
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, node)).To(Succeed())
+
+			oscSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "osc-secret",
+					Namespace: "kube-system",
+				},
+				Data: map[string][]byte{
+					"osc.yaml": []byte("test-data"),
+				},
+			}
+
+			rs := reflect.ValueOf(b).Elem()
+			rf := rs.FieldByName("operatingSystemConfigSecret")
+			reflect.NewAt(rf.Type(), unsafe.Pointer(rf.UnsafeAddr())).Elem().Set(reflect.ValueOf(oscSecret))
+		})
+
+		Context("when Zone is nil", func() {
+			BeforeEach(func() {
+				b.Zone = nil
+			})
+
+			It("should not write zone file", func() {
+				Expect(b.ApplyOperatingSystemConfig(ctx)).To(Succeed())
+
+				_, statErr := fs.Stat("/var/lib/gardener-node-agent/zone")
+				Expect(statErr).To(MatchError(ContainSubstring("file does not exist")))
+			})
+		})
+
+		Context("when Zone is set", func() {
+			BeforeEach(func() {
+				zone = "zone-a"
+				b.Zone = ptr.To(zone)
+			})
+
+			It("should write zone file", func() {
+				Expect(b.ApplyOperatingSystemConfig(ctx)).To(Succeed())
+
+				zoneContent, readErr := fs.ReadFile("/var/lib/gardener-node-agent/zone")
+				Expect(readErr).NotTo(HaveOccurred())
+				Expect(string(zoneContent)).To(Equal(zone))
+			})
+
+			It("should overwrite existing zone file", func() {
+				Expect(fs.MkdirAll("/var/lib/gardener-node-agent", 0755)).To(Succeed())
+				Expect(fs.WriteFile("/var/lib/gardener-node-agent/zone", []byte("existing-zone"), 0600)).To(Succeed())
+
+				Expect(b.ApplyOperatingSystemConfig(ctx)).To(Succeed())
+
+				zoneContent, readErr := fs.ReadFile("/var/lib/gardener-node-agent/zone")
+				Expect(readErr).NotTo(HaveOccurred())
+				Expect(string(zoneContent)).To(Equal(zone))
+			})
 		})
 	})
 })

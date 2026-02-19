@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -34,7 +35,10 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 		Long:  "Bootstrap the first control plane node",
 
 		Example: `# Bootstrap the first control plane node
-gardenadm init --config-dir /path/to/manifests`,
+gardenadm init --config-dir /path/to/manifests
+
+# Bootstrap the first control plane node in a specific zone (required when multiple zones are configured)
+gardenadm init --config-dir /path/to/manifests --zone zone-a`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.ParseArgs(args); err != nil {
@@ -446,6 +450,10 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Garden
 	b, err := botanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir, true)
 	if err != nil {
 		return nil, err
+	}
+
+	if opts.Zone != "" {
+		b.Zone = ptr.To(opts.Zone)
 	}
 
 	kubeconfigFileExists, err := b.FS.Exists(botanist.PathKubeconfig)
