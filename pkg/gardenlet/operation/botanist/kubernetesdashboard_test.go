@@ -63,6 +63,18 @@ var _ = Describe("Kubernetes Dashboard", func() {
 			botanist.Shoot.SetInfo(shoot)
 		})
 
+		Context("For a Shoot with empty .spec.addons", func() {
+			BeforeEach(func() {
+				shoot.Spec.Addons = &gardencorev1beta1.Addons{}
+			})
+
+			It("should successfully create a Kubernetes Dashboard interface", func() {
+				kubernetesDashboard, err := botanist.DefaultKubernetesDashboard()
+				Expect(kubernetesDashboard).NotTo(BeNil())
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
 		It("should successfully create a Kubernetes Dashboard interface", func() {
 			kubernetesDashboard, err := botanist.DefaultKubernetesDashboard()
 			Expect(kubernetesDashboard).NotTo(BeNil())

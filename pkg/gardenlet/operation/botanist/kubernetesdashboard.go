@@ -37,7 +37,7 @@ func (b *Botanist) DefaultKubernetesDashboard() (kubernetesdashboard.Interface, 
 		values.APIServerHost = ptr.To(b.outOfClusterAPIServerFQDN())
 	}
 
-	if b.Shoot.GetInfo().Spec.Addons != nil && b.Shoot.GetInfo().Spec.Addons.KubernetesDashboard.AuthenticationMode != nil {
+	if b.Shoot.GetInfo().Spec.Addons != nil && b.Shoot.GetInfo().Spec.Addons.KubernetesDashboard != nil && b.Shoot.GetInfo().Spec.Addons.KubernetesDashboard.AuthenticationMode != nil {
 		values.AuthenticationMode = *b.Shoot.GetInfo().Spec.Addons.KubernetesDashboard.AuthenticationMode
 	}
 
