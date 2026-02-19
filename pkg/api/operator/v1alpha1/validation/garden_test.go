@@ -2601,6 +2601,27 @@ var _ = Describe("Validation Tests", func() {
 				})
 			})
 
+			Context("DiscoveryServer", func() {
+				It("should accept a valid domain", func() {
+					garden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+						Domain: ptr.To("discovery.gardener.cloud"),
+					}
+
+					Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
+				})
+
+				It("should reject a domain with a protocol prefix", func() {
+					garden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+						Domain: ptr.To("https://discovery.gardener.cloud"),
+					}
+
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer.domain"),
+					}))))
+				})
+			})
+
 			Context("Kubernetes", func() {
 				Context("sni", func() {
 					BeforeEach(func() {

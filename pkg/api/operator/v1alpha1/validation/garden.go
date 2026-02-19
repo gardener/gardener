@@ -447,6 +447,7 @@ func validateGardener(gardener operatorv1alpha1.Gardener, kubernetes operatorv1a
 	allErrs = append(allErrs, validateGardenerControllerManagerConfig(gardener.ControllerManager, fldPath.Child("gardenerControllerManager"))...)
 	allErrs = append(allErrs, validateGardenerSchedulerConfig(gardener.Scheduler, fldPath.Child("gardenerScheduler"))...)
 	allErrs = append(allErrs, validateGardenerDashboardConfig(gardener.Dashboard, kubernetes.KubeAPIServer, fldPath.Child("gardenerDashboard"))...)
+	allErrs = append(allErrs, validateGardenerDiscoveryServerConfig(gardener.DiscoveryServer, fldPath.Child("gardenerDiscoveryServer"))...)
 
 	return allErrs
 }
@@ -649,6 +650,20 @@ func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardC
 		if oidc.IssuerURL != nil {
 			allErrs = append(allErrs, gardencorevalidation.ValidateOIDCIssuerURL(*oidc.IssuerURL, oidcPath.Child("issuerURL"))...)
 		}
+	}
+
+	return allErrs
+}
+
+func validateGardenerDiscoveryServerConfig(config *operatorv1alpha1.GardenerDiscoveryServerConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if config == nil {
+		return allErrs
+	}
+
+	if config.Domain != nil {
+		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(*config.Domain, fldPath.Child("domain"))...)
 	}
 
 	return allErrs
