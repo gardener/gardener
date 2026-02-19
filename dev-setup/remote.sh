@@ -113,6 +113,8 @@ case "$command" in
     fi
 
     echo "Check if essential config options are initialized"
+    check-not-initial "$SCRIPT_DIR"/garden/overlays/remote/secret-dns.yaml 'select(document_index == 0) | .data'
+
     if [[ "$workload_identity_support" == "true" ]]; then
       echo "Using workload identities"
       check-not-initial "$REPO_ROOT_DIR"/gardenconfig/overlays/remote/credentials/domains/domain-workload-identities.yaml 'select(document_index == 0) | .metadata.namespace'
@@ -295,6 +297,13 @@ case "$command" in
     check-not-initial "$SCRIPT_DIR"/gardenlet/overlays/remote/gardenlet.yaml ".spec.config.seedConfig.spec.provider.region"
     check-not-initial "$SCRIPT_DIR"/gardenlet/overlays/remote/gardenlet.yaml ".spec.config.seedConfig.spec.provider.type"
     check-not-initial "$SCRIPT_DIR"/gardenlet/overlays/remote/gardenlet.yaml ".spec.config.seedConfig.spec.provider.zones"
+
+    echo "Check if /dev-setup/extensions/remote directory contains at least one extension (.yaml file)"
+    yaml_file_count=$(find "$SCRIPT_DIR/extensions/remote" -maxdepth 1 -name "*.yaml" -type f 2>/dev/null | wc -l)
+    if [[ $yaml_file_count -eq 0 ]]; then
+      echo "Directory \"$SCRIPT_DIR/extensions/remote\" does not contain any extensions (.yaml files). Please check your config."
+      exit 1
+    fi
 
     echo "Deploying kyverno and container registry"
     kubectl --server-side=true --force-conflicts=true apply -k "$SCRIPT_DIR"/remote/kyverno

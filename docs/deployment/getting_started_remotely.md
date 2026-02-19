@@ -23,45 +23,53 @@ This guide leverages `gardener-operator` to manage the Gardener components.
 
 As this setup is running on a real infrastructure, you have to provide credentials for DNS, the infrastructure, and the kubeconfig for the Kubernetes cluster you want to use as seed.
 
-> [!CAUTION]
+> ⚠️
 > There are `.gitignore` entries for all files and directories which include credentials. Nevertheless, please double check and make sure that credentials are not committed to the version control system.
 
 ### DNS
 
 Gardener control plane requires DNS for the virtual garden, default and internal domains. Thus, you have to configure a valid DNS provider credentials for your setup.
 
-- The DNS credentials for the virtual garden domain should be maintained at [`/dev-setup/gardenconfig/overlays/remote/credentials/domains/domain-secrets.yaml`](/dev-setup/gardenconfig/overlays/remote/credentials/domains/domain-secrets.yaml)
+- The DNS credentials for the virtual garden domain should be maintained at [`/dev-setup/garden/overlays/remote/secret-dns.yaml`](/dev-setup/garden/overlays/remote/secret-dns.yaml)
 - For the default and internal domains, you have two options:
   - In case DNS credentials based on workload identities are used, `WorkloadIdentity`s should be maintained at [`/dev-setup/gardenconfig/overlays/remote/credentials/domains/domain-workload-identities.yaml`](/dev-setup/gardenconfig/overlays/remote/credentials/domains/domain-workload-identities.yaml).
   - If static DNS credentials are used, the `Secret`s for default and internal domains should be maintained at [`/dev-setup/gardenconfig/overlays/remote/credentials/domains/domain-secrets.yaml`](/dev-setup/gardenconfig/overlays/remote/credentials/domains/domain-secrets.yaml).
 
 There are templates with `.tmpl` suffixes for the files in the corresponding folders.
 
-### Infrastructure
-
-In case infrastructure credentials based on workload identities are used, `WorkloadIdentity`s:
-
-- [`/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-garden/infrastructure-workloadidentities.yaml`](/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-garden/infrastructure-workloadidentities.yaml)
-- [`/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-remote/infrastructure-workloadidentities.yaml`](/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-remote/infrastructure-workloadidentities.yaml)
-
-If static credentials are used, the `Secret`s and the corresponding `CredentialsBinding`s:
-
-- [`/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-garden/infrastructure-secrets.yaml`](/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-garden/infrastructure-secrets.yaml)
-- [`/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-remote/infrastructure-secrets.yaml`](/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-remote/infrastructure-secrets.yaml)
-
-`CredentialsBinding`s for both scenarios should be maintained at:
-- [`/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-garden/credentialsbindings.yaml`](/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-garden/credentialsbindings.yaml) and [`/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-garden/credentialsbindings.yaml`](/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-garden/credentialsbindings.yaml).
-- [`/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-garden/credentialsbindings.yaml`](/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-garden/credentialsbindings.yaml) and [`/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-remote/credentialsbindings.yaml`](/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-remote/credentialsbindings.yaml).
-
-There are templates with `.tmpl` suffixes for the files in the corresponding folders.
-
 ### Projects
 
-There is the `remote` project which is predefined and where infrastructure credentials are created by default. Other projects can be created manually.
+There the `garden` and `remote` projects which are predefined and where infrastructure credentials can be created automatically.
+Please use the `remote` project for your shoots. Other projects can be created manually.
+
+### Infrastructure
+
+This section explains how to maintain infrastructure credentials for the `remote` and the `garden` project.
+If you don't plan to create additional seeds, the `garden` project secrets could remain empty.
+
+In case infrastructure credentials based on workload identities are used, update the `WorkloadIdentity`s in the two files:
+
+- `garden` project: [`/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-garden/infrastructure-workloadidentities.yaml`](/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-garden/infrastructure-workloadidentities.yaml)
+- `remote` project: [`/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-remote/infrastructure-workloadidentities.yaml`](/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-remote/infrastructure-workloadidentities.yaml)
+
+If static credentials are used, update the `Secret`s in the following files:
+
+- `garden` project: [`/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-garden/infrastructure-secrets.yaml`](/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-garden/infrastructure-secrets.yaml)
+- `remote` project: [`/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-remote/infrastructure-secrets.yaml`](/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-remote/infrastructure-secrets.yaml)
+
+`CredentialsBinding`s for both scenarios should be maintained at:
+- `garden` project: [`/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-garden/credentialsbindings.yaml`](/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-garden/credentialsbindings.yaml)
+- `remote` project: [`/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-remote/credentialsbindings.yaml`](/dev-setup/gardenconfig/overlays/remote/credentials/credentials-project-remote/credentialsbindings.yaml).
+
+There are templates with `.tmpl` suffixes for the files in the corresponding folders.
 
 ### Garden Runtime and Soil Cluster Preparation
 
 The `kubeconfig` of your Kubernetes cluster you would like to use as seed should be placed at [`/dev-setup/remote/kubeconfigs/kubeconfig`](/dev-setup/remote/kubeconfigs/kubeconfig).
+
+> ℹ️ 
+> Do **not** use a kubeconfig created with `gardenctl`. It leads to strange errors when skaffold is running kubectl commands.
+
 Additionally, please maintain the configuration of your garden in [`/dev-setup/garden/overlays/remote/garden.yaml`](/dev-setup/garden/overlays/remote/garden.yaml)
 and for your gardenlet in [`/dev-setup/gardenlet/overlays/remote/gardenlet.yaml`](/dev-setup/gardenlet/overlays/remote/gardenlet.yaml).
 They are automatically copied from their corresponding `*.yaml.tmpl` files in the same directory when you run `make remote up` for the first time. They also include explanations of the properties you should set.
@@ -70,7 +78,8 @@ Using a Gardener Shoot cluster as seed simplifies the process, because some conf
 
 ### Extensions
 
-You might plan to deploy and register external extensions for networking, operating system, providers, etc. Please put `Extensions`s into the [`/dev-setup/extensions/remote`](/dev-setup/extensions/remote) directory. The whole content of this folder will be applied to your garden runtime cluster.
+You might plan to deploy and register external extensions for networking, operating system, providers, etc. Please put `Extension`s into the [`/dev-setup/extensions/remote`](/dev-setup/extensions/remote) directory. The whole content of this folder will be applied to your garden runtime cluster.
+Calico and Cilium networking extensions are already deployed by default. Most likely, you will additionally need at least one provider and one os extension for your setup.
 
 ### `CloudProfile`s
 

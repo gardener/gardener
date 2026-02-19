@@ -28,6 +28,11 @@ profiles:
       - op: replace
         path: /manifests/kustomize/paths/0
         value: dev-setup/gardenconfig/overlays/remote
+    deploy:
+      kubectl:
+        flags:
+          apply:
+            - --server-side
 ---
 apiVersion: skaffold/v4beta12
 kind: Config
