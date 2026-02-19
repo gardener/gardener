@@ -1053,6 +1053,18 @@ Gardener enables this webhook to schedule pods of deployments across nodes and z
 
 Please note that the `gardener-resource-manager` itself as well as pods labelled with `topology-spread-constraints.resources.gardener.cloud/skip` are excluded from any mutations.
 
+#### Pod Scheduler Name
+
+This webhook mutates `Pod`s to set a custom scheduler name in `.spec.schedulerName`.
+It only overwrites the scheduler name when no custom scheduler name is already specified (i.e., when `.spec.schedulerName` is empty or set to `default-scheduler`).
+This webhook is useful when a custom scheduler (e.g., `bin-packing-scheduler`) should be used by default for all pods in certain namespaces.
+
+#### Seccomp Profile
+
+This webhook mutates `Pod`s to set a default seccomp profile in `.spec.securityContext.seccompProfile`.
+If the pod does not already have a seccomp profile specified, this webhook adds the `RuntimeDefault` seccomp profile type.
+This enhances security by ensuring that pods run with a seccomp profile that restricts the system calls they can make, reducing the attack surface.
+
 #### System Components Webhook
 
 If enabled, this webhook handles scheduling concerns for system components `Pod`s (except those managed by `DaemonSet`s).

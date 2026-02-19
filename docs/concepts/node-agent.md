@@ -97,6 +97,22 @@ Since the underlying client is based on `k8s.io/client-go` and the kubeconfig po
 This procedure ensures that the most up-to-date tokens are always present on the host and used by the `gardener-node-agent` and the other `systemd` components.
 The controller is also triggered via a source channel, which is done by the `Operating System Config` controller during an in-place service account key rotation.
 
+### [Certificate Controller](../../pkg/nodeagent/controller/certificate)
+
+This controller is responsible for rotating the client certificate used by `gardener-node-agent` to authenticate against the shoot cluster's API server.
+It monitors the expiration of the certificate and requests a new one before the current certificate expires.
+
+### [Health Check Controller](../../pkg/nodeagent/controller/healthcheck)
+
+This controller performs periodic health checks on the node's critical components, such as `containerd` and `kubelet`.
+It watches the `Node` object and executes configured health checkers at regular intervals.
+If a health check fails, the controller can restart the affected systemd service to restore normal operation.
+
+### [Hostname Check Controller](../../pkg/nodeagent/controller/hostnamecheck)
+
+This controller periodically checks whether the hostname of the machine has changed.
+If a hostname change is detected, the controller triggers a restart of `gardener-node-agent` by calling its cancel function.
+
 ## Reasoning
 
 The `gardener-node-agent` is a replacement for what was called the `cloud-config-downloader` and the `cloud-config-executor`, both written in `bash`. The `gardener-node-agent` implements this functionality as a regular controller and feels more uniform in terms of maintenance.

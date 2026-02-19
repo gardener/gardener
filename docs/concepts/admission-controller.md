@@ -13,6 +13,11 @@ It is also used to serve http(s) handlers for authorization webhooks.
 
 This section describes the admission webhook handlers that are currently served.
 
+### Audit Policy Validator
+
+In `Shoot`s, it is possible to reference audit policy ConfigMaps that define the audit logging behavior for the kube-apiserver.
+This validation handler validates that such audit policy configurations are valid and conform to the expected schema.
+
 ### Authentication Configuration Validator
 
 In `Shoot`s, it is possible to reference [structured authentication configurations](https://kubernetes.io/blog/2024/04/25/structured-authentication-moves-to-beta).
@@ -37,6 +42,12 @@ This handler checks if the incoming request contains a Kubernetes secret with a 
 Namespaces are the backing entities of Gardener projects in which shoot cluster objects reside.
 This validation handler protects active namespaces against premature deletion requests.
 Therefore, it denies deletion requests if a namespace still contains shoot clusters or if it belongs to a non-deleting Gardener project (without `.metadata.deletionTimestamp`).
+
+### Internal Domain Secret Validator
+
+Gardener uses internal domain secrets to configure DNS for shoot clusters.
+This validation handler ensures that only one internal domain secret can exist per namespace and validates the immutability of critical domain configuration.
+It prevents modifications that could break DNS resolution for existing shoots.
 
 ### Provider Secret Labels
 
@@ -108,6 +119,11 @@ The count restriction can also be used in combination with size restrictions.
 
 Please refer to [Scoped API Access for Gardenlets](../deployment/gardenlet_api_access.md) for more information.
 
+### ShootRestriction
+
+This handler restricts requests made by gardenlets running in self-hosted shoots.
+It ensures that shoot gardenlets can only access resources that belong to their own shoot, preventing unauthorized access to other shoots' resources.
+
 ### UpdateRestriction
 
 Gardener stores public data regarding shoot clusters, i.e. certificate authority bundles, OIDC discovery documents, etc.
@@ -126,3 +142,8 @@ This section describes the authorization webhook handlers that are currently ser
 ### SeedAuthorization
 
 Please refer to [Scoped API Access for Gardenlets](../deployment/gardenlet_api_access.md) for more information.
+
+### ShootAuthorization
+
+This handler authorizes requests from gardenlets running in self-hosted shoots.
+It implements scoped API access for shoot gardenlets, ensuring they can only access resources related to their own shoot.
