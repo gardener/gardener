@@ -634,9 +634,6 @@ func getDaemonSet(hash string, advertiseIPAddress string) *appsv1.DaemonSet {
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Name:            "sidecar",
 							Resources: corev1.ResourceRequirements{
-								Limits: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("90Mi"),
-								},
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("5m"),
 									corev1.ResourceMemory: resource.MustParse("15Mi"),
@@ -687,9 +684,6 @@ func getDaemonSet(hash string, advertiseIPAddress string) *appsv1.DaemonSet {
 								TimeoutSeconds:      1,
 							},
 							Resources: corev1.ResourceRequirements{
-								Limits: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("1Gi"),
-								},
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("5m"),
 									corev1.ResourceMemory: resource.MustParse("30Mi"),
@@ -722,9 +716,6 @@ func getDaemonSet(hash string, advertiseIPAddress string) *appsv1.DaemonSet {
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Name:            "setup",
 							Resources: corev1.ResourceRequirements{
-								Limits: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("200Mi"),
-								},
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("20m"),
 									corev1.ResourceMemory: resource.MustParse("20Mi"),
