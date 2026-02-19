@@ -655,7 +655,7 @@ On `Gardenlet` deletion, nothing happens: `gardenlet`s must always be deleted ma
 
 ## Webhooks
 
-As of today, the `gardener-operator` only has one webhook handler which is now described in more detail.
+The `gardener-operator` exposes several webhook handlers which are now described in more detail.
 
 ### Validation
 
@@ -687,6 +687,11 @@ These deletions often happen accidentally, and this handler safeguards the syste
 
 This webhook handler validates `DELETE` operations on the `core/v1.Namespace` resource with name `garden` (which is Gardener's system namespace).
 It prevents deleting it as long as a `operator.gardener.cloud/v1alpha1.Garden` resource (still) exists, i.e., it has to be deleted first before any attempt of deleting the namespace.
+
+#### `Audit Policy`
+
+This webhook handler validates `ConfigMap`s containing audit policies that are referenced by `Garden` resources.
+It ensures that audit policy configurations for both the `virtual-garden-kube-apiserver` and `gardener-apiserver` are valid and conform to the expected schema.
 
 ### Defaulting
 
