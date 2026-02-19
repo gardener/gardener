@@ -200,6 +200,9 @@ setup_containerd_registry_mirrors() {
     setup_containerd_registry_mirror "$NODE" "registry.k8s.io" "https://registry.k8s.io" "http://k8s.registry-cache.local.gardener.cloud:5001"
     setup_containerd_registry_mirror "$NODE" "quay.io" "https://quay.io" "http://quay.registry-cache.local.gardener.cloud:5001"
     setup_containerd_registry_mirror "$NODE" "europe-docker.pkg.dev" "https://europe-docker.pkg.dev" "http://europe-docker-pkg-dev.registry-cache.local.gardener.cloud:5001"
+
+    echo "[${NODE}] Restarting containerd after setting up containerd registry mirrors."
+    docker exec "${NODE}" systemctl restart containerd
   done
 }
 
