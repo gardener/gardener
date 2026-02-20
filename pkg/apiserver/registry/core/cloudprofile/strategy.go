@@ -83,6 +83,7 @@ type cloudProfileStatusStrategy struct {
 	cloudProfileStrategy
 }
 
+// StatusStrategy defines the storage strategy for the status subresource of CloudProfiles.
 var StatusStrategy = cloudProfileStatusStrategy{Strategy}
 
 func (cloudProfileStatusStrategy) PrepareForUpdate(_ context.Context, newObj, oldObj runtime.Object) {
