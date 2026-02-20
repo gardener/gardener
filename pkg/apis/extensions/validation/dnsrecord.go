@@ -6,6 +6,7 @@ package validation
 
 import (
 	"fmt"
+	"math"
 	"net"
 	"slices"
 	"strings"
@@ -86,7 +87,9 @@ func ValidateDNSRecordSpec(spec *extensionsv1alpha1.DNSRecordSpec, fldPath *fiel
 	}
 
 	if spec.TTL != nil {
-		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(*spec.TTL, fldPath.Child("ttl"))...)
+		for _, msg := range validation.IsInRange(int(*spec.TTL), 0, math.MaxUint32) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("ttl"), *spec.TTL, msg))
+		}
 	}
 
 	return allErrs

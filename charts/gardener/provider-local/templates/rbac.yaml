@@ -118,7 +118,6 @@ rules:
   - mutatingwebhookconfigurations
   - customresourcedefinitions
   - networkpolicies
-  - ingresses
   - poddisruptionbudgets
   - ippools
   verbs:

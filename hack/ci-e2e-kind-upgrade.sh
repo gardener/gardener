@@ -14,8 +14,6 @@ VERSION="$(cat VERSION)"
 CLUSTER_NAME=""
 SEED_NAME=""
 
-ensure_local_gardener_cloud_hosts
-
 # copy_kubeconfig_from_kubeconfig_env_var copies the kubeconfig to appropriate location based on kind setup
 function copy_kubeconfig_from_kubeconfig_env_var() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
@@ -235,6 +233,7 @@ kind_up
 # export all container logs and events after test execution
 trap "
   ( rm -rf "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases" )
+  ( export_artifacts_host )
   ( export_artifacts "$CLUSTER_NAME" )
   ( kind_down )
 " EXIT

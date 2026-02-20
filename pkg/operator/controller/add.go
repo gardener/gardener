@@ -145,7 +145,9 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 			return err
 		}
 
-		if err := (&service.Reconciler{}).AddToManager(mgr, predicate.And(
+		if err := (&service.Reconciler{
+			VirtualGardenIP: os.Getenv("GARDENER_OPERATOR_VIRTUAL_GARDEN_IP"),
+		}).AddToManager(mgr, predicate.And(
 			virtualGardenIstioIngressPredicate,
 			predicate.NewPredicateFuncs(func(obj client.Object) bool {
 				return obj.GetNamespace() == operatorv1alpha1.VirtualGardenDefaultSNIIngressNamespace

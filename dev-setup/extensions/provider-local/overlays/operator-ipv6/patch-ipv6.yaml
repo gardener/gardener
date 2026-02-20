@@ -8,9 +8,9 @@ spec:
       values:
         controllers:
           service:
-            hostIP: "::1"
-            virtualGardenIP: "::3"
-            zone0IP: "::10"
-            zone1IP: "::11"
-            zone2IP: "::12"
-            bastionIP: "::22"
+            hostIP: "fd00:ff::1"
+            virtualGardenIP: "fd00:ff::3"
+            zone0IP: "fd00:ff::10"
+            zone1IP: "fd00:ff::11"
+            zone2IP: "fd00:ff::12"
+            bastionIP: "fd00:ff::22"

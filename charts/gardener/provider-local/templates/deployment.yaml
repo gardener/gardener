@@ -63,9 +63,19 @@ spec:
         - --ignore-operation-annotation={{ .Values.controllers.ignoreOperationAnnotation }}
         - --worker-max-concurrent-reconciles={{ .Values.controllers.worker.concurrentSyncs }}
         - --operatingsystemconfig-max-concurrent-reconciles={{ .Values.controllers.operatingsystemconfig.concurrentSyncs }}
-        - --ingress-max-concurrent-reconciles={{ .Values.controllers.ingress.concurrentSyncs }}
         - --service-max-concurrent-reconciles={{ .Values.controllers.service.concurrentSyncs }}
+        {{- if contains "managedseed" (default "" .Values.gardener.seed.name) }}
+        # On ManagedSeeds, there are no proper LoadBalancers that make the istio ingress-gateway reachable from the
+        # host. However, reusing the same IP in the kind seed and the ManagedSeeds leads to components on the
+        # ManagedSeeds not being able to reach their API server (the shoot API server).
+        # To prevent the IP conflict while still allowing the seed to get ready (it requires an external IP on the
+        # istio ingress-gateway), we use the loopback IP for ManagedSeeds.
+        - --service-host-ip=127.0.0.1
+        {{- else if eq .Values.gardener.seed.name "local2" }}
+        - --service-host-ip={{ .Values.controllers.service.hostIP2 }}
+        {{- else }}
         - --service-host-ip={{ .Values.controllers.service.hostIP }}
+        {{- end }}
         - --service-virtual-garden-ip={{ .Values.controllers.service.virtualGardenIP }}
         - --service-zone-0-ip={{ .Values.controllers.service.zone0IP }}
         - --service-zone-1-ip={{ .Values.controllers.service.zone1IP }}
@@ -75,11 +85,8 @@ spec:
         - --backupbucket-container-mount-path={{ .Values.controllers.backupbucket.containerMountPath }}
         - --heartbeat-namespace={{ .Release.Namespace }}
         - --heartbeat-renew-interval-seconds={{ .Values.controllers.heartbeat.renewIntervalSeconds }}
-        {{- if eq (include "coredns.enabled" .) "false" }}
-        - --disable-webhooks=dnsconfig
-        {{- end }}
         {{- if .Values.gardener.runtimeCluster.enabled }}
-        - --disable-webhooks=controlplane,dnsconfig,networkpolicy,prometheus,shoot
+        - --disable-webhooks=controlplane,networkpolicy,prometheus,shoot
         - --controllers=backupbucket,dnsrecord,local-ext-shoot
         - --extension-classes=garden
         {{- else }}
