@@ -37,27 +37,27 @@ parse_flags "$@"
 
 LOOPBACK_IP_ADDRESSES=(172.18.255.1)
 if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-  LOOPBACK_IP_ADDRESSES+=(::1)
+  LOOPBACK_IP_ADDRESSES+=(fd00:ff::1)
 fi
 
 if [[ "$MULTI_ZONAL" == "true" ]]; then
   LOOPBACK_IP_ADDRESSES+=(172.18.255.10 172.18.255.11 172.18.255.12)
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-    LOOPBACK_IP_ADDRESSES+=(::10 ::11 ::12)
+    LOOPBACK_IP_ADDRESSES+=(fd00:ff::10 fd00:ff::11 fd00:ff::12)
   fi
 fi
 
 if [[ "$CLUSTER_NAME" != "*local2*" ]] ; then
   LOOPBACK_IP_ADDRESSES+=(172.18.255.22)
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-    LOOPBACK_IP_ADDRESSES+=(::22)
+    LOOPBACK_IP_ADDRESSES+=(fd00:ff::22)
   fi
 fi
 
 if [[ "$CLUSTER_NAME" == "gardener-operator-local" ]]; then
   LOOPBACK_IP_ADDRESSES+=(172.18.255.3)
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-    LOOPBACK_IP_ADDRESSES+=(::3)
+    LOOPBACK_IP_ADDRESSES+=(fd00:ff::3)
   fi
 elif [[ "$CLUSTER_NAME" == "gardener-local2" || "$CLUSTER_NAME" == "gardener-local-multi-node2" ]]; then
   LOOPBACK_IP_ADDRESSES+=(172.18.255.2)
