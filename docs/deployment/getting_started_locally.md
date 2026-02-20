@@ -57,7 +57,7 @@ The local registry can now be accessed either via `localhost:5001` or `registry.
 The storage directories of the registries are mounted to the host machine under `dev/local-registry`.
 With this, mirrored images don't have to be pulled again after recreating the cluster.
 
-It may also be necessary to mark the repository in Docker as an insecure repository to ensure that Docker establishes the connection via HTTP. This can be achieved by adding the repository accordingly in the `/etc/docker/daemon.json` file:
+It may also be necessary to mark the registry in Docker as an insecure registry to ensure that Docker establishes the connection via HTTP. This can be achieved by adding the registry accordingly in the `/etc/docker/daemon.json` file:
 ```json
 { "insecure-registries":["registry.local.gardener.cloud:5001"] }
 ``` 
