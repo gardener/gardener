@@ -578,8 +578,25 @@ func (r *Reconciler) reconcile(
 			Fn:   c.fluentBit.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name:   "Deploying Vali",
-			Fn:     c.vali.Deploy,
+			Name: "Deploying Vali/VictoriaLogs",
+			Fn: func(ctx context.Context) error {
+				if err := c.vali.Deploy(ctx); err != nil {
+					return err
+				}
+				if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
+					if err := c.victoriaLogs.Deploy(ctx); err != nil {
+						return err
+					}
+				} else {
+					if err := c.victoriaLogs.Destroy(ctx); err != nil {
+						return err
+					}
+				}
+				return nil
+			},
+			// TODO(rrhubenov): the `enableVali` flag is false only if the runtime cluster is running in an IPv6 environment.
+			// When we completely remove `Vali`, this needs to be reviewed and VictoriaLogs introduced to IPv6 environments as well.
+			// For now, IPv6 clusters remain without a logging backend.
 			SkipIf: !enableVali,
 		})
 		_ = g.Add(flow.Task{

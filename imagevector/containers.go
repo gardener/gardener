@@ -135,6 +135,8 @@ const (
 	ContainerImageNameValiCurator = "vali-curator"
 	// ContainerImageNameValitail is a constant for an image in the image vector with name 'valitail'.
 	ContainerImageNameValitail = "valitail"
+	// ContainerImageNameVictoriaLogs is a constant for an image in the image vector with name 'victoria-logs'.
+	ContainerImageNameVictoriaLogs = "victoria-logs"
 	// ContainerImageNameVictoriaOperator is a constant for an image in the image vector with name 'victoria-operator'.
 	ContainerImageNameVictoriaOperator = "victoria-operator"
 	// ContainerImageNameVpaAdmissionController is a constant for an image in the image vector with name 'vpa-admission-controller'.

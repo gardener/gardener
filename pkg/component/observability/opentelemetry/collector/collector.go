@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
+	victorialogsconstants "github.com/gardener/gardener/pkg/component/observability/logging/victorialogs/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
@@ -75,6 +76,8 @@ type Values struct {
 	ClusterType component.ClusterType
 	// IsGardenCluster specifies if the Collector is being deployed in a cluster registered as a Garden.
 	IsGardenCluster bool
+	// VictoriaLogsBackend indicates whether VictoriaLogs should be deployed and used in the pipeline.
+	VictoriaLogsBackend bool
 }
 
 type otelCollector struct {
@@ -349,6 +352,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 				},
 				ServiceAccount: collectorconstants.ServiceAccountName,
 			},
+			// TODO(rrhubenov): Remove `Vali` references and switch to only using VictoriaLogs components when the `VictoriaLogsBackend` feature gate is promoted to GA.
 			Config: otelv1beta1.Config{
 				Receivers: otelv1beta1.AnyConfig{
 					Object: map[string]any{
@@ -454,6 +458,9 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 						"debug/logs": map[string]any{
 							"verbosity": "basic",
 						},
+						"otlphttp/victorialogs": map[string]any{
+							"logs_endpoint": "http://" + victorialogsconstants.ServiceName + ":" + strconv.Itoa(victorialogsconstants.VictoriaLogsPort) + victorialogsconstants.PushEndpoint,
+						},
 					},
 				},
 				Service: otelv1beta1.Service{
@@ -499,6 +506,21 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 				},
 			},
 		},
+	}
+
+	// TODO(rrhubenov): Remove when the `VictoriaLogsBackend` feature gate is promoted to GA and switch to only using VictoriaLogs components.
+	if o.values.VictoriaLogsBackend {
+		obj.Spec.Config.Service.Pipelines["logs/victorialogs"] = &otelv1beta1.Pipeline{
+			Exporters: []string{
+				"otlphttp/victorialogs",
+			},
+			Receivers: []string{
+				"otlp",
+			},
+			Processors: []string{
+				"batch",
+			},
+		}
 	}
 
 	if o.values.WithRBACProxy {
@@ -722,9 +744,10 @@ func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelRole:  v1beta1constants.LabelObservability,
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleObservability,
-		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToDNS:                                            v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                               v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelObservabilityApplication:                                      "opentelemetry-collector",
+		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort):                         v1beta1constants.LabelNetworkPolicyAllowed,
+		gardenerutils.NetworkPolicyLabel(victorialogsconstants.ServiceName, victorialogsconstants.VictoriaLogsPort): v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToDNS:                                                                    v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                                                       v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelObservabilityApplication:                                                              "opentelemetry-collector",
 	}
 }

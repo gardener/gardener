@@ -149,6 +149,7 @@ type components struct {
 	blackboxExporter              component.DeployWaiter
 	persesOperator                component.DeployWaiter
 	victoriaOperator              component.DeployWaiter
+	victoriaLogs                  component.DeployWaiter
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -362,6 +363,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.victoriaOperator, err = r.newVictoriaOperator()
+	if err != nil {
+		return
+	}
+	c.victoriaLogs, err = r.newVictoriaLogs()
 	if err != nil {
 		return
 	}
@@ -1396,6 +1401,18 @@ func (r *Reconciler) newVali() (component.Deployer, error) {
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		nil,
 		"",
+		true,
+	)
+}
+
+func (r *Reconciler) newVictoriaLogs() (component.DeployWaiter, error) {
+	return sharedcomponent.NewVictoriaLogs(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		component.ClusterTypeSeed,
+		1,
+		v1beta1constants.PriorityClassNameGardenSystem100,
+		nil,
 		true,
 	)
 }

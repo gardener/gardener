@@ -16,6 +16,7 @@ spec:
       VPAInPlaceUpdates: true
       VPNBondingModeRoundRobin: true
       PrometheusHealthChecks: true
+      VictoriaLogsBackend: true
     controllers:
       shoot:
         reconcileInMaintenanceOnly: true
@@ -25,6 +26,8 @@ spec:
     logging:
       enabled: true
       vali:
+        enabled: true
+      victoriaLogs:
         enabled: true
       shootNodeLogging:
         shootPurposes:

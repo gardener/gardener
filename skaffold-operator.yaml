@@ -168,6 +168,8 @@ build:
             - pkg/component/observability/logging/vali/templates/vali-init.sh
             - pkg/component/observability/logging/victoria/operator
             - pkg/component/observability/logging/victoria/operator/templates/crd-operator.victoriametrics.com_vlsingles.yaml
+            - pkg/component/observability/logging/victorialogs
+            - pkg/component/observability/logging/victorialogs/constants
             - pkg/component/observability/monitoring/alertmanager
             - pkg/component/observability/monitoring/blackboxexporter
             - pkg/component/observability/monitoring/blackboxexporter/garden
@@ -1064,6 +1066,7 @@ deploy:
           config.featureGates.IstioTLSTermination: true
           config.featureGates.VPAInPlaceUpdates: true
           config.featureGates.PrometheusHealthChecks: true
+          config.featureGates.VictoriaLogsBackend: false
         createNamespace: true
         wait: true
 profiles:
