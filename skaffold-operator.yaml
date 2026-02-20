@@ -977,6 +977,16 @@ deploy:
         createNamespace: true
         wait: true
 profiles:
+  - name: ipv6
+    activation:
+    - env: IPFAMILY=ipv6
+    patches:
+      - op: add
+        path: /deploy/helm/releases/0/setValueTemplates/env[1].name
+        value: GARDENER_OPERATOR_VIRTUAL_GARDEN_IP
+      - op: add
+        path: /deploy/helm/releases/0/setValueTemplates/env[1].value
+        value: fd00:ff::3
   - name: single-node
     activation:
       - env: SCENARIO=single-node
