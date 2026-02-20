@@ -742,7 +742,29 @@ type DashboardIngress struct {
 }
 
 // GardenerDiscoveryServerConfig contains configuration settings for the gardener-discovery-server.
-type GardenerDiscoveryServerConfig struct{}
+type GardenerDiscoveryServerConfig struct {
+	// Domain overrides the default ingress domain for the gardener-discovery-server.
+	// Defaults to "discovery.<first-runtime-ingress-domain>".
+	// +optional
+	Domain *string `json:"domain,omitempty"`
+	// TLSSecretName is the name of a secret (in the garden namespace) containing
+	// a trusted TLS certificate for the domain. If not configured, Gardener falls
+	// back to a secret labelled with 'gardener.cloud/role=garden-cert', if in turn not
+	// configured it generates a self-signed certificate.
+	// +optional
+	TLSSecretName *string `json:"tlsSecretName,omitempty"`
+	// Ingress contains configuration for the ingress settings.
+	// +optional
+	Ingress *DiscoveryServerIngress `json:"ingress,omitempty"`
+}
+
+// DiscoveryServerIngress contains configuration for the discovery server ingress resource.
+type DiscoveryServerIngress struct {
+	// Enabled controls whether the Discovery Service Ingress resource will be deployed to the cluster.
+	// +kubebuilder:default=true
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
+}
 
 const (
 	// ClusterTypeGarden enables the resource only for the garden cluster.

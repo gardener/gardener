@@ -1015,6 +1015,37 @@ ExtensionHelm
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.DiscoveryServerIngress">DiscoveryServerIngress
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerDiscoveryServerConfig">GardenerDiscoveryServerConfig</a>)
+</p>
+<p>
+<p>DiscoveryServerIngress contains configuration for the discovery server ingress resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Enabled controls whether the Discovery Service Ingress resource will be deployed to the cluster.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.ETCD">ETCD
 </h3>
 <p>
@@ -2442,6 +2473,58 @@ DashboardIngress
 <p>
 <p>GardenerDiscoveryServerConfig contains configuration settings for the gardener-discovery-server.</p>
 </p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>domain</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Domain overrides the default ingress domain for the gardener-discovery-server.
+Defaults to &ldquo;discovery.<first-runtime-ingress-domain>&rdquo;.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>tlsSecretName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TLSSecretName is the name of a secret (in the garden namespace) containing
+a trusted TLS certificate for the domain. If not configured, Gardener falls
+back to a secret labelled with &lsquo;gardener.cloud/role=garden-cert&rsquo;, if in turn not
+configured it generates a self-signed certificate.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ingress</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.DiscoveryServerIngress">
+DiscoveryServerIngress
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Ingress contains configuration for the ingress settings.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.GardenerResourceManagerConfig">GardenerResourceManagerConfig
 </h3>
 <p>

@@ -188,6 +188,19 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.ControlPlane, newVirtualCluster.ControlPlane, fldPath.Child("controlPlane", "highAvailability"))...)
 	}
 
+	// Discovery server cannot be disabled once enabled, and its domain is immutable.
+	// Disabling it or changing the domain would invalidate all workload identity tokens that reference the issuer URL.
+	if oldVirtualCluster.Gardener.DiscoveryServer != nil && newVirtualCluster.Gardener.DiscoveryServer == nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("gardener", "discoveryServer"), "discovery server must not be disabled once enabled (workload identity tokens have been issued)"))
+	}
+	if oldVirtualCluster.Gardener.DiscoveryServer != nil && newVirtualCluster.Gardener.DiscoveryServer != nil {
+		oldDomain := helper.DiscoveryServerDomain(oldGarden)
+		newDomain := helper.DiscoveryServerDomain(newGarden)
+		if oldDomain != newDomain {
+			allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldDomain, newDomain, fldPath.Child("gardener", "discoveryServer", "domain"))...)
+		}
+	}
+
 	allErrs = append(allErrs, gardencorevalidation.ValidateKubernetesVersionUpdate(newVirtualCluster.Kubernetes.Version, oldVirtualCluster.Kubernetes.Version, false, fldPath.Child("kubernetes", "version"))...)
 	allErrs = append(allErrs, validateEncryptionConfigUpdate(oldGarden, newGarden)...)
 
@@ -447,6 +460,7 @@ func validateGardener(gardener operatorv1alpha1.Gardener, kubernetes operatorv1a
 	allErrs = append(allErrs, validateGardenerControllerManagerConfig(gardener.ControllerManager, fldPath.Child("gardenerControllerManager"))...)
 	allErrs = append(allErrs, validateGardenerSchedulerConfig(gardener.Scheduler, fldPath.Child("gardenerScheduler"))...)
 	allErrs = append(allErrs, validateGardenerDashboardConfig(gardener.Dashboard, kubernetes.KubeAPIServer, fldPath.Child("gardenerDashboard"))...)
+	allErrs = append(allErrs, validateGardenerDiscoveryServerConfig(gardener.DiscoveryServer, fldPath.Child("gardenerDiscoveryServer"))...)
 
 	return allErrs
 }
@@ -649,6 +663,24 @@ func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardC
 		if oidc.IssuerURL != nil {
 			allErrs = append(allErrs, gardencorevalidation.ValidateOIDCIssuerURL(*oidc.IssuerURL, oidcPath.Child("issuerURL"))...)
 		}
+	}
+
+	return allErrs
+}
+
+func validateGardenerDiscoveryServerConfig(config *operatorv1alpha1.GardenerDiscoveryServerConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if config == nil {
+		return allErrs
+	}
+
+	if config.Domain != nil {
+		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(*config.Domain, fldPath.Child("domain"))...)
+	}
+
+	if config.TLSSecretName != nil {
+		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(*config.TLSSecretName, fldPath.Child("tlsSecretName"))...)
 	}
 
 	return allErrs
