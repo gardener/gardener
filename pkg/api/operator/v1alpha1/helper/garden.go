@@ -290,3 +290,16 @@ func GetEncryptionProviderTypeInStatus(gardenStatus operatorv1alpha1.GardenStatu
 
 	return ""
 }
+
+// DiscoveryServerDomain returns the effective domain for the gardener-discovery-server.
+// If a custom domain is configured, it returns that domain. Otherwise, it returns the default
+// domain constructed from the first runtime cluster ingress domain.
+func DiscoveryServerDomain(garden *operatorv1alpha1.Garden) string {
+	if config := garden.Spec.VirtualCluster.Gardener.DiscoveryServer; config != nil && config.Domain != nil {
+		return *config.Domain
+	}
+	if len(garden.Spec.RuntimeCluster.Ingress.Domains) > 0 {
+		return "discovery." + garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
+	}
+	return ""
+}

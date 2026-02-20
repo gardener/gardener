@@ -1566,7 +1566,7 @@ func (r *Reconciler) newGardenerDiscoveryServer(
 
 	values := gardenerdiscoveryserver.Values{
 		Image:                       image.String(),
-		Domain:                      discoveryServerDomain(garden),
+		Domain:                      helper.DiscoveryServerDomain(garden),
 		TLSSecretName:               discoveryServerTLSSecretName(garden, wildcardCertSecretName),
 		WorkloadIdentityTokenIssuer: workloadIdentityTokenIssuer,
 		Ingress: gardenerdiscoveryserver.IngressValues{
@@ -1672,13 +1672,6 @@ func (r *Reconciler) newExtensions(log logr.Logger, garden *operatorv1alpha1.Gar
 	return extension.New(log, r.RuntimeClientSet.Client(), values, extension.DefaultInterval, extension.DefaultSevereThreshold, extension.DefaultTimeout)
 }
 
-func discoveryServerDomain(garden *operatorv1alpha1.Garden) string {
-	if config := garden.Spec.VirtualCluster.Gardener.DiscoveryServer; config != nil && config.Domain != nil {
-		return *config.Domain
-	}
-	return "discovery." + garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
-}
-
 func discoveryServerTLSSecretName(garden *operatorv1alpha1.Garden, wildcardCertSecretName *string) *string {
 	if config := garden.Spec.VirtualCluster.Gardener.DiscoveryServer; config != nil && config.TLSSecretName != nil {
 		return config.TLSSecretName
@@ -1687,5 +1680,5 @@ func discoveryServerTLSSecretName(garden *operatorv1alpha1.Garden, wildcardCertS
 }
 
 func workloadIdentityTokenIssuerURL(garden *operatorv1alpha1.Garden) string {
-	return "https://" + discoveryServerDomain(garden) + "/garden/workload-identity/issuer"
+	return "https://" + helper.DiscoveryServerDomain(garden) + "/garden/workload-identity/issuer"
 }
