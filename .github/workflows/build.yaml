@@ -16,9 +16,8 @@ jobs:
     uses: gardener/cc-utils/.github/workflows/prepare.yaml@master
     with:
       mode: ${{ inputs.mode }}
-      version-commit-callback-action-path:
     permissions:
-      contents: read
+      id-token: write
 
   tests:
     runs-on: ${{ github.repository_owner == 'gardener' && 'ubuntu-latest-large' || 'ubuntu-latest' }}

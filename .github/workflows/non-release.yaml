@@ -13,7 +13,7 @@ jobs:
       mode: snapshot
     secrets: inherit
     permissions:
-      contents: write
+      contents: read
       packages: write
       id-token: write
 
@@ -22,7 +22,6 @@ jobs:
     uses: gardener/cc-utils/.github/workflows/post-build.yaml@master
     needs:
       - build
-    secrets: inherit
     permissions:
       id-token: write
       contents: write
