@@ -295,7 +295,7 @@ if [[ "$IPFAMILY" == "dual" ]]; then
 fi
 
 if [[ "$IPFAMILY" == "ipv6" ]] && [[ "$MULTI_ZONAL" == "true" ]]; then
-  ADDITIONAL_ARGS="$ADDITIONAL_ARGS --set gardener.seed.istio.listenAddresses={::1,::10,::11,::12}"
+  ADDITIONAL_ARGS="$ADDITIONAL_ARGS --set gardener.seed.istio.listenAddresses={fd00:ff::1,fd00:ff::10,fd00:ff::11,fd00:ff::12}"
 fi
 
 kind create cluster \

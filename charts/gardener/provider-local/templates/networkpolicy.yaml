@@ -22,6 +22,6 @@ spec:
     - ipBlock:
         cidr: 172.18.255.0/24
     - ipBlock:
-        cidr: ::/120
+        cidr: fd00:ff::/64
   policyTypes:
   - Egress
