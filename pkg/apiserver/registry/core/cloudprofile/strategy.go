@@ -32,6 +32,7 @@ func (cloudProfileStrategy) NamespaceScoped() bool {
 
 func (cloudProfileStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	cloudProfile := obj.(*core.CloudProfile)
+	cloudProfile.Status = core.CloudProfileStatus{}
 
 	dropInactiveVersions(cloudProfile)
 }
@@ -55,6 +56,7 @@ func (cloudProfileStrategy) PrepareForUpdate(_ context.Context, newObj, oldObj r
 	oldCloudProfile := oldObj.(*core.CloudProfile)
 	newCloudProfile := newObj.(*core.CloudProfile)
 
+	newCloudProfile.Status = oldCloudProfile.Status // can only be changed by cloudProfiles/status subresource.
 	gardenerutils.SyncArchitectureCapabilityFields(newCloudProfile.Spec, oldCloudProfile.Spec)
 }
 
@@ -75,6 +77,23 @@ func (cloudProfileStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object
 // WarningsOnUpdate returns warnings to the client performing the update.
 func (cloudProfileStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
+}
+
+type cloudProfileStatusStrategy struct {
+	cloudProfileStrategy
+}
+
+// StatusStrategy defines the storage strategy for the status subresource of CloudProfiles.
+var StatusStrategy = cloudProfileStatusStrategy{Strategy}
+
+func (cloudProfileStatusStrategy) PrepareForUpdate(_ context.Context, newObj, oldObj runtime.Object) {
+	oldCloudProfile, newCloudProfile := oldObj.(*core.CloudProfile), newObj.(*core.CloudProfile)
+	newCloudProfile.Spec = oldCloudProfile.Spec
+}
+
+func (cloudProfileStatusStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object) field.ErrorList {
+	oldCloudProfile, newCloudProfile := oldObj.(*core.CloudProfile), newObj.(*core.CloudProfile)
+	return validation.ValidateCloudProfileStatusUpdate(&oldCloudProfile.Status, &newCloudProfile.Status)
 }
 
 func dropInactiveVersions(cloudProfile *core.CloudProfile) {
