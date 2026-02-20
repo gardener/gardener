@@ -8,6 +8,7 @@ import (
 	"bytes"
 	_ "embed"
 	"errors"
+	"fmt"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -19,11 +20,24 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
+const (
+	// If an average log record is around 400 bytes,
+	// then 2000 MiB of memory allows to buffer around 5 million log records.
+	// This is provided as a sane default.
+	memoryLimitMiB = 2000
+)
+
 var (
 	tplNameOpenTelemetryCollector = "config"
 	//go:embed templates/opentelemetry-collector-config.yaml.tpl
 	tplContentOpenTelemetryCollector string
 	tplOpenTelemetryCollector        *template.Template
+
+	// As per the OpenTelemetry `memory_limiter` documentation,
+	// it's recommended to set the `GOMEMLIMIT` environment variable to 80%
+	// of the `limit_mib` value.
+	// Ref: https://github.com/open-telemetry/opentelemetry-collector/tree/main/processor/memorylimiterprocessor#best-practices
+	goMemLimit = fmt.Sprintf("%dMiB", int(0.8*memoryLimitMiB))
 )
 
 func init() {
@@ -40,10 +54,11 @@ func getOpentelemetryCollectorConfigurationFile(ctx components.Context) (extensi
 
 	var config bytes.Buffer
 	if err := tplOpenTelemetryCollector.Execute(&config, map[string]any{
-		"clientURL":     ctx.OpenTelemetryCollectorIngressHostName + ":443",
-		"pathCACert":    PathCACert,
-		"pathAuthToken": PathAuthToken,
-		"metricsPort":   MetricsPort,
+		"clientURL":      ctx.OpenTelemetryCollectorIngressHostName + ":443",
+		"pathCACert":     PathCACert,
+		"pathAuthToken":  PathAuthToken,
+		"metricsPort":    MetricsPort,
+		"memoryLimitMiB": memoryLimitMiB,
 	}); err != nil {
 		return extensionsv1alpha1.File{}, err
 	}
@@ -101,7 +116,7 @@ Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
 Environment=KUBECONFIG=` + openTelemetryCollectorKubeconfigPath + `
-ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
+ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:]) GOMEMLIMIT=` + goMemLimit + `"
 ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/opentelemetry-collector --config=` + PathConfig),
 		FilePaths: []string{PathConfig, PathCACert, openTelemetryCollectorBinaryPath, openTelemetryCollectorKubeconfigPath},
 	}
