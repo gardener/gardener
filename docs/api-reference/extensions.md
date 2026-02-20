@@ -907,7 +907,7 @@ DNSRecordType
 </em>
 </td>
 <td>
-<p>RecordType is the DNS record type. Only A, CNAME, and TXT records are currently supported. This field is immutable.</p>
+<p>RecordType is the DNS record type. Only A, CNAME, and TXT records are currently supported.</p>
 </td>
 </tr>
 <tr>
@@ -2737,7 +2737,7 @@ DNSRecordType
 </em>
 </td>
 <td>
-<p>RecordType is the DNS record type. Only A, CNAME, and TXT records are currently supported. This field is immutable.</p>
+<p>RecordType is the DNS record type. Only A, CNAME, and TXT records are currently supported.</p>
 </td>
 </tr>
 <tr>

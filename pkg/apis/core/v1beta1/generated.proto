@@ -3559,7 +3559,6 @@ message ShootSpec {
   repeated Toleration tolerations = 17;
 
   // ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
-  // This field is immutable.
   // +optional
   optional string exposureClassName = 18;
 

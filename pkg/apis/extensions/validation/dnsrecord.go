@@ -103,7 +103,6 @@ func ValidateDNSRecordSpecUpdate(new, old *extensionsv1alpha1.DNSRecordSpec, del
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Name, old.Name, fldPath.Child("name"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.RecordType, old.RecordType, fldPath.Child("recordType"))...)
 
 	return allErrs
 }

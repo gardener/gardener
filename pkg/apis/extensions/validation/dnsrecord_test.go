@@ -236,7 +236,7 @@ var _ = Describe("DNSRecord validation tests", func() {
 			}))))
 		})
 
-		It("should prevent updating the type, name, or recordType", func() {
+		It("should prevent updating the type or name", func() {
 			newDNSRecord := prepareDNSRecordForUpdate(dns)
 			newDNSRecord.Spec.Type = "changed-type"
 			newDNSRecord.Spec.Name = "changed-test.example.com"
@@ -250,10 +250,8 @@ var _ = Describe("DNSRecord validation tests", func() {
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.name"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.recordType"),
-			}))))
+			})),
+			))
 		})
 
 		It("should allow updating everything else", func() {
