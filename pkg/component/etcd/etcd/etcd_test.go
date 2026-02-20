@@ -1536,10 +1536,8 @@ var _ = Describe("Etcd", func() {
 						testclock.NewFakeClock(time.Now()),
 						fakeClient,
 						"",
-						secretsmanager.Config{
-							SecretNamesToTimes: secretNamesToTimes,
-						},
-						testNamespace,
+						secretsmanager.WithSecretNamesToTimes(secretNamesToTimes),
+						secretsmanager.WithNamespaces(testNamespace),
 					)
 					Expect(err).ToNot(HaveOccurred())
 
@@ -1644,10 +1642,8 @@ var _ = Describe("Etcd", func() {
 					testclock.NewFakeClock(time.Now()),
 					fakeClient,
 					"",
-					secretsmanager.Config{
-						SecretNamesToTimes: secretNamesToTimes,
-					},
-					testNamespace,
+					secretsmanager.WithSecretNamesToTimes(secretNamesToTimes),
+					secretsmanager.WithNamespaces(testNamespace),
 				)
 				Expect(err).ToNot(HaveOccurred())
 

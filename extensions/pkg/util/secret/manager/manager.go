@@ -51,10 +51,10 @@ func SecretsManagerForCluster(
 	secretsmanager.Interface,
 	error,
 ) {
-	sm, err := secretsmanager.New(ctx, logger, clock, c, identity, secretsmanager.Config{
-		CASecretAutoRotation: false,
-		SecretNamesToTimes:   lastSecretRotationStartTimesFromCluster(cluster, secretConfigs),
-	}, cluster.ObjectMeta.Name)
+	sm, err := secretsmanager.New(ctx, logger, clock, c, identity,
+		secretsmanager.WithSecretNamesToTimes(lastSecretRotationStartTimesFromCluster(cluster, secretConfigs)),
+		secretsmanager.WithNamespaces(cluster.ObjectMeta.Name),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -84,10 +84,10 @@ func SecretsManagerForGarden(
 	secretsmanager.Interface,
 	error,
 ) {
-	sm, err := secretsmanager.New(ctx, logger, clock, c, identity, secretsmanager.Config{
-		CASecretAutoRotation: false,
-		SecretNamesToTimes:   lastSecretRotationStartTimesFromGarden(garden, secretConfigs),
-	}, namespaces...)
+	sm, err := secretsmanager.New(ctx, logger, clock, c, identity,
+		secretsmanager.WithSecretNamesToTimes(lastSecretRotationStartTimesFromGarden(garden, secretConfigs)),
+		secretsmanager.WithNamespaces(namespaces...),
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -34,10 +34,10 @@ func (m *manager) Generate(ctx context.Context, config secretsutils.ConfigInterf
 		bundleFor = ptr.To(strings.TrimSuffix(config.GetName(), nameSuffixBundle))
 	}
 
-	namespace := m.namespaces[0]
+	namespace := m.opts.Namespaces[0]
 	if len(options.Namespace) > 0 {
 		namespace = options.Namespace
-		if !slices.Contains(m.namespaces, namespace) {
+		if !slices.Contains(m.opts.Namespaces, namespace) {
 			return nil, fmt.Errorf("namespace %q is not managed by this secrets manager", namespace)
 		}
 	}
@@ -427,6 +427,10 @@ type SignedByCAOptions struct {
 	// the old CA by default, however one might want to use the current CA instead. Similarly, client certificates are
 	// signed with the current CA by default, however one might want to use the old CA instead.
 	CAClass *secretClass
+	// LoadMissingCAFromClusterCtx enables loading a missing signing CA from the cluster when it is not found in the
+	// internal store, and specifies the context.Context to use for the LIST call. This is useful when generating
+	// certificates signed by CAs that were not created by this secrets manager instance.
+	LoadMissingCAFromClusterCtx context.Context
 }
 
 // ApplyOptions applies the given update options on these options, and then returns itself (for convenient chaining).
@@ -452,6 +456,19 @@ func (o useCAClassOption) ApplyToOptions(options *SignedByCAOptions) {
 	options.CAClass = &o.class
 }
 
+type signedByCAOptionFunc func(*SignedByCAOptions)
+
+func (f signedByCAOptionFunc) ApplyToOptions(o *SignedByCAOptions) {
+	f(o)
+}
+
+// LoadMissingCAFromCluster sets the LoadMissingCAFromClusterCtx field to 'ctx' in the SignedByCAOptions.
+func LoadMissingCAFromCluster(ctx context.Context) SignedByCAOption {
+	return signedByCAOptionFunc(func(o *SignedByCAOptions) {
+		o.LoadMissingCAFromClusterCtx = ctx
+	})
+}
+
 // SignedByCA returns a function which sets the 'SigningCA' field in case the ConfigInterface provided to the
 // Generate request is a CertificateSecretConfig. Additionally, in such case it stores a checksum of the signing
 // CA in the options.
@@ -472,7 +489,15 @@ func SignedByCA(name string, opts ...SignedByCAOption) GenerateOption {
 
 		secrets, found := mgr.getFromStore(name)
 		if !found {
-			return fmt.Errorf("secrets for name %q not found in internal store", name)
+			if signedByCAOptions.LoadMissingCAFromClusterCtx == nil {
+				return fmt.Errorf("secrets for name %q not found in internal store", name)
+			}
+
+			mgr.logger.Info("Signing CA secret not found in internal store, trying to load it from cluster", "signingCASecretName", name)
+			if err := loadCASecretsFromClusterIntoStore(signedByCAOptions.LoadMissingCAFromClusterCtx, mgr, name); err != nil {
+				return fmt.Errorf("failed to load missing CA secret from cluster: %w", err)
+			}
+			secrets, _ = mgr.getFromStore(name)
 		}
 
 		secret := secrets.current
@@ -500,6 +525,31 @@ func SignedByCA(name string, opts ...SignedByCAOption) GenerateOption {
 		options.signingCAChecksum = ptr.To(kubernetesutils.TruncateLabelValue(secret.dataChecksum))
 		return nil
 	}
+}
+
+func loadCASecretsFromClusterIntoStore(ctx context.Context, mgr *manager, name string) error {
+	secretList, err := mgr.listSecrets(ctx, client.MatchingLabels{LabelKeyName: name})
+	if err != nil {
+		return fmt.Errorf("failed to list secrets for name %q: %w", name, err)
+	}
+
+	if len(secretList.Items) == 0 {
+		return fmt.Errorf("secrets for name %q not found in cluster", name)
+	}
+
+	kubernetesutils.ByCreationTimestamp().Sort(secretList)
+
+	if err := mgr.addToStore(name, &secretList.Items[len(secretList.Items)-1], current); err != nil {
+		return fmt.Errorf("failed to load current secret for name %q from cluster into internal store: %w", name, err)
+	}
+
+	if len(secretList.Items) > 1 {
+		if err := mgr.addToStore(name, &secretList.Items[len(secretList.Items)-2], old); err != nil {
+			return fmt.Errorf("failed to load old secret for name %q from cluster into internal store: %w", name, err)
+		}
+	}
+
+	return nil
 }
 
 // Persist returns a function which sets the 'Persist' field to true.
