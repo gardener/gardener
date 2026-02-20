@@ -129,7 +129,7 @@ relabel_configs:
 metric_relabel_configs:
 - source_labels: [__name__]
   action: keep
-  regex: ^(kubelet_volume_stats_available_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes)$
+  regex: ^(kubelet_volume_stats_available_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes|kubelet_volume_stats_inodes|kubelet_volume_stats_inodes_free|kubelet_volume_stats_inodes_used)$
 `,
 				))
 			})
@@ -225,7 +225,7 @@ relabel_configs:
 metric_relabel_configs:
 - source_labels: [__name__]
   action: keep
-  regex: ^(kubelet_volume_stats_available_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes)$
+  regex: ^(kubelet_volume_stats_available_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes|kubelet_volume_stats_inodes|kubelet_volume_stats_inodes_free|kubelet_volume_stats_inodes_used)$
 `,
 				))
 			})

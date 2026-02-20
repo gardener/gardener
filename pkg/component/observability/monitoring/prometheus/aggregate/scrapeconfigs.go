@@ -46,6 +46,8 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 						`{__name__=~"kube_.+",job="kube-state-metrics",namespace=""}`,
 						`{__name__=~"container_.+",job="cadvisor",namespace=~"garden|extension-.+|istio-(.+)"}`,
 						`{__name__=~"etcddruid_.+",job="etcd-druid",namespace="garden"}`,
+						`{__name__="kubelet_volume_stats_used_bytes"}`,
+						`{__name__="kubelet_volume_stats_capacity_bytes"}`,
 					},
 				},
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
