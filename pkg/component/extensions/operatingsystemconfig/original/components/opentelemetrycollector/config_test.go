@@ -66,7 +66,7 @@ Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
 Environment=KUBECONFIG=/var/lib/opentelemetry-collector/kubeconfig
-ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
+ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:]) GOMEMLIMIT=1600MiB"
 ExecStart=/opt/bin/opentelemetry-collector --config=` + PathConfig
 
 			otelDaemonUnit := extensionsv1alpha1.Unit{
@@ -140,7 +140,13 @@ receivers:
 
 processors:
   batch:
+    send_batch_size: 2000
+    send_batch_max_size: 4000
     timeout: 10s
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 2000
 
   # Include resource attributes from the Kubernetes environment.
   # The Shoot KAPI server is queried for pods in the kube-system namespace
@@ -214,11 +220,11 @@ service:
   pipelines:
     logs/journal:
       receivers: [journald/journal]
-      processors: [resource/journal, batch]
+      processors: [memory_limiter, resource/journal, batch]
       exporters: [otlp]
     logs/pods:
       receivers: [filelog/pods]
-      processors: [k8sattributes, filter/drop_non_gardener, resource/pod_labels, batch]
+      processors: [memory_limiter, k8sattributes, filter/drop_non_gardener, resource/pod_labels, batch]
       exporters: [otlp]
 `)),
 					},
