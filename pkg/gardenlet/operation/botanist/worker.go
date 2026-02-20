@@ -192,7 +192,7 @@ func getTimeoutWaitOperatingSystemConfigUpdated(shoot *shootpkg.Shoot) time.Dura
 
 // WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools waits for a maximum of 6 minutes until all the nodes for all
 // the worker pools in the Shoot have successfully applied the desired version of their operating system config.
-func (b *Botanist) WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx context.Context) error {
+func (b *Botanist) WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx context.Context, tolerateErrors bool) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, GetTimeoutWaitOperatingSystemConfigUpdated(b.Shoot))
 	defer cancel()
 
@@ -203,15 +203,20 @@ func (b *Botanist) WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx co
 	timeoutCtx2, cancel2 := context.WithTimeout(ctx, GetTimeoutWaitOperatingSystemConfigUpdated(b.Shoot))
 	defer cancel2()
 
+	retryFn := retry.SevereError
+	if tolerateErrors {
+		retryFn = retry.MinorError
+	}
+
 	return retry.Until(timeoutCtx2, IntervalWaitOperatingSystemConfigUpdated, func(ctx context.Context) (done bool, err error) {
 		workerPoolToNodes, err := WorkerPoolToNodesMap(ctx, b.ShootClientSet.Client())
 		if err != nil {
-			return retry.SevereError(err)
+			return retryFn(err)
 		}
 
 		workerPoolToOperatingSystemConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, b.ShootClientSet.Client(), v1beta1constants.GardenRoleOperatingSystemConfig)
 		if err != nil {
-			return retry.SevereError(err)
+			return retryFn(err)
 		}
 
 		if err := OperatingSystemConfigUpdatedForAllWorkerPools(b.Shoot.GetInfo().Spec.Provider.Workers, workerPoolToNodes, workerPoolToOperatingSystemConfigSecretMeta); err != nil {

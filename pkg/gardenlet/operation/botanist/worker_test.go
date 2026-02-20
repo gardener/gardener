@@ -407,7 +407,7 @@ var _ = Describe("Worker", func() {
 				})).AnyTimes(),
 			)
 
-			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx)).To(MatchError(ContainSubstring("the operating system configs for the worker nodes were not populated yet")))
+			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, false)).To(MatchError(ContainSubstring("the operating system configs for the worker nodes were not populated yet")))
 		})
 
 		It("should fail when the operating system config was not updated for all worker pools", func() {
@@ -473,7 +473,7 @@ var _ = Describe("Worker", func() {
 				}).AnyTimes(),
 			)
 
-			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx)).To(MatchError(ContainSubstring("is outdated")))
+			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, false)).To(MatchError(ContainSubstring("is outdated")))
 		})
 
 		It("should succeed when the operating system config was updated for all worker pools", func() {
@@ -539,7 +539,7 @@ var _ = Describe("Worker", func() {
 				}).AnyTimes(),
 			)
 
-			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx)).To(Succeed())
+			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, false)).To(Succeed())
 		})
 	})
 })

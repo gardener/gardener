@@ -63,7 +63,6 @@ type GardenadmBotanist struct {
 
 	operatingSystemConfigSecret       *corev1.Secret
 	gardenerResourceManagerServiceIPs []string
-	staticPodNameToHash               map[string]string
 	useEtcdManagedByDruid             bool
 
 	// controlPlaneMachines is set by ListControlPlaneMachines during `gardenadm bootstrap`.

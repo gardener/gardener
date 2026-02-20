@@ -918,8 +918,10 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(syncPointAllSystemComponentsDeployed, waitUntilNetworkIsReady, waitUntilWorkerReady),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Waiting until all shoot worker nodes have updated the operating system config",
-			Fn:           botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools,
+			Name: "Waiting until all shoot worker nodes have updated the operating system config",
+			Fn: func(ctx context.Context) error {
+				return botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, false)
+			},
 			SkipIf:       o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, waitUntilTunnelConnectionExists),
 		})
