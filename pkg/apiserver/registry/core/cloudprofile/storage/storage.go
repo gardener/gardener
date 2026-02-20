@@ -82,7 +82,7 @@ var (
 	_ rest.Updater = &StatusREST{}
 )
 
-// New creats a new (empty) internal CloudProfile object.
+// New creates a new (empty) internal CloudProfile object.
 func (r *StatusREST) New() runtime.Object {
 	return &core.CloudProfile{}
 }
@@ -93,6 +93,7 @@ func (r *StatusREST) Destroy() {
 	// we don't destroy it here explicitly.
 }
 
+// Get retrieves the object from the storage. It is required to support Patch.
 func (r *StatusREST) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
 	return r.store.Get(ctx, name, options)
 }
