@@ -84,7 +84,7 @@ This is the same certificate that is also contained in the `kubeconfig`'s `certi
 All the certificates are valid for 10 years.
 Since it requires adaptation for the consumers of the `Shoot`, there is no automatic rotation, and **it is the responsibility of the end-user to regularly rotate the CA certificates.**
 
-The rotation happens in three stages (see also [GEP-0018](../https://github.com/gardener/enhancements/tree/main/geps/0018-shoot-ca-rotation) for the full details):
+The rotation happens in three stages (see also [GEP-0018](https://github.com/gardener/enhancements/tree/main/geps/0018-shoot-ca-rotation) for the full details):
 
 - In stage one, new CAs are created and added to the bundle (together with the old CAs). Client certificates are re-issued immediately.
 - In stage two, end-users update all cluster API clients that communicate with the control plane.
