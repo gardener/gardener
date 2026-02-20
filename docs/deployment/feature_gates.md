@@ -18,22 +18,22 @@ The following tables are a summary of the feature gates that you can set on diff
 
 ## Feature Gates for Alpha or Beta Features
 
-| Feature                       | Default | Stage   | Since   | Until   |
-|-------------------------------|---------|---------|---------|---------|
-| DefaultSeccompProfile         | `false` | `Alpha` | `1.54`  |         |
-| NewWorkerPoolHash             | `false` | `Alpha` | `1.98`  | `1.125` |
-| NewWorkerPoolHash             | `true`  | `Beta`  | `1.126` |         |
-| InPlaceNodeUpdates            | `false` | `Alpha` | `1.113` |         |
-| IstioTLSTermination           | `false` | `Alpha` | `1.114` |         |
-| CloudProfileCapabilities      | `false` | `Alpha` | `1.117` |         |
-| OpenTelemetryCollector        | `false` | `Alpha` | `1.124` | `1.135` |
-| OpenTelemetryCollector        | `true`  | `Beta`  | `1.136` |         |
-| UseUnifiedHTTPProxyPort       | `false` | `Alpha` | `1.130` |         |
-| VPAInPlaceUpdates             | `false` | `Alpha` | `1.133` |         |
-| VictoriaLogsBackend           | `false` | `Alpha` | `1.137` |         |
-| CustomDNSServerInNodeLocalDNS | `true`  | `Beta`  | `1.133` |         |
-| VPNBondingModeRoundRobin      | `false` | `Alpha` | `1.135` |         |
-| PrometheusHealthChecks        | `false` | `Alpha` | `1.135` |         |
+| Feature                        | Default | Stage   | Since   | Until   |
+|--------------------------------|---------|---------|---------|---------|
+| DefaultSeccompProfile          | `false` | `Alpha` | `1.54`  |         |
+| NewWorkerPoolHash              | `false` | `Alpha` | `1.98`  | `1.125` |
+| NewWorkerPoolHash              | `true`  | `Beta`  | `1.126` |         |
+| InPlaceNodeUpdates             | `false` | `Alpha` | `1.113` |         |
+| IstioTLSTermination            | `false` | `Alpha` | `1.114` |         |
+| CloudProfileCapabilities       | `false` | `Alpha` | `1.117` |         |
+| OpenTelemetryCollector         | `false` | `Alpha` | `1.124` | `1.135` |
+| OpenTelemetryCollector         | `true`  | `Beta`  | `1.136` |         |
+| UseUnifiedHTTPProxyPort        | `false` | `Alpha` | `1.130` |         |
+| VPAInPlaceUpdates              | `false` | `Alpha` | `1.133` |         |
+| VictoriaLogsBackend            | `false` | `Alpha` | `1.137` |         |
+| CustomDNSServerInNodeLocalDNS  | `true`  | `Beta`  | `1.133` |         |
+| VPNBondingModeRoundRobin       | `false` | `Alpha` | `1.135` |         |
+| PrometheusHealthChecks         | `false` | `Alpha` | `1.135` |         |
 | VersionClassificationLifecycle | `false` | `Alpha` | `1.136` |         |
 
 ## Feature Gates for Graduated or Deprecated Features
