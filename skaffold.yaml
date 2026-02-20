@@ -1101,6 +1101,7 @@ build:
             - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_infrastructures.yaml
             - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_networks.yaml
             - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_operatingsystemconfigs.yaml
+            - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_selfhostedshootexposures.yaml
             - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_workers.yaml
             - pkg/component/extensions/dnsrecord
             - pkg/component/extensions/extension
