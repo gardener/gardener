@@ -166,15 +166,18 @@ func newGardenCustomResourceStateMetrics() customresourcestate.Resource {
 
 	resource.Metrics = append(resource.Metrics, customresourcestate.Generator{
 		Name: "garden_last_operation",
-		Help: "denotes the last operation performed on a Garden object",
+		Help: "state of the last operation performed on a Garden object",
 		Each: customresourcestate.Metric{
 			Type: metric.StateSet,
 			StateSet: &customresourcestate.MetricStateSet{
-				LabelName: "last_operation",
-				List:      []string{"Create", "Reconcile", "Delete", "Migrate", "Restore"},
-				ValueFrom: []string{"type"},
+				LabelName: "state",
+				List:      []string{"Processing", "Succeeded", "Error", "Failed", "Pending", "Aborted"},
+				ValueFrom: []string{"state"},
 				MetricMeta: customresourcestate.MetricMeta{
 					Path: []string{"status", "lastOperation"},
+					LabelsFromPath: map[string][]string{
+						"type": {"type"},
+					},
 				},
 			},
 		},
