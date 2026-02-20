@@ -56,7 +56,13 @@ receivers:
 
 processors:
   batch:
+    send_batch_size: 2000
+    send_batch_max_size: 4000
     timeout: 10s
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: {{ .memoryLimitMiB }}
 
   # Include resource attributes from the Kubernetes environment.
   # The Shoot KAPI server is queried for pods in the kube-system namespace
@@ -130,9 +136,9 @@ service:
   pipelines:
     logs/journal:
       receivers: [journald/journal]
-      processors: [resource/journal, batch]
+      processors: [memory_limiter, resource/journal, batch]
       exporters: [otlp]
     logs/pods:
       receivers: [filelog/pods]
-      processors: [k8sattributes, filter/drop_non_gardener, resource/pod_labels, batch]
+      processors: [memory_limiter, k8sattributes, filter/drop_non_gardener, resource/pod_labels, batch]
       exporters: [otlp]
