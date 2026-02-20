@@ -21,9 +21,9 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"

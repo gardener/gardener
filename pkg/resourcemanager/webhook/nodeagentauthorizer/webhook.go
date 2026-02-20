@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-logr/logr"
 
-	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/resourcemanager/v1alpha1"
 )
 
 // Webhook represents the webhook of node-agent authorizer.

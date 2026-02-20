@@ -22,10 +22,10 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/scheduler/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	shootcontroller "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"

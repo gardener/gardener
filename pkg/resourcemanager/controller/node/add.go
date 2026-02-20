@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/resourcemanager/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/agentreconciliationdelay"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/criticalcomponents"
 )

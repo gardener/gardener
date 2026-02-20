@@ -14,8 +14,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 // CheckAPIServerAvailability checks if the API server of a cluster is reachable and measure the response time.

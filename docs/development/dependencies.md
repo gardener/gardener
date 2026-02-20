@@ -34,7 +34,7 @@ These packages feature a dummy `doc.go` file to allow other Go projects to pull 
 
 These packages are explicitly *not* supposed to be used in other projects (consider them as "non-exported"):
 
-- API validation packages: `pkg/apis/*/*/validation`
+- API validation packages: `pkg/api/*/*/validation`
 - Operation package (main Gardener business logic regarding `Seed` and `Shoot` clusters): `pkg/gardenlet/operation`
 - Third party code: `third_party`
 

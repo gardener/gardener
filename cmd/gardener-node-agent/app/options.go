@@ -14,10 +14,10 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/gardener/gardener/cmd/utils/initrun"
+	nodeagenthelper "github.com/gardener/gardener/pkg/api/config/nodeagent/v1alpha1/helper"
+	nodeagentvalidation "github.com/gardener/gardener/pkg/api/config/nodeagent/v1alpha1/validation"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
-	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
-	nodeagenthelper "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1/helper"
-	nodeagentvalidation "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1/validation"
 )
 
 var configDecoder runtime.Decoder

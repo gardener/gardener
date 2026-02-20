@@ -28,9 +28,9 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/required"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"

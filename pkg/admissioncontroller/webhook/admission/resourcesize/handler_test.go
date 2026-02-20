@@ -30,8 +30,8 @@ import (
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/resourcesize"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/admissioncontroller/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"

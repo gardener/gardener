@@ -24,9 +24,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/resourcemanager/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/criticalcomponents/helper"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )

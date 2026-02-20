@@ -13,8 +13,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	"github.com/gardener/gardener/pkg/controller/vpaevictionrequirements"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 

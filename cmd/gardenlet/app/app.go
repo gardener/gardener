@@ -44,6 +44,7 @@ import (
 
 	"github.com/gardener/gardener/cmd/utils/initrun"
 	"github.com/gardener/gardener/pkg/api/indexer"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -59,7 +60,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrappers"

@@ -14,7 +14,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 
-	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/admissioncontroller/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"

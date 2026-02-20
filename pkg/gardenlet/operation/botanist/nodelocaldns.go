@@ -14,9 +14,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component/networking/nodelocaldns"
 	"github.com/gardener/gardener/pkg/features"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"

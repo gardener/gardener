@@ -9,8 +9,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/resource"
 
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 )
 
 func getBootstrapConfiguration(worker gardencorev1beta1.Worker) (*nodeagentconfigv1alpha1.BootstrapConfiguration, error) {

@@ -13,8 +13,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock/testing"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"

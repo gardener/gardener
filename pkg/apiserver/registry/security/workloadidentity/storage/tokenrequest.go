@@ -19,9 +19,9 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 
 	"github.com/gardener/gardener/pkg/api"
+	securityvalidation "github.com/gardener/gardener/pkg/api/security/validation"
 	securityapi "github.com/gardener/gardener/pkg/apis/security"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
-	securityvalidation "github.com/gardener/gardener/pkg/apis/security/validation"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )

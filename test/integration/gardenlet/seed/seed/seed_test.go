@@ -28,6 +28,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -47,7 +48,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
 	opentelemetryoperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"

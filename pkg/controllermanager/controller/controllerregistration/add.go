@@ -9,7 +9,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerregistrationfinalizer"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/extensionclusterrole"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/seed"

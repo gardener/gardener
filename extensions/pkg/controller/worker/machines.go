@@ -22,7 +22,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"

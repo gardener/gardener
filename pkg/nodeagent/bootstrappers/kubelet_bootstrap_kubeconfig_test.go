@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/afero"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	. "github.com/gardener/gardener/pkg/nodeagent/bootstrappers"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"

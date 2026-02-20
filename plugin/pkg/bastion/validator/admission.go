@@ -16,9 +16,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"

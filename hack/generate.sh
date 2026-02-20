@@ -57,11 +57,12 @@ parse_flags() {
   done
 }
 
+root_module=$(cd "$REPO_ROOT"; go list -m)
 overwrite_paths() {
   local updated_paths=()
 
   for option in "${@}"; do
-    updated_paths+=("./$option/...")
+    updated_paths+=("$root_module/$option/...")
   done
 
   echo "${updated_paths[@]}"

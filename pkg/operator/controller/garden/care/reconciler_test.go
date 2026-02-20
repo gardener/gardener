@@ -19,12 +19,12 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/operator/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/garden/care"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"

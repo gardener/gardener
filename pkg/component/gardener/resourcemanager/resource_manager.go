@@ -42,6 +42,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/resourcemanager/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -55,7 +56,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/endpointslicehints"

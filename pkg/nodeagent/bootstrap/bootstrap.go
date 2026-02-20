@@ -13,9 +13,9 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	nodeagentcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
-	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 )
 

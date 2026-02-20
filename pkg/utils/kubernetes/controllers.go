@@ -4,7 +4,9 @@
 
 package kubernetes
 
-import versionutils "github.com/gardener/gardener/pkg/utils/version"
+import (
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
+)
 
 // APIGroupControllerMap is a map for the Kubernetes API groups and the corresponding controllers for them.
 var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{

@@ -64,6 +64,7 @@ TOOLS_DIR := hack/tools
 include hack/tools.mk
 
 LOGCHECK_DIR := $(TOOLS_DIR)/logcheck
+PKG_APIS_DIR := $(REPO_ROOT)/pkg/apis
 
 #########################################
 # Rules for local development scenarios #
@@ -143,6 +144,7 @@ docker-push:
 tidy:
 	@GO111MODULE=on go mod tidy
 	@cd $(LOGCHECK_DIR); go mod tidy
+	@cd $(PKG_APIS_DIR); go mod tidy
 
 .PHONY: clean
 clean:
@@ -165,6 +167,10 @@ check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(
 	@sed ./.golangci.yaml.in -e "s#<<LOGCHECK_PLUGIN_PATH>>#$(TOOLS_BIN_DIR)#g" > ./.golangci.yaml
 	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./charts/... ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 	@hack/check-imports.sh ./charts/... ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
+
+	@echo "> Check $(PKG_APIS_DIR)"
+	@cd $(PKG_APIS_DIR); ../../hack/check.sh --golangci-lint-config=../../.golangci.yaml ./...
+	@cd $(PKG_APIS_DIR); ../../hack/check-imports.sh ./...
 
 	@echo "> Check $(LOGCHECK_DIR)"
 	@cd $(LOGCHECK_DIR); $(abspath $(GOLANGCI_LINT)) run -c $(REPO_ROOT)/.golangci.yaml --timeout 10m ./...
@@ -215,7 +221,8 @@ generate:
 else
 generate: tools-for-generate
 	@printf "\nFor more info on the generate command, Run 'make generate PRINT_HELP=y'\n"
-	@REPO_ROOT=$(REPO_ROOT) LOGCHECK_DIR=$(LOGCHECK_DIR) hack/generate.sh --what "$(WHAT)" --codegen-groups "$(CODEGEN_GROUPS)" --manifests-dirs "$(MANIFESTS_DIRS)" --mode "$(MODE)" --max-parallel-workers "$(MAX_PARALLEL_WORKERS)"
+	@cd $(PKG_APIS_DIR); REPO_ROOT=$(REPO_ROOT) ../../hack/generate.sh --what "manifests" --manifests-dirs "./pkg/apis" --mode "$(MODE)"
+	@REPO_ROOT=$(REPO_ROOT) LOGCHECK_DIR=$(LOGCHECK_DIR) hack/generate.sh --what "$(WHAT)" --codegen-groups "$(CODEGEN_GROUPS)" --manifests-dirs "$(MANIFESTS_DIRS)" --mode "$(MODE)"
 	$(MAKE) format
 endif
 
@@ -235,6 +242,7 @@ sast-report: $(GOSEC)
 .PHONY: test
 test: $(REPORT_COLLECTOR) $(PROMTOOL) $(HELM) logcheck-symlinks
 	@./hack/test.sh ./charts/... ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/...
+	@cd $(PKG_APIS_DIR); ../../hack/test.sh ./...
 	@cd $(LOGCHECK_DIR); go test -race -timeout=2m ./... | grep -v 'no test files'
 
 .PHONY: test-integration
@@ -250,8 +258,8 @@ test-cov-clean:
 	@./hack/test-cover-clean.sh
 
 .PHONY: check-apidiff
-check-apidiff: $(GO_APIDIFF)
-	@./hack/check-apidiff.sh
+check-apidiff:
+	@REPO_ROOT=$(REPO_ROOT) ./hack/check-apidiff.sh
 
 .PHONY: check-vulnerabilities
 check-vulnerabilities: $(GO_VULN_CHECK)

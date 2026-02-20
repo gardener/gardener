@@ -13,11 +13,11 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 
 	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/api/seedmanagement/validation"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement/validation"
 	"github.com/gardener/gardener/pkg/apiserver/registry/seedmanagement/utils"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 

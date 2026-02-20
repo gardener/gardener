@@ -23,6 +23,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -33,7 +34,6 @@ import (
 	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"

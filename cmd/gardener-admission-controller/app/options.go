@@ -14,8 +14,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/gardener/gardener/cmd/utils/initrun"
-	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
-	admissioncontrollervalidation "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1/validation"
+	admissioncontrollervalidation "github.com/gardener/gardener/pkg/api/config/admissioncontroller/v1alpha1/validation"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/admissioncontroller/v1alpha1"
 )
 
 var configDecoder runtime.Decoder

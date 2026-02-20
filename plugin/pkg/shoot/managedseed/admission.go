@@ -16,10 +16,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 
+	gardencorehelper "github.com/gardener/gardener/pkg/api/core/helper"
+	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/api/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"

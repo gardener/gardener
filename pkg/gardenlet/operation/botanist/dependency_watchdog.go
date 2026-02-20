@@ -7,7 +7,7 @@ package botanist
 import (
 	"context"
 
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/dependencywatchdog"
 )

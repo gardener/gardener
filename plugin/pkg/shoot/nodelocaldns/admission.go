@@ -12,8 +12,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apiserver/pkg/admission"
 
+	gardencorehelper "github.com/gardener/gardener/pkg/api/core/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 

@@ -1,0 +1,389 @@
+// SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
+//
+// SPDX-License-Identifier: Apache-2.0
+
+package helper_test
+
+import (
+	"time"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
+
+	. "github.com/gardener/gardener/pkg/api/operator/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+)
+
+var _ = Describe("helper", func() {
+	DescribeTable("#GetCARotationPhase",
+		func(credentials *operatorv1alpha1.Credentials, expectedPhase gardencorev1beta1.CredentialsRotationPhase) {
+			Expect(GetCARotationPhase(credentials)).To(Equal(expectedPhase))
+		},
+
+		Entry("credentials nil", nil, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("rotation nil", &operatorv1alpha1.Credentials{}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("ca nil", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{}}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("phase empty", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{CertificateAuthorities: &gardencorev1beta1.CARotation{}}}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("phase set", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{CertificateAuthorities: &gardencorev1beta1.CARotation{Phase: gardencorev1beta1.RotationCompleting}}}, gardencorev1beta1.RotationCompleting),
+	)
+
+	Describe("#MutateCARotation", func() {
+		It("should do nothing when mutate function is nil", func() {
+			garden := &operatorv1alpha1.Garden{}
+			MutateCARotation(garden, nil)
+			Expect(GetCARotationPhase(garden.Status.Credentials)).To(BeEmpty())
+		})
+
+		DescribeTable("mutate function not nil",
+			func(garden *operatorv1alpha1.Garden, phase gardencorev1beta1.CredentialsRotationPhase) {
+				MutateCARotation(garden, func(rotation *gardencorev1beta1.CARotation) {
+					rotation.Phase = phase
+				})
+				Expect(garden.Status.Credentials.Rotation.CertificateAuthorities.Phase).To(Equal(phase))
+			},
+
+			Entry("credentials nil", &operatorv1alpha1.Garden{}, gardencorev1beta1.RotationCompleting),
+			Entry("rotation nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{}}}, gardencorev1beta1.RotationCompleting),
+			Entry("certificateAuthorities nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{}}}}, gardencorev1beta1.RotationCompleting),
+			Entry("certificateAuthorities non-nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{CertificateAuthorities: &gardencorev1beta1.CARotation{}}}}}, gardencorev1beta1.RotationCompleting),
+		)
+	})
+
+	DescribeTable("#GetServiceAccountKeyRotationPhase",
+		func(credentials *operatorv1alpha1.Credentials, expectedPhase gardencorev1beta1.CredentialsRotationPhase) {
+			Expect(GetServiceAccountKeyRotationPhase(credentials)).To(Equal(expectedPhase))
+		},
+
+		Entry("credentials nil", nil, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("rotation nil", &operatorv1alpha1.Credentials{}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("sa nil", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{}}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("phase empty", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{}}}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("phase set", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{Phase: gardencorev1beta1.RotationCompleting}}}, gardencorev1beta1.RotationCompleting),
+	)
+
+	Describe("#MutateServiceAccountKeyRotation", func() {
+		It("should do nothing when mutate function is nil", func() {
+			garden := &operatorv1alpha1.Garden{}
+			MutateServiceAccountKeyRotation(garden, nil)
+			Expect(GetServiceAccountKeyRotationPhase(garden.Status.Credentials)).To(BeEmpty())
+		})
+
+		DescribeTable("mutate function not nil",
+			func(garden *operatorv1alpha1.Garden, phase gardencorev1beta1.CredentialsRotationPhase) {
+				MutateServiceAccountKeyRotation(garden, func(rotation *gardencorev1beta1.ServiceAccountKeyRotation) {
+					rotation.Phase = phase
+				})
+				Expect(garden.Status.Credentials.Rotation.ServiceAccountKey.Phase).To(Equal(phase))
+			},
+
+			Entry("credentials nil", &operatorv1alpha1.Garden{}, gardencorev1beta1.RotationCompleting),
+			Entry("rotation nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{}}}, gardencorev1beta1.RotationCompleting),
+			Entry("certificateAuthorities nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{}}}}, gardencorev1beta1.RotationCompleting),
+			Entry("certificateAuthorities non-nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{}}}}}, gardencorev1beta1.RotationCompleting),
+		)
+	})
+
+	DescribeTable("#GetETCDEncryptionKeyRotationPhase",
+		func(credentials *operatorv1alpha1.Credentials, expectedPhase gardencorev1beta1.CredentialsRotationPhase) {
+			Expect(GetETCDEncryptionKeyRotationPhase(credentials)).To(Equal(expectedPhase))
+		},
+
+		Entry("credentials nil", nil, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("rotation nil", &operatorv1alpha1.Credentials{}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("etcd nil", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{}}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("phase empty", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{}}}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("phase set", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{Phase: gardencorev1beta1.RotationCompleting}}}, gardencorev1beta1.RotationCompleting),
+	)
+
+	DescribeTable("#ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared",
+		func(credentials *operatorv1alpha1.Credentials, autoCompleteAfterPrepared bool) {
+			Expect(ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(credentials)).To(Equal(autoCompleteAfterPrepared))
+		},
+
+		Entry("credentials nil", nil, false),
+		Entry("rotation nil", &operatorv1alpha1.Credentials{}, false),
+		Entry("etcdEncryptionKey nil", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{}}, false),
+		Entry("AutoCompleteAfterPrepared empty", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{}}}, false),
+		Entry("AutoCompleteAfterPrepared true", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: ptr.To(true)}}}, true),
+		Entry("AutoCompleteAfterPrepared false", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: ptr.To(false)}}}, false),
+	)
+
+	Describe("#MutateETCDEncryptionKeyRotation", func() {
+		It("should do nothing when mutate function is nil", func() {
+			garden := &operatorv1alpha1.Garden{}
+			MutateETCDEncryptionKeyRotation(garden, nil)
+			Expect(GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials)).To(BeEmpty())
+		})
+
+		DescribeTable("mutate function not nil",
+			func(garden *operatorv1alpha1.Garden, phase gardencorev1beta1.CredentialsRotationPhase) {
+				MutateETCDEncryptionKeyRotation(garden, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
+					rotation.Phase = phase
+				})
+				Expect(garden.Status.Credentials.Rotation.ETCDEncryptionKey.Phase).To(Equal(phase))
+			},
+
+			Entry("credentials nil", &operatorv1alpha1.Garden{}, gardencorev1beta1.RotationCompleting),
+			Entry("rotation nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{}}}, gardencorev1beta1.RotationCompleting),
+			Entry("certificateAuthorities nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{}}}}, gardencorev1beta1.RotationCompleting),
+			Entry("certificateAuthorities non-nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{}}}}}, gardencorev1beta1.RotationCompleting),
+		)
+	})
+
+	DescribeTable("#GetWorkloadIdentityKeyRotationPhase",
+		func(credentials *operatorv1alpha1.Credentials, expectedPhase gardencorev1beta1.CredentialsRotationPhase) {
+			Expect(GetWorkloadIdentityKeyRotationPhase(credentials)).To(Equal(expectedPhase))
+		},
+
+		Entry("credentials nil", nil, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("rotation nil", &operatorv1alpha1.Credentials{}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("workload identity nil", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{}}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("phase empty", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{}}}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("phase set", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{Phase: gardencorev1beta1.RotationCompleting}}}, gardencorev1beta1.RotationCompleting),
+	)
+
+	Describe("#MutateWorkloadIdentityKeyRotation", func() {
+		It("should do nothing when mutate function is nil", func() {
+			garden := &operatorv1alpha1.Garden{}
+			MutateWorkloadIdentityKeyRotation(garden, nil)
+			Expect(GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials)).To(BeEmpty())
+		})
+
+		DescribeTable("mutate function not nil",
+			func(garden *operatorv1alpha1.Garden, phase gardencorev1beta1.CredentialsRotationPhase) {
+				MutateWorkloadIdentityKeyRotation(garden, func(rotation *operatorv1alpha1.WorkloadIdentityKeyRotation) {
+					rotation.Phase = phase
+				})
+				Expect(garden.Status.Credentials.Rotation.WorkloadIdentityKey.Phase).To(Equal(phase))
+			},
+
+			Entry("credentials nil", &operatorv1alpha1.Garden{}, gardencorev1beta1.RotationCompleting),
+			Entry("rotation nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{}}}, gardencorev1beta1.RotationCompleting),
+			Entry("certificateAuthorities nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{}}}}, gardencorev1beta1.RotationCompleting),
+			Entry("certificateAuthorities non-nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{}}}}}, gardencorev1beta1.RotationCompleting),
+		)
+	})
+
+	DescribeTable("#IsShootObservabilityRotationInitiationTimeAfterLastCompletionTime",
+		func(credentials *operatorv1alpha1.Credentials, matcher gomegatypes.GomegaMatcher) {
+			Expect(IsObservabilityRotationInitiationTimeAfterLastCompletionTime(credentials)).To(matcher)
+		},
+
+		Entry("credentials nil", nil, BeFalse()),
+		Entry("rotation nil", &operatorv1alpha1.Credentials{}, BeFalse()),
+		Entry("observability nil", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{}}, BeFalse()),
+		Entry("lastInitiationTime nil", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{}}}, BeFalse()),
+		Entry("lastCompletionTime nil", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{LastInitiationTime: &metav1.Time{Time: metav1.Now().Time}}}}, BeTrue()),
+		Entry("lastCompletionTime before lastInitiationTime", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{LastInitiationTime: &metav1.Time{Time: metav1.Now().Time}, LastCompletionTime: &metav1.Time{Time: metav1.Now().Add(-time.Minute)}}}}, BeTrue()),
+		Entry("lastCompletionTime equal lastInitiationTime", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{LastInitiationTime: &metav1.Time{Time: metav1.Now().Time}, LastCompletionTime: &metav1.Time{Time: metav1.Now().Time}}}}, BeFalse()),
+		Entry("lastCompletionTime after lastInitiationTime", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{LastInitiationTime: &metav1.Time{Time: metav1.Now().Time}, LastCompletionTime: &metav1.Time{Time: metav1.Now().Add(time.Minute)}}}}, BeFalse()),
+	)
+
+	Describe("#MutateObservabilityRotation", func() {
+		It("should do nothing when mutate function is nil", func() {
+			garden := &operatorv1alpha1.Garden{}
+			MutateObservabilityRotation(garden, nil)
+			Expect(garden.Status.Credentials).To(BeNil())
+		})
+
+		DescribeTable("mutate function not nil",
+			func(garden *operatorv1alpha1.Garden, lastInitiationTime metav1.Time) {
+				MutateObservabilityRotation(garden, func(rotation *gardencorev1beta1.ObservabilityRotation) {
+					rotation.LastInitiationTime = &lastInitiationTime
+				})
+				Expect(garden.Status.Credentials.Rotation.Observability.LastInitiationTime).To(PointTo(Equal(lastInitiationTime)))
+			},
+
+			Entry("credentials nil", &operatorv1alpha1.Garden{}, metav1.Now()),
+			Entry("rotation nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{}}}, metav1.Now()),
+			Entry("observability nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{}}}}, metav1.Now()),
+			Entry("observability non-nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{}}}}}, metav1.Now()),
+		)
+	})
+
+	DescribeTable("#HighAvailabilityEnabled",
+		func(controlPlane *operatorv1alpha1.ControlPlane, expected bool) {
+			garden := &operatorv1alpha1.Garden{}
+			garden.Spec.VirtualCluster.ControlPlane = controlPlane
+
+			Expect(HighAvailabilityEnabled(garden)).To(Equal(expected))
+		},
+
+		Entry("no control-plane", nil, false),
+		Entry("no high-availability", &operatorv1alpha1.ControlPlane{HighAvailability: nil}, false),
+		Entry("high-availability set", &operatorv1alpha1.ControlPlane{HighAvailability: &operatorv1alpha1.HighAvailability{}}, true),
+	)
+
+	DescribeTable("#TopologyAwareRoutingEnabled",
+		func(settings *operatorv1alpha1.Settings, expected bool) {
+			Expect(TopologyAwareRoutingEnabled(settings)).To(Equal(expected))
+		},
+
+		Entry("no settings", nil, false),
+		Entry("no topology-aware routing setting", &operatorv1alpha1.Settings{}, false),
+		Entry("topology-aware routing enabled", &operatorv1alpha1.Settings{TopologyAwareRouting: &operatorv1alpha1.SettingTopologyAwareRouting{Enabled: true}}, true),
+		Entry("topology-aware routing disabled", &operatorv1alpha1.Settings{TopologyAwareRouting: &operatorv1alpha1.SettingTopologyAwareRouting{Enabled: false}}, false),
+	)
+
+	DescribeTable("#VerticalPodAutoscalerMaxAllowed",
+		func(settings *operatorv1alpha1.Settings, expected corev1.ResourceList) {
+			Expect(VerticalPodAutoscalerMaxAllowed(settings)).To(Equal(expected))
+		},
+
+		Entry("no settings", nil, nil),
+		Entry("no vertical pod autocaler setting", &operatorv1alpha1.Settings{}, nil),
+		Entry("vertical pod autocaler max allowed setting exists",
+			&operatorv1alpha1.Settings{VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{MaxAllowed: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2")}}},
+			corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2")},
+		),
+	)
+
+	DescribeTable("#GetETCDMainBackup",
+		func(garden *operatorv1alpha1.Garden, expected *operatorv1alpha1.Backup) {
+			Expect(GetETCDMainBackup(garden)).To(Equal(expected))
+		},
+		Entry("no garden", nil, nil),
+		Entry("no ETCD config", &operatorv1alpha1.Garden{}, nil),
+		Entry("no ETCD Main config", &operatorv1alpha1.Garden{Spec: operatorv1alpha1.GardenSpec{VirtualCluster: operatorv1alpha1.VirtualCluster{ETCD: &operatorv1alpha1.ETCD{}}}}, nil),
+		Entry("no backup config", &operatorv1alpha1.Garden{Spec: operatorv1alpha1.GardenSpec{VirtualCluster: operatorv1alpha1.VirtualCluster{ETCD: &operatorv1alpha1.ETCD{Main: &operatorv1alpha1.ETCDMain{}}}}}, nil),
+		Entry("with backup config", &operatorv1alpha1.Garden{Spec: operatorv1alpha1.GardenSpec{VirtualCluster: operatorv1alpha1.VirtualCluster{ETCD: &operatorv1alpha1.ETCD{Main: &operatorv1alpha1.ETCDMain{Backup: &operatorv1alpha1.Backup{Provider: "test"}}}}}}, &operatorv1alpha1.Backup{Provider: "test"}),
+	)
+
+	DescribeTable("#GetDNSProviders",
+		func(garden *operatorv1alpha1.Garden, expected []operatorv1alpha1.DNSProvider) {
+			Expect(GetDNSProviders(garden)).To(Equal(expected))
+		},
+		Entry("no garden", nil, nil),
+		Entry("no DNS config", &operatorv1alpha1.Garden{}, nil),
+		Entry("no DNS providers", &operatorv1alpha1.Garden{Spec: operatorv1alpha1.GardenSpec{DNS: &operatorv1alpha1.DNSManagement{}}}, nil),
+		Entry("with DNS providers", &operatorv1alpha1.Garden{Spec: operatorv1alpha1.GardenSpec{DNS: &operatorv1alpha1.DNSManagement{Providers: []operatorv1alpha1.DNSProvider{{Name: "provider-1"}, {Name: "provider-2"}}}}}, []operatorv1alpha1.DNSProvider{{Name: "provider-1"}, {Name: "provider-2"}}),
+	)
+
+	Describe("GetAPIServerSNIDomains", func() {
+		It("should return the correct SNI domains", func() {
+			domains := []string{"foo.bar", "bar.foo.bar", "foo.foo.bar", "foo.bar.foo.bar", "api.bar"}
+			sni := operatorv1alpha1.SNI{
+				DomainPatterns: []string{"api.bar", "*.foo.bar"},
+			}
+
+			Expect(GetAPIServerSNIDomains(domains, sni)).To(Equal([]string{"api.bar", "bar.foo.bar", "foo.foo.bar"}))
+		})
+	})
+
+	DescribeTable("#GetEncryptedResourcesInStatus",
+		func(status operatorv1alpha1.GardenStatus, expected []string) {
+			Expect(GetEncryptedResourcesInStatus(status)).To(Equal(expected))
+		},
+		Entry("no credentials field", operatorv1alpha1.GardenStatus{}, nil),
+		Entry("without resources", operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{}}, nil),
+		Entry("with resources", operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{Resources: []string{"configmaps", "shoots.core.gardener.cloud"}}}}, []string{"configmaps", "shoots.core.gardener.cloud"}),
+	)
+
+	Describe("EncryptionProvider", func() {
+		const EncryptionProviderType gardencorev1beta1.EncryptionProviderType = "foo"
+
+		DescribeTable("#GetGardenAPIServerEncryptionProviderType",
+			func(gardenAPIServerConfig *operatorv1alpha1.GardenerAPIServerConfig, expectedProvider string) {
+				Expect(string(GetGardenAPIServerEncryptionProviderType(gardenAPIServerConfig))).To(Equal(expectedProvider))
+			},
+
+			Entry("kubeAPIServerConfig is nil", nil, ""),
+			Entry("encryptionConfig is nil", &operatorv1alpha1.GardenerAPIServerConfig{}, ""),
+			Entry("Provider is empty", &operatorv1alpha1.GardenerAPIServerConfig{
+				EncryptionConfig: &gardencorev1beta1.EncryptionConfig{},
+			}, ""),
+			Entry("Type is nil", &operatorv1alpha1.GardenerAPIServerConfig{
+				EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+					Provider: gardencorev1beta1.EncryptionProvider{
+						Type: nil,
+					},
+				},
+			}, ""),
+			Entry("Type is set", &operatorv1alpha1.GardenerAPIServerConfig{
+				EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+					Provider: gardencorev1beta1.EncryptionProvider{
+						Type: ptr.To(EncryptionProviderType),
+					},
+				},
+			}, "foo"),
+		)
+
+		DescribeTable("#GetKubeAPIServerEncryptionProviderType",
+			func(kubeAPIServerConfig *operatorv1alpha1.KubeAPIServerConfig, expectedProvider string) {
+				Expect(string(GetKubeAPIServerEncryptionProviderType(kubeAPIServerConfig))).To(Equal(expectedProvider))
+			},
+
+			Entry("kubeAPIServerConfig is nil", nil, ""),
+			Entry("encryptionConfig is nil", &operatorv1alpha1.KubeAPIServerConfig{}, ""),
+			Entry("Provider is empty", &operatorv1alpha1.KubeAPIServerConfig{
+				KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+					EncryptionConfig: &gardencorev1beta1.EncryptionConfig{},
+				},
+			}, ""),
+			Entry("Type is nil", &operatorv1alpha1.KubeAPIServerConfig{
+				KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+					EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+						Provider: gardencorev1beta1.EncryptionProvider{
+							Type: nil,
+						},
+					},
+				},
+			}, ""),
+			Entry("Type is set", &operatorv1alpha1.KubeAPIServerConfig{
+				KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+					EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+						Provider: gardencorev1beta1.EncryptionProvider{
+							Type: ptr.To(EncryptionProviderType),
+						},
+					},
+				},
+			}, "foo"),
+		)
+
+		DescribeTable("#GetEncryptionProviderInStatus",
+			func(status operatorv1alpha1.GardenStatus, expected string) {
+				Expect(string(GetEncryptionProviderTypeInStatus(status))).To(Equal(expected))
+			},
+			Entry("no credentials field", operatorv1alpha1.GardenStatus{}, ""),
+			Entry("without provider", operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{}}, ""),
+			Entry("with provider", operatorv1alpha1.GardenStatus{
+				Credentials: &operatorv1alpha1.Credentials{
+					EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
+						Provider: operatorv1alpha1.EncryptionProviderStatus{
+							Type: EncryptionProviderType,
+						},
+					},
+				},
+			}, "foo"),
+		)
+	})
+
+	DescribeTable("#GetGardenerOperations",
+		func(annotations map[string]string, expectedResult []string) {
+			Expect(GetGardenerOperations(annotations)).To(Equal(expectedResult))
+		},
+		Entry("annotations are empty", nil, nil),
+		Entry("gardener.cloud/operation annotation is not set", map[string]string{
+			"foo": "bar",
+		}, nil),
+		Entry("gardener.cloud/operation annotation is empty", map[string]string{
+			"gardener.cloud/operation": "",
+		}, nil),
+		Entry("gardener.cloud/operation has single operation", map[string]string{
+			"gardener.cloud/operation": "reconcile",
+		}, []string{"reconcile"}),
+		Entry("gardener.cloud/operation has multiple operations", map[string]string{
+			"gardener.cloud/operation": "reconcile;rotate-credentials-start;rotate-ssh-keypair",
+		}, []string{"reconcile", "rotate-credentials-start", "rotate-ssh-keypair"}),
+		Entry("gardener.cloud/operation has whitespaces", map[string]string{
+			"gardener.cloud/operation": "reconcile ;rotate-credentials-start  ; rotate-ssh-keypair;   ",
+		}, []string{"reconcile", "rotate-credentials-start", "rotate-ssh-keypair", ""}),
+	)
+})

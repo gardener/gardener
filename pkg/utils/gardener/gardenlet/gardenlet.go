@@ -19,10 +19,10 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"

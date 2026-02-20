@@ -11,9 +11,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
