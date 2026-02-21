@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	"go.yaml.in/yaml/v4"
 	corev1 "k8s.io/api/core/v1"
@@ -537,7 +538,7 @@ func (o *operatingSystemConfig) WaitCleanup(ctx context.Context) error {
 
 // DeleteStaleResources deletes unused OperatingSystemConfig resources from the shoot namespace in the seed.
 func (o *operatingSystemConfig) DeleteStaleResources(ctx context.Context) error {
-	wantedOSCs, err := o.getWantedOSCNames()
+	wantedOSCs, err := o.getWantedOSCNames(ctx)
 	if err != nil {
 		return err
 	}
@@ -546,7 +547,7 @@ func (o *operatingSystemConfig) DeleteStaleResources(ctx context.Context) error 
 
 // WaitCleanupStaleResources waits until all unused OperatingSystemConfig resources are cleaned up.
 func (o *operatingSystemConfig) WaitCleanupStaleResources(ctx context.Context) error {
-	wantedOSCs, err := o.getWantedOSCNames()
+	wantedOSCs, err := o.getWantedOSCNames(ctx)
 	if err != nil {
 		return err
 	}
@@ -571,7 +572,7 @@ func (o *operatingSystemConfig) waitCleanup(ctx context.Context, wantedOSCNames 
 
 // getWantedOSCNames returns the names of all OSC resources, that are currently needed based
 // on the configured worker pools.
-func (o *operatingSystemConfig) getWantedOSCNames() (sets.Set[string], error) {
+func (o *operatingSystemConfig) getWantedOSCNames(ctx context.Context) (sets.Set[string], error) {
 	wantedOSCNames := sets.New[string]()
 
 	for _, worker := range o.values.Workers {
@@ -588,7 +589,24 @@ func (o *operatingSystemConfig) getWantedOSCNames() (sets.Set[string], error) {
 			if err != nil {
 				return nil, err
 			}
+			o.log.V(1).Info("Inserted osc data from worker", "data", oscKey+keySuffix(version, worker.Machine.Image, purpose))
 			wantedOSCNames.Insert(oscKey + keySuffix(version, worker.Machine.Image, purpose))
+		}
+	}
+
+	machineList := &v1alpha1.MachineList{}
+	if err := o.client.List(ctx, machineList, client.InNamespace(o.values.Namespace)); err != nil {
+		return nil, fmt.Errorf("failed to list Machines: %w", err)
+	}
+
+	for _, machine := range machineList.Items {
+		if val, ok := machine.Spec.NodeTemplateSpec.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]; ok {
+			originalVal := generateOSCName(val, "original")
+			initVal := generateOSCName(val, "init")
+
+			o.log.V(1).Info("Found wanted OSC name from existing machine", "init", initVal, "original", originalVal, "machine", machine.Name)
+			wantedOSCNames.Insert(originalVal, initVal)
+			continue
 		}
 	}
 
@@ -1131,4 +1149,8 @@ func keySuffix(version int, machineImage *gardencorev1beta1.ShootMachineImage, p
 		return imagePrefix + "-original"
 	}
 	return ""
+}
+
+func generateOSCName(val, suffix string) string {
+	return fmt.Sprintf("%s-%s", val, suffix)
 }
