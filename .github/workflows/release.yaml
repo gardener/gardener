@@ -12,8 +12,9 @@ jobs:
   build:
     if: ${{ github.repository == 'gardener/gardener' && startsWith(github.ref, 'refs/heads/release-v') }}
     uses: ./.github/workflows/build.yaml
+    secrets: inherit
     permissions:
-      contents: write
+      contents: read
       id-token: write
       packages: write
     with:
@@ -35,7 +36,6 @@ jobs:
       github-additional-tag-templates: |
         pkg/apis/${version}
       next-version: ${{ inputs.next-version }}
-      next-version-callback-action-path:
       slack-channel-id: C9CEBQPGE # #sap-tech-gardener
       assets: |
         - name: gardenadm-darwin-amd64
