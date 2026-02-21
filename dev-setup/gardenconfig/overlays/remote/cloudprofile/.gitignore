@@ -1,0 +1,5 @@
+*
+
+!.gitignore
+!kustomization.yaml
+!cloudprofiles.yaml.tmpl
