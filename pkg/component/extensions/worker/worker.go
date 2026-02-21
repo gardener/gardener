@@ -39,7 +39,7 @@ const (
 	DefaultSevereThreshold = 30 * time.Second
 	// DefaultTimeout is the default timeout and defines how long Gardener should wait for a successful reconciliation
 	// of a Worker resource.
-	DefaultTimeout = 10 * time.Minute
+	DefaultTimeout = 15 * time.Minute
 )
 
 // TimeNow returns the current time. Exposed for testing.
