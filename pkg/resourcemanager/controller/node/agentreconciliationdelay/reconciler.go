@@ -7,6 +7,7 @@ package agentreconciliationdelay
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -41,6 +42,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 		return reconcile.Result{}, fmt.Errorf("failed listing nodes from store: %w", err)
 	}
 
+	var err error
+	nodeList, err = r.removeNodesWithSerialOperatingSystemConfigReconciliation(ctx, nodeList)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to filter out nodes with serial operating system config reconciliation: %w", err)
+	}
+
 	// nothing to be done, node list has not changed since last time
 	currentNodeNames := nodeNames(nodeList)
 	if currentNodeNames.Equal(r.knownNodeNames) {
@@ -51,9 +58,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 
 	var taskFns []flow.TaskFn
 
-	for index, n := range nodeList.Items {
-		node := n
-
+	for index, node := range nodeList.Items {
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			rangeSize := (r.Config.MaxDelay.Seconds() - r.Config.MinDelay.Seconds()) / float64(len(nodeList.Items))
 			delaySeconds := r.Config.MinDelay.Seconds() + float64(index)*rangeSize
@@ -82,4 +87,32 @@ func nodeNames(nodeList *corev1.NodeList) sets.Set[string] {
 		out.Insert(node.Name)
 	}
 	return out
+}
+
+func (r *Reconciler) gardenerNodeAgentSecretsWithSerialReconciliation(ctx context.Context) (sets.Set[string], error) {
+	secretList := &corev1.SecretList{}
+	if err := r.TargetClient.List(ctx, secretList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleOperatingSystemConfig}); err != nil {
+		return nil, fmt.Errorf("failed to list gardener-node-agent secrets: %w", err)
+	}
+
+	secrets := sets.New[string]()
+	for _, secret := range secretList.Items {
+		if secret.Annotations[v1beta1constants.AnnotationNodeAgentSerialOSCReconciliation] == "true" {
+			secrets.Insert(secret.Name)
+		}
+	}
+	return secrets, nil
+}
+
+func (r *Reconciler) removeNodesWithSerialOperatingSystemConfigReconciliation(ctx context.Context, nodeList *corev1.NodeList) (*corev1.NodeList, error) {
+	secrets, err := r.gardenerNodeAgentSecretsWithSerialReconciliation(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch gardener-node-agent secrets with serial reconciliation: %w", err)
+	}
+
+	out := nodeList.DeepCopy()
+	out.Items = slices.DeleteFunc(out.Items, func(node corev1.Node) bool {
+		return secrets.Has(node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName])
+	})
+	return out, nil
 }

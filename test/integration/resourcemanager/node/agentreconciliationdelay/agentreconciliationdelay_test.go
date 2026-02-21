@@ -5,6 +5,8 @@
 package agentreconciliationdelay_test
 
 import (
+	"strconv"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -15,7 +17,7 @@ import (
 var _ = Describe("AgentReconciliationDelay tests", func() {
 	When("#nodes = 1", func() {
 		BeforeEach(func() {
-			prepareNodes(1)
+			prepareNodes(1, false)
 
 			By("Wait until manager has observed all nodes")
 			Eventually(func(g Gomega) int {
@@ -37,7 +39,7 @@ var _ = Describe("AgentReconciliationDelay tests", func() {
 
 	When("1 < #nodes <= max-delay-seconds", func() {
 		BeforeEach(func() {
-			prepareNodes(10)
+			prepareNodes(10, false)
 
 			By("Wait until manager has observed all nodes")
 			Eventually(func(g Gomega) int {
@@ -68,7 +70,7 @@ var _ = Describe("AgentReconciliationDelay tests", func() {
 
 	When("#nodes > max-delay-seconds", func() {
 		BeforeEach(func() {
-			prepareNodes(31)
+			prepareNodes(31, false)
 
 			By("Wait until manager has observed all nodes")
 			Eventually(func(g Gomega) int {
@@ -116,27 +118,110 @@ var _ = Describe("AgentReconciliationDelay tests", func() {
 			}).Should(Succeed())
 		})
 	})
+
+	Context("ignore nodes with serial operating system config rollout", func() {
+		BeforeEach(func() {
+			prepareNodes(5, true)   // first group of nodes should be excluded
+			prepareNodes(10, false) // second group of nodes should be considered
+			prepareNodes(5, true)   // third group of nodes should be excluded
+
+			By("Wait until manager has observed all objects")
+			Eventually(func(g Gomega) {
+				secretList := &corev1.SecretList{}
+				g.Expect(mgrClient.List(ctx, secretList)).To(Succeed())
+				g.Expect(secretList.Items).To(HaveLen(2))
+
+				nodeList := &corev1.NodeList{}
+				g.Expect(mgrClient.List(ctx, nodeList)).To(Succeed())
+				g.Expect(nodeList.Items).To(HaveLen(20))
+			}).Should(Succeed())
+		})
+
+		It("should not assign any delay for the nodes with serial rollout", func() {
+			Eventually(func(g Gomega) {
+				nodeList := &corev1.NodeList{}
+				g.Expect(testClient.List(ctx, nodeList)).To(Succeed())
+
+				g.Expect(nodeList.Items[5].Annotations["node-agent.gardener.cloud/reconciliation-delay"]).To(Equal("5s"))
+				g.Expect(nodeList.Items[6].Annotations["node-agent.gardener.cloud/reconciliation-delay"]).To(Equal("7.5s"))
+				g.Expect(nodeList.Items[7].Annotations["node-agent.gardener.cloud/reconciliation-delay"]).To(Equal("10s"))
+				g.Expect(nodeList.Items[8].Annotations["node-agent.gardener.cloud/reconciliation-delay"]).To(Equal("12.5s"))
+				g.Expect(nodeList.Items[9].Annotations["node-agent.gardener.cloud/reconciliation-delay"]).To(Equal("15s"))
+				g.Expect(nodeList.Items[10].Annotations["node-agent.gardener.cloud/reconciliation-delay"]).To(Equal("17.5s"))
+				g.Expect(nodeList.Items[11].Annotations["node-agent.gardener.cloud/reconciliation-delay"]).To(Equal("20s"))
+				g.Expect(nodeList.Items[12].Annotations["node-agent.gardener.cloud/reconciliation-delay"]).To(Equal("22.5s"))
+				g.Expect(nodeList.Items[13].Annotations["node-agent.gardener.cloud/reconciliation-delay"]).To(Equal("25s"))
+				g.Expect(nodeList.Items[14].Annotations["node-agent.gardener.cloud/reconciliation-delay"]).To(Equal("27.5s"))
+			}).Should(Succeed())
+
+			Consistently(func(g Gomega) {
+				nodeList := &corev1.NodeList{}
+				g.Expect(testClient.List(ctx, nodeList)).To(Succeed())
+
+				g.Expect(nodeList.Items[0].Annotations).NotTo(HaveKey("node-agent.gardener.cloud/reconciliation-delay"))
+				g.Expect(nodeList.Items[1].Annotations).NotTo(HaveKey("node-agent.gardener.cloud/reconciliation-delay"))
+				g.Expect(nodeList.Items[2].Annotations).NotTo(HaveKey("node-agent.gardener.cloud/reconciliation-delay"))
+				g.Expect(nodeList.Items[3].Annotations).NotTo(HaveKey("node-agent.gardener.cloud/reconciliation-delay"))
+				g.Expect(nodeList.Items[4].Annotations).NotTo(HaveKey("node-agent.gardener.cloud/reconciliation-delay"))
+				g.Expect(nodeList.Items[15].Annotations).NotTo(HaveKey("node-agent.gardener.cloud/reconciliation-delay"))
+				g.Expect(nodeList.Items[16].Annotations).NotTo(HaveKey("node-agent.gardener.cloud/reconciliation-delay"))
+				g.Expect(nodeList.Items[17].Annotations).NotTo(HaveKey("node-agent.gardener.cloud/reconciliation-delay"))
+				g.Expect(nodeList.Items[18].Annotations).NotTo(HaveKey("node-agent.gardener.cloud/reconciliation-delay"))
+				g.Expect(nodeList.Items[19].Annotations).NotTo(HaveKey("node-agent.gardener.cloud/reconciliation-delay"))
+			}).Should(Succeed())
+		})
+	})
 })
 
-func prepareNodes(count int) {
-	for range count {
-		node := newNode()
+func prepareNodes(count int, withSerialOSCReconciliation bool) {
+	GinkgoHelper()
 
-		ExpectWithOffset(1, testClient.Create(ctx, node)).To(Succeed(), "node "+node.Name)
+	var gardenerNodeAgentSecret *corev1.Secret
+	if withSerialOSCReconciliation {
+		gardenerNodeAgentSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "gardener-node-agent-",
+			Namespace:    "kube-system",
+			Annotations:  map[string]string{"reconciliation.osc.node-agent.gardener.cloud/serial": "true"},
+			Labels:       map[string]string{"gardener.cloud/role": "operating-system-config"},
+		}}
+
+		Expect(testClient.Create(ctx, gardenerNodeAgentSecret)).To(Succeed())
+		By("Created gardener-node-agent Secret " + gardenerNodeAgentSecret.Name + " with serial OSC reconciliation for test")
+
+		DeferCleanup(func() {
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, gardenerNodeAgentSecret))).To(Succeed())
+			By("Deleted gardener-node-agent Secret " + gardenerNodeAgentSecret.Name + " with serial OSC reconciliation")
+		})
+	}
+
+	for suffix := range count {
+		node := newNode(suffix, gardenerNodeAgentSecret)
+
+		Expect(testClient.Create(ctx, node)).To(Succeed(), "node "+node.Name)
 		By("Created Node " + node.Name + " for test")
 
 		DeferCleanup(func() {
-			ExpectWithOffset(1, client.IgnoreNotFound(testClient.Delete(ctx, node))).To(Succeed(), "node "+node.Name)
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, node))).To(Succeed(), "node "+node.Name)
 			By("Deleted Node " + node.Name)
 		})
 	}
+
+	nodeGroup++
 }
 
-func newNode() *corev1.Node {
-	return &corev1.Node{
+var nodeGroup int
+
+func newNode(suffix int, gardenerNodeAgentSecret *corev1.Secret) *corev1.Node {
+	node := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "node-",
-			Labels:       map[string]string{testID: testRunID},
+			Name:   "node-" + strconv.Itoa(nodeGroup) + "-" + strconv.Itoa(suffix),
+			Labels: map[string]string{testID: testRunID},
 		},
 	}
+
+	if gardenerNodeAgentSecret != nil {
+		metav1.SetMetaDataLabel(&node.ObjectMeta, "worker.gardener.cloud/gardener-node-agent-secret-name", gardenerNodeAgentSecret.Name)
+	}
+
+	return node
 }
