@@ -11,6 +11,7 @@ set -x
 
 source $(dirname "${0}")/ci-common.sh
 
+increase_system_limits
 clamp_mss_to_pmtu
 
 ensure_local_gardener_cloud_hosts
