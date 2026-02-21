@@ -366,7 +366,7 @@ export SKAFFOLD_LABEL = "skaffold.dev/run-id=gardener-local"
 
 
 gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
-	$(SKAFFOLD) run
+	$(SKAFFOLD) run --rpc-port=50051 --event-log-file="tmp/skaffold/skaffold-events-gardener-up.json"
 gardener-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	$(SKAFFOLD) dev
 gardener-debug: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
@@ -384,10 +384,10 @@ gardener-extensions-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down: export SKAFFOLD_PREFIX_NAME = kind2
 gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down: export SKAFFOLD_COMMAND_KUBECONFIG := $(GARDENER_LOCAL_KUBECONFIG)
 gardenlet-kind2-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) deploy -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_COMMAND_KUBECONFIG) \
+	$(SKAFFOLD) deploy -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_COMMAND_KUBECONFIG) --rpc-port=50051 --event-log-file="tmp/skaffold/skaffold-events-gardenlet-kind2-up-deploy-$(SKAFFOLD_PREFIX_NAME).json" \
 		--status-check=false # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
 	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
-	GARDENER_LOCAL_KUBECONFIG=$(SKAFFOLD_COMMAND_KUBECONFIG) $(SKAFFOLD) run -m gardenlet -p $(SKAFFOLD_PREFIX_NAME)
+	GARDENER_LOCAL_KUBECONFIG=$(SKAFFOLD_COMMAND_KUBECONFIG) $(SKAFFOLD) run -m gardenlet -p $(SKAFFOLD_PREFIX_NAME) --rpc-port=50051 --event-log-file="tmp/skaffold/skaffold-events-gardenlet-kind2-up-$(SKAFFOLD_PREFIX_NAME).json"
 gardenlet-kind2-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(SKAFFOLD) deploy -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_COMMAND_KUBECONFIG)
 	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready

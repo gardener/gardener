@@ -14,6 +14,8 @@ export_artifacts() {
   echo "> Exporting events of kind cluster '$cluster_name' > '$ARTIFACTS/$cluster_name'"
   export_events_for_cluster "$ARTIFACTS/$cluster_name"
 
+  export_skaffold_events
+
   export_resource_yamls_for seeds shoots bastions.operations.gardener.cloud etcds leases
   export_events_for_shoots
 
@@ -41,6 +43,11 @@ export_artifacts() {
 
   echo "> Exporting /etc/hosts"
   cp /etc/hosts $ARTIFACTS/$cluster_name/hosts
+}
+
+export_skaffold_events() {
+  echo "> Exporting skaffold events > $ARTIFACTS/skaffold"
+  cp -r "$(dirname "$0")/../tmp/skaffold" "$ARTIFACTS/skaffold/" || true
 }
 
 export_resource_yamls_for() {
