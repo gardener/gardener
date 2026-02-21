@@ -56,7 +56,8 @@ receivers:
 
 processors:
   batch:
-    send_batch_max_size: 8192
+    send_batch_size: 2000
+    send_batch_max_size: 4000
     timeout: 10s
 
   memory_limiter:
@@ -135,9 +136,9 @@ service:
   pipelines:
     logs/journal:
       receivers: [journald/journal]
-      processors: [batch, memory_limiter, resource/journal]
+      processors: [memory_limiter, resource/journal, batch]
       exporters: [otlp]
     logs/pods:
       receivers: [filelog/pods]
-      processors: [batch, memory_limiter, k8sattributes, filter/drop_non_gardener, resource/pod_labels]
+      processors: [memory_limiter, k8sattributes, filter/drop_non_gardener, resource/pod_labels, batch]
       exporters: [otlp]
