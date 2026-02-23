@@ -6,6 +6,7 @@ package victorialogs_test
 
 import (
 	"context"
+	"fmt"
 
 	vmv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
 	vmv1beta1 "github.com/VictoriaMetrics/operator/api/operator/v1beta1"
@@ -29,11 +30,14 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component"
+	componentpkg "github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/logging/victorialogs"
 	victorialogsconstants "github.com/gardener/gardener/pkg/component/observability/logging/victorialogs/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -42,18 +46,19 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
+const namespace = "some-namespace"
+
 var _ = Describe("VictoriaLogs", func() {
 	var (
 		ctx = context.Background()
 
-		namespace = "some-namespace"
-		image     = "europe-docker.pkg.dev/gardener-project/releases/some-image:some-tag"
-		values    = Values{
+		image  = "europe-docker.pkg.dev/gardener-project/releases/some-image:some-tag"
+		values = Values{
 			Image: image,
 		}
 
 		c         client.Client
-		component component.DeployWaiter
+		component componentpkg.DeployWaiter
 		consistOf func(...client.Object) types.GomegaMatcher
 
 		customResourcesManagedResourceName   = "victoria-logs"
@@ -211,7 +216,7 @@ var _ = Describe("VictoriaLogs", func() {
 	})
 
 	Describe("#Deploy", func() {
-		It("should successfully deploy all resources", func() {
+		It("should successfully deploy all resources for shoot cluster", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(BeNotFoundError())
 
@@ -251,6 +256,134 @@ var _ = Describe("VictoriaLogs", func() {
 			Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(customResourcesManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+		})
+
+		Context("when deployed in seed cluster", func() {
+			BeforeEach(func() {
+				values = Values{
+					Image:       image,
+					ClusterType: componentpkg.ClusterTypeSeed,
+				}
+				component = New(c, namespace, values)
+			})
+
+			It("should successfully deploy all resources with seed-specific configuration", func() {
+				Expect(component.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
+
+				// Verify VLSingle has seed-specific network policy annotations
+				expectedVlSingle := vlSingle.DeepCopy()
+				expectedVlSingle.Spec.ManagedMetadata = &vmv1beta1.ManagedObjectsMetadata{
+					Annotations: map[string]string{
+						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicySeedScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, victorialogsconstants.VictoriaLogsPort),
+					},
+				}
+
+				// Verify ServiceMonitor has seed prometheus label and name
+				expectedServiceMonitor := serviceMonitor.DeepCopy()
+				expectedServiceMonitor.ObjectMeta = monitoringutils.ConfigObjectMeta("victoria-logs", namespace, seed.Label)
+
+				// Verify PrometheusRule has seed prometheus label and name
+				expectedPrometheusRule := prometheusRule.DeepCopy()
+				expectedPrometheusRule.ObjectMeta = monitoringutils.ConfigObjectMeta("victoria-logs", namespace, seed.Label)
+
+				customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
+				Expect(customResourcesManagedResource).To(consistOf(
+					expectedVlSingle,
+					vpa,
+					expectedServiceMonitor,
+					expectedPrometheusRule,
+				))
+
+				componenttest.PrometheusRule(getVictoriaLogsPrometheusRule(seed.Label), "testdata/seed-victoria-logs.prometheusrule.test.yaml")
+			})
+		})
+
+		Context("when deployed in garden cluster", func() {
+			BeforeEach(func() {
+				values = Values{
+					Image:           image,
+					ClusterType:     componentpkg.ClusterTypeSeed,
+					IsGardenCluster: true,
+				}
+				component = New(c, namespace, values)
+			})
+
+			It("should successfully deploy all resources with garden-specific configuration", func() {
+				Expect(component.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
+
+				// Verify VLSingle has garden-specific network policy annotations
+				expectedVlSingle := vlSingle.DeepCopy()
+				expectedVlSingle.Spec.ManagedMetadata = &vmv1beta1.ManagedObjectsMetadata{
+					Annotations: map[string]string{
+						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicyGardenScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, victorialogsconstants.VictoriaLogsPort),
+					},
+				}
+
+				// Verify ServiceMonitor has garden prometheus label and name
+				expectedServiceMonitor := serviceMonitor.DeepCopy()
+				expectedServiceMonitor.ObjectMeta = monitoringutils.ConfigObjectMeta("victoria-logs", namespace, garden.Label)
+
+				// Verify PrometheusRule has garden prometheus label and name
+				expectedPrometheusRule := prometheusRule.DeepCopy()
+				expectedPrometheusRule.ObjectMeta = monitoringutils.ConfigObjectMeta("victoria-logs", namespace, garden.Label)
+
+				customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
+				Expect(customResourcesManagedResource).To(consistOf(
+					expectedVlSingle,
+					vpa,
+					expectedServiceMonitor,
+					expectedPrometheusRule,
+				))
+			})
+		})
+
+		Context("when deployed in shoot cluster", func() {
+			BeforeEach(func() {
+				values = Values{
+					Image:       image,
+					ClusterType: componentpkg.ClusterTypeShoot,
+				}
+				component = New(c, namespace, values)
+			})
+
+			It("should successfully deploy all resources with shoot-specific configuration", func() {
+				Expect(component.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
+
+				// Verify VLSingle has shoot-specific network policy annotations
+				expectedVlSingle := vlSingle.DeepCopy()
+				expectedVlSingle.Spec.ManagedMetadata = &vmv1beta1.ManagedObjectsMetadata{
+					Annotations: map[string]string{
+						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicyScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, victorialogsconstants.VictoriaLogsPort),
+						resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias: v1beta1constants.LabelNetworkPolicyShootNamespaceAlias,
+						resourcesv1alpha1.NetworkingNamespaceSelectors:             `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
+					},
+				}
+
+				// Verify ServiceMonitor has shoot prometheus label and name
+				expectedServiceMonitor := serviceMonitor.DeepCopy()
+				expectedServiceMonitor.ObjectMeta = monitoringutils.ConfigObjectMeta("victoria-logs", namespace, shoot.Label)
+
+				// Verify PrometheusRule has shoot prometheus label, name, and shoot-specific description
+				expectedPrometheusRule := prometheusRule.DeepCopy()
+				expectedPrometheusRule.ObjectMeta = monitoringutils.ConfigObjectMeta("victoria-logs", namespace, shoot.Label)
+				expectedPrometheusRule.Spec.Groups[0].Rules[0].Annotations["description"] = "There are no VictoriaLogs pods running. No logs will be collected."
+
+				customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
+				Expect(customResourcesManagedResource).To(consistOf(
+					expectedVlSingle,
+					vpa,
+					expectedServiceMonitor,
+					expectedPrometheusRule,
+				))
+
+				componenttest.PrometheusRule(getVictoriaLogsPrometheusRule(shoot.Label), "testdata/shoot-victoria-logs.prometheusrule.test.yaml")
+			})
 		})
 	})
 
@@ -367,5 +500,40 @@ func getLabels() map[string]string {
 		v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelObservabilityApplication:        "victoria-logs",
+	}
+}
+
+func getVictoriaLogsPrometheusRule(label string) *monitoringv1.PrometheusRule {
+	description := "There are no VictoriaLogs pods running on seed: {{ .ExternalLabels.seed }}. No logs will be collected."
+	if label == "shoot" {
+		description = "There are no VictoriaLogs pods running. No logs will be collected."
+	}
+
+	return &monitoringv1.PrometheusRule{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      label + "-victoria-logs",
+			Namespace: namespace,
+			Labels:    map[string]string{"prometheus": label},
+		},
+		Spec: monitoringv1.PrometheusRuleSpec{
+			Groups: []monitoringv1.RuleGroup{{
+				Name: "victoria-logs.rules",
+				Rules: []monitoringv1.Rule{{
+					Alert: "VictoriaLogsDown",
+					Expr:  intstr.FromString(`absent(up{job="victoria-logs"} == 1)`),
+					For:   ptr.To(monitoringv1.Duration("30m")),
+					Labels: map[string]string{
+						"service":    "logging",
+						"severity":   "warning",
+						"type":       "seed",
+						"visibility": "operator",
+					},
+					Annotations: map[string]string{
+						"description": description,
+						"summary":     "VictoriaLogs is down",
+					},
+				}},
+			}},
+		},
 	}
 }
