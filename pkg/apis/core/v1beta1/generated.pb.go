@@ -2918,6 +2918,18 @@ func (m *ControllerInstallationSpec) MarshalToSizedBuffer(dAtA []byte) (int, err
 	_ = i
 	var l int
 	_ = l
+	if m.ShootRef != nil {
+		{
+			size, err := m.ShootRef.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x22
+	}
 	if m.DeploymentRef != nil {
 		{
 			size, err := m.DeploymentRef.MarshalToSizedBuffer(dAtA[:i])
@@ -2930,16 +2942,18 @@ func (m *ControllerInstallationSpec) MarshalToSizedBuffer(dAtA []byte) (int, err
 		i--
 		dAtA[i] = 0x1a
 	}
-	{
-		size, err := m.SeedRef.MarshalToSizedBuffer(dAtA[:i])
-		if err != nil {
-			return 0, err
+	if m.SeedRef != nil {
+		{
+			size, err := m.SeedRef.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
 		}
-		i -= size
-		i = encodeVarintGenerated(dAtA, i, uint64(size))
+		i--
+		dAtA[i] = 0x12
 	}
-	i--
-	dAtA[i] = 0x12
 	{
 		size, err := m.RegistrationRef.MarshalToSizedBuffer(dAtA[:i])
 		if err != nil {
@@ -14426,10 +14440,16 @@ func (m *ControllerInstallationSpec) Size() (n int) {
 	_ = l
 	l = m.RegistrationRef.Size()
 	n += 1 + l + sovGenerated(uint64(l))
-	l = m.SeedRef.Size()
-	n += 1 + l + sovGenerated(uint64(l))
+	if m.SeedRef != nil {
+		l = m.SeedRef.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
 	if m.DeploymentRef != nil {
 		l = m.DeploymentRef.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
+	if m.ShootRef != nil {
+		l = m.ShootRef.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
 	return n
@@ -19020,8 +19040,9 @@ func (this *ControllerInstallationSpec) String() string {
 	}
 	s := strings.Join([]string{`&ControllerInstallationSpec{`,
 		`RegistrationRef:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.RegistrationRef), "ObjectReference", "v1.ObjectReference", 1), `&`, ``, 1) + `,`,
-		`SeedRef:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.SeedRef), "ObjectReference", "v1.ObjectReference", 1), `&`, ``, 1) + `,`,
+		`SeedRef:` + strings.Replace(fmt.Sprintf("%v", this.SeedRef), "ObjectReference", "v1.ObjectReference", 1) + `,`,
 		`DeploymentRef:` + strings.Replace(fmt.Sprintf("%v", this.DeploymentRef), "ObjectReference", "v1.ObjectReference", 1) + `,`,
+		`ShootRef:` + strings.Replace(fmt.Sprintf("%v", this.ShootRef), "ObjectReference", "v1.ObjectReference", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -28857,6 +28878,9 @@ func (m *ControllerInstallationSpec) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
+			if m.SeedRef == nil {
+				m.SeedRef = &v1.ObjectReference{}
+			}
 			if err := m.SeedRef.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -28894,6 +28918,42 @@ func (m *ControllerInstallationSpec) Unmarshal(dAtA []byte) error {
 				m.DeploymentRef = &v1.ObjectReference{}
 			}
 			if err := m.DeploymentRef.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ShootRef", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ShootRef == nil {
+				m.ShootRef = &v1.ObjectReference{}
+			}
+			if err := m.ShootRef.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

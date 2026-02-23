@@ -736,7 +736,12 @@ message ControllerInstallationSpec {
   optional .k8s.io.api.core.v1.ObjectReference registrationRef = 1;
 
   // SeedRef is used to reference a Seed resource. The name field of the SeedRef is immutable.
+  // +optional
   optional .k8s.io.api.core.v1.ObjectReference seedRef = 2;
+
+  // ShootRef is used to reference a Shoot resource. The name field of the ShootRef is immutable.
+  // +optional
+  optional .k8s.io.api.core.v1.ObjectReference shootRef = 4;
 
   // DeploymentRef is used to reference a ControllerDeployment resource.
   // +optional
