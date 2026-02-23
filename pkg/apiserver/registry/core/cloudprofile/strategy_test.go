@@ -329,12 +329,20 @@ var _ = Describe("Strategy", func() {
 			newCloudProfile = &core.CloudProfile{}
 		})
 
+		It("should allow updating the status", func() {
+			newCloudProfile.Status.Kubernetes = &core.KubernetesStatus{
+				Versions: []core.ExpirableVersionStatus{{Version: "foo"}},
+			}
+			strategy.PrepareForUpdate(ctx, newCloudProfile, oldCloudProfile)
+
+			Expect(newCloudProfile.Status.Kubernetes.Versions).To(ConsistOf(core.ExpirableVersionStatus{Version: "foo"}))
+		})
+
 		It("should not allow editing the spec", func() {
 			newCloudProfile.Spec.Type = "foo"
 			strategy.PrepareForUpdate(ctx, newCloudProfile, oldCloudProfile)
 
-			Expect(newCloudProfile.Status).To(Equal(oldCloudProfile.Status))
+			Expect(newCloudProfile.Spec).To(Equal(oldCloudProfile.Spec))
 		})
-
 	})
 })
