@@ -601,8 +601,15 @@ func (o *operatingSystemConfig) getWantedOSCNames(ctx context.Context) (sets.Set
 
 	for _, machine := range machineList.Items {
 		if val, ok := machine.Spec.NodeTemplateSpec.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]; ok {
-			originalVal := generateOSCName(val, "original")
-			initVal := generateOSCName(val, "init")
+			originalVal := generateOSCName(
+				val,
+				extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
+			)
+
+			initVal := generateOSCName(
+				val,
+				extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
+			)
 
 			o.log.V(1).Info("Found wanted OSC name from existing machine", "init", initVal, "original", originalVal, "machine", machine.Name)
 			wantedOSCNames.Insert(originalVal, initVal)
@@ -1136,21 +1143,42 @@ func KeyV2(
 	return fmt.Sprintf("gardener-node-agent-%s-%s", worker.Name, utils.ComputeSHA256Hex([]byte(result.String()))[:16])
 }
 
-func keySuffix(version int, machineImage *gardencorev1beta1.ShootMachineImage, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {
+func oscPurposeSuffix(purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {
+	switch purpose {
+	case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
+		return "init"
+	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
+		return "original"
+	default:
+		return ""
+	}
+}
+
+func keySuffix(
+	version int,
+	machineImage *gardencorev1beta1.ShootMachineImage,
+	purpose extensionsv1alpha1.OperatingSystemConfigPurpose,
+) string {
 	var imagePrefix string
 	if version == 1 && machineImage != nil {
 		imagePrefix = "-" + machineImage.Name
 	}
 
-	switch purpose {
-	case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
-		return imagePrefix + "-init"
-	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
-		return imagePrefix + "-original"
+	suffix := oscPurposeSuffix(purpose)
+	if suffix == "" {
+		return ""
 	}
-	return ""
+
+	return imagePrefix + "-" + suffix
 }
 
-func generateOSCName(val, suffix string) string {
+func generateOSCName(
+	val string,
+	purpose extensionsv1alpha1.OperatingSystemConfigPurpose,
+) string {
+	suffix := oscPurposeSuffix(purpose)
+	if suffix == "" {
+		return val
+	}
 	return fmt.Sprintf("%s-%s", val, suffix)
 }
