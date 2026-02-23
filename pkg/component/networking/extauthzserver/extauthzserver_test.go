@@ -243,6 +243,32 @@ status:
   loadBalancer: {}
 `
 		}
+		vpa = func(isGarden bool) string {
+			prefix := ""
+			if isGarden {
+				prefix = "virtual-garden-"
+			}
+			return `apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    app: ` + prefix + `ext-authz-server
+  name: ` + prefix + `ext-authz-server
+  namespace: some-namespace
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: ext-authz-server
+      controlledValues: RequestsOnly
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ` + prefix + `ext-authz-server
+  updatePolicy:
+    updateMode: Recreate
+status: {}
+`
+		}
 		tlsSecretInIstioNamespaceMeta = func(isGarden bool) metav1.ObjectMeta {
 			prefix := ""
 			if isGarden {
@@ -374,6 +400,7 @@ status:
 				destinationRule(isGarden),
 				envoyFilter(isGarden, hosts...),
 				service(isGarden),
+				vpa(isGarden),
 			}
 			Expect(nonSecretManifests).To(ConsistOf(expectedManifests))
 			Expect(secretManifests).To(HaveLen(1))
