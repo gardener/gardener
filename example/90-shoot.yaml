@@ -253,7 +253,7 @@ spec:
   #     - configmaps
   #     - customresource.fancyoperator.io
   #     provider:
-  #       type: "secretbox"
+  #       type: "aesgcm"
   #   autoscaling:
   #     minAllowed:
   #       cpu: "1"
