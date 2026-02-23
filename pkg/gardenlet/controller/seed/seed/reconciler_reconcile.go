@@ -466,15 +466,15 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Name: "Deploying Vali/VictoriaLogs",
 			Fn: func(ctx context.Context) error {
 				if err := c.vali.Deploy(ctx); err != nil {
-					return err
+					return fmt.Errorf("deploying Vali failed: %w", err)
 				}
 				if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
 					if err := c.victoriaLogs.Deploy(ctx); err != nil {
-						return err
+						return fmt.Errorf("deploying VictoriaLogs failed: %w", err)
 					}
 				} else {
 					if err := c.victoriaLogs.Destroy(ctx); err != nil {
-						return err
+						return fmt.Errorf("destroying VictoriaLogs failed: %w", err)
 					}
 				}
 				return nil
