@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -17,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -29,12 +31,14 @@ var _ = Describe("Reconciler", func() {
 	const finalizerName = "gardener"
 
 	var (
-		ctx  = context.TODO()
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
+		ctx    = context.TODO()
+		ctrl   *gomock.Controller
+		c      *mockclient.MockClient
+		status *mockclient.MockStatusWriter
 
 		cloudProfileName string
 		fakeErr          error
+		fakeClock        *testclock.FakeClock
 		reconciler       reconcile.Reconciler
 		cloudProfile     *gardencorev1beta1.CloudProfile
 	)
@@ -42,10 +46,13 @@ var _ = Describe("Reconciler", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
+		status = mockclient.NewMockStatusWriter(ctrl)
 
 		cloudProfileName = "test-cloudprofile"
 		fakeErr = errors.New("fake err")
-		reconciler = &Reconciler{Client: c, Recorder: &events.FakeRecorder{}}
+		fakeClock = testclock.NewFakeClock(time.Now())
+		reconciler = &Reconciler{Client: c, Recorder: &events.FakeRecorder{}, Clock: fakeClock}
+
 		cloudProfile = &gardencorev1beta1.CloudProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            cloudProfileName,
@@ -95,11 +102,20 @@ var _ = Describe("Reconciler", func() {
 			Expect(err).To(MatchError(err))
 		})
 
-		It("should ensure the finalizer (no error)", func() {
-			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-				Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
-				return nil
-			})
+		It("should ensure the finalizer and status (no error)", func() {
+			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{}), gomock.Any()).
+				DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
+					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
+					return nil
+				})
+
+			c.EXPECT().Status().Return(status)
+			status.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{}), gomock.Any()).
+				DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
+					fmt.Println(patch.Data(o))
+					Expect(patch.Data(o)).To(BeEquivalentTo(`{}`))
+					return nil
+				})
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: cloudProfileName}})
 			Expect(result).To(Equal(reconcile.Result{}))
@@ -132,6 +148,7 @@ var _ = Describe("Reconciler", func() {
 				(&gardencorev1beta1.NamespacedCloudProfileList{}).DeepCopyInto(obj)
 				return nil
 			})
+
 			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
 				(&gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{
 					{
@@ -208,6 +225,116 @@ var _ = Describe("Reconciler", func() {
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: cloudProfileName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Context("status reconciliation", func() {
+		var (
+			now    = time.Time{}
+			future *metav1.Time
+			past   *metav1.Time
+
+			testStatus = func(spec gardencorev1beta1.CloudProfileSpec, wantStatus gardencorev1beta1.CloudProfileStatus) reconcile.Result {
+				cloudProfile.Spec = spec
+
+				want := cloudProfile.DeepCopy()
+				want.Status = wantStatus
+
+				c.EXPECT().Status().Return(status)
+				status.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{}), gomock.Any()).
+					Do(func(_ context.Context, o client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(o).To(Equal(want))
+					})
+
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: cloudProfileName}})
+				Expect(err).NotTo(HaveOccurred())
+
+				return result
+			}
+		)
+
+		BeforeEach(func() {
+			cloudProfile.Finalizers = []string{finalizerName}
+			now = time.Now()
+			future = &metav1.Time{Time: now.Add(24 * time.Hour)}
+			past = &metav1.Time{Time: now.Add(-24 * time.Hour)}
+
+			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: cloudProfileName}, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+				*obj = *cloudProfile
+				return nil
+			})
+		})
+
+		It("should reconcile status of lifecycle classifications and requeue due to upcoming stage", func() {
+			var (
+				spec = gardencorev1beta1.CloudProfileSpec{
+					Kubernetes: gardencorev1beta1.KubernetesSettings{
+						Versions: []gardencorev1beta1.ExpirableVersion{
+							{
+								Version: "1.28.2",
+								Lifecycle: []gardencorev1beta1.LifecycleStage{
+									{
+										Classification: gardencorev1beta1.ClassificationPreview,
+										StartTime:      past,
+									},
+									{
+										Classification: gardencorev1beta1.ClassificationSupported,
+										StartTime:      future,
+									},
+								},
+							},
+						},
+					},
+				}
+
+				wantStatus = gardencorev1beta1.CloudProfileStatus{
+					Kubernetes: &gardencorev1beta1.KubernetesStatus{
+						Versions: []gardencorev1beta1.ExpirableVersionStatus{
+							{
+								Version:        "1.28.2",
+								Classification: gardencorev1beta1.ClassificationPreview,
+							},
+						},
+					},
+				}
+			)
+
+			result := testStatus(spec, wantStatus)
+			Expect(result.RequeueAfter).To(BeNumerically("~", future.Sub(now), time.Second))
+		})
+
+		It("should reconcile status of lifecycle classifications but not requeue without upcoming stages", func() {
+			var (
+				spec = gardencorev1beta1.CloudProfileSpec{
+					Kubernetes: gardencorev1beta1.KubernetesSettings{
+						Versions: []gardencorev1beta1.ExpirableVersion{
+							{
+								Version: "1.28.2",
+								Lifecycle: []gardencorev1beta1.LifecycleStage{
+									{
+										Classification: gardencorev1beta1.ClassificationPreview,
+										StartTime:      past,
+									},
+								},
+							},
+						},
+					},
+				}
+
+				wantStatus = gardencorev1beta1.CloudProfileStatus{
+					Kubernetes: &gardencorev1beta1.KubernetesStatus{
+						Versions: []gardencorev1beta1.ExpirableVersionStatus{
+							{
+								Version:        "1.28.2",
+								Classification: gardencorev1beta1.ClassificationPreview,
+							},
+						},
+					},
+				}
+			)
+
+			result := testStatus(spec, wantStatus)
+			Expect(result.RequeueAfter).To(BeZero())
 		})
 	})
 })
