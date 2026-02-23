@@ -33,12 +33,17 @@ etc.
 In order to advertise such endpoints, their respective `Ingress` resource needs
 to be labeled with `endpoint.shoot.gardener.cloud/advertise=true`.
 
+Optionally, a human-readable display name can be set using the
+`endpoint.shoot.gardener.cloud/displayName` label. This display name is intended
+for UI clients to show a user-friendly name instead of the auto-generated name.
+
 For example, if we want to advertise the `plutono` endpoint for our local shoot
-cluster, we would label its respective `Ingress` resource like this:
+cluster with a display name, we would label its respective `Ingress` resource like this:
 
 ``` shell
 kubectl --namespace shoot--local--local \
-    label ingress plutono endpoint.shoot.gardener.cloud/advertise=true
+    label ingress plutono endpoint.shoot.gardener.cloud/advertise=true \
+    endpoint.shoot.gardener.cloud/displayName=Plutono
 ```
 
 After successful reconciliation of the `Shoot` by the `gardenlet`, we should see a
@@ -53,4 +58,5 @@ new advertised endpoint for our cluster.
   url: https://discovery.local.gardener.cloud/projects/local/shoots/41a0cdaa-6ad5-4846-9f6b-b7a7716538cb/issuer
 - name: ingress/plutono/0/0
   url: https://gu-local--local.ingress.local.seed.local.gardener.cloud
+  displayName: Plutono
 ```
