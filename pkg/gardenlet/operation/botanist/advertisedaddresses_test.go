@@ -301,5 +301,59 @@ var _ = Describe("AdvertisedAddresses", func() {
 				},
 			}))
 		})
+
+		It("returns valid endpoints with displayName from ingress resources", func() {
+			ingressA := &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-1",
+					Namespace: shootNamespace.Name,
+					Labels: map[string]string{
+						v1beta1constants.LabelShootEndpointAdvertise:   "true",
+						v1beta1constants.LabelShootEndpointDisplayName: "Dashboard",
+					},
+				},
+				Spec: networkingv1.IngressSpec{
+					TLS: []networkingv1.IngressTLS{
+						{
+							Hosts: []string{"foo.example.org"},
+						},
+					},
+				},
+			}
+			ingressB := &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-2",
+					Namespace: shootNamespace.Name,
+					Labels: map[string]string{
+						v1beta1constants.LabelShootEndpointAdvertise:   "true",
+						v1beta1constants.LabelShootEndpointDisplayName: "Monitoring",
+					},
+				},
+				Spec: networkingv1.IngressSpec{
+					TLS: []networkingv1.IngressTLS{
+						{
+							Hosts: []string{"bar.example.org"},
+						},
+					},
+				},
+			}
+
+			Expect(botanist.SeedClientSet.Client().Create(ctx, ingressA)).To(Succeed())
+			Expect(botanist.SeedClientSet.Client().Create(ctx, ingressB)).To(Succeed())
+			items, err := botanist.GetIngressAdvertisedEndpoints(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(items).To(HaveExactElements([]gardencorev1beta1.ShootAdvertisedAddress{
+				{
+					Name:        "ingress/ingress-1/0/0",
+					URL:         "https://foo.example.org",
+					DisplayName: "Dashboard",
+				},
+				{
+					Name:        "ingress/ingress-2/0/0",
+					URL:         "https://bar.example.org",
+					DisplayName: "Monitoring",
+				},
+			}))
+		})
 	})
 })
