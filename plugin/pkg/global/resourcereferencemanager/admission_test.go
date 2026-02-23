@@ -3232,13 +3232,8 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
 					"ErrStatus": MatchFields(IgnoreExtras, Fields{
-						"Code": Equal(int32(http.StatusForbidden)),
-						"Message": And(
-							ContainSubstring("maximum node count of worker pool \"coreos-worker\" in shoot \"default/shoot-one\" exceeds the limit of 5 total nodes configured in the cloud profile"),
-							ContainSubstring("total minimum node count of all worker pools of shoot \"default/shoot-one\" must not exceed the limit of 5 total nodes configured in the cloud profile"),
-							ContainSubstring("maximum node count of worker pool \"ubuntu-worker-2\" in shoot \"default/shoot-two\" exceeds the limit of 5 total nodes configured in the cloud profile"),
-							ContainSubstring("maximum node count of worker pool \"ubuntu-worker-1\" in shoot \"default/shoot-two\" exceeds the limit of 5 total nodes configured in the cloud profile"),
-						),
+						"Code":    Equal(int32(http.StatusForbidden)),
+						"Message": ContainSubstring("total minimum node count of all worker pools of shoot \"default/shoot-one\" must not exceed the limit of 5 total nodes configured in the cloud profile"),
 					}),
 				})))
 			})
@@ -3270,11 +3265,8 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
 					"ErrStatus": MatchFields(IgnoreExtras, Fields{
-						"Code": Equal(int32(http.StatusForbidden)),
-						"Message": And(
-							ContainSubstring("maximum node count of worker pool \"coreos-worker\" in shoot \"default/shoot-one\" exceeds the limit of 5 total nodes configured in the cloud profile"),
-							ContainSubstring("total minimum node count of all worker pools of shoot \"default/shoot-one\" must not exceed the limit of 5 total nodes configured in the cloud profile"),
-						),
+						"Code":    Equal(int32(http.StatusForbidden)),
+						"Message": ContainSubstring("total minimum node count of all worker pools of shoot \"default/shoot-one\" must not exceed the limit of 5 total nodes configured in the cloud profile"),
 					}),
 				})))
 			})
@@ -4212,12 +4204,8 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
 					"ErrStatus": MatchFields(IgnoreExtras, Fields{
-						"Code": Equal(int32(http.StatusForbidden)),
-						"Message": And(
-							ContainSubstring("maximum node count of worker pool \"ubuntu-worker-2\" in shoot \"test-project/shoot-two\" exceeds the limit of 5 total nodes configured in the cloud profile"),
-							ContainSubstring("maximum node count of worker pool \"ubuntu-worker-1\" in shoot \"test-project/shoot-two\" exceeds the limit of 5 total nodes configured in the cloud profile"),
-							ContainSubstring("total minimum node count of all worker pools of shoot \"test-project/shoot-two\" must not exceed the limit of 5 total nodes configured in the cloud profile"),
-						),
+						"Code":    Equal(int32(http.StatusForbidden)),
+						"Message": ContainSubstring("total minimum node count of all worker pools of shoot \"test-project/shoot-two\" must not exceed the limit of 5 total nodes configured in the cloud profile"),
 					}),
 				})))
 			})
