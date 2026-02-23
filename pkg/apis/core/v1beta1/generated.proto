@@ -1094,7 +1094,7 @@ message EncryptionProvider {
   //   - "aescbc"
   //   - "aesgcm"
   //   - "secretbox"
-  // Defaults to secretbox.
+  // Defaults to aesgcm.
   // +optional
   optional string type = 1;
 }
