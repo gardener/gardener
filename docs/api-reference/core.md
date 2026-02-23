@@ -5872,7 +5872,7 @@ EncryptionProviderType
 - &ldquo;aescbc&rdquo;
 - &ldquo;aesgcm&rdquo;
 - &ldquo;secretbox&rdquo;
-Defaults to secretbox.</p>
+Defaults to aesgcm.</p>
 </td>
 </tr>
 </tbody>
