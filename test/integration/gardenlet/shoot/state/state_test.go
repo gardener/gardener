@@ -46,9 +46,18 @@ var _ = Describe("Shoot State controller tests", func() {
 			Spec: gardencorev1beta1.ShootSpec{
 				Region:           "local",
 				CloudProfileName: ptr.To("local"),
-				Kubernetes:       gardencorev1beta1.Kubernetes{Version: "1.33.1"},
-				Provider:         gardencorev1beta1.Provider{Type: "local"},
-				SeedName:         &seedName,
+				Maintenance: &gardencorev1beta1.Maintenance{
+					AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+						Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+								RotationPeriod: &metav1.Duration{Duration: 7 * 24 * time.Hour},
+							},
+						},
+					},
+				},
+				Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.33.1"},
+				Provider:   gardencorev1beta1.Provider{Type: "local"},
+				SeedName:   &seedName,
 			},
 		}
 		lastOperation = &gardencorev1beta1.LastOperation{
