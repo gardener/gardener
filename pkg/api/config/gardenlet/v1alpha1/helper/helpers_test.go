@@ -138,6 +138,42 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	Describe("#ValiConfiguration", func() {
+		It("should return true when the GardenletConfiguration is nil", func() {
+			Expect(IsValiEnabled(nil)).To(BeTrue())
+		})
+
+		It("should return true when the logging is nil", func() {
+			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{}
+
+			Expect(IsValiEnabled(gardenletConfig)).To(BeTrue())
+		})
+
+		It("should return false when the vali is not enabled", func() {
+			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
+				Logging: &gardenletconfigv1alpha1.Logging{
+					Vali: &gardenletconfigv1alpha1.Vali{
+						Enabled: ptr.To(false),
+					},
+				},
+			}
+
+			Expect(IsValiEnabled(gardenletConfig)).To(BeFalse())
+		})
+
+		It("should return true when the vali is enabled", func() {
+			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
+				Logging: &gardenletconfigv1alpha1.Logging{
+					Vali: &gardenletconfigv1alpha1.Vali{
+						Enabled: ptr.To(true),
+					},
+				},
+			}
+
+			Expect(IsValiEnabled(gardenletConfig)).To(BeTrue())
+		})
+	})
+
 	Describe("#VictoriaLogsConfiguration", func() {
 		It("should return true when the GardenletConfiguration is nil", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, true))
