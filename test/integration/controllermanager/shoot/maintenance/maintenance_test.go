@@ -406,6 +406,13 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.31.1",
+					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+						EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+							Provider: gardencorev1beta1.EncryptionProvider{
+								Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeAESCBC),
+							},
+						},
+					},
 				},
 				Networking: &gardencorev1beta1.Networking{
 					Type: ptr.To("foo-networking"),
@@ -414,6 +421,13 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 					AutoUpdate: &gardencorev1beta1.MaintenanceAutoUpdate{
 						KubernetesVersion:   false,
 						MachineImageVersion: ptr.To(false),
+					},
+					AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+						Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+								RotationPeriod: &metav1.Duration{Duration: 7 * 24 * time.Hour},
+							},
+						},
 					},
 					TimeWindow: &gardencorev1beta1.MaintenanceTimeWindow{
 						Begin: timewindow.NewMaintenanceTime(time.Now().Add(2*time.Hour).Hour(), 0, 0).Formatted(),
