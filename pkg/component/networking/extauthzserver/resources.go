@@ -12,11 +12,14 @@ import (
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -187,6 +190,32 @@ func (e *extAuthzServer) getTLSSecret(caSecret *corev1.Secret, secretName string
 		},
 		Data: map[string][]byte{
 			"cacert": caSecret.Data[secretsutils.DataKeyCertificateCA],
+		},
+	}
+}
+
+func (e *extAuthzServer) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
+	return &vpaautoscalingv1.VerticalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      e.getPrefix() + name,
+			Namespace: e.namespace,
+			Labels:    e.getLabels(),
+		},
+		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+			TargetRef: &autoscalingv1.CrossVersionObjectReference{
+				APIVersion: appsv1.SchemeGroupVersion.String(),
+				Kind:       "Deployment",
+				Name:       e.getPrefix() + v1beta1constants.DeploymentNameExtAuthzServer,
+			},
+			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+			},
+			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+					ContainerName:    name,
+					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+				}},
+			},
 		},
 	}
 }
