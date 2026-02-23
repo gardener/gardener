@@ -534,7 +534,7 @@
           "exemplar": true,
           "expr": "garden_garden_last_operation",
           "interval": "",
-          "legendFormat": "{{last_operation}}",
+          "legendFormat": "{{type}} - {{state}}",
           "refId": "A"
         }
       ],
@@ -542,7 +542,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Last Operation",
+      "title": "Last Operation (Type and State)",
       "tooltip": {
         "shared": true,
         "sort": 0,
