@@ -690,8 +690,13 @@ It prevents deleting it as long as a `operator.gardener.cloud/v1alpha1.Garden` r
 
 #### `Audit Policy`
 
-This webhook handler validates `ConfigMap`s containing audit policies that are referenced by `Garden` resources.
-It ensures that audit policy configurations for both the `virtual-garden-kube-apiserver` and `gardener-apiserver` are valid and conform to the expected schema.
+This webhook handler validates `CREATE`/`UPDATE` operations on `Garden` resources and `ConfigMap`s in the `garden` namespace that are referenced as audit policies.
+It ensures that audit policy configurations for the `virtual-garden-kube-apiserver` (via `.spec.virtualCluster.kubernetes.kubeAPIServer.auditConfig.auditPolicy.configMapRef.name`) and `gardener-apiserver` (via `.spec.virtualCluster.gardener.gardenerAPIServer.auditConfig.auditPolicy.configMapRef.name`) are valid.
+
+For `Garden` resources, when a new `Garden` is created or an existing one is updated with an audit policy reference, the handler fetches the referenced `ConfigMap` and validates its content.
+For `ConfigMap`s, when a `ConfigMap` that is referenced by a `Garden` is created or updated, the handler validates the new content.
+
+The handler validates that the `ConfigMap` contains a valid audit policy in its `policy` data key, conforming to the Kubernetes audit policy schema (e.g., `audit.k8s.io/v1.Policy`). Invalid or unparsable policies are rejected, preventing misconfigurations that could break audit logging.
 
 ### Defaulting
 
