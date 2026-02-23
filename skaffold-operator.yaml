@@ -1567,6 +1567,10 @@ profiles:
     activation:
       - env: SCENARIO=remote
     patches:
+      - op: remove
+        path: /manifests/kustomize/paths/1
+      - op: remove
+        path: /manifests/kustomize/paths/0
       - op: add
         path: /manifests/rawYaml
         value:

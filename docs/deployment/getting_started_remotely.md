@@ -79,7 +79,7 @@ Using a Gardener Shoot cluster as seed simplifies the process, because some conf
 ### Extensions
 
 You might plan to deploy and register external extensions for networking, operating system, providers, etc. Please put `Extension`s into the [`/dev-setup/extensions/remote`](/dev-setup/extensions/remote) directory. The whole content of this folder will be applied to your garden runtime cluster.
-Calico and Cilium networking extensions are already deployed by default. Most likely, you will additionally need at least one provider and one os extension for your setup.
+Most likely, you will need at least one networking, one provider and one os extension for your setup.
 
 ### `CloudProfile`s
 

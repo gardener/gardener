@@ -43,7 +43,7 @@ case "$COMMAND" in
     kubectl delete garden $garden_name --wait=false --ignore-not-found
 
     echo "Waiting for the garden to be deleted..."
-    kubectl wait --for=delete                            garden                             $garden_name   --timeout=300s
+    kubectl wait --for=delete                            garden                             $garden_name   --timeout=480s
     if [[ "$SCENARIO" != "remote" ]]; then
       echo "Waiting for the provider-local extension to be uninstalled..."
       kubectl wait --for=condition=RequiredRuntime="False" extensions.operator.gardener.cloud provider-local --timeout=120s
