@@ -7802,6 +7802,36 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
 				Expect(errorList).To(BeEmpty())
 			})
+
+			It("should not fail for duplicate displayName (grouping)", func() {
+				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
+					{Name: "a", URL: "https://foo.bar", DisplayName: "display"},
+					{Name: "b", URL: "https://bar.foo", DisplayName: "display"},
+				}
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should succeed with unique displayNames", func() {
+				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
+					{Name: "a", URL: "https://foo.bar", DisplayName: "display-a"},
+					{Name: "b", URL: "https://bar.foo", DisplayName: "display-b"},
+				}
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should succeed with empty displayNames", func() {
+				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
+					{Name: "a", URL: "https://foo.bar", DisplayName: ""},
+					{Name: "b", URL: "https://bar.foo", DisplayName: ""},
+				}
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+				Expect(errorList).To(BeEmpty())
+			})
 		})
 
 		Context("validate shoot networking status", func() {
