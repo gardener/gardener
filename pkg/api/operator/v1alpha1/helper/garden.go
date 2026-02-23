@@ -298,8 +298,5 @@ func DiscoveryServerDomain(garden *operatorv1alpha1.Garden) string {
 	if config := garden.Spec.VirtualCluster.Gardener.DiscoveryServer; config != nil && config.Domain != nil {
 		return *config.Domain
 	}
-	if len(garden.Spec.RuntimeCluster.Ingress.Domains) > 0 {
-		return "discovery." + garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
-	}
-	return ""
+	return "discovery." + garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
 }

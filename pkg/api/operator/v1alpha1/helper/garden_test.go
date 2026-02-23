@@ -365,6 +365,51 @@ var _ = Describe("helper", func() {
 		)
 	})
 
+	DescribeTable("#DiscoveryServerDomain",
+		func(garden *operatorv1alpha1.Garden, expected string) {
+			Expect(DiscoveryServerDomain(garden)).To(Equal(expected))
+		},
+		Entry("no discovery server config, uses first ingress domain", &operatorv1alpha1.Garden{
+			Spec: operatorv1alpha1.GardenSpec{
+				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+					Ingress: operatorv1alpha1.Ingress{
+						Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.example.com"}},
+					},
+				},
+			},
+		}, "discovery.ingress.example.com"),
+		Entry("discovery server config without custom domain, uses first ingress domain", &operatorv1alpha1.Garden{
+			Spec: operatorv1alpha1.GardenSpec{
+				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+					Ingress: operatorv1alpha1.Ingress{
+						Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.example.com"}},
+					},
+				},
+				VirtualCluster: operatorv1alpha1.VirtualCluster{
+					Gardener: operatorv1alpha1.Gardener{
+						DiscoveryServer: &operatorv1alpha1.GardenerDiscoveryServerConfig{},
+					},
+				},
+			},
+		}, "discovery.ingress.example.com"),
+		Entry("discovery server config with custom domain, uses custom domain", &operatorv1alpha1.Garden{
+			Spec: operatorv1alpha1.GardenSpec{
+				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+					Ingress: operatorv1alpha1.Ingress{
+						Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.example.com"}},
+					},
+				},
+				VirtualCluster: operatorv1alpha1.VirtualCluster{
+					Gardener: operatorv1alpha1.Gardener{
+						DiscoveryServer: &operatorv1alpha1.GardenerDiscoveryServerConfig{
+							Domain: ptr.To("custom.discovery.example.com"),
+						},
+					},
+				},
+			},
+		}, "custom.discovery.example.com"),
+	)
+
 	DescribeTable("#GetGardenerOperations",
 		func(annotations map[string]string, expectedResult []string) {
 			Expect(GetGardenerOperations(annotations)).To(Equal(expectedResult))

@@ -190,15 +190,14 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 
 	// Discovery server cannot be disabled once enabled, and its domain is immutable.
 	// Disabling it or changing the domain would invalidate all workload identity tokens that reference the issuer URL.
+	discoveryServerPath := fldPath.Child("gardener", "gardenerDiscoveryServer")
 	if oldVirtualCluster.Gardener.DiscoveryServer != nil && newVirtualCluster.Gardener.DiscoveryServer == nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("gardener", "discoveryServer"), "discovery server must not be disabled once enabled (workload identity tokens have been issued)"))
+		allErrs = append(allErrs, field.Forbidden(discoveryServerPath, "discovery server must not be disabled once enabled (workload identity tokens have been issued)"))
 	}
 	if oldVirtualCluster.Gardener.DiscoveryServer != nil && newVirtualCluster.Gardener.DiscoveryServer != nil {
 		oldDomain := helper.DiscoveryServerDomain(oldGarden)
 		newDomain := helper.DiscoveryServerDomain(newGarden)
-		if oldDomain != newDomain {
-			allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldDomain, newDomain, fldPath.Child("gardener", "discoveryServer", "domain"))...)
-		}
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldDomain, newDomain, discoveryServerPath.Child("domain"))...)
 	}
 
 	allErrs = append(allErrs, gardencorevalidation.ValidateKubernetesVersionUpdate(newVirtualCluster.Kubernetes.Version, oldVirtualCluster.Kubernetes.Version, false, fldPath.Child("kubernetes", "version"))...)
