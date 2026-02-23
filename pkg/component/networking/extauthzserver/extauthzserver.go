@@ -84,7 +84,7 @@ func (e *extAuthzServer) Deploy(ctx context.Context) error {
 	destinationHost := kubernetesutils.FQDNForService(e.getPrefix()+svcName, e.namespace)
 	caName := fmt.Sprintf("ca-%s%s", e.getPrefix(), name)
 
-	_, err := e.secretsManager.Generate(ctx,
+	caSecret, err := e.secretsManager.Generate(ctx,
 		&secretsutils.CertificateSecretConfig{
 			Name:       caName,
 			CommonName: "ext-authz-server-ca",
@@ -112,6 +112,8 @@ func (e *extAuthzServer) Deploy(ctx context.Context) error {
 		return fmt.Errorf("failed to generate server certificate: %w", err)
 	}
 
+	secretNameInIstioNamespace := fmt.Sprintf("%s-%s", e.namespace, caSecret.Name)
+
 	ownerNamespace := &corev1.Namespace{}
 	if err := e.client.Get(ctx, client.ObjectKey{Name: e.namespace}, ownerNamespace); err != nil {
 		return fmt.Errorf("failed to get namespace %q: %w", e.namespace, err)
@@ -133,6 +135,11 @@ func (e *extAuthzServer) Deploy(ctx context.Context) error {
 		return fmt.Errorf("failed to calculate configuration for ext-authz-server: %w", err)
 	}
 
+	destinationRule, err := e.getDestinationRule(destinationHost, secretNameInIstioNamespace)
+	if err != nil {
+		return fmt.Errorf("failed to create destination rule for ext-authz-server: %w", err)
+	}
+
 	isShootNamespace, err := gardenerutils.IsShootNamespace(ctx, e.client, e.namespace)
 	if err != nil {
 		return fmt.Errorf("failed checking if namespace is a shoot namespace: %w", err)
@@ -141,6 +148,7 @@ func (e *extAuthzServer) Deploy(ctx context.Context) error {
 	serializedResources, err := registry.AddAllAndSerialize(
 		e.getDeployment(volumes, volumeMounts),
 		e.getService(isShootNamespace),
+		destinationRule,
 		e.getEnvoyFilter(configPatches, ownerReference),
 	)
 	if err != nil {
