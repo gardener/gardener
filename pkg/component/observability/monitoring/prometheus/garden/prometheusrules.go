@@ -214,7 +214,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 			For:    ptr.To(monitoringv1.Duration("10m")),
 			Labels: getLabels("critical"),
 			Annotations: map[string]string{
-			"summary": "Garden {{$labels.name}} last operation has failed",
+				"summary": "Garden {{$labels.name}} last operation has failed",
 				"description": "Garden {{$labels.name}} in landscape " +
 					"{{$externalLabels.landscape}} has last operation {{$labels.type}} in state {{$labels.state}}" +
 					" for 10 minutes.",
@@ -226,9 +226,9 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 			For:    ptr.To(monitoringv1.Duration("30m")),
 			Labels: getLabels("warning"),
 			Annotations: map[string]string{
-			"summary": "Garden {{$labels.name}} last operation stuck in Processing",
-			"description": "Garden {{$labels.name}} in landscape " +
-				"{{$externalLabels.landscape}} has last operation {{$labels.type}} stuck in Processing" +
+				"summary": "Garden {{$labels.name}} last operation stuck in Processing",
+				"description": "Garden {{$labels.name}} in landscape " +
+					"{{$externalLabels.landscape}} has last operation {{$labels.type}} stuck in Processing" +
 					" for 30 minutes.",
 			},
 		},
