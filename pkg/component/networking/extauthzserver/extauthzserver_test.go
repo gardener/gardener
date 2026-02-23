@@ -187,6 +187,30 @@ metadata:
 spec:` + spec + `status: {}
 `
 		}
+		service = func(isGarden bool) string {
+			prefix := ""
+			if isGarden {
+				prefix = "virtual-garden-"
+			}
+			return `apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    networking.istio.io/exportTo: '*'
+    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]'
+  name: ` + prefix + `ext-authz-server
+  namespace: some-namespace
+spec:
+  ports:
+  - name: grpc
+    port: 10000
+    targetPort: 10000
+  selector:
+    app: ` + prefix + `ext-authz-server
+status:
+  loadBalancer: {}
+`
+		}
 		dummyVirtualService = &istionetworkingv1beta1.VirtualService{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "dummy-virtual-service",
@@ -296,6 +320,7 @@ spec:` + spec + `status: {}
 			expectedManifests := []string{
 				deployment(isGarden, prefixToSecret),
 				envoyFilter(isGarden, hosts...),
+				service(isGarden),
 			}
 			Expect(nonSecretManifests).To(ConsistOf(expectedManifests))
 			Expect(secretManifests).To(HaveLen(0))
