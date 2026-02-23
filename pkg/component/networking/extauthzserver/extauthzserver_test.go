@@ -243,6 +243,26 @@ status:
   loadBalancer: {}
 `
 		}
+		tlsSecretInIstioNamespaceMeta = func(isGarden bool) metav1.ObjectMeta {
+			prefix := ""
+			if isGarden {
+				prefix = "virtual-garden-"
+			}
+			return metav1.ObjectMeta{
+				Name:      "some-namespace-ca-" + prefix + "ext-authz-server",
+				Namespace: prefix + "istio-ingress",
+				Labels: map[string]string{
+					"app": prefix + "ext-authz-server",
+				},
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion:         "v1",
+					BlockOwnerDeletion: ptr.To(true),
+					Kind:               "Namespace",
+					Name:               "some-namespace",
+					UID:                "",
+				}},
+			}
+		}
 		dummyVirtualService = &istionetworkingv1beta1.VirtualService{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "dummy-virtual-service",
@@ -356,7 +376,8 @@ status:
 				service(isGarden),
 			}
 			Expect(nonSecretManifests).To(ConsistOf(expectedManifests))
-			Expect(secretManifests).To(HaveLen(0))
+			Expect(secretManifests).To(HaveLen(1))
+			Expect(secretManifests[0].ObjectMeta).To(Equal(tlsSecretInIstioNamespaceMeta(isGarden)))
 		}
 
 		Context("When no corresponding secrets exist", func() {

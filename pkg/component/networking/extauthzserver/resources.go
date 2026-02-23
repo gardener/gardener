@@ -22,6 +22,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/istio"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 func (e *extAuthzServer) getService(isShootNamespace bool) *corev1.Service {
@@ -169,4 +170,23 @@ func (e *extAuthzServer) getDestinationRule(destinationHost string, secretName s
 	destinationRule.Spec.TrafficPolicy.ConnectionPool.Http = nil
 
 	return destinationRule, nil
+}
+
+func (e *extAuthzServer) getTLSSecret(caSecret *corev1.Secret, secretName string, ownerReference *metav1.OwnerReference) *corev1.Secret {
+	// Currently, all observability components are exposed via the same istio ingress gateway.
+	// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
+	ingressNamespace := e.getPrefix() + v1beta1constants.DefaultSNIIngressNamespace
+
+	// Istio expects the secret in the istio ingress gateway namespace => copy certificate to istio namespace
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            secretName,
+			Namespace:       ingressNamespace,
+			Labels:          e.getLabels(),
+			OwnerReferences: []metav1.OwnerReference{*ownerReference},
+		},
+		Data: map[string][]byte{
+			"cacert": caSecret.Data[secretsutils.DataKeyCertificateCA],
+		},
+	}
 }

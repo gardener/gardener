@@ -150,6 +150,7 @@ func (e *extAuthzServer) Deploy(ctx context.Context) error {
 		e.getService(isShootNamespace),
 		destinationRule,
 		e.getEnvoyFilter(configPatches, ownerReference),
+		e.getTLSSecret(caSecret, secretNameInIstioNamespace, ownerReference),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to serialize resources: %w", err)
