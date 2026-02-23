@@ -7,8 +7,8 @@ package helper
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/gardener/gardener/pkg/features"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 // SeedNameFromSeedConfig returns an empty string if the given seed config is nil, or the
