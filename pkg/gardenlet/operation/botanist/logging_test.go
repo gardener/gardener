@@ -297,6 +297,69 @@ var _ = Describe("Logging", func() {
 
 					Expect(botanist.DeployLogging(ctx)).To(Succeed())
 				})
+
+				It("should fail to deploy the logging stack when VictoriaLogs Deploy returns error", func() {
+					gardenletfeatures.RegisterFeatureGates()
+					gomock.InOrder(
+						c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
+							_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
+							deployment := &appsv1.Deployment{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
+									Namespace: controlPlaneNamespace,
+								},
+								Status: appsv1.DeploymentStatus{
+									ReadyReplicas: 1,
+								},
+							}
+							*obj.(*appsv1.Deployment) = *deployment
+							return nil
+						}),
+						valiDeployer.EXPECT().WithAuthenticationProxy(true),
+
+						eventLoggerDeployer.EXPECT().Deploy(ctx),
+						otelCollectorDeployer.EXPECT().Destroy(ctx),
+						victoriaLogsDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
+					)
+
+					Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
+				})
+			})
+
+			Context("Combined VictoriaLogsBackend and OpenTelemetryCollector feature gates", func() {
+				BeforeEach(func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, true))
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, true))
+				})
+
+				It("should successfully deploy all components when both VictoriaLogs and OpenTelemetryCollector are enabled", func() {
+					gardenletfeatures.RegisterFeatureGates()
+					gomock.InOrder(
+						c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
+							_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
+							deployment := &appsv1.Deployment{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
+									Namespace: controlPlaneNamespace,
+								},
+								Status: appsv1.DeploymentStatus{
+									ReadyReplicas: 1,
+								},
+							}
+							*obj.(*appsv1.Deployment) = *deployment
+							return nil
+						}),
+						valiDeployer.EXPECT().WithAuthenticationProxy(false),
+
+						eventLoggerDeployer.EXPECT().Deploy(ctx),
+						otelCollectorDeployer.EXPECT().WithAuthenticationProxy(true),
+						otelCollectorDeployer.EXPECT().Deploy(ctx),
+						victoriaLogsDeployer.EXPECT().Deploy(ctx),
+						valiDeployer.EXPECT().Deploy(ctx),
+					)
+
+					Expect(botanist.DeployLogging(ctx)).To(Succeed())
+				})
 			})
 
 			It("should not deploy event logger when it is disabled", func() {
