@@ -13515,6 +13515,18 @@ string
 <p>The URL of the API Server. e.g. <a href="https://api.foo.bar">https://api.foo.bar</a> or <a href="https://1.2.3.4">https://1.2.3.4</a></p>
 </td>
 </tr>
+<tr>
+<td>
+<code>displayName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DisplayName is a human-readable name for this address. Used by UI clients.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootCredentials">ShootCredentials

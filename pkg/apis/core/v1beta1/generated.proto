@@ -3382,6 +3382,10 @@ message ShootAdvertisedAddress {
 
   // The URL of the API Server. e.g. https://api.foo.bar or https://1.2.3.4
   optional string url = 2;
+
+  // DisplayName is a human-readable name for this address. Used by UI clients.
+  // +optional
+  optional string displayName = 3;
 }
 
 // ShootCredentials contains information about the shoot credentials.
