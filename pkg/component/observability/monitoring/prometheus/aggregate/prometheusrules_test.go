@@ -88,7 +88,7 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"TypeMeta":   MatchFields(IgnoreExtras, Fields{"APIVersion": Equal("monitoring.coreos.com/v1"), "Kind": Equal("PrometheusRule")}),
-						"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("pvc-aggregations")}),
+						"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("pvc")}),
 					})),
 					Equal(&monitoringv1.PrometheusRule{
 						ObjectMeta: metav1.ObjectMeta{Name: "seed"},
@@ -146,7 +146,7 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"TypeMeta":   MatchFields(IgnoreExtras, Fields{"APIVersion": Equal("monitoring.coreos.com/v1"), "Kind": Equal("PrometheusRule")}),
-						"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("pvc-aggregations")}),
+						"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("pvc")}),
 					})),
 					Equal(&monitoringv1.PrometheusRule{
 						ObjectMeta: metav1.ObjectMeta{Name: "seed"},

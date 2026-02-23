@@ -1,10 +1,10 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: pvc-aggregations
+  name: pvc
 spec:
   groups:
-  - name: pvc.recording.rules
+  - name: pvc.rules
     rules:
 
     - record: seed:persistentvolumeclaims_capacity:sum
