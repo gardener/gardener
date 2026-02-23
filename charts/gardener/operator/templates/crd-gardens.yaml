@@ -689,7 +689,7 @@ spec:
                                         - "aescbc"
                                         - "aesgcm"
                                         - "secretbox"
-                                      Defaults to secretbox.
+                                      Defaults to aesgcm.
                                     type: string
                                 type: object
                               resources:
@@ -1588,7 +1588,7 @@ spec:
                                         - "aescbc"
                                         - "aesgcm"
                                         - "secretbox"
-                                      Defaults to secretbox.
+                                      Defaults to aesgcm.
                                     type: string
                                 type: object
                               resources:
