@@ -137,6 +137,38 @@ spec:
 ` + volumes + `status: {}
 `
 		}
+		destinationRule = func(isGarden bool) string {
+			prefix := ""
+			if isGarden {
+				prefix = "virtual-garden-"
+			}
+			return `apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  labels:
+    app: ` + prefix + `ext-authz-server
+  name: ` + prefix + `ext-authz-server
+  namespace: some-namespace
+spec:
+  exportTo:
+  - '*'
+  host: ` + prefix + `ext-authz-server.some-namespace.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 5000
+        tcpKeepalive:
+          interval: 75s
+          time: 7200s
+    loadBalancer:
+      simple: LEAST_REQUEST
+    tls:
+      credentialName: some-namespace-ca-` + prefix + `ext-authz-server
+      mode: SIMPLE
+      sni: ` + prefix + `ext-authz-server.some-namespace.svc.cluster.local
+status: {}
+`
+		}
 		envoyFilter = func(isGarden bool, hosts ...string) string {
 			prefix := ""
 			if isGarden {
@@ -319,6 +351,7 @@ status:
 		testManifests := func(isGarden bool, prefixToSecret []prefixToSecretMapping, hosts ...string) {
 			expectedManifests := []string{
 				deployment(isGarden, prefixToSecret),
+				destinationRule(isGarden),
 				envoyFilter(isGarden, hosts...),
 				service(isGarden),
 			}

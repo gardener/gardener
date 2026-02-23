@@ -8,7 +8,9 @@ import (
 	"fmt"
 
 	istioapinetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
+	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -19,6 +21,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/istio"
 )
 
 func (e *extAuthzServer) getService(isShootNamespace bool) *corev1.Service {
@@ -148,4 +151,22 @@ func (e *extAuthzServer) getEnvoyFilter(
 			ConfigPatches: configPatches,
 		},
 	}
+}
+
+func (e *extAuthzServer) getDestinationRule(destinationHost string, secretName string) (*istionetworkingv1beta1.DestinationRule, error) {
+	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: e.getPrefix() + v1beta1constants.DeploymentNameExtAuthzServer, Namespace: e.namespace}}
+	//	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, e.getLabels(), destinationHost)(); err != nil {
+	if err := istio.DestinationRuleWithTLSTermination(
+		destinationRule,
+		e.getLabels(),
+		destinationHost,
+		destinationHost,
+		secretName,
+		istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE,
+	)(); err != nil {
+		return nil, fmt.Errorf("failed to create destination rule: %w", err)
+	}
+	destinationRule.Spec.TrafficPolicy.ConnectionPool.Http = nil
+
+	return destinationRule, nil
 }
