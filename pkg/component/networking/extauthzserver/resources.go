@@ -7,7 +7,6 @@ package extauthzserver
 import (
 	"fmt"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	istioapinetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	appsv1 "k8s.io/api/apps/v1"
@@ -15,7 +14,48 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
+
+func (e *extAuthzServer) getService(isShootNamespace bool) *corev1.Service {
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      e.getPrefix() + svcName,
+			Namespace: e.namespace,
+			Annotations: map[string]string{
+				"networking.istio.io/exportTo": "*",
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: e.getLabels(),
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "grpc",
+					Port:       Port,
+					TargetPort: intstr.FromInt32(Port),
+				},
+			},
+		},
+	}
+
+	namespaceSelectors := []metav1.LabelSelector{{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}}}
+
+	if isShootNamespace {
+		metav1.SetMetaDataAnnotation(&svc.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+
+		namespaceSelectors = append(namespaceSelectors,
+			metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
+		)
+	}
+
+	utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(svc, namespaceSelectors...))
+
+	return svc
+}
 
 func (e *extAuthzServer) getDeployment(volumes []corev1.Volume, volumeMounts []corev1.VolumeMount) *appsv1.Deployment {
 	return &appsv1.Deployment{

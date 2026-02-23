@@ -24,6 +24,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -132,8 +133,14 @@ func (e *extAuthzServer) Deploy(ctx context.Context) error {
 		return fmt.Errorf("failed to calculate configuration for ext-authz-server: %w", err)
 	}
 
+	isShootNamespace, err := gardenerutils.IsShootNamespace(ctx, e.client, e.namespace)
+	if err != nil {
+		return fmt.Errorf("failed checking if namespace is a shoot namespace: %w", err)
+	}
+
 	serializedResources, err := registry.AddAllAndSerialize(
 		e.getDeployment(volumes, volumeMounts),
+		e.getService(isShootNamespace),
 		e.getEnvoyFilter(configPatches, ownerReference),
 	)
 	if err != nil {
