@@ -3147,7 +3147,7 @@ var _ = Describe("Validation Tests", func() {
 
 					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.virtualCluster.gardener.discoveryServer"),
+						"Field":  Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer"),
 						"Detail": ContainSubstring("must not be disabled once enabled"),
 					}))))
 				})
@@ -3160,7 +3160,7 @@ var _ = Describe("Validation Tests", func() {
 
 					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.virtualCluster.gardener.discoveryServer"),
+						"Field":  Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer"),
 						"Detail": ContainSubstring("must not be disabled once enabled"),
 					}))))
 				})
@@ -3173,7 +3173,7 @@ var _ = Describe("Validation Tests", func() {
 
 					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.virtualCluster.gardener.discoveryServer.domain"),
+						"Field": Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer.domain"),
 					}))))
 				})
 
@@ -3187,7 +3187,7 @@ var _ = Describe("Validation Tests", func() {
 
 					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.virtualCluster.gardener.discoveryServer.domain"),
+						"Field": Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer.domain"),
 					}))))
 				})
 
@@ -3199,7 +3199,7 @@ var _ = Describe("Validation Tests", func() {
 
 					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.virtualCluster.gardener.discoveryServer.domain"),
+						"Field": Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer.domain"),
 					}))))
 				})
 			})

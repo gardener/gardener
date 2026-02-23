@@ -1574,10 +1574,8 @@ func (r *Reconciler) newGardenerDiscoveryServer(
 		},
 	}
 
-	if config := garden.Spec.VirtualCluster.Gardener.DiscoveryServer; config != nil {
-		if config.Ingress != nil {
-			values.Ingress.Enabled = ptr.Deref(config.Ingress.Enabled, true)
-		}
+	if config := garden.Spec.VirtualCluster.Gardener.DiscoveryServer; config != nil && config.Ingress != nil {
+		values.Ingress.Enabled = ptr.Deref(config.Ingress.Enabled, true)
 	}
 
 	return gardenerdiscoveryserver.New(
