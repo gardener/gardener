@@ -475,6 +475,64 @@ var _ = Describe("mutator", func() {
 			)
 		})
 
+		Context("default maintenance window", func() {
+			BeforeEach(func() {
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+			})
+
+			DescribeTable("should default maintenance auto rotation settings on create",
+				func(maintenance *core.Maintenance, shouldDefault bool) {
+					expectedMaintenance := maintenance.DeepCopy()
+					shoot.Spec.Maintenance = maintenance
+
+					if shouldDefault {
+						expectedMaintenance = &core.Maintenance{
+							AutoRotation: &core.MaintenanceAutoRotation{
+								Credentials: &core.MaintenanceCredentialsAutoRotation{
+									ETCDEncryptionKey: &core.MaintenanceRotationConfig{
+										RotationPeriod: &metav1.Duration{Duration: 28 * 24 * time.Hour},
+									},
+								},
+							},
+						}
+					}
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+
+					Expect(shoot.Spec.Maintenance).To(Equal(expectedMaintenance))
+				},
+				Entry("should default all fields when maintenance is nil", nil, true),
+				Entry("should default all fields when maintenance is empty", &core.Maintenance{}, true),
+				Entry("should default ETCDEncryptionKey when Credentials is nil",
+					&core.Maintenance{
+						AutoRotation: &core.MaintenanceAutoRotation{},
+					}, true,
+				),
+				Entry("should not override existing ETCDEncryptionKey configuration",
+					&core.Maintenance{
+						AutoRotation: &core.MaintenanceAutoRotation{
+							Credentials: &core.MaintenanceCredentialsAutoRotation{
+								ETCDEncryptionKey: &core.MaintenanceRotationConfig{
+									RotationPeriod: &metav1.Duration{Duration: 14 * 24 * time.Hour},
+								},
+							},
+						},
+					}, false,
+				),
+			)
+
+			It("should not modify maintenance settings on update", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Maintenance = nil
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+
+				Expect(shoot.Spec.Maintenance).To(BeNil())
+			})
+		})
+
 		Context("networking settings", func() {
 			var (
 				podsCIDR     = "100.96.0.0/11"

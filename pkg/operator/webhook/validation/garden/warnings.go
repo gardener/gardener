@@ -35,10 +35,7 @@ func GetWarnings(garden *operatorv1alpha1.Garden) ([]string, error) {
 		}
 
 		path := field.NewPath("spec", "virtualCluster", "kubernetes", "kubeAPIServer")
-
-		// Garden does not support auto rotation of ETCD encryption keys, we set the parameter to true
-		// in order to skip the warning when the encryption provider is set to aesgcm.
-		warnings = append(warnings, shoot.GetKubeAPIServerWarnings(coreKubeAPIServerConfig, true, path)...)
+		warnings = append(warnings, shoot.GetKubeAPIServerWarnings(coreKubeAPIServerConfig, path)...)
 	}
 
 	return warnings, nil

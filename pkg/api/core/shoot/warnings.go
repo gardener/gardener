@@ -78,14 +78,14 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 
 	if kubeAPIServer := shoot.Spec.Kubernetes.KubeAPIServer; kubeAPIServer != nil {
 		path := field.NewPath("spec", "kubernetes", "kubeAPIServer")
-		warnings = append(warnings, GetKubeAPIServerWarnings(kubeAPIServer, helper.IsETCDEncryptionKeyAutoRotationEnabled(shoot.Spec.Maintenance), path)...)
+		warnings = append(warnings, GetKubeAPIServerWarnings(kubeAPIServer, path)...)
 	}
 
 	return warnings
 }
 
 // GetKubeAPIServerWarnings returns warnings for the given KubeAPIServerConfig.
-func GetKubeAPIServerWarnings(kubeAPIServer *core.KubeAPIServerConfig, etcdEncryptionKeyAutoRotationEnabled bool, fldPath *field.Path) []string {
+func GetKubeAPIServerWarnings(kubeAPIServer *core.KubeAPIServerConfig, fldPath *field.Path) []string {
 	if kubeAPIServer == nil {
 		return nil
 	}
@@ -100,9 +100,6 @@ func GetKubeAPIServerWarnings(kubeAPIServer *core.KubeAPIServerConfig, etcdEncry
 	// TODO(ialidzhikov): Remove this in Gardener v1.142.0 when invalid event ttl values for existing Shoots are no longer accepted.
 	if kubeAPIServer.EventTTL != nil && kubeAPIServer.EventTTL.Duration > time.Hour*24 {
 		warnings = append(warnings, fmt.Sprintf("you are setting the %s field to an invalid value. Invalid value: '%s', valid values: [0, 24h]. Invalid values for existing resources will be no longer allowed in Gardener v1.142.0. See: https://github.com/gardener/gardener/issues/13825", fldPath.Child("eventTTL").String(), kubeAPIServer.EventTTL.Duration))
-	}
-	if helper.GetEncryptionProviderType(kubeAPIServer) == core.EncryptionProviderTypeAESGCM && !etcdEncryptionKeyAutoRotationEnabled {
-		warnings = append(warnings, "aesgcm encryption provider type is not recommended to be used without enabling auto encryption key rotation in the maintenance window. For enabling auto rotation, see: https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_maintenance.md#automatic-credentials-rotation")
 	}
 
 	return warnings

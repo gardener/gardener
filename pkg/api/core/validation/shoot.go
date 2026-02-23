@@ -312,8 +312,9 @@ func ValidateShootObjectMetaUpdate(_, _ metav1.ObjectMeta, _ *field.Path) field.
 // ValidateShootSpec validates the specification of a Shoot object.
 func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootValidationOptions, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	var (
-		allErrs    = field.ErrorList{}
-		workerless = len(spec.Provider.Workers) == 0
+		allErrs                  = field.ErrorList{}
+		workerless               = len(spec.Provider.Workers) == 0
+		encryptionAtRestProvider = helper.GetEncryptionProviderType(spec.Kubernetes.KubeAPIServer)
 	)
 
 	allErrs = append(allErrs, ValidateCloudProfileReference(spec.CloudProfile, spec.CloudProfileName, spec.Kubernetes.Version, fldPath)...)
@@ -324,7 +325,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 	allErrs = append(allErrs, ValidateResources(spec.Resources, fldPath.Child("resources"), true)...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, opts, workerless, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateNetworking(spec.Networking, workerless, fldPath.Child("networking"))...)
-	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"), workerless)...)
+	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"), encryptionAtRestProvider, workerless)...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
 	allErrs = append(allErrs, ValidateHibernation(meta.Annotations, spec.Hibernation, fldPath.Child("hibernation"))...)
 
@@ -2084,7 +2085,7 @@ func validateAlerting(alerting *core.Alerting, fldPath *field.Path) field.ErrorL
 	return allErrs
 }
 
-func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, workerless bool) field.ErrorList {
+func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, encryptionAtRestProvider core.EncryptionProviderType, workerless bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if maintenance == nil {
@@ -2115,6 +2116,10 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, wor
 		if credentials.ETCDEncryptionKey != nil {
 			allErrs = append(allErrs, validateCredentialAutoRotationPeriod(credentials.ETCDEncryptionKey.RotationPeriod, credentialsPath.Child("etcdEncryptionKey"))...)
 		}
+	}
+
+	if encryptionAtRestProvider == core.EncryptionProviderTypeAESGCM && !helper.IsETCDEncryptionKeyAutoRotationEnabled(maintenance) {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("autoRotation", "credentials", "etcdEncryptionKey"), "etcdEncryptionKey auto rotation must be enabled when encryption at rest provider is AES-GCM"))
 	}
 
 	if maintenance.TimeWindow != nil {
