@@ -137,6 +137,56 @@ spec:
 ` + volumes + `status: {}
 `
 		}
+		envoyFilter = func(isGarden bool, hosts ...string) string {
+			prefix := ""
+			if isGarden {
+				prefix = "virtual-garden-"
+			}
+			spec := ` {}
+`
+			if len(hosts) > 0 {
+				spec = `
+  configPatches:
+`
+				for _, host := range hosts {
+					spec += `  - applyTo: HTTP_FILTER
+    match:
+      context: GATEWAY
+      listener:
+        filterChain:
+          filter:
+            name: envoy.filters.network.http_connection_manager
+          sni: ` + host + `
+        portNumber: 9443
+    patch:
+      filterClass: AUTHZ
+      operation: INSERT_BEFORE
+      value:
+        name: envoy.filters.http.ext_authz
+        typed_config:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+          grpc_service:
+            envoy_grpc:
+              cluster_name: outbound|10000||` + prefix + `ext-authz-server.some-namespace.svc.cluster.local
+            timeout: 2s
+          transport_api_version: V3
+`
+				}
+			}
+			return `apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: some-namespace-` + prefix + `ext-authz-server
+  namespace: ` + prefix + `istio-ingress
+  ownerReferences:
+  - apiVersion: v1
+    blockOwnerDeletion: true
+    kind: Namespace
+    name: some-namespace
+    uid: ""
+spec:` + spec + `status: {}
+`
+		}
 		dummyVirtualService = &istionetworkingv1beta1.VirtualService{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "dummy-virtual-service",
@@ -208,6 +258,7 @@ spec:
 				managedResource.Name = "virtual-garden-" + managedResourceName
 				managedResourceSecret.Name = "managedresource-" + managedResource.Name
 			}
+			Expect(c.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 			Expect(component.Deploy(ctx)).To(Succeed())
 
@@ -244,6 +295,7 @@ spec:
 		testManifests := func(isGarden bool, prefixToSecret []prefixToSecretMapping, hosts ...string) {
 			expectedManifests := []string{
 				deployment(isGarden, prefixToSecret),
+				envoyFilter(isGarden, hosts...),
 			}
 			Expect(nonSecretManifests).To(ConsistOf(expectedManifests))
 			Expect(secretManifests).To(HaveLen(0))

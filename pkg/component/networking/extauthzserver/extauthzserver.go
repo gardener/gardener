@@ -11,9 +11,14 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/protobuf/types/known/structpb"
+	"istio.io/api/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -106,13 +111,30 @@ func (e *extAuthzServer) Deploy(ctx context.Context) error {
 		return fmt.Errorf("failed to generate server certificate: %w", err)
 	}
 
-	volumes, volumeMounts, err := e.calculateConfiguration(ctx, serverSecret)
+	ownerNamespace := &corev1.Namespace{}
+	if err := e.client.Get(ctx, client.ObjectKey{Name: e.namespace}, ownerNamespace); err != nil {
+		return fmt.Errorf("failed to get namespace %q: %w", e.namespace, err)
+	}
+	ownerNamespaceGVK, err := apiutil.GVKForObject(ownerNamespace, kubernetes.SeedScheme)
+	if err != nil {
+		return fmt.Errorf("failed to get GVK for namespace %q: %w", ownerNamespace.Name, err)
+	}
+	ownerReference := &metav1.OwnerReference{
+		APIVersion:         ownerNamespaceGVK.GroupVersion().String(),
+		Kind:               ownerNamespaceGVK.Kind,
+		Name:               ownerNamespace.Name,
+		UID:                ownerNamespace.UID,
+		BlockOwnerDeletion: ptr.To(true),
+	}
+
+	volumes, volumeMounts, configPatches, err := e.calculateConfiguration(ctx, serverSecret)
 	if err != nil {
 		return fmt.Errorf("failed to calculate configuration for ext-authz-server: %w", err)
 	}
 
 	serializedResources, err := registry.AddAllAndSerialize(
 		e.getDeployment(volumes, volumeMounts),
+		e.getEnvoyFilter(configPatches, ownerReference),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to serialize resources: %w", err)
@@ -141,11 +163,11 @@ func (e *extAuthzServer) WaitCleanup(ctx context.Context) error {
 	return managedresources.WaitUntilDeleted(timeoutCtx, e.client, e.namespace, e.getPrefix()+managedResourceName)
 }
 
-func (e *extAuthzServer) calculateConfiguration(ctx context.Context, tlsSecret *corev1.Secret) ([]corev1.Volume, []corev1.VolumeMount, error) {
+func (e *extAuthzServer) calculateConfiguration(ctx context.Context, tlsSecret *corev1.Secret) ([]corev1.Volume, []corev1.VolumeMount, []*v1alpha3.EnvoyFilter_EnvoyConfigObjectPatch, error) {
 	virtualServiceList := &istionetworkingv1beta1.VirtualServiceList{}
 	err := e.client.List(ctx, virtualServiceList, client.InNamespace(e.namespace), client.HasLabels{v1beta1constants.LabelBasicAuthSecretName})
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to list virtual services: %w", err)
+		return nil, nil, nil, fmt.Errorf("unable to list virtual services: %w", err)
 	}
 
 	var (
@@ -162,6 +184,7 @@ func (e *extAuthzServer) calculateConfiguration(ctx context.Context, tlsSecret *
 			MountPath: tlsMountPath,
 			ReadOnly:  true,
 		}}
+		configPatches []*v1alpha3.EnvoyFilter_EnvoyConfigObjectPatch
 	)
 
 	for _, virtualService := range virtualServiceList.Items {
@@ -191,10 +214,54 @@ func (e *extAuthzServer) calculateConfiguration(ctx context.Context, tlsSecret *
 				MountPath: path.Join(rootMountPath, subdomain),
 				SubPath:   subdomain,
 			})
+
+			configPatches = append(configPatches, &v1alpha3.EnvoyFilter_EnvoyConfigObjectPatch{
+				ApplyTo: v1alpha3.EnvoyFilter_HTTP_FILTER,
+				Match: &v1alpha3.EnvoyFilter_EnvoyConfigObjectMatch{
+					Context: v1alpha3.EnvoyFilter_GATEWAY,
+					ObjectTypes: &v1alpha3.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
+						Listener: &v1alpha3.EnvoyFilter_ListenerMatch{
+							PortNumber: 9443,
+							FilterChain: &v1alpha3.EnvoyFilter_ListenerMatch_FilterChainMatch{
+								Filter: &v1alpha3.EnvoyFilter_ListenerMatch_FilterMatch{
+									Name: "envoy.filters.network.http_connection_manager",
+								},
+								Sni: host,
+							},
+						},
+					},
+				},
+				Patch: &v1alpha3.EnvoyFilter_Patch{
+					Operation:   v1alpha3.EnvoyFilter_Patch_INSERT_BEFORE,
+					FilterClass: v1alpha3.EnvoyFilter_Patch_AUTHZ,
+					Value: &structpb.Struct{
+						Fields: map[string]*structpb.Value{
+							"name": structpb.NewStringValue("envoy.filters.http.ext_authz"),
+							"typed_config": structpb.NewStructValue(&structpb.Struct{
+								Fields: map[string]*structpb.Value{
+									"@type":                 structpb.NewStringValue("type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz"),
+									"transport_api_version": structpb.NewStringValue("V3"),
+									"grpc_service": structpb.NewStructValue(&structpb.Struct{
+										Fields: map[string]*structpb.Value{
+											"timeout": structpb.NewStringValue("2s"),
+											"envoy_grpc": structpb.NewStructValue(&structpb.Struct{
+												Fields: map[string]*structpb.Value{
+													"cluster_name": structpb.NewStringValue(fmt.Sprintf("outbound|%d||%s%s.%s.svc.cluster.local", Port, e.getPrefix(), svcName, e.namespace)),
+												},
+											}),
+										},
+									}),
+								},
+							}),
+						},
+					},
+				},
+			},
+			)
 		}
 	}
 
-	return volumes, volumeMounts, nil
+	return volumes, volumeMounts, configPatches, nil
 }
 
 func (e *extAuthzServer) getPrefix() string {

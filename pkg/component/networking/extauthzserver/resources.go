@@ -5,6 +5,11 @@
 package extauthzserver
 
 import (
+	"fmt"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	istioapinetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
+	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -81,6 +86,26 @@ func (e *extAuthzServer) getDeployment(volumes []corev1.Volume, volumeMounts []c
 					Volumes:           volumes,
 				},
 			},
+		},
+	}
+}
+
+func (e *extAuthzServer) getEnvoyFilter(
+	configPatches []*istioapinetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch,
+	ownerReference *metav1.OwnerReference,
+) *istionetworkingv1alpha3.EnvoyFilter {
+	// Currently, all observability components are exposed via the same istio ingress gateway.
+	// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
+	ingressNamespace := e.getPrefix() + v1beta1constants.DefaultSNIIngressNamespace
+
+	return &istionetworkingv1alpha3.EnvoyFilter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            fmt.Sprintf("%s-%s%s", e.namespace, e.getPrefix(), name),
+			Namespace:       ingressNamespace,
+			OwnerReferences: []metav1.OwnerReference{*ownerReference},
+		},
+		Spec: istioapinetworkingv1alpha3.EnvoyFilter{
+			ConfigPatches: configPatches,
 		},
 	}
 }
