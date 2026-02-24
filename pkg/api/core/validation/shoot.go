@@ -771,7 +771,10 @@ func validateKubeControllerManagerUpdate(newConfig, oldConfig *core.KubeControll
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(nodeCIDRMaskNew, nodeCIDRMaskOld, fldPath.Child("nodeCIDRMaskSize"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(nodeCIDRMaskIPv6New, nodeCIDRMaskIPv6Old, fldPath.Child("nodeCIDRMaskSizeIPv6"))...)
+	// allow nodeCIDRMaskSizeIPv6 to be added if it was not set before for migration to dual-stack.
+	if nodeCIDRMaskIPv6Old != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(nodeCIDRMaskIPv6New, nodeCIDRMaskIPv6Old, fldPath.Child("nodeCIDRMaskSizeIPv6"))...)
+	}
 
 	return allErrs
 }
