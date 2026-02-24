@@ -67,7 +67,7 @@ func (e *extAuthzServer) getService(isShootNamespace bool) *corev1.Service {
 func (e *extAuthzServer) getDeployment(volumes []corev1.Volume, volumeMounts []corev1.VolumeMount) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      e.getPrefix() + name,
+			Name:      e.getPrefix() + v1beta1constants.DeploymentNameExtAuthzServer,
 			Namespace: e.namespace,
 			Labels:    e.getLabels(),
 		},
