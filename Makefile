@@ -261,10 +261,6 @@ test-cov-clean:
 check-apidiff:
 	@REPO_ROOT=$(REPO_ROOT) ./hack/check-apidiff.sh
 
-.PHONY: check-vulnerabilities
-check-vulnerabilities: $(GO_VULN_CHECK)
-	$(GO_VULN_CHECK) ./...
-
 .PHONY: verify
 verify: check format test test-integration sast
 
