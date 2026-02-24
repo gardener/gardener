@@ -113,7 +113,7 @@ func (b *Botanist) CalculateMaxNodesForShootNetworks(shoot *gardencorev1beta1.Sh
 
 func (b *Botanist) calculateMaxNodesForPodsNetwork(shoot *gardencorev1beta1.Shoot) (int64, error) {
 	resultPerIPFamily := map[gardencorev1beta1.IPFamily]int64{}
-	isDualStack := !gardencorev1beta1.IsIPv4SingleStack(shoot.Spec.Networking.IPFamilies) && !gardencorev1beta1.IsIPv6SingleStack(shoot.Spec.Networking.IPFamilies)
+	isDualStack := gardencorev1beta1.IsDualStack(shoot.Spec.Networking.IPFamilies)
 
 	for _, podNetwork := range b.Shoot.Networks.Pods {
 		// In dual-stack scenarios, only consider IPv4

@@ -122,7 +122,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 					It("should default both NodeCIDRMaskSize and NodeCIDRMaskSizeIPv6", func() {
 						SetObjectDefaults_Shoot(obj)
-						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Not(BeNil()))
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(PointTo(Equal(int32(24))))
 						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6).To(PointTo(Equal(int32(64))))
 					})
 				})

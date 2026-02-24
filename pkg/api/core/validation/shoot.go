@@ -1920,14 +1920,13 @@ func ValidateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networ
 		}
 
 		if maskSize := kcm.NodeCIDRMaskSize; maskSize != nil && networking != nil {
-			if core.IsIPv4SingleStack(networking.IPFamilies) && !core.IsIPv6SingleStack(networking.IPFamilies) {
+			if core.IsIPv6SingleStack(networking.IPFamilies) {
+				if *maskSize < 64 || *maskSize > 124 {
+					allErrs = append(allErrs, field.Invalid(fldPath.Child("nodeCIDRMaskSize"), *maskSize, "nodeCIDRMaskSize must be between 64 and 128 for IPv6 single-stack clusters"))
+				}
+			} else if core.IsIPv4SingleStack(networking.IPFamilies) {
 				if *maskSize < 16 || *maskSize > 28 {
 					allErrs = append(allErrs, field.Invalid(fldPath.Child("nodeCIDRMaskSize"), *maskSize, "nodeCIDRMaskSize must be between 16 and 28"))
-				}
-			}
-			if core.IsIPv6SingleStack(networking.IPFamilies) {
-				if *maskSize < 64 || *maskSize > 128 {
-					allErrs = append(allErrs, field.Invalid(fldPath.Child("nodeCIDRMaskSize"), *maskSize, "nodeCIDRMaskSize must be between 64 and 128 for IPv6 single-stack clusters"))
 				}
 			}
 		}
@@ -1935,7 +1934,7 @@ func ValidateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networ
 		if maskSize := kcm.NodeCIDRMaskSizeIPv6; maskSize != nil && networking != nil {
 			if core.IsIPv4SingleStack(networking.IPFamilies) {
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("nodeCIDRMaskSizeIPv6"), "nodeCIDRMaskSizeIPv6 cannot be set for IPv4 single-stack clusters"))
-			} else if *maskSize < 64 || *maskSize > 128 {
+			} else if *maskSize < 64 || *maskSize > 124 {
 				allErrs = append(allErrs, field.Invalid(fldPath.Child("nodeCIDRMaskSizeIPv6"), *maskSize, "nodeCIDRMaskSizeIPv6 must be between 64 and 128"))
 			}
 		}
