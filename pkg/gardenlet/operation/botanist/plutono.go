@@ -17,6 +17,11 @@ import (
 
 // DefaultPlutono returns a deployer for Plutono.
 func (b *Botanist) DefaultPlutono() (plutono.Interface, error) {
+	istioLabels := map[string]string{}
+	if !b.Shoot.IsSelfHosted() {
+		istioLabels = b.WildcardIstioLabels()
+	}
+
 	return shared.NewPlutono(
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
@@ -33,6 +38,7 @@ func (b *Botanist) DefaultPlutono() (plutono.Interface, error) {
 		b.Shoot.WantsVerticalPodAutoscaler,
 		nil,
 		false,
+		istioLabels,
 	)
 }
 
