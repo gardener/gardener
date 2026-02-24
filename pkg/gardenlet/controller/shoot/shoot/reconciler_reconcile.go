@@ -889,7 +889,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
 		})
 
-		_ = g.Add(flow.Task{
+		deployPlutonoForLogging = g.Add(flow.Task{
 			Name:         "Reconciling Plutono for Shoot in Seed for the logging stack",
 			Fn:           flow.TaskFn(botanist.DeployPlutono).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(deploySeedLogging),
@@ -946,15 +946,20 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			SkipIf:       o.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(deployPrometheus, deployAlertmanager),
 		})
-		_ = g.Add(flow.Task{
+		deployPlutonoForMonitoring = g.Add(flow.Task{
 			Name:         "Reconciling Plutono for Shoot in Seed for the monitoring stack",
 			Fn:           flow.TaskFn(botanist.DeployPlutono).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(deployPrometheus, deployAlertmanager),
 		})
+		waitUntilPlutonoReady = g.Add(flow.Task{
+			Name:         "Waiting until Plutono for Shoot in Seed is ready",
+			Fn:           o.Shoot.Components.ControlPlane.Plutono.Wait,
+			Dependencies: flow.NewTaskIDs(deployPlutonoForLogging, deployPlutonoForMonitoring),
+		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying ext-authz-server",
 			Fn:           flow.TaskFn(botanist.DeployExtAuthzServer).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(initializeShootClients),
+			Dependencies: flow.NewTaskIDs(waitUntilPlutonoReady),
 		})
 
 		hibernateControlPlane = g.Add(flow.Task{
