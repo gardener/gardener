@@ -35,7 +35,7 @@ const (
 	// Port is the port exposed by the ext-authz-server.
 	Port = 10000
 
-	name                = "ext-authz-server"
+	name                = v1beta1constants.DeploymentNameExtAuthzServer
 	managedResourceName = name
 	svcName             = name
 

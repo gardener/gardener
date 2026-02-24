@@ -22,9 +22,11 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/component/networking/extauthzserver"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
+	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -43,14 +45,14 @@ func NewIstio(
 	priorityClassName string,
 	istiodEnabled bool,
 	labels map[string]string,
-	toKubeAPIServerPolicyLabel string,
+	networkPolicyLabels []string,
 	lbAnnotations map[string]string,
 	loadBalancerClass *string,
 	externalTrafficPolicy *corev1.ServiceExternalTrafficPolicy,
 	serviceExternalIP *string,
 	servicePorts []corev1.ServicePort,
 	terminateLoadBalancerProxyProtocol *bool,
-	vpnEnabled bool,
+	withShoots bool,
 	zones []string,
 	dualStack bool,
 	kubernetesVersion *semver.Version,
@@ -88,11 +90,10 @@ func NewIstio(
 		}
 	}
 
-	policyLabels := commonIstioIngressNetworkPolicyLabels(vpnEnabled)
-	policyLabels[toKubeAPIServerPolicyLabel] = v1beta1constants.LabelNetworkPolicyAllowed
-	// In case the cluster's API server should be exposed via ingress domain for the dashboard terminal scenario,
-	// istio ingress gateway needs to be able to directly forward traffic to the runtime API server.
-	policyLabels[v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer] = v1beta1constants.LabelNetworkPolicyAllowed
+	policyLabels := commonIstioIngressNetworkPolicyLabels(withShoots)
+	for _, label := range networkPolicyLabels {
+		policyLabels[label] = v1beta1constants.LabelNetworkPolicyAllowed
+	}
 
 	enforceSpreadAcrossHosts, err := ShouldEnforceSpreadAcrossHosts(ctx, cl, zones)
 	if err != nil {
@@ -115,7 +116,7 @@ func NewIstio(
 		Namespace:                          namePrefix + ingressNamespace,
 		PriorityClassName:                  priorityClassName,
 		TerminateLoadBalancerProxyProtocol: ptr.Deref(terminateLoadBalancerProxyProtocol, false),
-		VPNEnabled:                         vpnEnabled,
+		VPNEnabled:                         withShoots,
 		DualStack:                          dualStack,
 		EnforceSpreadAcrossHosts:           enforceSpreadAcrossHosts,
 		KubernetesVersion:                  kubernetesVersion.String(),
@@ -358,13 +359,19 @@ forNode:
 	return zonesIncomplete == 0 && len(zones) > 0, nil
 }
 
-func commonIstioIngressNetworkPolicyLabels(vpnEnabled bool) map[string]string {
+func commonIstioIngressNetworkPolicyLabels(withShoots bool) map[string]string {
 	labels := map[string]string{
 		v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed,
 		gardenerutils.NetworkPolicyLabel(v1beta1constants.IstioSystemNamespace+"-"+istio.IstiodServiceName, istio.IstiodPort):                         v1beta1constants.LabelNetworkPolicyAllowed,
 		gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+nginxingress.GetServiceName(), nginxingress.ServicePortControllerHttps): v1beta1constants.LabelNetworkPolicyAllowed,
+		gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+v1beta1constants.DeploymentNamePlutono, plutono.Port):                   v1beta1constants.LabelNetworkPolicyAllowed,
 	}
-	if vpnEnabled {
+	if withShoots {
+		// In case the cluster's API server should be exposed via ingress domain for the dashboard terminal scenario,
+		// istio ingress gateway needs to be able to directly forward traffic to the runtime API server.
+		labels[v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer] = v1beta1constants.LabelNetworkPolicyAllowed
+		labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.DeploymentNameExtAuthzServer, extauthzserver.Port)] = v1beta1constants.LabelNetworkPolicyAllowed
+		labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.DeploymentNamePlutono, plutono.Port)] = v1beta1constants.LabelNetworkPolicyAllowed
 		labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.DeploymentNameVPNSeedServer, vpnseedserver.OpenVPNPort)] = v1beta1constants.LabelNetworkPolicyAllowed
 
 		for i := range vpnseedserver.HighAvailabilityReplicaCount {

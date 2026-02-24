@@ -366,7 +366,10 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, seedIsGar
 		v1beta1constants.PriorityClassNameSeedSystemCritical,
 		!seedIsGarden,
 		labels,
-		gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port),
+		[]string{
+			gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port),
+			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+v1beta1constants.DeploymentNameExtAuthzServer, extauthzserver.Port),
+		},
 		seed.GetLoadBalancerServiceAnnotations(),
 		seed.GetLoadBalancerServiceClass(),
 		seed.GetLoadBalancerServiceExternalTrafficPolicy(),

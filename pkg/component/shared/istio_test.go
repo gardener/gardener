@@ -71,7 +71,7 @@ func createIstio(testValues istioTestValues) istio.Interface {
 		testValues.priorityClassName,
 		testValues.istiodEnabled,
 		testValues.labels,
-		testValues.kubeAPIServerPolicyLabel,
+		[]string{testValues.kubeAPIServerPolicyLabel},
 		testValues.lbAnnotations,
 		testValues.loadBalancerClass,
 		testValues.externalTrafficPolicy,
@@ -103,10 +103,13 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 		"networking.gardener.cloud/to-dns":                                     "allowed",
 		"networking.gardener.cloud/to-runtime-apiserver":                       "allowed",
 		"networking.resources.gardener.cloud/to-istio-system-istiod-tcp-15012": "allowed",
+		"networking.resources.gardener.cloud/to-garden-plutono-tcp-3000":       "allowed",
 		testValues.kubeAPIServerPolicyLabel:                                    "allowed",
 	}
 
 	if testValues.vpnEnabled {
+		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-ext-authz-server-tcp-10000"] = "allowed"
+		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-plutono-tcp-3000"] = "allowed"
 		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-tcp-1194"] = "allowed"
 		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-0-tcp-1194"] = "allowed"
 		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-1-tcp-1194"] = "allowed"
