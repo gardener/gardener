@@ -62,7 +62,6 @@ It may also be necessary to mark the registry in Docker as an insecure registry 
 { "insecure-registries":["registry.local.gardener.cloud:5001"] }
 ``` 
 
-
 The command also deploys a default [calico](https://github.com/projectcalico/calico) installation as the cluster's CNI implementation with `NetworkPolicy` support (the default `kindnet` CNI doesn't provide `NetworkPolicy` support).
 Furthermore, it deploys the [metrics-server](https://github.com/kubernetes-sigs/metrics-server) in order to support HPA and VPA on the seed cluster.
 
