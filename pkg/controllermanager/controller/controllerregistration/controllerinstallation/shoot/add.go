@@ -18,11 +18,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/gardener/gardener/pkg/api/core"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerinstallation"
+	"github.com/gardener/gardener/pkg/controller/controllerinstallation"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
@@ -31,55 +31,56 @@ import (
 // ControllerName is the name of this controller.
 const ControllerName = "controllerinstallation-shoot"
 
-// AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager) error {
-	log := mgr.GetLogger().WithValues("controller", ControllerName)
-
-	if r.Client == nil {
-		r.Client = mgr.GetClient()
-	}
-	if r.APIReader == nil {
-		r.APIReader = mgr.GetAPIReader()
-	}
+// AddToManager adds the ControllerInstallation Reconciler to the given manager.
+func AddToManager(mgr manager.Manager, config controllermanagerconfigv1alpha1.ControllerRegistrationControllerConfiguration) error {
+	var (
+		log = mgr.GetLogger().WithValues("controller", ControllerName)
+		r   = &controllerinstallation.Reconciler{
+			APIReader:           mgr.GetAPIReader(),
+			Client:              mgr.GetClient(),
+			NewTargetObjectFunc: func() client.Object { return &gardencorev1beta1.Shoot{} },
+			Kind:                controllerinstallation.ShootKind,
+		}
+	)
 
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(&gardencorev1beta1.Shoot{}, builder.WithPredicates(controllerinstallation.ShootPredicate(true))).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(config.ConcurrentSyncs, 0),
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		Watches(
 			&gardencorev1beta1.ControllerRegistration{},
-			handler.EnqueueRequestsFromMapFunc(r.MapToAllSelfHostedShoots(log)),
+			handler.EnqueueRequestsFromMapFunc(MapToAllSelfHostedShoots(log, r)),
 			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
 		).
 		Watches(
 			&gardencorev1beta1.BackupBucket{},
-			handler.EnqueueRequestsFromMapFunc(r.MapBackupEntryToShoot),
+			handler.EnqueueRequestsFromMapFunc(MapBackupBucketToShoot),
 			builder.WithPredicates(controllerinstallation.BackupBucketPredicate(true)),
 		).
 		Watches(
 			&gardencorev1beta1.BackupEntry{},
-			handler.EnqueueRequestsFromMapFunc(r.MapBackupEntryToShoot),
+			handler.EnqueueRequestsFromMapFunc(MapBackupEntryToShoot),
 			builder.WithPredicates(controllerinstallation.BackupEntryPredicate(true)),
 		).
 		Watches(
 			&gardencorev1beta1.ControllerInstallation{},
-			handler.EnqueueRequestsFromMapFunc(r.MapControllerInstallationToShoot),
+			handler.EnqueueRequestsFromMapFunc(MapControllerInstallationToShoot),
 			builder.WithPredicates(controllerinstallation.ControllerInstallationPredicate(true)),
 		).
 		Watches(
 			&gardencorev1.ControllerDeployment{},
-			handler.EnqueueRequestsFromMapFunc(r.MapControllerDeploymentToAllSelfHostedShoots(log)),
+			handler.EnqueueRequestsFromMapFunc(MapControllerDeploymentToAllSelfHostedShoots(log, r)),
 			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
 		).
 		Complete(r)
 }
 
 // MapToAllSelfHostedShoots returns reconcile.Request objects for all existing self-hosted shoots in the system.
-func (r *Reconciler) MapToAllSelfHostedShoots(log logr.Logger) handler.MapFunc {
+func MapToAllSelfHostedShoots(log logr.Logger, r *controllerinstallation.Reconciler) handler.MapFunc {
 	return func(ctx context.Context, _ client.Object) []reconcile.Request {
 		shootList := &metav1.PartialObjectMetadataList{}
 		shootList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
@@ -96,8 +97,8 @@ func (r *Reconciler) MapToAllSelfHostedShoots(log logr.Logger) handler.MapFunc {
 }
 
 // MapBackupBucketToShoot returns a reconcile.Request object for the Shoot for the shoot specified in the
-// .spec.shootRef.name field.
-func (r *Reconciler) MapBackupBucketToShoot(_ context.Context, obj client.Object) []reconcile.Request {
+// .spec.shootRef field.
+func MapBackupBucketToShoot(_ context.Context, obj client.Object) []reconcile.Request {
 	backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
 	if !ok || backupBucket.Spec.ShootRef == nil {
 		return nil
@@ -107,8 +108,8 @@ func (r *Reconciler) MapBackupBucketToShoot(_ context.Context, obj client.Object
 }
 
 // MapBackupEntryToShoot returns a reconcile.Request object for the Shoot for the shoot specified in the
-// .spec.shootRef.name field.
-func (r *Reconciler) MapBackupEntryToShoot(_ context.Context, obj client.Object) []reconcile.Request {
+// .spec.shootRef field.
+func MapBackupEntryToShoot(_ context.Context, obj client.Object) []reconcile.Request {
 	backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
 	if !ok || backupEntry.Spec.ShootRef == nil {
 		return nil
@@ -118,8 +119,8 @@ func (r *Reconciler) MapBackupEntryToShoot(_ context.Context, obj client.Object)
 }
 
 // MapControllerInstallationToShoot returns a reconcile.Request object for the shoot specified in the
-// .spec.shootRef.name field.
-func (r *Reconciler) MapControllerInstallationToShoot(_ context.Context, obj client.Object) []reconcile.Request {
+// .spec.shootRef field.
+func MapControllerInstallationToShoot(_ context.Context, obj client.Object) []reconcile.Request {
 	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
 	if !ok || controllerInstallation.Spec.ShootRef == nil {
 		return nil
@@ -130,7 +131,7 @@ func (r *Reconciler) MapControllerInstallationToShoot(_ context.Context, obj cli
 
 // MapControllerDeploymentToAllSelfHostedShoots returns reconcile.Request objects for all self-hosted shoots in case
 // there is at least one ControllerRegistration which references the ControllerDeployment.
-func (r *Reconciler) MapControllerDeploymentToAllSelfHostedShoots(log logr.Logger) handler.MapFunc {
+func MapControllerDeploymentToAllSelfHostedShoots(log logr.Logger, r *controllerinstallation.Reconciler) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		controllerDeployment, ok := obj.(*gardencorev1.ControllerDeployment)
 		if !ok {
@@ -150,7 +151,7 @@ func (r *Reconciler) MapControllerDeploymentToAllSelfHostedShoots(log logr.Logge
 
 			for _, ref := range controllerReg.Spec.Deployment.DeploymentRefs {
 				if ref.Name == controllerDeployment.Name {
-					return r.MapToAllSelfHostedShoots(log)(ctx, nil)
+					return MapToAllSelfHostedShoots(log, r)(ctx, nil)
 				}
 			}
 		}

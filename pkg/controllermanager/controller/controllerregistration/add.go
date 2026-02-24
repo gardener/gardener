@@ -15,6 +15,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/clusterfinalizer"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerinstallation/seed"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerinstallation/shoot"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerregistrationfinalizer"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/extensionclusterrole"
 )
@@ -45,6 +46,10 @@ func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.Contr
 
 	if err := seed.AddToManager(mgr, *cfg.Controllers.ControllerRegistration); err != nil {
 		return fmt.Errorf("failed adding ControllerInstallation Seed reconciler: %w", err)
+	}
+
+	if err := shoot.AddToManager(mgr, *cfg.Controllers.ControllerRegistration); err != nil {
+		return fmt.Errorf("failed adding ControllerInstallation Shoot reconciler: %w", err)
 	}
 
 	if err := (&controllerregistrationfinalizer.Reconciler{}).AddToManager(mgr); err != nil {
