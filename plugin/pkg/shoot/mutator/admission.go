@@ -15,7 +15,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/Masterminds/semver/v3"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -381,7 +380,7 @@ func (c *mutationContext) defaultMaintenanceWindow(a admission.Attributes) {
 	}
 	if c.shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey == nil {
 		c.shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey = &core.MaintenanceRotationConfig{
-			RotationPeriod: &metav1.Duration{Duration: 28 * 24 * time.Hour},
+			RotationPeriod: &metav1.Duration{Duration: v1beta1constants.ETCDEncryptionKeyAutoRotationPeriod},
 		}
 	}
 }
