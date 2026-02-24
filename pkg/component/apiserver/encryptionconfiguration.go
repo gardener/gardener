@@ -50,8 +50,8 @@ func init() {
 	encryptionCodec = serializer.NewCodecFactory(encryptionScheme).CodecForVersions(ser, ser, versions, versions)
 }
 
-type aesKeyWithProvider struct {
-	AESKey   apiserverconfigv1.Key
+type keyWithProvider struct {
+	Key      apiserverconfigv1.Key
 	Provider gardencorev1beta1.EncryptionProviderType
 }
 
@@ -65,7 +65,7 @@ const (
 func generateEncryptionProviders(keySecretCurrent, keySecretOld *corev1.Secret, encryptWithCurrentKey, encrypt bool) ([]apiserverconfigv1.ProviderConfiguration, error) {
 	var (
 		result         []apiserverconfigv1.ProviderConfiguration
-		encryptionKeys = etcdEncryptionAESKeys(keySecretCurrent, keySecretOld, encryptWithCurrentKey)
+		encryptionKeys = etcdEncryptionKeys(keySecretCurrent, keySecretOld, encryptWithCurrentKey)
 	)
 
 	for _, key := range encryptionKeys {
@@ -93,11 +93,11 @@ func generateEncryptionProviders(keySecretCurrent, keySecretOld *corev1.Secret, 
 			// Reuse the existing ProviderConfiguration by appending to its keys
 			switch provider {
 			case gardencorev1beta1.EncryptionProviderTypeAESCBC:
-				result[lastIdx].AESCBC.Keys = append(result[lastIdx].AESCBC.Keys, key.AESKey)
+				result[lastIdx].AESCBC.Keys = append(result[lastIdx].AESCBC.Keys, key.Key)
 			case gardencorev1beta1.EncryptionProviderTypeAESGCM:
-				result[lastIdx].AESGCM.Keys = append(result[lastIdx].AESGCM.Keys, key.AESKey)
+				result[lastIdx].AESGCM.Keys = append(result[lastIdx].AESGCM.Keys, key.Key)
 			case gardencorev1beta1.EncryptionProviderTypeSecretbox:
-				result[lastIdx].Secretbox.Keys = append(result[lastIdx].Secretbox.Keys, key.AESKey)
+				result[lastIdx].Secretbox.Keys = append(result[lastIdx].Secretbox.Keys, key.Key)
 			}
 		} else {
 			// Create a new ProviderConfiguration
@@ -105,19 +105,19 @@ func generateEncryptionProviders(keySecretCurrent, keySecretOld *corev1.Secret, 
 			case gardencorev1beta1.EncryptionProviderTypeAESCBC:
 				result = append(result, apiserverconfigv1.ProviderConfiguration{
 					AESCBC: &apiserverconfigv1.AESConfiguration{
-						Keys: []apiserverconfigv1.Key{key.AESKey},
+						Keys: []apiserverconfigv1.Key{key.Key},
 					},
 				})
 			case gardencorev1beta1.EncryptionProviderTypeAESGCM:
 				result = append(result, apiserverconfigv1.ProviderConfiguration{
 					AESGCM: &apiserverconfigv1.AESConfiguration{
-						Keys: []apiserverconfigv1.Key{key.AESKey},
+						Keys: []apiserverconfigv1.Key{key.Key},
 					},
 				})
 			case gardencorev1beta1.EncryptionProviderTypeSecretbox:
 				result = append(result, apiserverconfigv1.ProviderConfiguration{
 					Secretbox: &apiserverconfigv1.SecretboxConfiguration{
-						Keys: []apiserverconfigv1.Key{key.AESKey},
+						Keys: []apiserverconfigv1.Key{key.Key},
 					},
 				})
 			default:
@@ -225,11 +225,11 @@ func ReconcileSecretETCDEncryptionConfiguration(
 	return c.Patch(ctx, secretETCDEncryptionConfiguration, patch)
 }
 
-func etcdEncryptionAESKeys(keySecretCurrent, keySecretOld *corev1.Secret, encryptWithCurrentKey bool) []aesKeyWithProvider {
+func etcdEncryptionKeys(keySecretCurrent, keySecretOld *corev1.Secret, encryptWithCurrentKey bool) []keyWithProvider {
 	if keySecretOld == nil {
-		return []aesKeyWithProvider{
+		return []keyWithProvider{
 			{
-				AESKey:   aesKeyFromSecretData(keySecretCurrent.Data),
+				Key:      keyFromSecretData(keySecretCurrent.Data),
 				Provider: gardencorev1beta1.EncryptionProviderType(keySecretCurrent.Data[secretsutils.DataKeyEncryptionProvider]),
 			},
 		}
@@ -240,19 +240,19 @@ func etcdEncryptionAESKeys(keySecretCurrent, keySecretOld *corev1.Secret, encryp
 		keyForEncryption, keyForDecryption = keySecretOld, keySecretCurrent
 	}
 
-	return []aesKeyWithProvider{
+	return []keyWithProvider{
 		{
-			AESKey:   aesKeyFromSecretData(keyForEncryption.Data),
+			Key:      keyFromSecretData(keyForEncryption.Data),
 			Provider: gardencorev1beta1.EncryptionProviderType(keyForEncryption.Data[secretsutils.DataKeyEncryptionProvider]),
 		},
 		{
-			AESKey:   aesKeyFromSecretData(keyForDecryption.Data),
+			Key:      keyFromSecretData(keyForDecryption.Data),
 			Provider: gardencorev1beta1.EncryptionProviderType(keyForDecryption.Data[secretsutils.DataKeyEncryptionProvider]),
 		},
 	}
 }
 
-func aesKeyFromSecretData(data map[string][]byte) apiserverconfigv1.Key {
+func keyFromSecretData(data map[string][]byte) apiserverconfigv1.Key {
 	var key string
 	if v, ok := data[secretsutils.DataKeyEncryptionSecretEncoding]; ok && string(v) == "none" {
 		// key is not encoded, so we need to encode it before passing it to the kube-apiserver

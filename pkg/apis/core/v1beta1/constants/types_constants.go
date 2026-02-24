@@ -976,6 +976,9 @@ const (
 	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the apiserver domain would be
 	// 'api.cluster.example.com'.
 	APIServerFQDNPrefix = "api"
+
+	// ETCDEncryptionKeyAutoRotationPeriod is the default period for automatic rotation of etcd encryption key.
+	ETCDEncryptionKeyAutoRotationPeriod = 28 * 24 * time.Hour // 28 days
 )
 
 var (

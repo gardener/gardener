@@ -100,7 +100,11 @@ spec:
           rotationPeriod: 672h # default: 28d(672h)
 ```
 
-> **Note:** For newly created Shoots, the `etcdEncryptionKey` automatic rotation is **enabled by default** with a rotation period of **28 days (672h)**. This is particularly important for Shoots using the `aesgcm` encryption provider. See [ETCD Encryption Config](../security/etcd_encryption_config.md) for more details.
+> [!NOTE]
+> 
+> For newly created Shoots, the `etcdEncryptionKey` automatic rotation is **enabled by default** with a rotation period of **28 days (672h)**.
+> This is particularly important for Shoots using the `aesgcm` encryption provider.
+> See [ETCD Encryption Config](../security/etcd_encryption_config.md) for more details.
 
 During the daily maintenance, the `gardener-controller-manager` starts the rotation for specific credentials if the Shoot opted-in for automatic rotation for the given credential and the set period has passed since the last rotation completion.
 Automatic rotation can be disabled for specific credential by setting the `rotationPeriod` field to `0`.
