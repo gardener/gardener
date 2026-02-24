@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	"go.yaml.in/yaml/v4"
 	corev1 "k8s.io/api/core/v1"
@@ -594,7 +594,7 @@ func (o *operatingSystemConfig) getWantedOSCNames(ctx context.Context) (sets.Set
 		}
 	}
 
-	machineList := &v1alpha1.MachineList{}
+	machineList := &machinev1alpha1.MachineList{}
 	if err := o.client.List(ctx, machineList, client.InNamespace(o.values.Namespace)); err != nil {
 		return nil, fmt.Errorf("failed to list Machines: %w", err)
 	}
@@ -611,7 +611,6 @@ func (o *operatingSystemConfig) getWantedOSCNames(ctx context.Context) (sets.Set
 				extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 			)
 
-			o.log.V(1).Info("Found wanted OSC name from existing machine", "init", initVal, "original", originalVal, "machine", machine.Name)
 			wantedOSCNames.Insert(originalVal, initVal)
 			continue
 		}
@@ -1146,9 +1145,9 @@ func KeyV2(
 func oscPurposeSuffix(purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {
 	switch purpose {
 	case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
-		return "init"
+		return "-init"
 	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
-		return "original"
+		return "-original"
 	default:
 		return ""
 	}
@@ -1169,7 +1168,7 @@ func keySuffix(
 		return ""
 	}
 
-	return imagePrefix + "-" + suffix
+	return imagePrefix + suffix
 }
 
 func generateOSCName(
@@ -1180,5 +1179,5 @@ func generateOSCName(
 	if suffix == "" {
 		return val
 	}
-	return fmt.Sprintf("%s-%s", val, suffix)
+	return fmt.Sprintf("%s%s", val, suffix)
 }
