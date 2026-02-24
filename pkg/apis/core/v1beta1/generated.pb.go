@@ -5467,7 +5467,7 @@ func (m *KubeControllerManagerConfig) MarshalToSizedBuffer(dAtA []byte) (int, er
 	if m.NodeCIDRMaskSizeIPv6 != nil {
 		i = encodeVarintGenerated(dAtA, i, uint64(*m.NodeCIDRMaskSizeIPv6))
 		i--
-		dAtA[i] = 0x38
+		dAtA[i] = 0x30
 	}
 	if m.NodeMonitorGracePeriod != nil {
 		{
@@ -5479,7 +5479,7 @@ func (m *KubeControllerManagerConfig) MarshalToSizedBuffer(dAtA []byte) (int, er
 			i = encodeVarintGenerated(dAtA, i, uint64(size))
 		}
 		i--
-		dAtA[i] = 0x32
+		dAtA[i] = 0x2a
 	}
 	if m.PodEvictionTimeout != nil {
 		{
@@ -5491,7 +5491,7 @@ func (m *KubeControllerManagerConfig) MarshalToSizedBuffer(dAtA []byte) (int, er
 			i = encodeVarintGenerated(dAtA, i, uint64(size))
 		}
 		i--
-		dAtA[i] = 0x2a
+		dAtA[i] = 0x22
 	}
 	if m.NodeCIDRMaskSize != nil {
 		i = encodeVarintGenerated(dAtA, i, uint64(*m.NodeCIDRMaskSize))
@@ -36297,7 +36297,7 @@ func (m *KubeControllerManagerConfig) Unmarshal(dAtA []byte) error {
 				}
 			}
 			m.NodeCIDRMaskSize = &v
-		case 5:
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field PodEvictionTimeout", wireType)
 			}
@@ -36333,7 +36333,7 @@ func (m *KubeControllerManagerConfig) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 6:
+		case 5:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field NodeMonitorGracePeriod", wireType)
 			}
@@ -36369,7 +36369,7 @@ func (m *KubeControllerManagerConfig) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 7:
+		case 6:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field NodeCIDRMaskSizeIPv6", wireType)
 			}

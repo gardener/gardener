@@ -3677,7 +3677,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should prevent setting the pod eviction timeout for kubernetes versions >= 1.33", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
-				// shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = nil
 				shoot.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = &metav1.Duration{Duration: time.Minute}
 				shoot.Spec.Kubernetes.Version = "1.33.0"
 
@@ -4922,7 +4921,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid specifying unsupported IP family", func() {
-				// shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = nil
 				shoot.Spec.Networking.IPFamilies = []core.IPFamily{"IPv5"}
 
 				errorList := ValidateShoot(shoot)

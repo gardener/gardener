@@ -1555,15 +1555,15 @@ message KubeControllerManagerConfig {
   // `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`. Setting this field is forbidden starting
   // from Kubernetes 1.33.
   // TODO(plkokanov): Drop this field after support for Kubernetes 1.32 is dropped.
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration podEvictionTimeout = 5;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration podEvictionTimeout = 4;
 
   // NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
   // +optional
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration nodeMonitorGracePeriod = 6;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration nodeMonitorGracePeriod = 5;
 
   // NodeCIDRMaskSizeIPv6 defines the mask size for node cidr in cluster (default is 64). This field is immutable.
   // +optional
-  optional int32 nodeCIDRMaskSizeIPv6 = 7;
+  optional int32 nodeCIDRMaskSizeIPv6 = 6;
 }
 
 // KubeProxyConfig contains configuration settings for the kube-proxy.

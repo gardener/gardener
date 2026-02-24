@@ -1267,13 +1267,13 @@ type KubeControllerManagerConfig struct {
 	// `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`. Setting this field is forbidden starting
 	// from Kubernetes 1.33.
 	// TODO(plkokanov): Drop this field after support for Kubernetes 1.32 is dropped.
-	PodEvictionTimeout *metav1.Duration `json:"podEvictionTimeout,omitempty" protobuf:"bytes,5,opt,name=podEvictionTimeout"`
+	PodEvictionTimeout *metav1.Duration `json:"podEvictionTimeout,omitempty" protobuf:"bytes,4,opt,name=podEvictionTimeout"`
 	// NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
 	// +optional
-	NodeMonitorGracePeriod *metav1.Duration `json:"nodeMonitorGracePeriod,omitempty" protobuf:"bytes,6,opt,name=nodeMonitorGracePeriod"`
+	NodeMonitorGracePeriod *metav1.Duration `json:"nodeMonitorGracePeriod,omitempty" protobuf:"bytes,5,opt,name=nodeMonitorGracePeriod"`
 	// NodeCIDRMaskSizeIPv6 defines the mask size for node cidr in cluster (default is 64). This field is immutable.
 	// +optional
-	NodeCIDRMaskSizeIPv6 *int32 `json:"nodeCIDRMaskSizeIPv6,omitempty" protobuf:"varint,7,opt,name=nodeCIDRMaskSizeIPv6"`
+	NodeCIDRMaskSizeIPv6 *int32 `json:"nodeCIDRMaskSizeIPv6,omitempty" protobuf:"varint,6,opt,name=nodeCIDRMaskSizeIPv6"`
 }
 
 // HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
