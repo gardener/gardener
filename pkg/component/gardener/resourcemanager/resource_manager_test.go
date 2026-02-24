@@ -337,7 +337,7 @@ var _ = Describe("ResourceManager", func() {
 			DefaultSeccompProfileEnabled:              false,
 			EndpointSliceHintsEnabled:                 false,
 			PodTopologySpreadConstraintsEnabled:       true,
-			VPAInPlaceUpdatesEnabled:                  false,
+			VPAInPlaceUpdatesEnabled:                  true,
 			LogLevel:                                  "info",
 			LogFormat:                                 "json",
 			Zones:                                     []string{"a", "b"},
