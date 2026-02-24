@@ -43,6 +43,7 @@ var gardenManagedResourceList = []string{
 	"fluent-operator",
 	"fluent-operator-custom-resources-garden",
 	"vali",
+	"victoria-logs",
 	"plutono",
 	"prometheus-operator",
 	"perses-operator",
