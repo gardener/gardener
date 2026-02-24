@@ -172,7 +172,8 @@ func ShootPredicate(forSelfHostedShoots bool) predicate.Predicate {
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.Extensions, shoot.Spec.Extensions) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.DNS, shoot.Spec.DNS) ||
 				shootNetworkingTypeHasChanged(oldShoot.Spec.Networking, shoot.Spec.Networking) ||
-				oldShoot.Spec.Provider.Type != shoot.Spec.Provider.Type
+				oldShoot.Spec.Provider.Type != shoot.Spec.Provider.Type ||
+				(forSelfHostedShoots && shoot.DeletionTimestamp != nil)
 		},
 
 		DeleteFunc: func(e event.DeleteEvent) bool {

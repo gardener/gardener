@@ -212,6 +212,12 @@ func computeKindTypesForShoots(
 		if !ok {
 			return nil, fmt.Errorf("cannot convert object of type %T to *gardencorev1beta1.Shoot", obj)
 		}
+
+		// enable clean up of controller installations in case of shoot deletion
+		if shoot.DeletionTimestamp != nil {
+			return sets.New[string](), nil
+		}
+
 		return gardenerutils.ComputeRequiredExtensionsForShoot(shoot, nil, controllerRegistrationList, nil, nil), nil
 	}
 
