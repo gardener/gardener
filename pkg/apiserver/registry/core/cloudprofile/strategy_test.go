@@ -12,13 +12,23 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	cloudprofileregistry "github.com/gardener/gardener/pkg/apiserver/registry/core/cloudprofile"
+	"github.com/gardener/gardener/pkg/apiserver/registry/core/cloudprofile"
 )
 
 var _ = Describe("Strategy", func() {
+	var (
+		ctx      = context.Background()
+		strategy rest.RESTCreateUpdateStrategy
+	)
+
+	BeforeEach(func() {
+		strategy = cloudprofile.Strategy
+	})
+
 	Describe("#PrepareForCreate", func() {
 		var cloudProfile *core.CloudProfile
 
@@ -42,16 +52,32 @@ var _ = Describe("Strategy", func() {
 								ExpirationDate: validExpirationDate1,
 							},
 							{
-								Version:        "1.25.6",
-								ExpirationDate: validExpirationDate2,
+								Version: "1.25.6",
+								Lifecycle: []core.LifecycleStage{
+									{
+										Classification: core.ClassificationSupported,
+									},
+									{
+										Classification: core.ClassificationExpired,
+										StartTime:      validExpirationDate2,
+									},
+								},
 							},
 							{
 								Version:        "1.24.8",
 								ExpirationDate: expiredExpirationDate1,
 							},
 							{
-								Version:        "1.24.6",
-								ExpirationDate: expiredExpirationDate2,
+								Version: "1.24.6",
+								Lifecycle: []core.LifecycleStage{
+									{
+										Classification: core.ClassificationSupported,
+									},
+									{
+										Classification: core.ClassificationExpired,
+										StartTime:      expiredExpirationDate2,
+									},
+								},
 							},
 						},
 					},
@@ -100,11 +126,54 @@ var _ = Describe("Strategy", func() {
 								},
 							},
 						},
+						{
+							Name: "machineImage3",
+							Versions: []core.MachineImageVersion{
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version: "1.3.0",
+										Lifecycle: []core.LifecycleStage{
+											{
+												Classification: core.ClassificationSupported,
+											},
+											{
+												Classification: core.ClassificationExpired,
+												StartTime:      validExpirationDate1,
+											},
+										},
+									},
+								},
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version: "1.2.3",
+										Lifecycle: []core.LifecycleStage{
+											{
+												Classification: core.ClassificationSupported,
+											},
+										},
+									},
+								},
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version: "1.1.8",
+										Lifecycle: []core.LifecycleStage{
+											{
+												Classification: core.ClassificationSupported,
+											},
+											{
+												Classification: core.ClassificationExpired,
+												StartTime:      expiredExpirationDate1,
+											},
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			}
 
-			cloudprofileregistry.Strategy.PrepareForCreate(context.TODO(), cloudProfile)
+			strategy.PrepareForCreate(ctx, cloudProfile)
 
 			Expect(cloudProfile.Spec.Kubernetes.Versions).To(ConsistOf(
 				MatchFields(IgnoreExtras, Fields{
@@ -139,6 +208,17 @@ var _ = Describe("Strategy", func() {
 							"Version": Equal("4.2.3"),
 						})},
 					)),
+				}), MatchFields(IgnoreExtras, Fields{
+					"Name": Equal("machineImage3"),
+					"Versions": ConsistOf(MatchFields(IgnoreExtras, Fields{
+						"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+							"Version": Equal("1.3.0"),
+						})},
+					), MatchFields(IgnoreExtras, Fields{
+						"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+							"Version": Equal("1.2.3"),
+						})},
+					)),
 				}),
 			))
 		})
@@ -151,14 +231,23 @@ var _ = Describe("Strategy", func() {
 		)
 
 		BeforeEach(func() {
-			newCloudProfile = &core.CloudProfile{
-				Spec: core.CloudProfileSpec{
-					Regions: []core.Region{{
-						Name: "local",
-					}},
+			oldCloudProfile = &core.CloudProfile{}
+			newCloudProfile = &core.CloudProfile{}
+		})
+
+		It("should not allow editing the status", func() {
+			k8sStatus := core.KubernetesStatus{
+				Versions: []core.ExpirableVersionStatus{
+					{
+						Version: "foo",
+					},
 				},
 			}
-			oldCloudProfile = newCloudProfile.DeepCopy()
+			newCloudProfile.Status.Kubernetes = &k8sStatus
+
+			strategy.PrepareForUpdate(ctx, newCloudProfile, oldCloudProfile)
+
+			Expect(newCloudProfile.Status).To(Equal(oldCloudProfile.Status))
 		})
 
 		It("should correctly sync the architecture fields on migration to Capabilities", func() {
@@ -189,7 +278,7 @@ var _ = Describe("Strategy", func() {
 				{Name: "architecture", Values: []string{"amd64", "arm64"}},
 			}
 
-			cloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), newCloudProfile, oldCloudProfile)
+			strategy.PrepareForUpdate(ctx, newCloudProfile, oldCloudProfile)
 
 			Expect(newCloudProfile.Spec.MachineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
 			Expect(newCloudProfile.Spec.MachineTypes[0].Capabilities["architecture"]).To(ConsistOf("amd64"))
@@ -200,6 +289,7 @@ var _ = Describe("Strategy", func() {
 			}))
 		})
 	})
+
 	Describe("#Canonicalize", func() {
 		It("should sync architecture capabilities to empty architecture fields", func() {
 			cloudProfile := &core.CloudProfile{
@@ -217,10 +307,42 @@ var _ = Describe("Strategy", func() {
 				},
 			}
 
-			cloudprofileregistry.Strategy.Canonicalize(cloudProfile)
+			strategy.Canonicalize(cloudProfile)
 
 			Expect(cloudProfile.Spec.MachineTypes[0].Architecture).To(PointTo(Equal("amd64")))
 			Expect(cloudProfile.Spec.MachineImages[0].Versions[0].Architectures).To(ConsistOf("amd64"))
+		})
+	})
+
+	Describe("StatusStrategy", func() {
+		BeforeEach(func() {
+			strategy = cloudprofile.StatusStrategy
+		})
+
+		var (
+			newCloudProfile *core.CloudProfile
+			oldCloudProfile *core.CloudProfile
+		)
+
+		BeforeEach(func() {
+			oldCloudProfile = &core.CloudProfile{}
+			newCloudProfile = &core.CloudProfile{}
+		})
+
+		It("should allow updating the status", func() {
+			newCloudProfile.Status.Kubernetes = &core.KubernetesStatus{
+				Versions: []core.ExpirableVersionStatus{{Version: "foo"}},
+			}
+			strategy.PrepareForUpdate(ctx, newCloudProfile, oldCloudProfile)
+
+			Expect(newCloudProfile.Status.Kubernetes.Versions).To(ConsistOf(core.ExpirableVersionStatus{Version: "foo"}))
+		})
+
+		It("should not allow editing the spec", func() {
+			newCloudProfile.Spec.Type = "foo"
+			strategy.PrepareForUpdate(ctx, newCloudProfile, oldCloudProfile)
+
+			Expect(newCloudProfile.Spec).To(Equal(oldCloudProfile.Spec))
 		})
 	})
 })
