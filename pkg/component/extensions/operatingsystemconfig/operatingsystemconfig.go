@@ -1179,5 +1179,5 @@ func generateOSCName(
 	if suffix == "" {
 		return val
 	}
-	return fmt.Sprintf("%s%s", val, suffix)
+	return val + suffix
 }
