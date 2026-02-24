@@ -39,13 +39,13 @@ import (
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
 
-func TestControllerRegistration(t *testing.T) {
+func TestSeed(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration ControllerManager ControllerRegistration ControllerInstallation Suite")
+	RunSpecs(t, "Test Integration ControllerManager ControllerRegistration ControllerInstallation Seed Suite")
 }
 
 // testID is used for generating test namespace names and other IDs
-const testID = "controllerregistration-seed-controller-test"
+const testID = "controllerinstallation-seed-controller-test"
 
 var (
 	ctx = context.Background()
@@ -184,7 +184,7 @@ var _ = BeforeSuite(func() {
 		By("Delete seed ControllerRegistration")
 		Expect(testClient.Delete(ctx, seedControllerRegistration)).To(Or(Succeed(), BeNotFoundError()))
 
-		By("Wait until manager has observed controllerregistration deletion")
+		By("Wait until manager has observed ControllerRegistration deletion")
 		Eventually(func() error {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(seedControllerRegistration), seedControllerRegistration)
 		}).Should(BeNotFoundError())

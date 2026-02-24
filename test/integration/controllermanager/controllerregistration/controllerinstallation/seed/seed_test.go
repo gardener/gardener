@@ -19,7 +19,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("ControllerRegistration controller test", func() {
+var _ = Describe("ControllerInstallation-Seed controller test", func() {
 	var (
 		shootProviderType           = "shoot-provider"
 		shoot                       *gardencorev1beta1.Shoot
@@ -419,7 +419,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 				return shootControllerRegistration.Finalizers
 			}).Should(ConsistOf("core.gardener.cloud/controllerregistration"))
 
-			By("Create object")
+			By("Create Shoot")
 			Expect(testClient.Create(ctx, shoot)).To(Succeed())
 
 			By("Expect ControllerInstallation to be created")

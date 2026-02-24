@@ -21,64 +21,66 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerinstallation"
+	"github.com/gardener/gardener/pkg/controller/controllerinstallation"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 // ControllerName is the name of this controller.
-const ControllerName = "controllerregistration-seed"
+const ControllerName = "controllerinstallation-seed"
 
-// AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager) error {
-	log := mgr.GetLogger().WithValues("controller", ControllerName)
-
-	if r.Client == nil {
-		r.Client = mgr.GetClient()
-	}
-	if r.APIReader == nil {
-		r.APIReader = mgr.GetAPIReader()
-	}
+// AddToManager adds the ControllerInstallation Reconciler to the given manager.
+func AddToManager(mgr manager.Manager, config controllermanagerconfigv1alpha1.ControllerRegistrationControllerConfiguration) error {
+	var (
+		log = mgr.GetLogger().WithValues("controller", ControllerName)
+		r   = &controllerinstallation.Reconciler{
+			APIReader:           mgr.GetAPIReader(),
+			Client:              mgr.GetClient(),
+			NewTargetObjectFunc: func() client.Object { return &gardencorev1beta1.Seed{} },
+			Kind:                controllerinstallation.SeedKind,
+		}
+	)
 
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(&gardencorev1beta1.Seed{}, builder.WithPredicates(r.SeedPredicate())).
+		For(&gardencorev1beta1.Seed{}, builder.WithPredicates(SeedPredicate())).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(config.ConcurrentSyncs, 0),
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		Watches(
 			&gardencorev1beta1.ControllerRegistration{},
-			handler.EnqueueRequestsFromMapFunc(r.MapToAllSeeds(log)),
+			handler.EnqueueRequestsFromMapFunc(MapToAllSeeds(log, r)),
 			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
 		).
 		Watches(
 			&gardencorev1beta1.BackupBucket{},
-			handler.EnqueueRequestsFromMapFunc(r.MapBackupBucketToSeed),
+			handler.EnqueueRequestsFromMapFunc(MapBackupBucketToSeed),
 			builder.WithPredicates(controllerinstallation.BackupBucketPredicate(false)),
 		).
 		Watches(
 			&gardencorev1beta1.BackupEntry{},
-			handler.EnqueueRequestsFromMapFunc(r.MapBackupEntryToSeed),
+			handler.EnqueueRequestsFromMapFunc(MapBackupEntryToSeed),
 			builder.WithPredicates(controllerinstallation.BackupEntryPredicate(false)),
 		).
 		Watches(
 			&gardencorev1beta1.ControllerInstallation{},
-			handler.EnqueueRequestsFromMapFunc(r.MapControllerInstallationToSeed),
+			handler.EnqueueRequestsFromMapFunc(MapControllerInstallationToSeed),
 			builder.WithPredicates(controllerinstallation.ControllerInstallationPredicate(false)),
 		).
 		Watches(
 			&gardencorev1.ControllerDeployment{},
-			handler.EnqueueRequestsFromMapFunc(r.MapControllerDeploymentToAllSeeds(log)),
+			handler.EnqueueRequestsFromMapFunc(MapControllerDeploymentToAllSeeds(log, r)),
 			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
 		).
 		Watches(
 			&gardencorev1beta1.Shoot{},
-			handler.EnqueueRequestsFromMapFunc(r.MapShootToSeed),
+			handler.EnqueueRequestsFromMapFunc(MapShootToSeed),
 			builder.WithPredicates(controllerinstallation.ShootPredicate(false)),
 		).
 		Complete(r)
@@ -86,7 +88,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 // SeedPredicate returns true for all Seed events except for updates. Here, it returns true when there is a change
 // in the spec or labels or annotations or when the deletion timestamp is set.
-func (r *Reconciler) SeedPredicate() predicate.Predicate {
+func SeedPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			seed, ok := e.ObjectNew.(*gardencorev1beta1.Seed)
@@ -108,7 +110,7 @@ func (r *Reconciler) SeedPredicate() predicate.Predicate {
 }
 
 // MapToAllSeeds returns reconcile.Request objects for all existing seeds in the system.
-func (r *Reconciler) MapToAllSeeds(log logr.Logger) handler.MapFunc {
+func MapToAllSeeds(log logr.Logger, r *controllerinstallation.Reconciler) handler.MapFunc {
 	return func(ctx context.Context, _ client.Object) []reconcile.Request {
 		seedList := &metav1.PartialObjectMetadataList{}
 		seedList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("SeedList"))
@@ -122,7 +124,7 @@ func (r *Reconciler) MapToAllSeeds(log logr.Logger) handler.MapFunc {
 }
 
 // MapBackupBucketToSeed returns a reconcile.Request object for the seed specified in the .spec.seedName field.
-func (r *Reconciler) MapBackupBucketToSeed(_ context.Context, obj client.Object) []reconcile.Request {
+func MapBackupBucketToSeed(_ context.Context, obj client.Object) []reconcile.Request {
 	backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
 	if !ok {
 		return nil
@@ -136,7 +138,7 @@ func (r *Reconciler) MapBackupBucketToSeed(_ context.Context, obj client.Object)
 }
 
 // MapBackupEntryToSeed returns a reconcile.Request object for the seed specified in the .spec.seedName field.
-func (r *Reconciler) MapBackupEntryToSeed(_ context.Context, obj client.Object) []reconcile.Request {
+func MapBackupEntryToSeed(_ context.Context, obj client.Object) []reconcile.Request {
 	backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
 	if !ok {
 		return nil
@@ -150,7 +152,7 @@ func (r *Reconciler) MapBackupEntryToSeed(_ context.Context, obj client.Object) 
 }
 
 // MapShootToSeed returns a reconcile.Request object for the seed specified in the .spec.seedName field.
-func (r *Reconciler) MapShootToSeed(_ context.Context, obj client.Object) []reconcile.Request {
+func MapShootToSeed(_ context.Context, obj client.Object) []reconcile.Request {
 	shoot, ok := obj.(*gardencorev1beta1.Shoot)
 	if !ok {
 		return nil
@@ -164,7 +166,7 @@ func (r *Reconciler) MapShootToSeed(_ context.Context, obj client.Object) []reco
 }
 
 // MapControllerInstallationToSeed returns a reconcile.Request object for the seed specified in the .spec.seedRef.name field.
-func (r *Reconciler) MapControllerInstallationToSeed(_ context.Context, obj client.Object) []reconcile.Request {
+func MapControllerInstallationToSeed(_ context.Context, obj client.Object) []reconcile.Request {
 	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
 	if !ok || controllerInstallation.Spec.SeedRef == nil {
 		return nil
@@ -175,7 +177,7 @@ func (r *Reconciler) MapControllerInstallationToSeed(_ context.Context, obj clie
 
 // MapControllerDeploymentToAllSeeds returns reconcile.Request objects for all seeds in case there is at least one
 // ControllerRegistration which references the ControllerDeployment.
-func (r *Reconciler) MapControllerDeploymentToAllSeeds(log logr.Logger) handler.MapFunc {
+func MapControllerDeploymentToAllSeeds(log logr.Logger, r *controllerinstallation.Reconciler) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		controllerDeployment, ok := obj.(*gardencorev1.ControllerDeployment)
 		if !ok {
@@ -195,7 +197,7 @@ func (r *Reconciler) MapControllerDeploymentToAllSeeds(log logr.Logger) handler.
 
 			for _, ref := range controllerReg.Spec.Deployment.DeploymentRefs {
 				if ref.Name == controllerDeployment.Name {
-					return r.MapToAllSeeds(log)(ctx, nil)
+					return MapToAllSeeds(log, r)(ctx, nil)
 				}
 			}
 		}

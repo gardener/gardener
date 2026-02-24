@@ -43,10 +43,8 @@ func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.Contr
 		return fmt.Errorf("failed adding cluster finalizer reconciler for Shoots: %w", err)
 	}
 
-	if err := (&seed.Reconciler{
-		Config: *cfg.Controllers.ControllerRegistration,
-	}).AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding Seed reconciler: %w", err)
+	if err := seed.AddToManager(mgr, *cfg.Controllers.ControllerRegistration); err != nil {
+		return fmt.Errorf("failed adding ControllerInstallation Seed reconciler: %w", err)
 	}
 
 	if err := (&controllerregistrationfinalizer.Reconciler{}).AddToManager(mgr); err != nil {
