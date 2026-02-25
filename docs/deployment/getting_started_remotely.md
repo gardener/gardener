@@ -15,7 +15,7 @@ This guide leverages `gardener-operator` to manage the Gardener components.
 ## Prerequisites
 
 - Make sure that you have access to a Kubernetes cluster you can use as garden runtime and soil cluster in this setup.
-    - The cluster requires at least 16 CPUs in total to run one shoot cluster
+    - In many cases the resource utilization of the cluster will be best when you use machines with 1:4 CPU to memory ratio. For example, machines with 4 vCPUs and 16 GB of memory could be a good choice for the cluster. 
     - Your cluster must use one single CPU architecture since Skaffold does not build multi-arch images. The CPU architecture of your cluster could still be different from the CPU architecture of your local machine though.
     - You could use any Kubernetes cluster for your garden runtime and soil cluster. However, using a Gardener shoot cluster simplifies some configuration steps.
     - When bootstrapping `gardenlet` to the cluster, your new soil will have the same provider type as the shoot cluster you use - an AWS shoot will become an AWS soil, a GCP shoot will become a GCP soil, etc. (only relevant when using a Gardener shoot as seed).
