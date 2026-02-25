@@ -144,6 +144,7 @@ type ControlPlane struct {
 	ResourceManager          resourcemanager.Interface
 	Vali                     vali.Interface
 	OtelCollector            collector.Interface
+	VictoriaLogs             component.DeployWaiter
 	VerticalPodAutoscaler    vpa.Interface
 	VPNSeedServer            vpnseedserver.Interface
 }

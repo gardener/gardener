@@ -128,6 +128,8 @@ build:
             - pkg/component/observability/logging/vali
             - pkg/component/observability/logging/vali/constants
             - pkg/component/observability/logging/victoria/operator
+            - pkg/component/observability/logging/victorialogs
+            - pkg/component/observability/logging/victorialogs/constants
             - pkg/component/observability/monitoring/alertmanager
             - pkg/component/observability/monitoring/blackboxexporter
             - pkg/component/observability/monitoring/blackboxexporter/garden
@@ -974,6 +976,7 @@ deploy:
           config.featureGates.IstioTLSTermination: true
           config.featureGates.VPAInPlaceUpdates: true
           config.featureGates.PrometheusHealthChecks: true
+          config.featureGates.VictoriaLogsBackend: true
         createNamespace: true
         wait: true
 profiles:

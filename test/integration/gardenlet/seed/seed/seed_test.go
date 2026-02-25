@@ -48,6 +48,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
 	opentelemetryoperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -143,6 +144,9 @@ var _ = Describe("Seed controller tests", func() {
 				Logging: &gardenletconfigv1alpha1.Logging{
 					Enabled: ptr.To(true),
 					Vali: &gardenletconfigv1alpha1.Vali{
+						Enabled: ptr.To(true),
+					},
+					VictoriaLogs: &gardenletconfigv1alpha1.VictoriaLogs{
 						Enabled: ptr.To(true),
 					},
 				},
@@ -727,6 +731,10 @@ var _ = Describe("Seed controller tests", func() {
 						"opentelemetry-operator",
 						"opentelemetry-collector",
 					)
+					// Add victoria-logs when VictoriaLogsBackend feature gate is enabled
+					if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
+						expectedManagedResources = append(expectedManagedResources, "victoria-logs")
+					}
 				} else {
 					expectedManagedResources = append(expectedManagedResources,
 						"nginx-ingress-seed",
@@ -890,6 +898,7 @@ var _ = Describe("Seed controller tests", func() {
 					test(true)
 				})
 			})
+
 		})
 	})
 })

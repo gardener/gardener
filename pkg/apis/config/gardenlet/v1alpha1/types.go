@@ -513,6 +513,25 @@ type GardenVali struct {
 	Storage *resource.Quantity `json:"storage,omitempty" yaml:"storage,omitempty"`
 }
 
+// VictoriaLogs contains configuration for the VictoriaLogs.
+type VictoriaLogs struct {
+	// Enabled is used to enable or disable VictoriaLogs.
+	// If not set, by default VictoriaLogs is enabled when the VictoriaLogsBackend feature gate is enabled.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	// Garden contains configuration for VictoriaLogs in garden namespace.
+	// +optional
+	Garden *GardenVictoriaLogs `json:"garden,omitempty" yaml:"garden,omitempty"`
+}
+
+// GardenVictoriaLogs contains configuration for VictoriaLogs in garden namespace.
+type GardenVictoriaLogs struct {
+	// Storage is the disk storage capacity of VictoriaLogs.
+	// Defaults to 100Gi.
+	// +optional
+	Storage *resource.Quantity `json:"storage,omitempty" yaml:"storage,omitempty"`
+}
+
 // ShootNodeLogging contains configuration for the shoot node logging.
 type ShootNodeLogging struct {
 	// ShootPurposes determines which shoots can have node logging by their purpose
@@ -535,6 +554,9 @@ type Logging struct {
 	// Vali contains configuration for the Vali
 	// +optional
 	Vali *Vali `json:"vali,omitempty" yaml:"vali,omitempty"`
+	// VictoriaLogs contains configuration for VictoriaLogs
+	// +optional
+	VictoriaLogs *VictoriaLogs `json:"victoriaLogs,omitempty" yaml:"victoriaLogs,omitempty"`
 	// ShootNodeLogging contains configurations for the shoot node logging
 	// +optional
 	ShootNodeLogging *ShootNodeLogging `json:"shootNodeLogging,omitempty" yaml:"shootNodeLogging,omitempty"`
@@ -740,6 +762,9 @@ var DefaultControllerSyncPeriod = metav1.Duration{Duration: time.Minute}
 
 // DefaultCentralValiStorage is a default value for garden/vali's storage.
 var DefaultCentralValiStorage = resource.MustParse("100Gi")
+
+// DefaultCentralVictoriaLogsStorage is a default value for garden/victoria-logs's storage.
+var DefaultCentralVictoriaLogsStorage = resource.MustParse("100Gi")
 
 // NodeToleration contains information about node toleration options.
 type NodeToleration struct {

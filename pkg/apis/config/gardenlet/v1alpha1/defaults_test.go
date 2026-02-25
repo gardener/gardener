@@ -638,6 +638,10 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Logging.Vali.Enabled).To(PointTo(Equal(false)))
 			Expect(obj.Logging.Vali.Garden).NotTo(BeNil())
 			Expect(obj.Logging.Vali.Garden.Storage).To(PointTo(Equal(resource.MustParse("100Gi"))))
+			Expect(obj.Logging.VictoriaLogs).NotTo(BeNil())
+			Expect(obj.Logging.VictoriaLogs.Enabled).To(PointTo(Equal(false)))
+			Expect(obj.Logging.VictoriaLogs.Garden).NotTo(BeNil())
+			Expect(obj.Logging.VictoriaLogs.Garden.Storage).To(PointTo(Equal(resource.MustParse("100Gi"))))
 			Expect(obj.Logging.ShootEventLogging).NotTo(BeNil())
 			Expect(obj.Logging.ShootEventLogging.Enabled).To(PointTo(Equal(false)))
 		})
@@ -650,6 +654,12 @@ var _ = Describe("Defaults", func() {
 					Enabled: ptr.To(false),
 					Garden: &GardenVali{
 						Storage: &gardenValiStorage,
+					},
+				},
+				VictoriaLogs: &VictoriaLogs{
+					Enabled: ptr.To(true),
+					Garden: &GardenVictoriaLogs{
+						Storage: &DefaultCentralVictoriaLogsStorage,
 					},
 				},
 				ShootNodeLogging: &ShootNodeLogging{

@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 // SeedNameFromSeedConfig returns an empty string if the given seed config is nil, or the
@@ -45,6 +46,16 @@ func IsValiEnabled(c *gardenletconfigv1alpha1.GardenletConfiguration) bool {
 		return *c.Logging.Vali.Enabled
 	}
 	return true
+}
+
+// IsVictoriaLogsEnabled returns true if victoria-logs is enabled
+func IsVictoriaLogsEnabled(c *gardenletconfigv1alpha1.GardenletConfiguration) bool {
+	enabled := true
+	if c != nil && c.Logging != nil &&
+		c.Logging.VictoriaLogs != nil && c.Logging.VictoriaLogs.Enabled != nil {
+		enabled = *c.Logging.VictoriaLogs.Enabled
+	}
+	return enabled && features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend)
 }
 
 // IsEventLoggingEnabled returns true if the event-logging is enabled.

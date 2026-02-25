@@ -56,6 +56,16 @@ func (b *Botanist) DeployLogging(ctx context.Context) error {
 		}
 	}
 
+	if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) && gardenlethelper.IsVictoriaLogsEnabled(b.Config) {
+		if err := b.Shoot.Components.ControlPlane.VictoriaLogs.Deploy(ctx); err != nil {
+			return fmt.Errorf("deploying VictoriaLogs failed: %w", err)
+		}
+	} else {
+		if err := b.Shoot.Components.ControlPlane.VictoriaLogs.Destroy(ctx); err != nil {
+			return fmt.Errorf("destroying VictoriaLogs failed: %w", err)
+		}
+	}
+
 	// check if vali is enabled in gardenlet config, default is true
 	if !gardenlethelper.IsValiEnabled(b.Config) {
 		if err = b.Shoot.Components.ControlPlane.Vali.Destroy(ctx); err != nil {
@@ -76,13 +86,19 @@ func (b *Botanist) DestroySeedLogging(ctx context.Context) error {
 	if err := b.Shoot.Components.ControlPlane.OtelCollector.Destroy(ctx); err != nil {
 		return err
 	}
+	if err := b.Shoot.Components.ControlPlane.VictoriaLogs.Destroy(ctx); err != nil {
+		return err
+	}
 
 	return b.Shoot.Components.ControlPlane.Vali.Destroy(ctx)
 }
 
 func (b *Botanist) isShootNodeLoggingEnabled() bool {
+	isValiEnabled := gardenlethelper.IsValiEnabled(b.Config)
+	isVictoriaLogsEnabled := gardenlethelper.IsVictoriaLogsEnabled(b.Config)
+	isLoggingComponentEnabled := isValiEnabled || isVictoriaLogsEnabled
 	return b.Shoot != nil && !b.Shoot.IsWorkerless && b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) &&
-		gardenlethelper.IsValiEnabled(b.Config) && b.Config != nil &&
+		isLoggingComponentEnabled && b.Config != nil &&
 		b.Config.Logging != nil && b.Config.Logging.ShootNodeLogging != nil &&
 		slices.Contains(b.Config.Logging.ShootNodeLogging.ShootPurposes, b.Shoot.Purpose)
 }
@@ -152,7 +168,21 @@ func (b *Botanist) DefaultOtelCollector() (collector.Interface, error) {
 			ValiHost:                b.ComputeValiHost(),
 			ClusterType:             component.ClusterTypeShoot,
 			IsGardenCluster:         false,
+			VictoriaLogsBackend:     features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
 		},
 		b.SecretsManager,
 	), nil
+}
+
+// DefaultVictoriaLogs returns a deployer for VictoriaLogs.
+func (b *Botanist) DefaultVictoriaLogs() (component.DeployWaiter, error) {
+	return shared.NewVictoriaLogs(
+		b.SeedClientSet.Client(),
+		b.Shoot.ControlPlaneNamespace,
+		component.ClusterTypeShoot,
+		b.Shoot.GetReplicas(1),
+		v1beta1constants.PriorityClassNameShootControlPlane100,
+		nil,
+		false,
+	)
 }
