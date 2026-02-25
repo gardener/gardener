@@ -1410,11 +1410,7 @@ func validateShootWorkerLimits(channel chan error, shoot *gardencorev1beta1.Shoo
 
 	for _, worker := range shoot.Spec.Provider.Workers {
 		totalMinimum += worker.Minimum
-		if worker.Maximum > maxNodesTotal {
-			channel <- fmt.Errorf("the maximum node count of worker pool %q in shoot \"%s/%s\" exceeds the limit of %d total nodes configured in the cloud profile", worker.Name, shoot.Namespace, shoot.Name, maxNodesTotal)
-		}
 	}
-
 	if totalMinimum > maxNodesTotal {
 		channel <- fmt.Errorf("the total minimum node count of all worker pools of shoot \"%s/%s\" must not exceed the limit of %d total nodes configured in the cloud profile", shoot.Namespace, shoot.Name, maxNodesTotal)
 	}
