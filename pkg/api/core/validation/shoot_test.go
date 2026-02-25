@@ -7803,30 +7803,30 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
-			It("should not fail for duplicate displayName (grouping)", func() {
+			It("should not fail for duplicate application (grouping)", func() {
 				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
-					{Name: "a", URL: "https://foo.bar", DisplayName: ptr.To("display")},
-					{Name: "b", URL: "https://bar.foo", DisplayName: ptr.To("display")},
+					{Name: "a", URL: "https://foo.bar", Application: ptr.To("app")},
+					{Name: "b", URL: "https://bar.foo", Application: ptr.To("app")},
 				}
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
 				Expect(errorList).To(BeEmpty())
 			})
 
-			It("should succeed with unique displayNames", func() {
+			It("should succeed with unique applications", func() {
 				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
-					{Name: "a", URL: "https://foo.bar", DisplayName: ptr.To("display-a")},
-					{Name: "b", URL: "https://bar.foo", DisplayName: ptr.To("display-b")},
+					{Name: "a", URL: "https://foo.bar", Application: ptr.To("app-a")},
+					{Name: "b", URL: "https://bar.foo", Application: ptr.To("app-b")},
 				}
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
 				Expect(errorList).To(BeEmpty())
 			})
 
-			It("should succeed with empty displayNames", func() {
+			It("should succeed with empty applications", func() {
 				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
-					{Name: "a", URL: "https://foo.bar", DisplayName: nil},
-					{Name: "b", URL: "https://bar.foo", DisplayName: nil},
+					{Name: "a", URL: "https://foo.bar", Application: nil},
+					{Name: "b", URL: "https://bar.foo", Application: nil},
 				}
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
