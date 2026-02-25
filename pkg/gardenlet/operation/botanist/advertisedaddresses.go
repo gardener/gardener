@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	networkingv1 "k8s.io/api/networking/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -121,6 +122,10 @@ func (b *Botanist) GetIngressAdvertisedEndpoints(ctx context.Context) ([]gardenc
 	// endpoints only.
 	for _, ingress := range ingressList.Items {
 		displayName := ingress.Labels[v1beta1constants.LabelShootEndpointDisplayName]
+		var displayNamePtr *string
+		if displayName != "" {
+			displayNamePtr = ptr.To(displayName)
+		}
 		for tlsIdx, tlsItem := range ingress.Spec.TLS {
 			for hostIdx, hostItem := range tlsItem.Hosts {
 				if strings.Contains(hostItem, "*") {
@@ -129,7 +134,7 @@ func (b *Botanist) GetIngressAdvertisedEndpoints(ctx context.Context) ([]gardenc
 				result = append(result, gardencorev1beta1.ShootAdvertisedAddress{
 					Name:        fmt.Sprintf("ingress/%s/%d/%d", ingress.Name, tlsIdx, hostIdx),
 					URL:         fmt.Sprintf("https://%s", hostItem),
-					DisplayName: displayName,
+					DisplayName: displayNamePtr,
 				})
 			}
 		}

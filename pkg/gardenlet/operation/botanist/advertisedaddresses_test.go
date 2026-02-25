@@ -346,12 +346,12 @@ var _ = Describe("AdvertisedAddresses", func() {
 				{
 					Name:        "ingress/ingress-1/0/0",
 					URL:         "https://foo.example.org",
-					DisplayName: "Dashboard",
+					DisplayName: ptr.To("Dashboard"),
 				},
 				{
 					Name:        "ingress/ingress-2/0/0",
 					URL:         "https://bar.example.org",
-					DisplayName: "Monitoring",
+					DisplayName: ptr.To("Monitoring"),
 				},
 			}))
 		})
