@@ -274,6 +274,9 @@ func (a *Actuator) getPreCheckFuncObject(ctx context.Context, request types.Name
 		}
 		return garden, nil
 	}
+	if !classesHaveClusterObject(a.extensionClasses) {
+		return nil, nil
+	}
 	cluster, err := extensionscontroller.GetCluster(ctx, a.sourceClient, request.Namespace)
 	if err != nil {
 		return nil, err
