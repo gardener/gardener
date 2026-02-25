@@ -507,7 +507,7 @@ import custom/*.server
 									corev1.ResourceMemory: resource.MustParse("15Mi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("1500Mi"),
+									corev1.ResourceMemory: resource.MustParse("1000Mi"),
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
