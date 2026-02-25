@@ -1561,7 +1561,21 @@ Kubernetes core/v1.ObjectReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>CredentialsRef is a reference to the cloud provider credentials.</p>
+<p>CredentialsRef is a reference to the cloud provider credentials.
+It is only set for shoots with managed infrastructure (i.e., if <code>Shoot.spec.{credentials,secret}BindingName</code> is set).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>port</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>Port is the port number that should be exposed by the exposure mechanism.
+It is the port where the API server listens on the control plane nodes and the port on which the load balancer (or
+any other exposure mechanism) should listen on.</p>
 </td>
 </tr>
 <tr>
@@ -2650,17 +2664,6 @@ string
 </td>
 <td>
 <p>Addresses is a list of addresses of type NodeAddress to expose.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>port</code></br>
-<em>
-int32
-</em>
-</td>
-<td>
-<p>Port of the API server.</p>
 </td>
 </tr>
 </tbody>
@@ -4774,7 +4777,21 @@ Kubernetes core/v1.ObjectReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>CredentialsRef is a reference to the cloud provider credentials.</p>
+<p>CredentialsRef is a reference to the cloud provider credentials.
+It is only set for shoots with managed infrastructure (i.e., if <code>Shoot.spec.{credentials,secret}BindingName</code> is set).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>port</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>Port is the port number that should be exposed by the exposure mechanism.
+It is the port where the API server listens on the control plane nodes and the port on which the load balancer (or
+any other exposure mechanism) should listen on.</p>
 </td>
 </tr>
 <tr>

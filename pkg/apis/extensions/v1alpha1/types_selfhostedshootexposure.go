@@ -65,8 +65,13 @@ type SelfHostedShootExposureSpec struct {
 	DefaultSpec `json:",inline"`
 
 	// CredentialsRef is a reference to the cloud provider credentials.
+	// It is only set for shoots with managed infrastructure (i.e., if `Shoot.spec.{credentials,secret}BindingName` is set).
 	// +optional
 	CredentialsRef *corev1.ObjectReference `json:"credentialsRef,omitempty"`
+	// Port is the port number that should be exposed by the exposure mechanism.
+	// It is the port where the API server listens on the control plane nodes and the port on which the load balancer (or
+	// any other exposure mechanism) should listen on.
+	Port int32 `json:"port"`
 	// Endpoints contains a list of healthy control plane nodes to expose.
 	Endpoints []ControlPlaneEndpoint `json:"endpoints"`
 }
@@ -77,8 +82,6 @@ type ControlPlaneEndpoint struct {
 	NodeName string `json:"nodeName"`
 	// Addresses is a list of addresses of type NodeAddress to expose.
 	Addresses []corev1.NodeAddress `json:"addresses"`
-	// Port of the API server.
-	Port int32 `json:"port"`
 }
 
 // SelfHostedShootExposureStatus is the status for an SelfHostedShootExposure resource.

@@ -11,9 +11,12 @@ This allows Gardener to be agnostic to the underlying exposure implementation.
 
 The `SelfHostedShootExposure` resource is reconciled by an extension controller. The controller is responsible for:
 
-1.  Reading the endpoints listed in `.spec.endpoints`. These endpoints represent the nodes where the shoot control plane components (specifically the API server) are running.
-2.  Provisioning a load balancer (or similar mechanism) that routes traffic to these endpoints on the specified port.
-3.  Updating the `.status.ingress` field with the public address (IP or hostname) of the provisioned load balancer.
+1. Reading the endpoints listed in `.spec.endpoints`. These endpoints represent the nodes where the shoot control plane components (specifically the API server) are running. The API server listens on the specified `.spec.port` on these nodes.
+2. Provisioning a load balancer (or similar mechanism) that accepts traffic on `.spec.port` and routes traffic to the listed control plane endpoints.
+3. Updating the `.status.ingress` field with the public address (IP or hostname) of the provisioned load balancer.
+
+The `.spec.credentialsRef` field references the cloudprovider credentials in case the self-hosted shoot has managed infrastructure (i.e., if `Shoot.spec.{credentials,secret}BindingName` is set).
+For shoots with unmanaged infrastructure, `.spec.credentialsRef` is unset.
 
 ### Example
 
@@ -24,20 +27,24 @@ apiVersion: extensions.gardener.cloud/v1alpha1
 kind: SelfHostedShootExposure
 metadata:
   name: self-hosted-exposure
-  namespace: shoot--my-project--my-shoot
+  namespace: kube-system
 spec:
   type: stackit
+  credentialsRef:
+    apiVersion: v1
+    kind: Secret
+    namespace: kube-system
+    name: cloudprovider
+  port: 443
   endpoints:
   - nodeName: node-1
     addresses:
     - type: InternalIP
       address: 10.0.1.10
-    port: 443
   - nodeName: node-2
     addresses:
     - type: InternalIP
       address: 10.0.1.11
-    port: 443
 status:
   ingress:
   - ip: 203.0.113.10

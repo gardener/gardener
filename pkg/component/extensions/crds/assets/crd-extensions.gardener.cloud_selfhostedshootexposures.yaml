@@ -75,7 +75,9 @@ spec:
                 - message: Value is immutable
                   rule: self == oldSelf
               credentialsRef:
-                description: CredentialsRef is a reference to the cloud provider credentials.
+                description: |-
+                  CredentialsRef is a reference to the cloud provider credentials.
+                  It is only set for shoots with managed infrastructure (i.e., if `Shoot.spec.{credentials,secret}BindingName` is set).
                 properties:
                   apiVersion:
                     description: API version of the referent.
@@ -146,16 +148,18 @@ spec:
                     nodeName:
                       description: NodeName is the name of the node to expose.
                       type: string
-                    port:
-                      description: Port of the API server.
-                      format: int32
-                      type: integer
                   required:
                   - addresses
                   - nodeName
-                  - port
                   type: object
                 type: array
+              port:
+                description: |-
+                  Port is the port number that should be exposed by the exposure mechanism.
+                  It is the port where the API server listens on the control plane nodes and the port on which the load balancer (or
+                  any other exposure mechanism) should listen on.
+                format: int32
+                type: integer
               providerConfig:
                 description: ProviderConfig is the provider specific configuration.
                 type: object
@@ -165,6 +169,7 @@ spec:
                 type: string
             required:
             - endpoints
+            - port
             - type
             type: object
           status:

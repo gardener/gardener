@@ -37,10 +37,10 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 					Namespace:  "test-namespace",
 					Name:       "test",
 				},
+				Port: 443,
 				Endpoints: []extensionsv1alpha1.ControlPlaneEndpoint{
 					{
 						NodeName: "test-node",
-						Port:     443,
 						Addresses: []corev1.NodeAddress{
 							{
 								Type:    corev1.NodeInternalIP,
@@ -67,6 +67,9 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.type"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.port"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.endpoints"),
 			}))))
@@ -74,6 +77,18 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 
 		It("should allow valid selfhostedshootexposure resources", func() {
 			Expect(ValidateSelfHostedShootExposure(exposure)).To(BeEmpty())
+		})
+
+		It("should forbid invalid ports", func() {
+			e := prepareSelfHostedShootExposureForUpdate(exposure)
+			e.Spec.Port = 70000
+
+			errorList := ValidateSelfHostedShootExposure(e)
+
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.port"),
+			}))))
 		})
 
 		It("should forbid endpoints with missing nodeName", func() {
@@ -85,18 +100,6 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.endpoints[0].nodeName"),
-			}))))
-		})
-
-		It("should forbid endpoints with invalid port", func() {
-			e := prepareSelfHostedShootExposureForUpdate(exposure)
-			e.Spec.Endpoints[0].Port = 70000
-
-			errorList := ValidateSelfHostedShootExposure(e)
-
-			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.endpoints[0].port"),
 			}))))
 		})
 
@@ -313,7 +316,6 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 			newSelfHostedShootExposure.Spec.Endpoints = []extensionsv1alpha1.ControlPlaneEndpoint{
 				{
 					NodeName: "update-node",
-					Port:     443,
 					Addresses: []corev1.NodeAddress{
 						{
 							Type:    corev1.NodeInternalIP,

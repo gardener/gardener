@@ -52,6 +52,10 @@ func ValidateSelfHostedShootExposureSpec(spec *extensionsv1alpha1.SelfHostedShoo
 		allErrs = append(allErrs, validateCredentialsRef(*spec.CredentialsRef, namespace, fldPath.Child("credentialsRef"))...)
 	}
 
+	if errs := utilvalidation.IsValidPortNum(int(spec.Port)); len(errs) > 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("port"), spec.Port, strings.Join(errs, ",")))
+	}
+
 	if len(spec.Endpoints) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("endpoints"), "field is required"))
 	}
@@ -61,10 +65,6 @@ func ValidateSelfHostedShootExposureSpec(spec *extensionsv1alpha1.SelfHostedShoo
 
 		if len(ep.NodeName) == 0 {
 			allErrs = append(allErrs, field.Required(epPath.Child("nodeName"), "field is required"))
-		}
-
-		if errs := utilvalidation.IsValidPortNum(int(ep.Port)); len(errs) > 0 {
-			allErrs = append(allErrs, field.Invalid(epPath.Child("port"), ep.Port, strings.Join(errs, ",")))
 		}
 
 		for j, addr := range ep.Addresses {
