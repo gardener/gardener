@@ -7210,7 +7210,7 @@ func Convert_core_Shoot_To_v1beta1_Shoot(in *core.Shoot, out *Shoot, s conversio
 func autoConvert_v1beta1_ShootAdvertisedAddress_To_core_ShootAdvertisedAddress(in *ShootAdvertisedAddress, out *core.ShootAdvertisedAddress, s conversion.Scope) error {
 	out.Name = in.Name
 	out.URL = in.URL
-	out.DisplayName = (*string)(unsafe.Pointer(in.DisplayName))
+	out.Application = (*string)(unsafe.Pointer(in.Application))
 	return nil
 }
 
@@ -7222,7 +7222,7 @@ func Convert_v1beta1_ShootAdvertisedAddress_To_core_ShootAdvertisedAddress(in *S
 func autoConvert_core_ShootAdvertisedAddress_To_v1beta1_ShootAdvertisedAddress(in *core.ShootAdvertisedAddress, out *ShootAdvertisedAddress, s conversion.Scope) error {
 	out.Name = in.Name
 	out.URL = in.URL
-	out.DisplayName = (*string)(unsafe.Pointer(in.DisplayName))
+	out.Application = (*string)(unsafe.Pointer(in.Application))
 	return nil
 }
 
