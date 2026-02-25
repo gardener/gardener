@@ -3385,7 +3385,7 @@ message ShootAdvertisedAddress {
 
   // DisplayName is a human-readable name for this address. Used by UI clients.
   // +optional
-  optional string displayname = 3;
+  optional string displayName = 3;
 }
 
 // ShootCredentials contains information about the shoot credentials.

@@ -9748,7 +9748,7 @@ func schema_pkg_apis_core_v1beta1_ShootAdvertisedAddress(ref common.ReferenceCal
 							Format:      "",
 						},
 					},
-					"displayname": {
+					"display-name": {
 						SchemaProps: spec.SchemaProps{
 							Description: "DisplayName is a human-readable name for this address. Used by UI clients.",
 							Type:        []string{"string"},
