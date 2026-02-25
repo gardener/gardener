@@ -13517,14 +13517,14 @@ string
 </tr>
 <tr>
 <td>
-<code>display-name</code></br>
+<code>application</code></br>
 <em>
 string
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>DisplayName is a human-readable name for this address. Used by UI clients.</p>
+<p>Application is the name of the application this address belongs to. Used by UI clients.</p>
 </td>
 </tr>
 </tbody>
