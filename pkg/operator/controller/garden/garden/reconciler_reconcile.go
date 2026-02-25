@@ -667,6 +667,11 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(generateObservabilityIngressPassword),
 		})
 		_ = g.Add(flow.Task{
+			Name:         "Deploying ext-authz-server",
+			Fn:           c.extAuthzServer.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
+		})
+		_ = g.Add(flow.Task{
 			Name: "Deploying perses-operator",
 			Fn:   c.persesOperator.Deploy,
 		})

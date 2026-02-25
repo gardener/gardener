@@ -64,6 +64,7 @@ import (
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
+	"github.com/gardener/gardener/pkg/component/networking/extauthzserver"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/component/observability/logging"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
@@ -110,6 +111,7 @@ type components struct {
 	etcdDruid               component.DeployWaiter
 	istio                   istio.Interface
 	nginxIngressController  component.DeployWaiter
+	extAuthzServer          component.DeployWaiter
 
 	extensions extension.Interface
 
@@ -227,6 +229,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.nginxIngressController, err = r.newNginxIngressController(garden, c.istio.GetValues().IngressGateway)
+	if err != nil {
+		return
+	}
+	c.extAuthzServer, err = r.newExtAuthzServer(secretsManager)
 	if err != nil {
 		return
 	}
@@ -1087,6 +1093,18 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, 
 		ingressDomains,
 		ingressGatewayValues[0].Labels,
 		false,
+	)
+}
+
+func (r *Reconciler) newExtAuthzServer(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	return sharedcomponent.NewExtAuthzServer(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		secretsManager,
+		true,
+		1,
+		v1beta1constants.PriorityClassNameGardenSystem100,
+		true,
 	)
 }
 
