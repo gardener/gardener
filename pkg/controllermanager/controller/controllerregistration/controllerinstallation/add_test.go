@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	. "github.com/gardener/gardener/pkg/controller/controllerinstallation"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerinstallation"
 )
 
 var _ = Describe("Add", func() {

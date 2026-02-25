@@ -312,6 +312,7 @@ build:
             - pkg/controllermanager/controller/controllerregistration/clusterfinalizer
             - pkg/controllermanager/controller/controllerregistration/controllerinstallation
             - pkg/controllermanager/controller/controllerregistration/controllerinstallation/seed
+            - pkg/controllermanager/controller/controllerregistration/controllerinstallation/shoot
             - pkg/controllermanager/controller/controllerregistration/controllerregistrationfinalizer
             - pkg/controllermanager/controller/controllerregistration/extensionclusterrole
             - pkg/controllermanager/controller/credentialsbinding
