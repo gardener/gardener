@@ -185,7 +185,14 @@ func ensureOtelColPipelineConfiguration(collector *otelv1beta1.OpenTelemetryColl
 	collector.Spec.Config.Processors = &otelv1beta1.AnyConfig{
 		Object: map[string]any{
 			"batch": map[string]any{
-				"timeout": "10s",
+				"send_batch_size":     2000,
+				"send_batch_max_size": 4000,
+				"timeout":             "10s",
+			},
+			"memory_limiter": map[string]any{
+				"check_interval":  "1s",
+				"limit_mib":       3000,
+				"spike_limit_mib": 600,
 			},
 			"resource/vali": map[string]any{
 				"attributes": []any{
@@ -217,6 +224,15 @@ func ensureOtelColPipelineConfiguration(collector *otelv1beta1.OpenTelemetryColl
 				"exporter": false,
 				"job":      false,
 			},
+			"sending_queue": map[string]any{
+				"queue_size": 16777216,
+				"sizer":      "bytes",
+				"batch": map[string]any{
+					"flush_timeout": "1s",
+					"max_size":      4194304,
+					"sizer":         "bytes",
+				},
+			},
 		},
 		"debug/logs": map[string]any{
 			"verbosity": "basic",
@@ -226,7 +242,7 @@ func ensureOtelColPipelineConfiguration(collector *otelv1beta1.OpenTelemetryColl
 	collector.Spec.Config.Service.Pipelines = map[string]*otelv1beta1.Pipeline{
 		"logs/vali": {
 			Receivers:  []string{"otlp"},
-			Processors: []string{"resource/vali", "attributes/vali", "batch"},
+			Processors: []string{"memory_limiter", "resource/vali", "attributes/vali", "batch"},
 			Exporters:  []string{"loki", "debug/logs"},
 		},
 	}

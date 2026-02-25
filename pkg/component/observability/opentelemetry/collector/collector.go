@@ -368,7 +368,8 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 				Processors: &otelv1beta1.AnyConfig{
 					Object: map[string]any{
 						"batch": map[string]any{
-							"send_batch_max_size": 8192,
+							"send_batch_size":     2000,
+							"send_batch_max_size": 4000,
 							"timeout":             "10s",
 						},
 						"memory_limiter": map[string]any{
@@ -454,6 +455,15 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 								"exporter": false,
 								"job":      false,
 							},
+							"sending_queue": map[string]any{
+								"queue_size": 16777216,
+								"sizer":      "bytes",
+								"batch": map[string]any{
+									"flush_timeout": "1s",
+									"max_size":      4194304,
+									"sizer":         "bytes",
+								},
+							},
 						},
 						"debug/logs": map[string]any{
 							"verbosity": "basic",
@@ -496,10 +506,10 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 								"otlp",
 							},
 							Processors: []string{
-								"batch",
 								"memory_limiter",
 								"resource/vali",
 								"attributes/vali",
+								"batch",
 							},
 						},
 					},

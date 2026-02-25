@@ -372,7 +372,8 @@ var _ = Describe("OpenTelemetry Collector", func() {
 								// When fetching the object from the apiserver, since there's no type information regarding this field.
 								// the deserializer will interpret it as a `float64`. By setting the value to `float64` here, we ensure that
 								// when this object is compared to the fetched one, the types match.
-								"send_batch_max_size": float64(8192),
+								"send_batch_size":     float64(2000),
+								"send_batch_max_size": float64(4000),
 								"timeout":             "10s",
 							},
 							"memory_limiter": map[string]any{
@@ -458,6 +459,15 @@ var _ = Describe("OpenTelemetry Collector", func() {
 									"exporter": false,
 									"job":      false,
 								},
+								"sending_queue": map[string]any{
+									"queue_size": float64(16777216),
+									"sizer":      "bytes",
+									"batch": map[string]any{
+										"flush_timeout": "1s",
+										"max_size":      float64(4194304),
+										"sizer":         "bytes",
+									},
+								},
 							},
 							"debug/logs": map[string]any{
 								"verbosity": "basic",
@@ -499,7 +509,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 							"logs/vali": {
 								Exporters:  []string{"loki", "debug/logs"},
 								Receivers:  []string{"otlp"},
-								Processors: []string{"batch", "memory_limiter", "resource/vali", "attributes/vali"},
+								Processors: []string{"memory_limiter", "resource/vali", "attributes/vali", "batch"},
 							},
 						},
 					},
