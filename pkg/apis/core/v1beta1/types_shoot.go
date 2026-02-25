@@ -485,9 +485,9 @@ type ShootAdvertisedAddress struct {
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// The URL of the API Server. e.g. https://api.foo.bar or https://1.2.3.4
 	URL string `json:"url" protobuf:"bytes,2,opt,name=url"`
-	// DisplayName is a human-readable name for this address. Used by UI clients.
+	// Application is the name of the application this address belongs to. Used by UI clients.
 	// +optional
-	DisplayName *string `json:"display-name,omitempty" protobuf:"bytes,3,opt,name=displayName"`
+	Application *string `json:"application,omitempty" protobuf:"bytes,3,opt,name=application"`
 }
 
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.
