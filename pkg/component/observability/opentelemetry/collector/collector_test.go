@@ -356,7 +356,18 @@ var _ = Describe("OpenTelemetry Collector", func() {
 					Processors: &otelv1beta1.AnyConfig{
 						Object: map[string]any{
 							"batch": map[string]any{
-								"timeout": "10s",
+								// Field needs to be cast to `float64` due to an issue with serialization during tests.
+								// When fetching the object from the apiserver, since there's no type information regarding this field.
+								// the deserializer will interpret it as a `float64`. By setting the value to `float64` here, we ensure that
+								// when this object is compared to the fetched one, the types match.
+								"send_batch_size":     float64(2000),
+								"send_batch_max_size": float64(4000),
+								"timeout":             "10s",
+							},
+							"memory_limiter": map[string]any{
+								"check_interval":  "1s",
+								"limit_mib":       float64(3000),
+								"spike_limit_mib": float64(600),
 							},
 							"resource/vali": map[string]any{
 								"attributes": []any{
@@ -393,6 +404,15 @@ var _ = Describe("OpenTelemetry Collector", func() {
 						Object: map[string]any{
 							"loki": map[string]any{
 								"endpoint": lokiEndpoint,
+								"sending_queue": map[string]any{
+									"queue_size": float64(16777216),
+									"sizer":      "bytes",
+									"batch": map[string]any{
+										"flush_timeout": "1s",
+										"max_size":      float64(4194304),
+										"sizer":         "bytes",
+									},
+								},
 							},
 						},
 					},
@@ -428,7 +448,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 							"logs/vali": {
 								Exporters:  []string{"loki"},
 								Receivers:  []string{"otlp"},
-								Processors: []string{"resource/vali", "batch"},
+								Processors: []string{"memory_limiter", "resource/vali", "batch"},
 							},
 						},
 					},
