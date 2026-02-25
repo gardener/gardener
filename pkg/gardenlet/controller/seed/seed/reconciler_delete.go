@@ -182,6 +182,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name: "Destroying plutono",
 			Fn:   component.OpDestroyAndWait(c.plutono).Destroy,
 		})
+		destroyExtAuthzServer = g.Add(flow.Task{
+			Name: "Destroying external authorization server",
+			Fn:   component.OpDestroyAndWait(c.extAuthzServer).Destroy,
+		})
 
 		// When the seed is the garden cluster then these components are reconciled by the gardener-operator.
 		destroyEtcdDruid = g.Add(flow.Task{
@@ -284,6 +288,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyPrometheusOperator,
 			destroyOpenTelemetryOperator,
 			destroyPlutono,
+			destroyExtAuthzServer,
 			destroyKubeStateMetrics,
 			destroyEtcdDruid,
 			destroyVPA,
