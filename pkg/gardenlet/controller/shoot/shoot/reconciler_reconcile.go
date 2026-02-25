@@ -951,6 +951,11 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.DeployPlutono).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(deployPrometheus, deployAlertmanager),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying ext-authz-server",
+			Fn:           flow.TaskFn(botanist.DeployExtAuthzServer).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Dependencies: flow.NewTaskIDs(initializeShootClients),
+		})
 
 		hibernateControlPlane = g.Add(flow.Task{
 			Name:         "Hibernating control plane",
