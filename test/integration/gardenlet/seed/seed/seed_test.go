@@ -596,6 +596,24 @@ var _ = Describe("Seed controller tests", func() {
 					return test.ObjectNames(crdList)
 				}).WithTimeout(kubernetesutils.WaitTimeout).Should(ContainElements(crdsOnlyForSeedClusters))
 
+				patchPlutonoMRHealth := func(mrName string) {
+					// The seed controller waits for the plutono ManagedResource to be healthy, so
+					// let's fake this here.
+					By("Patch plutono deployment to report healthiness")
+					Eventually(func(g Gomega) {
+						mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: mrName, Namespace: testNamespace.Name}}
+						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
+
+						patch := client.MergeFrom(mr.DeepCopy())
+						mr.Status.ObservedGeneration = mr.Generation
+						mr.Status.Conditions = []gardencorev1beta1.Condition{
+							{Type: resourcesv1alpha1.ResourcesApplied, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.NewTime(time.Unix(10, 0)), LastUpdateTime: metav1.NewTime(time.Unix(10, 0))},
+							{Type: resourcesv1alpha1.ResourcesHealthy, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.NewTime(time.Unix(10, 0)), LastUpdateTime: metav1.NewTime(time.Unix(10, 0))},
+						}
+						g.Expect(testClient.Status().Patch(ctx, mr, patch)).To(Succeed())
+					}).Should(Succeed())
+				}
+
 				if !seedIsGarden {
 					By("Verify that VPA was created for gardenlet")
 					Eventually(func() error {
@@ -621,6 +639,8 @@ var _ = Describe("Seed controller tests", func() {
 						deployment.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}
 						g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
 					}).Should(Succeed())
+
+					patchPlutonoMRHealth("plutono")
 				} else {
 					By("Verify that the CRDs shared with the garden cluster have not been deployed (gardener-operator deploys them)")
 					Eventually(func(g Gomega) []string {
@@ -688,6 +708,8 @@ var _ = Describe("Seed controller tests", func() {
 					Eventually(func() error {
 						return testClient.Get(ctx, client.ObjectKey{Name: "gardenlet-vpa", Namespace: testNamespace.Name}, &vpaautoscalingv1.VerticalPodAutoscaler{})
 					}).WithTimeout(kubernetesutils.WaitTimeout).Should(Succeed())
+
+					patchPlutonoMRHealth("plutono-seed-config-only")
 				}
 
 				controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
@@ -707,6 +729,7 @@ var _ = Describe("Seed controller tests", func() {
 					"cluster-autoscaler",
 					"dependency-watchdog-weeder",
 					"dependency-watchdog-prober",
+					"ext-authz-server",
 					"system",
 					"prometheus-cache",
 					"prometheus-seed",

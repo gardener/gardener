@@ -592,6 +592,7 @@ spec:
 			"opentelemetry-operator",
 			"opentelemetry-collector",
 			"victoria-operator",
+			"virtual-garden-ext-authz-server",
 		))
 
 		By("Verify that the virtual garden control plane components have been deployed")
