@@ -13517,7 +13517,7 @@ string
 </tr>
 <tr>
 <td>
-<code>displayName</code></br>
+<code>displayname</code></br>
 <em>
 string
 </em>

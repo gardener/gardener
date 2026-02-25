@@ -11378,11 +11378,13 @@ func (m *ShootAdvertisedAddress) MarshalToSizedBuffer(dAtA []byte) (int, error) 
 	_ = i
 	var l int
 	_ = l
-	i -= len(m.DisplayName)
-	copy(dAtA[i:], m.DisplayName)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.DisplayName)))
-	i--
-	dAtA[i] = 0x1a
+	if m.DisplayName != nil {
+		i -= len(*m.DisplayName)
+		copy(dAtA[i:], *m.DisplayName)
+		i = encodeVarintGenerated(dAtA, i, uint64(len(*m.DisplayName)))
+		i--
+		dAtA[i] = 0x1a
+	}
 	i -= len(m.URL)
 	copy(dAtA[i:], m.URL)
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.URL)))
@@ -17611,8 +17613,10 @@ func (m *ShootAdvertisedAddress) Size() (n int) {
 	n += 1 + l + sovGenerated(uint64(l))
 	l = len(m.URL)
 	n += 1 + l + sovGenerated(uint64(l))
-	l = len(m.DisplayName)
-	n += 1 + l + sovGenerated(uint64(l))
+	if m.DisplayName != nil {
+		l = len(*m.DisplayName)
+		n += 1 + l + sovGenerated(uint64(l))
+	}
 	return n
 }
 
@@ -21263,7 +21267,7 @@ func (this *ShootAdvertisedAddress) String() string {
 	s := strings.Join([]string{`&ShootAdvertisedAddress{`,
 		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
 		`URL:` + fmt.Sprintf("%v", this.URL) + `,`,
-		`DisplayName:` + fmt.Sprintf("%v", this.DisplayName) + `,`,
+		`DisplayName:` + valueToStringGenerated(this.DisplayName) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -53948,7 +53952,8 @@ func (m *ShootAdvertisedAddress) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.DisplayName = string(dAtA[iNdEx:postIndex])
+			s := string(dAtA[iNdEx:postIndex])
+			m.DisplayName = &s
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
