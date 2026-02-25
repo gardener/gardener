@@ -1,6 +1,6 @@
 # Contract: `SelfHostedShootExposure` Resource
 
-The `SelfHostedShootExposure` resource is a concept introduced to support Self-Hosted Shoot Clusters introduced in [GEP36](https://github.com/gardener/gardener/blob/master/docs/proposals/36-self-hosted-shoot-exposure.md). 
+The `SelfHostedShootExposure` resource is a concept introduced to support Self-Hosted Shoot Clusters described in [GEP36](https://github.com/gardener/gardener/blob/master/docs/proposals/36-self-hosted-shoot-exposure.md). 
 In a self-hosted scenario, the control plane of a shoot cluster runs on dedicated nodes within the cluster itself, rather than in a separate seed cluster. 
 To make the API server of such a cluster accessible from the outside (e.g., for `kubectl` access), the control plane endpoints must be exposed via a stable address (e.g., a `LoadBalancer`).
 

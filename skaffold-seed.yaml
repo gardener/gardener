@@ -334,6 +334,7 @@ build:
             - pkg/api/config/resourcemanager/v1alpha1/validation
             - pkg/api/core/helper
             - pkg/api/core/v1beta1/helper
+            - pkg/api/core/validation
             - pkg/api/extensions
             - pkg/api/extensions/v1alpha1/helper
             - pkg/api/extensions/validation
@@ -381,6 +382,7 @@ build:
             - pkg/controllerutils/predicate
             - pkg/controllerutils/reconciler
             - pkg/controllerutils/routes
+            - pkg/features
             - pkg/healthz
             - pkg/logger
             - pkg/resourcemanager/bootstrappers
@@ -427,7 +429,10 @@ build:
             - pkg/utils/secrets
             - pkg/utils/time
             - pkg/utils/validation
+            - pkg/utils/validation/admissionplugins
+            - pkg/utils/validation/apigroups
             - pkg/utils/validation/cidr
+            - pkg/utils/validation/features
             - pkg/utils/validation/kubernetes/core
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version

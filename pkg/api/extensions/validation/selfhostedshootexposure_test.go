@@ -32,8 +32,10 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 					ProviderConfig: &runtime.RawExtension{},
 				},
 				CredentialsRef: &corev1.ObjectReference{
-					Kind: "Secret",
-					Name: "test",
+					APIVersion: "v1",
+					Kind:       "Secret",
+					Namespace:  "test-namespace",
+					Name:       "test",
 				},
 				Endpoints: []extensionsv1alpha1.ControlPlaneEndpoint{
 					{
@@ -98,6 +100,21 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 			}))))
 		})
 
+		It("should forbid endpoints address with missing address", func() {
+			e := prepareSelfHostedShootExposureForUpdate(exposure)
+			e.Spec.Endpoints[0].Addresses = []corev1.NodeAddress{{
+				Type:    corev1.NodeInternalIP,
+				Address: "",
+			}}
+
+			errorList := ValidateSelfHostedShootExposure(e)
+
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.endpoints[0].addresses[0].address"),
+			}))))
+		})
+
 		It("should forbid endpoints with invalid IP address", func() {
 			e := prepareSelfHostedShootExposureForUpdate(exposure)
 			e.Spec.Endpoints[0].Addresses = []corev1.NodeAddress{{
@@ -128,7 +145,25 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 			}))))
 		})
 
-		It("should forbid unknown node address types", func() {
+		It("should forbid endpoints with missing address type", func() {
+			e := prepareSelfHostedShootExposureForUpdate(exposure)
+			e.Spec.Endpoints[0].Addresses = []corev1.NodeAddress{{
+				Type:    "",
+				Address: "1.2.3.4",
+			}}
+
+			errorList := ValidateSelfHostedShootExposure(e)
+
+			Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.endpoints[0].addresses[0].type"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.endpoints[0].addresses[0].address"),
+			}))))
+		})
+
+		It("should forbid endpoints with unknown node address types", func() {
 			e := prepareSelfHostedShootExposureForUpdate(exposure)
 			e.Spec.Endpoints[0].Addresses = []corev1.NodeAddress{{
 				Type:    "UnknownType",
@@ -143,34 +178,101 @@ var _ = Describe("SelfHostedShootExposure validation tests", func() {
 			}))))
 		})
 
-		It("should require kind and name if credentialsRef is set", func() {
+		It("should allow omitting credentialsRef", func() {
 			e := prepareSelfHostedShootExposureForUpdate(exposure)
-			e.Spec.CredentialsRef = &corev1.ObjectReference{}
+			e.Spec.CredentialsRef = nil
 
 			errorList := ValidateSelfHostedShootExposure(e)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.credentialsRef.name"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.credentialsRef.kind"),
-			}))))
+			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should require kind to be Secret if credentialsRef is set", func() {
-			e := prepareSelfHostedShootExposureForUpdate(exposure)
-			e.Spec.CredentialsRef = &corev1.ObjectReference{
-				Name: "foo",
-				Kind: "ConfigMap",
-			}
+		When("credentialsRef is set", func() {
+			It("should allow valid credentialsRef", func() {
+				e := prepareSelfHostedShootExposureForUpdate(exposure)
+				e.Spec.CredentialsRef = &corev1.ObjectReference{
+					APIVersion: "v1",
+					Kind:       "Secret",
+					Namespace:  e.Namespace,
+					Name:       "foo",
+				}
 
-			errorList := ValidateSelfHostedShootExposure(e)
+				errorList := ValidateSelfHostedShootExposure(e)
 
-			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.credentialsRef.kind"),
-			}))))
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should require apiVersion, kind, namespace, and name", func() {
+				e := prepareSelfHostedShootExposureForUpdate(exposure)
+				e.Spec.CredentialsRef = &corev1.ObjectReference{}
+
+				errorList := ValidateSelfHostedShootExposure(e)
+
+				Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.credentialsRef.apiVersion"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.credentialsRef.kind"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.credentialsRef.name"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.credentialsRef.namespace"),
+				}))))
+			})
+
+			It("should require kind to be corev1.Secret", func() {
+				e := prepareSelfHostedShootExposureForUpdate(exposure)
+				e.Spec.CredentialsRef = &corev1.ObjectReference{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+					Namespace:  e.Namespace,
+					Name:       "foo",
+				}
+
+				errorList := ValidateSelfHostedShootExposure(e)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.credentialsRef"),
+				}))))
+			})
+
+			It("should require namespace to equal the object's namespace", func() {
+				e := prepareSelfHostedShootExposureForUpdate(exposure)
+				e.Spec.CredentialsRef = &corev1.ObjectReference{
+					APIVersion: "v1",
+					Kind:       "Secret",
+					Namespace:  e.Namespace + "-other",
+					Name:       "foo",
+				}
+
+				errorList := ValidateSelfHostedShootExposure(e)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.credentialsRef.namespace"),
+				}))))
+			})
+
+			It("should reject invalid names", func() {
+				e := prepareSelfHostedShootExposureForUpdate(exposure)
+				e.Spec.CredentialsRef = &corev1.ObjectReference{
+					APIVersion: "v1",
+					Kind:       "Secret",
+					Namespace:  e.Namespace,
+					Name:       "-invalid.",
+				}
+
+				errorList := ValidateSelfHostedShootExposure(e)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.credentialsRef.name"),
+				}))))
+			})
 		})
 	})
 

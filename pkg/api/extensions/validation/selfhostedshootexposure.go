@@ -16,6 +16,7 @@ import (
 	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
+	"github.com/gardener/gardener/pkg/api/core/validation"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
@@ -23,7 +24,7 @@ import (
 func ValidateSelfHostedShootExposure(exposure *extensionsv1alpha1.SelfHostedShootExposure) field.ErrorList {
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&exposure.ObjectMeta, true, apivalidation.NameIsDNSSubdomain, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateSelfHostedShootExposureSpec(&exposure.Spec, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateSelfHostedShootExposureSpec(&exposure.Spec, exposure.Namespace, field.NewPath("spec"))...)
 
 	return allErrs
 }
@@ -40,7 +41,7 @@ func ValidateSelfHostedShootExposureUpdate(new, old *extensionsv1alpha1.SelfHost
 }
 
 // ValidateSelfHostedShootExposureSpec validates the specification of a SelfHostedShootExposure object.
-func ValidateSelfHostedShootExposureSpec(spec *extensionsv1alpha1.SelfHostedShootExposureSpec, fldPath *field.Path) field.ErrorList {
+func ValidateSelfHostedShootExposureSpec(spec *extensionsv1alpha1.SelfHostedShootExposureSpec, namespace string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(spec.Type) == 0 {
@@ -48,14 +49,7 @@ func ValidateSelfHostedShootExposureSpec(spec *extensionsv1alpha1.SelfHostedShoo
 	}
 
 	if spec.CredentialsRef != nil {
-		if len(spec.CredentialsRef.Name) == 0 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("credentialsRef", "name"), "field is required"))
-		}
-		if len(spec.CredentialsRef.Kind) == 0 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("credentialsRef", "kind"), "field is required"))
-		} else if spec.CredentialsRef.Kind != "Secret" {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("credentialsRef", "kind"), spec.CredentialsRef.Kind, "must be Secret"))
-		}
+		allErrs = append(allErrs, validateCredentialsRef(*spec.CredentialsRef, namespace, fldPath.Child("credentialsRef"))...)
 	}
 
 	if len(spec.Endpoints) == 0 {
@@ -76,7 +70,9 @@ func ValidateSelfHostedShootExposureSpec(spec *extensionsv1alpha1.SelfHostedShoo
 		for j, addr := range ep.Addresses {
 			addrPath := epPath.Child("addresses").Index(j)
 
-			if addr.Type != "" {
+			if len(addr.Type) == 0 {
+				allErrs = append(allErrs, field.Required(addrPath.Child("type"), "field is required"))
+			} else {
 				var supportedAddressTypes = sets.New(corev1.NodeHostName, corev1.NodeInternalIP, corev1.NodeExternalIP, corev1.NodeInternalDNS, corev1.NodeExternalDNS)
 				if !supportedAddressTypes.Has(addr.Type) {
 					allErrs = append(allErrs, field.NotSupported(addrPath.Child("type"), addr.Type, sets.List(supportedAddressTypes)))
@@ -92,9 +88,12 @@ func ValidateSelfHostedShootExposureSpec(spec *extensionsv1alpha1.SelfHostedShoo
 						allErrs = append(allErrs, errs...)
 					}
 				case corev1.NodeHostName, corev1.NodeInternalDNS, corev1.NodeExternalDNS:
-					if errs := utilvalidation.IsDNS1123Subdomain(addr.Address); len(errs) != 0 {
-						allErrs = append(allErrs, field.Invalid(addrPath.Child("address"), addr.Address, strings.Join(errs, ",")))
-					}
+					allErrs = append(allErrs, validation.ValidateDNS1123Subdomain(addr.Address, addrPath.Child("address"))...)
+				default:
+					// If we reach this case, the address type is not supported, but this should have already been caught by the
+					// validation of the address type. We still return an error for the address field to ensure we don't
+					// accidentally allow random data when extending the list of supported address types in the future.
+					allErrs = append(allErrs, field.Invalid(addrPath.Child("address"), addr.Address, fmt.Sprintf("invalid address for unsupported address type %q", addr.Type)))
 				}
 			}
 		}
@@ -113,6 +112,48 @@ func ValidateSelfHostedShootExposureSpecUpdate(new, old *extensionsv1alpha1.Self
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)
+
+	return allErrs
+}
+
+// validateCredentialsRef validates the credentials reference of an extension object.
+// For now, only the SelfHostedShootExposure resource has a credentialsRef field, other resources have a secretRef field
+// instead.
+func validateCredentialsRef(ref corev1.ObjectReference, namespace string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(ref.APIVersion) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("apiVersion"), "must provide an apiVersion"))
+	}
+
+	if len(ref.Kind) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("kind"), "must provide a kind"))
+	}
+
+	// For now, only local references are allowed. So namespace must equal the namespace of the extension object.
+	if len(ref.Namespace) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("namespace"), "must provide a namespace"))
+	} else if ref.Namespace != namespace {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), ref.Namespace, "must equal metadata.namespace"))
+	}
+
+	if len(ref.Name) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
+	} else {
+		allErrs = append(allErrs, validation.ValidateDNS1123Subdomain(ref.Name, fldPath.Child("name"))...)
+	}
+
+	// For now, only Secret references are allowed in extension objects.
+	var (
+		secret = corev1.SchemeGroupVersion.WithKind("Secret")
+
+		allowedGVKs = sets.New(secret)
+		validGVKs   = []string{secret.String()}
+	)
+
+	if !allowedGVKs.Has(ref.GroupVersionKind()) {
+		allErrs = append(allErrs, field.NotSupported(fldPath, ref.GroupVersionKind(), validGVKs))
+	}
 
 	return allErrs
 }
