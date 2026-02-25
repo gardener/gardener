@@ -1,0 +1,37 @@
+name: Golang Test Images
+
+on:
+  workflow_call:
+    outputs:
+      matrix:
+        description: "Matrix configuration for golang-test images"
+        value: ${{ jobs.generate-matrix.outputs.matrix }}
+
+jobs:
+  generate-matrix:
+    name: Generate Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Set matrix
+        id: set-matrix
+        run: |
+          cat <<'EOF' >> $GITHUB_OUTPUT
+          matrix<<MATRIX_EOF
+          {
+            "images": [
+              {
+                "version": "1.25",
+                "image": "golang:1.25.7-bookworm"
+              },
+              {
+                "version": "1.26",
+                "image": "golang:1.26.0-bookworm"
+              }
+            ]
+          }
+          MATRIX_EOF
+          EOF
+
+

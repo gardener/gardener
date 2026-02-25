@@ -23,13 +23,14 @@
       // Generic detection for pod-like image specifications.
       customType: 'regex',
       managerFilePatterns: [
+        '/^.github/workflows/.+\\.yaml$/',
         '/^example/.+\\.yaml$/',
         '/^hack/.+\\.yaml$/',
         '/^\\.test-defs/.+\\.yaml$/',
         '/^charts/.+\\.yaml$/',
       ],
       matchStrings: [
-        'image: ["|\']?(?<depName>.*?):(?<currentValue>.*?)["|\']?\\s',
+        '["|\']?image["|\']?: ["|\']?(?<depName>.*?):(?<currentValue>.*?)["|\']?\\s',
       ],
       datasourceTemplate: 'docker',
     },

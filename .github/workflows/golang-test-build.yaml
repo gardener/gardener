@@ -1,0 +1,61 @@
+name: Build and Push golang-test Image
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - .github/workflows/golang-test-build.yaml
+      - .github/workflows/golang-test-images.yaml
+      - hack/tools/image/**
+      - hack/tools.mk
+      - go.mod
+
+jobs:
+  prepare-metadata:
+    name: Prepare Metadata
+    if: ${{ github.repository == 'gardener/gardener' }}
+    runs-on: ubuntu-latest
+    outputs:
+      date: ${{ steps.metadata.outputs.date }}
+      short-sha: ${{ steps.metadata.outputs.short-sha }}
+    steps:
+      - name: Generate metadata
+        id: metadata
+        run: |
+          echo "date=$(date +%Y%m%d)" >> $GITHUB_OUTPUT
+          echo "short-sha=${GITHUB_SHA:0:7} >> $GITHUB_OUTPUT
+
+  generate-matrix:
+    name: Generate Matrix
+    if: ${{ github.repository == 'gardener/gardener' }}
+    uses: ./.github/workflows/golang-test-images.yaml
+
+  oci-images:
+    name: Build OCI-Images
+    if: ${{ github.repository == 'gardener/gardener' }}
+    needs:
+      - prepare-metadata
+      - generate-matrix
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    secrets: inherit
+    uses: gardener/cc-utils/.github/workflows/oci-ocm.yaml@master
+    strategy:
+      matrix: ${{ fromJSON(needs.generate-matrix.outputs.matrix) }}
+    with:
+      name: golang-test
+      version: ${{ matrix.images.version }}
+      dockerfile: ./hack/tools/image/Dockerfile
+      build-args: |
+        image=${{ matrix.images.image }}
+      target: golang-test
+      commit-objects-artefact: ""
+      oci-registry: europe-docker.pkg.dev/gardener-project/releases/ci-infra
+      oci-repository: golang-test
+      oci-platforms: linux/amd64,linux/arm64
+      ocm-labels: ""
+      extra-tags: v${{ needs.prepare-metadata.outputs.date }}-${{ needs.prepare-metadata.outputs.short-sha }}-${{ matrix.images.version }}
+      push: always
