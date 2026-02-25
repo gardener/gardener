@@ -302,14 +302,14 @@ var _ = Describe("AdvertisedAddresses", func() {
 			}))
 		})
 
-		It("returns valid endpoints with displayName from ingress resources", func() {
+		It("returns valid endpoints with application from ingress resources", func() {
 			ingressA := &networkingv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "ingress-1",
 					Namespace: shootNamespace.Name,
 					Labels: map[string]string{
 						v1beta1constants.LabelShootEndpointAdvertise:   "true",
-						v1beta1constants.LabelShootEndpointDisplayName: "Dashboard",
+						v1beta1constants.LabelShootEndpointApplication: "Dashboard",
 					},
 				},
 				Spec: networkingv1.IngressSpec{
@@ -326,7 +326,7 @@ var _ = Describe("AdvertisedAddresses", func() {
 					Namespace: shootNamespace.Name,
 					Labels: map[string]string{
 						v1beta1constants.LabelShootEndpointAdvertise:   "true",
-						v1beta1constants.LabelShootEndpointDisplayName: "Monitoring",
+						v1beta1constants.LabelShootEndpointApplication: "Monitoring",
 					},
 				},
 				Spec: networkingv1.IngressSpec{
@@ -346,12 +346,12 @@ var _ = Describe("AdvertisedAddresses", func() {
 				{
 					Name:        "ingress/ingress-1/0/0",
 					URL:         "https://foo.example.org",
-					DisplayName: ptr.To("Dashboard"),
+					Application: ptr.To("Dashboard"),
 				},
 				{
 					Name:        "ingress/ingress-2/0/0",
 					URL:         "https://bar.example.org",
-					DisplayName: ptr.To("Monitoring"),
+					Application: ptr.To("Monitoring"),
 				},
 			}))
 		})
