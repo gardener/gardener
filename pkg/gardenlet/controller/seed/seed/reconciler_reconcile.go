@@ -483,6 +483,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 			SkipIf:       seedIsGarden,
 		})
 		_ = g.Add(flow.Task{
+			Name:         "Deploying ext-authz-server",
+			Fn:           c.extAuthzServer.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+		})
+		_ = g.Add(flow.Task{
 			Name:         "Deploying Prometheus Operator",
 			Fn:           c.prometheusOperator.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),

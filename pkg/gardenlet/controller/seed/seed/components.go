@@ -45,6 +45,7 @@ import (
 	kubeproxy "github.com/gardener/gardener/pkg/component/kubernetes/proxy"
 	kubescheduler "github.com/gardener/gardener/pkg/component/kubernetes/scheduler"
 	"github.com/gardener/gardener/pkg/component/networking/coredns"
+	"github.com/gardener/gardener/pkg/component/networking/extauthzserver"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
@@ -106,6 +107,7 @@ type components struct {
 	clusterAutoscaler       component.DeployWaiter
 	dwdWeeder               component.DeployWaiter
 	dwdProber               component.DeployWaiter
+	extAuthzServer          component.DeployWaiter
 
 	kubeAPIServerService component.Deployer
 	kubeAPIServerIngress component.Deployer
@@ -218,6 +220,10 @@ func (r *Reconciler) instantiateComponents(
 	}
 	c.clusterAutoscaler = r.newClusterAutoscaler()
 	c.dwdWeeder, c.dwdProber, err = r.newDependencyWatchdogs(seed.GetInfo().Spec.Settings)
+	if err != nil {
+		return
+	}
+	c.extAuthzServer, err = r.newExtAuthzServer(secretsManager)
 	if err != nil {
 		return
 	}
@@ -521,6 +527,18 @@ func (r *Reconciler) newDependencyWatchdogs(seedSettings *gardencorev1beta1.Seed
 	}
 
 	return
+}
+
+func (r *Reconciler) newExtAuthzServer(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	return sharedcomponent.NewExtAuthzServer(
+		r.SeedClientSet.Client(),
+		r.GardenNamespace,
+		secretsManager,
+		gardenlethelper.IsMonitoringEnabled(&r.Config),
+		1,
+		v1beta1constants.PriorityClassNameSeedSystem600,
+		false,
+	)
 }
 
 func (r *Reconciler) newSystem(seed *gardencorev1beta1.Seed) (component.DeployWaiter, error) {
