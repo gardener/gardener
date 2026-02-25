@@ -7805,8 +7805,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should not fail for duplicate displayName (grouping)", func() {
 				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
-					{Name: "a", URL: "https://foo.bar", DisplayName: "display"},
-					{Name: "b", URL: "https://bar.foo", DisplayName: "display"},
+					{Name: "a", URL: "https://foo.bar", DisplayName: ptr.To("display")},
+					{Name: "b", URL: "https://bar.foo", DisplayName: ptr.To("display")},
 				}
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
@@ -7815,8 +7815,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should succeed with unique displayNames", func() {
 				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
-					{Name: "a", URL: "https://foo.bar", DisplayName: "display-a"},
-					{Name: "b", URL: "https://bar.foo", DisplayName: "display-b"},
+					{Name: "a", URL: "https://foo.bar", DisplayName: ptr.To("display-a")},
+					{Name: "b", URL: "https://bar.foo", DisplayName: ptr.To("display-b")},
 				}
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
@@ -7825,8 +7825,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should succeed with empty displayNames", func() {
 				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
-					{Name: "a", URL: "https://foo.bar", DisplayName: ""},
-					{Name: "b", URL: "https://bar.foo", DisplayName: ""},
+					{Name: "a", URL: "https://foo.bar", DisplayName: nil},
+					{Name: "b", URL: "https://bar.foo", DisplayName: nil},
 				}
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
