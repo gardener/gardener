@@ -29,7 +29,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | OpenTelemetryCollector         | `false` | `Alpha` | `1.124` | `1.135` |
 | OpenTelemetryCollector         | `true`  | `Beta`  | `1.136` |         |
 | UseUnifiedHTTPProxyPort        | `false` | `Alpha` | `1.130` |         |
-| VPAInPlaceUpdates              | `false` | `Alpha` | `1.133` |         |
+| VPAInPlaceUpdates              | `false` | `Alpha` | `1.133` | `1.136` |
+| VPAInPlaceUpdates              | `true`  | `Beta`  | `1.137` |         |
 | VictoriaLogsBackend            | `false` | `Alpha` | `1.137` |         |
 | CustomDNSServerInNodeLocalDNS  | `true`  | `Beta`  | `1.133` |         |
 | VPNBondingModeRoundRobin       | `false` | `Alpha` | `1.135` |         |
