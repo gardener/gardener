@@ -255,7 +255,8 @@
         'github-releases',
       ],
       matchPackageNames: [
-        '/.*?gardener/dependency-watchdog$/',
+        '/github\\.com/gardener/dependency-watchdog/',
+        '/gardener/dependency-watchdog/',
       ],
     },
     {
