@@ -475,12 +475,26 @@ var _ = Describe("Reconciler", func() {
 			Expect(kindTypes.Len()).To(BeZero())
 		})
 
-		It("should correctly compute the result", func() {
+		It("should correctly compute the result for seeds", func() {
 			kindTypes := computeKindTypesForBackupBuckets(backupBucketsMap, seed, SeedKind)
 
 			Expect(kindTypes).To(Equal(sets.New(
 				extensionsv1alpha1.BackupBucketResource+"/"+backupBucket1.Spec.Provider.Type,
 				extensionsv1alpha1.BackupBucketResource+"/"+backupBucket2.Spec.Provider.Type,
+			)))
+		})
+
+		It("should correctly compute the result for shoots", func() {
+			backupBucketsMap := map[string]*gardencorev1beta1.BackupBucket{
+				"1": {Spec: gardencorev1beta1.BackupBucketSpec{Provider: gardencorev1beta1.BackupBucketProvider{Type: "bbtype1"}, ShootRef: &corev1.ObjectReference{Name: shoot1.Name, Namespace: shoot1.Namespace}}},
+				"2": {Spec: gardencorev1beta1.BackupBucketSpec{Provider: gardencorev1beta1.BackupBucketProvider{Type: "bbtype2"}, ShootRef: &corev1.ObjectReference{Name: shoot1.Name, Namespace: shoot1.Namespace}}},
+			}
+
+			kindTypes := computeKindTypesForBackupBuckets(backupBucketsMap, shoot1, ShootKind)
+
+			Expect(kindTypes).To(Equal(sets.New(
+				extensionsv1alpha1.BackupBucketResource+"/bbtype1",
+				extensionsv1alpha1.BackupBucketResource+"/bbtype2",
 			)))
 		})
 	})
@@ -591,6 +605,26 @@ var _ = Describe("Reconciler", func() {
 				extensionsv1alpha1.ExtensionResource+"/"+type10,
 				extensionsv1alpha1.DNSRecordResource+"/"+type9,
 			)))
+		})
+
+		Context("for self-hosted shoots", func() {
+			It("should correctly compute the result", func() {
+				Expect(computeKindTypesForShoots(ctx, log, fakeClient, shoot3, ShootKind, controllerRegistrationList, shootList)).To(Equal(sets.New(
+					extensionsv1alpha1.ControlPlaneResource+"/"+type6,
+					extensionsv1alpha1.InfrastructureResource+"/"+type6,
+					extensionsv1alpha1.WorkerResource+"/"+type6,
+					extensionsv1alpha1.ContainerRuntimeResource+"/"+type12,
+					extensionsv1alpha1.NetworkResource+"/"+type3,
+
+					// automatically enabled extensions
+					extensionsv1alpha1.ExtensionResource+"/"+type10,
+				)))
+			})
+
+			It("should correctly compute the result", func() {
+				shootWithDeletionTimestamp := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &metav1.Time{}}}
+				Expect(computeKindTypesForShoots(ctx, log, fakeClient, shootWithDeletionTimestamp, ShootKind, controllerRegistrationList, shootList)).To(BeEmpty())
+			})
 		})
 	})
 
@@ -791,7 +825,7 @@ var _ = Describe("Reconciler", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
-			It("should correctly deploy needed controller installations", func() {
+			It("should correctly deploy needed controller installations for seeds", func() {
 				var (
 					wantedControllerRegistrations  = sets.New(controllerRegistration2.Name, controllerRegistration3.Name, controllerRegistration4.Name)
 					registrationNameToInstallation = map[string]*gardencorev1beta1.ControllerInstallation{
@@ -826,6 +860,48 @@ var _ = Describe("Reconciler", func() {
 				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should correctly deploy needed controller installations for shoots", func() {
+				var (
+					setShootRef = func(controllerInstallation *gardencorev1beta1.ControllerInstallation, shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.ControllerInstallation {
+						obj := controllerInstallation.DeepCopy()
+						obj.Spec.SeedRef = nil
+						obj.Spec.ShootRef = &corev1.ObjectReference{Name: shoot.Name, Namespace: shoot.Namespace, ResourceVersion: shoot.ResourceVersion}
+						return obj
+					}
+
+					wantedControllerRegistrations  = sets.New(controllerRegistration2.Name, controllerRegistration3.Name, controllerRegistration4.Name)
+					registrationNameToInstallation = map[string]*gardencorev1beta1.ControllerInstallation{
+						controllerRegistration1.Name: controllerInstallation1,
+						controllerRegistration2.Name: controllerInstallation2,
+						controllerRegistration3.Name: controllerInstallation3,
+						controllerRegistration4.Name: nil,
+					}
+				)
+
+				installation2 := setShootRef(controllerInstallation2, shoot3)
+				installation2.Labels = map[string]string{
+					ControllerDeploymentHash: "deb30f197b882cd1",
+					RegistrationSpecHash:     "61ca93a1782c5fa3",
+					ShootSpecHash:            "a1fbf32b9ada7b98",
+				}
+
+				installation3 := setShootRef(controllerInstallation3, shoot3)
+				installation3.Labels = map[string]string{
+					RegistrationSpecHash: "61ca93a1782c5fa3",
+					ShootSpecHash:        "a1fbf32b9ada7b98",
+				}
+
+				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
+				k8sClient.EXPECT().Patch(ctx, installation2, gomock.Any())
+
+				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation3.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
+				k8sClient.EXPECT().Patch(ctx, installation3, gomock.Any())
+
+				k8sClient.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
+
+				Expect(deployNeededInstallations(ctx, log, k8sClient, shoot3, ShootKind, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallation)).To(Succeed())
 			})
 
 			It("should not skip the controller registration that is after one in deletion", func() {

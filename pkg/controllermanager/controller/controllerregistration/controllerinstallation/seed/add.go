@@ -61,17 +61,17 @@ func AddToManager(mgr manager.Manager, config controllermanagerconfigv1alpha1.Co
 		Watches(
 			&gardencorev1beta1.BackupBucket{},
 			handler.EnqueueRequestsFromMapFunc(MapBackupBucketToSeed),
-			builder.WithPredicates(controllerinstallation.BackupBucketPredicate(false)),
+			builder.WithPredicates(controllerinstallation.BackupBucketPredicate(controllerinstallation.SeedKind)),
 		).
 		Watches(
 			&gardencorev1beta1.BackupEntry{},
 			handler.EnqueueRequestsFromMapFunc(MapBackupEntryToSeed),
-			builder.WithPredicates(controllerinstallation.BackupEntryPredicate(false)),
+			builder.WithPredicates(controllerinstallation.BackupEntryPredicate(controllerinstallation.SeedKind)),
 		).
 		Watches(
 			&gardencorev1beta1.ControllerInstallation{},
 			handler.EnqueueRequestsFromMapFunc(MapControllerInstallationToSeed),
-			builder.WithPredicates(controllerinstallation.ControllerInstallationPredicate(false)),
+			builder.WithPredicates(controllerinstallation.ControllerInstallationPredicate(controllerinstallation.SeedKind)),
 		).
 		Watches(
 			&gardencorev1.ControllerDeployment{},
@@ -81,7 +81,7 @@ func AddToManager(mgr manager.Manager, config controllermanagerconfigv1alpha1.Co
 		Watches(
 			&gardencorev1beta1.Shoot{},
 			handler.EnqueueRequestsFromMapFunc(MapShootToSeed),
-			builder.WithPredicates(controllerinstallation.ShootPredicate(false)),
+			builder.WithPredicates(controllerinstallation.ShootPredicate(controllerinstallation.SeedKind)),
 		).
 		Complete(r)
 }

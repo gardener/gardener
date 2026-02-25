@@ -16,7 +16,7 @@ import (
 
 // BackupBucketPredicate returns true for all BackupBucket events. For updates, it only returns true when there is a
 // change in the .spec.seedName or .spec.provider.type fields.
-func BackupBucketPredicate(forSelfHostedShoots bool) predicate.Predicate {
+func BackupBucketPredicate(kind Kind) predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			backupBucket, ok := e.Object.(*gardencorev1beta1.BackupBucket)
@@ -24,7 +24,7 @@ func BackupBucketPredicate(forSelfHostedShoots bool) predicate.Predicate {
 				return false
 			}
 
-			return forSelfHostedShoots == (backupBucket.Spec.SeedName == nil)
+			return (kind == ShootKind) == (backupBucket.Spec.SeedName == nil)
 		},
 
 		UpdateFunc: func(e event.UpdateEvent) bool {
@@ -38,7 +38,7 @@ func BackupBucketPredicate(forSelfHostedShoots bool) predicate.Predicate {
 				return false
 			}
 
-			if forSelfHostedShoots && backupBucket.Spec.SeedName != nil {
+			if (kind == ShootKind) && backupBucket.Spec.SeedName != nil {
 				return false
 			}
 
@@ -51,21 +51,21 @@ func BackupBucketPredicate(forSelfHostedShoots bool) predicate.Predicate {
 			if !ok {
 				return false
 			}
-			return forSelfHostedShoots == (backupBucket.Spec.SeedName == nil)
+			return (kind == ShootKind) == (backupBucket.Spec.SeedName == nil)
 		},
 	}
 }
 
 // BackupEntryPredicate returns true for all BackupEntry events. For updates, it only returns true when there is a
 // change in the .spec.seedName or .spec.bucketName fields.
-func BackupEntryPredicate(forSelfHostedShoots bool) predicate.Predicate {
+func BackupEntryPredicate(kind Kind) predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			backupEntry, ok := e.Object.(*gardencorev1beta1.BackupEntry)
 			if !ok {
 				return false
 			}
-			return forSelfHostedShoots == (backupEntry.Spec.SeedName == nil)
+			return (kind == ShootKind) == (backupEntry.Spec.SeedName == nil)
 		},
 
 		UpdateFunc: func(e event.UpdateEvent) bool {
@@ -79,7 +79,7 @@ func BackupEntryPredicate(forSelfHostedShoots bool) predicate.Predicate {
 				return false
 			}
 
-			if forSelfHostedShoots && backupEntry.Spec.SeedName != nil {
+			if (kind == ShootKind) && backupEntry.Spec.SeedName != nil {
 				return false
 			}
 
@@ -92,17 +92,17 @@ func BackupEntryPredicate(forSelfHostedShoots bool) predicate.Predicate {
 			if !ok {
 				return false
 			}
-			return forSelfHostedShoots == (backupEntry.Spec.SeedName == nil)
+			return (kind == ShootKind) == (backupEntry.Spec.SeedName == nil)
 		},
 	}
 }
 
 // ControllerInstallationPredicate returns true for all ControllerInstallation 'create' events. For updates, it only
 // returns true when the Required condition's status has changed. For other events, false is returned.
-func ControllerInstallationPredicate(forSelfHostedShoots bool) predicate.Predicate {
+func ControllerInstallationPredicate(kind Kind) predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			if !forSelfHostedShoots {
+			if kind == SeedKind {
 				return true
 			}
 
@@ -124,7 +124,7 @@ func ControllerInstallationPredicate(forSelfHostedShoots bool) predicate.Predica
 				return false
 			}
 
-			if forSelfHostedShoots && controllerInstallation.Spec.SeedRef != nil {
+			if kind == ShootKind && controllerInstallation.Spec.SeedRef != nil {
 				return false
 			}
 
@@ -137,7 +137,7 @@ func ControllerInstallationPredicate(forSelfHostedShoots bool) predicate.Predica
 
 // ShootPredicate returns true for all Shoot events. For updates, it only returns true when there is a change in the
 // .spec.provider.workers or .spec.extensions or .spec.dns or .spec.networking.type or .spec.provider.type fields.
-func ShootPredicate(forSelfHostedShoots bool) predicate.Predicate {
+func ShootPredicate(kind Kind) predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			shoot, ok := e.Object.(*gardencorev1beta1.Shoot)
@@ -145,7 +145,7 @@ func ShootPredicate(forSelfHostedShoots bool) predicate.Predicate {
 				return false
 			}
 
-			if forSelfHostedShoots {
+			if kind == ShootKind {
 				return v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers)
 			}
 
@@ -163,17 +163,17 @@ func ShootPredicate(forSelfHostedShoots bool) predicate.Predicate {
 				return false
 			}
 
-			if forSelfHostedShoots && !v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
+			if kind == ShootKind && !v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
 				return false
 			}
 
-			return !apiequality.Semantic.DeepEqual(oldShoot.Spec.SeedName, shoot.Spec.SeedName) ||
+			return (kind == SeedKind && !apiequality.Semantic.DeepEqual(oldShoot.Spec.SeedName, shoot.Spec.SeedName)) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.Provider.Workers, shoot.Spec.Provider.Workers) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.Extensions, shoot.Spec.Extensions) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.DNS, shoot.Spec.DNS) ||
 				shootNetworkingTypeHasChanged(oldShoot.Spec.Networking, shoot.Spec.Networking) ||
 				oldShoot.Spec.Provider.Type != shoot.Spec.Provider.Type ||
-				(forSelfHostedShoots && shoot.DeletionTimestamp != nil)
+				(kind == ShootKind && shoot.DeletionTimestamp != nil)
 		},
 
 		DeleteFunc: func(e event.DeleteEvent) bool {
@@ -182,7 +182,7 @@ func ShootPredicate(forSelfHostedShoots bool) predicate.Predicate {
 				return false
 			}
 
-			if forSelfHostedShoots {
+			if kind == ShootKind {
 				return v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers)
 			}
 

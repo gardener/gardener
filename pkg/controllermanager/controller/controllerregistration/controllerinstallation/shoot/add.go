@@ -46,7 +46,7 @@ func AddToManager(mgr manager.Manager, config controllermanagerconfigv1alpha1.Co
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(&gardencorev1beta1.Shoot{}, builder.WithPredicates(controllerinstallation.ShootPredicate(true))).
+		For(&gardencorev1beta1.Shoot{}, builder.WithPredicates(controllerinstallation.ShootPredicate(controllerinstallation.ShootKind))).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(config.ConcurrentSyncs, 0),
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
@@ -59,17 +59,17 @@ func AddToManager(mgr manager.Manager, config controllermanagerconfigv1alpha1.Co
 		Watches(
 			&gardencorev1beta1.BackupBucket{},
 			handler.EnqueueRequestsFromMapFunc(MapBackupBucketToShoot),
-			builder.WithPredicates(controllerinstallation.BackupBucketPredicate(true)),
+			builder.WithPredicates(controllerinstallation.BackupBucketPredicate(controllerinstallation.ShootKind)),
 		).
 		Watches(
 			&gardencorev1beta1.BackupEntry{},
 			handler.EnqueueRequestsFromMapFunc(MapBackupEntryToShoot),
-			builder.WithPredicates(controllerinstallation.BackupEntryPredicate(true)),
+			builder.WithPredicates(controllerinstallation.BackupEntryPredicate(controllerinstallation.ShootKind)),
 		).
 		Watches(
 			&gardencorev1beta1.ControllerInstallation{},
 			handler.EnqueueRequestsFromMapFunc(MapControllerInstallationToShoot),
-			builder.WithPredicates(controllerinstallation.ControllerInstallationPredicate(true)),
+			builder.WithPredicates(controllerinstallation.ControllerInstallationPredicate(controllerinstallation.ShootKind)),
 		).
 		Watches(
 			&gardencorev1.ControllerDeployment{},
