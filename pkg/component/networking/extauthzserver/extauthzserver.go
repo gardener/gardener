@@ -7,15 +7,21 @@ package extauthzserver
 import (
 	"context"
 	"fmt"
+	"path"
+	"strings"
 	"time"
 
-	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -25,6 +31,12 @@ const (
 
 	name                = "ext-authz-server"
 	managedResourceName = name
+	svcName             = name
+
+	rootMountPath = "/secrets"
+	tlsMountPath  = "/tls"
+
+	tlsServerCertificateName = "tls-server-certificate"
 )
 
 // Values is the values for ext-authz-server configuration.
@@ -63,8 +75,45 @@ func New(
 
 func (e *extAuthzServer) Deploy(ctx context.Context) error {
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	destinationHost := kubernetesutils.FQDNForService(e.getPrefix()+svcName, e.namespace)
+	caName := fmt.Sprintf("ca-%s%s", e.getPrefix(), name)
 
-	serializedResources, err := registry.AddAllAndSerialize()
+	_, err := e.secretsManager.Generate(ctx,
+		&secretsutils.CertificateSecretConfig{
+			Name:       caName,
+			CommonName: "ext-authz-server-ca",
+			CertType:   secretsutils.CACert,
+		},
+		secretsmanager.Rotate(secretsmanager.InPlace),
+		secretsmanager.Namespace(e.namespace),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to generate ca certificate: %w", err)
+	}
+
+	serverSecret, err := e.secretsManager.Generate(ctx,
+		&secretsutils.CertificateSecretConfig{
+			Name:       e.getPrefix() + name,
+			CommonName: destinationHost,
+			DNSNames:   kubernetesutils.DNSNamesForService(e.getPrefix()+svcName, e.namespace),
+			CertType:   secretsutils.ServerCert,
+		},
+		secretsmanager.SignedByCA(caName),
+		secretsmanager.Rotate(secretsmanager.InPlace),
+		secretsmanager.Namespace(e.namespace),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to generate server certificate: %w", err)
+	}
+
+	volumes, volumeMounts, err := e.calculateConfiguration(ctx, serverSecret)
+	if err != nil {
+		return fmt.Errorf("failed to calculate configuration for ext-authz-server: %w", err)
+	}
+
+	serializedResources, err := registry.AddAllAndSerialize(
+		e.getDeployment(volumes, volumeMounts),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to serialize resources: %w", err)
 	}
@@ -90,6 +139,62 @@ func (e *extAuthzServer) WaitCleanup(ctx context.Context) error {
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, e.client, e.namespace, e.getPrefix()+managedResourceName)
+}
+
+func (e *extAuthzServer) calculateConfiguration(ctx context.Context, tlsSecret *corev1.Secret) ([]corev1.Volume, []corev1.VolumeMount, error) {
+	virtualServiceList := &istionetworkingv1beta1.VirtualServiceList{}
+	err := e.client.List(ctx, virtualServiceList, client.InNamespace(e.namespace), client.HasLabels{v1beta1constants.LabelBasicAuthSecretName})
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to list virtual services: %w", err)
+	}
+
+	var (
+		volumes = []corev1.Volume{{
+			Name: tlsServerCertificateName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: tlsSecret.Name,
+				},
+			},
+		}}
+		volumeMounts = []corev1.VolumeMount{{
+			Name:      tlsServerCertificateName,
+			MountPath: tlsMountPath,
+			ReadOnly:  true,
+		}}
+	)
+
+	for _, virtualService := range virtualServiceList.Items {
+		for _, host := range virtualService.Spec.Hosts {
+			subdomain, _, found := strings.Cut(host, ".")
+			if !found {
+				continue
+			}
+
+			volumes = append(volumes, corev1.Volume{
+				Name: subdomain,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: virtualService.Labels[v1beta1constants.LabelBasicAuthSecretName],
+						Items: []corev1.KeyToPath{
+							{
+								Key:  secretsutils.DataKeyAuth,
+								Path: subdomain,
+							},
+						},
+					},
+				},
+			})
+
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      subdomain,
+				MountPath: path.Join(rootMountPath, subdomain),
+				SubPath:   subdomain,
+			})
+		}
+	}
+
+	return volumes, volumeMounts, nil
 }
 
 func (e *extAuthzServer) getPrefix() string {

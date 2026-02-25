@@ -9,6 +9,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -38,6 +40,14 @@ var _ = Describe("ExtAuthzServer", func() {
 		namespace           = "some-namespace"
 		image               = "some-image:some-tag"
 		priorityClassName   = "some-priority-class"
+		secret1             = "first-secret"
+		secret2             = "second-secret"
+		prefix1             = "first"
+		prefix2             = "second"
+		prefix3             = "third"
+		host1               = prefix1 + ".long.domain.name"
+		host2               = prefix2 + ".even.longer.domain.name"
+		host3               = prefix3 + ".domain.name"
 
 		c                 client.Client
 		component         comp.DeployWaiter
@@ -46,6 +56,120 @@ var _ = Describe("ExtAuthzServer", func() {
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
+
+		deployment = func(isGarden bool, prefixToSecret []prefixToSecretMapping) string {
+			volumes := ""
+			volumeMounts := ""
+			for _, entry := range prefixToSecret {
+				prefix := entry.prefix
+				secret := entry.secret
+				volumes += `      - name: ` + prefix + `
+        secret:
+          items:
+          - key: auth
+            path: ` + prefix + `
+          secretName: ` + secret + `
+`
+				volumeMounts += `        - mountPath: /secrets/` + prefix + `
+          name: ` + prefix + `
+          subPath: ` + prefix + `
+`
+			}
+			prefix := ""
+			if isGarden {
+				prefix = "virtual-garden-"
+			}
+			return `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ` + prefix + `ext-authz-server
+  name: ` + prefix + `ext-authz-server
+  namespace: some-namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ` + prefix + `ext-authz-server
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: ` + prefix + `ext-authz-server
+    spec:
+      containers:
+      - args:
+        - --grpc-reflection
+        image: some-image:some-tag
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 2
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 10000
+          timeoutSeconds: 5
+        name: ext-authz-server
+        ports:
+        - containerPort: 10000
+          name: grpc
+        readinessProbe:
+          failureThreshold: 2
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 10000
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+        volumeMounts:
+        - mountPath: /tls
+          name: tls-server-certificate
+          readOnly: true
+` + volumeMounts + `      priorityClassName: some-priority-class
+      volumes:
+      - name: tls-server-certificate
+        secret:
+          secretName: ` + prefix + `ext-authz-server
+` + volumes + `status: {}
+`
+		}
+		dummyVirtualService = &istionetworkingv1beta1.VirtualService{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "dummy-virtual-service",
+				Namespace: namespace,
+				Labels:    map[string]string{"app": "dummy"},
+			},
+		}
+		realVirtualService1 = &istionetworkingv1beta1.VirtualService{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "real-virtual-service-1",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app": "dummy",
+					"reference.gardener.cloud/basic-auth-secret-name": secret1,
+				},
+			},
+			Spec: istioapinetworkingv1beta1.VirtualService{
+				Hosts: []string{host1},
+			},
+		}
+		realVirtualService2 = &istionetworkingv1beta1.VirtualService{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "real-virtual-service-2",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app": "dummy",
+					"reference.gardener.cloud/basic-auth-secret-name": secret2,
+				},
+			},
+			Spec: istioapinetworkingv1beta1.VirtualService{
+				Hosts: []string{host2, host3},
+			},
+		}
 	)
 
 	BeforeEach(func() {
@@ -117,11 +241,65 @@ var _ = Describe("ExtAuthzServer", func() {
 			nonSecretManifests, secretManifests = filterManifests(manifests)
 		})
 
-		_ = func(isGarden bool, prefixToSecret []prefixToSecretMapping, hosts ...string) {
-			expectedManifests := []string{}
+		testManifests := func(isGarden bool, prefixToSecret []prefixToSecretMapping, hosts ...string) {
+			expectedManifests := []string{
+				deployment(isGarden, prefixToSecret),
+			}
 			Expect(nonSecretManifests).To(ConsistOf(expectedManifests))
 			Expect(secretManifests).To(HaveLen(0))
 		}
+
+		Context("When no corresponding secrets exist", func() {
+			Context("Shoot or Seed", func() {
+				It("should successfully deploy the resources", func() {
+					testManifests(false, []prefixToSecretMapping{})
+				})
+			})
+
+			Context("Garden", func() {
+				BeforeEach(func() {
+					values.IsGardenCluster = true
+					component = New(c, namespace, fakeSecretManager, values)
+				})
+
+				It("should successfully deploy the resources", func() {
+					testManifests(true, []prefixToSecretMapping{})
+				})
+			})
+		})
+
+		Context("With secrets present", func() {
+			BeforeEach(func() {
+				Expect(c.Create(ctx, dummyVirtualService.DeepCopy())).To(Succeed())
+				Expect(c.Create(ctx, realVirtualService1.DeepCopy())).To(Succeed())
+				Expect(c.Create(ctx, realVirtualService2.DeepCopy())).To(Succeed())
+			})
+
+			Context("Shoot or Seed", func() {
+				It("should successfully deploy the resources", func() {
+					testManifests(false, []prefixToSecretMapping{
+						{prefix1, secret1},
+						{prefix2, secret2},
+						{prefix3, secret2},
+					}, host1, host2, host3)
+				})
+			})
+
+			Context("Garden", func() {
+				BeforeEach(func() {
+					values.IsGardenCluster = true
+					component = New(c, namespace, fakeSecretManager, values)
+				})
+
+				It("should successfully deploy the resources", func() {
+					testManifests(true, []prefixToSecretMapping{
+						{prefix1, secret1},
+						{prefix2, secret2},
+						{prefix3, secret2},
+					}, host1, host2, host3)
+				})
+			})
+		})
 	})
 
 	Describe("#Destroy", func() {
