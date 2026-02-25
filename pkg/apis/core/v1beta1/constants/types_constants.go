@@ -1108,7 +1108,7 @@ const (
 	// whether an endpoint is advertised for a shoot.
 	LabelShootEndpointAdvertise = LabelShootEndpointPrefix + "advertise"
 	// LabelShootEndpointDisplayName is the name of the label which holds a dashboard-friendly name for an endpoint.
-	LabelShootEndpointDisplayName = LabelShootEndpointPrefix + "displayname"
+	LabelShootEndpointDisplayName = LabelShootEndpointPrefix + "display-name"
 
 	// AnnotationStaticManifestsShootSelector is the name of an annotation on Secrets in the garden namespace of seeds
 	// that contains a label selector for shoots. The static manifests will only be propagated for shoots matching the
