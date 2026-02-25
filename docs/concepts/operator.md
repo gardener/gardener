@@ -655,7 +655,7 @@ On `Gardenlet` deletion, nothing happens: `gardenlet`s must always be deleted ma
 
 ## Webhooks
 
-As of today, the `gardener-operator` only has one webhook handler which is now described in more detail.
+The `gardener-operator` exposes several webhook handlers which are now described in more detail.
 
 ### Validation
 
@@ -687,6 +687,16 @@ These deletions often happen accidentally, and this handler safeguards the syste
 
 This webhook handler validates `DELETE` operations on the `core/v1.Namespace` resource with name `garden` (which is Gardener's system namespace).
 It prevents deleting it as long as a `operator.gardener.cloud/v1alpha1.Garden` resource (still) exists, i.e., it has to be deleted first before any attempt of deleting the namespace.
+
+#### `Audit Policy`
+
+This webhook handler validates `CREATE`/`UPDATE` operations on `Garden` resources and `ConfigMap`s in the `garden` namespace that are referenced as audit policies.
+It ensures that audit policy configurations for the `virtual-garden-kube-apiserver` (via `.spec.virtualCluster.kubernetes.kubeAPIServer.auditConfig.auditPolicy.configMapRef.name`) and `gardener-apiserver` (via `.spec.virtualCluster.gardener.gardenerAPIServer.auditConfig.auditPolicy.configMapRef.name`) are valid.
+
+For `Garden` resources, when a new `Garden` is created or an existing one is updated with an audit policy reference, the handler fetches the referenced `ConfigMap` and validates its content.
+For `ConfigMap`s, when a `ConfigMap` that is referenced by a `Garden` is created or updated, the handler validates the new content.
+
+The handler validates that the `ConfigMap` contains a valid audit policy in its `policy` data key, conforming to the Kubernetes audit policy schema (e.g., `audit.k8s.io/v1.Policy`). Invalid or unparsable policies are rejected, preventing misconfigurations that could break audit logging.
 
 ### Defaulting
 
