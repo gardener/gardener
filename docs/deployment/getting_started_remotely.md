@@ -14,8 +14,9 @@ This guide leverages `gardener-operator` to manage the Gardener components.
 
 ## Prerequisites
 
-- Make sure that you have access to a Kubernetes cluster you can use as a seed cluster in this setup.
-    - The seed cluster requires at least 16 CPUs in total to run one shoot cluster
+- Make sure that you have access to a Kubernetes cluster you can use as garden runtime and soil cluster in this setup.
+    - The cluster requires at least 16 CPUs in total to run one shoot cluster
+    - Your cluster must use one single CPU architecture since Skaffold does not build multi-arch images. The CPU architecture of your cluster could still be different from the CPU architecture of your local machine though.
     - You could use any Kubernetes cluster for your garden runtime and soil cluster. However, using a Gardener shoot cluster simplifies some configuration steps.
     - When bootstrapping `gardenlet` to the cluster, your new soil will have the same provider type as the shoot cluster you use - an AWS shoot will become an AWS soil, a GCP shoot will become a GCP soil, etc. (only relevant when using a Gardener shoot as seed).
 
@@ -23,7 +24,7 @@ This guide leverages `gardener-operator` to manage the Gardener components.
 
 As this setup is running on a real infrastructure, you have to provide credentials for DNS, the infrastructure, and the kubeconfig for the Kubernetes cluster you want to use as seed.
 
-> ⚠️
+> [!WARNING]
 > There are `.gitignore` entries for all files and directories which include credentials. Nevertheless, please double check and make sure that credentials are not committed to the version control system.
 
 ### DNS
@@ -93,6 +94,10 @@ make remote-up
 ```
 
 This command will first prepare the basic configuration of your gardener runtime and soil cluster.
+
+When it starts it will generate config files from corresponding `*.yaml.tmpl` files if they do not exist yet.
+Additionally, it checks certain configuration options. If they are not set, it will return an error. Please set those options and run the command again.
+When the configuration is correct, the command will proceed with preparing your remote cluster.
 It deploys container registry into your remote cluster where all images of the subsequent steps will be pushed to.
 Finally, it copies the kubeconfig of your remote cluster to [`/dev-setup/kubeconfigs/runtime/kubeconfig`](/dev-setup/kubeconfigs/runtime/kubeconfig).
 
@@ -140,7 +145,7 @@ You can now start deploying shoots into your virtual garden.
 
 ### Rotate credentials of container image registry
 
-There is a container image registry in your garden runtime and soil cluster where Gardener images required for the Gardenm Seed and the Shoot nodes are pushed to.
+There is a container image registry in your garden runtime and soil cluster where Gardener images required for the Garden, Seed and the Shoot nodes are pushed to.
 This registry is password protected. The password is generated when remote cluster is prepared via `make remote-up`. Afterward, it is not rotated automatically.
 Otherwise, this could break the update of `gardener-node-agent`, because it might not be able to pull its own new image anymore.
 This is no general issue of `gardener-node-agent`, but a limitation `remote` setup. Gardener does not support protected container images out of the box. The function was added for this scenario only.

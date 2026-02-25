@@ -15,9 +15,9 @@ spec:
         # Specify all fields when defining 'backup' so that they correctly overwrite the corresponding fields in example/gardener-local/gardenlet/values.yaml
         backup: ~
         provider:
-          # Automatically set when using a Gardener shoot
+          # This field will be automatically set by `make remote-up` when using a Gardener shoot.
           region: ""
-          # Automatically set when using a Gardener shoot
+          # This field will be automatically set by `make remote-up` when using a Gardener shoot.
           type: ""
           # Enter zones of your seed
           zones: []
@@ -67,11 +67,11 @@ spec:
         networks:
           blockCIDRs:
             - 169.254.169.254/32
-          # Automatically set when using a Gardener shoot
+          # This field will be automatically set by `make remote-up` when using a Gardener shoot.
           pods: ""
-          # Automatically set when using a Gardener shoot
+          # This field will be automatically set by `make remote-up` when using a Gardener shoot.
           nodes: ""
-          # Automatically set when using a Gardener shoot
+          # This field will be automatically set by `make remote-up` when using a Gardener shoot.
           services: ""
           shootDefaults:
             pods: 100.80.0.0/12
