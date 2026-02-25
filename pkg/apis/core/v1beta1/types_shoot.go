@@ -487,7 +487,7 @@ type ShootAdvertisedAddress struct {
 	URL string `json:"url" protobuf:"bytes,2,opt,name=url"`
 	// DisplayName is a human-readable name for this address. Used by UI clients.
 	// +optional
-	DisplayName string `json:"displayName,omitempty" protobuf:"bytes,3,opt,name=displayName"`
+	DisplayName *string `json:"displayname,omitempty" protobuf:"bytes,3,opt,name=displayname"`
 }
 
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.

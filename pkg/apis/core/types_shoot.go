@@ -389,7 +389,7 @@ type ShootAdvertisedAddress struct {
 	// The URL of the API Server. e.g. https://api.foo.bar or https://1.2.3.4
 	URL string
 	// DisplayName is a human-readable name for this address. Used by UI clients.
-	DisplayName string
+	DisplayName *string
 }
 
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.
