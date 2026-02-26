@@ -809,6 +809,10 @@ images:
           confidentiality_requirement: 'low'
           integrity_requirement: 'high'
           availability_requirement: 'high'
+      - name: 'cloud.gardener.cnudie/responsibles'
+        value:
+          - type: 'githubTeam'
+            teamname: 'gardener/vertical-pod-autoscaler-maintainers'
   - name: vpa-recommender
     sourceRepository: github.com/kubernetes/autoscaler
     repository: registry.k8s.io/autoscaling/vpa-recommender
@@ -822,6 +826,10 @@ images:
           confidentiality_requirement: 'low'
           integrity_requirement: 'high'
           availability_requirement: 'high'
+      - name: 'cloud.gardener.cnudie/responsibles'
+        value:
+          - type: 'githubTeam'
+            teamname: 'gardener/vertical-pod-autoscaler-maintainers'
   - name: vpa-updater
     sourceRepository: github.com/kubernetes/autoscaler
     repository: registry.k8s.io/autoscaling/vpa-updater
@@ -835,6 +843,10 @@ images:
           confidentiality_requirement: 'low'
           integrity_requirement: 'high'
           availability_requirement: 'high'
+      - name: 'cloud.gardener.cnudie/responsibles'
+        value:
+          - type: 'githubTeam'
+            teamname: 'gardener/vertical-pod-autoscaler-maintainers'
   # Horizontal cluster-proportional-autoscaler
   - name: cluster-proportional-autoscaler
     sourceRepository: https://github.com/kubernetes-sigs/cluster-proportional-autoscaler
