@@ -98,7 +98,7 @@ var _ = Describe("NginxIngress", func() {
 				ConfigData:                configMapData,
 				LoadBalancerAnnotations:   loadBalancerAnnotations,
 				VPAEnabled:                true,
-				WildcardIngressDomains:    []string{firstWildcardIngress, secondWildcardIngress},
+				Domains:                   []string{firstWildcardIngress, secondWildcardIngress},
 				IstioIngressGatewayLabels: map[string]string{istioLabelKey: istioLabelValue},
 			}
 		})
@@ -623,12 +623,12 @@ spec:
   gateways:
   - nginx-ingress-controller
   hosts:
-  - '` + values.WildcardIngressDomains[index] + `'
+  - '` + values.Domains[index] + `'
   tls:
   - match:
     - port: 443
       sniHosts:
-      - '` + values.WildcardIngressDomains[index] + `'
+      - '` + values.Domains[index] + `'
     route:
     - destination:
         host: nginx-ingress-controller.` + namespace + `.svc.cluster.local
