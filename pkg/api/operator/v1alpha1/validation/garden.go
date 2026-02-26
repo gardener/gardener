@@ -244,19 +244,28 @@ func validateDomains(dns *operatorv1alpha1.DNSManagement, domains []operatorv1al
 
 	names := sets.New[string]()
 	for i, domain := range domains {
-		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(domain.Name, path.Index(i).Child("name"))...)
+		allErrs = append(allErrs, validateDomain(dns, domain, path.Index(i))...)
+
 		if names.Has(domain.Name) {
 			allErrs = append(allErrs, field.Duplicate(path.Index(i).Child("name"), domain.Name))
 		}
 		names.Insert(domain.Name)
-		if dns != nil {
-			if domain.Provider != nil {
-				if !hasProvider(dns, *domain.Provider) {
-					allErrs = append(allErrs, field.Invalid(path.Index(i).Child("provider"), *domain.Provider, "provider name not found in .spec.dns.providers"))
-				}
-			} else {
-				allErrs = append(allErrs, field.Required(path.Index(i).Child("provider"), "provider name must be set if `.spec.dns` is set"))
+	}
+
+	return allErrs
+}
+
+func validateDomain(dns *operatorv1alpha1.DNSManagement, domain operatorv1alpha1.DNSDomain, path *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(domain.Name, path.Child("name"))...)
+	if dns != nil {
+		if domain.Provider != nil {
+			if !hasProvider(dns, *domain.Provider) {
+				allErrs = append(allErrs, field.Invalid(path.Child("provider"), *domain.Provider, "provider name not found in .spec.dns.providers"))
 			}
+		} else {
+			allErrs = append(allErrs, field.Required(path.Child("provider"), "provider name must be set if `.spec.dns` is set"))
 		}
 	}
 
@@ -398,7 +407,7 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 		allErrs = append(allErrs, gardencorevalidation.ValidateKubeControllerManager(coreKubeControllerManagerConfig, nil, virtualCluster.Kubernetes.Version, true, path)...)
 	}
 
-	allErrs = append(allErrs, validateGardener(virtualCluster.Gardener, virtualCluster.Kubernetes, fldPath.Child("gardener"))...)
+	allErrs = append(allErrs, validateGardener(dns, virtualCluster.Gardener, virtualCluster.Kubernetes, fldPath.Child("gardener"))...)
 
 	for i, services := range virtualCluster.Networking.Services {
 		if _, _, err := net.ParseCIDR(services); err != nil {
@@ -451,7 +460,7 @@ func validateETCDAutoscaling(autoscaling *gardencorev1beta1.ControlPlaneAutoscal
 	return allErrs
 }
 
-func validateGardener(gardener operatorv1alpha1.Gardener, kubernetes operatorv1alpha1.Kubernetes, fldPath *field.Path) field.ErrorList {
+func validateGardener(dns *operatorv1alpha1.DNSManagement, gardener operatorv1alpha1.Gardener, kubernetes operatorv1alpha1.Kubernetes, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateGardenerAPIServerConfig(gardener.APIServer, kubernetes.KubeAPIServer, kubernetes.Version, fldPath.Child("gardenerAPIServer"))...)
@@ -459,7 +468,7 @@ func validateGardener(gardener operatorv1alpha1.Gardener, kubernetes operatorv1a
 	allErrs = append(allErrs, validateGardenerControllerManagerConfig(gardener.ControllerManager, fldPath.Child("gardenerControllerManager"))...)
 	allErrs = append(allErrs, validateGardenerSchedulerConfig(gardener.Scheduler, fldPath.Child("gardenerScheduler"))...)
 	allErrs = append(allErrs, validateGardenerDashboardConfig(gardener.Dashboard, kubernetes.KubeAPIServer, fldPath.Child("gardenerDashboard"))...)
-	allErrs = append(allErrs, validateGardenerDiscoveryServerConfig(gardener.DiscoveryServer, fldPath.Child("gardenerDiscoveryServer"))...)
+	allErrs = append(allErrs, validateGardenerDiscoveryServerConfig(dns, gardener.DiscoveryServer, fldPath.Child("gardenerDiscoveryServer"))...)
 
 	return allErrs
 }
@@ -667,7 +676,7 @@ func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardC
 	return allErrs
 }
 
-func validateGardenerDiscoveryServerConfig(config *operatorv1alpha1.GardenerDiscoveryServerConfig, fldPath *field.Path) field.ErrorList {
+func validateGardenerDiscoveryServerConfig(dns *operatorv1alpha1.DNSManagement, config *operatorv1alpha1.GardenerDiscoveryServerConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if config == nil {
@@ -675,7 +684,7 @@ func validateGardenerDiscoveryServerConfig(config *operatorv1alpha1.GardenerDisc
 	}
 
 	if config.Domain != nil {
-		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(*config.Domain, fldPath.Child("domain"))...)
+		allErrs = append(allErrs, validateDomain(dns, *config.Domain, fldPath.Child("domain"))...)
 	}
 
 	if config.TLSSecretName != nil {

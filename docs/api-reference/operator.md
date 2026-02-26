@@ -496,6 +496,7 @@ The first given domain in this list is immutable.</p>
 <p>
 (<em>Appears on:</em>
 <a href="#operator.gardener.cloud/v1alpha1.DNS">DNS</a>, 
+<a href="#operator.gardener.cloud/v1alpha1.GardenerDiscoveryServerConfig">GardenerDiscoveryServerConfig</a>, 
 <a href="#operator.gardener.cloud/v1alpha1.Ingress">Ingress</a>)
 </p>
 <p>
@@ -2454,12 +2455,14 @@ DashboardIngress
 <td>
 <code>domain</code></br>
 <em>
-string
+<a href="#operator.gardener.cloud/v1alpha1.DNSDomain">
+DNSDomain
+</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Domain overrides the default ingress domain for the gardener-discovery-server.
+<p>Domain overrides the default ingress domain and optionally the DNS provider for the gardener-discovery-server.
 Defaults to &ldquo;discovery.<first-runtime-ingress-domain>&rdquo;.</p>
 </td>
 </tr>

@@ -402,7 +402,9 @@ var _ = Describe("helper", func() {
 				VirtualCluster: operatorv1alpha1.VirtualCluster{
 					Gardener: operatorv1alpha1.Gardener{
 						DiscoveryServer: &operatorv1alpha1.GardenerDiscoveryServerConfig{
-							Domain: ptr.To("custom.discovery.example.com"),
+							Domain: &operatorv1alpha1.DNSDomain{
+								Name: "custom.discovery.example.com",
+							},
 						},
 					},
 				},

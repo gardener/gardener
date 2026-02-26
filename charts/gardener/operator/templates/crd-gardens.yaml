@@ -1331,9 +1331,21 @@ spec:
                         properties:
                           domain:
                             description: |-
-                              Domain overrides the default ingress domain for the gardener-discovery-server.
+                              Domain overrides the default ingress domain and optionally the DNS provider for the gardener-discovery-server.
                               Defaults to "discovery.<first-runtime-ingress-domain>".
-                            type: string
+                            properties:
+                              name:
+                                description: Name is the domain name.
+                                minLength: 1
+                                type: string
+                              provider:
+                                description: |-
+                                  Provider is the name of the DNS provider as declared in the '.spec.dns.providers' section.
+                                  It is only optional, if the `.spec.dns` section is not provided at all.
+                                type: string
+                            required:
+                            - name
+                            type: object
                           tlsSecretName:
                             description: |-
                               TLSSecretName is the name of a secret (in the garden namespace) containing
