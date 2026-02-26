@@ -7,8 +7,6 @@ package matchers
 import (
 	"context"
 	"fmt"
-	"maps"
-	"slices"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -137,11 +135,11 @@ func findMismatchObjects(availableObjects map[string]client.Object, expectedObje
 }
 
 func findMissingObjects(availableObjects map[string]client.Object, expectedObjects map[string]client.Object) []string {
-	return sets.New(slices.Collect(maps.Keys(expectedObjects))...).Difference(sets.New(slices.Collect(maps.Keys(availableObjects))...)).UnsortedList()
+	return sets.KeySet(expectedObjects).Difference(sets.KeySet(availableObjects)).UnsortedList()
 }
 
 func findExtraObjects(availableObjects map[string]client.Object, expectedObjects map[string]client.Object) []string {
-	return sets.New(slices.Collect(maps.Keys(availableObjects))...).Difference(sets.New(slices.Collect(maps.Keys(expectedObjects))...)).UnsortedList()
+	return sets.KeySet(availableObjects).Difference(sets.KeySet(expectedObjects)).UnsortedList()
 }
 
 func objectKey(obj client.Object, scheme *runtime.Scheme) string {
