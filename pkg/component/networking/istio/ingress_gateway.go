@@ -90,14 +90,11 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 				"port":    vpnseedserver.GatewayPort,
 				"header":  "Reversed-VPN",
 			},
-		}
-
-		if features.DefaultFeatureGate.Enabled(features.UseUnifiedHTTPProxyPort) {
-			httpProxy["unifiedPort"] = map[string]any{
+			"unifiedPort": map[string]any{
 				"enabled": true,
 				"port":    vpnseedserver.HTTPProxyGatewayPort,
 				"header":  "X-Gardener-Destination",
-			}
+			},
 		}
 
 		values := map[string]any{
