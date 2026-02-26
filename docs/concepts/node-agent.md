@@ -91,8 +91,12 @@ After all these steps are complete, the controller maintains two annotations on 
 #### Serial Reconciliation
 
 For certain critical nodes that should never be updated in parallel (e.g., control plane nodes for self-hosted shoot clusters), the controller supports a **serial reconciliation** mode.
-This ensures that only one `gardener-node-agent` instance at a time can reconcile the `OperatingSystemConfig`, preventing simultaneous updates that could potentially disrupt cluster operations.
+This ensures that only one `gardener-node-agent` instance at a time reconciles the `OperatingSystemConfig`, preventing simultaneous updates that could potentially disrupt cluster operations.
+
 It is particularly relevant for control plane nodes since they run critical components like `etcd` or `kube-apiserver` as static pods, and we want them to get updated one at a time.
+The primary driver for this feature is `etcd`'s quorum requirement: `etcd` needs a majority of members to be healthy to perform any useful operations, so updating multiple control plane nodes simultaneously risks losing quorum and making the cluster unavailable.
+In contrast, `kube-apiserver` instances sit behind a load balancer that can health-check and route traffic away from non-ready instances, meaning the API server can tolerate some replicas being temporarily unavailable as long as at least one is ready.
+Therefore, while serial reconciliation benefits both components, it is the `etcd` quorum constraint that makes it a hard requirement.
 
 ##### How It Works
 

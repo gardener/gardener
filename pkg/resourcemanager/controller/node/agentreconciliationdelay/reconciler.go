@@ -89,6 +89,19 @@ func nodeNames(nodeList *corev1.NodeList) sets.Set[string] {
 	return out
 }
 
+func (r *Reconciler) removeNodesWithSerialOperatingSystemConfigReconciliation(ctx context.Context, nodeList *corev1.NodeList) (*corev1.NodeList, error) {
+	secrets, err := r.gardenerNodeAgentSecretsWithSerialReconciliation(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch gardener-node-agent secrets with serial reconciliation: %w", err)
+	}
+
+	out := nodeList.DeepCopy()
+	out.Items = slices.DeleteFunc(out.Items, func(node corev1.Node) bool {
+		return secrets.Has(node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName])
+	})
+	return out, nil
+}
+
 func (r *Reconciler) gardenerNodeAgentSecretsWithSerialReconciliation(ctx context.Context) (sets.Set[string], error) {
 	secretList := &corev1.SecretList{}
 	if err := r.TargetClient.List(ctx, secretList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleOperatingSystemConfig}); err != nil {
@@ -102,17 +115,4 @@ func (r *Reconciler) gardenerNodeAgentSecretsWithSerialReconciliation(ctx contex
 		}
 	}
 	return secrets, nil
-}
-
-func (r *Reconciler) removeNodesWithSerialOperatingSystemConfigReconciliation(ctx context.Context, nodeList *corev1.NodeList) (*corev1.NodeList, error) {
-	secrets, err := r.gardenerNodeAgentSecretsWithSerialReconciliation(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch gardener-node-agent secrets with serial reconciliation: %w", err)
-	}
-
-	out := nodeList.DeepCopy()
-	out.Items = slices.DeleteFunc(out.Items, func(node corev1.Node) bool {
-		return secrets.Has(node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName])
-	})
-	return out, nil
 }

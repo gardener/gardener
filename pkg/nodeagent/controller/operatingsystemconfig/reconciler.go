@@ -111,7 +111,7 @@ func init() {
 type Reconciler struct {
 	Client client.Client
 	// LeaseClient is a cached client just for the leader election Lease in case the OperatingSystemConfig
-	// reconciliation is serialed.
+	// reconciliation is serialised.
 	LeaseClient      client.Client
 	ContainerdClient nodeagentcontainerd.Client
 	Config           nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig

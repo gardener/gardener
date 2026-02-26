@@ -6,6 +6,7 @@ package operatingsystemconfig
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -62,6 +63,10 @@ func newLeaderElectorForSecret(log logr.Logger, c client.Client, clock clock.Clo
 func (l *leaderElector) logger() logr.Logger {
 	log := l.log
 
+	if l.lease == nil {
+		return log
+	}
+
 	if l.lease.Spec.HolderIdentity != nil {
 		log = log.WithValues("holderIdentity", *l.lease.Spec.HolderIdentity)
 	}
@@ -79,19 +84,35 @@ func (l *leaderElector) logger() logr.Logger {
 }
 
 func (l *leaderElector) acquiredByMe() bool {
+	if l.lease == nil {
+		return false
+	}
+
 	return ptr.Deref(l.lease.Spec.HolderIdentity, "") == l.identity
 }
 
 func (l *leaderElector) acquiredByAnotherInstance() bool {
+	if l.lease == nil {
+		return false
+	}
+
 	holder := ptr.Deref(l.lease.Spec.HolderIdentity, "")
 	return holder != "" && !l.acquiredByMe()
 }
 
 func (l *leaderElector) leaseDuration() time.Duration {
+	if l.lease == nil {
+		return 0
+	}
+
 	return time.Duration(ptr.Deref(l.lease.Spec.LeaseDurationSeconds, 0)) * time.Second
 }
 
 func (l *leaderElector) renewedInTime() bool {
+	if l.lease == nil {
+		return false
+	}
+
 	if ptr.Deref(l.lease.Spec.LeaseDurationSeconds, 0) < 0 || l.lease.Spec.RenewTime == nil {
 		return false
 	}
@@ -99,6 +120,10 @@ func (l *leaderElector) renewedInTime() bool {
 }
 
 func (l *leaderElector) durationUntilLeaseExpires() time.Duration {
+	if l.lease == nil {
+		return 0
+	}
+
 	if ptr.Deref(l.lease.Spec.LeaseDurationSeconds, 0) < 0 || l.lease.Spec.RenewTime == nil {
 		return 0
 	}
@@ -106,10 +131,18 @@ func (l *leaderElector) durationUntilLeaseExpires() time.Duration {
 }
 
 func (l *leaderElector) reload(ctx context.Context) error {
+	if l.lease == nil {
+		return nil
+	}
+
 	return client.IgnoreNotFound(l.client.Get(ctx, client.ObjectKeyFromObject(l.lease), l.lease))
 }
 
 func (l *leaderElector) tryAcquireOrRenew(ctx context.Context) error {
+	if l.lease == nil {
+		return errors.New("cannot acquire or renew Lease because it is not set")
+	}
+
 	l.log.Info("Try to acquire or renew Lease")
 
 	setLeaseSpec := func() {
