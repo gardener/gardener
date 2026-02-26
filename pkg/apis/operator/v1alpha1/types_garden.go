@@ -743,10 +743,10 @@ type DashboardIngress struct {
 
 // GardenerDiscoveryServerConfig contains configuration settings for the gardener-discovery-server.
 type GardenerDiscoveryServerConfig struct {
-	// Domain overrides the default ingress domain for the gardener-discovery-server.
+	// Domain overrides the default ingress domain and optionally the DNS provider for the gardener-discovery-server.
 	// Defaults to "discovery.<first-runtime-ingress-domain>".
 	// +optional
-	Domain *string `json:"domain,omitempty"`
+	Domain *DNSDomain `json:"domain,omitempty"`
 	// TLSSecretName is the name of a secret (in the garden namespace) containing
 	// a trusted TLS certificate for the domain. If not configured, Gardener falls
 	// back to a secret labelled with 'gardener.cloud/role=garden-cert', if in turn not

@@ -1199,8 +1199,8 @@ func (in *GardenerDiscoveryServerConfig) DeepCopyInto(out *GardenerDiscoveryServ
 	*out = *in
 	if in.Domain != nil {
 		in, out := &in.Domain, &out.Domain
-		*out = new(string)
-		**out = **in
+		*out = new(DNSDomain)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.TLSSecretName != nil {
 		in, out := &in.TLSSecretName, &out.TLSSecretName

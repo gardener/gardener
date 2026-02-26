@@ -310,7 +310,11 @@ spec:
     #       description: A nice container for debugging purposes
     #   ingress:
     #     enabled: true
-      gardenerDiscoveryServer: {}
+      gardenerDiscoveryServer:
+      # domain:
+      #   name: discovery.local.gardener.cloud
+      #   provider: primary
+      # tlsSecretName: gardener-discovery-server-tls
     # gardenerResourceManager:
     #   additionalTargetNamespaces:
     #   - my-custom-namespace
