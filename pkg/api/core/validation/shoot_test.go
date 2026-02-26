@@ -2827,6 +2827,57 @@ var _ = Describe("Shoot Validation Tests", func() {
 					))
 				})
 
+				DescribeTable("aesgcm encryption provider type",
+					func(rotationConfig *core.MaintenanceRotationConfig, providerType *core.EncryptionProviderType, matcher gomegatypes.GomegaMatcher) {
+						shoot.Spec.Maintenance.AutoRotation = &core.MaintenanceAutoRotation{
+							Credentials: &core.MaintenanceCredentialsAutoRotation{
+								ETCDEncryptionKey: rotationConfig,
+							},
+						}
+
+						shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+							EncryptionConfig: &core.EncryptionConfig{
+								Provider: core.EncryptionProvider{
+									Type: providerType,
+								},
+							},
+						}
+
+						Expect(ValidateShoot(shoot)).To(matcher)
+					},
+
+					Entry("should fail when encryption provider type is aesgcm and auto rotation is not enabled",
+						nil, ptr.To(core.EncryptionProviderTypeAESGCM),
+						ContainElements(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeForbidden),
+								"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.provider.type"),
+								"Detail": ContainSubstring("etcdEncryptionKey auto rotation must be enabled when encryption at rest provider is AES-GCM"),
+							})))),
+					Entry("should pass when encryption provider type is aesgcm and auto rotation is enabled",
+						&core.MaintenanceRotationConfig{
+							RotationPeriod: &metav1.Duration{Duration: 30 * 24 * time.Hour},
+						}, ptr.To(core.EncryptionProviderTypeAESGCM), BeEmpty()),
+					Entry("should fail when encryption provider type is aesgcm and auto rotation is enabled with rotation period beyond 90 days",
+						&core.MaintenanceRotationConfig{
+							RotationPeriod: &metav1.Duration{Duration: 91 * 24 * time.Hour},
+						}, ptr.To(core.EncryptionProviderTypeAESGCM),
+						ContainElements(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.maintenance.autoRotation.credentials.etcdEncryptionKey.rotationPeriod"),
+								"Detail": ContainSubstring("value must be either 0 to disable rotation or between 30m and 90d"),
+							})))),
+					Entry("should pass when encryption provider type is not aesgcm and auto rotation is not enabled",
+						nil, ptr.To(core.EncryptionProviderTypeSecretbox), BeEmpty()),
+					Entry("should pass when encryption provider type is not aesgcm and auto rotation is enabled",
+						&core.MaintenanceRotationConfig{
+							RotationPeriod: &metav1.Duration{Duration: 30 * 24 * time.Hour},
+						}, ptr.To(core.EncryptionProviderTypeSecretbox), BeEmpty()),
+					Entry("should pass when encryption provider type is not set and auto rotation is not enabled",
+						nil, nil, BeEmpty()),
+				)
+
 				It("should deny changing items when resources in the spec and status are not equal", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Resources: []string{"configmaps", "deployments.apps"},
@@ -5257,57 +5308,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("should fail when autoRotation is below 30m", &metav1.Duration{Duration: 16 * time.Minute}, false),
 				Entry("should fail when autoRotation is above 90d", &metav1.Duration{Duration: 128 * 24 * time.Hour}, false),
 				Entry("should fail when autoRotation is a negative duration", &metav1.Duration{Duration: -64 * 24 * time.Hour}, false),
-			)
-
-			DescribeTable("aesgcm encryption provider type",
-				func(rotationConfig *core.MaintenanceRotationConfig, providerType *core.EncryptionProviderType, matcher gomegatypes.GomegaMatcher) {
-					shoot.Spec.Maintenance.AutoRotation = &core.MaintenanceAutoRotation{
-						Credentials: &core.MaintenanceCredentialsAutoRotation{
-							ETCDEncryptionKey: rotationConfig,
-						},
-					}
-
-					shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
-						EncryptionConfig: &core.EncryptionConfig{
-							Provider: core.EncryptionProvider{
-								Type: providerType,
-							},
-						},
-					}
-
-					Expect(ValidateShoot(shoot)).To(matcher)
-				},
-
-				Entry("should fail when encryption provider type is aesgcm and auto rotation is not enabled",
-					nil, ptr.To(core.EncryptionProviderTypeAESGCM),
-					ContainElements(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeForbidden),
-							"Field":  Equal("spec.maintenance.autoRotation.credentials.etcdEncryptionKey"),
-							"Detail": ContainSubstring("etcdEncryptionKey auto rotation must be enabled when encryption at rest provider is AES-GCM"),
-						})))),
-				Entry("should pass when encryption provider type is aesgcm and auto rotation is enabled",
-					&core.MaintenanceRotationConfig{
-						RotationPeriod: &metav1.Duration{Duration: 30 * 24 * time.Hour},
-					}, ptr.To(core.EncryptionProviderTypeAESGCM), BeEmpty()),
-				Entry("should fail when encryption provider type is aesgcm and auto rotation is enabled with rotation period beyond 90 days",
-					&core.MaintenanceRotationConfig{
-						RotationPeriod: &metav1.Duration{Duration: 91 * 24 * time.Hour},
-					}, ptr.To(core.EncryptionProviderTypeAESGCM),
-					ContainElements(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.maintenance.autoRotation.credentials.etcdEncryptionKey.rotationPeriod"),
-							"Detail": ContainSubstring("value must be either 0 to disable rotation or between 30m and 90d"),
-						})))),
-				Entry("should pass when encryption provider type is not aesgcm and auto rotation is not enabled",
-					nil, ptr.To(core.EncryptionProviderTypeSecretbox), BeEmpty()),
-				Entry("should pass when encryption provider type is not aesgcm and auto rotation is enabled",
-					&core.MaintenanceRotationConfig{
-						RotationPeriod: &metav1.Duration{Duration: 30 * 24 * time.Hour},
-					}, ptr.To(core.EncryptionProviderTypeSecretbox), BeEmpty()),
-				Entry("should pass when encryption provider type is not set and auto rotation is not enabled",
-					nil, nil, BeEmpty()),
 			)
 		})
 
