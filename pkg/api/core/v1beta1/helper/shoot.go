@@ -31,13 +31,10 @@ func HibernationIsEnabled(shoot *gardencorev1beta1.Shoot) bool {
 // ShootWantsClusterAutoscaler checks if the given Shoot needs a cluster autoscaler.
 // This is determined by checking whether one of the Shoot workers has a different
 // Maximum than Minimum.
-func ShootWantsClusterAutoscaler(shoot *gardencorev1beta1.Shoot) (bool, error) {
-	for _, worker := range shoot.Spec.Provider.Workers {
-		if worker.Maximum > worker.Minimum {
-			return true, nil
-		}
-	}
-	return false, nil
+func ShootWantsClusterAutoscaler(shoot *gardencorev1beta1.Shoot) bool {
+	return slices.ContainsFunc(shoot.Spec.Provider.Workers, func(worker gardencorev1beta1.Worker) bool {
+		return worker.Maximum > worker.Minimum
+	})
 }
 
 // ShootWantsVerticalPodAutoscaler checks if the given Shoot needs a VPA.

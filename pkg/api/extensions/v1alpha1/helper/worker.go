@@ -5,18 +5,17 @@
 package helper
 
 import (
+	"slices"
+
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 // ClusterAutoscalerRequired returns whether the given worker pool configuration indicates that a cluster-autoscaler
 // is needed.
 func ClusterAutoscalerRequired(pools []extensionsv1alpha1.WorkerPool) bool {
-	for _, pool := range pools {
-		if pool.Maximum > pool.Minimum {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(pools, func(pool extensionsv1alpha1.WorkerPool) bool {
+		return pool.Maximum > pool.Minimum
+	})
 }
 
 // GetMachineDeploymentClusterAutoscalerAnnotations returns a map of annotations with values intended to be used as cluster-autoscaler options for the worker group
