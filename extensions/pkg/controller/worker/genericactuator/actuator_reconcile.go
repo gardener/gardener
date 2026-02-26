@@ -230,10 +230,7 @@ func deployMachineDeployments(
 		// and the cluster autoscaler must be enabled. We do not want to override the machine deployment's
 		// replicas as the cluster autoscaler is responsible for setting appropriate values.
 		default:
-			replicas = getDeploymentSpecReplicas(existingMachineDeployments, deployment.Name)
-			if replicas == -1 {
-				replicas = deployment.Minimum
-			}
+			replicas = existingMachineDeployment.Spec.Replicas
 		}
 
 		machineDeployment := &machinev1alpha1.MachineDeployment{
@@ -605,15 +602,6 @@ func shootIsAwake(isHibernated bool, existingMachineDeployments *machinev1alpha1
 		}
 	}
 	return true
-}
-
-func getDeploymentSpecReplicas(existingMachineDeployments *machinev1alpha1.MachineDeploymentList, name string) int32 {
-	for _, existingMachineDeployment := range existingMachineDeployments.Items {
-		if existingMachineDeployment.Name == name {
-			return existingMachineDeployment.Spec.Replicas
-		}
-	}
-	return -1
 }
 
 func getExistingMachineDeployment(existingMachineDeployments *machinev1alpha1.MachineDeploymentList, name string) *machinev1alpha1.MachineDeployment {
