@@ -47,6 +47,7 @@ type GetExtensionObjectListFunc = func() client.ObjectList
 // PreCheckFunc checks whether the health check shall be performed based on the given object.
 // For shoot extensions, the object is a cluster resource *extensions.Cluster.
 // For garden extensions, the object is *operatorv1alpha1.Garden.
+// For seed extensions, the object is nil.
 type PreCheckFunc = func(context.Context, client.Client, client.Object, any) bool
 
 // ErrorCodeCheckFunc checks if the given error is user specific and return respective Gardener ErrorCodes.

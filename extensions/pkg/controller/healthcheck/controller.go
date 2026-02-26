@@ -224,23 +224,14 @@ func isGardenExtensionClass(extensionClasses []extensionsv1alpha1.ExtensionClass
 	return len(extensionClasses) == 1 && extensionClasses[0] == extensionsv1alpha1.ExtensionClassGarden
 }
 
+func isShootExtensionClass(class extensionsv1alpha1.ExtensionClass) bool {
+	return class == extensionsv1alpha1.ExtensionClassShoot
+}
+
 func classesHaveClusterObject(extensionClasses []extensionsv1alpha1.ExtensionClass) bool {
 	// backwards compatibility for shoot extension
 	if len(extensionClasses) == 0 {
 		return true
 	}
-	return slices.ContainsFunc(extensionClasses, classHasClusterObject)
-}
-
-func classHasClusterObject(extensionClass extensionsv1alpha1.ExtensionClass) bool {
-	switch extensionClass {
-	case extensionsv1alpha1.ExtensionClassGarden:
-		return false
-	case extensionsv1alpha1.ExtensionClassSeed:
-		return false
-	case extensionsv1alpha1.ExtensionClassShoot:
-		return true
-	default:
-		return false
-	}
+	return slices.ContainsFunc(extensionClasses, isShootExtensionClass)
 }

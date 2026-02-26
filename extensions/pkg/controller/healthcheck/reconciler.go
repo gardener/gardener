@@ -104,7 +104,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	extClass := extensionsv1alpha1helper.GetExtensionClassOrDefault(extension.GetExtensionSpec().GetExtensionClass())
-	if classHasClusterObject(extClass) {
+	if isShootExtensionClass(extClass) {
 		cluster, err := extensionscontroller.GetCluster(ctx, r.client, acc.GetNamespace())
 		if err != nil {
 			return reconcile.Result{}, err
