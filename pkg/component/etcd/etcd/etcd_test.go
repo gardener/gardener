@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"time"
@@ -1590,6 +1591,7 @@ var _ = Describe("Etcd", func() {
 							"*.etcd-" + testRole + "-peer.shoot--test--test.svc",
 							"*.etcd-" + testRole + "-peer.shoot--test--test.svc.cluster.local",
 						},
+						IPAddresses:                 []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
 						CertType:                    secretsutils.ServerClientCert,
 						SkipPublishingCACertificate: true,
 					}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
@@ -1617,6 +1619,7 @@ var _ = Describe("Etcd", func() {
 							"*.etcd-" + testRole + "-peer.shoot--test--test.svc",
 							"*.etcd-" + testRole + "-peer.shoot--test--test.svc.cluster.local",
 						},
+						IPAddresses:                 []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
 						CertType:                    secretsutils.ServerClientCert,
 						SkipPublishingCACertificate: true,
 					}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
