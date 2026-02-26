@@ -185,6 +185,14 @@ func deployMachineDeployments(
 	clusterAutoscalerUsed bool,
 ) error {
 	log.Info("Deploying machine deployments")
+
+	// If the Shoot is hibernated, then mark all machines for forceful deletion to avoid respecting of PDBs/SLAs.
+	if extensionscontroller.IsHibernationEnabled(cluster) {
+		if err := markAllMachinesForcefulDeletion(ctx, log, cl, worker.Namespace); err != nil {
+			return fmt.Errorf("marking all machines for forceful deletion failed: %w", err)
+		}
+	}
+
 	for _, deployment := range wantedMachineDeployments {
 		var (
 			labels                    = map[string]string{extensionsworkercontroller.LabelKeyMachineDeploymentName: deployment.Name}
@@ -210,12 +218,8 @@ func deployMachineDeployments(
 
 			switch {
 			// If the Shoot is hibernated then the machine deployment's replicas should be zero.
-			// Also mark all machines for forceful deletion to avoid respecting of PDBs/SLAs in case of cluster hibernation.
 			case extensionscontroller.IsHibernationEnabled(cluster):
 				machineDeployment.Spec.Replicas = 0
-				if err := markAllMachinesForcefulDeletion(ctx, log, cl, worker.Namespace); err != nil {
-					return fmt.Errorf("marking all machines for forceful deletion failed: %w", err)
-				}
 			// If the cluster autoscaler is not enabled then min=max (as per API validation), hence
 			// we can use either min or max.
 			case !clusterAutoscalerUsed:
