@@ -184,6 +184,7 @@ var (
 
 type shootValidationOptions struct {
 	KubeAPIServerValidationOptions
+	EncryptionConfigValidationOptions
 }
 
 // KubeAPIServerValidationOptions are validation options for the KubeAPIServer fields.
@@ -194,6 +195,14 @@ type KubeAPIServerValidationOptions struct {
 	//
 	// TODO(ialidzhikov): Stop accepting invalid event ttl values for existing Shoots in Gardener v1.142.0.
 	AllowInvalidEventTTL bool
+}
+
+// EncryptionConfigValidationOptions are validation options for the encryption configuration fields.
+type EncryptionConfigValidationOptions struct {
+	// AutoRotationEnabled is true when ETCD encryption key auto rotation is enabled.
+	AutoRotationEnabled bool
+	// SkipAutoRotationValidation is true when the auto rotation validation should be skipped.
+	SkipAutoRotationValidation bool
 }
 
 // ValidateShoot validates a Shoot object.
@@ -313,10 +322,13 @@ func ValidateShootObjectMetaUpdate(_, _ metav1.ObjectMeta, _ *field.Path) field.
 // ValidateShootSpec validates the specification of a Shoot object.
 func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootValidationOptions, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	var (
-		allErrs                  = field.ErrorList{}
-		workerless               = len(spec.Provider.Workers) == 0
-		encryptionAtRestProvider = helper.GetEncryptionProviderType(spec.Kubernetes.KubeAPIServer)
+		allErrs    = field.ErrorList{}
+		workerless = len(spec.Provider.Workers) == 0
 	)
+
+	opts.EncryptionConfigValidationOptions = EncryptionConfigValidationOptions{
+		AutoRotationEnabled: helper.IsETCDEncryptionKeyAutoRotationEnabled(spec.Maintenance),
+	}
 
 	allErrs = append(allErrs, ValidateCloudProfileReference(spec.CloudProfile, spec.CloudProfileName, spec.Kubernetes.Version, fldPath)...)
 	allErrs = append(allErrs, validateProvider(meta.Namespace, spec.Provider, spec.Kubernetes, spec.Networking, workerless, fldPath.Child("provider"), inTemplate)...)
@@ -326,7 +338,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 	allErrs = append(allErrs, ValidateResources(spec.Resources, fldPath.Child("resources"), true)...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, opts, workerless, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateNetworking(spec.Networking, workerless, fldPath.Child("networking"))...)
-	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"), encryptionAtRestProvider, workerless)...)
+	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"), workerless)...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
 	allErrs = append(allErrs, ValidateHibernation(meta.Annotations, spec.Hibernation, fldPath.Child("hibernation"))...)
 
@@ -1149,7 +1161,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 	}
 
 	allErrs = append(allErrs, validateETCD(kubernetes.ETCD, fldPath.Child("etcd"))...)
-	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, opts.KubeAPIServerValidationOptions, workerless, gardenerutils.DefaultGroupResourcesForEncryption(), fldPath.Child("kubeAPIServer"))...)
+	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, opts.KubeAPIServerValidationOptions, opts.EncryptionConfigValidationOptions, workerless, gardenerutils.DefaultGroupResourcesForEncryption(), fldPath.Child("kubeAPIServer"))...)
 	allErrs = append(allErrs, ValidateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)
 
 	if workerless {
@@ -1432,7 +1444,7 @@ func ValidateAPIServerRequests(requests *core.APIServerRequests, fldPath *field.
 
 // validateEncryptionConfig was created by reusing validation from the kubernetes/kubernetes project
 // https://github.com/kubernetes/kubernetes/blob/8adc0f041b8e7ad1d30e29cc59c6ae7a15e19828/staging/src/k8s.io/apiserver/pkg/apis/apiserver/validation/validation_encryption.go#L122-L284
-func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEncryptedResources []schema.GroupResource, fldPath *field.Path) field.ErrorList {
+func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEncryptedResources []schema.GroupResource, encryptionConfigOpts EncryptionConfigValidationOptions, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs       = field.ErrorList{}
 		seenResources = sets.New[schema.GroupResource]()
@@ -1477,8 +1489,15 @@ func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEn
 		seenResources.Insert(gr)
 	}
 
-	if encryptionConfig.Provider.Type != nil && !availableEncryptionAtRestProviders.Has(*encryptionConfig.Provider.Type) {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("encryptionConfig", "provider", "type"), *encryptionConfig.Provider.Type, sets.List(availableEncryptionAtRestProviders)))
+	if encryptionConfig.Provider.Type != nil {
+		providerTypeIdx := fldPath.Child("encryptionConfig", "provider", "type")
+
+		if !availableEncryptionAtRestProviders.Has(*encryptionConfig.Provider.Type) {
+			allErrs = append(allErrs, field.NotSupported(providerTypeIdx, *encryptionConfig.Provider.Type, sets.List(availableEncryptionAtRestProviders)))
+		}
+		if *encryptionConfig.Provider.Type == core.EncryptionProviderTypeAESGCM && !encryptionConfigOpts.SkipAutoRotationValidation && !encryptionConfigOpts.AutoRotationEnabled {
+			allErrs = append(allErrs, field.Forbidden(providerTypeIdx, "etcdEncryptionKey auto rotation must be enabled when encryption at rest provider is AES-GCM"))
+		}
 	}
 
 	return allErrs
@@ -1739,7 +1758,7 @@ func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
 }
 
 // ValidateKubeAPIServer validates KubeAPIServerConfig.
-func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, kubernetesVersion string, opts KubeAPIServerValidationOptions, workerless bool, defaultEncryptedResources []schema.GroupResource, fldPath *field.Path) field.ErrorList {
+func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, kubernetesVersion string, opts KubeAPIServerValidationOptions, encryptionConfigOpts EncryptionConfigValidationOptions, workerless bool, defaultEncryptedResources []schema.GroupResource, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kubeAPIServer == nil {
@@ -1841,7 +1860,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, kubernetesVe
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(*defaultUnreachableTolerationSeconds, fldPath.Child("defaultUnreachableTolerationSeconds"))...)
 	}
 
-	allErrs = append(allErrs, validateEncryptionConfig(kubeAPIServer.EncryptionConfig, defaultEncryptedResources, fldPath)...)
+	allErrs = append(allErrs, validateEncryptionConfig(kubeAPIServer.EncryptionConfig, defaultEncryptedResources, encryptionConfigOpts, fldPath)...)
 
 	allErrs = append(allErrs, ValidateAPIServerRequests(kubeAPIServer.Requests, fldPath.Child("requests"))...)
 
@@ -2125,7 +2144,7 @@ func validateAlerting(alerting *core.Alerting, fldPath *field.Path) field.ErrorL
 	return allErrs
 }
 
-func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, encryptionAtRestProvider core.EncryptionProviderType, workerless bool) field.ErrorList {
+func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, workerless bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if maintenance == nil {
@@ -2156,10 +2175,6 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, enc
 		if credentials.ETCDEncryptionKey != nil {
 			allErrs = append(allErrs, validateCredentialAutoRotationPeriod(credentials.ETCDEncryptionKey.RotationPeriod, credentialsPath.Child("etcdEncryptionKey"))...)
 		}
-	}
-
-	if encryptionAtRestProvider == core.EncryptionProviderTypeAESGCM && !helper.IsETCDEncryptionKeyAutoRotationEnabled(maintenance) {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("autoRotation", "credentials", "etcdEncryptionKey"), "etcdEncryptionKey auto rotation must be enabled when encryption at rest provider is AES-GCM"))
 	}
 
 	if maintenance.TimeWindow != nil {
