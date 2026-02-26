@@ -96,6 +96,9 @@ func defaultGarden(backupSecret *corev1.Secret, specifyBackupBucket bool) *opera
 							Container: operatorv1alpha1.DashboardTerminalContainer{Image: "busybox:latest"},
 						},
 					},
+					DiscoveryServer: &operatorv1alpha1.GardenerDiscoveryServerConfig{
+						Domain: &operatorv1alpha1.DNSDomain{Name: "discovery.local.gardener.cloud"},
+					},
 				},
 				Kubernetes: operatorv1alpha1.Kubernetes{
 					Version: "1.34.2",

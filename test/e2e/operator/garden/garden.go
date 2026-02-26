@@ -60,6 +60,8 @@ var gardenManagedResourceList = []string{
 	"gardener-admission-controller-virtual",
 	"gardener-controller-manager-runtime",
 	"gardener-controller-manager-virtual",
+	"gardener-discovery-server-runtime",
+	"gardener-discovery-server-virtual",
 	"gardener-scheduler-runtime",
 	"gardener-scheduler-virtual",
 	"gardener-dashboard-runtime",

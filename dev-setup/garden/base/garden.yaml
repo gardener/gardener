@@ -58,7 +58,10 @@ spec:
           CloudProfileCapabilities: true
           InPlaceNodeUpdates: true
       gardenerDashboard: {}
-      gardenerDiscoveryServer: {}
+      gardenerDiscoveryServer:
+        domain:
+          name: discovery.local.gardener.cloud
+          provider: primary
     maintenance:
       timeWindow:
         begin: 220000+0100
