@@ -114,6 +114,24 @@ var _ = Describe("Network", func() {
 		})
 	})
 
+	Describe("#MachineIP", func() {
+		It("should return the IP address for a resolvable hostname", func() {
+			b.HostName = "localhost"
+
+			ip, err := b.MachineIP()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ip).NotTo(BeNil())
+		})
+
+		It("should return an error when no IP address is found", func() {
+			b.HostName = "this-hostname-does-not-exist.invalid"
+
+			ip, err := b.MachineIP()
+			Expect(err).To(MatchError("no IP address found for node"))
+			Expect(ip).To(BeNil())
+		})
+	})
+
 	Describe("#ApplyNetworkPolicies", func() {
 		It("should apply the NetworkPolicies", func() {
 			namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default", Labels: map[string]string{"gardener.cloud/role": "shoot"}}, Status: corev1.NamespaceStatus{Phase: corev1.NamespaceActive}}
