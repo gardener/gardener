@@ -88,7 +88,7 @@ var _ = Describe("Etcd", func() {
 			End:   "5678",
 		}
 		highAvailabilityEnabled bool
-		runAsStaticPod          bool
+		staticPodConfig         *StaticPodConfig
 		role                    string
 		caRotationPhase         gardencorev1beta1.CredentialsRotationPhase
 		autoscalingConfig       AutoscalingConfig
@@ -135,7 +135,7 @@ var _ = Describe("Etcd", func() {
 			peerServerSecretName *string,
 			topologyAwareRoutingEnabled bool,
 			runtimeKubernetesVersion *semver.Version,
-			runAsStaticPod bool,
+			staticPodConfig *StaticPodConfig,
 		) *druidcorev1alpha1.Etcd {
 			defragSchedule := defragmentationSchedule
 			if existingDefragmentationSchedule != "" {
@@ -373,7 +373,7 @@ var _ = Describe("Etcd", func() {
 				}
 			}
 
-			if runAsStaticPod {
+			if staticPodConfig != nil {
 				obj.Annotations["druid.gardener.cloud/disable-etcd-runtime-component-creation"] = ""
 				obj.Spec.RunAsRoot = ptr.To(true)
 
@@ -727,7 +727,7 @@ var _ = Describe("Etcd", func() {
 		backupConfig = nil
 		replicas = ptr.To[int32](1)
 		highAvailabilityEnabled = false
-		runAsStaticPod = false
+		staticPodConfig = nil
 		role = testRole
 	})
 
@@ -756,7 +756,7 @@ var _ = Describe("Etcd", func() {
 			MaintenanceTimeWindow:   maintenanceTimeWindow,
 			HighAvailabilityEnabled: highAvailabilityEnabled,
 			BackupConfig:            backupConfig,
-			RunsAsStaticPod:         runAsStaticPod,
+			StaticPod:               staticPodConfig,
 		})
 	})
 
@@ -806,7 +806,7 @@ var _ = Describe("Etcd", func() {
 						nil,
 						false,
 						nil,
-						runAsStaticPod,
+						staticPodConfig,
 					)))
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
@@ -881,7 +881,7 @@ var _ = Describe("Etcd", func() {
 						nil,
 						false,
 						nil,
-						runAsStaticPod,
+						staticPodConfig,
 					)))
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
@@ -961,7 +961,7 @@ var _ = Describe("Etcd", func() {
 						nil,
 						false,
 						nil,
-						runAsStaticPod,
+						staticPodConfig,
 					)))
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
@@ -1025,7 +1025,7 @@ var _ = Describe("Etcd", func() {
 						nil,
 						false,
 						nil,
-						runAsStaticPod,
+						staticPodConfig,
 					)
 					expectedObj.Annotations = utils.MergeStringMaps(expectedObj.Annotations, map[string]string{
 						"foo": "bar",
@@ -1098,7 +1098,7 @@ var _ = Describe("Etcd", func() {
 						nil,
 						false,
 						nil,
-						runAsStaticPod,
+						staticPodConfig,
 					)))
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
@@ -1143,7 +1143,7 @@ var _ = Describe("Etcd", func() {
 						nil,
 						false,
 						nil,
-						runAsStaticPod,
+						staticPodConfig,
 					)))
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
@@ -1211,7 +1211,7 @@ var _ = Describe("Etcd", func() {
 							nil,
 							false,
 							nil,
-							runAsStaticPod,
+							staticPodConfig,
 						)))
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
@@ -1271,7 +1271,7 @@ var _ = Describe("Etcd", func() {
 							nil,
 							false,
 							nil,
-							runAsStaticPod,
+							staticPodConfig,
 						)))
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
@@ -1336,7 +1336,7 @@ var _ = Describe("Etcd", func() {
 							nil,
 							false,
 							nil,
-							runAsStaticPod,
+							staticPodConfig,
 						)
 						expobj.Status.Etcd = &druidcorev1alpha1.CrossVersionObjectReference{}
 
@@ -1362,7 +1362,7 @@ var _ = Describe("Etcd", func() {
 
 		When("etcd should run as static pod", func() {
 			BeforeEach(func() {
-				runAsStaticPod = true
+				staticPodConfig = &StaticPodConfig{}
 			})
 
 			Describe("main etcd", func() {
@@ -1389,7 +1389,7 @@ var _ = Describe("Etcd", func() {
 								nil,
 								false,
 								nil,
-								runAsStaticPod,
+								staticPodConfig,
 							)))
 						}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
@@ -1441,7 +1441,7 @@ var _ = Describe("Etcd", func() {
 								nil,
 								false,
 								nil,
-								runAsStaticPod,
+								staticPodConfig,
 							)))
 						}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
@@ -1498,7 +1498,7 @@ var _ = Describe("Etcd", func() {
 							&peerServerSecretName,
 							false,
 							nil,
-							runAsStaticPod,
+							staticPodConfig,
 						)))
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
@@ -1815,7 +1815,7 @@ var _ = Describe("Etcd", func() {
 								nil,
 								true,
 								runtimeKubernetesVersion,
-								runAsStaticPod,
+								staticPodConfig,
 							)))
 						}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
@@ -1881,7 +1881,7 @@ var _ = Describe("Etcd", func() {
 					nil,
 					false,
 					nil,
-					runAsStaticPod,
+					staticPodConfig,
 				)
 				etcdObj.Name = etcdName
 				etcdObj.Spec.VolumeClaimTemplate = ptr.To(testRole + "-virtual-garden-etcd")
@@ -1952,7 +1952,7 @@ var _ = Describe("Etcd", func() {
 							nil,
 							false,
 							nil,
-							runAsStaticPod,
+							staticPodConfig,
 						)))
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
