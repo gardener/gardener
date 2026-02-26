@@ -589,7 +589,6 @@ func (o *operatingSystemConfig) getWantedOSCNames(ctx context.Context) (sets.Set
 			if err != nil {
 				return nil, err
 			}
-			o.log.V(1).Info("Inserted osc data from worker", "data", oscKey+keySuffix(version, worker.Machine.Image, purpose))
 			wantedOSCNames.Insert(oscKey + keySuffix(version, worker.Machine.Image, purpose))
 		}
 	}
