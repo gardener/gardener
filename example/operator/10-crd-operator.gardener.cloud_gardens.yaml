@@ -1334,17 +1334,6 @@ spec:
                               Domain overrides the default ingress domain for the gardener-discovery-server.
                               Defaults to "discovery.<first-runtime-ingress-domain>".
                             type: string
-                          ingress:
-                            description: Ingress contains configuration for the ingress
-                              settings.
-                            properties:
-                              enabled:
-                                default: true
-                                description: Enabled controls whether the Discovery
-                                  Service Ingress resource will be deployed to the
-                                  cluster.
-                                type: boolean
-                            type: object
                           tlsSecretName:
                             description: |-
                               TLSSecretName is the name of a secret (in the garden namespace) containing

@@ -753,17 +753,6 @@ type GardenerDiscoveryServerConfig struct {
 	// configured it generates a self-signed certificate.
 	// +optional
 	TLSSecretName *string `json:"tlsSecretName,omitempty"`
-	// Ingress contains configuration for the ingress settings.
-	// +optional
-	Ingress *DiscoveryServerIngress `json:"ingress,omitempty"`
-}
-
-// DiscoveryServerIngress contains configuration for the discovery server ingress resource.
-type DiscoveryServerIngress struct {
-	// Enabled controls whether the Discovery Service Ingress resource will be deployed to the cluster.
-	// +kubebuilder:default=true
-	// +optional
-	Enabled *bool `json:"enabled,omitempty"`
 }
 
 const (

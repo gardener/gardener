@@ -1564,25 +1564,16 @@ func (r *Reconciler) newGardenerDiscoveryServer(
 		return nil, err
 	}
 
-	values := gardenerdiscoveryserver.Values{
-		Image:                       image.String(),
-		Domain:                      helper.DiscoveryServerDomain(garden),
-		TLSSecretName:               discoveryServerTLSSecretName(garden, wildcardCertSecretName),
-		WorkloadIdentityTokenIssuer: workloadIdentityTokenIssuer,
-		Ingress: gardenerdiscoveryserver.IngressValues{
-			Enabled: true,
-		},
-	}
-
-	if config := garden.Spec.VirtualCluster.Gardener.DiscoveryServer; config != nil && config.Ingress != nil {
-		values.Ingress.Enabled = ptr.Deref(config.Ingress.Enabled, true)
-	}
-
 	return gardenerdiscoveryserver.New(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		secretsManager,
-		values,
+		gardenerdiscoveryserver.Values{
+			Image:                       image.String(),
+			Domain:                      helper.DiscoveryServerDomain(garden),
+			TLSSecretName:               discoveryServerTLSSecretName(garden, wildcardCertSecretName),
+			WorkloadIdentityTokenIssuer: workloadIdentityTokenIssuer,
+		},
 	), nil
 }
 

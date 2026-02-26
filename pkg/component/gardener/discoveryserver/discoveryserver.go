@@ -51,17 +51,8 @@ type Values struct {
 	// TLSSecretName is the name of the secret that will be used by the discovery server to handle TLS.
 	// If not provided then self-signed certificate will be generated.
 	TLSSecretName *string
-	// Ingress contains the ingress configuration.
-	Ingress IngressValues
-
 	// WorkloadIdentityTokenIssuer is the issuer URL of the workload identity token issuer.
 	WorkloadIdentityTokenIssuer string
-}
-
-// IngressValues contains the Ingress configuration.
-type IngressValues struct {
-	// Enabled specifies if the ingress resource should be deployed.
-	Enabled bool
 }
 
 // New creates a new [component.DeployWaiter] capable of deploying gardener-discovery-server.
@@ -121,17 +112,12 @@ func (g *gardenerDiscoveryServer) Deploy(ctx context.Context) error {
 		tlsSecretName = ingressTLSSecret.Name
 	}
 
-	if g.values.Ingress.Enabled {
-		if err := runtimeRegistry.Add(g.ingress()); err != nil {
-			return err
-		}
-	}
-
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		g.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, tlsSecretName, secretWorkloadIdentityDiscoveryDocuments.GetName()),
 		g.service(),
 		g.podDisruptionBudget(),
 		g.verticalPodAutoscaler(),
+		g.ingress(),
 		g.serviceMonitor(),
 		secretWorkloadIdentityDiscoveryDocuments,
 	)
