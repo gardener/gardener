@@ -140,6 +140,10 @@ images:
           confidentiality_requirement: high
           integrity_requirement: high
           availability_requirement: low
+      - name: 'cloud.gardener.cnudie/responsibles'
+        value:
+          - type: 'githubTeam'
+            teamname: 'gardener/mcm-maintainers'          
   - name: cluster-autoscaler
     sourceRepository: github.com/gardener/autoscaler
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
