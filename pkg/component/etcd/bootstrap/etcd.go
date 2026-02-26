@@ -7,7 +7,6 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"net"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -78,26 +77,24 @@ type etcdDeployer struct {
 }
 
 func (e *etcdDeployer) Deploy(ctx context.Context) error {
-	etcdCASecret, serverSecret, clientSecret, err := etcd.GenerateClientServerCertificates(
+	etcdCASecret, serverSecret, clientSecret, err := etcd.GenerateServerAndClientCertificates(
 		ctx,
 		e.secretsManager,
 		e.values.Role,
 		[]string{"localhost"},
-		[]net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
+		nil,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to generate etcd client/server certificates: %w", err)
 	}
 
-	etcdPeerCASecretName, peerServerSecretName, err := etcd.GeneratePeerCertificates(
-		ctx,
-		e.secretsManager,
-		e.values.Role,
-		[]string{"localhost"},
-		[]net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
-	)
+	etcdPeerCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
+	}
+	peerServerSecret, err := etcd.GeneratePeerCertificate(ctx, e.secretsManager, e.values.Role, []string{"localhost"}, nil)
 	if err != nil {
-		return fmt.Errorf("failed to generate etcd peer certificates: %w", err)
+		return fmt.Errorf("failed to generate etcd peer certificate: %w", err)
 	}
 
 	statefulSet := e.emptyStatefulSet()
@@ -229,7 +226,7 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 							Name: volumeNamePeerCA,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: etcdPeerCASecretName,
+									SecretName: etcdPeerCASecret.Name,
 								},
 							},
 						},
@@ -253,7 +250,7 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 							Name: volumeNamePeerServerTLS,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: peerServerSecretName,
+									SecretName: peerServerSecret.Name,
 								},
 							},
 						},
