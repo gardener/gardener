@@ -897,7 +897,7 @@ images:
         value:
           - type: 'githubTeam'
             teamname: 'gardener/gardener-core-networking-maintainers'
-  - name: ext-authz-server
+  - name: istio-basic-auth-server
     sourceRepository: github.com/gardener/ext-authz-server
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/ext-authz-server
     tag: "v0.2.0"

@@ -45,8 +45,8 @@ import (
 	kubeproxy "github.com/gardener/gardener/pkg/component/kubernetes/proxy"
 	kubescheduler "github.com/gardener/gardener/pkg/component/kubernetes/scheduler"
 	"github.com/gardener/gardener/pkg/component/networking/coredns"
-	"github.com/gardener/gardener/pkg/component/networking/extauthzserver"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
+	"github.com/gardener/gardener/pkg/component/networking/istiobasicauthserver"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/dependencywatchdog"
@@ -107,7 +107,7 @@ type components struct {
 	clusterAutoscaler       component.DeployWaiter
 	dwdWeeder               component.DeployWaiter
 	dwdProber               component.DeployWaiter
-	extAuthzServer          component.DeployWaiter
+	istioBasicAuthServer    component.DeployWaiter
 
 	kubeAPIServerService component.Deployer
 	kubeAPIServerIngress component.Deployer
@@ -223,7 +223,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.extAuthzServer, err = r.newExtAuthzServer(secretsManager)
+	c.istioBasicAuthServer, err = r.newIstioBasicAuthServer(secretsManager)
 	if err != nil {
 		return
 	}
@@ -368,7 +368,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, seedIsGar
 		labels,
 		[]string{
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port),
-			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+v1beta1constants.DeploymentNameExtAuthzServer, extauthzserver.Port),
+			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+v1beta1constants.DeploymentNameIstioBasicAuthServer, istiobasicauthserver.Port),
 		},
 		seed.GetLoadBalancerServiceAnnotations(),
 		seed.GetLoadBalancerServiceClass(),
@@ -532,8 +532,8 @@ func (r *Reconciler) newDependencyWatchdogs(seedSettings *gardencorev1beta1.Seed
 	return
 }
 
-func (r *Reconciler) newExtAuthzServer(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
-	return sharedcomponent.NewExtAuthzServer(
+func (r *Reconciler) newIstioBasicAuthServer(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	return sharedcomponent.NewIstioBasicAuthServer(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
 		secretsManager,
@@ -791,7 +791,7 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 		vpnseedserver.CentralLoggingConfiguration,
 		kubescheduler.CentralLoggingConfiguration,
 		machinecontrollermanager.CentralLoggingConfiguration,
-		extauthzserver.CentralLoggingConfiguration,
+		istiobasicauthserver.CentralLoggingConfiguration,
 		// shoot worker components
 		nodeagent.CentralLoggingConfiguration,
 		// shoot system components

@@ -64,8 +64,8 @@ import (
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
-	"github.com/gardener/gardener/pkg/component/networking/extauthzserver"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
+	"github.com/gardener/gardener/pkg/component/networking/istiobasicauthserver"
 	"github.com/gardener/gardener/pkg/component/observability/logging"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
@@ -111,7 +111,7 @@ type components struct {
 	etcdDruid               component.DeployWaiter
 	istio                   istio.Interface
 	nginxIngressController  component.DeployWaiter
-	extAuthzServer          component.DeployWaiter
+	istioBasicAuthServer    component.DeployWaiter
 
 	extensions extension.Interface
 
@@ -232,7 +232,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.extAuthzServer, err = r.newExtAuthzServer(secretsManager)
+	c.istioBasicAuthServer, err = r.newIstioBasicAuthServer(secretsManager)
 	if err != nil {
 		return
 	}
@@ -941,7 +941,7 @@ func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Gard
 		sharedcomponent.GetIstioZoneLabels(nil, nil),
 		[]string{
 			gardenerutils.NetworkPolicyLabel(r.GardenNamespace+"-"+kubeapiserverconstants.ServiceName(operatorv1alpha1.VirtualGardenNamePrefix), kubeapiserverconstants.Port),
-			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameExtAuthzServer, extauthzserver.Port),
+			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameIstioBasicAuthServer, istiobasicauthserver.Port),
 		},
 		annotations,
 		nil,
@@ -1099,8 +1099,8 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, 
 	)
 }
 
-func (r *Reconciler) newExtAuthzServer(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
-	return sharedcomponent.NewExtAuthzServer(
+func (r *Reconciler) newIstioBasicAuthServer(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	return sharedcomponent.NewIstioBasicAuthServer(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		secretsManager,

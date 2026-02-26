@@ -108,7 +108,7 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 	}
 
 	if testValues.vpnEnabled {
-		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-ext-authz-server-tcp-10000"] = "allowed"
+		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-istio-basic-auth-server-tcp-10000"] = "allowed"
 		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-plutono-tcp-3000"] = "allowed"
 		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-tcp-1194"] = "allowed"
 		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-0-tcp-1194"] = "allowed"

@@ -655,9 +655,9 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.Plutono.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureDeleted),
 		})
-		deleteExtAuthzServer = g.Add(flow.Task{
-			Name:         "Deleting external authorization server in Seed",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.ExtAuthzServer.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		deleteIstioBasicAuthServer = g.Add(flow.Task{
+			Name:         "Deleting istio-basic-auth-server in Seed",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.IstioBasicAuthServer.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deletePlutono),
 		})
 		destroySeedLogging = g.Add(flow.Task{
@@ -671,7 +671,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			deletePrometheus,
 			deleteBlackboxExporter,
 			deletePlutono,
-			deleteExtAuthzServer,
+			deleteIstioBasicAuthServer,
 			destroySeedLogging,
 			waitUntilKubeAPIServerDeleted,
 			waitUntilControlPlaneDeleted,

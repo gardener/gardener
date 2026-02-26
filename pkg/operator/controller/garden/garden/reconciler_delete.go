@@ -85,8 +85,8 @@ func (r *Reconciler) delete(
 			Fn:   component.OpDestroyAndWait(c.plutono).Destroy,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Destroying external authorization server",
-			Fn:           component.OpDestroyAndWait(c.extAuthzServer).Destroy,
+			Name:         "Destroying istio-basic-auth-server",
+			Fn:           component.OpDestroyAndWait(c.istioBasicAuthServer).Destroy,
 			Dependencies: flow.NewTaskIDs(deletePlutono),
 		})
 		_ = g.Add(flow.Task{

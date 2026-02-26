@@ -180,9 +180,9 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name: "Destroying plutono",
 			Fn:   component.OpDestroyAndWait(c.plutono).Destroy,
 		})
-		destroyExtAuthzServer = g.Add(flow.Task{
-			Name:         "Destroying external authorization server",
-			Fn:           component.OpDestroyAndWait(c.extAuthzServer).Destroy,
+		destroyIstioBasicAuthServer = g.Add(flow.Task{
+			Name:         "Destroying istio basic auth server",
+			Fn:           component.OpDestroyAndWait(c.istioBasicAuthServer).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyPlutono),
 		})
 
@@ -287,7 +287,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyPrometheusOperator,
 			destroyOpenTelemetryOperator,
 			destroyPlutono,
-			destroyExtAuthzServer,
+			destroyIstioBasicAuthServer,
 			destroyKubeStateMetrics,
 			destroyEtcdDruid,
 			destroyVPA,

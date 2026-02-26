@@ -16,7 +16,7 @@ import (
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 )
 
-var _ = Describe("ExtAuthzServer", func() {
+var _ = Describe("IstioBasicAuthServer", func() {
 	var (
 		ctrl             *gomock.Controller
 		botanist         *Botanist
@@ -43,12 +43,12 @@ var _ = Describe("ExtAuthzServer", func() {
 		ctrl.Finish()
 	})
 
-	Describe("#DefaultExtAuthzServer", func() {
-		It("should successfully create a ext-authz-server interface", func() {
+	Describe("#DefaultIstioBasicAuthServer", func() {
+		It("should successfully create a istio-basic-auth-server interface", func() {
 			kubernetesClient.EXPECT().Client()
 
-			extAuthzServer, err := botanist.DefaultExtAuthzServer()
-			Expect(extAuthzServer).NotTo(BeNil())
+			istioBasicAuthServer, err := botanist.DefaultIstioBasicAuthServer()
+			Expect(istioBasicAuthServer).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

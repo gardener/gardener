@@ -729,7 +729,7 @@ var _ = Describe("Seed controller tests", func() {
 					"cluster-autoscaler",
 					"dependency-watchdog-weeder",
 					"dependency-watchdog-prober",
-					"ext-authz-server",
+					"istio-basic-auth-server",
 					"system",
 					"prometheus-cache",
 					"prometheus-seed",

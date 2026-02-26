@@ -957,8 +957,8 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(deployPlutonoForLogging, deployPlutonoForMonitoring),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying ext-authz-server",
-			Fn:           flow.TaskFn(o.Shoot.Components.ControlPlane.ExtAuthzServer.Deploy).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Name:         "Deploying istio-basic-auth-server",
+			Fn:           flow.TaskFn(o.Shoot.Components.ControlPlane.IstioBasicAuthServer.Deploy).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(waitUntilPlutonoReady),
 		})
 

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package extauthzserver_test
+package istiobasicauthserver_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestExtAuthzServer(t *testing.T) {
+func TestIstioBasicAuthServer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Component Networking ExtAuthzServer Suite")
+	RunSpecs(t, "Component Networking IstioBasicAuthServer Suite")
 }

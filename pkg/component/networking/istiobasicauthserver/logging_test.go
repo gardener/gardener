@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package extauthzserver_test
+package istiobasicauthserver_test
 
 import (
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	. "github.com/gardener/gardener/pkg/component/networking/extauthzserver"
+	. "github.com/gardener/gardener/pkg/component/networking/istiobasicauthserver"
 )
 
 var _ = Describe("Logging", func() {
@@ -26,16 +26,16 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterFilter{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "ext-authz-server",
+							Name:   "istio-basic-auth-server",
 							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
 						},
 						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: "kubernetes.*ext-authz-server*ext-authz-server*",
+							Match: "kubernetes.*istio-basic-auth-server*istio-basic-auth-server*",
 							FilterItems: []fluentbitv1alpha2.FilterItem{
 								{
 									Parser: &fluentbitv1alpha2filter.Parser{
 										KeyName:     "log",
-										Parser:      "ext-authz-server-parser",
+										Parser:      "istio-basic-auth-server-parser",
 										ReserveData: ptr.To(true),
 									},
 								},
@@ -47,7 +47,7 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterParser{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "ext-authz-server-parser",
+							Name:   "istio-basic-auth-server-parser",
 							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
 						},
 						Spec: fluentbitv1alpha2.ParserSpec{
@@ -72,16 +72,16 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterFilter{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "virtual-garden-ext-authz-server",
+							Name:   "virtual-garden-istio-basic-auth-server",
 							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
 						},
 						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: "kubernetes.*virtual-garden-ext-authz-server*ext-authz-server*",
+							Match: "kubernetes.*virtual-garden-istio-basic-auth-server*istio-basic-auth-server*",
 							FilterItems: []fluentbitv1alpha2.FilterItem{
 								{
 									Parser: &fluentbitv1alpha2filter.Parser{
 										KeyName:     "log",
-										Parser:      "ext-authz-server-parser",
+										Parser:      "istio-basic-auth-server-parser",
 										ReserveData: ptr.To(true),
 									},
 								},
@@ -93,7 +93,7 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterParser{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "virtual-garden-ext-authz-server-parser",
+							Name:   "virtual-garden-istio-basic-auth-server-parser",
 							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
 						},
 						Spec: fluentbitv1alpha2.ParserSpec{

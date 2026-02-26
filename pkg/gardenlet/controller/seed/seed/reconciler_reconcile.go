@@ -488,8 +488,8 @@ func (r *Reconciler) runReconcileSeedFlow(
 			SkipIf:       seedIsGarden,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying ext-authz-server",
-			Fn:           c.extAuthzServer.Deploy,
+			Name:         "Deploying istio-basic-auth-server",
+			Fn:           c.istioBasicAuthServer.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents, waitUntilPlutonoReady),
 		})
 		_ = g.Add(flow.Task{

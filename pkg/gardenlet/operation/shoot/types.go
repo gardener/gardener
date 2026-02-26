@@ -132,7 +132,7 @@ type ControlPlane struct {
 	EtcdEvents               etcd.Interface
 	EtcdCopyBackupsTask      etcdcopybackupstask.Interface
 	EventLogger              component.Deployer
-	ExtAuthzServer           component.DeployWaiter
+	IstioBasicAuthServer     component.DeployWaiter
 	KubeAPIServerService     component.DeployWaiter
 	KubeAPIServerSNI         component.DeployWaiter
 	KubeAPIServer            kubeapiserver.Interface

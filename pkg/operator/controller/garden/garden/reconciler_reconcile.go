@@ -672,8 +672,8 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(deployPlutono),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying ext-authz-server",
-			Fn:           c.extAuthzServer.Deploy,
+			Name:         "Deploying istio-basic-auth-server",
+			Fn:           c.istioBasicAuthServer.Deploy,
 			Dependencies: flow.NewTaskIDs(waitUntilPlutonoReady),
 		})
 		_ = g.Add(flow.Task{
