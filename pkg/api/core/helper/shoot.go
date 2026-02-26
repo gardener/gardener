@@ -216,11 +216,10 @@ func NginxIngressEnabled(addons *core.Addons) bool {
 // FindPrimaryDNSProvider finds the primary provider among the given `providers`.
 // It returns the first provider if multiple candidates are found.
 func FindPrimaryDNSProvider(providers []core.DNSProvider) *core.DNSProvider {
-	for _, provider := range providers {
-		if provider.Primary != nil && *provider.Primary {
-			primaryProvider := provider
-			return &primaryProvider
-		}
+	if idx := slices.IndexFunc(providers, func(provider core.DNSProvider) bool {
+		return provider.Primary != nil && *provider.Primary
+	}); idx != -1 {
+		return &providers[idx]
 	}
 	return nil
 }
@@ -250,10 +249,10 @@ func SystemComponentsAllowed(worker *core.Worker) bool {
 
 // GetResourceByName returns the NamedResourceReference with the given name in the given slice, or nil if not found.
 func GetResourceByName(resources []core.NamedResourceReference, name string) *core.NamedResourceReference {
-	for _, resource := range resources {
-		if resource.Name == name {
-			return &resource
-		}
+	if idx := slices.IndexFunc(resources, func(resource core.NamedResourceReference) bool {
+		return resource.Name == name
+	}); idx != -1 {
+		return &resources[idx]
 	}
 	return nil
 }
@@ -283,10 +282,10 @@ func AccessRestrictionsAreSupported(seedAccessRestrictions []core.AccessRestrict
 
 // FindWorkerByName tries to find the worker with the given name. If it cannot be found it returns nil.
 func FindWorkerByName(workers []core.Worker, name string) *core.Worker {
-	for _, w := range workers {
-		if w.Name == name {
-			return &w
-		}
+	if idx := slices.IndexFunc(workers, func(worker core.Worker) bool {
+		return worker.Name == name
+	}); idx != -1 {
+		return &workers[idx]
 	}
 	return nil
 }
@@ -319,14 +318,13 @@ func IsShootSelfHosted(workers []core.Worker) bool {
 
 // ControlPlaneWorkerPoolForShoot returns the worker pool running the control plane in case the shoot is self-hosted.
 func ControlPlaneWorkerPoolForShoot(workers []core.Worker) *core.Worker {
-	idx := slices.IndexFunc(workers, func(worker core.Worker) bool {
+	if idx := slices.IndexFunc(workers, func(worker core.Worker) bool {
 		return worker.ControlPlane != nil
-	})
-	if idx == -1 {
-		return nil
+	}); idx != -1 {
+		return &workers[idx]
 	}
 
-	return &workers[idx]
+	return nil
 }
 
 // GetEncryptionProviderType returns the encryption provider type.
