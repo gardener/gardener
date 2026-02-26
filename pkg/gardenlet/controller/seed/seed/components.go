@@ -796,6 +796,7 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 		vpnseedserver.CentralLoggingConfiguration,
 		kubescheduler.CentralLoggingConfiguration,
 		machinecontrollermanager.CentralLoggingConfiguration,
+		extauthzserver.CentralLoggingConfiguration,
 		// shoot worker components
 		nodeagent.CentralLoggingConfiguration,
 		// shoot system components

@@ -75,7 +75,8 @@ func (e *extAuthzServer) getDeployment(volumes []corev1.Volume, volumeMounts []c
 			Selector: &metav1.LabelSelector{
 				MatchLabels: e.getLabels(),
 			},
-			Replicas: &e.values.Replicas,
+			Replicas:             &e.values.Replicas,
+			RevisionHistoryLimit: ptr.To[int32](2),
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
 			},
@@ -84,6 +85,7 @@ func (e *extAuthzServer) getDeployment(volumes []corev1.Volume, volumeMounts []c
 					Labels: e.getLabels(),
 				},
 				Spec: corev1.PodSpec{
+					AutomountServiceAccountToken: ptr.To(false),
 					Containers: []corev1.Container{
 						{
 							Name:            name,
@@ -126,11 +128,25 @@ func (e *extAuthzServer) getDeployment(volumes []corev1.Volume, volumeMounts []c
 									corev1.ResourceMemory: resource.MustParse("16Mi"),
 								},
 							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+								Capabilities: &corev1.Capabilities{
+									Drop: []corev1.Capability{
+										"ALL",
+									},
+								},
+							},
 							VolumeMounts: volumeMounts,
 						},
 					},
 					PriorityClassName: e.values.PriorityClassName,
-					Volumes:           volumes,
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsNonRoot: ptr.To(true),
+						RunAsUser:    ptr.To[int64](65532),
+						RunAsGroup:   ptr.To[int64](65532),
+						FSGroup:      ptr.To[int64](65532),
+					},
+					Volumes: volumes,
 				},
 			},
 		},
@@ -143,6 +159,7 @@ func (e *extAuthzServer) getEnvoyFilter(
 ) *istionetworkingv1alpha3.EnvoyFilter {
 	// Currently, all observability components are exposed via the same istio ingress gateway.
 	// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
+	// See https://github.com/gardener/gardener/issues/11860 for details.
 	ingressNamespace := e.getPrefix() + v1beta1constants.DefaultSNIIngressNamespace
 
 	return &istionetworkingv1alpha3.EnvoyFilter{
@@ -159,7 +176,6 @@ func (e *extAuthzServer) getEnvoyFilter(
 
 func (e *extAuthzServer) getDestinationRule(destinationHost string, secretName string) (*istionetworkingv1beta1.DestinationRule, error) {
 	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: e.getPrefix() + v1beta1constants.DeploymentNameExtAuthzServer, Namespace: e.namespace}}
-	//	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, e.getLabels(), destinationHost)(); err != nil {
 	if err := istio.DestinationRuleWithTLSTermination(
 		destinationRule,
 		e.getLabels(),
@@ -178,6 +194,7 @@ func (e *extAuthzServer) getDestinationRule(destinationHost string, secretName s
 func (e *extAuthzServer) getTLSSecret(caSecret *corev1.Secret, secretName string, ownerReference *metav1.OwnerReference) *corev1.Secret {
 	// Currently, all observability components are exposed via the same istio ingress gateway.
 	// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
+	// See https://github.com/gardener/gardener/issues/11860 for details.
 	ingressNamespace := e.getPrefix() + v1beta1constants.DefaultSNIIngressNamespace
 
 	// Istio expects the secret in the istio ingress gateway namespace => copy certificate to istio namespace
@@ -189,7 +206,7 @@ func (e *extAuthzServer) getTLSSecret(caSecret *corev1.Secret, secretName string
 			OwnerReferences: []metav1.OwnerReference{*ownerReference},
 		},
 		Data: map[string][]byte{
-			"cacert": caSecret.Data[secretsutils.DataKeyCertificateCA],
+			"cacert": caSecret.Data[secretsutils.DataKeyCertificateBundle],
 		},
 	}
 }

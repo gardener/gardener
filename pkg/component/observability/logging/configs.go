@@ -13,6 +13,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
+	"github.com/gardener/gardener/pkg/component/networking/extauthzserver"
 	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/observability/logging/victorialogs"
@@ -32,6 +33,7 @@ var GardenCentralLoggingConfigurations = []component.CentralLoggingConfiguration
 	vali.CentralLoggingConfiguration,
 	victorialogs.CentralLoggingConfiguration,
 	kubestatemetrics.CentralLoggingConfiguration,
+	extauthzserver.CentralLoggingConfigurationForGarden,
 	// virtual garden control plane components
 	etcd.CentralLoggingConfiguration,
 	kubeapiserver.CentralLoggingConfiguration,

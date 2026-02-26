@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/types/known/structpb"
-	"istio.io/api/networking/v1alpha3"
+	istioapinetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,6 +43,8 @@ const (
 	tlsMountPath  = "/tls"
 
 	tlsServerCertificateName = "tls-server-certificate"
+
+	timeoutWaitForManagedResources = 2 * time.Minute
 )
 
 // Values is the values for ext-authz-server configuration.
@@ -164,8 +166,6 @@ func (e *extAuthzServer) Destroy(ctx context.Context) error {
 	return managedresources.DeleteForSeed(ctx, e.client, e.namespace, e.getPrefix()+managedResourceName)
 }
 
-var timeoutWaitForManagedResources = 2 * time.Minute
-
 func (e *extAuthzServer) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
@@ -180,7 +180,10 @@ func (e *extAuthzServer) WaitCleanup(ctx context.Context) error {
 	return managedresources.WaitUntilDeleted(timeoutCtx, e.client, e.namespace, e.getPrefix()+managedResourceName)
 }
 
-func (e *extAuthzServer) calculateConfiguration(ctx context.Context, tlsSecret *corev1.Secret) ([]corev1.Volume, []corev1.VolumeMount, []*v1alpha3.EnvoyFilter_EnvoyConfigObjectPatch, error) {
+func (e *extAuthzServer) calculateConfiguration(
+	ctx context.Context,
+	tlsSecret *corev1.Secret,
+) ([]corev1.Volume, []corev1.VolumeMount, []*istioapinetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch, error) {
 	virtualServiceList := &istionetworkingv1beta1.VirtualServiceList{}
 	err := e.client.List(ctx, virtualServiceList, client.InNamespace(e.namespace), client.HasLabels{v1beta1constants.LabelBasicAuthSecretName})
 	if err != nil {
@@ -201,11 +204,13 @@ func (e *extAuthzServer) calculateConfiguration(ctx context.Context, tlsSecret *
 			MountPath: tlsMountPath,
 			ReadOnly:  true,
 		}}
-		configPatches []*v1alpha3.EnvoyFilter_EnvoyConfigObjectPatch
+		configPatches []*istioapinetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch
 	)
 
 	for _, virtualService := range virtualServiceList.Items {
 		for _, host := range virtualService.Spec.Hosts {
+			// Use the first subdomain as the filename for the basic authentication data. Domains without '.' are ignored.
+			// The full domain is used to identify the filter chain via SNI in the EnvoyFilter configuration patch.
 			subdomain, _, found := strings.Cut(host, ".")
 			if !found {
 				continue
@@ -232,15 +237,15 @@ func (e *extAuthzServer) calculateConfiguration(ctx context.Context, tlsSecret *
 				SubPath:   subdomain,
 			})
 
-			configPatches = append(configPatches, &v1alpha3.EnvoyFilter_EnvoyConfigObjectPatch{
-				ApplyTo: v1alpha3.EnvoyFilter_HTTP_FILTER,
-				Match: &v1alpha3.EnvoyFilter_EnvoyConfigObjectMatch{
-					Context: v1alpha3.EnvoyFilter_GATEWAY,
-					ObjectTypes: &v1alpha3.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
-						Listener: &v1alpha3.EnvoyFilter_ListenerMatch{
+			configPatches = append(configPatches, &istioapinetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch{
+				ApplyTo: istioapinetworkingv1alpha3.EnvoyFilter_HTTP_FILTER,
+				Match: &istioapinetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectMatch{
+					Context: istioapinetworkingv1alpha3.EnvoyFilter_GATEWAY,
+					ObjectTypes: &istioapinetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
+						Listener: &istioapinetworkingv1alpha3.EnvoyFilter_ListenerMatch{
 							PortNumber: 9443,
-							FilterChain: &v1alpha3.EnvoyFilter_ListenerMatch_FilterChainMatch{
-								Filter: &v1alpha3.EnvoyFilter_ListenerMatch_FilterMatch{
+							FilterChain: &istioapinetworkingv1alpha3.EnvoyFilter_ListenerMatch_FilterChainMatch{
+								Filter: &istioapinetworkingv1alpha3.EnvoyFilter_ListenerMatch_FilterMatch{
 									Name: "envoy.filters.network.http_connection_manager",
 								},
 								Sni: host,
@@ -248,9 +253,9 @@ func (e *extAuthzServer) calculateConfiguration(ctx context.Context, tlsSecret *
 						},
 					},
 				},
-				Patch: &v1alpha3.EnvoyFilter_Patch{
-					Operation:   v1alpha3.EnvoyFilter_Patch_INSERT_BEFORE,
-					FilterClass: v1alpha3.EnvoyFilter_Patch_AUTHZ,
+				Patch: &istioapinetworkingv1alpha3.EnvoyFilter_Patch{
+					Operation:   istioapinetworkingv1alpha3.EnvoyFilter_Patch_INSERT_BEFORE,
+					FilterClass: istioapinetworkingv1alpha3.EnvoyFilter_Patch_AUTHZ,
 					Value: &structpb.Struct{
 						Fields: map[string]*structpb.Value{
 							"name": structpb.NewStringValue("envoy.filters.http.ext_authz"),
