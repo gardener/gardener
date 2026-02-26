@@ -106,6 +106,9 @@ type Interface interface {
 	GetReplicas() *int32
 	// SetReplicas sets the Replicas field in the Values.
 	SetReplicas(*int32)
+	// SetStaticPodControlPlaneNodesIPAddresses sets the IP addresses of the control plane nodes when etcd is ran as
+	// static pod.
+	SetStaticPodControlPlaneNodesIPAddresses(...net.IP)
 }
 
 // New creates a new instance of DeployWaiter for the Etcd.
@@ -191,6 +194,8 @@ type AutoscalingConfig struct {
 
 // StaticPodConfig contains configuration when etcd runs as static pod.
 type StaticPodConfig struct {
+	// ControlPlaneNodesIPAddresses is the list of IP addresses for control plane nodes.
+	ControlPlaneNodesIPAddresses []net.IP
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -239,6 +244,12 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		if e.values.StaticPod == nil {
 			volumeClaimTemplate = e.values.Role + "-" + strings.TrimSuffix(e.etcd.Name, "-"+e.values.Role)
 		}
+	}
+
+	var controlPlaneNodeIP net.IP
+	if e.values.StaticPod != nil && len(e.values.StaticPod.ControlPlaneNodesIPAddresses) > 0 {
+		// TODO(rfranzke): Handle multiple control plane nodes later on as part of GEP-28.
+		controlPlaneNodeIP = e.values.StaticPod.ControlPlaneNodesIPAddresses[0]
 	}
 
 	etcdCASecret, serverSecret, clientSecret, err := GenerateClientServerCertificates(
@@ -982,6 +993,12 @@ func (e *etcd) GetValues() Values { return e.values }
 func (e *etcd) GetReplicas() *int32 { return e.values.Replicas }
 
 func (e *etcd) SetReplicas(replicas *int32) { e.values.Replicas = replicas }
+
+func (e *etcd) SetStaticPodControlPlaneNodesIPAddresses(ips ...net.IP) {
+	if e.values.StaticPod != nil {
+		e.values.StaticPod.ControlPlaneNodesIPAddresses = append(e.values.StaticPod.ControlPlaneNodesIPAddresses, ips...)
+	}
+}
 
 func (e *etcd) computeMinAllowedForETCDContainer() corev1.ResourceList {
 	minAllowed := corev1.ResourceList{
