@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -616,10 +617,10 @@ func getDeploymentSpecReplicas(existingMachineDeployments *machinev1alpha1.Machi
 }
 
 func getExistingMachineDeployment(existingMachineDeployments *machinev1alpha1.MachineDeploymentList, name string) *machinev1alpha1.MachineDeployment {
-	for _, machineDeployment := range existingMachineDeployments.Items {
-		if machineDeployment.Name == name {
-			return &machineDeployment
-		}
+	if idx := slices.IndexFunc(existingMachineDeployments.Items, func(machineDeployment machinev1alpha1.MachineDeployment) bool {
+		return machineDeployment.Name == name
+	}); idx != -1 {
+		return &existingMachineDeployments.Items[idx]
 	}
 	return nil
 }
