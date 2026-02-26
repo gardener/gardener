@@ -253,13 +253,27 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	// add peer certs if shoot has HA control plane
-	var (
-		etcdPeerCASecretName string
-		peerServerSecretName string
-	)
+	// TODO(timuthy): Once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved we can enable
+	//  PeerUrlTLS for all remaining clusters as well.
+	var peerUrlTLS *druidcorev1alpha1.TLSConfig
+	if e.values.HighAvailabilityEnabled {
+		if etcdPeerCASecretName, peerServerSecretName, err = e.handlePeerCertificates(ctx); err != nil {
+			return err
+		}
 
-	if etcdPeerCASecretName, peerServerSecretName, err = e.handlePeerCertificates(ctx); err != nil {
-		return err
+		peerUrlTLS = &druidcorev1alpha1.TLSConfig{
+			TLSCASecretRef: druidcorev1alpha1.SecretReference{
+				SecretReference: corev1.SecretReference{
+					Name:      etcdPeerCASecretName,
+					Namespace: e.namespace,
+				},
+				DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
+			},
+			ServerTLSSecretRef: corev1.SecretReference{
+				Name:      peerServerSecretName,
+				Namespace: e.namespace,
+			},
+		}
 	}
 
 	clientService := &corev1.Service{}
@@ -339,6 +353,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					Namespace: clientSecret.Namespace,
 				},
 			},
+			PeerUrlTLS:              peerUrlTLS,
 			ClientPort:              ptr.To(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdClient, etcdconstants.StaticPodPortEtcdEventsClient)),
 			ServerPort:              ptr.To(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdPeer, etcdconstants.StaticPodPortEtcdEventsPeer)),
 			WrapperPort:             ptr.To(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdWrapper, etcdconstants.StaticPodPortEtcdEventsWrapper)),
@@ -350,23 +365,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				Labels:              clientService.Labels,
 				TrafficDistribution: clientService.Spec.TrafficDistribution,
 			},
-		}
-
-		// TODO(timuthy): Once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved we can enable PeerUrlTLS for all remaining clusters as well.
-		if e.values.HighAvailabilityEnabled {
-			e.etcd.Spec.Etcd.PeerUrlTLS = &druidcorev1alpha1.TLSConfig{
-				TLSCASecretRef: druidcorev1alpha1.SecretReference{
-					SecretReference: corev1.SecretReference{
-						Name:      etcdPeerCASecretName,
-						Namespace: e.namespace,
-					},
-					DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
-				},
-				ServerTLSSecretRef: corev1.SecretReference{
-					Name:      peerServerSecretName,
-					Namespace: e.namespace,
-				},
-			}
 		}
 
 		e.etcd.Spec.Backup = druidcorev1alpha1.BackupSpec{
