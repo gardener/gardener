@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
@@ -354,6 +355,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			s := runtime.NewScheme()
 			Expect(extensionsv1alpha1.AddToScheme(s)).To(Succeed())
 			Expect(fakekubernetes.AddToScheme(s)).To(Succeed())
+			Expect(machinev1alpha1.AddToScheme(s)).To(Succeed())
 			c = fakeclient.NewClientBuilder().WithScheme(s).Build()
 
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(s).Build()

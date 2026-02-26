@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	"go.yaml.in/yaml/v4"
 	corev1 "k8s.io/api/core/v1"
@@ -537,7 +538,7 @@ func (o *operatingSystemConfig) WaitCleanup(ctx context.Context) error {
 
 // DeleteStaleResources deletes unused OperatingSystemConfig resources from the shoot namespace in the seed.
 func (o *operatingSystemConfig) DeleteStaleResources(ctx context.Context) error {
-	wantedOSCs, err := o.getWantedOSCNames()
+	wantedOSCs, err := o.getWantedOSCNames(ctx)
 	if err != nil {
 		return err
 	}
@@ -546,7 +547,7 @@ func (o *operatingSystemConfig) DeleteStaleResources(ctx context.Context) error 
 
 // WaitCleanupStaleResources waits until all unused OperatingSystemConfig resources are cleaned up.
 func (o *operatingSystemConfig) WaitCleanupStaleResources(ctx context.Context) error {
-	wantedOSCs, err := o.getWantedOSCNames()
+	wantedOSCs, err := o.getWantedOSCNames(ctx)
 	if err != nil {
 		return err
 	}
@@ -571,7 +572,7 @@ func (o *operatingSystemConfig) waitCleanup(ctx context.Context, wantedOSCNames 
 
 // getWantedOSCNames returns the names of all OSC resources, that are currently needed based
 // on the configured worker pools.
-func (o *operatingSystemConfig) getWantedOSCNames() (sets.Set[string], error) {
+func (o *operatingSystemConfig) getWantedOSCNames(ctx context.Context) (sets.Set[string], error) {
 	wantedOSCNames := sets.New[string]()
 
 	for _, worker := range o.values.Workers {
@@ -589,6 +590,28 @@ func (o *operatingSystemConfig) getWantedOSCNames() (sets.Set[string], error) {
 				return nil, err
 			}
 			wantedOSCNames.Insert(oscKey + keySuffix(version, worker.Machine.Image, purpose))
+		}
+	}
+
+	machineList := &machinev1alpha1.MachineList{}
+	if err := o.client.List(ctx, machineList, client.InNamespace(o.values.Namespace)); err != nil {
+		return nil, fmt.Errorf("failed to list Machines: %w", err)
+	}
+
+	for _, machine := range machineList.Items {
+		if val, ok := machine.Spec.NodeTemplateSpec.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]; ok {
+			originalVal := generateOSCName(
+				val,
+				extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
+			)
+
+			initVal := generateOSCName(
+				val,
+				extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
+			)
+
+			wantedOSCNames.Insert(originalVal, initVal)
+			continue
 		}
 	}
 
@@ -1118,17 +1141,42 @@ func KeyV2(
 	return fmt.Sprintf("gardener-node-agent-%s-%s", worker.Name, utils.ComputeSHA256Hex([]byte(result.String()))[:16])
 }
 
-func keySuffix(version int, machineImage *gardencorev1beta1.ShootMachineImage, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {
+func oscPurposeSuffix(purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {
+	switch purpose {
+	case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
+		return "-init"
+	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
+		return "-original"
+	default:
+		return ""
+	}
+}
+
+func keySuffix(
+	version int,
+	machineImage *gardencorev1beta1.ShootMachineImage,
+	purpose extensionsv1alpha1.OperatingSystemConfigPurpose,
+) string {
 	var imagePrefix string
 	if version == 1 && machineImage != nil {
 		imagePrefix = "-" + machineImage.Name
 	}
 
-	switch purpose {
-	case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
-		return imagePrefix + "-init"
-	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
-		return imagePrefix + "-original"
+	suffix := oscPurposeSuffix(purpose)
+	if suffix == "" {
+		return ""
 	}
-	return ""
+
+	return imagePrefix + suffix
+}
+
+func generateOSCName(
+	val string,
+	purpose extensionsv1alpha1.OperatingSystemConfigPurpose,
+) string {
+	suffix := oscPurposeSuffix(purpose)
+	if suffix == "" {
+		return val
+	}
+	return val + suffix
 }
