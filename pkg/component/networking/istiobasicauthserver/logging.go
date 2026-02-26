@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package extauthzserver
+package istiobasicauthserver
 
 import (
 	"fmt"
@@ -18,12 +18,12 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 )
 
-// CentralLoggingConfiguration returns a fluent-bit parser and filter for the ext-authz-server logs in seed/shoot.
+// CentralLoggingConfiguration returns a fluent-bit parser and filter for the istio-basic-auth-server logs in seed/shoot.
 func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
 	return component.CentralLoggingConfig{Filters: generateClusterFilters(""), Parsers: generateClusterParsers("")}, nil
 }
 
-// CentralLoggingConfigurationForGarden returns a fluent-bit parser and filter for the ext-authz-server logs in garden.
+// CentralLoggingConfigurationForGarden returns a fluent-bit parser and filter for the istio-basic-auth-server logs in garden.
 func CentralLoggingConfigurationForGarden() (component.CentralLoggingConfig, error) {
 	return component.CentralLoggingConfig{Filters: generateClusterFilters(operatorv1alpha1.VirtualGardenNamePrefix), Parsers: generateClusterParsers(operatorv1alpha1.VirtualGardenNamePrefix)}, nil
 }
@@ -32,11 +32,11 @@ func generateClusterFilters(prefix string) []*fluentbitv1alpha2.ClusterFilter {
 	return []*fluentbitv1alpha2.ClusterFilter{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   prefix + v1beta1constants.DeploymentNameExtAuthzServer,
+				Name:   prefix + v1beta1constants.DeploymentNameIstioBasicAuthServer,
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.FilterSpec{
-				Match: fmt.Sprintf("kubernetes.*%s*%s*", prefix+v1beta1constants.DeploymentNameExtAuthzServer, name),
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", prefix+v1beta1constants.DeploymentNameIstioBasicAuthServer, name),
 				FilterItems: []fluentbitv1alpha2.FilterItem{
 					{
 						Parser: &fluentbitv1alpha2filter.Parser{

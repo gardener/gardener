@@ -10,9 +10,9 @@ import (
 	"github.com/gardener/gardener/pkg/component/shared"
 )
 
-// DefaultExtAuthzServer returns a deployer for the external authorization server.
-func (b *Botanist) DefaultExtAuthzServer() (component.DeployWaiter, error) {
-	return shared.NewExtAuthzServer(
+// DefaultIstioBasicAuthServer returns a deployer for the istio-basic-auth-server.
+func (b *Botanist) DefaultIstioBasicAuthServer() (component.DeployWaiter, error) {
+	return shared.NewIstioBasicAuthServer(
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,

@@ -9,12 +9,12 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/networking/extauthzserver"
+	"github.com/gardener/gardener/pkg/component/networking/istiobasicauthserver"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-// NewExtAuthzServer instantiates a new `ext-authz-server` component.
-func NewExtAuthzServer(
+// NewIstioBasicAuthServer instantiates a new `istio-basic-auth-server` component.
+func NewIstioBasicAuthServer(
 	c client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
@@ -26,17 +26,17 @@ func NewExtAuthzServer(
 	deployer component.DeployWaiter,
 	err error,
 ) {
-	extAuthzServerImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameExtAuthzServer)
+	istioBasicAuthServerImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameIstioBasicAuthServer)
 	if err != nil {
 		return nil, err
 	}
 
-	deployer = extauthzserver.New(
+	deployer = istiobasicauthserver.New(
 		c,
 		namespace,
 		secretsManager,
-		extauthzserver.Values{
-			Image:             extAuthzServerImage.String(),
+		istiobasicauthserver.Values{
+			Image:             istioBasicAuthServerImage.String(),
 			PriorityClassName: priorityClassName,
 			Replicas:          replicas,
 			IsGardenCluster:   isGardenCluster,

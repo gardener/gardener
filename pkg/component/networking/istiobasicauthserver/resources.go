@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package extauthzserver
+package istiobasicauthserver
 
 import (
 	"fmt"
@@ -28,17 +28,17 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
-func (e *extAuthzServer) getService(isShootNamespace bool) *corev1.Service {
+func (i *istioBasicAuthServer) getService(isShootNamespace bool) *corev1.Service {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      e.getPrefix() + svcName,
-			Namespace: e.namespace,
+			Name:      i.getPrefix() + svcName,
+			Namespace: i.namespace,
 			Annotations: map[string]string{
 				"networking.istio.io/exportTo": "*",
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: e.getLabels(),
+			Selector: i.getLabels(),
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "grpc",
@@ -64,32 +64,32 @@ func (e *extAuthzServer) getService(isShootNamespace bool) *corev1.Service {
 	return svc
 }
 
-func (e *extAuthzServer) getDeployment(volumes []corev1.Volume, volumeMounts []corev1.VolumeMount) *appsv1.Deployment {
+func (i *istioBasicAuthServer) getDeployment(volumes []corev1.Volume, volumeMounts []corev1.VolumeMount) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      e.getPrefix() + v1beta1constants.DeploymentNameExtAuthzServer,
-			Namespace: e.namespace,
-			Labels:    e.getLabels(),
+			Name:      i.getPrefix() + v1beta1constants.DeploymentNameIstioBasicAuthServer,
+			Namespace: i.namespace,
+			Labels:    i.getLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: e.getLabels(),
+				MatchLabels: i.getLabels(),
 			},
-			Replicas:             &e.values.Replicas,
+			Replicas:             &i.values.Replicas,
 			RevisionHistoryLimit: ptr.To[int32](2),
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: e.getLabels(),
+					Labels: i.getLabels(),
 				},
 				Spec: corev1.PodSpec{
 					AutomountServiceAccountToken: ptr.To(false),
 					Containers: []corev1.Container{
 						{
 							Name:            name,
-							Image:           e.values.Image,
+							Image:           i.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
 								"--grpc-reflection",
@@ -139,7 +139,7 @@ func (e *extAuthzServer) getDeployment(volumes []corev1.Volume, volumeMounts []c
 							VolumeMounts: volumeMounts,
 						},
 					},
-					PriorityClassName: e.values.PriorityClassName,
+					PriorityClassName: i.values.PriorityClassName,
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: ptr.To(true),
 						RunAsUser:    ptr.To[int64](65532),
@@ -153,18 +153,18 @@ func (e *extAuthzServer) getDeployment(volumes []corev1.Volume, volumeMounts []c
 	}
 }
 
-func (e *extAuthzServer) getEnvoyFilter(
+func (i *istioBasicAuthServer) getEnvoyFilter(
 	configPatches []*istioapinetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch,
 	ownerReference *metav1.OwnerReference,
 ) *istionetworkingv1alpha3.EnvoyFilter {
 	// Currently, all observability components are exposed via the same istio ingress gateway.
 	// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
 	// See https://github.com/gardener/gardener/issues/11860 for details.
-	ingressNamespace := e.getPrefix() + v1beta1constants.DefaultSNIIngressNamespace
+	ingressNamespace := i.getPrefix() + v1beta1constants.DefaultSNIIngressNamespace
 
 	return &istionetworkingv1alpha3.EnvoyFilter{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            fmt.Sprintf("%s-%s%s", e.namespace, e.getPrefix(), name),
+			Name:            fmt.Sprintf("%s-%s%s", i.namespace, i.getPrefix(), name),
 			Namespace:       ingressNamespace,
 			OwnerReferences: []metav1.OwnerReference{*ownerReference},
 		},
@@ -174,11 +174,11 @@ func (e *extAuthzServer) getEnvoyFilter(
 	}
 }
 
-func (e *extAuthzServer) getDestinationRule(destinationHost string, secretName string) (*istionetworkingv1beta1.DestinationRule, error) {
-	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: e.getPrefix() + v1beta1constants.DeploymentNameExtAuthzServer, Namespace: e.namespace}}
+func (i *istioBasicAuthServer) getDestinationRule(destinationHost string, secretName string) (*istionetworkingv1beta1.DestinationRule, error) {
+	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: i.getPrefix() + v1beta1constants.DeploymentNameIstioBasicAuthServer, Namespace: i.namespace}}
 	if err := istio.DestinationRuleWithTLSTermination(
 		destinationRule,
-		e.getLabels(),
+		i.getLabels(),
 		destinationHost,
 		destinationHost,
 		secretName,
@@ -191,18 +191,18 @@ func (e *extAuthzServer) getDestinationRule(destinationHost string, secretName s
 	return destinationRule, nil
 }
 
-func (e *extAuthzServer) getTLSSecret(caSecret *corev1.Secret, secretName string, ownerReference *metav1.OwnerReference) *corev1.Secret {
+func (i *istioBasicAuthServer) getTLSSecret(caSecret *corev1.Secret, secretName string, ownerReference *metav1.OwnerReference) *corev1.Secret {
 	// Currently, all observability components are exposed via the same istio ingress gateway.
 	// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
 	// See https://github.com/gardener/gardener/issues/11860 for details.
-	ingressNamespace := e.getPrefix() + v1beta1constants.DefaultSNIIngressNamespace
+	ingressNamespace := i.getPrefix() + v1beta1constants.DefaultSNIIngressNamespace
 
 	// Istio expects the secret in the istio ingress gateway namespace => copy certificate to istio namespace
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            secretName,
 			Namespace:       ingressNamespace,
-			Labels:          e.getLabels(),
+			Labels:          i.getLabels(),
 			OwnerReferences: []metav1.OwnerReference{*ownerReference},
 		},
 		Data: map[string][]byte{
@@ -211,18 +211,18 @@ func (e *extAuthzServer) getTLSSecret(caSecret *corev1.Secret, secretName string
 	}
 }
 
-func (e *extAuthzServer) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
+func (i *istioBasicAuthServer) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      e.getPrefix() + name,
-			Namespace: e.namespace,
-			Labels:    e.getLabels(),
+			Name:      i.getPrefix() + name,
+			Namespace: i.namespace,
+			Labels:    i.getLabels(),
 		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "Deployment",
-				Name:       e.getPrefix() + v1beta1constants.DeploymentNameExtAuthzServer,
+				Name:       i.getPrefix() + v1beta1constants.DeploymentNameIstioBasicAuthServer,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),

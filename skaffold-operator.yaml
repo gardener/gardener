@@ -116,8 +116,8 @@ build:
             - pkg/component/kubernetes/controllermanager
             - pkg/component/kubernetes/scheduler
             - pkg/component/networking/coredns/constants
-            - pkg/component/networking/extauthzserver
             - pkg/component/networking/istio
+            - pkg/component/networking/istiobasicauthserver
             - pkg/component/networking/nginxingress
             - pkg/component/networking/nodelocaldns/constants
             - pkg/component/networking/vpn/envoy

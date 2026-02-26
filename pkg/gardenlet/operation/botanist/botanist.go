@@ -107,7 +107,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
-	o.Shoot.Components.ControlPlane.ExtAuthzServer, err = b.DefaultExtAuthzServer()
+	o.Shoot.Components.ControlPlane.IstioBasicAuthServer, err = b.DefaultIstioBasicAuthServer()
 	if err != nil {
 		return nil, err
 	}

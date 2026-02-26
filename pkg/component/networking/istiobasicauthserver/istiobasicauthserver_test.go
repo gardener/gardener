@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package extauthzserver_test
+package istiobasicauthserver_test
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	comp "github.com/gardener/gardener/pkg/component"
-	. "github.com/gardener/gardener/pkg/component/networking/extauthzserver"
+	. "github.com/gardener/gardener/pkg/component/networking/istiobasicauthserver"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -32,11 +32,11 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("ExtAuthzServer", func() {
+var _ = Describe("IstioBasicAuthServer", func() {
 	var (
 		ctx = context.Background()
 
-		managedResourceName = "ext-authz-server"
+		managedResourceName = "istio-basic-auth-server"
 		namespace           = "some-namespace"
 		image               = "some-image:some-tag"
 		priorityClassName   = "some-priority-class"
@@ -83,21 +83,21 @@ var _ = Describe("ExtAuthzServer", func() {
 kind: Deployment
 metadata:
   labels:
-    app: ` + prefix + `ext-authz-server
-  name: ` + prefix + `ext-authz-server
+    app: ` + prefix + `istio-basic-auth-server
+  name: ` + prefix + `istio-basic-auth-server
   namespace: some-namespace
 spec:
   replicas: 1
   revisionHistoryLimit: 2
   selector:
     matchLabels:
-      app: ` + prefix + `ext-authz-server
+      app: ` + prefix + `istio-basic-auth-server
   strategy:
     type: RollingUpdate
   template:
     metadata:
       labels:
-        app: ` + prefix + `ext-authz-server
+        app: ` + prefix + `istio-basic-auth-server
     spec:
       automountServiceAccountToken: false
       containers:
@@ -112,7 +112,7 @@ spec:
           tcpSocket:
             port: 10000
           timeoutSeconds: 5
-        name: ext-authz-server
+        name: istio-basic-auth-server
         ports:
         - containerPort: 10000
           name: grpc
@@ -145,7 +145,7 @@ spec:
       volumes:
       - name: tls-server-certificate
         secret:
-          secretName: ` + prefix + `ext-authz-server
+          secretName: ` + prefix + `istio-basic-auth-server
 ` + volumes + `status: {}
 `
 		}
@@ -158,13 +158,13 @@ spec:
 kind: DestinationRule
 metadata:
   labels:
-    app: ` + prefix + `ext-authz-server
-  name: ` + prefix + `ext-authz-server
+    app: ` + prefix + `istio-basic-auth-server
+  name: ` + prefix + `istio-basic-auth-server
   namespace: some-namespace
 spec:
   exportTo:
   - '*'
-  host: ` + prefix + `ext-authz-server.some-namespace.svc.cluster.local
+  host: ` + prefix + `istio-basic-auth-server.some-namespace.svc.cluster.local
   trafficPolicy:
     connectionPool:
       tcp:
@@ -175,9 +175,9 @@ spec:
     loadBalancer:
       simple: LEAST_REQUEST
     tls:
-      credentialName: some-namespace-ca-` + prefix + `ext-authz-server
+      credentialName: some-namespace-ca-` + prefix + `istio-basic-auth-server
       mode: SIMPLE
-      sni: ` + prefix + `ext-authz-server.some-namespace.svc.cluster.local
+      sni: ` + prefix + `istio-basic-auth-server.some-namespace.svc.cluster.local
 status: {}
 `
 		}
@@ -211,7 +211,7 @@ status: {}
           '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
           grpc_service:
             envoy_grpc:
-              cluster_name: outbound|10000||` + prefix + `ext-authz-server.some-namespace.svc.cluster.local
+              cluster_name: outbound|10000||` + prefix + `istio-basic-auth-server.some-namespace.svc.cluster.local
             timeout: 2s
           transport_api_version: V3
 `
@@ -220,7 +220,7 @@ status: {}
 			return `apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
-  name: some-namespace-` + prefix + `ext-authz-server
+  name: some-namespace-` + prefix + `istio-basic-auth-server
   namespace: ` + prefix + `istio-ingress
   ownerReferences:
   - apiVersion: v1
@@ -242,7 +242,7 @@ metadata:
   annotations:
     networking.istio.io/exportTo: '*'
     networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]'
-  name: ` + prefix + `ext-authz-server
+  name: ` + prefix + `istio-basic-auth-server
   namespace: some-namespace
 spec:
   ports:
@@ -250,7 +250,7 @@ spec:
     port: 10000
     targetPort: 10000
   selector:
-    app: ` + prefix + `ext-authz-server
+    app: ` + prefix + `istio-basic-auth-server
 status:
   loadBalancer: {}
 `
@@ -264,18 +264,18 @@ status:
 kind: VerticalPodAutoscaler
 metadata:
   labels:
-    app: ` + prefix + `ext-authz-server
-  name: ` + prefix + `ext-authz-server
+    app: ` + prefix + `istio-basic-auth-server
+  name: ` + prefix + `istio-basic-auth-server
   namespace: some-namespace
 spec:
   resourcePolicy:
     containerPolicies:
-    - containerName: ext-authz-server
+    - containerName: istio-basic-auth-server
       controlledValues: RequestsOnly
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: ` + prefix + `ext-authz-server
+    name: ` + prefix + `istio-basic-auth-server
   updatePolicy:
     updateMode: Recreate
 status: {}
@@ -287,10 +287,10 @@ status: {}
 				prefix = "virtual-garden-"
 			}
 			return metav1.ObjectMeta{
-				Name:      "some-namespace-ca-" + prefix + "ext-authz-server",
+				Name:      "some-namespace-ca-" + prefix + "istio-basic-auth-server",
 				Namespace: prefix + "istio-ingress",
 				Labels: map[string]string{
-					"app": prefix + "ext-authz-server",
+					"app": prefix + "istio-basic-auth-server",
 				},
 				OwnerReferences: []metav1.OwnerReference{{
 					APIVersion:         "v1",

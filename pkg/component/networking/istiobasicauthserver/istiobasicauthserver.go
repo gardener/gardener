@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package extauthzserver
+package istiobasicauthserver
 
 import (
 	"context"
@@ -32,10 +32,10 @@ import (
 )
 
 const (
-	// Port is the port exposed by the ext-authz-server.
+	// Port is the port exposed by the istio-basic-auth-server.
 	Port = 10000
 
-	name                = v1beta1constants.DeploymentNameExtAuthzServer
+	name                = v1beta1constants.DeploymentNameIstioBasicAuthServer
 	managedResourceName = name
 	svcName             = name
 
@@ -47,33 +47,33 @@ const (
 	timeoutWaitForManagedResources = 2 * time.Minute
 )
 
-// Values is the values for ext-authz-server configuration.
+// Values is the values for istio-basic-auth-server configuration.
 type Values struct {
-	// Image is the ext-authz-server container image.
+	// Image is the istio-basic-auth-server container image.
 	Image string
-	// PriorityClassName is the name of the priority class of the ext-authz-server.
+	// PriorityClassName is the name of the priority class of the istio-basic-auth-server.
 	PriorityClassName string
-	// Replicas is the number of pod replicas for the ext-authz-server.
+	// Replicas is the number of pod replicas for the istio-basic-auth-server.
 	Replicas int32
 	// IsGardenCluster specifies whether the cluster is garden cluster.
 	IsGardenCluster bool
 }
 
-type extAuthzServer struct {
+type istioBasicAuthServer struct {
 	client         client.Client
 	namespace      string
 	secretsManager secretsmanager.Interface
 	values         Values
 }
 
-// New creates a new instance of an ext-authz-server deployer.
+// New creates a new instance of an istio-basic-auth-server deployer.
 func New(
 	client client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values Values,
 ) component.DeployWaiter {
-	return &extAuthzServer{
+	return &istioBasicAuthServer{
 		client:         client,
 		namespace:      namespace,
 		secretsManager: secretsManager,
@@ -81,44 +81,44 @@ func New(
 	}
 }
 
-func (e *extAuthzServer) Deploy(ctx context.Context) error {
+func (i *istioBasicAuthServer) Deploy(ctx context.Context) error {
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-	destinationHost := kubernetesutils.FQDNForService(e.getPrefix()+svcName, e.namespace)
-	caName := fmt.Sprintf("ca-%s%s", e.getPrefix(), name)
+	destinationHost := kubernetesutils.FQDNForService(i.getPrefix()+svcName, i.namespace)
+	caName := fmt.Sprintf("ca-%s%s", i.getPrefix(), name)
 
-	caSecret, err := e.secretsManager.Generate(ctx,
+	caSecret, err := i.secretsManager.Generate(ctx,
 		&secretsutils.CertificateSecretConfig{
 			Name:       caName,
-			CommonName: "ext-authz-server-ca",
+			CommonName: "istio-basic-auth-server-ca",
 			CertType:   secretsutils.CACert,
 		},
 		secretsmanager.Rotate(secretsmanager.InPlace),
-		secretsmanager.Namespace(e.namespace),
+		secretsmanager.Namespace(i.namespace),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to generate ca certificate: %w", err)
 	}
 
-	serverSecret, err := e.secretsManager.Generate(ctx,
+	serverSecret, err := i.secretsManager.Generate(ctx,
 		&secretsutils.CertificateSecretConfig{
-			Name:       e.getPrefix() + name,
+			Name:       i.getPrefix() + name,
 			CommonName: destinationHost,
-			DNSNames:   kubernetesutils.DNSNamesForService(e.getPrefix()+svcName, e.namespace),
+			DNSNames:   kubernetesutils.DNSNamesForService(i.getPrefix()+svcName, i.namespace),
 			CertType:   secretsutils.ServerCert,
 		},
 		secretsmanager.SignedByCA(caName),
 		secretsmanager.Rotate(secretsmanager.InPlace),
-		secretsmanager.Namespace(e.namespace),
+		secretsmanager.Namespace(i.namespace),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to generate server certificate: %w", err)
 	}
 
-	secretNameInIstioNamespace := fmt.Sprintf("%s-%s", e.namespace, caSecret.Name)
+	secretNameInIstioNamespace := fmt.Sprintf("%s-%s", i.namespace, caSecret.Name)
 
 	ownerNamespace := &corev1.Namespace{}
-	if err := e.client.Get(ctx, client.ObjectKey{Name: e.namespace}, ownerNamespace); err != nil {
-		return fmt.Errorf("failed to get namespace %q: %w", e.namespace, err)
+	if err := i.client.Get(ctx, client.ObjectKey{Name: i.namespace}, ownerNamespace); err != nil {
+		return fmt.Errorf("failed to get namespace %q: %w", i.namespace, err)
 	}
 	ownerNamespaceGVK, err := apiutil.GVKForObject(ownerNamespace, kubernetes.SeedScheme)
 	if err != nil {
@@ -132,60 +132,60 @@ func (e *extAuthzServer) Deploy(ctx context.Context) error {
 		BlockOwnerDeletion: ptr.To(true),
 	}
 
-	volumes, volumeMounts, configPatches, err := e.calculateConfiguration(ctx, serverSecret)
+	volumes, volumeMounts, configPatches, err := i.calculateConfiguration(ctx, serverSecret)
 	if err != nil {
-		return fmt.Errorf("failed to calculate configuration for ext-authz-server: %w", err)
+		return fmt.Errorf("failed to calculate configuration for istio-basic-auth-server: %w", err)
 	}
 
-	destinationRule, err := e.getDestinationRule(destinationHost, secretNameInIstioNamespace)
+	destinationRule, err := i.getDestinationRule(destinationHost, secretNameInIstioNamespace)
 	if err != nil {
-		return fmt.Errorf("failed to create destination rule for ext-authz-server: %w", err)
+		return fmt.Errorf("failed to create destination rule for istio-basic-auth-server: %w", err)
 	}
 
-	isShootNamespace, err := gardenerutils.IsShootNamespace(ctx, e.client, e.namespace)
+	isShootNamespace, err := gardenerutils.IsShootNamespace(ctx, i.client, i.namespace)
 	if err != nil {
 		return fmt.Errorf("failed checking if namespace is a shoot namespace: %w", err)
 	}
 
 	serializedResources, err := registry.AddAllAndSerialize(
-		e.getDeployment(volumes, volumeMounts),
-		e.getService(isShootNamespace),
+		i.getDeployment(volumes, volumeMounts),
+		i.getService(isShootNamespace),
 		destinationRule,
-		e.getEnvoyFilter(configPatches, ownerReference),
-		e.getTLSSecret(caSecret, secretNameInIstioNamespace, ownerReference),
-		e.getVPA(),
+		i.getEnvoyFilter(configPatches, ownerReference),
+		i.getTLSSecret(caSecret, secretNameInIstioNamespace, ownerReference),
+		i.getVPA(),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to serialize resources: %w", err)
 	}
 
-	return managedresources.CreateForSeed(ctx, e.client, e.namespace, e.getPrefix()+managedResourceName, false, serializedResources)
+	return managedresources.CreateForSeed(ctx, i.client, i.namespace, i.getPrefix()+managedResourceName, false, serializedResources)
 }
 
-func (e *extAuthzServer) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, e.client, e.namespace, e.getPrefix()+managedResourceName)
+func (i *istioBasicAuthServer) Destroy(ctx context.Context) error {
+	return managedresources.DeleteForSeed(ctx, i.client, i.namespace, i.getPrefix()+managedResourceName)
 }
 
-func (e *extAuthzServer) Wait(ctx context.Context) error {
+func (i *istioBasicAuthServer) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, e.client, e.namespace, e.getPrefix()+managedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, i.client, i.namespace, i.getPrefix()+managedResourceName)
 }
 
-func (e *extAuthzServer) WaitCleanup(ctx context.Context) error {
+func (i *istioBasicAuthServer) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, e.client, e.namespace, e.getPrefix()+managedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, i.client, i.namespace, i.getPrefix()+managedResourceName)
 }
 
-func (e *extAuthzServer) calculateConfiguration(
+func (i *istioBasicAuthServer) calculateConfiguration(
 	ctx context.Context,
 	tlsSecret *corev1.Secret,
 ) ([]corev1.Volume, []corev1.VolumeMount, []*istioapinetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch, error) {
 	virtualServiceList := &istionetworkingv1beta1.VirtualServiceList{}
-	err := e.client.List(ctx, virtualServiceList, client.InNamespace(e.namespace), client.HasLabels{v1beta1constants.LabelBasicAuthSecretName})
+	err := i.client.List(ctx, virtualServiceList, client.InNamespace(i.namespace), client.HasLabels{v1beta1constants.LabelBasicAuthSecretName})
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("unable to list virtual services: %w", err)
 	}
@@ -268,7 +268,7 @@ func (e *extAuthzServer) calculateConfiguration(
 											"timeout": structpb.NewStringValue("2s"),
 											"envoy_grpc": structpb.NewStructValue(&structpb.Struct{
 												Fields: map[string]*structpb.Value{
-													"cluster_name": structpb.NewStringValue(fmt.Sprintf("outbound|%d||%s%s.%s.svc.cluster.local", Port, e.getPrefix(), svcName, e.namespace)),
+													"cluster_name": structpb.NewStringValue(fmt.Sprintf("outbound|%d||%s%s.%s.svc.cluster.local", Port, i.getPrefix(), svcName, i.namespace)),
 												},
 											}),
 										},
@@ -286,16 +286,16 @@ func (e *extAuthzServer) calculateConfiguration(
 	return volumes, volumeMounts, configPatches, nil
 }
 
-func (e *extAuthzServer) getPrefix() string {
-	if e.values.IsGardenCluster {
+func (i *istioBasicAuthServer) getPrefix() string {
+	if i.values.IsGardenCluster {
 		return operatorv1alpha1.VirtualGardenNamePrefix
 	}
 
 	return ""
 }
 
-func (e *extAuthzServer) getLabels() map[string]string {
+func (i *istioBasicAuthServer) getLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp: e.getPrefix() + name,
+		v1beta1constants.LabelApp: i.getPrefix() + name,
 	}
 }
