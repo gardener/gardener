@@ -735,7 +735,7 @@ Kubernetes core/v1.ObjectReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>ShootRef is used to reference a Shoot resource. The name field of the ShootRef is immutable.</p>
+<p>ShootRef is used to reference a Shoot resource. The name and namespace fields of the ShootRef are immutable.</p>
 </td>
 </tr>
 <tr>
@@ -4685,7 +4685,7 @@ Kubernetes core/v1.ObjectReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>ShootRef is used to reference a Shoot resource. The name field of the ShootRef is immutable.</p>
+<p>ShootRef is used to reference a Shoot resource. The name and namespace fields of the ShootRef are immutable.</p>
 </td>
 </tr>
 <tr>

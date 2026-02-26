@@ -100,6 +100,31 @@ var _ = Describe("validation", func() {
 			}))))
 		})
 
+		It("should forbid not specifying required seedRef fields", func() {
+			controllerInstallation.Spec.SeedRef = &corev1.ObjectReference{}
+
+			Expect(ValidateControllerInstallation(controllerInstallation)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.seedRef.name"),
+			}))))
+		})
+
+		It("should forbid not specifying required shootRef fields", func() {
+			controllerInstallation.Spec.SeedRef = nil
+			controllerInstallation.Spec.ShootRef = &corev1.ObjectReference{}
+
+			Expect(ValidateControllerInstallation(controllerInstallation)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.shootRef.name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.shootRef.namespace"),
+				})),
+			))
+		})
+
 		It("should allow valid ControllerInstallation resources", func() {
 			Expect(ValidateControllerInstallation(controllerInstallation)).To(BeEmpty())
 		})
@@ -135,6 +160,45 @@ var _ = Describe("validation", func() {
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.seedRef.name"),
 			}))))
+		})
+
+		It("should forbid resetting seedRef when it was set before", func() {
+			newControllerInstallation := prepareControllerInstallationForUpdate(controllerInstallation)
+			newControllerInstallation.Spec.SeedRef = nil
+
+			Expect(ValidateControllerInstallationUpdate(newControllerInstallation, controllerInstallation)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.seedRef"),
+			}))))
+		})
+
+		It("should forbid resetting shootRef when it was set before", func() {
+			controllerInstallation.Spec.ShootRef = &corev1.ObjectReference{Name: "foo", Namespace: "bar"}
+			newControllerInstallation := prepareControllerInstallationForUpdate(controllerInstallation)
+			newControllerInstallation.Spec.ShootRef = nil
+
+			Expect(ValidateControllerInstallationUpdate(newControllerInstallation, controllerInstallation)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.shootRef"),
+			}))))
+		})
+
+		It("should forbid updating the name/namespace of the shootRef", func() {
+			controllerInstallation.Spec.ShootRef = &corev1.ObjectReference{Name: "foo", Namespace: "bar"}
+			newControllerInstallation := prepareControllerInstallationForUpdate(controllerInstallation)
+			newControllerInstallation.Spec.ShootRef.Name = "bar"
+			newControllerInstallation.Spec.ShootRef.Namespace = "foo"
+
+			Expect(ValidateControllerInstallationUpdate(newControllerInstallation, controllerInstallation)).To(ContainElements(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.shootRef.name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.shootRef.namespace"),
+				})),
+			))
 		})
 	})
 })

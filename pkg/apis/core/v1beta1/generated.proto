@@ -739,7 +739,7 @@ message ControllerInstallationSpec {
   // +optional
   optional .k8s.io.api.core.v1.ObjectReference seedRef = 2;
 
-  // ShootRef is used to reference a Shoot resource. The name field of the ShootRef is immutable.
+  // ShootRef is used to reference a Shoot resource. The name and namespace fields of the ShootRef are immutable.
   // +optional
   optional .k8s.io.api.core.v1.ObjectReference shootRef = 4;
 

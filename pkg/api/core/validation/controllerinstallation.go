@@ -46,18 +46,21 @@ func ValidateControllerInstallationSpec(spec *core.ControllerInstallationSpec, f
 		allErrs = append(allErrs, field.Required(registrationRefPath.Child("name"), "field is required"))
 	}
 
-	if spec.SeedRef != nil && len(spec.SeedRef.Name) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("seedRef").Child("name"), "field is required"))
-	}
-
-	if spec.ShootRef != nil && len(spec.ShootRef.Name) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("shootRef").Child("name"), "field is required"))
-	}
-
 	if spec.SeedRef == nil && spec.ShootRef == nil {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("seedRef"), "either seedRef or shootRef must be set"))
 	} else if spec.SeedRef != nil && spec.ShootRef != nil {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("seedRef"), "cannot set both seedRef and shootRef"))
+	} else if spec.SeedRef != nil {
+		if len(spec.SeedRef.Name) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("seedRef").Child("name"), "field is required"))
+		}
+	} else if spec.ShootRef != nil {
+		if len(spec.ShootRef.Name) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("shootRef").Child("name"), "field is required"))
+		}
+		if len(spec.ShootRef.Namespace) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("shootRef").Child("namespace"), "field is required"))
+		}
 	}
 
 	return allErrs
@@ -73,11 +76,18 @@ func ValidateControllerInstallationSpecUpdate(new, old *core.ControllerInstallat
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.RegistrationRef.Name, old.RegistrationRef.Name, fldPath.Child("registrationRef", "name"))...)
-	if new.SeedRef != nil {
+
+	if old.SeedRef == nil || new.SeedRef == nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.SeedRef, old.SeedRef, fldPath.Child("seedRef"))...)
+	} else if new.SeedRef != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.SeedRef.Name, old.SeedRef.Name, fldPath.Child("seedRef", "name"))...)
 	}
-	if new.ShootRef != nil {
+
+	if old.ShootRef == nil || new.ShootRef == nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.ShootRef, old.ShootRef, fldPath.Child("shootRef"))...)
+	} else if new.ShootRef != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.ShootRef.Name, old.ShootRef.Name, fldPath.Child("shootRef", "name"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.ShootRef.Namespace, old.ShootRef.Namespace, fldPath.Child("shootRef", "namespace"))...)
 	}
 
 	return allErrs

@@ -46,7 +46,7 @@ type ControllerInstallationSpec struct {
 	RegistrationRef corev1.ObjectReference
 	// SeedRef is used to reference a Seed resource. The name field of the SeedRef is immutable.
 	SeedRef *corev1.ObjectReference
-	// ShootRef is used to reference a Shoot resource. The name field of the ShootRef is immutable.
+	// ShootRef is used to reference a Shoot resource. The name and namespace fields of the ShootRef are immutable.
 	ShootRef *corev1.ObjectReference
 	// DeploymentRef is used to reference a ControllerDeployment resource.
 	DeploymentRef *corev1.ObjectReference

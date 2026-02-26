@@ -3067,7 +3067,7 @@ func schema_pkg_apis_core_v1beta1_ControllerInstallationSpec(ref common.Referenc
 					},
 					"shootRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ShootRef is used to reference a Shoot resource. The name field of the ShootRef is immutable.",
+							Description: "ShootRef is used to reference a Shoot resource. The name and namespace fields of the ShootRef are immutable.",
 							Ref:         ref(corev1.ObjectReference{}.OpenAPIModelName()),
 						},
 					},

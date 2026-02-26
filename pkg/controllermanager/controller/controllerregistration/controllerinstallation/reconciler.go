@@ -687,7 +687,7 @@ func getShoots(ctx context.Context, c client.Reader, obj client.Object, kind Kin
 
 func controllerInstallationReferencesObject(controllerInstallation gardencorev1beta1.ControllerInstallation, obj client.Object, kind Kind) bool {
 	if kind == SeedKind &&
-		(controllerInstallation.Spec.SeedRef != nil && controllerInstallation.Spec.SeedRef.Name != obj.GetName()) {
+		(controllerInstallation.Spec.SeedRef == nil || controllerInstallation.Spec.SeedRef.Name != obj.GetName()) {
 		return false
 	}
 
