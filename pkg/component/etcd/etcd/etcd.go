@@ -161,7 +161,7 @@ type Values struct {
 	PriorityClassName           string
 	HighAvailabilityEnabled     bool
 	TopologyAwareRoutingEnabled bool
-	RunsAsStaticPod             bool
+	StaticPod                   *StaticPodConfig
 }
 
 // BackupConfig contains information for configuring the backup-restore sidecar so that it takes regularly backups of
@@ -187,6 +187,10 @@ type BackupConfig struct {
 type AutoscalingConfig struct {
 	// MinAllowed are the minimum allowed resources for vertical autoscaling.
 	MinAllowed corev1.ResourceList
+}
+
+// StaticPodConfig contains configuration when etcd runs as static pod.
+type StaticPodConfig struct {
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -232,7 +236,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 		metrics = druidcorev1alpha1.Extensive
 
-		if !e.values.RunsAsStaticPod {
+		if e.values.StaticPod == nil {
 			volumeClaimTemplate = e.values.Role + "-" + strings.TrimSuffix(e.etcd.Name, "-"+e.values.Role)
 		}
 	}
@@ -416,7 +420,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			}
 		}
 
-		if e.values.RunsAsStaticPod {
+		if e.values.StaticPod != nil {
 			e.etcd.Spec.RunAsRoot = ptr.To(true)
 			metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, druidcorev1alpha1.DisableEtcdRuntimeComponentCreationAnnotation, "")
 		}
@@ -1146,7 +1150,7 @@ func GenerateClientServerCertificates(
 }
 
 func (e *etcd) defaultPortOrEtcdEventsStaticPodPort(defaultPort, etcdEventsPortWhenRunningAsStaticPod int32) int32 {
-	if e.values.Role == v1beta1constants.ETCDRoleMain || !e.values.RunsAsStaticPod {
+	if e.values.Role == v1beta1constants.ETCDRoleMain || e.values.StaticPod == nil {
 		return defaultPort
 	}
 	return etcdEventsPortWhenRunningAsStaticPod
