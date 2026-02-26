@@ -805,6 +805,7 @@ func (p *plutono) getIstioResources(ctx context.Context) ([]client.Object, error
 	var (
 		// Currently, all observability components are exposed via the same istio ingress gateway.
 		// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
+		// See https://github.com/gardener/gardener/issues/11860 for details.
 		ingressNamespace      = v1beta1constants.DefaultSNIIngressNamespace
 		credentialsSecretName = p.values.AuthSecretName
 		caName                = v1beta1constants.SecretNameCASeed

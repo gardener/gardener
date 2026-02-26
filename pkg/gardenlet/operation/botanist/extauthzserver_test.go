@@ -5,15 +5,12 @@
 package botanist
 
 import (
-	"context"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	"github.com/gardener/gardener/pkg/component/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -24,8 +21,6 @@ var _ = Describe("ExtAuthzServer", func() {
 		ctrl             *gomock.Controller
 		botanist         *Botanist
 		kubernetesClient *kubernetesmock.MockInterface
-
-		ctx = context.TODO()
 	)
 
 	BeforeEach(func() {
@@ -55,26 +50,6 @@ var _ = Describe("ExtAuthzServer", func() {
 			extAuthzServer, err := botanist.DefaultExtAuthzServer()
 			Expect(extAuthzServer).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
-		})
-	})
-
-	Describe("#DeployExtAuthzServer", func() {
-		var mockExtAuthzServer *mock.MockDeployWaiter
-
-		BeforeEach(func() {
-			mockExtAuthzServer = mock.NewMockDeployWaiter(ctrl)
-			botanist.Shoot.Components.ControlPlane.ExtAuthzServer = mockExtAuthzServer
-		})
-
-		It("should successfully deploy the ext-authz-server", func() {
-			mockExtAuthzServer.EXPECT().Deploy(ctx)
-			Expect(botanist.DeployExtAuthzServer(ctx)).To(Succeed())
-		})
-
-		It("should successfully destroy the ext-authz-server when shoot purpose is testing", func() {
-			botanist.Shoot.Purpose = gardencorev1beta1.ShootPurposeTesting
-			mockExtAuthzServer.EXPECT().Destroy(ctx)
-			Expect(botanist.DeployExtAuthzServer(ctx)).To(Succeed())
 		})
 	})
 })

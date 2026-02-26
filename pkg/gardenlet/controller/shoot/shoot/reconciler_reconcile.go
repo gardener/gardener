@@ -958,7 +958,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying ext-authz-server",
-			Fn:           flow.TaskFn(botanist.DeployExtAuthzServer).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Fn:           flow.TaskFn(o.Shoot.Components.ControlPlane.ExtAuthzServer.Deploy).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(waitUntilPlutonoReady),
 		})
 

@@ -181,8 +181,9 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Fn:   component.OpDestroyAndWait(c.plutono).Destroy,
 		})
 		destroyExtAuthzServer = g.Add(flow.Task{
-			Name: "Destroying external authorization server",
-			Fn:   component.OpDestroyAndWait(c.extAuthzServer).Destroy,
+			Name:         "Destroying external authorization server",
+			Fn:           component.OpDestroyAndWait(c.extAuthzServer).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyPlutono),
 		})
 
 		// When the seed is the garden cluster then these components are reconciled by the gardener-operator.

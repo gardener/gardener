@@ -88,6 +88,7 @@ metadata:
   namespace: some-namespace
 spec:
   replicas: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: ` + prefix + `ext-authz-server
@@ -98,6 +99,7 @@ spec:
       labels:
         app: ` + prefix + `ext-authz-server
     spec:
+      automountServiceAccountToken: false
       containers:
       - args:
         - --grpc-reflection
@@ -125,11 +127,21 @@ spec:
           requests:
             cpu: 5m
             memory: 16Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
         volumeMounts:
         - mountPath: /tls
           name: tls-server-certificate
           readOnly: true
 ` + volumeMounts + `      priorityClassName: some-priority-class
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
       volumes:
       - name: tls-server-certificate
         secret:
