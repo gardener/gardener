@@ -707,7 +707,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 
 		// When TLSSecretName is explicitly set, the component must use it directly instead of
 		// auto-generating a self-signed certificate via the secrets manager.
-		Context("when TLSSecretName is explicitly set", func() {
+		When("TLSSecretName is explicitly set", func() {
 			BeforeEach(func() {
 				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{

@@ -192,7 +192,7 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 	// Disabling it or changing the domain would invalidate all workload identity tokens that reference the issuer URL.
 	discoveryServerPath := fldPath.Child("gardener", "gardenerDiscoveryServer")
 	if oldVirtualCluster.Gardener.DiscoveryServer != nil && newVirtualCluster.Gardener.DiscoveryServer == nil {
-		allErrs = append(allErrs, field.Forbidden(discoveryServerPath, "discovery server must not be disabled once enabled (workload identity tokens have been issued)"))
+		allErrs = append(allErrs, field.Forbidden(discoveryServerPath, "discovery server must not be disabled once enabled (workload identity tokens might have been issued)"))
 	}
 	if oldVirtualCluster.Gardener.DiscoveryServer != nil && newVirtualCluster.Gardener.DiscoveryServer != nil {
 		oldDomain := helper.DiscoveryServerDomain(oldGarden)
