@@ -1,5 +1,0 @@
-*
-!.gitignore
-!domain-secrets.yaml.tmpl
-!domain-workload-identities.yaml.tmpl
-!workload-identity-issuer.yaml.tmpl

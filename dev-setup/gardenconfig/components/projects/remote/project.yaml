@@ -1,0 +1,6 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: Project
+metadata:
+  name: remote
+spec:
+  namespace: garden-remote

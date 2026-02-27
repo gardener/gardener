@@ -1,0 +1,39 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Garden
+metadata:
+  name: remote
+spec:
+  dns:
+    providers:
+    - name: primary
+      secretRef:
+        name: garden-dns-remote
+       # The type of your provider, e.g. <aws-route53|azure|google-clouddns|alicloud-dns|...>
+      type: ""
+  runtimeCluster:
+    ingress:
+      domains:
+      # Enter ingress domain of your virtual garden
+      - name: ""
+        provider: primary
+    networking:
+      # This field will be automatically set by `make remote-up` when using a Gardener shoot.
+      nodes: []
+      # This field will be automatically set by `make remote-up` when using a Gardener shoot.
+      pods: []
+      # This field will be automatically set by `make remote-up` when using a Gardener shoot.
+      services: []
+    provider:
+      # This field will be automatically set by `make remote-up` when using a Gardener shoot.
+      region: ""
+      # Enter zones of your runtime cluster
+      zones: []
+  virtualCluster:
+    dns:
+      domains:
+      # Enter primary domain of your virtual garden
+      - name: ""
+        provider: primary
+    networking:
+      # Enter service CIDRs of your virtual garden
+      services: []

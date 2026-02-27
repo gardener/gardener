@@ -1,7 +1,0 @@
-gardener:
-  apiserverRelay:
-    deployed: true
-  seed:
-    deployed: false
-  nginxIngress:
-    deployed: false
