@@ -81,7 +81,7 @@ var _ = Describe("Logging", func() {
 								{
 									Parser: &fluentbitv1alpha2filter.Parser{
 										KeyName:     "log",
-										Parser:      "istio-basic-auth-server-parser",
+										Parser:      "virtual-garden-istio-basic-auth-server-parser",
 										ReserveData: ptr.To(true),
 									},
 								},

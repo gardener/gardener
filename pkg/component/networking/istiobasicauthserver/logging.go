@@ -32,16 +32,16 @@ func generateClusterFilters(prefix string) []*fluentbitv1alpha2.ClusterFilter {
 	return []*fluentbitv1alpha2.ClusterFilter{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   prefix + v1beta1constants.DeploymentNameIstioBasicAuthServer,
+				Name:   prefix + name,
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.FilterSpec{
-				Match: fmt.Sprintf("kubernetes.*%s*%s*", prefix+v1beta1constants.DeploymentNameIstioBasicAuthServer, name),
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", prefix+name, name),
 				FilterItems: []fluentbitv1alpha2.FilterItem{
 					{
 						Parser: &fluentbitv1alpha2filter.Parser{
 							KeyName:     "log",
-							Parser:      name + "-parser",
+							Parser:      prefix + name + "-parser",
 							ReserveData: ptr.To(true),
 						},
 					},
