@@ -134,7 +134,7 @@ func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod, sou
 	)
 
 	for i, volume := range pod.Spec.Volumes {
-		hostPath := filepath.Join(string(filepath.Separator), "var", "lib", pod.Name, volume.Name)
+		hostPath := HostPath(pod.Name, volume.Name)
 
 		switch {
 		case volume.ConfigMap != nil:
@@ -191,4 +191,9 @@ func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod, sou
 // translated.
 func StatefulSetVolumeClaimTemplateHostPath(volumeClaimTemplateName string) string {
 	return fmt.Sprintf("/var/lib/%s/data", volumeClaimTemplateName)
+}
+
+// HostPath returns the host path for the given pod name and volume name.
+func HostPath(podName, volumeName string) string {
+	return filepath.Join(string(filepath.Separator), "var", "lib", podName, volumeName)
 }

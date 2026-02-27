@@ -106,6 +106,9 @@ type Interface interface {
 	GetReplicas() *int32
 	// SetReplicas sets the Replicas field in the Values.
 	SetReplicas(*int32)
+	// SetStaticPodControlPlaneNodesIPAddresses sets the IP addresses of the control plane nodes when etcd is ran as
+	// static pod.
+	SetStaticPodControlPlaneNodesIPAddresses(...net.IP)
 }
 
 // New creates a new instance of DeployWaiter for the Etcd.
@@ -161,7 +164,7 @@ type Values struct {
 	PriorityClassName           string
 	HighAvailabilityEnabled     bool
 	TopologyAwareRoutingEnabled bool
-	RunsAsStaticPod             bool
+	StaticPod                   *StaticPodConfig
 }
 
 // BackupConfig contains information for configuring the backup-restore sidecar so that it takes regularly backups of
@@ -187,6 +190,12 @@ type BackupConfig struct {
 type AutoscalingConfig struct {
 	// MinAllowed are the minimum allowed resources for vertical autoscaling.
 	MinAllowed corev1.ResourceList
+}
+
+// StaticPodConfig contains configuration when etcd runs as static pod.
+type StaticPodConfig struct {
+	// ControlPlaneNodesIPAddresses is the list of IP addresses for control plane nodes.
+	ControlPlaneNodesIPAddresses []net.IP
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -232,30 +241,56 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 		metrics = druidcorev1alpha1.Extensive
 
-		if !e.values.RunsAsStaticPod {
+		if e.values.StaticPod == nil {
 			volumeClaimTemplate = e.values.Role + "-" + strings.TrimSuffix(e.etcd.Name, "-"+e.values.Role)
 		}
 	}
 
-	etcdCASecret, serverSecret, clientSecret, err := GenerateClientServerCertificates(
+	var controlPlaneNodeIP net.IP
+	if e.values.StaticPod != nil && len(e.values.StaticPod.ControlPlaneNodesIPAddresses) > 0 {
+		// TODO(rfranzke): Handle multiple control plane nodes later on as part of GEP-28.
+		controlPlaneNodeIP = e.values.StaticPod.ControlPlaneNodesIPAddresses[0]
+	}
+
+	etcdCASecret, serverSecret, clientSecret, err := GenerateServerAndClientCertificates(
 		ctx,
 		e.secretsManager,
 		e.values.Role,
-		e.clientServiceDNSNames(),
-		e.clientServiceIPAddresses(),
+		ClientServiceDNSNames(e.etcd.Name, e.namespace, e.values.StaticPod != nil),
+		controlPlaneNodeIP,
 	)
 	if err != nil {
 		return err
 	}
 
 	// add peer certs if shoot has HA control plane
-	var (
-		etcdPeerCASecretName string
-		peerServerSecretName string
-	)
+	// TODO(timuthy): Once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved we can enable
+	//  PeerUrlTLS for all remaining clusters as well.
+	var peerUrlTLS *druidcorev1alpha1.TLSConfig
+	if e.values.HighAvailabilityEnabled {
+		etcdPeerCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
+		if !found {
+			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
+		}
 
-	if etcdPeerCASecretName, peerServerSecretName, err = e.handlePeerCertificates(ctx); err != nil {
-		return err
+		peerServerSecret, err := GeneratePeerCertificate(ctx, e.secretsManager, e.values.Role, e.peerServiceDNSNames(), controlPlaneNodeIP)
+		if err != nil {
+			return fmt.Errorf("failed to generate a peer certificate: %w", err)
+		}
+
+		peerUrlTLS = &druidcorev1alpha1.TLSConfig{
+			TLSCASecretRef: druidcorev1alpha1.SecretReference{
+				SecretReference: corev1.SecretReference{
+					Name:      etcdPeerCASecret.Name,
+					Namespace: e.namespace,
+				},
+				DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
+			},
+			ServerTLSSecretRef: corev1.SecretReference{
+				Name:      peerServerSecret.Name,
+				Namespace: e.namespace,
+			},
+		}
 	}
 
 	clientService := &corev1.Service{}
@@ -335,6 +370,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					Namespace: clientSecret.Namespace,
 				},
 			},
+			PeerUrlTLS:              peerUrlTLS,
 			ClientPort:              ptr.To(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdClient, etcdconstants.StaticPodPortEtcdEventsClient)),
 			ServerPort:              ptr.To(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdPeer, etcdconstants.StaticPodPortEtcdEventsPeer)),
 			WrapperPort:             ptr.To(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdWrapper, etcdconstants.StaticPodPortEtcdEventsWrapper)),
@@ -346,23 +382,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				Labels:              clientService.Labels,
 				TrafficDistribution: clientService.Spec.TrafficDistribution,
 			},
-		}
-
-		// TODO(timuthy): Once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved we can enable PeerUrlTLS for all remaining clusters as well.
-		if e.values.HighAvailabilityEnabled {
-			e.etcd.Spec.Etcd.PeerUrlTLS = &druidcorev1alpha1.TLSConfig{
-				TLSCASecretRef: druidcorev1alpha1.SecretReference{
-					SecretReference: corev1.SecretReference{
-						Name:      etcdPeerCASecretName,
-						Namespace: e.namespace,
-					},
-					DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
-				},
-				ServerTLSSecretRef: corev1.SecretReference{
-					Name:      peerServerSecretName,
-					Namespace: e.namespace,
-				},
-			}
 		}
 
 		e.etcd.Spec.Backup = druidcorev1alpha1.BackupSpec{
@@ -416,7 +435,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			}
 		}
 
-		if e.values.RunsAsStaticPod {
+		if e.values.StaticPod != nil {
 			e.etcd.Spec.RunAsRoot = ptr.To(true)
 			metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, druidcorev1alpha1.DisableEtcdRuntimeComponentCreationAnnotation, "")
 		}
@@ -861,40 +880,6 @@ func (e *etcd) Snapshot(ctx context.Context, httpClient rest.HTTPClient) error {
 	return err
 }
 
-func (e *etcd) clientServiceDNSNames() []string {
-	var domainNames []string
-	domainNames = append(domainNames, fmt.Sprintf("%s-local", e.etcd.Name))
-	domainNames = append(domainNames, kubernetesutils.DNSNamesForService(fmt.Sprintf("%s-client", e.etcd.Name), e.namespace)...)
-
-	// The peer service needs to be considered here since the etcd-backup-restore side-car
-	// connects to member pods via pod domain names (e.g. for defragmentation).
-	// See https://github.com/gardener/etcd-backup-restore/issues/494
-	domainNames = append(domainNames, kubernetesutils.DNSNamesForService(fmt.Sprintf("*.%s-peer", e.etcd.Name), e.namespace)...)
-
-	if e.values.RunsAsStaticPod {
-		domainNames = append(domainNames, "localhost")
-	}
-
-	return domainNames
-}
-
-func (e *etcd) clientServiceIPAddresses() []net.IP {
-	if !e.values.RunsAsStaticPod {
-		return nil
-	}
-	return []net.IP{
-		net.ParseIP("127.0.0.1"),
-		net.ParseIP("::1"),
-	}
-}
-
-func (e *etcd) peerServiceDNSNames() []string {
-	return append(
-		kubernetesutils.DNSNamesForService(fmt.Sprintf("%s-peer", e.etcd.Name), e.namespace),
-		kubernetesutils.DNSNamesForService(fmt.Sprintf("*.%s-peer", e.etcd.Name), e.namespace)...,
-	)
-}
-
 // Get retrieves the Etcd resource
 func (e *etcd) Get(ctx context.Context) (*druidcorev1alpha1.Etcd, error) {
 	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); err != nil {
@@ -980,6 +965,12 @@ func (e *etcd) GetValues() Values { return e.values }
 func (e *etcd) GetReplicas() *int32 { return e.values.Replicas }
 
 func (e *etcd) SetReplicas(replicas *int32) { e.values.Replicas = replicas }
+
+func (e *etcd) SetStaticPodControlPlaneNodesIPAddresses(ips ...net.IP) {
+	if e.values.StaticPod != nil {
+		e.values.StaticPod.ControlPlaneNodesIPAddresses = append(e.values.StaticPod.ControlPlaneNodesIPAddresses, ips...)
+	}
+}
 
 func (e *etcd) computeMinAllowedForETCDContainer() corev1.ResourceList {
 	minAllowed := corev1.ResourceList{
@@ -1070,83 +1061,8 @@ func (e *etcd) computeFullSnapshotSchedule(existingEtcd *druidcorev1alpha1.Etcd)
 	return fullSnapshotSchedule
 }
 
-func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSecretName string, err error) {
-	// TODO(timuthy): Remove this once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved.
-	if !e.values.HighAvailabilityEnabled {
-		return
-	}
-
-	return GeneratePeerCertificates(ctx, e.secretsManager, e.values.Role, e.peerServiceDNSNames(), nil)
-}
-
-// GeneratePeerCertificates generates the peer certificates for the etcd cluster.
-func GeneratePeerCertificates(
-	ctx context.Context,
-	secretsManager secretsmanager.Interface,
-	role string,
-	dnsNames []string,
-	ipAddresses []net.IP,
-) (string, string, error) {
-	etcdPeerCASecret, found := secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
-	if !found {
-		return "", "", fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
-	}
-
-	peerServerSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:                        secretNamePrefixPeerServer + role,
-		CommonName:                  "etcd-server",
-		DNSNames:                    dnsNames,
-		IPAddresses:                 ipAddresses,
-		CertType:                    secretsutils.ServerClientCert,
-		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
-	if err != nil {
-		return "", "", fmt.Errorf("failed to generate secret %q: %w", secretNamePrefixPeerServer+role, err)
-	}
-
-	return etcdPeerCASecret.Name, peerServerSecret.Name, nil
-}
-
-// GenerateClientServerCertificates generates client and server certificates for the etcd cluster.
-func GenerateClientServerCertificates(
-	ctx context.Context,
-	secretsManager secretsmanager.Interface,
-	role string,
-	dnsNames []string,
-	ipAddresses []net.IP,
-) (*corev1.Secret, *corev1.Secret, *corev1.Secret, error) {
-	etcdCASecret, found := secretsManager.Get(v1beta1constants.SecretNameCAETCD)
-	if !found {
-		return nil, nil, nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
-	}
-
-	serverSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:                        secretNamePrefixServer + role,
-		CommonName:                  "etcd-server",
-		DNSNames:                    dnsNames,
-		IPAddresses:                 ipAddresses,
-		CertType:                    secretsutils.ServerClientCert,
-		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to generate secret %q: %w", secretNamePrefixServer+role, err)
-	}
-
-	clientSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:                        SecretNameClient,
-		CommonName:                  "etcd-client",
-		CertType:                    secretsutils.ClientCert,
-		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to generate secret %q: %w", SecretNameClient, err)
-	}
-
-	return etcdCASecret, serverSecret, clientSecret, nil
-}
-
 func (e *etcd) defaultPortOrEtcdEventsStaticPodPort(defaultPort, etcdEventsPortWhenRunningAsStaticPod int32) int32 {
-	if e.values.Role == v1beta1constants.ETCDRoleMain || !e.values.RunsAsStaticPod {
+	if e.values.Role == v1beta1constants.ETCDRoleMain || e.values.StaticPod == nil {
 		return defaultPort
 	}
 	return etcdEventsPortWhenRunningAsStaticPod

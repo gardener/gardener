@@ -7,28 +7,36 @@ package join
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
+	staticpodtranslator "github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -93,18 +101,36 @@ func run(ctx context.Context, opts *Options) error {
 	b.Shoot.SetInfo(nil)
 
 	b.Logger.Info("Retrieving short-lived shoot cluster kubeconfig via bootstrap token")
-	shootClientSet, err := cmd.InitializeTemporaryClientSet(ctx, b, bootstrapClientSet)
+	b.ShootClientSet, err = cmd.InitializeTemporaryClientSet(ctx, b, bootstrapClientSet)
 	if err != nil {
 		return fmt.Errorf("failed retrieving short-lived kubeconfig: %w", err)
 	}
 	b.Logger.Info("Successfully retrieved short-lived bootstrap kubeconfig")
-	b.ShootClientSet = shootClientSet
 
+	b.Logger.Info("Fetching Shoot manifest from Cluster object")
 	cluster, err := gardenerextensions.GetCluster(ctx, b.ShootClientSet.Client(), b.Shoot.ControlPlaneNamespace)
 	if err != nil {
 		return fmt.Errorf("failed to read Cluster resource %s: %w", b.Shoot.ControlPlaneNamespace, err)
 	}
 	b.Shoot.SetInfo(cluster.Shoot)
+
+	b.SecretsManager, err = secretsmanager.New(
+		ctx,
+		b.Logger.WithName("secretsmanager"),
+		clock.RealClock{},
+		b.ShootClientSet.Client(),
+		v1beta1constants.SecretManagerIdentitySelfHostedShoot,
+		secretsmanager.WithNamespaces(b.Shoot.ControlPlaneNamespace, v1beta1constants.GardenNamespace),
+		secretsmanager.WithoutAutomaticSecretRenewal(),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to instantiate a new secrets manager: %w", err)
+	}
+
+	machineIP, err := b.MachineIP()
+	if err != nil {
+		return fmt.Errorf("failed determining the machine IP address")
+	}
 
 	node, err := nodeagent.FetchNodeByHostName(ctx, b.ShootClientSet.Client(), b.HostName)
 	if err != nil {
@@ -115,6 +141,7 @@ func run(ctx context.Context, opts *Options) error {
 	var (
 		g                       = flow.NewGraph("join")
 		gardenerNodeAgentSecret *corev1.Secret
+		etcdRoleToTLSSecretsMap = make(etcdRoleToTLSSecrets, 2)
 
 		ensureNoActiveShootReconciliation = g.Add(flow.Task{
 			Name: "Ensuring shoot is not concurrently reconciled by gardenlet when joining control plane node",
@@ -138,9 +165,45 @@ func run(ctx context.Context, opts *Options) error {
 				return err
 			},
 		})
+
+		generateETCDCertificates = g.Add(flow.Task{
+			Name: "Generating ETCD certificates",
+			Fn: func(ctx context.Context) error {
+				for _, role := range []string{v1beta1constants.ETCDRoleMain, v1beta1constants.ETCDRoleEvents} {
+					var (
+						etcdName = etcd.Name(role)
+						dnsNames = etcd.ClientServiceDNSNames(etcdName, b.Shoot.ControlPlaneNamespace, true)
+						tls      = etcdTLSSecrets{}
+					)
+
+					tls.server, err = etcd.GenerateServerCertificate(ctx, b.SecretsManager, role, dnsNames, machineIP)
+					if err != nil {
+						return fmt.Errorf("failed to generate server secret for %s: %w", etcdName, err)
+					}
+
+					tls.peer, err = etcd.GeneratePeerCertificate(ctx, b.SecretsManager, role, dnsNames, machineIP)
+					if err != nil {
+						return fmt.Errorf("failed to generate peer secret for %s: %w", etcdName, err)
+					}
+
+					etcdRoleToTLSSecretsMap[role] = tls
+				}
+				return nil
+			},
+			SkipIf: !opts.ControlPlane,
+		})
+		writeETCDFilesToDisk = g.Add(flow.Task{
+			Name: "Writing ETCD files to disk",
+			Fn: func(_ context.Context) error {
+				return etcdRoleToTLSSecretsMap.writeToDisk(b.FS)
+			},
+			SkipIf:       !opts.ControlPlane,
+			Dependencies: flow.NewTaskIDs(generateETCDCertificates),
+		})
 		syncPointReadyForGardenerNodeInit = flow.NewTaskIDs(
 			determineGardenerNodeAgentSecretName,
 			ensureNoActiveShootReconciliation,
+			writeETCDFilesToDisk,
 		)
 
 		generateGardenerNodeInitConfig = g.Add(flow.Task{
@@ -257,7 +320,7 @@ func getWorkerPoolName(ctx context.Context, opts *Options, b *botanist.Gardenadm
 }
 
 func getControlPlaneWorkerPoolName(workers []gardencorev1beta1.Worker) (string, error) {
-	if pool := helper.ControlPlaneWorkerPoolForShoot(workers); pool != nil {
+	if pool := v1beta1helper.ControlPlaneWorkerPoolForShoot(workers); pool != nil {
 		return pool.Name, nil
 	}
 
@@ -329,4 +392,30 @@ func waitForNodeReadiness(ctx context.Context, log logr.Logger, c client.Client,
 
 		return retry.Ok()
 	})
+}
+
+type etcdTLSSecrets struct {
+	server, peer *corev1.Secret
+}
+
+type etcdRoleToTLSSecrets map[string]etcdTLSSecrets
+
+func (e etcdRoleToTLSSecrets) writeToDisk(fs afero.Afero) error {
+	for role, tlsSecrets := range e {
+		dir := staticpodtranslator.HostPath(etcd.Name(role), etcdconstants.VolumeNameServerTLS)
+		if err := fs.MkdirAll(dir, os.ModeDir); err != nil {
+			return fmt.Errorf("failed creating directory %s: %w", dir, err)
+		}
+
+		for _, secret := range []*corev1.Secret{tlsSecrets.server, tlsSecrets.peer} {
+			for key, value := range secret.Data {
+				path := filepath.Join(dir, key)
+				if err := fs.WriteFile(path, value, 0640); err != nil {
+					return fmt.Errorf("failed to write file to %s: %w", path, err)
+				}
+			}
+		}
+	}
+
+	return nil
 }

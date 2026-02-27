@@ -31,58 +31,46 @@ var NewEtcd = etcd.New
 
 // DefaultEtcd returns a deployer for the etcd.
 func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, error) {
+	values := etcd.Values{
+		Role:                        role,
+		Class:                       class,
+		CARotationPhase:             v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials),
+		RuntimeKubernetesVersion:    b.Seed.KubernetesVersion,
+		MaintenanceTimeWindow:       *b.Shoot.GetInfo().Spec.Maintenance.TimeWindow,
+		EvictionRequirement:         getEvictionRequirement(class, b.Shoot),
+		PriorityClassName:           v1beta1constants.PriorityClassNameShootControlPlane500,
+		HighAvailabilityEnabled:     v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()),
+		TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
+	}
+
 	defragmentationSchedule, err := determineDefragmentationSchedule(b.Shoot.GetInfo(), b.ManagedSeed, class)
 	if err != nil {
 		return nil, err
 	}
+	values.DefragmentationSchedule = &defragmentationSchedule
 
-	var replicas *int32
 	if !b.Shoot.HibernationEnabled {
-		replicas = ptr.To(getEtcdReplicas(b.Shoot.GetInfo()))
+		values.Replicas = ptr.To(getEtcdReplicas(b.Shoot.GetInfo()))
 	}
-
-	var (
-		minAllowed      corev1.ResourceList
-		storageCapacity string
-	)
 
 	switch role {
 	case v1beta1constants.ETCDRoleMain:
 		if etcd := b.Shoot.GetInfo().Spec.Kubernetes.ETCD; etcd != nil && etcd.Main != nil && etcd.Main.Autoscaling != nil {
-			minAllowed = etcd.Main.Autoscaling.MinAllowed
+			values.Autoscaling.MinAllowed = etcd.Main.Autoscaling.MinAllowed
 		}
-		storageCapacity = "25Gi"
+		values.StorageCapacity = b.Seed.GetValidVolumeSize("25Gi")
 	case v1beta1constants.ETCDRoleEvents:
 		if etcd := b.Shoot.GetInfo().Spec.Kubernetes.ETCD; etcd != nil && etcd.Events != nil && etcd.Events.Autoscaling != nil {
-			minAllowed = etcd.Events.Autoscaling.MinAllowed
+			values.Autoscaling.MinAllowed = etcd.Events.Autoscaling.MinAllowed
 		}
-		storageCapacity = "10Gi"
+		values.StorageCapacity = b.Seed.GetValidVolumeSize("10Gi")
 	}
 
-	e := NewEtcd(
-		b.Logger,
-		b.SeedClientSet.Client(),
-		b.Shoot.ControlPlaneNamespace,
-		b.SecretsManager,
-		etcd.Values{
-			Role:                        role,
-			Class:                       class,
-			Replicas:                    replicas,
-			Autoscaling:                 etcd.AutoscalingConfig{MinAllowed: minAllowed},
-			StorageCapacity:             b.Seed.GetValidVolumeSize(storageCapacity),
-			DefragmentationSchedule:     &defragmentationSchedule,
-			CARotationPhase:             v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials),
-			RuntimeKubernetesVersion:    b.Seed.KubernetesVersion,
-			MaintenanceTimeWindow:       *b.Shoot.GetInfo().Spec.Maintenance.TimeWindow,
-			EvictionRequirement:         getEvictionRequirement(class, b.Shoot),
-			PriorityClassName:           v1beta1constants.PriorityClassNameShootControlPlane500,
-			HighAvailabilityEnabled:     v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()),
-			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
-			RunsAsStaticPod:             b.Shoot.RunsControlPlane(),
-		},
-	)
+	if b.Shoot.RunsControlPlane() {
+		values.StaticPod = &etcd.StaticPodConfig{}
+	}
 
-	return e, nil
+	return NewEtcd(b.Logger, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.SecretsManager, values), nil
 }
 
 func getEvictionRequirement(c etcd.Class, s *shoot.Shoot) *string {

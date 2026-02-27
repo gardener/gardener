@@ -35,4 +35,9 @@ var (
 	// StaticPodPortEtcdEventsWrapper is the port exposed by the etcd-wrapper container in etcd-events when it runs as
 	// static pod.
 	StaticPodPortEtcdEventsWrapper int32 = 9096
+
+	// VolumeNameServerTLS is the name of the volume in the ETCD pod spec used for the server TLS.
+	VolumeNameServerTLS = "etcd-server-tls"
+	// VolumeNamePeerTLS is the name of the volume in the ETCD pod spec used for the peer TLS.
+	VolumeNamePeerTLS = "etcd-peer-server-tls"
 )

@@ -75,3 +75,13 @@ func netIPNetSliceToStringSlice(in []net.IPNet) []string {
 	}
 	return out
 }
+
+// MachineIP returns the IP address of the current machine.
+func (b *GardenadmBotanist) MachineIP() (net.IP, error) {
+	// https://github.com/kubernetes/kubernetes/blob/ec9f0d55360f74337f9ef40879434a063821ff5b/pkg/kubelet/nodestatus/setters.go#L162-L178
+	addrs, _ := net.LookupIP(b.HostName)
+	for _, addr := range addrs {
+		return addr, nil
+	}
+	return nil, fmt.Errorf("no IP address found for node")
+}
