@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/utils"
@@ -183,6 +184,10 @@ func add(mgr manager.Manager, args AddArgs, actuator HealthCheckActuator) error 
 
 	// add type predicate to only watch registered resource (e.g. ControlPlane) with a certain type (e.g. aws)
 	predicates := predicateutils.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClasses, args.Type)
+
+	if args.ControllerOptions.ReconciliationTimeout == 0 {
+		args.ControllerOptions.ReconciliationTimeout = controllerutils.DefaultReconciliationTimeout
+	}
 
 	log.Log.Info("Registering health check controller", "kind", args.registeredExtension.groupVersionKind.Kind, "type", args.Type, "conditionTypes", args.registeredExtension.healthConditionTypes, "syncPeriod", args.SyncPeriod.Duration.String())
 

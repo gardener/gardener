@@ -61,6 +61,10 @@ type AddArgs struct {
 func Add(mgr manager.Manager, args AddArgs) error {
 	args.ControllerOptions.MaxConcurrentReconciles = 1
 
+	if args.ControllerOptions.ReconciliationTimeout == 0 {
+		args.ControllerOptions.ReconciliationTimeout = controllerutils.DefaultReconciliationTimeout
+	}
+
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
