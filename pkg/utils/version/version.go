@@ -81,7 +81,7 @@ func CheckVersionMeetsConstraint(version, constraint string) (bool, error) {
 // Normalize returns the normalized version string by removing the leading 'v' and any suffixes like '-rc1', '-beta2', etc.
 func Normalize(version string) string {
 	v := strings.ReplaceAll(version, "v", "")
-	idx := strings.IndexAny(v, "-+")
+	idx := strings.IndexAny(v, "-+~")
 	if idx != -1 {
 		v = v[:idx]
 	}
