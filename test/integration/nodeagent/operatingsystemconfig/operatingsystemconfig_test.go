@@ -404,7 +404,6 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 				ExtensionUnits: []extensionsv1alpha1.Unit{unit3, unit4, unit8, unit9, existingUnitDropIn},
 			},
 		}
-
 	})
 
 	JustBeforeEach(func() {

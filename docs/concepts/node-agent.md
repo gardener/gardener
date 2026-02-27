@@ -88,6 +88,38 @@ After all these steps are complete, the controller maintains two annotations on 
 - `worker.gardener.cloud/kubernetes-version`, describing the version of the installed `kubelet`.
 - `checksum/cloud-config-data`, describing the checksum of the applied `OperatingSystemConfig` (used in future reconciliations to determine whether it needs to reconcile, and to report that this node is up-to-date).
 
+#### Serial Reconciliation
+
+For certain critical nodes that should never be updated in parallel (e.g., control plane nodes for self-hosted shoot clusters), the controller supports a **serial reconciliation** mode.
+This ensures that only one `gardener-node-agent` instance at a time reconciles the `OperatingSystemConfig`, preventing simultaneous updates that could potentially disrupt cluster operations.
+
+It is particularly relevant for control plane nodes since they run critical components like `etcd` or `kube-apiserver` as static pods, and we want them to get updated one at a time.
+The primary driver for this feature is `etcd`'s quorum requirement: `etcd` needs a majority of members to be healthy to perform any useful operations, so updating multiple control plane nodes simultaneously risks losing quorum and making the cluster unavailable.
+In contrast, `kube-apiserver` instances sit behind a load balancer that can health-check and route traffic away from non-ready instances, meaning the API server can tolerate some replicas being temporarily unavailable as long as at least one is ready.
+Therefore, while serial reconciliation benefits both components, it is the `etcd` quorum constraint that makes it a hard requirement.
+
+##### How It Works
+
+Serial reconciliation is enabled by setting the `reconciliation.osc.node-agent.gardener.cloud/serial` annotation to `"true"` on the `Secret` containing the `OperatingSystemConfig`.
+When this annotation is present, the controller uses a leader election mechanism based on Kubernetes `Lease` objects to coordinate reconciliation across multiple `gardener-node-agent` instances:
+
+1. **Lease Acquisition**: Before starting reconciliation, each `gardener-node-agent` instance attempts to acquire a `Lease` object with the same name as the `Secret` (in the `kube-system` namespace). The `Lease` is owned by the `Secret` via an `OwnerReference`.
+2. **Reconciliation with Lock**: Only the instance that successfully acquires the `Lease` proceeds with reconciliation. The `Lease` has a duration of 10 minutes and is renewed in the beginning of the reconciliation process.
+3. **Lock Release**: After successful reconciliation, the instance releases the `Lease` by clearing its holder identity, making it available for other instances to acquire.
+4. **Waiting for Lock**: Instances that fail to acquire the `Lease` (because another instance holds it) will requeue their reconciliation and wait. The controller watches the `Lease` object and automatically requeues when it detects the `Lease` has been released.
+5. **Lease Expiry Handling**: If a `Lease` holder fails to renew the `Lease` before it expires, other instances can detect this and attempt to acquire the `Lease` to proceed with reconciliation.
+
+##### Behavior Changes
+
+When serial reconciliation is enabled:
+
+- The [jitter delay mechanism](resource-manager.md#node-agent-reconciliation-delay-controller) (which normally staggers reconciliations to reduce API server load) is bypassed, as the leader election mechanism provides sufficient coordination.
+- Accordingly, 'Update' events on the `Secret` are processed immediately rather than with a random delay.
+- The controller uses a dedicated cache for the leader election `Lease` object to minimize unnecessary network I/O.
+
+> [!NOTE]
+> Nodes with serial reconciliation enabled are excluded from the [Agent Reconciliation Delay Controller](resource-manager.md#agent-reconciliation-delay-controller) in the `gardener-resource-manager`, as the serialization mechanism provides its own coordination.
+
 ### [Token Controller](../../pkg/nodeagent/controller/token)
 
 This controller watches the access token `Secret`s in the `kube-system` namespace configured via the `gardener-node-agent`'s component configuration (`.controllers.token.syncConfigs[]` field).

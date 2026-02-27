@@ -36,6 +36,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/events"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -108,9 +109,13 @@ func init() {
 // Reconciler decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
 // node.
 type Reconciler struct {
-	Client           client.Client
+	Client client.Client
+	// LeaseClient is a cached client just for the leader election Lease in case the OperatingSystemConfig
+	// reconciliation is serialised.
+	LeaseClient      client.Client
 	ContainerdClient nodeagentcontainerd.Client
 	Config           nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig
+	Clock            clock.Clock
 	ConfigDir        string
 	Recorder         events.EventRecorder
 	DBus             dbus.DBus
@@ -126,7 +131,8 @@ type Reconciler struct {
 	// actual OSC, or not reconcile them at all.
 	SkipWritingStateFiles bool
 
-	// Channel and TokenSecretSyncConfigs are used by the reconciler to trigger events for the token reconciler during an in-place service-account-key rotation.
+	// Channel and TokenSecretSyncConfigs are used by the reconciler to trigger events for the token reconciler during
+	// an in-place service-account-key rotation.
 	Channel                chan event.TypedGenericEvent[*corev1.Secret]
 	TokenSecretSyncConfigs []nodeagentconfigv1alpha1.TokenSecretSyncConfig
 }
@@ -151,7 +157,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if nodeCreated {
-		log.Info("Node registered by kubelet. Restarting myself (gardener-node-agent unit) to start lease controller and watch my own node only. Canceling the context to initiate graceful shutdown")
+		log.Info("Node registered by kubelet. Restarting myself (gardener-node-agent unit) to start Lease controller and watch my own node only. Canceling the context to initiate graceful shutdown")
 		r.CancelContext()
 		return reconcile.Result{}, nil
 	}
@@ -178,13 +184,43 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
+	serialReconciliationLease := newLeaderElectorForSecret(log, r.LeaseClient, r.Clock, secret, r.HostName)
+
+	if node != nil && node.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig] == oscChecksum {
+		log.Info("Configuration on this node is up to date, nothing to be done")
+		return reconcile.Result{}, serialReconciliationLease.release(ctx)
+	}
+
+	if serialReconciliation(secret) {
+		log.Info("OperatingSystemConfig reconciliation is serial")
+
+		if err := serialReconciliationLease.reload(ctx); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to reload Lease for serial reconciliation leader election: %w", err)
+		}
+
+		if serialReconciliationLease.acquiredByAnotherInstance() {
+			if serialReconciliationLease.renewedInTime() {
+				requeueAfter := serialReconciliationLease.durationUntilLeaseExpires()
+				serialReconciliationLease.logger().Info("Lease was acquired by another instance, exiting early and requeue when Lease expires", "requeueAfter", requeueAfter)
+				return reconcile.Result{RequeueAfter: requeueAfter}, nil
+			}
+
+			serialReconciliationLease.logger().Info("Lease was acquired by another instance, but it was not renewed in time")
+		}
+
+		if err := serialReconciliationLease.tryAcquireOrRenew(ctx); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed acquiring or renewing lease: %w", err)
+		}
+
+		log.Info("Lease acquired, starting reconciliation")
+	}
+
 	log.Info("Applying containerd configuration")
 	if err := r.ReconcileContainerdConfig(ctx, log, osc); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
 	}
 
-	var osVersion *string
-	osVersion, err = GetOSVersion(osc.Spec.InPlaceUpdates, r.FS)
+	osVersion, err := GetOSVersion(osc.Spec.InPlaceUpdates, r.FS)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed getting OS version: %w", err)
 	}
@@ -192,11 +228,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	oscChanges, err := computeOperatingSystemConfigChanges(log, r.FS, osc, oscChecksum, osVersion, r.SkipWritingStateFiles, r.HostName)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed calculating the OSC changes: %w", err)
-	}
-
-	if node != nil && node.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig] == oscChecksum {
-		log.Info("Configuration on this node is up to date, nothing to be done")
-		return reconcile.Result{}, nil
 	}
 
 	// If the node-agent has restarted after OS update, we need to persist the change in oscChanges.
@@ -344,8 +375,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	patch := client.MergeFrom(node.DeepCopy())
 	metav1.SetMetaDataLabel(&node.ObjectMeta, v1beta1constants.LabelWorkerKubernetesVersion, r.Config.KubernetesVersion.String())
 	metav1.SetMetaDataAnnotation(&node.ObjectMeta, nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig, oscChecksum)
+	if err := r.Client.Patch(ctx, node, patch); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed patching Node annotations after OSC was applied: %w", err)
+	}
 
-	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, r.Client.Patch(ctx, node, patch)
+	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, serialReconciliationLease.release(ctx)
 }
 
 func (r *Reconciler) getNode(ctx context.Context) (*corev1.Node, bool, error) {

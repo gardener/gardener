@@ -874,6 +874,10 @@ The highest possible value is `1800`.
 
 The controller adds the `node-agent.gardener.cloud/reconciliation-delay` annotation to nodes whose value is read by the [node-agent](node-agent.md)s.
 
+> [!NOTE]
+> Nodes which should never be updated in parallel and are marked for 'serial reconciliation' (e.g., control plane nodes for self-hosted shoot clusters) are excluded by this controller.
+> Read more about it [here](node-agent.md#serial-reconciliation).
+
 ## Webhooks
 
 ### Mutating Webhooks

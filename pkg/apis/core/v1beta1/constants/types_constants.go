@@ -1077,6 +1077,12 @@ const (
 	// should wait with reconciliation of the operating system config (to prevent too many node-agents from restarting
 	// kubelet or other critical units at the same time).
 	AnnotationNodeAgentReconciliationDelay = "node-agent.gardener.cloud/reconciliation-delay"
+	// AnnotationNodeAgentSerialOSCReconciliation is an annotation key on the gardener-node-agent Secret containing
+	// the OperatingSystemConfig that should be reconciled. When set, gardener-node-agent instances watching this Secret
+	// will try to lock the resource (by writing a Lease object with the same name as the Secret).
+	// If they have the lock, they reconcile and release the Lease at the end. If they don't have the lock, they
+	// wait until it is removed again.
+	AnnotationNodeAgentSerialOSCReconciliation = "reconciliation.osc.node-agent.gardener.cloud/serial"
 	// NodeAgentsGroup is the identity group for gardener-node-agents when authenticating to the API server.
 	NodeAgentsGroup = "gardener.cloud:node-agents"
 	// NodeAgentUserNamePrefix is the identity username prefix for gardener-node-agent when authenticating to the API server.
