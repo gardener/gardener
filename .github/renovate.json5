@@ -356,7 +356,7 @@
         'minor',
       ],
       matchFileNames: [
-        'hack/tools/image/variants\\.yaml',
+        '\\.github/workflows/golang-test-images\\.yaml',
       ],
       enabled: false,
     },
