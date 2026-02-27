@@ -10,7 +10,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -39,7 +38,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 			RateLimiter:             workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](time.Millisecond, 2*time.Second),
 			ReconciliationTimeout:   time.Duration(r.LeaseResyncSeconds) * time.Second,
 		}).
-		WatchesRawSource(source.Kind[client.Object](
+		WatchesRawSource(source.Kind(
 			gardenCluster.GetCache(),
 			r.NewObjectFunc(),
 			&handler.EnqueueRequestForObject{},

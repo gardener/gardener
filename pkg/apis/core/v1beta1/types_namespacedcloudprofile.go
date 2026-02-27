@@ -49,17 +49,17 @@ type NamespacedCloudProfileSpec struct {
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	// +optional
-	MachineImages []MachineImage `json:"machineImages,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,3,opt,name=machineImages"`
+	MachineImages []MachineImage `json:"machineImages,omitempty" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,3,opt,name=machineImages"`
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	// +optional
-	MachineTypes []MachineType `json:"machineTypes,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,4,opt,name=machineTypes"`
+	MachineTypes []MachineType `json:"machineTypes,omitempty" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,4,opt,name=machineTypes"`
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	// +optional
-	VolumeTypes []VolumeType `json:"volumeTypes,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,6,opt,name=volumeTypes"`
+	VolumeTypes []VolumeType `json:"volumeTypes,omitempty" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,6,opt,name=volumeTypes"`
 	// Parent contains a reference to a CloudProfile it inherits from.
 	Parent CloudProfileReference `json:"parent" protobuf:"bytes,7,req,name=parent"`
 	// ProviderConfig contains provider-specific configuration for the profile.

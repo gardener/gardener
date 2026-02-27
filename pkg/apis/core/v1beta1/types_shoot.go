@@ -124,7 +124,7 @@ type ShootSpec struct {
 	// +patchMergeKey=key
 	// +patchStrategy=merge
 	// +optional
-	Tolerations []Toleration `json:"tolerations,omitempty" patchStrategy:"merge" patchMergeKey:"key" protobuf:"bytes,17,rep,name=tolerations"`
+	Tolerations []Toleration `json:"tolerations,omitempty" patchMergeKey:"key" patchStrategy:"merge" protobuf:"bytes,17,rep,name=tolerations"`
 	// ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
 	// This field is immutable.
 	// +optional
@@ -158,12 +158,12 @@ type ShootStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional
-	Conditions []Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	Conditions []Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
 	// Constraints represents conditions of a Shoot's current state that constraint some operations on it.
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional
-	Constraints []Condition `json:"constraints,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,2,rep,name=constraints"`
+	Constraints []Condition `json:"constraints,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,2,rep,name=constraints"`
 	// Gardener holds information about the Gardener which last acted on the Shoot.
 	Gardener Gardener `json:"gardener" protobuf:"bytes,3,opt,name=gardener"`
 	// IsHibernated indicates whether the Shoot is currently hibernated.
@@ -201,7 +201,7 @@ type ShootStatus struct {
 	// +optional
 	// +patchMergeKey=name
 	// +patchStrategy=merge
-	AdvertisedAddresses []ShootAdvertisedAddress `json:"advertisedAddresses,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,13,rep,name=advertisedAddresses"`
+	AdvertisedAddresses []ShootAdvertisedAddress `json:"advertisedAddresses,omitempty" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,13,rep,name=advertisedAddresses"`
 	// MigrationStartTime is the time when a migration to a different seed was initiated.
 	// +optional
 	MigrationStartTime *metav1.Time `json:"migrationStartTime,omitempty" protobuf:"bytes,14,opt,name=migrationStartTime"`
@@ -948,7 +948,7 @@ type KubeAPIServerConfig struct {
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	// +optional
-	AdmissionPlugins []AdmissionPlugin `json:"admissionPlugins,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,2,rep,name=admissionPlugins"`
+	AdmissionPlugins []AdmissionPlugin `json:"admissionPlugins,omitempty" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,2,rep,name=admissionPlugins"`
 	// APIAudiences are the identifiers of the API. The service account token authenticator will
 	// validate that tokens used against the API are bound to at least one of these audiences.
 	// Defaults to ["kubernetes"].
@@ -1738,7 +1738,7 @@ type Provider struct {
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	// +optional
-	Workers []Worker `json:"workers,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,4,rep,name=workers"`
+	Workers []Worker `json:"workers,omitempty" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,4,rep,name=workers"`
 	// WorkersSettings contains settings for all workers.
 	// +optional
 	WorkersSettings *WorkersSettings `json:"workersSettings,omitempty" protobuf:"bytes,5,opt,name=workersSettings"`

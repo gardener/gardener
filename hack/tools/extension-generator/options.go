@@ -6,8 +6,6 @@ package main
 
 import (
 	"fmt"
-	"maps"
-	"slices"
 
 	flag "github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -29,7 +27,7 @@ type Options struct {
 	AdmissionApplicationOCIRepository string
 }
 
-var validCategories = sets.New(slices.Collect(maps.Keys(categoryToEnsurer))...)
+var validCategories = sets.KeySet(categoryToEnsurer)
 
 // AddFlags adds the cmd flags to the given FlagSet.
 func (o *Options) AddFlags(flags *flag.FlagSet) {

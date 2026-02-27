@@ -58,18 +58,18 @@ type CloudProfileSpec struct {
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
-	MachineImages []MachineImage `json:"machineImages" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,3,rep,name=machineImages"`
+	MachineImages []MachineImage `json:"machineImages" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,3,rep,name=machineImages"`
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
-	MachineTypes []MachineType `json:"machineTypes" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,4,rep,name=machineTypes"`
+	MachineTypes []MachineType `json:"machineTypes" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,4,rep,name=machineTypes"`
 	// ProviderConfig contains provider-specific configuration for the profile.
 	// +optional
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,5,opt,name=providerConfig"`
 	// Regions contains constraints regarding allowed values for regions and zones.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
-	Regions []Region `json:"regions" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,6,rep,name=regions"`
+	Regions []Region `json:"regions" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,6,rep,name=regions"`
 	// SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile.
 	// An empty list means that all seeds of the same provider type are supported.
 	// This is useful for environments that are of the same type (like openstack) but may have different "instances"/landscapes.
@@ -83,7 +83,7 @@ type CloudProfileSpec struct {
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	// +optional
-	VolumeTypes []VolumeType `json:"volumeTypes,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,9,rep,name=volumeTypes"`
+	VolumeTypes []VolumeType `json:"volumeTypes,omitempty" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,9,rep,name=volumeTypes"`
 	// Bastion contains the machine and image properties
 	// +optional
 	Bastion *Bastion `json:"bastion,omitempty" protobuf:"bytes,10,opt,name=bastion"`
@@ -116,7 +116,7 @@ type KubernetesSettings struct {
 	// +patchMergeKey=version
 	// +patchStrategy=merge
 	// +optional
-	Versions []ExpirableVersion `json:"versions,omitempty" patchStrategy:"merge" patchMergeKey:"version" protobuf:"bytes,1,rep,name=versions"`
+	Versions []ExpirableVersion `json:"versions,omitempty" patchMergeKey:"version" patchStrategy:"merge" protobuf:"bytes,1,rep,name=versions"`
 }
 
 // MachineImage defines the name and multiple versions of the machine image in any environment.
@@ -126,7 +126,7 @@ type MachineImage struct {
 	// Versions contains versions, expiration dates and container runtimes of the machine image
 	// +patchMergeKey=version
 	// +patchStrategy=merge
-	Versions []MachineImageVersion `json:"versions" patchStrategy:"merge" patchMergeKey:"version" protobuf:"bytes,2,rep,name=versions"`
+	Versions []MachineImageVersion `json:"versions" patchMergeKey:"version" patchStrategy:"merge" protobuf:"bytes,2,rep,name=versions"`
 	// UpdateStrategy is the update strategy to use for the machine image. Possible values are:
 	//  - patch: update to the latest patch version of the current minor version.
 	//  - minor: update to the latest minor and patch version.
@@ -249,7 +249,7 @@ type Region struct {
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	// +optional
-	Zones []AvailabilityZone `json:"zones,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,2,rep,name=zones"`
+	Zones []AvailabilityZone `json:"zones,omitempty" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,2,rep,name=zones"`
 	// Labels is an optional set of key-value pairs that contain certain administrator-controlled labels for this region.
 	// It can be used by Gardener administrators/operators to provide additional information about a region, e.g. wrt
 	// quality, reliability, etc.

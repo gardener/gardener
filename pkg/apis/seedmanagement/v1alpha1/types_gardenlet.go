@@ -90,7 +90,7 @@ type GardenletStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional
-	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
 	// ObservedGeneration is the most recent generation observed for this Gardenlet. It corresponds to the Gardenlet's
 	// generation, which is updated on mutation by the API Server.
 	// +optional

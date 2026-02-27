@@ -50,5 +50,5 @@ type ExposureClassScheduling struct {
 	// +patchMergeKey=key
 	// +patchStrategy=merge
 	// +optional
-	Tolerations []Toleration `json:"tolerations,omitempty" patchStrategy:"merge" patchMergeKey:"key" protobuf:"bytes,2,rep,name=tolerations"`
+	Tolerations []Toleration `json:"tolerations,omitempty" patchMergeKey:"key" patchStrategy:"merge" protobuf:"bytes,2,rep,name=tolerations"`
 }

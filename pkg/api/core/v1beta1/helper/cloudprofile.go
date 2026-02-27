@@ -141,10 +141,10 @@ func ToExpirableVersions(versions []gardencorev1beta1.MachineImageVersion) []gar
 
 // FindMachineTypeByName tries to find the machine type details with the given name. If it cannot be found it returns nil.
 func FindMachineTypeByName(machines []gardencorev1beta1.MachineType, name string) *gardencorev1beta1.MachineType {
-	for _, m := range machines {
-		if m.Name == name {
-			return &m
-		}
+	if idx := slices.IndexFunc(machines, func(machine gardencorev1beta1.MachineType) bool {
+		return machine.Name == name
+	}); idx != -1 {
+		return &machines[idx]
 	}
 	return nil
 }

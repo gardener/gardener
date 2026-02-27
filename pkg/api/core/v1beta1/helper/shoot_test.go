@@ -49,10 +49,7 @@ var _ = Describe("Helper", func() {
 
 	DescribeTable("#ShootWantsClusterAutoscaler",
 		func(shoot *gardencorev1beta1.Shoot, wantsAutoscaler bool) {
-			actualWantsAutoscaler, err := ShootWantsClusterAutoscaler(shoot)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(actualWantsAutoscaler).To(Equal(wantsAutoscaler))
+			Expect(ShootWantsClusterAutoscaler(shoot)).To(Equal(wantsAutoscaler))
 		},
 		Entry("no workers",
 			&gardencorev1beta1.Shoot{

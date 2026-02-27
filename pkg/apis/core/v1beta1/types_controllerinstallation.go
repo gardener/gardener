@@ -58,7 +58,7 @@ type ControllerInstallationStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional
-	Conditions []Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	Conditions []Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
 	// ProviderStatus contains type-specific status.
 	// +optional
 	ProviderStatus *runtime.RawExtension `json:"providerStatus,omitempty" protobuf:"bytes,2,opt,name=providerStatus"`

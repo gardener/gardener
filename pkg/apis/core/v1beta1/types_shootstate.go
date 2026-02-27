@@ -44,7 +44,7 @@ type ShootStateSpec struct {
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	// +optional
-	Gardener []GardenerResourceData `json:"gardener,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,1,rep,name=gardener"`
+	Gardener []GardenerResourceData `json:"gardener,omitempty" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,1,rep,name=gardener"`
 	// Extensions holds the state of custom resources reconciled by extension controllers in the seed
 	// +optional
 	Extensions []ExtensionResourceState `json:"extensions,omitempty" protobuf:"bytes,2,rep,name=extensions"`
