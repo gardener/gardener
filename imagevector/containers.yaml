@@ -901,6 +901,10 @@ images:
         value:
           - type: 'githubTeam'
             teamname: 'gardener/gardener-core-networking-maintainers'
+  - name: istio-basic-auth-server
+    sourceRepository: github.com/gardener/ext-authz-server
+    repository: europe-docker.pkg.dev/gardener-project/releases/gardener/ext-authz-server
+    tag: "v0.2.0"
   # API Server SNI, VPN-SeedServer and Kube-ApiServer Proxy
   - name: envoy-proxy
     sourceRepository: github.com/envoyproxy/envoy

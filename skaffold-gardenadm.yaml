@@ -123,6 +123,7 @@ build:
             - pkg/component/networking/coredns
             - pkg/component/networking/coredns/constants
             - pkg/component/networking/istio
+            - pkg/component/networking/istiobasicauthserver
             - pkg/component/networking/nginxingress
             - pkg/component/networking/nodelocaldns
             - pkg/component/networking/nodelocaldns/constants
@@ -645,6 +646,7 @@ build:
             - pkg/component/networking/coredns
             - pkg/component/networking/coredns/constants
             - pkg/component/networking/istio
+            - pkg/component/networking/istiobasicauthserver
             - pkg/component/networking/nginxingress
             - pkg/component/networking/nodelocaldns
             - pkg/component/networking/nodelocaldns/constants

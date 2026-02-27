@@ -14,9 +14,10 @@ import (
 	"strings"
 	"time"
 
+	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,13 +30,16 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -45,7 +49,8 @@ import (
 const (
 	name = "plutono"
 
-	port                          = 3000
+	// Port is the port exposed by the plutono.
+	Port                          = 3000
 	ingressTLSCertificateValidity = 730 * 24 * time.Hour
 	labelValueTrue                = "true"
 
@@ -110,6 +115,8 @@ type Values struct {
 	IngressHost string
 	// IncludeIstioDashboards specifies whether to include istio dashboard.
 	IncludeIstioDashboards bool
+	// IstioIngressGatewayLabels are the labels identifying the corresponding istio ingress gateway.
+	IstioIngressGatewayLabels map[string]string
 	// IsWorkerless specifies whether the cluster managed by this API server has worker nodes.
 	IsWorkerless bool
 	// IsGardenCluster specifies whether the cluster is garden cluster.
@@ -281,22 +288,28 @@ func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, 
 	utilruntime.Must(kubernetesutils.MakeUnique(plutonoConfigSecret))
 	utilruntime.Must(kubernetesutils.MakeUnique(providerConfigMap))
 
-	ingress, err := p.getIngress(ctx)
+	istioResources, err := p.getIstioResources(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	data, err := registry.AddAllAndSerialize(
+	isShootNamespace, err := gardenerutils.IsShootNamespace(ctx, p.client, p.namespace)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed checking if namespace is a shoot namespace: %w", err)
+	}
+
+	resources := append([]client.Object{
 		plutonoConfigSecret,
 		providerConfigMap,
 		dataSourceConfigMap,
 		p.getDeployment(providerConfigMap, plutonoConfigSecret, plutonoAdminUserSecret),
-		p.getService(),
-		ingress,
+		p.getService(isShootNamespace),
 		p.getServiceAccount(),
 		p.getRole(),
 		p.getRoleBinding(),
-	)
+	}, istioResources...)
+
+	data, err := registry.AddAllAndSerialize(resources...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -569,21 +582,24 @@ func (p *plutono) getRoleBinding() *rbacv1.RoleBinding {
 	}
 }
 
-func (p *plutono) getService() *corev1.Service {
+func (p *plutono) getService(isShootNamespace bool) *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: p.namespace,
 			Labels:    getLabels(),
+			Annotations: map[string]string{
+				"networking.istio.io/exportTo": "*",
+			},
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeClusterIP,
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "web",
-					Port:       int32(port),
+					Port:       int32(Port),
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt32(port),
+					TargetPort: intstr.FromInt32(Port),
 				},
 			},
 			Selector: getLabels(),
@@ -593,6 +609,18 @@ func (p *plutono) getService() *corev1.Service {
 	if p.values.ClusterType == component.ClusterTypeSeed {
 		service.Labels = utils.MergeStringMaps(service.Labels, map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring})
 	}
+
+	namespaceSelectors := []metav1.LabelSelector{{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}}}
+
+	if isShootNamespace {
+		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+
+		namespaceSelectors = append(namespaceSelectors,
+			metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
+		)
+	}
+
+	utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service, namespaceSelectors...))
 
 	return service
 }
@@ -652,7 +680,7 @@ func (p *plutono) getDeployment(providerConfigMap *corev1.ConfigMap, plutonoConf
 							},
 							Ports: []corev1.ContainerPort{{
 								Name:          "web",
-								ContainerPort: int32(port),
+								ContainerPort: int32(Port),
 							}},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
@@ -751,7 +779,7 @@ func (p *plutono) refresherSidecar(what, label, folder string, volumeMount corev
 			{Name: "LABEL", Value: label},
 			{Name: "LABEL_VALUE", Value: labelValueTrue},
 			{Name: "METHOD", Value: "WATCH"},
-			{Name: "REQ_URL", Value: fmt.Sprintf("http://localhost:%d/api/admin/provisioning/%ss/reload", port, what)},
+			{Name: "REQ_URL", Value: fmt.Sprintf("http://localhost:%d/api/admin/provisioning/%ss/reload", Port, what)},
 			{Name: "REQ_METHOD", Value: "POST"},
 		},
 		VolumeMounts: []corev1.VolumeMount{
@@ -773,16 +801,18 @@ func (p *plutono) refresherSidecar(what, label, folder string, volumeMount corev
 	}
 }
 
-func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error) {
+func (p *plutono) getIstioResources(ctx context.Context) ([]client.Object, error) {
 	var (
-		pathType              = networkingv1.PathTypePrefix
+		// Currently, all observability components are exposed via the same istio ingress gateway.
+		// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
+		// See https://github.com/gardener/gardener/issues/11860 for details.
+		ingressNamespace      = v1beta1constants.DefaultSNIIngressNamespace
 		credentialsSecretName = p.values.AuthSecretName
 		caName                = v1beta1constants.SecretNameCASeed
+		gatewayName           = name
 	)
 
 	if p.values.IsGardenCluster {
-		pathType = networkingv1.PathTypeImplementationSpecific
-
 		credentialsSecret, found := p.secretsManager.Get(v1beta1constants.SecretNameObservabilityIngress)
 		if !found {
 			return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngress)
@@ -790,6 +820,8 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 
 		credentialsSecretName = credentialsSecret.Name
 		caName = operatorv1alpha1.SecretNameCARuntime
+		ingressNamespace = operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace
+		gatewayName = fmt.Sprintf("%s%s-%s", operatorv1alpha1.VirtualGardenNamePrefix, gatewayName, v1beta1constants.GardenNamespace)
 	}
 
 	if p.values.ClusterType == component.ClusterTypeShoot {
@@ -800,6 +832,7 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 
 		credentialsSecretName = credentialsSecret.Name
 		caName = v1beta1constants.SecretNameCACluster
+		gatewayName = fmt.Sprintf("%s-%s", gatewayName, p.namespace)
 	}
 
 	var ingressTLSSecretName string
@@ -821,54 +854,72 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 		ingressTLSSecretName = ingressTLSSecret.Name
 	}
 
-	ingress := &networkingv1.Ingress{
+	// Istio expects the secret in the istio ingress gateway namespace => copy certificate to istio namespace
+	tlsSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      ingressTLSSecretName,
 			Namespace: p.namespace,
-			Annotations: map[string]string{
-				"nginx.ingress.kubernetes.io/auth-realm":  "Authentication Required",
-				"nginx.ingress.kubernetes.io/auth-secret": credentialsSecretName,
-				"nginx.ingress.kubernetes.io/auth-type":   "basic",
-				"nginx.ingress.kubernetes.io/server-snippet": `location /api/admin/ {
-  return 403;
-}`,
-			},
 		},
-		Spec: networkingv1.IngressSpec{
-			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
-			TLS: []networkingv1.IngressTLS{{
-				SecretName: ingressTLSSecretName,
-				Hosts:      []string{p.values.IngressHost},
-			}},
-			Rules: []networkingv1.IngressRule{{
-				Host: p.values.IngressHost,
-				IngressRuleValue: networkingv1.IngressRuleValue{
-					HTTP: &networkingv1.HTTPIngressRuleValue{
-						Paths: []networkingv1.HTTPIngressPath{
-							{
-								Backend: networkingv1.IngressBackend{
-									Service: &networkingv1.IngressServiceBackend{
-										Name: name,
-										Port: networkingv1.ServiceBackendPort{
-											Number: int32(port),
-										},
-									},
-								},
-								Path:     "/",
-								PathType: &pathType,
-							},
-						},
-					},
+	}
+	if err := p.client.Get(ctx, client.ObjectKeyFromObject(tlsSecret), tlsSecret); err != nil {
+		return nil, fmt.Errorf("failed to get TLS secret %q: %w", ingressTLSSecretName, err)
+	}
+
+	tlsSecretInIstioNamespace := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-%s-%s", p.namespace, name, ingressTLSSecretName),
+			Namespace: ingressNamespace,
+			Labels:    getLabels(),
+		},
+		Data: tlsSecret.Data,
+	}
+
+	gateway := &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: p.namespace}}
+	if err := istio.GatewayWithTLSTermination(
+		gateway,
+		getLabels(),
+		p.values.IstioIngressGatewayLabels,
+		[]string{p.values.IngressHost},
+		kubeapiserverconstants.Port,
+		tlsSecretInIstioNamespace.Name,
+	)(); err != nil {
+		return nil, fmt.Errorf("failed to create gateway resource: %w", err)
+	}
+
+	destinationHost := kubernetesutils.FQDNForService(name, p.namespace)
+	virtualService := &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: p.namespace}}
+	if err := istio.VirtualServiceForTLSTermination(
+		virtualService,
+		utils.MergeStringMaps(getLabels(), map[string]string{v1beta1constants.LabelBasicAuthSecretName: credentialsSecretName}),
+		[]string{p.values.IngressHost},
+		gatewayName,
+		Port,
+		destinationHost,
+		"",
+		"",
+	)(); err != nil {
+		return nil, fmt.Errorf("failed to create virtual service resource: %w", err)
+	}
+	virtualService.Spec.Http = append([]*istioapinetworkingv1beta1.HTTPRoute{{
+		Name: "admin-endpoints",
+		Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{{
+			Uri: &istioapinetworkingv1beta1.StringMatch{
+				MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+					Prefix: "/api/admin/",
 				},
-			}},
+			},
+		}},
+		DirectResponse: &istioapinetworkingv1beta1.HTTPDirectResponse{
+			Status: 403,
 		},
+	}}, virtualService.Spec.Http...)
+
+	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: p.namespace}}
+	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), destinationHost)(); err != nil {
+		return nil, fmt.Errorf("failed to create destination rule resource: %w", err)
 	}
 
-	if p.values.ClusterType == component.ClusterTypeShoot {
-		ingress.Labels = getLabels()
-	}
-
-	return ingress, nil
+	return []client.Object{tlsSecretInIstioNamespace, gateway, virtualService, destinationRule}, nil
 }
 
 func (p *plutono) dashboardLabel() string {

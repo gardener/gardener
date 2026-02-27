@@ -65,6 +65,7 @@ import (
 	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
+	"github.com/gardener/gardener/pkg/component/networking/istiobasicauthserver"
 	"github.com/gardener/gardener/pkg/component/observability/logging"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
@@ -110,6 +111,7 @@ type components struct {
 	etcdDruid               component.DeployWaiter
 	istio                   istio.Interface
 	nginxIngressController  component.DeployWaiter
+	istioBasicAuthServer    component.DeployWaiter
 
 	extensions extension.Interface
 
@@ -230,6 +232,10 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
+	c.istioBasicAuthServer, err = r.newIstioBasicAuthServer(secretsManager)
+	if err != nil {
+		return
+	}
 
 	// garden extensions
 	c.extensions = r.newExtensions(log, garden, extensionList)
@@ -330,7 +336,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.plutono, err = r.newPlutono(garden, secretsManager, primaryIngressDomain.Name, wildcardCertSecretName)
+	c.plutono, err = r.newPlutono(garden, secretsManager, primaryIngressDomain.Name, wildcardCertSecretName, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -933,7 +939,10 @@ func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Gard
 		v1beta1constants.PriorityClassNameGardenSystemCritical,
 		true,
 		sharedcomponent.GetIstioZoneLabels(nil, nil),
-		gardenerutils.NetworkPolicyLabel(r.GardenNamespace+"-"+kubeapiserverconstants.ServiceName(operatorv1alpha1.VirtualGardenNamePrefix), kubeapiserverconstants.Port),
+		[]string{
+			gardenerutils.NetworkPolicyLabel(r.GardenNamespace+"-"+kubeapiserverconstants.ServiceName(operatorv1alpha1.VirtualGardenNamePrefix), kubeapiserverconstants.Port),
+			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameIstioBasicAuthServer, istiobasicauthserver.Port),
+		},
 		annotations,
 		nil,
 		nil,
@@ -1090,6 +1099,18 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, 
 	)
 }
 
+func (r *Reconciler) newIstioBasicAuthServer(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	return sharedcomponent.NewIstioBasicAuthServer(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		secretsManager,
+		true,
+		1,
+		v1beta1constants.PriorityClassNameGardenSystem100,
+		true,
+	)
+}
+
 func (r *Reconciler) newGardenerMetricsExporter(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerMetricsExporter)
 	if err != nil {
@@ -1099,7 +1120,17 @@ func (r *Reconciler) newGardenerMetricsExporter(secretsManager secretsmanager.In
 	return gardenermetricsexporter.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, gardenermetricsexporter.Values{Image: image.String()}), nil
 }
 
-func (r *Reconciler) newPlutono(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressDomain string, wildcardCertSecretName *string) (plutono.Interface, error) {
+func (r *Reconciler) newPlutono(
+	garden *operatorv1alpha1.Garden,
+	secretsManager secretsmanager.Interface,
+	ingressDomain string,
+	wildcardCertSecretName *string,
+	ingressGatewayValues []istio.IngressGatewayValues,
+) (plutono.Interface, error) {
+	if len(ingressGatewayValues) != 1 {
+		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the plutono config")
+	}
+
 	return sharedcomponent.NewPlutono(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -1116,6 +1147,7 @@ func (r *Reconciler) newPlutono(garden *operatorv1alpha1.Garden, secretsManager 
 		vpaEnabled(garden.Spec.RuntimeCluster.Settings),
 		wildcardCertSecretName,
 		false,
+		ingressGatewayValues[0].Labels,
 	)
 }
 

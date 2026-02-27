@@ -489,7 +489,19 @@ metadata:
 				out := `apiVersion: v1
 kind: Service
 metadata:
-  labels:
+  annotations:
+    networking.istio.io/exportTo: '*'
+`
+
+				if values.ClusterType == comp.ClusterTypeShoot {
+					out += `    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchExpressions":[{"key":"handler.exposureclass.gardener.cloud/name","operator":"Exists"}]}]'
+    networking.resources.gardener.cloud/pod-label-selector-namespace-alias: all-shoots
+`
+				} else {
+					out += `    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]'
+`
+				}
+				out += `  labels:
     component: plutono
 `
 				if values.ClusterType == comp.ClusterTypeSeed {
@@ -513,69 +525,147 @@ status:
 				return out
 			}
 
-			ingressYAMLFor = func(values Values) string {
-				out := `apiVersion: networking.k8s.io/v1
-kind: Ingress
+			gatewayYAMLFor = func(values Values) string {
+				out := `apiVersion: networking.istio.io/v1beta1
+kind: Gateway
 metadata:
-  annotations:
-    nginx.ingress.kubernetes.io/auth-realm: Authentication Required
-`
-				if !values.IsGardenCluster {
-					if values.ClusterType == comp.ClusterTypeShoot {
-						out += `    nginx.ingress.kubernetes.io/auth-secret: observability-ingress-users
-    nginx.ingress.kubernetes.io/auth-type: basic
-`
-					} else {
-						out += `    nginx.ingress.kubernetes.io/auth-secret: global-monitoring-secret
-    nginx.ingress.kubernetes.io/auth-type: basic
-`
-					}
-				} else {
-					out += `    nginx.ingress.kubernetes.io/auth-secret: observability-ingress
-    nginx.ingress.kubernetes.io/auth-type: basic
-`
-				}
-				out += `    nginx.ingress.kubernetes.io/server-snippet: |-
-      location /api/admin/ {
-        return 403;
-      }
-`
-				if values.ClusterType == comp.ClusterTypeShoot {
-					out += `  labels:
+  labels:
     component: plutono
-`
+  name: `
+				if values.IsGardenCluster {
+					out += `virtual-garden-plutono-garden`
+				} else if values.ClusterType == comp.ClusterTypeSeed {
+					out += `plutono`
+				} else {
+					out += `plutono-` + namespace
 				}
-				out += `  name: plutono
+				out += `
   namespace: ` + namespace + `
 spec:
-  ingressClassName: nginx-ingress-gardener
-  rules:
-  - host: ` + values.IngressHost + `
-    http:
-      paths:
-      - backend:
-          service:
-            name: plutono
-            port:
-              number: 3000
-        path: /
-`
-				if values.IsGardenCluster {
-					out += `        pathType: ImplementationSpecific
-`
-				} else {
-					out += `        pathType: Prefix
-`
-				}
-
-				out += `  tls:
+  servers:
   - hosts:
-    - ` + values.IngressHost + `
-    secretName: plutono-tls
-status:
-  loadBalancer: {}
+    - `
+				if values.ClusterType == comp.ClusterTypeSeed {
+					out += `seed`
+				} else {
+					out += `shoot`
+				}
+				out += `.example.com
+    port:
+      name: tls
+      number: 443
+      protocol: HTTPS
+    tls:
+      credentialName: ` + namespace + `-plutono-plutono-tls
+      mode: SIMPLE
+status: {}
 `
 				return out
+			}
+
+			virtualServiceYAMLFor = func(values Values) string {
+				out := `apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  labels:
+    component: plutono
+    reference.gardener.cloud/basic-auth-secret-name: `
+				secretName := values.AuthSecretName
+				if values.IsGardenCluster {
+					secretName = `observability-ingress`
+				}
+				if values.ClusterType == comp.ClusterTypeShoot {
+					secretName = `observability-ingress-users`
+				}
+				out += secretName + `
+  name: `
+				if values.IsGardenCluster {
+					out += `virtual-garden-plutono-garden`
+				} else if values.ClusterType == comp.ClusterTypeShoot {
+					out += `plutono-` + namespace
+				} else {
+					out += `plutono`
+				}
+				out += `
+  namespace: ` + namespace + `
+spec:
+  exportTo:
+  - '*'
+  gateways:
+  - `
+				if values.IsGardenCluster {
+					out += `virtual-garden-plutono-garden`
+				} else if values.ClusterType == comp.ClusterTypeShoot {
+					out += `plutono-` + namespace
+				} else {
+					out += `plutono`
+				}
+				out += `
+  hosts:
+  - `
+				if values.ClusterType == comp.ClusterTypeSeed {
+					out += `seed`
+				} else {
+					out += `shoot`
+				}
+				out += `.example.com
+  http:
+  - directResponse:
+      status: 403
+    match:
+    - uri:
+        prefix: /api/admin/
+    name: admin-endpoints
+  - route:
+    - destination:
+        host: plutono.` + namespace + `.svc.cluster.local
+        port:
+          number: 3000
+status: {}
+`
+				return out
+			}
+
+			destinationRuleYAMLFor = `apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  labels:
+    component: plutono
+  name: plutono
+  namespace: ` + namespace + `
+spec:
+  exportTo:
+  - '*'
+  host: plutono.` + namespace + `.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 5000
+        tcpKeepalive:
+          interval: 75s
+          time: 7200s
+    loadBalancer:
+      localityLbSetting:
+        enabled: true
+        failoverPriority:
+        - topology.kubernetes.io/zone
+    outlierDetection: {}
+    tls: {}
+status: {}
+`
+
+			tlsSecretMetaFor = func(values Values) metav1.ObjectMeta {
+				ns := "istio-ingress"
+				if values.IsGardenCluster {
+					ns = "virtual-garden-" + ns
+				}
+				return metav1.ObjectMeta{
+					Labels: map[string]string{
+						"component": "plutono",
+					},
+					Name:      namespace + "-plutono-plutono-tls",
+					Namespace: ns,
+				}
 			}
 		)
 
@@ -585,6 +675,13 @@ status:
 				managedResource.Name = "plutono-seed-config-only"
 
 			}
+
+			nsLabels := map[string]string{}
+			if values.ClusterType == comp.ClusterTypeShoot {
+				nsLabels["gardener.cloud/role"] = "shoot"
+			}
+			Expect(c.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace, Labels: nsLabels}})).To(Succeed())
+
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
@@ -640,7 +737,8 @@ status:
 			deploymentYAML, err := kubernetesutils.Serialize(deployment, c.Scheme())
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(manifests).To(ConsistOf(
+			filteredManifests, secretMetas := filterManifests(manifests, namespace+"-")
+			Expect(filteredManifests).To(ConsistOf(
 				plutonoConfigSecretYAML,
 				serviceAccountYAML,
 				roleYAML,
@@ -649,8 +747,12 @@ status:
 				providerConfigMapYAML,
 				dataSourceConfigMapYAMLFor(values),
 				serviceYAMLFor(values),
-				ingressYAMLFor(values),
+				gatewayYAMLFor(values),
+				virtualServiceYAMLFor(values),
+				destinationRuleYAMLFor,
 			), "Resource manifests do not match the expected ones")
+			Expect(secretMetas).To(HaveLen(1))
+			Expect(secretMetas[0]).To(Equal(tlsSecretMetaFor(values)))
 
 			dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: dashboardConfigMapName, Namespace: namespace}}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed(), "Could not successfully get dashboards configMap")
@@ -929,4 +1031,20 @@ func clusterLabelKey(values Values) string {
 		return "garden"
 	}
 	return "seed"
+}
+
+func filterManifests(manifests []string, secretPrefixToRemove string) (filteredManifests []string, removedObjectMetas []metav1.ObjectMeta) {
+	for _, manifest := range manifests {
+		secret, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode([]byte(manifest), nil, &corev1.Secret{})
+		if err != nil {
+			filteredManifests = append(filteredManifests, manifest)
+			continue
+		}
+		if strings.HasPrefix(secret.(*corev1.Secret).Name, secretPrefixToRemove) {
+			removedObjectMetas = append(removedObjectMetas, secret.(*corev1.Secret).ObjectMeta)
+			continue
+		}
+		filteredManifests = append(filteredManifests, manifest)
+	}
+	return filteredManifests, removedObjectMetas
 }

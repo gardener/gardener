@@ -457,10 +457,15 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents, deployFluentOperator),
 			SkipIf:       seedIsGarden,
 		})
-		_ = g.Add(flow.Task{
+		deployPlutono = g.Add(flow.Task{
 			Name:         "Deploying Plutono",
 			Fn:           c.plutono.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+		})
+		waitUntilPlutonoReady = g.Add(flow.Task{
+			Name:         "Waiting until Plutono is ready",
+			Fn:           c.plutono.Wait,
+			Dependencies: flow.NewTaskIDs(deployPlutono),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying Vali/VictoriaLogs",
@@ -481,6 +486,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 			},
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 			SkipIf:       seedIsGarden,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying istio-basic-auth-server",
+			Fn:           c.istioBasicAuthServer.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents, waitUntilPlutonoReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Prometheus Operator",

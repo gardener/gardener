@@ -82,6 +82,7 @@ var gardenManagedResourceList = []string{
 	"local-ext-shoot",
 	"opentelemetry-operator",
 	"opentelemetry-collector",
+	"virtual-garden-istio-basic-auth-server",
 }
 
 var istioManagedResourceList = []string{

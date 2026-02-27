@@ -173,6 +173,9 @@ const (
 	// DeploymentNameVPAUpdater is a constant for the name of the VPA updater deployment.
 	DeploymentNameVPAUpdater = "vpa-updater"
 
+	// DeploymentNameIstioBasicAuthServer is a constant for the name of the istio-basic-auth-server deployment.
+	DeploymentNameIstioBasicAuthServer = "istio-basic-auth-server"
+
 	// DeploymentNameKubernetesDashboard is a constant for the name of the kubernetes dashboard deployment.
 	DeploymentNameKubernetesDashboard = "kubernetes-dashboard"
 	// DeploymentNameDashboardMetricsScraper is a constant for the name of the dashboard metrics scraper deployment.
@@ -516,6 +519,8 @@ const (
 	LabelPrefixSeedName = "name.seed.gardener.cloud/"
 	// LabelObservability is a constant for a label for observability stack configurations
 	LabelObservability = "observability"
+	// LabelBasicAuthSecretName is a constant for a label used on virtual services to include the referenced secret into the istio-basic-auth-server for basic auth.
+	LabelBasicAuthSecretName = "reference.gardener.cloud/basic-auth-secret-name"
 
 	// LabelExtensionExtensionTypePrefix is used to prefix extension label for extension types.
 	LabelExtensionExtensionTypePrefix = "extensions.extensions.gardener.cloud/"
