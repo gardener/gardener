@@ -34,7 +34,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | CustomDNSServerInNodeLocalDNS  | `true`  | `Beta`  | `1.133` |         |
 | VPNBondingModeRoundRobin       | `false` | `Alpha` | `1.135` |         |
 | PrometheusHealthChecks         | `false` | `Alpha` | `1.135` |         |
-| VersionClassificationLifecycle | `false` | `Alpha` | `1.136` |         |
+| VersionClassificationLifecycle | `false` | `Alpha` | `1.137` |         |
 
 ## Feature Gates for Graduated or Deprecated Features
 
