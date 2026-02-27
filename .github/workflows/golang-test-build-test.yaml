@@ -1,0 +1,47 @@
+name: Test golang-test Build
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - .github/workflows/golang-test-build.yaml
+      - .github/workflows/golang-test-images.yaml
+      - hack/tools/image/**
+      - hack/tools.mk
+      - go.mod
+
+jobs:
+  generate-matrix:
+    name: Generate Matrix
+    if: ${{ github.repository == 'gardener/gardener' }}
+    uses: ./.github/workflows/golang-test-images.yaml
+
+  build-golang-test:
+    name: Build golang-test
+    if: ${{ github.repository == 'gardener/gardener' }}
+    needs: generate-matrix
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix: ${{ fromJSON(needs.generate-matrix.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build golang-test
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./hack/tools/image/Dockerfile
+          target: golang-test
+          build-args: |
+            image=${{ matrix.images.image }}
+          push: false
+          load: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

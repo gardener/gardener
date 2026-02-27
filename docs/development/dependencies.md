@@ -74,8 +74,8 @@ Once a new Go version is released, please consider the guidance below for updati
 
 1. Check the [release notes](https://go.dev/doc/devel/release) to see whether there are any relevant changes that might be useful or affect us in another way.
 
-2. Maintain the image variants of the [`golang-test`](../../hack/tools/image) image used for unit- and integration testing as well as being the base image for `krte` (see next step) in the [`hack/tools/image/variants.yaml`](../../hack/tools/image/variants.yaml) file.
-   Remove older Go versions [if they are no longer supported](https://endoflife.date/go) and add the new version ([example](https://github.com/gardener/gardener/pull/12770)).  
+2. Maintain the image variants of the [`golang-test`](../../hack/tools/image) image used for unit- and integration testing as well as being the base image for `krte` (see next step) in the [`.github/workflows/golang-test-images.yaml`](../../.github/workflows/golang-test-images.yaml) file.
+   Remove older Go versions [if they are no longer supported](https://endoflife.date/go) and add the new version.  
    Check the registry to see when the new image variant is available:  
    [europe-docker.pkg.dev/gardener-project/releases/ci-infra/golang-test](https://console.cloud.google.com/artifacts/docker/gardener-project/europe/releases/ci-infra%2Fgolang-test)
 

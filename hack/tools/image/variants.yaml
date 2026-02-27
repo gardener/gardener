@@ -1,9 +1,0 @@
-# Debian versions of golang images should be `bookworm`.
-# The Kubernetes upstream `krte` images uses the same version, and we should keep this in sync.
-# - https://github.com/kubernetes/test-infra/blob/master/images/krte/Dockerfile
-# - https://github.com/gardener/ci-infra/blob/master/images/krte
-variants:
-  "1.25":
-    image: golang:1.25.7-bookworm
-  "1.26":
-    image: golang:1.26.0-bookworm
