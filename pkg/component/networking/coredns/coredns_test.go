@@ -349,8 +349,6 @@ spec:
           successThreshold: 1
           timeoutSeconds: 2
         resources:
-          limits:
-            memory: 1500Mi
           requests:
             cpu: 50m
             memory: 15Mi
