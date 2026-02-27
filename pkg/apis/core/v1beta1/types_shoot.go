@@ -1271,6 +1271,9 @@ type KubeControllerManagerConfig struct {
 	// NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
 	// +optional
 	NodeMonitorGracePeriod *metav1.Duration `json:"nodeMonitorGracePeriod,omitempty" protobuf:"bytes,5,opt,name=nodeMonitorGracePeriod"`
+	// NodeCIDRMaskSizeIPv6 defines the mask size for node cidr in cluster (default is 64). This field is immutable.
+	// +optional
+	NodeCIDRMaskSizeIPv6 *int32 `json:"nodeCIDRMaskSizeIPv6,omitempty" protobuf:"varint,6,opt,name=nodeCIDRMaskSizeIPv6"`
 }
 
 // HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.

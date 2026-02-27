@@ -113,7 +113,16 @@ func (b *Botanist) CalculateMaxNodesForShootNetworks(shoot *gardencorev1beta1.Sh
 
 func (b *Botanist) calculateMaxNodesForPodsNetwork(shoot *gardencorev1beta1.Shoot) (int64, error) {
 	resultPerIPFamily := map[gardencorev1beta1.IPFamily]int64{}
+	isDualStack := !gardencorev1beta1.IsIPv4SingleStack(shoot.Spec.Networking.IPFamilies) && !gardencorev1beta1.IsIPv6SingleStack(shoot.Spec.Networking.IPFamilies)
+
 	for _, podNetwork := range b.Shoot.Networks.Pods {
+		// In dual-stack scenarios, only consider IPv4
+		// For IPv6 the actual effective nodeCIDRMaskSize is often dependent on the infrastructure. Thus, we ignore the pod network for IPv6 in dual-stack scenarios.
+		// The limiting factor for the maximum number of nodes is IPv4 in general, because the ranges for IPv6 are much larger than for IPv4 and thus allows more nodes from a networking perspective.
+		if isDualStack && podNetwork.IP.To4() == nil {
+			continue
+		}
+
 		podCIDRMaskSize, _ := podNetwork.Mask.Size()
 		if podCIDRMaskSize == 0 {
 			return 0, fmt.Errorf("pod CIDR is not in its canonical form")
@@ -121,13 +130,18 @@ func (b *Botanist) calculateMaxNodesForPodsNetwork(shoot *gardencorev1beta1.Shoo
 		// Calculate how many subnets with nodeCIDRMaskSize can be allocated out of the pod network (with podCIDRMaskSize).
 		// This indicates how many Nodes we can host at max from a networking perspective.
 		var maxNodeCount = &big.Int{}
-		// For dual-stack, we use 80 as nodeCIDRMaskSize for IPv6. In general, for ipv6 nodeCIDRMaskSize and podCIDRMaskSize are dependent on the infrastructure provider.
-		// For AWS, it is nodeCIDRMaskSize 80 and podCIDRMaskSize 56, for GCP nodeCIDRMaskSize 112 and podCIDRMaskSize 64.
-		// With 80 as node nodeCIDRMaskSize in this calculation, IPv6 is not a limitation for the number of nodes.
-		exp := 80 - int64(podCIDRMaskSize)
-		if podNetwork.IP.To4() != nil || gardencorev1beta1.IsIPv6SingleStack(shoot.Spec.Networking.IPFamilies) {
-			exp = int64(*shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize) - int64(podCIDRMaskSize)
+		var nodeCIDRMaskSize int64
+		if podNetwork.IP.To4() != nil {
+			nodeCIDRMaskSize = int64(*shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize)
+		} else {
+			if shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 != nil {
+				nodeCIDRMaskSize = int64(*shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6)
+			} else if gardencorev1beta1.IsIPv6SingleStack(shoot.Spec.Networking.IPFamilies) && shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize != nil {
+				// For single-stack IPv6, fall back to NodeCIDRMaskSize
+				nodeCIDRMaskSize = int64(*shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize)
+			}
 		}
+		exp := nodeCIDRMaskSize - int64(podCIDRMaskSize)
 		// Bigger numbers than 2^62 do not fit into an int64 variable and big.Int{}.Int64() is undefined in such cases.
 		// The pod network is no limitation in this case anyway.
 		if exp > 62 {
@@ -143,7 +157,6 @@ func (b *Botanist) calculateMaxNodesForPodsNetwork(shoot *gardencorev1beta1.Shoo
 		}
 	}
 
-	// In a dual-stack scenario, return the minimum because beyond the minimum dual-stack is no longer possible.
 	var result int64 = math.MaxInt64
 	for _, value := range resultPerIPFamily {
 		result = min(result, value)

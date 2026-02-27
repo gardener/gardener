@@ -7306,6 +7306,18 @@ Kubernetes meta/v1.Duration
 <p>NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>nodeCIDRMaskSizeIPv6</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeCIDRMaskSizeIPv6 defines the mask size for node cidr in cluster (default is 64). This field is immutable.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeProxyConfig">KubeProxyConfig

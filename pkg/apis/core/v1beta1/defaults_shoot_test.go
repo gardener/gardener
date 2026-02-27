@@ -59,6 +59,7 @@ var _ = Describe("Shoot defaulting", func() {
 						SetObjectDefaults_Shoot(obj)
 
 						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(ptr.To[int32](23)))
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6).To(BeNil())
 					})
 
 					It("should make nodeCIDRMaskSize big enough for 2*maxPods (consider worker pool settings)", func() {
@@ -84,6 +85,7 @@ var _ = Describe("Shoot defaulting", func() {
 						SetObjectDefaults_Shoot(obj)
 
 						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(ptr.To[int32](22)))
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6).To(BeNil())
 					})
 				})
 
@@ -97,7 +99,31 @@ var _ = Describe("Shoot defaulting", func() {
 					It("should default nodeCIDRMaskSize to 64", func() {
 						SetObjectDefaults_Shoot(obj)
 
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6).To(BeNil())
 						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(PointTo(Equal(int32(64))))
+					})
+
+					It("should not default NodeCIDRMaskSize if NodeCIDRMaskSizeIPv6 is set by user for IPv6 single stack", func() {
+						obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{
+							NodeCIDRMaskSizeIPv6: ptr.To[int32](80),
+						}
+						SetObjectDefaults_Shoot(obj)
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6).To(PointTo(Equal(int32(80))))
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(BeNil())
+					})
+				})
+
+				Context("DualStack", func() {
+					BeforeEach(func() {
+						obj.Spec.Provider.Workers = []Worker{{}}
+						obj.Spec.Networking = &Networking{}
+						obj.Spec.Networking.IPFamilies = []IPFamily{IPFamilyIPv4, IPFamilyIPv6}
+					})
+
+					It("should default both NodeCIDRMaskSize and NodeCIDRMaskSizeIPv6", func() {
+						SetObjectDefaults_Shoot(obj)
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Not(BeNil()))
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6).To(PointTo(Equal(int32(64))))
 					})
 				})
 			})
