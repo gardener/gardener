@@ -25,6 +25,10 @@ var (
 	//go:embed assets/prometheusrules/metering.rules.stateful.yaml
 	meteringStatefulYAML []byte
 	meteringStateful     *monitoringv1.PrometheusRule
+
+	//go:embed assets/prometheusrules/pvc.yaml
+	pvcYAML []byte
+	pvc     *monitoringv1.PrometheusRule
 )
 
 func init() {
@@ -33,6 +37,9 @@ func init() {
 
 	meteringStateful = &monitoringv1.PrometheusRule{}
 	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, meteringStatefulYAML, meteringStateful))
+
+	pvc = &monitoringv1.PrometheusRule{}
+	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, pvcYAML, pvc))
 }
 
 // CentralPrometheusRules returns the central PrometheusRule resources for the aggregate prometheus.
@@ -128,6 +135,7 @@ func CentralPrometheusRules(seedIsGarden bool) []*monitoringv1.PrometheusRule {
 	return []*monitoringv1.PrometheusRule{
 		healthcheck.DeepCopy(),
 		meteringStateful.DeepCopy(),
+		pvc.DeepCopy(),
 		{
 			ObjectMeta: metav1.ObjectMeta{Name: "seed"},
 			Spec: monitoringv1.PrometheusRuleSpec{
