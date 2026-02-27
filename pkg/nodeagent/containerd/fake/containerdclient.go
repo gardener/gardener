@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/Masterminds/semver/v3"
 	containerd "github.com/containerd/containerd/v2/client"
 )
 
@@ -41,7 +40,6 @@ func (f Client) Version(_ context.Context) (containerd.Version, error) {
 
 // SetFakeContainerdVersion sets the version of the (fake) containerd to the desired value
 func (f *Client) SetFakeContainerdVersion(version string) {
-	semver.MustParse(version)
 	f.version = version
 }
 
