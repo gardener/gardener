@@ -8,12 +8,13 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	containerd "github.com/containerd/containerd/v2/client"
 	"github.com/containerd/containerd/v2/defaults"
 	"github.com/containerd/containerd/v2/pkg/namespaces"
+
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // Client defines the containerd client Interface exported for testing.
@@ -61,26 +62,5 @@ func versionGreaterThanEqual(ctx context.Context, client Client, s *semver.Versi
 		return false, err
 	}
 
-	// on some Debian based distros, internal build info can spill over to the patch version of containerd
-	// e.g. the version could be 1.7.23~ds2
-	// this is not valid semver and therefore, we need to strip any ~ and what follows from the patch
-	// we also strip any pre-release or build info from the version string as these might also not be
-	// semver compliant with certain Debian builds of containerd
-	sanitizedVersion := strings.Split(containerdVersion.Version, ".")
-	if len(sanitizedVersion) < 3 {
-		return false, fmt.Errorf("containerd version %s is not semver compliant and does not consist of <major>.<minor>.<patch>", containerdVersion.Version)
-	}
-
-	for _, c := range []string{"-", "+", "~"} {
-		if before, _, found := strings.Cut(sanitizedVersion[2], c); found {
-			sanitizedVersion[2] = before
-		}
-	}
-
-	v, err := semver.NewVersion(strings.Join(sanitizedVersion[:3], "."))
-	if err != nil {
-		return false, err
-	}
-
-	return v.GreaterThanEqual(s), nil
+	return versionutils.CompareVersions(containerdVersion.Version, ">=", s.String())
 }
