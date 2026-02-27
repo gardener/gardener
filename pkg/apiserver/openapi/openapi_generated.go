@@ -9748,6 +9748,13 @@ func schema_pkg_apis_core_v1beta1_ShootAdvertisedAddress(ref common.ReferenceCal
 							Format:      "",
 						},
 					},
+					"application": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Application is the name of the application this address belongs to. Used by UI clients.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"name", "url"},
 			},

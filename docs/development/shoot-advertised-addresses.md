@@ -33,12 +33,20 @@ etc.
 In order to advertise such endpoints, their respective `Ingress` resource needs
 to be labeled with `endpoint.shoot.gardener.cloud/advertise=true`.
 
-For example, if we want to advertise the `plutono` endpoint for our local shoot
+Optionally, an application name can be set using the
+`endpoint.shoot.gardener.cloud/application` label. This application name is intended
+to be used by any external clients consuming the advert. The value of this label is not interpreted by the `gardenlet` and can be set to any string.
+
+For example, if we want to advertise the `credativ/plutono` endpoint for our local shoot
 cluster, we would label its respective `Ingress` resource like this:
 
-``` shell
-kubectl --namespace shoot--local--local \
-    label ingress plutono endpoint.shoot.gardener.cloud/advertise=true
+``` yaml 
+metadata:
+  name: plutono
+  namespace: shoot--local--local
+  labels:
+    endpoint.shoot.gardener.cloud/advertise: "true"
+    endpoint.shoot.gardener.cloud/application: "credativ/plutono"
 ```
 
 After successful reconciliation of the `Shoot` by the `gardenlet`, we should see a
@@ -53,4 +61,5 @@ new advertised endpoint for our cluster.
   url: https://discovery.local.gardener.cloud/projects/local/shoots/41a0cdaa-6ad5-4846-9f6b-b7a7716538cb/issuer
 - name: ingress/plutono/0/0
   url: https://gu-local--local.ingress.local.seed.local.gardener.cloud
+  application: credativ/plutono
 ```
