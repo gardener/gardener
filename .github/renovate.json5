@@ -523,6 +523,13 @@
       enabled: false,
     },
     {
+      // Ignore updates for internal packages.
+      matchPackageNames: [
+        'github.com/gardener/gardener/pkg/apis',
+      ],
+      enabled: false,
+    },
+    {
       // Ignore major updates of go.yaml.in/yaml/v2 (https://github.com/gardener/gardener/issues/12838).
       matchPackageNames: [
         'go.yaml.in/yaml/v2',
