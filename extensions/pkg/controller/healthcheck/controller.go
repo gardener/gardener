@@ -6,6 +6,7 @@ package healthcheck
 
 import (
 	"fmt"
+	"slices"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -196,7 +197,7 @@ func add(mgr manager.Manager, args AddArgs, actuator HealthCheckActuator) error 
 			builder.WithPredicates(predicates...),
 		)
 
-	if isGardenExtensionClass(args.ExtensionClasses) {
+	if !classesHaveClusterObject(args.ExtensionClasses) {
 		return builder.
 			Complete(NewReconciler(mgr, actuator, *args.registeredExtension, args.SyncPeriod, args.ExtensionClasses))
 	}
@@ -221,4 +222,16 @@ func getHealthCheckTypes(healthChecks []ConditionTypeToHealthCheck) []string {
 
 func isGardenExtensionClass(extensionClasses []extensionsv1alpha1.ExtensionClass) bool {
 	return len(extensionClasses) == 1 && extensionClasses[0] == extensionsv1alpha1.ExtensionClassGarden
+}
+
+func isShootExtensionClass(class extensionsv1alpha1.ExtensionClass) bool {
+	return class == extensionsv1alpha1.ExtensionClassShoot
+}
+
+func classesHaveClusterObject(extensionClasses []extensionsv1alpha1.ExtensionClass) bool {
+	// backwards compatibility for shoot extension
+	if len(extensionClasses) == 0 {
+		return true
+	}
+	return slices.ContainsFunc(extensionClasses, isShootExtensionClass)
 }
