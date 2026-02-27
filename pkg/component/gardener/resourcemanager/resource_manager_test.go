@@ -337,7 +337,7 @@ var _ = Describe("ResourceManager", func() {
 			DefaultSeccompProfileEnabled:              false,
 			EndpointSliceHintsEnabled:                 false,
 			PodTopologySpreadConstraintsEnabled:       true,
-			VPAInPlaceUpdatesEnabled:                  false,
+			VPAInPlaceUpdatesEnabled:                  true,
 			LogLevel:                                  "info",
 			LogFormat:                                 "json",
 			Zones:                                     []string{"a", "b"},
@@ -467,6 +467,9 @@ var _ = Describe("ResourceManager", func() {
 						Enabled:                true,
 						AuthorizeWithSelectors: ptr.To(true),
 						MachineNamespace:       cfg.MachineNamespace,
+					},
+					VPAInPlaceUpdates: resourcemanagerconfigv1alpha1.VPAInPlaceUpdatesConfig{
+						Enabled: true,
 					},
 				},
 			}
@@ -1596,10 +1599,42 @@ webhooks:
     resources:
     - pods
   sideEffects: None
+  timeoutSeconds: 10`
+			}
+			out += `
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/vpa-in-place-updates
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: vpa-in-place-updates.resources.gardener.cloud
+  namespaceSelector:
+    matchExpressions:
+    - key: kubernetes.io/metadata.name
+      operator: In
+      values:
+      - kube-system
+      - kubernetes-dashboard
+  objectSelector:
+    matchExpressions:
+    - key: vpa-in-place-updates.resources.gardener.cloud/skip
+      operator: DoesNotExist
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - autoscaling.k8s.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - verticalpodautoscalers
+  sideEffects: None
   timeoutSeconds: 10
 `
-			}
-
 			return out
 		}
 

@@ -8,8 +8,10 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/connect"
@@ -33,6 +35,11 @@ func NewCommand() *cobra.Command {
 		Use:   Name,
 		Short: Name + " bootstraps and manages self-hosted shoot clusters in the Gardener project.",
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
+			// TODO(vitanovs): Clean up once VPAInPlaceUpdates gets promoted to GA.
+			// Disable the feature gate as there are no VPA components that manage VPA resources and
+			// there is no reason for the GRM webhook, introduced by the gate, to be deployed.
+			utilruntime.Must(features.DefaultFeatureGate.Set("VPAInPlaceUpdates=false"))
+
 			if err := opts.Validate(); err != nil {
 				return err
 			}
