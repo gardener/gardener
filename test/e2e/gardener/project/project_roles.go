@@ -20,7 +20,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 )
 
@@ -34,7 +33,7 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), func() {
 		extensionClusterRole *rbacv1.ClusterRole
 	)
 
-	BeforeTestSetup(func() {
+	BeforeAll(func() {
 		projectName := "test-" + utils.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:5]
 
 		project := &gardencorev1beta1.Project{
@@ -47,9 +46,7 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), func() {
 		}
 
 		s = NewTestContext().ForProject(project)
-	})
 
-	BeforeAll(func() {
 		DeferCleanup(func(ctx SpecContext) {
 			Eventually(func(g Gomega) {
 				if testEndpoint != nil {
@@ -66,8 +63,13 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), func() {
 		}, NodeTimeout(time.Minute))
 	})
 
-	ItShouldCreateProject(s)
-	ItShouldWaitForProjectToBeReconciledAndReady(s)
+	It("Create Project", func(ctx SpecContext) {
+		CreateProject(ctx, s)
+	}, SpecTimeout(time.Minute))
+
+	It("Wait for Project to be reconciled", func(ctx SpecContext) {
+		WaitForProjectToBeReconciledAndReady(ctx, s)
+	}, SpecTimeout(5*time.Minute))
 
 	It("Initialize test user", func(ctx SpecContext) {
 		testUserName = s.Project.Name
@@ -142,6 +144,11 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), func() {
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 
-	ItShouldDeleteProject(s)
-	ItShouldWaitForProjectToBeDeleted(s)
+	It("Delete Project", func(ctx SpecContext) {
+		DeleteProject(ctx, s)
+	}, SpecTimeout(time.Minute))
+
+	It("Wait for Project to be deleted", func(ctx SpecContext) {
+		WaitForProjectToBeDeleted(ctx, s)
+	}, SpecTimeout(5*time.Minute))
 })
