@@ -59,7 +59,6 @@ spec:
 {{- end }}
 {{- if .Values.httpProxy.unifiedPort.enabled }}
 ---
-# TODO(hown3d): Unconditionally create with RemoveHTTPProxyLegacyPort feature gate
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
