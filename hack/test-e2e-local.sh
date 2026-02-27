@@ -22,6 +22,8 @@ echo "> E2E Tests"
 source "$(dirname "$0")/test-e2e-local.env"
 source $(dirname "${0}")/ci-common.sh
 
+increase_system_limits
+
 ginkgo_flags=
 
 # If running in prow, we want to generate a machine-readable output file under the location specified via $ARTIFACTS.

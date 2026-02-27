@@ -10,6 +10,8 @@ set -o errexit
 
 source $(dirname "${0}")/ci-common.sh
 
+increase_system_limits
+
 VERSION="$(cat VERSION)"
 CLUSTER_NAME=""
 SEED_NAME=""
