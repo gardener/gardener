@@ -77,8 +77,7 @@ const (
 	// alpha: v1.137.0
 	VictoriaLogsBackend featuregate.Feature = "VictoriaLogsBackend"
 
-	// UseUnifiedHTTPProxyPort enables the gardenlet to set up the unified HTTP proxy network infrastructure.
-	// Gardenlet will also reconfigure the API server proxy and shoot VPN client to connect to the unified port using the new X-Gardener-Destination header.
+	// UseUnifiedHTTPProxyPort enables the API server proxy and shoot VPN client to connect to the unified port using the new X-Gardener-Destination header.
 	// owner: @hown3d
 	// alpha: v1.130.0
 	UseUnifiedHTTPProxyPort featuregate.Feature = "UseUnifiedHTTPProxyPort"

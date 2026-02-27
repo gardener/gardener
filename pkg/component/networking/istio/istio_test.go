@@ -289,9 +289,9 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
-		istioProxyProtocolEnvoyFilterVPNUnified = func(i int) string {
-			data, _ := os.ReadFile("./test_charts/proxyprotocol_envoyfilter_vpn_unified.yaml")
-			return strings.Split(string(data), "---\n")[i]
+		istioProxyProtocolEnvoyFilterVPNUnified = func() string {
+			data, _ := os.ReadFile("./test_charts/proxyprotocol_envoyfilter_unified.yaml")
+			return string(data)
 		}
 
 		istioIngressHTTPProxyGatewayUnified = func() string {
@@ -469,20 +469,32 @@ var _ = Describe("istiod", func() {
 			expectedIstioSystemManifests = append(expectedIstioSystemManifests, istiodPodDisruptionBudget())
 
 			if expectAPIServerTLSTermination {
-				expectedIstioManifests = append(expectedIstioManifests, istioAPIServerTLSTerminationEnvoyFilter())
-				expectedIstioManifests = append(expectedIstioManifests, istioIngressAutoscalerTLSTerminationHPA(minReplicas, maxReplicas))
-				expectedIstioManifests = append(expectedIstioManifests, istioIngressAutoscalerTLSTerminationVPA())
-				expectedIstioManifests = append(expectedIstioManifests, istioStripTrailingDotEnvoyFilter())
+				expectedIstioManifests = append(expectedIstioManifests,
+					istioAPIServerTLSTerminationEnvoyFilter(),
+					istioIngressAutoscalerTLSTerminationHPA(minReplicas, maxReplicas),
+					istioIngressAutoscalerTLSTerminationVPA(),
+					istioStripTrailingDotEnvoyFilter(),
+				)
 			} else {
 				expectedIstioManifests = append(expectedIstioManifests, istioIngressAutoscaler(minReplicas, maxReplicas))
 			}
 
 			if igw[0].TerminateLoadBalancerProxyProtocol {
-				expectedIstioManifests = append(expectedIstioManifests, istioProxyProtocolEnvoyFilterSNI(), istioProxyProtocolEnvoyFilterVPN())
+				expectedIstioManifests = append(expectedIstioManifests,
+					istioProxyProtocolEnvoyFilterSNI(),
+					istioProxyProtocolEnvoyFilterVPN(),
+					istioProxyProtocolEnvoyFilterVPNUnified(),
+				)
 			}
 
 			if igw[0].VPNEnabled {
-				expectedIstioManifests = append(expectedIstioManifests, istioIngressHTTPConnectGateway(), istioIngressEnvoyVPNFilter(0), istioIngressEnvoyVPNFilter(1))
+				expectedIstioManifests = append(expectedIstioManifests,
+					istioIngressHTTPConnectGateway(),
+					istioIngressEnvoyVPNFilter(0),
+					istioIngressEnvoyVPNFilter(1),
+					istioIngressHTTPProxyGatewayUnified(),
+					istioIngressEnvoyHTTPProxyFilterUnified(),
+				)
 			}
 
 			By("Verify istio resources")
@@ -826,56 +838,6 @@ var _ = Describe("istiod", func() {
 
 			It("should successfully deploy all resources", func() {
 				checkSuccessfulDeployment(nil, nil)
-			})
-		})
-
-		Context("With UseUnifiedHTTPProxyPort feature gate enabled", func() {
-			BeforeEach(func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseUnifiedHTTPProxyPort, true))
-			})
-
-			It("should successfully deploy all resources", func() {
-				getAndCheckManagedResourceSecret()
-
-				expectedIstioManifests := []string{
-					istioIngressHTTPConnectGateway(),
-					istioIngressHTTPProxyGatewayUnified(),
-					istioIngressEnvoyVPNFilter(0),
-					istioIngressEnvoyVPNFilter(1),
-					istioIngressEnvoyHTTPProxyFilterUnified(),
-				}
-
-				By("Verify istio resources")
-				var err error
-				istioManifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceIstioSecret.Data)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(istioManifests).To(ContainElements(expectedIstioManifests))
-			})
-
-			Context("with proxy protocol termination", func() {
-				BeforeEach(func() {
-					igw[0].TerminateLoadBalancerProxyProtocol = true
-				})
-
-				It("should successfully deploy all resources", func() {
-					getAndCheckManagedResourceSecret()
-
-					expectedIstioManifests := []string{
-						istioIngressHTTPConnectGateway(),
-						istioIngressHTTPProxyGatewayUnified(),
-						istioIngressEnvoyVPNFilter(0),
-						istioIngressEnvoyVPNFilter(1),
-						istioIngressEnvoyHTTPProxyFilterUnified(),
-						istioProxyProtocolEnvoyFilterVPNUnified(0),
-						istioProxyProtocolEnvoyFilterVPNUnified(1),
-					}
-
-					By("Verify istio resources")
-					var err error
-					istioManifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceIstioSecret.Data)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(istioManifests).To(ContainElements(expectedIstioManifests))
-				})
 			})
 		})
 	})
