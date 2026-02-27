@@ -224,7 +224,7 @@ func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 		obj.EncryptionConfig = &EncryptionConfig{}
 	}
 	if obj.EncryptionConfig.Provider.Type == nil {
-		obj.EncryptionConfig.Provider.Type = ptr.To(EncryptionProviderTypeAESCBC)
+		obj.EncryptionConfig.Provider.Type = ptr.To(EncryptionProviderTypeAESGCM)
 	}
 }
 

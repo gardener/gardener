@@ -5,6 +5,8 @@
 package credentialsbinding_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -82,6 +84,15 @@ var _ = Describe("CredentialsBinding controller test", func() {
 				CloudProfileName:       ptr.To("test-cloudprofile"),
 				CredentialsBindingName: ptr.To(credentialsBinding.Name),
 				Region:                 "foo-region",
+				Maintenance: &gardencorev1beta1.Maintenance{
+					AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+						Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+								RotationPeriod: &metav1.Duration{Duration: 7 * 24 * time.Hour},
+							},
+						},
+					},
+				},
 				Provider: gardencorev1beta1.Provider{
 					Type: "test-provider",
 					Workers: []gardencorev1beta1.Worker{

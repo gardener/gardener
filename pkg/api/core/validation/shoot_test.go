@@ -2787,15 +2787,29 @@ var _ = Describe("Shoot Validation Tests", func() {
 					))
 				})
 
-				It("should allow specifying available provider type", func() {
-					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
-						Provider: core.EncryptionProvider{
-							Type: ptr.To(core.EncryptionProviderTypeAESCBC),
-						},
-					}
+				DescribeTable("allowed encryption provider types",
+					func(providerType core.EncryptionProviderType) {
+						shoot.Spec.Maintenance.AutoRotation = &core.MaintenanceAutoRotation{
+							Credentials: &core.MaintenanceCredentialsAutoRotation{
+								ETCDEncryptionKey: &core.MaintenanceRotationConfig{
+									RotationPeriod: &metav1.Duration{Duration: 30 * 24 * time.Hour},
+								},
+							},
+						}
 
-					Expect(ValidateShoot(shoot)).To(BeEmpty())
-				})
+						shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+							Provider: core.EncryptionProvider{
+								Type: ptr.To(providerType),
+							},
+						}
+
+						Expect(ValidateShoot(shoot)).To(BeEmpty())
+					},
+
+					Entry("aescbc", core.EncryptionProviderTypeAESCBC),
+					Entry("aesgcm", core.EncryptionProviderTypeAESGCM),
+					Entry("secretbox", core.EncryptionProviderTypeSecretbox),
+				)
 
 				It("should deny specifying unavailable provider type", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
@@ -2806,11 +2820,63 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					Expect(ValidateShoot(shoot)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeNotSupported),
-							"Field": Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.provider.type"),
+							"Type":   Equal(field.ErrorTypeNotSupported),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.provider.type"),
+							"Detail": Equal("supported values: \"aescbc\", \"aesgcm\", \"secretbox\""),
 						})),
 					))
 				})
+
+				DescribeTable("aesgcm encryption provider type",
+					func(rotationConfig *core.MaintenanceRotationConfig, providerType *core.EncryptionProviderType, matcher gomegatypes.GomegaMatcher) {
+						shoot.Spec.Maintenance.AutoRotation = &core.MaintenanceAutoRotation{
+							Credentials: &core.MaintenanceCredentialsAutoRotation{
+								ETCDEncryptionKey: rotationConfig,
+							},
+						}
+
+						shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+							EncryptionConfig: &core.EncryptionConfig{
+								Provider: core.EncryptionProvider{
+									Type: providerType,
+								},
+							},
+						}
+
+						Expect(ValidateShoot(shoot)).To(matcher)
+					},
+
+					Entry("should fail when encryption provider type is aesgcm and auto rotation is not enabled",
+						nil, ptr.To(core.EncryptionProviderTypeAESGCM),
+						ContainElements(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeForbidden),
+								"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.provider.type"),
+								"Detail": ContainSubstring("etcdEncryptionKey auto rotation must be enabled when encryption at rest provider is AES-GCM"),
+							})))),
+					Entry("should pass when encryption provider type is aesgcm and auto rotation is enabled",
+						&core.MaintenanceRotationConfig{
+							RotationPeriod: &metav1.Duration{Duration: 30 * 24 * time.Hour},
+						}, ptr.To(core.EncryptionProviderTypeAESGCM), BeEmpty()),
+					Entry("should fail when encryption provider type is aesgcm and auto rotation is enabled with rotation period beyond 90 days",
+						&core.MaintenanceRotationConfig{
+							RotationPeriod: &metav1.Duration{Duration: 91 * 24 * time.Hour},
+						}, ptr.To(core.EncryptionProviderTypeAESGCM),
+						ContainElements(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.maintenance.autoRotation.credentials.etcdEncryptionKey.rotationPeriod"),
+								"Detail": ContainSubstring("value must be either 0 to disable rotation or between 30m and 90d"),
+							})))),
+					Entry("should pass when encryption provider type is not aesgcm and auto rotation is not enabled",
+						nil, ptr.To(core.EncryptionProviderTypeSecretbox), BeEmpty()),
+					Entry("should pass when encryption provider type is not aesgcm and auto rotation is enabled",
+						&core.MaintenanceRotationConfig{
+							RotationPeriod: &metav1.Duration{Duration: 30 * 24 * time.Hour},
+						}, ptr.To(core.EncryptionProviderTypeSecretbox), BeEmpty()),
+					Entry("should pass when encryption provider type is not set and auto rotation is not enabled",
+						nil, nil, BeEmpty()),
+				)
 
 				It("should deny changing items when resources in the spec and status are not equal", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
@@ -2819,6 +2885,29 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "new.fancyresource.io"}
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources"),
+							"Detail": Equal("resources cannot be changed because a previous encryption configuration change is currently being rolled out"),
+						})),
+					))
+				})
+
+				It("should deny changing resources when provider types in the spec and status are not equal", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"configmaps", "deployments.apps"},
+						Provider: core.EncryptionProvider{
+							Type: ptr.To(core.EncryptionProviderTypeAESCBC),
+						},
+					}
+					shoot.Status.Credentials.EncryptionAtRest.Resources = []string{"deployments.apps", "configmaps"}
+					shoot.Status.Credentials.EncryptionAtRest.Provider.Type = core.EncryptionProviderTypeSecretbox
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "new.fancyresource.io"}
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type = ptr.To(core.EncryptionProviderTypeAESCBC)
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -2920,6 +3009,25 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+
+				It("should fail updating immutable provider type field", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Provider: core.EncryptionProvider{
+							Type: ptr.To(core.EncryptionProviderTypeAESCBC),
+						},
+					}
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type = ptr.To(core.EncryptionProviderTypeSecretbox)
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.provider.type"),
+						"Detail": ContainSubstring(`field is immutable`),
+					}))
 				})
 			})
 

@@ -50,12 +50,93 @@ func init() {
 	encryptionCodec = serializer.NewCodecFactory(encryptionScheme).CodecForVersions(ser, ser, versions, versions)
 }
 
+type keyWithProvider struct {
+	Key      apiserverconfigv1.Key
+	Provider gardencorev1beta1.EncryptionProviderType
+}
+
 const (
 	secretETCDEncryptionConfigurationDataKey = "encryption-configuration.yaml"
 
 	volumeNameEtcdEncryptionConfig      = "etcd-encryption-secret"
 	volumeMountPathEtcdEncryptionConfig = "/etc/kubernetes/etcd-encryption-secret"
 )
+
+func generateEncryptionProviders(keySecretCurrent, keySecretOld *corev1.Secret, encryptWithCurrentKey, encrypt bool) ([]apiserverconfigv1.ProviderConfiguration, error) {
+	var (
+		result         []apiserverconfigv1.ProviderConfiguration
+		encryptionKeys = etcdEncryptionKeys(keySecretCurrent, keySecretOld, encryptWithCurrentKey)
+	)
+
+	for _, key := range encryptionKeys {
+		var (
+			provider     = key.Provider
+			lastIdx      = len(result) - 1
+			canReuseLast = false
+		)
+
+		if len(provider) == 0 {
+			provider = gardencorev1beta1.EncryptionProviderTypeAESCBC
+		}
+		if lastIdx >= 0 {
+			switch provider {
+			case gardencorev1beta1.EncryptionProviderTypeAESCBC:
+				canReuseLast = result[lastIdx].AESCBC != nil
+			case gardencorev1beta1.EncryptionProviderTypeAESGCM:
+				canReuseLast = result[lastIdx].AESGCM != nil
+			case gardencorev1beta1.EncryptionProviderTypeSecretbox:
+				canReuseLast = result[lastIdx].Secretbox != nil
+			}
+		}
+
+		if canReuseLast {
+			// Reuse the existing ProviderConfiguration by appending to its keys
+			switch provider {
+			case gardencorev1beta1.EncryptionProviderTypeAESCBC:
+				result[lastIdx].AESCBC.Keys = append(result[lastIdx].AESCBC.Keys, key.Key)
+			case gardencorev1beta1.EncryptionProviderTypeAESGCM:
+				result[lastIdx].AESGCM.Keys = append(result[lastIdx].AESGCM.Keys, key.Key)
+			case gardencorev1beta1.EncryptionProviderTypeSecretbox:
+				result[lastIdx].Secretbox.Keys = append(result[lastIdx].Secretbox.Keys, key.Key)
+			}
+		} else {
+			// Create a new ProviderConfiguration
+			switch provider {
+			case gardencorev1beta1.EncryptionProviderTypeAESCBC:
+				result = append(result, apiserverconfigv1.ProviderConfiguration{
+					AESCBC: &apiserverconfigv1.AESConfiguration{
+						Keys: []apiserverconfigv1.Key{key.Key},
+					},
+				})
+			case gardencorev1beta1.EncryptionProviderTypeAESGCM:
+				result = append(result, apiserverconfigv1.ProviderConfiguration{
+					AESGCM: &apiserverconfigv1.AESConfiguration{
+						Keys: []apiserverconfigv1.Key{key.Key},
+					},
+				})
+			case gardencorev1beta1.EncryptionProviderTypeSecretbox:
+				result = append(result, apiserverconfigv1.ProviderConfiguration{
+					Secretbox: &apiserverconfigv1.SecretboxConfiguration{
+						Keys: []apiserverconfigv1.Key{key.Key},
+					},
+				})
+			default:
+				return nil, fmt.Errorf("unknown encryption provider '%s'", key.Provider)
+			}
+		}
+	}
+
+	if encrypt {
+		return append(result, apiserverconfigv1.ProviderConfiguration{
+			Identity: &apiserverconfigv1.IdentityConfiguration{},
+		}), nil
+	}
+	return append([]apiserverconfigv1.ProviderConfiguration{
+		{
+			Identity: &apiserverconfigv1.IdentityConfiguration{},
+		},
+	}, result...), nil
+}
 
 // ReconcileSecretETCDEncryptionConfiguration reconciles the ETCD encryption secret configuration.
 func ReconcileSecretETCDEncryptionConfiguration(
@@ -93,43 +174,30 @@ func ReconcileSecretETCDEncryptionConfiguration(
 		return err
 	}
 
-	var (
-		keySecretOld, _         = secretsManager.Get(secretNameETCDEncryptionKey, secretsmanager.Old)
-		encryptionKeys          = etcdEncryptionAESKeys(keySecret, keySecretOld, config.EncryptWithCurrentKey)
-		encryptionConfiguration = &apiserverconfigv1.EncryptionConfiguration{
-			Resources: []apiserverconfigv1.ResourceConfiguration{
-				{
-					Resources: config.ResourcesToEncrypt,
-					Providers: []apiserverconfigv1.ProviderConfiguration{
-						{
-							AESCBC: &apiserverconfigv1.AESConfiguration{
-								Keys: encryptionKeys,
-							},
-						},
-						{
-							Identity: &apiserverconfigv1.IdentityConfiguration{},
-						},
-					},
-				},
+	keySecretOld, _ := secretsManager.Get(secretNameETCDEncryptionKey, secretsmanager.Old)
+	encryptionProviders, err := generateEncryptionProviders(keySecret, keySecretOld, config.EncryptWithCurrentKey, true)
+	if err != nil {
+		return err
+	}
+	encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{
+		Resources: []apiserverconfigv1.ResourceConfiguration{
+			{
+				Resources: config.ResourcesToEncrypt,
+				Providers: encryptionProviders,
 			},
-		}
-	)
+		},
+	}
 
 	if !reflect.DeepEqual(config.ResourcesToEncrypt, config.EncryptedResources) {
 		removedResources := sets.New(config.EncryptedResources...).Difference(sets.New(config.ResourcesToEncrypt...))
+		encryptionProviders, err = generateEncryptionProviders(keySecret, keySecretOld, config.EncryptWithCurrentKey, false)
+		if err != nil {
+			return err
+		}
 		if removedResources.Len() > 0 {
 			encryptionConfiguration.Resources = append(encryptionConfiguration.Resources, apiserverconfigv1.ResourceConfiguration{
 				Resources: sets.List(removedResources),
-				Providers: []apiserverconfigv1.ProviderConfiguration{
-					{
-						Identity: &apiserverconfigv1.IdentityConfiguration{},
-					},
-					{
-						AESCBC: &apiserverconfigv1.AESConfiguration{
-							Keys: encryptionKeys,
-						},
-					},
-				},
+				Providers: encryptionProviders,
 			})
 		}
 	}
@@ -157,10 +225,13 @@ func ReconcileSecretETCDEncryptionConfiguration(
 	return c.Patch(ctx, secretETCDEncryptionConfiguration, patch)
 }
 
-func etcdEncryptionAESKeys(keySecretCurrent, keySecretOld *corev1.Secret, encryptWithCurrentKey bool) []apiserverconfigv1.Key {
+func etcdEncryptionKeys(keySecretCurrent, keySecretOld *corev1.Secret, encryptWithCurrentKey bool) []keyWithProvider {
 	if keySecretOld == nil {
-		return []apiserverconfigv1.Key{
-			aesKeyFromSecretData(keySecretCurrent.Data),
+		return []keyWithProvider{
+			{
+				Key:      keyFromSecretData(keySecretCurrent.Data),
+				Provider: gardencorev1beta1.EncryptionProviderType(keySecretCurrent.Data[secretsutils.DataKeyEncryptionProvider]),
+			},
 		}
 	}
 
@@ -169,13 +240,19 @@ func etcdEncryptionAESKeys(keySecretCurrent, keySecretOld *corev1.Secret, encryp
 		keyForEncryption, keyForDecryption = keySecretOld, keySecretCurrent
 	}
 
-	return []apiserverconfigv1.Key{
-		aesKeyFromSecretData(keyForEncryption.Data),
-		aesKeyFromSecretData(keyForDecryption.Data),
+	return []keyWithProvider{
+		{
+			Key:      keyFromSecretData(keyForEncryption.Data),
+			Provider: gardencorev1beta1.EncryptionProviderType(keyForEncryption.Data[secretsutils.DataKeyEncryptionProvider]),
+		},
+		{
+			Key:      keyFromSecretData(keyForDecryption.Data),
+			Provider: gardencorev1beta1.EncryptionProviderType(keyForDecryption.Data[secretsutils.DataKeyEncryptionProvider]),
+		},
 	}
 }
 
-func aesKeyFromSecretData(data map[string][]byte) apiserverconfigv1.Key {
+func keyFromSecretData(data map[string][]byte) apiserverconfigv1.Key {
 	var key string
 	if v, ok := data[secretsutils.DataKeyEncryptionSecretEncoding]; ok && string(v) == "none" {
 		// key is not encoded, so we need to encode it before passing it to the kube-apiserver

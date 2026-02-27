@@ -21,6 +21,7 @@ func GetWarnings(managedseedset *seedmanagement.ManagedSeedSet) []string {
 
 	if kubeAPIServer := managedseedset.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer; kubeAPIServer != nil {
 		path := field.NewPath("spec", "shootTemplate", "spec", "kubernetes", "kubeAPIServer")
+
 		warnings = append(warnings, shoot.GetKubeAPIServerWarnings(kubeAPIServer, path)...)
 	}
 

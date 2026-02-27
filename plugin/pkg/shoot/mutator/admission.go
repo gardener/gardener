@@ -192,6 +192,7 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 	}
 
 	mutationContext.addMetadataAnnotations(a)
+	mutationContext.defaultMaintenanceWindow(a)
 	mutationContext.defaultShootNetworks(helper.IsWorkerless(shoot))
 	allErrs = append(allErrs, mutationContext.defaultKubernetes()...)
 	allErrs = append(allErrs, mutationContext.defaultKubernetesVersionForWorkers()...)
@@ -361,6 +362,27 @@ func (c *mutationContext) defaultKubernetes() field.ErrorList {
 	}
 
 	return nil
+}
+
+func (c *mutationContext) defaultMaintenanceWindow(a admission.Attributes) {
+	if a.GetOperation() != admission.Create {
+		return
+	}
+
+	if c.shoot.Spec.Maintenance == nil {
+		c.shoot.Spec.Maintenance = &core.Maintenance{}
+	}
+	if c.shoot.Spec.Maintenance.AutoRotation == nil {
+		c.shoot.Spec.Maintenance.AutoRotation = &core.MaintenanceAutoRotation{}
+	}
+	if c.shoot.Spec.Maintenance.AutoRotation.Credentials == nil {
+		c.shoot.Spec.Maintenance.AutoRotation.Credentials = &core.MaintenanceCredentialsAutoRotation{}
+	}
+	if c.shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey == nil {
+		c.shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey = &core.MaintenanceRotationConfig{
+			RotationPeriod: &metav1.Duration{Duration: v1beta1constants.ETCDEncryptionKeyAutoRotationPeriod},
+		}
+	}
 }
 
 func defaultKubernetesVersion(constraints []gardencorev1beta1.ExpirableVersion, shootVersion string, fldPath *field.Path) (*string, field.ErrorList) {

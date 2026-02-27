@@ -5,6 +5,8 @@
 package seed_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -37,6 +39,15 @@ var _ = Describe("ControllerRegistration controller test", func() {
 				SecretBindingName: ptr.To("my-provider-account"),
 				CloudProfileName:  ptr.To("test-cloudprofile"),
 				Region:            "foo-region",
+				Maintenance: &gardencorev1beta1.Maintenance{
+					AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+						Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+								RotationPeriod: &metav1.Duration{Duration: 7 * 24 * time.Hour},
+							},
+						},
+					},
+				},
 				Provider: gardencorev1beta1.Provider{
 					Type: shootProviderType,
 					Workers: []gardencorev1beta1.Worker{
