@@ -945,19 +945,6 @@ make test-e2e-local-operator
 
 #### Accessing the Virtual Garden Cluster
 
-⚠️ Please note that in this setup, the virtual garden cluster is not accessible by default when you download the kubeconfig and try to communicate with it.
-The reason is that your host most probably cannot resolve the DNS name of the cluster.
-Hence, if you want to access the virtual garden cluster, you have to run the following command which will extend your `/etc/hosts` file with the required information to make the DNS names resolvable:
-
-```shell
-cat <<EOF | sudo tee -a /etc/hosts
-
-# Manually created to access local Gardener virtual garden cluster.
-# TODO: Remove this again when the virtual garden cluster access is no longer required.
-172.18.255.3 api.virtual-garden.local.gardener.cloud
-EOF
-```
-
 To access the virtual garden, you can generate a `kubeconfig` by running
 
 ```shell

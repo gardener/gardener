@@ -35,8 +35,6 @@ In these cases, you might want to check out one of the following options that ru
 
 ## Setting Up the KinD Cluster (Garden and Seed)
 
-> First, you will need to add `127.0.0.1 registry.local.gardener.cloud` to your /etc/hosts.
-
 ```bash
 make kind-up
 ```
@@ -78,17 +76,7 @@ To avoid recreating the cluster, there is a script that can be used to easily br
 
 ## Setting Up IPv6 Single-Stack Networking (optional)
 
-First, ensure that your `/etc/hosts` file contains entries resolving `registry.local.gardener.cloud` to the IPv6 loopback address:
-
-```text
-::1 registry.local.gardener.cloud
-::3 api.virtual-garden.local.gardener.cloud
-```
-
-Typically, only `ip6-localhost` is mapped to `::1` on linux machines.
-However, we need `registry.local.gardener.cloud` to resolve to both `127.0.0.1` and `::1` so that we can talk to our registry via a single address (`registry.local.gardener.cloud:5001`).
-
-Next, we need to configure NAT for outgoing traffic from the kind network to the internet.
+We need to configure NAT for outgoing traffic from the kind network to the internet.
 After executing `make kind-up IPFAMILY=ipv6`, execute the following command to set up the corresponding iptables rules:
 
 ```bash
@@ -235,98 +223,6 @@ make test-e2e-local-simple KUBECONFIG="$PWD/example/gardener-local/kind/local/ku
 
 ### Accessing the `Shoot` Cluster
 
-⚠️ Please note that in this setup, shoot clusters are not accessible by default when you download the kubeconfig and try to communicate with them.
-The reason is that your host most probably cannot resolve the DNS names of the clusters since `provider-local` extension runs inside the KinD cluster (for more details, see [DNSRecord](../extensions/provider-local.md#dnsrecord)).
-Hence, if you want to access the shoot cluster, you have to run the following command which will extend your `/etc/hosts` file with the required information to make the DNS names resolvable:
-
-```bash
-cat <<EOF | sudo tee -a /etc/hosts
-
-# Begin of Gardener local setup section
-# Shoot API server domains
-172.18.255.1 api.local.local.external.local.gardener.cloud
-172.18.255.1 api.local.local.internal.local.gardener.cloud
-
-# Ingress
-172.18.255.1 p-seed.ingress.local.seed.local.gardener.cloud
-172.18.255.1 g-seed.ingress.local.seed.local.gardener.cloud
-172.18.255.1 gu-local--local.ingress.local.seed.local.gardener.cloud
-172.18.255.1 p-local--local.ingress.local.seed.local.gardener.cloud
-172.18.255.1 v-local--local.ingress.local.seed.local.gardener.cloud
-172.18.255.1 otc-local--local.ingress.local.seed.local.gardener.cloud
-
-# E2E tests
-172.18.255.1 api.e2e-managedseed.garden.external.local.gardener.cloud
-172.18.255.1 api.e2e-managedseed.garden.internal.local.gardener.cloud
-172.18.255.1 api.e2e-hib.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-hib.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-hib-wl.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-hib-wl.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-unpriv.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-unpriv.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-wake-up.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-wake-up.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-wake-up-wl.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-wake-up-wl.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-wake-up-ncp.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-wake-up-ncp.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-migrate.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-migrate.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-migrate-wl.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-migrate-wl.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-mgr-hib.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-mgr-hib.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-rotate.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-rotate.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-rotate-wl.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-rotate-wl.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-rot-noroll.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-rot-noroll.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-rot-ip.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-rot-ip.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-rot-nr-ip.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-rot-nr-ip.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-rot-etcd.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-rot-etcd.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-default.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-default.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-default-wl.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-default-wl.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-default-ip.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-default-ip.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-force-delete.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-force-delete.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-fd-hib.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-fd-hib.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-upd-node.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-upd-node.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-upd-node-wl.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-upd-node-wl.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-upd-node-ovr.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-upd-node-ovr.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-upgrade.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-upgrade.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-upgrade-wl.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-upgrade-wl.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-upg-hib.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-upg-hib.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-upg-hib-wl.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-upg-hib-wl.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-auth-one.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-auth-one.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-auth-two.local.external.local.gardener.cloud
-172.18.255.1 api.e2e-auth-two.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-layer4-lb.local.internal.local.gardener.cloud
-172.18.255.1 api.e2e-layer4-lb.local.external.local.gardener.cloud
-172.18.255.1 gu-local--e2e-rotate.ingress.local.seed.local.gardener.cloud
-172.18.255.1 gu-local--e2e-rotate-wl.ingress.local.seed.local.gardener.cloud
-172.18.255.1 gu-local--e2e-rot-noroll.ingress.local.seed.local.gardener.cloud
-172.18.255.1 gu-local--e2e-rot-ip.ingress.local.seed.local.gardener.cloud
-172.18.255.1 gu-local--e2e-rot-nr-ip.ingress.local.seed.local.gardener.cloud
-# End of Gardener local setup section
-EOF
-```
-
 To access the `Shoot`, you can acquire a `kubeconfig` by using the [`shoots/adminkubeconfig` subresource](../usage/shoot/shoot_access.md#shootsadminkubeconfig-subresource).
 
 For convenience a [helper script](../../hack/usage/generate-admin-kubeconf.sh) is provided in the `hack` directory. By default the script will generate a kubeconfig for a `Shoot` named "local" in the `garden-local` namespace valid for one hour.
@@ -412,20 +308,6 @@ make kind-down
 ## Alternative Way to Set Up Garden and Seed Leveraging `gardener-operator`
 
 Instead of starting Garden and Seed via `make kind-up gardener-up`, you can also use `gardener-operator` to create your local dev landscape.
-In this setup, the virtual garden cluster has its own load balancer, so you have to create an own DNS entry in your `/etc/hosts`:
-
-```shell
-cat <<EOF | sudo tee -a /etc/hosts
-
-# Begin of Gardener Operator local setup section
-172.18.255.3 api.virtual-garden.local.gardener.cloud
-172.18.255.3 plutono-garden.ingress.runtime-garden.local.gardener.cloud
-172.18.255.3 dashboard.ingress.runtime-garden.local.gardener.cloud
-172.18.255.3 discovery.ingress.runtime-garden.local.gardener.cloud
-# End of Gardener Operator local setup section
-EOF
-```
-
 You can bring up `gardener-operator` with this command:
 
 ```shell
@@ -440,15 +322,6 @@ make operator-seed-up
 
 You find the kubeconfig for the KinD cluster at `./example/gardener-local/kind/multi-zone/kubeconfig`.
 The one for the virtual garden is accessible at `./dev-setup/kubeconfigs/virtual-garden/kubeconfig`.
-
-> [!IMPORTANT]
-> When you create non-HA shoot clusters (i.e., `Shoot`s with `.spec.controlPlane.highAvailability.failureTolerance != zone`), then they are not exposed via `172.18.255.1` ([ref](#accessing-the-shoot-cluster)).
-> Instead, you need to find out under which Istio instance they got exposed, and put the corresponding IP address into your `/etc/hosts` file:
-> ```shell
-> # replace <shoot-namespace> with your shoot namespace (e.g., `shoot--foo--bar`):
-> kubectl -n "$(kubectl -n <shoot-namespace> get gateway kube-apiserver -o jsonpath={.spec.selector.istio} | sed 's/.*--/istio-ingress--/')" get svc istio-ingressgateway -o jsonpath={.status.loadBalancer.ingress..ip}
-> ```
-> When the shoot cluster is HA (i.e., `.spec.controlPlane.highAvailability.failureTolerance == zone`), then you can access it via `172.18.255.1`.
 
 Similar as in the section _[Developing Gardener](#developing-gardener)_ it's possible to run a [Skaffold development loop](https://skaffold.dev/docs/workflows/dev/) as well using:
 ```shell

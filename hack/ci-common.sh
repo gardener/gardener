@@ -6,6 +6,22 @@
 
 set -o errexit
 
+export_artifacts_host() {
+  mkdir -p "${ARTIFACTS:-}"
+
+  echo "> Exporting logs of host services"
+  cp /var/log/{docker,dnsmasq}.log "${ARTIFACTS:-}/" || true
+
+  echo "> Exporting logs of local infrastructure managed via docker compose"
+  mkdir -p "${ARTIFACTS:-}/infra"
+  # In Docker, container logs are not stored in /var/log but in /var/lib/docker/containers.
+  # However, this directory also holds a lot of other files, so we use `docker compose logs` to get only the logs of the
+  # relevant containers to avoid exporting unnecessary files.
+  for service in $(yq '.services | keys() | .[]' ./dev-setup/infra/docker-compose.yaml); do
+    docker compose -f ./dev-setup/infra/docker-compose.yaml logs --no-log-prefix "$service" > "${ARTIFACTS:-}/infra/$service.log" || true
+  done
+}
+
 export_artifacts() {
   cluster_name="${1}"
   echo "> Exporting logs of kind cluster '$cluster_name'"
@@ -38,9 +54,6 @@ export_artifacts() {
       kubectl cp "$namespace/$node":/var/log "$node_dir" || true
     done < <(kubectl -n "$namespace" get po -l 'app in (machine,bastion)' -oname | cut -d/ -f2)
   done < <(kubectl get ns -l gardener.cloud/role=shoot -oname | cut -d/ -f2; kubectl get ns -l export-artifacts=true -oname | cut -d/ -f2)
-
-  echo "> Exporting /etc/hosts"
-  cp /etc/hosts $ARTIFACTS/$cluster_name/hosts
 }
 
 export_resource_yamls_for() {
@@ -87,14 +100,5 @@ clamp_mss_to_pmtu() {
   # https://github.com/kubernetes/test-infra/issues/23741
   if [[ "$OSTYPE" != "darwin"* ]]; then
     iptables -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
-  fi
-}
-
-ensure_local_gardener_cloud_hosts() {
-  if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
-    echo "> Adding local.gardener.cloud entries to /etc/hosts..."
-    printf "\n127.0.0.1 registry.local.gardener.cloud\n" >> /etc/hosts
-    printf "\n::1 registry.local.gardener.cloud\n" >> /etc/hosts
-    echo "> Content of '/etc/hosts' after adding local.gardener.cloud entries:\n$(cat /etc/hosts)"
   fi
 }

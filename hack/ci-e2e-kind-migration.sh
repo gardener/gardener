@@ -12,14 +12,13 @@ source $(dirname "${0}")/ci-common.sh
 
 clamp_mss_to_pmtu
 
-ensure_local_gardener_cloud_hosts
-
 # test setup
 make kind-up
 make kind2-up
 
 # export all container logs and events after test execution
 trap "
+  ( export_artifacts_host )
   ( export KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG; export_artifacts "gardener-local" )
   ( export KUBECONFIG=$GARDENER_LOCAL2_KUBECONFIG; export_artifacts "gardener-local2" )
   ( make kind-down )

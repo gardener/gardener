@@ -461,7 +461,7 @@ test-e2e-local-migration-ha-multi-node: $(GINKGO)
 test-e2e-local-ha-multi-node: $(GINKGO)
 	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "basic || (high-availability && update-to-node)" ./test/e2e/gardener/...
 test-e2e-local-ha-multi-zone: $(GINKGO)
-	SHOOT_FAILURE_TOLERANCE_TYPE=zone USE_PROVIDER_LOCAL_COREDNS_SERVER=true ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "basic || (high-availability && update-to-zone)" ./test/e2e/gardener/...
+	SHOOT_FAILURE_TOLERANCE_TYPE=zone ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "basic || (high-availability && update-to-zone)" ./test/e2e/gardener/...
 test-e2e-local-operator: $(GINKGO)
 	./hack/test-e2e-local.sh operator --procs=1 --label-filter="default" ./test/e2e/operator/...
 test-e2e-local-gardenadm-managed-infra: $(GINKGO)
@@ -499,4 +499,4 @@ ci-e2e-kind-upgrade: $(KIND) $(YQ)
 ci-e2e-kind-ha-multi-node-upgrade: $(KIND) $(YQ)
 	SHOOT_FAILURE_TOLERANCE_TYPE=node GARDENER_PREVIOUS_RELEASE=$(GARDENER_PREVIOUS_RELEASE) GARDENER_RELEASE_DOWNLOAD_PATH=$(GARDENER_RELEASE_DOWNLOAD_PATH) GARDENER_NEXT_RELEASE=$(GARDENER_NEXT_RELEASE) ./hack/ci-e2e-kind-upgrade.sh
 ci-e2e-kind-ha-multi-zone-upgrade: $(KIND) $(YQ)
-	SHOOT_FAILURE_TOLERANCE_TYPE=zone USE_PROVIDER_LOCAL_COREDNS_SERVER=true GARDENER_PREVIOUS_RELEASE=$(GARDENER_PREVIOUS_RELEASE) GARDENER_RELEASE_DOWNLOAD_PATH=$(GARDENER_RELEASE_DOWNLOAD_PATH) GARDENER_NEXT_RELEASE=$(GARDENER_NEXT_RELEASE) ./hack/ci-e2e-kind-upgrade.sh
+	SHOOT_FAILURE_TOLERANCE_TYPE=zone GARDENER_PREVIOUS_RELEASE=$(GARDENER_PREVIOUS_RELEASE) GARDENER_RELEASE_DOWNLOAD_PATH=$(GARDENER_RELEASE_DOWNLOAD_PATH) GARDENER_NEXT_RELEASE=$(GARDENER_NEXT_RELEASE) ./hack/ci-e2e-kind-upgrade.sh

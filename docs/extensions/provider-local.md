@@ -22,9 +22,9 @@ Please note that all of them are not technical limitations/blockers, but simply 
 
    _We have not yet developed a `cloud-controller-manager` which could reconcile load balancer `Service`s in the shoot cluster._
 
-1. In case a seed cluster with multiple availability zones, i.e. multiple entries in `.spec.provider.zones`, is used in conjunction with a single-zone shoot control plane, i.e. a shoot cluster without `.spec.controlPlane.highAvailability` or with `.spec.controlPlane.highAvailability.failureTolerance.type` set to `node`, the local address of the API server endpoint needs to be determined manually or via the in-cluster `coredns`.
+2. Machines/nodes are recreated during control plane migration.
 
-   _As the different istio ingress gateway loadbalancers have individual external IP addresses, single-zone shoot control planes can end up in a random availability zone. Having the local host use the `coredns` in the cluster as name resolver would form a name resolution cycle. The tests mitigate the issue by adapting the DNS configuration inside the affected test._
+   _Since the machine provider creates `Pod`s for the shoot worker nodes in the shoot's control plane namespace, they get deleted and recreated on the other seed cluster during control plane migration._
 
 ## `ManagedSeed`s
 
@@ -40,7 +40,7 @@ The corresponding e2e test can be run via:
 
 ### Implementation Details
 
-The images locally built by `Skaffold` for the Gardener components which are deployed to this shoot cluster are managed by a container registry in the `registry` namespace in the kind cluster.
+The Gardener images built locally by `Skaffold` are pushed to/pulled from a container registry in the `kind` network managed by [`docker-compose`](../../dev-setup/infra/docker-compose.yaml) (`registry.local.gardener.cloud:5001`). The registry is accessible from the host on `127.0.0.1:5001` and `[::1]:5001`.
 `provider-local` configures this registry as mirror for the shoot by mutating the `OperatingSystemConfig` and using the [default contract for extending the `containerd` configuration](../usage/advanced/custom-containerd-config.md).
 
 In order to bootstrap a seed cluster, the `gardenlet` deploys `PersistentVolumeClaim`s and `Service`s of type `LoadBalancer`.
@@ -57,11 +57,19 @@ This section contains information about how the respective controllers and webho
 
 ### Bootstrapping
 
-The Helm chart of the `provider-local` extension defined in its [`Extension`](registration.md) contains a special deployment for a [CoreDNS](https://coredns.io/) instance in a `gardener-extension-provider-local-coredns` namespace in the seed cluster.
+The local setup includes a [BIND9](https://www.isc.org/bind/) DNS server running as a Docker container in the `kind` network (accessible from the host on `172.18.255.53:53` and `[fd00:ff::53]:53`).
+This DNS server is authoritative for the `local.gardener.cloud` zone and accepts [RFC 2136](https://datatracker.ietf.org/doc/html/rfc2136) dynamic DNS updates.
+It is responsible for hosting all DNS records of the local setup and enabling clients on the host and components running in the seed/kind and shoot clusters to resolve them.
 
-This CoreDNS instance is responsible for enabling the components running in the shoot clusters to be able to resolve the DNS names when they communicate with their `kube-apiserver`s.
+The kind cluster nodes are configured to use the local DNS server as their DNS resolver (via a custom `/etc/resolv.conf`), so all nodes and pods of the cluster can resolve names in the `local.gardener.cloud` zone.
+[Machine pods](#machine-controller-manager-provider-local) created by provider-local are configured to use the same DNS server as the kind nodes (`dnsPolicy=Default`), i.e., talk directly to the BIND9 server without going through the kind cluster's coredns.
 
-It contains a static configuration to resolve the DNS names based on `local.gardener.cloud` to `istio-ingressgateway.istio-ingress.svc`.
+Clients on the host machine can resolve names in the `local.gardener.cloud` zone by using conditional forwarding in their DNS configuration.
+On macOS, this is achieved by creating a file `/etc/resolver/local.gardener.cloud` pointing to the local DNS server (see [this blog post](https://invisiblethreat.ca/technology/2025/04/12/macos-resolvers/)).
+On Linux systems using `systemd-resolved`, this is achieved by creating a file in `/etc/systemd/resolved.conf.d/` including the `Domains=~local.gardener.cloud` directive.
+In e2e tests running in CI (prow), this is achieved by running `dnsmasq` in the test pod and configuring it to forward requests for the `local.gardener.cloud` zone to the local DNS server.
+
+![Architecture for local DNS setup](images/local-setup-dns-architecture.excalidraw.svg)
 
 ### Credentials
 
@@ -83,28 +91,12 @@ Additionally, it creates a few (currently unused) dummy secrets (CA, server and 
 
 #### `DNSRecord`
 
-The controller adapts the cluster internal DNS configuration by extending the custom CoreDNS configuration for every observed `DNSRecord`.
-It adds two corresponding entries in the custom DNS configuration per shoot cluster containing a `rewrite` rule:
+The controller manages DNS records by sending [RFC 2136](https://datatracker.ietf.org/doc/html/rfc2136) dynamic DNS updates to the local BIND9 server (see [Bootstrapping](#bootstrapping)).
+For each `DNSRecord`, it sends an UPDATE message that first removes any existing resource record set for the FQDN and record type and then inserts the new records based on `DnsRecord.spec.values`.
 
-```yaml
-data:
-  api.local.local.external.local.gardener.cloud.override: |
-    rewrite stop name regex api.local.local.external.local.gardener.cloud istio-ingressgateway.istio-ingress.svc.cluster.local answer auto
-  api.local.local.internal.local.gardener.cloud.override: |
-    rewrite stop name regex api.local.local.internal.local.gardener.cloud istio-ingressgateway.istio-ingress.svc.cluster.local answer auto
-```
+For example, for a shoot with API server domain `api.local.local.internal.local.gardener.cloud`, the controller sends an update adding A records pointing to the IP addresses specified in the `DNSRecord`'s values.
 
-For self-hosted shoots, the controller configures the CoreDNS `template` plugin instead of using a `rewrite` rule for each `DNSRecord`:
-
-```yaml
-data:
-  api.root.garden.local.gardener.cloud.override: |
-    template IN A local.gardener.cloud {
-      match "^api\.root\.garden\.local\.gardener\.cloud\.$"
-      answer "{{ .Name }} 120 IN A 10.0.130.192"
-      fallthrough
-    }
-```
+The controller supports A, AAAA, and CNAME record types.
 
 #### `Infrastructure`
 
@@ -136,34 +128,31 @@ This controller implements the `Bastion.extensions.gardener.cloud` resource by d
 
 Note that this controller does not respect the `Bastion.spec.ingress` configuration as there is no way to perform client IP restrictions in the local setup.
 
-#### `Ingress`
-
-The gardenlet creates a wildcard DNS record for the Seed's ingress domain pointing to the `nginx-ingress-controller`'s LoadBalancer.
-This domain is commonly used by all `Ingress` objects created in the Seed for Seed and Shoot components.
-As provider-local implements the `DNSRecord` extension API (see the [`DNSRecord`section](#dnsrecord)), this controller reconciles all `Ingress`s and creates `DNSRecord`s of type `local` for each host included in `spec.rules`.
-This only happens for shoot namespaces (`gardener.cloud/role=shoot` label) to make `Ingress` domains resolvable on the machine pods.
-
 #### `Service`
 
 This controller reconciles `Services` of type `LoadBalancer` in the local `Seed` cluster.
-Since the local Kubernetes clusters used as Seed clusters typically don't support such services, this controller sets the `.status.ingress.loadBalancer.ip[0]` to magic `172.18.255.*` IP addresses that are added to the loopback interface of the host machine running the kind cluster.
+Since the local Kubernetes clusters used as Seed clusters typically don't support such services, this controller sets the `.status.ingress.loadBalancer.ip[0]` to magic `172.18.255.*` or `fd00:ff::*` IP addresses that are added to the loopback interface of the host machine running the kind cluster.
 It makes LoadBalancer Services (e.g. `istio-ingressgateway` and `shoot--*--*/bastion-*`) available to the host by setting `spec.ports[].nodePort` to well-known ports that are mapped to `hostPorts` in the kind cluster configuration.
 
 `istio-ingress/istio-ingressgateway` is set to be exposed on `nodePort` `30433` by this controller.
 The bastion services are exposed on `nodePort` `30022`.
 
-In case the seed has multiple availability zones (`.spec.provider.zones`) and it uses SNI, the different zone-specific `istio-ingressgateway` loadbalancers are exposed via different IP addresses. Per default, IP addresses `172.18.255.10`, `172.18.255.11`, and `172.18.255.12` are used for the zones `0`, `1`, and `2` respectively.
+In case the seed has multiple availability zones (`.spec.provider.zones`) and it uses SNI, the different zone-specific `istio-ingressgateway` loadbalancers are exposed via different IP addresses. Per default, IP addresses `172.18.255.1{0,1,2}` and `fd00:ff::1{0,1,2}` are used for the zones `0`, `1`, and `2` respectively.
 
 #### ETCD Backups
+
 This controller reconciles the `BackupBucket` and `BackupEntry` of the shoot allowing the `etcd-backup-restore` to create and copy backups using the `local` provider functionality. The backups are stored on the host file system. This is achieved by mounting that directory to the `etcd-backup-restore` container.
 
 #### Extension Seed
+
 This controller reconciles `Extensions` of type `local-ext-seed`. It creates a single `serviceaccount` named `local-ext-seed` in the shoot's namespace in the seed. The extension is reconciled before the `kube-apiserver`. More on extension lifecycle strategies can be read in [Registering Extension Controllers](registration.md#extension-lifecycle).
 
 #### Extension Shoot
+
 This controller reconciles `Extensions` of type `local-ext-shoot`. It creates a single `serviceaccount` named `local-ext-shoot` in the `kube-system` namespace of the shoot. The extension is reconciled after the `kube-apiserver`. More on extension lifecycle strategies can be read [Registering Extension Controllers](registration.md#extension-lifecycle).
 
 #### Extension Shoot After Worker
+
 This controller reconciles `Extensions` of type `local-ext-shoot-after-worker`. It creates a `deployment` named `local-ext-shoot-after-worker` in the `kube-system` namespace of the shoot. The extension is reconciled after the workers and waits until the deployment is ready. More on extension lifecycle strategies can be read [Registering Extension Controllers](registration.md#extension-lifecycle).
 
 #### Health Checks
@@ -182,13 +171,6 @@ The health check controller leverages the [health check library](healthcheck-lib
 
 This webhook reacts on the `OperatingSystemConfig` containing the configuration of the kubelet and sets the `failSwapOn` to `false` (independent of what is configured in the `Shoot` spec) ([ref](https://github.com/kubernetes-sigs/kind/blob/b6bc112522651d98c81823df56b7afa511459a3b/site/content/docs/design/node-image.md#design)).
 
-#### DNS Config
-
-This webhook reacts on events for the `dependency-watchdog-probe` `Deployment`, the `blackbox-exporter` `Deployment`, as well as on events for `Pod`s created when the `machine-controller-manager` reconciles `Machine`s.
-All these pods need to be able to resolve the DNS names for shoot clusters.
-It sets the `.spec.dnsPolicy=None` and `.spec.dnsConfig.nameServers` to the cluster IP of the `coredns` `Service` created in the `gardener-extension-provider-local-coredns` namespaces so that these pods can resolve the DNS records for shoot clusters (see the [Bootstrapping section](#bootstrapping) for more details).
-It also adds the necessary `NetworkPolicy` labels to allow the communication to the `coredns` pods.
-
 #### Node
 
 This webhook reacts on updates to `nodes/status` in both seed and shoot clusters and sets the `.status.{allocatable,capacity}.cpu="100"` and `.status.{allocatable,capacity}.memory="100Gi"` fields.
@@ -202,14 +184,6 @@ For the shoot clusters, this empty patch trigger is not needed since the `Mutati
 #### Shoot
 
 This webhook reacts on the `ConfigMap` used by the `kube-proxy` and sets the `maxPerCore` field to `0` since other values don't work well in conjunction with the `kindest/node` image which is used as base for the shoot worker machine pods ([ref](https://github.com/kubernetes-sigs/kind/blob/fa7d86470f4c0e924fc4c2e767ec8491c45f4304/pkg/cluster/internal/kubeadm/config.go#L283-L285)).
-
-### DNS Configuration for Multi-Zonal Seeds
-
-In case a seed cluster has multiple availability zones as specified in `.spec.provider.zones`, multiple istio ingress gateways are deployed, one per availability zone in addition to the default deployment. The result is that single-zone shoot control planes, i.e. shoot clusters with `.spec.controlPlane.highAvailability` set or with `.spec.controlPlane.highAvailability.failureTolerance.type` set to `node`, may be exposed via any of the zone-specific istio ingress gateways. Previously, the endpoints were statically mapped via `/etc/hosts`. Unfortunately, this is no longer possible due to the aforementioned dynamic in the endpoint selection.
-
-For multi-zonal seed clusters, there is an additional configuration following `coredns`'s [view plugin](https://github.com/coredns/coredns/tree/master/plugin/view) mapping the external IP addresses of the zone-specific loadbalancers to the corresponding internal istio ingress gateway domain names. This configuration is only in place for requests from outside of the seed cluster. Those requests are currently being identified by the protocol. UDP requests are interpreted as originating from within the seed cluster while TCP requests are assumed to come from outside the cluster via the docker hostport mapping.
-
-The corresponding test sets the DNS configuration accordingly so that the name resolution during the test use `coredns` in the cluster.
 
 ### machine-controller-manager-provider-local
 
@@ -231,7 +205,7 @@ metadata:
   namespace: shoot--garden-local--local
 provider: local
 providerSpec:
-  image: garden.local.gardener.cloud:5001/local-skaffold_gardener-extension-provider-local-node:...
+  image: registry.local.gardener.cloud:5001/local-skaffold_gardener-extension-provider-local-node:...
   ipPoolNameV4: shoot-machine-pods-shoot--garden-local--local-ipv4
   ipPoolNameV6: shoot-machine-pods-shoot--garden-local--local-ipv6
   namespace: shoot--garden-local--local
@@ -246,7 +220,7 @@ Typically, this is the shoot control plane namespace.
 However, for self-hosted shoots with managed infrastructure, this is the kind cluster namespace where the infrastructure resources are created during `gardenadm bootstrap` (the control plane namespace is `kube-system` in this case).
 
 Typically, machines running in a cloud infrastructure environment can resolve the hostnames of other machines in the same cluster/network.
-To mimic this behavior in the local setup, the machine provider creates a `Service` for every `Machine` with the same name as the `Pod`. 
+To mimic this behavior in the local setup, the machine provider creates a `Service` for every `Machine` with the same name as the `Pod`.
 With this, local `Nodes` and `Bastions` can connect to other `Nodes` via their hostname.
 
 ## Future Work

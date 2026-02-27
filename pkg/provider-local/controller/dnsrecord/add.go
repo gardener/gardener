@@ -8,6 +8,7 @@ import (
 	"context"
 	"slices"
 
+	"github.com/miekg/dns"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -48,7 +49,7 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 
 	return dnsrecord.Add(mgr, dnsrecord.AddArgs{
 		Actuator: &Actuator{
-			RuntimeClient: mgr.GetClient(),
+			DNSClient: &dns.Client{},
 		},
 		ControllerOptions: opts.Controller,
 		Predicates:        dnsrecord.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),

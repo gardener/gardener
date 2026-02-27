@@ -27,13 +27,11 @@ import (
 	localextensionshootafterworkercontroller "github.com/gardener/gardener/pkg/provider-local/controller/extension/shootafterworker"
 	healthcheckcontroller "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
 	infrastructurecontroller "github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
-	ingresscontroller "github.com/gardener/gardener/pkg/provider-local/controller/ingress"
 	networkpolicycontroller "github.com/gardener/gardener/pkg/provider-local/controller/networkpolicy"
 	operatingsystemconfigcontroller "github.com/gardener/gardener/pkg/provider-local/controller/operatingsystemconfig"
 	servicecontroller "github.com/gardener/gardener/pkg/provider-local/controller/service"
 	workercontroller "github.com/gardener/gardener/pkg/provider-local/controller/worker"
 	controlplanewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/controlplane"
-	dnsconfigwebhook "github.com/gardener/gardener/pkg/provider-local/webhook/dnsconfig"
 	networkpolicywebhook "github.com/gardener/gardener/pkg/provider-local/webhook/networkpolicy"
 	nodewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/node"
 	prometheuswebhook "github.com/gardener/gardener/pkg/provider-local/webhook/prometheus"
@@ -51,7 +49,6 @@ func ControllerSwitchOptions() *extensionscmdcontroller.SwitchOptions {
 		extensionscmdcontroller.Switch(extensionsdnsrecordcontroller.ControllerName, dnsrecordcontroller.AddToManager),
 		extensionscmdcontroller.Switch(extensionsinfrastructurecontroller.ControllerName, infrastructurecontroller.AddToManager),
 		extensionscmdcontroller.Switch(extensionsworkercontroller.ControllerName, workercontroller.AddToManager),
-		extensionscmdcontroller.Switch(ingresscontroller.ControllerName, ingresscontroller.AddToManager),
 		extensionscmdcontroller.Switch(servicecontroller.ControllerName, servicecontroller.AddToManager),
 		extensionscmdcontroller.Switch(extensionshealthcheckcontroller.ControllerName, healthcheckcontroller.AddToManager),
 		extensionscmdcontroller.Switch(extensionsoperatingsystemconfigcontroller.ControllerName, operatingsystemconfigcontroller.AddToManager),
@@ -68,7 +65,6 @@ func WebhookSwitchOptions() *extensionscmdwebhook.SwitchOptions {
 	return extensionscmdwebhook.NewSwitchOptions(
 		extensionscmdwebhook.Switch(extensionscontrolplanewebhook.WebhookName, controlplanewebhook.AddToManager),
 		extensionscmdwebhook.Switch(extensionsshootwebhook.WebhookName, shootwebhook.AddToManager),
-		extensionscmdwebhook.Switch(dnsconfigwebhook.WebhookName, dnsconfigwebhook.AddToManager),
 		extensionscmdwebhook.Switch(rolloutspeedupwebhook.WebhookName, rolloutspeedupwebhook.AddToManager),
 		extensionscmdwebhook.Switch(networkpolicywebhook.WebhookName, networkpolicywebhook.AddToManager),
 		extensionscmdwebhook.Switch(nodewebhook.WebhookName, nodewebhook.AddToManager),

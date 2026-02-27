@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	apiv1alpha1 "github.com/gardener/gardener/pkg/provider-local/machine-provider/api/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/machine-provider/api/validation"
@@ -143,14 +144,23 @@ func (d *localDriver) applyPod(
 	}
 
 	pod.Labels = map[string]string{
-		labelKeyProvider:                   apiv1alpha1.Provider,
-		labelKeyApp:                        labelValueMachine,
-		labelKeyMachine:                    req.Machine.Name,
-		"networking.gardener.cloud/to-dns": "allowed",
-		"networking.gardener.cloud/to-private-networks":                 "allowed",
-		"networking.gardener.cloud/to-public-networks":                  "allowed",
-		"networking.gardener.cloud/to-runtime-apiserver":                "allowed", // needed for ManagedSeeds such that gardenlets deployed to these Machines can talk to the seed's kube-apiserver (which is the same like the garden cluster kube-apiserver)
-		"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
+		labelKeyProvider: apiv1alpha1.Provider,
+		labelKeyApp:      labelValueMachine,
+		labelKeyMachine:  req.Machine.Name,
+
+		// needed for machine pods to talk to containers in the kind network:
+		// - the local DNS server (bind9)
+		// - the local registry and registry caches
+		// - seed istio ingress-gateways
+		// - virtual garden istio ingress-gateway
+		"networking.gardener.cloud/to-private-networks": "allowed",
+		// needed for machine pods to talk to the outside world:
+		// - for pulling container images from the upstream registries as fallbacks if the cache doesn't work
+		"networking.gardener.cloud/to-public-networks": "allowed",
+		// needed for ManagedSeeds such that gardenlets deployed to these Machines can talk to the seed's kube-apiserver (which is the same like the garden cluster kube-apiserver)
+		"networking.gardener.cloud/to-runtime-apiserver": "allowed",
+
+		local.LabelNetworkPolicyToIstioIngressGateway: v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 	pod.Spec = corev1.PodSpec{
 		Containers: []corev1.Container{
@@ -198,6 +208,11 @@ func (d *localDriver) applyPod(
 				}},
 			},
 		},
+		// Don't use the coredns of the kind cluster. The machine pods should not rely on in-cluster DNS at all because
+		// in the real world, shoot nodes also can't resolve DNS names of the seed (obviously). Using the DNS config of
+		// the kind cluster nodes means that the machine pods will talk directly to the local DNS server (bind9) running
+		// next to the kind nodes.
+		DNSPolicy: corev1.DNSDefault,
 		Volumes: []corev1.Volume{
 			{
 				Name: "userdata",
