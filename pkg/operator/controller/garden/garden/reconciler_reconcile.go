@@ -1282,7 +1282,7 @@ func (r *Reconciler) reconcileDNSRecords(ctx context.Context, log logr.Logger, g
 	var taskFns []flow.TaskFn
 
 	apiDomains := getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains)
-	ingressDomains := getIngressWildcardDomains(garden.Spec.RuntimeCluster.Ingress.Domains)
+	ingressDomains := getAllIngressDomains(garden)
 
 	for _, domain := range append(apiDomains, ingressDomains...) {
 		dnsName := domain.Name

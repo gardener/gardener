@@ -2601,6 +2601,66 @@ var _ = Describe("Validation Tests", func() {
 				})
 			})
 
+			Context("DiscoveryServer", func() {
+				It("should accept a valid domain", func() {
+					garden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+						Domain: &operatorv1alpha1.DNSDomain{
+							Name:     "discovery.gardener.cloud",
+							Provider: ptr.To("primary"),
+						},
+					}
+
+					Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
+				})
+
+				It("should reject a domain with a non-existing provider", func() {
+					garden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+						Domain: &operatorv1alpha1.DNSDomain{
+							Name:     "discovery.gardener.cloud",
+							Provider: ptr.To("non-existing"),
+						},
+					}
+
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer.domain.provider"),
+					}))))
+				})
+
+				It("should reject a domain with a protocol prefix", func() {
+					garden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+						Domain: &operatorv1alpha1.DNSDomain{
+							Name:     "https://discovery.gardener.cloud",
+							Provider: ptr.To("primary"),
+						},
+					}
+
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer.domain.name"),
+					}))))
+				})
+
+				It("should accept a valid TLS secret name", func() {
+					garden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+						TLSSecretName: ptr.To("my-tls-secret"),
+					}
+
+					Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
+				})
+
+				It("should reject a TLS secret name with invalid characters", func() {
+					garden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+						TLSSecretName: ptr.To("My_secret!"),
+					}
+
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer.tlsSecretName"),
+					}))))
+				})
+			})
+
 			Context("Kubernetes", func() {
 				Context("sni", func() {
 					BeforeEach(func() {
@@ -3060,6 +3120,124 @@ var _ = Describe("Validation Tests", func() {
 					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.virtualCluster.controlPlane.highAvailability"),
+					}))))
+				})
+			})
+
+			Context("DiscoveryServer", func() {
+				It("should allow enabling discovery server for the first time with custom domain", func() {
+					oldGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = nil
+					newGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+						Domain: &operatorv1alpha1.DNSDomain{
+							Name: "discovery.custom.example.com",
+						},
+					}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(BeEmpty())
+				})
+
+				It("should allow enabling discovery server for the first time with default domain", func() {
+					oldGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = nil
+					newGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(BeEmpty())
+				})
+
+				It("should allow making implicit default domain explicit (no change)", func() {
+					oldGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{}
+					newGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+						Domain: &operatorv1alpha1.DNSDomain{
+							Name: "discovery.ingress.bar.com", // Matches default from runtimeCluster.ingress.domains[]
+						},
+					}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(BeEmpty())
+				})
+
+				It("should allow keeping the same custom domain", func() {
+					oldGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+						Domain: &operatorv1alpha1.DNSDomain{
+							Name: "discovery.custom.example.com",
+						},
+					}
+					newGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+						Domain: &operatorv1alpha1.DNSDomain{
+							Name: "discovery.custom.example.com",
+						},
+					}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(BeEmpty())
+				})
+
+				It("should forbid disabling discovery server once enabled (with default domain)", func() {
+					oldGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{}
+					newGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = nil
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer"),
+						"Detail": ContainSubstring("must not be disabled once enabled"),
+					}))))
+				})
+
+				It("should forbid disabling discovery server once enabled (with custom domain)", func() {
+					oldGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+						Domain: &operatorv1alpha1.DNSDomain{
+							Name: "discovery.custom.example.com",
+						},
+					}
+					newGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = nil
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer"),
+						"Detail": ContainSubstring("must not be disabled once enabled"),
+					}))))
+				})
+
+				It("should forbid changing domain from default to custom", func() {
+					oldGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{}
+					newGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+						Domain: &operatorv1alpha1.DNSDomain{
+							Name: "discovery.custom.example.com",
+						},
+					}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer.domain"),
+					}))))
+				})
+
+				It("should forbid changing domain from custom to different custom", func() {
+					oldGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+						Domain: &operatorv1alpha1.DNSDomain{
+							Name: "discovery.old.example.com",
+						},
+					}
+					newGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+						Domain: &operatorv1alpha1.DNSDomain{
+							Name: "discovery.new.example.com",
+						},
+					}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer.domain"),
+					}))))
+				})
+
+				It("should forbid changing domain from custom to default (implicit)", func() {
+					oldGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+						Domain: &operatorv1alpha1.DNSDomain{
+							Name: "discovery.custom.example.com",
+						},
+					}
+					newGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer.domain"),
 					}))))
 				})
 			})
