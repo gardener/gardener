@@ -37,6 +37,8 @@ const (
 	WebhookPathNetwork = "/validate-extensions-gardener-cloud-v1alpha1-network"
 	// WebhookPathOperatingSystemConfig is the HTTP handler path for this admission webhook handler for OperatingSystemConfig.
 	WebhookPathOperatingSystemConfig = "/validate-extensions-gardener-cloud-v1alpha1-operatingsystemconfig"
+	// WebhookPathSelfHostedShootExposure is the HTTP handler path for this admission webhook handler for SelfHostedShootExposure.
+	WebhookPathSelfHostedShootExposure = "/validate-extensions-gardener-cloud-v1alpha1-selfhostedshootexposure"
 	// WebhookPathWorker is the HTTP handler path for this admission webhook handler for Worker.
 	WebhookPathWorker = "/validate-extensions-gardener-cloud-v1alpha1-worker"
 )
@@ -76,6 +78,9 @@ func AddToManager(mgr manager.Manager) error {
 		},
 		func() error {
 			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.OperatingSystemConfig{}).WithValidator(&operatingSystemConfigValidator{}).Complete()
+		},
+		func() error {
+			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.SelfHostedShootExposure{}).WithValidator(&selfHostedShootExposureValidator{}).Complete()
 		},
 		func() error {
 			return builder.WebhookManagedBy(mgr, &extensionsv1alpha1.Worker{}).WithValidator(&workerValidator{}).Complete()

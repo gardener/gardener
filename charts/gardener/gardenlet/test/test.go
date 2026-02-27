@@ -249,6 +249,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 					"clusters.extensions.gardener.cloud",
 					"controlplanes.extensions.gardener.cloud",
 					"networks.extensions.gardener.cloud",
+					"selfhostedshootexposures.extensions.gardener.cloud",
 					"verticalpodautoscalers.autoscaling.k8s.io",
 					"verticalpodautoscalercheckpoints.autoscaling.k8s.io",
 					"perses.perses.dev",
@@ -284,12 +285,12 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{"extensions.gardener.cloud"},
-				Resources: []string{"backupbuckets", "backupentries", "bastions", "clusters", "containerruntimes", "controlplanes", "dnsrecords", "extensions", "infrastructures", "networks", "operatingsystemconfigs", "workers"},
+				Resources: []string{"backupbuckets", "backupentries", "bastions", "clusters", "containerruntimes", "controlplanes", "dnsrecords", "extensions", "infrastructures", "networks", "operatingsystemconfigs", "selfhostedshootexposures", "workers"},
 				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
 			},
 			{
 				APIGroups: []string{"extensions.gardener.cloud"},
-				Resources: []string{"backupbuckets/status", "backupentries/status", "containerruntimes/status", "controlplanes/status", "dnsrecords/status", "extensions/status", "infrastructures/status", "networks/status", "operatingsystemconfigs/status", "workers/status"},
+				Resources: []string{"backupbuckets/status", "backupentries/status", "containerruntimes/status", "controlplanes/status", "dnsrecords/status", "extensions/status", "infrastructures/status", "networks/status", "operatingsystemconfigs/status", "selfhostedshootexposures/status", "workers/status"},
 				Verbs:     []string{"patch", "update"},
 			},
 			{

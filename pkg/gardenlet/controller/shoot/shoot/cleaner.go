@@ -33,13 +33,14 @@ var (
 
 var (
 	extensionKindToObjectList = map[string]client.ObjectList{
-		extensionsv1alpha1.ContainerRuntimeResource:      &extensionsv1alpha1.ContainerRuntimeList{},
-		extensionsv1alpha1.ControlPlaneResource:          &extensionsv1alpha1.ControlPlaneList{},
-		extensionsv1alpha1.ExtensionResource:             &extensionsv1alpha1.ExtensionList{},
-		extensionsv1alpha1.InfrastructureResource:        &extensionsv1alpha1.InfrastructureList{},
-		extensionsv1alpha1.NetworkResource:               &extensionsv1alpha1.NetworkList{},
-		extensionsv1alpha1.OperatingSystemConfigResource: &extensionsv1alpha1.OperatingSystemConfigList{},
-		extensionsv1alpha1.WorkerResource:                &extensionsv1alpha1.WorkerList{},
+		extensionsv1alpha1.ContainerRuntimeResource:        &extensionsv1alpha1.ContainerRuntimeList{},
+		extensionsv1alpha1.ControlPlaneResource:            &extensionsv1alpha1.ControlPlaneList{},
+		extensionsv1alpha1.ExtensionResource:               &extensionsv1alpha1.ExtensionList{},
+		extensionsv1alpha1.InfrastructureResource:          &extensionsv1alpha1.InfrastructureList{},
+		extensionsv1alpha1.NetworkResource:                 &extensionsv1alpha1.NetworkList{},
+		extensionsv1alpha1.OperatingSystemConfigResource:   &extensionsv1alpha1.OperatingSystemConfigList{},
+		extensionsv1alpha1.SelfHostedShootExposureResource: &extensionsv1alpha1.SelfHostedShootExposureList{},
+		extensionsv1alpha1.WorkerResource:                  &extensionsv1alpha1.WorkerList{},
 	}
 
 	machineKindToObjectList = map[string]client.ObjectList{

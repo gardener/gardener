@@ -1,6 +1,6 @@
 # Developing Gardener Locally
 
-[This document](../deployment/getting_started_locally.md) explains how to setup a kind based environment for developing Gardener locally.
+[This document](../deployment/getting_started_locally.md) explains how to set up a kind based environment for developing Gardener locally.
 
 For the best development experience you should especially check the [Developing Gardener](../deployment/getting_started_locally.md#developing-gardener) section.
 

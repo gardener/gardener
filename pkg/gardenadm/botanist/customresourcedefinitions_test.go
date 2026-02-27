@@ -107,6 +107,7 @@ var _ = Describe("CustomResourceDefinitions", func() {
 					HaveField("ObjectMeta.Name", "prometheusagents.monitoring.coreos.com"),
 					HaveField("ObjectMeta.Name", "prometheuses.monitoring.coreos.com"),
 					HaveField("ObjectMeta.Name", "prometheusrules.monitoring.coreos.com"),
+					HaveField("ObjectMeta.Name", "selfhostedshootexposures.extensions.gardener.cloud"),
 					HaveField("ObjectMeta.Name", "scrapeconfigs.monitoring.coreos.com"),
 					HaveField("ObjectMeta.Name", "servicemonitors.monitoring.coreos.com"),
 					HaveField("ObjectMeta.Name", "thanosrulers.monitoring.coreos.com"),
