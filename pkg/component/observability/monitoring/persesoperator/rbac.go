@@ -11,10 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	clusterRoleName        = "perses-operator"
-	leaderElectionRoleName = "perses-operator-leader-election"
-)
+const clusterRoleName = "perses-operator"
 
 func (p *persesOperator) clusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
