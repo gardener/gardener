@@ -16,6 +16,9 @@ VALID_COMMANDS=("up" "dev" "debug" "down")
 case "$COMMAND" in
   up)
     skaffold run \
+      --rpc-port=50051 \
+      --enable-rpc \
+      --event-log-file="$(dirname "$0")/../tmp/skaffold/skaffold-events-operator.json" \
       --cache-artifacts="$($(dirname "$0")/get-skaffold-cache-artifacts.sh)"
    ;;
 

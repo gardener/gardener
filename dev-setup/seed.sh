@@ -32,12 +32,16 @@ case "$COMMAND" in
       -v debug \
       -m garden-config \
       --kubeconfig "$VIRTUAL_GARDEN_KUBECONFIG" \
+      --rpc-port=50051 \
+      --event-log-file="$(dirname "$0")/../tmp/skaffold/skaffold-events-garden-config-$gardenlet_name.json" \
       --status-check=false --platform="linux/$SYSTEM_ARCH" # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
 
     skaffold $skaffold_command \
       -m gardenlet \
       --kubeconfig "$VIRTUAL_GARDEN_KUBECONFIG" \
       --cache-artifacts="$($(dirname "$0")/get-skaffold-cache-artifacts.sh)" \
+      --rpc-port=50051 \
+      --event-log-file="$(dirname "$0")/../tmp/skaffold/skaffold-events-$gardenlet_name.json" \
       --status-check=false --platform="linux/$SYSTEM_ARCH" # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
     ;;
 
