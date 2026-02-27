@@ -101,6 +101,7 @@ var _ = Describe("Version", func() {
 		Entry("handles both suffix and metadata", "1.2.3-rc1+build123", "1.2.3"),
 		Entry("returns unchanged version without 'v', suffix, or metadata", "1.2.3", "1.2.3"),
 		Entry("handles empty version string", "", ""),
+		Entry("removes Debian style suffix '~ds1'", "1.2.3~ds1", "1.2.3"),
 	)
 
 	DescribeTable("#CheckVersionMeetsConstraint",
