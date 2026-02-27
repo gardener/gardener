@@ -39,8 +39,6 @@ const (
 	ContainerImageNameEtcdDruid = "etcd-druid"
 	// ContainerImageNameEventLogger is a constant for an image in the image vector with name 'event-logger'.
 	ContainerImageNameEventLogger = "event-logger"
-	// ContainerImageNameIstioBasicAuthServer is a constant for an image in the image vector with name 'istio-basic-auth-server'.
-	ContainerImageNameIstioBasicAuthServer = "istio-basic-auth-server"
 	// ContainerImageNameFluentBit is a constant for an image in the image vector with name 'fluent-bit'.
 	ContainerImageNameFluentBit = "fluent-bit"
 	// ContainerImageNameFluentBitPlugin is a constant for an image in the image vector with name 'fluent-bit-plugin'.
@@ -75,6 +73,8 @@ const (
 	ContainerImageNameHyperkube = "hyperkube"
 	// ContainerImageNameIngressDefaultBackend is a constant for an image in the image vector with name 'ingress-default-backend'.
 	ContainerImageNameIngressDefaultBackend = "ingress-default-backend"
+	// ContainerImageNameIstioBasicAuthServer is a constant for an image in the image vector with name 'istio-basic-auth-server'.
+	ContainerImageNameIstioBasicAuthServer = "istio-basic-auth-server"
 	// ContainerImageNameIstioIstiod is a constant for an image in the image vector with name 'istio-istiod'.
 	ContainerImageNameIstioIstiod = "istio-istiod"
 	// ContainerImageNameIstioProxy is a constant for an image in the image vector with name 'istio-proxy'.
