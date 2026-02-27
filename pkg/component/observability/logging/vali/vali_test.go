@@ -473,7 +473,7 @@ var _ = Describe("Vali", func() {
 			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new200GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
-				// Annotate the Vali MamangedResource with Ignore annotation
+				// Annotate the Vali ManagedResource with Ignore annotation
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -510,7 +510,7 @@ var _ = Describe("Vali", func() {
 			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new80GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
-				// Annotate the Vali MamangedResource with Ignore annotation
+				// Annotate the Vali ManagedResource with Ignore annotation
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -599,7 +599,7 @@ var _ = Describe("Vali", func() {
 			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new200GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
-				// Annotate the Vali MamangedResource with Ignore annotation
+				// Annotate the Vali ManagedResource with Ignore annotation
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -635,7 +635,7 @@ var _ = Describe("Vali", func() {
 			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new200GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
-				// Annotate the Vali MamangedResource with Ignore annotation
+				// Annotate the Vali ManagedResource with Ignore annotation
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -672,7 +672,7 @@ var _ = Describe("Vali", func() {
 			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new80GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
-				// Annotate the Vali MamangedResource with Ignore annotation
+				// Annotate the Vali ManagedResource with Ignore annotation
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -717,7 +717,7 @@ var _ = Describe("Vali", func() {
 			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new200GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
-				// Annotate the Vali MamangedResource with Ignore annotation
+				// Annotate the Vali ManagedResource with Ignore annotation
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -733,7 +733,7 @@ var _ = Describe("Vali", func() {
 			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new200GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
-				// Annotate the Vali MamangedResource with Ignore annotation
+				// Annotate the Vali ManagedResource with Ignore annotation
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -750,7 +750,7 @@ var _ = Describe("Vali", func() {
 			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new200GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
-				// Annotate the Vali MamangedResource with Ignore annotation
+				// Annotate the Vali ManagedResource with Ignore annotation
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -769,7 +769,7 @@ var _ = Describe("Vali", func() {
 			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new80GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
-				// Annotate the Vali MamangedResource with Ignore annotation
+				// Annotate the Vali ManagedResource with Ignore annotation
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -788,7 +788,7 @@ var _ = Describe("Vali", func() {
 			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new80GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
-				// Annotate the Vali MamangedResource with Ignore annotation
+				// Annotate the Vali ManagedResource with Ignore annotation
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR).Return(errForbidden),
 			)
 			Expect(valiDeployer.Deploy(ctx)).ToNot(Succeed())
@@ -798,7 +798,7 @@ var _ = Describe("Vali", func() {
 			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new80GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
-				// Annotate the Vali MamangedResource with Ignore annotation
+				// Annotate the Vali ManagedResource with Ignore annotation
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).Return(errForbidden),
 			)
