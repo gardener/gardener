@@ -17,13 +17,14 @@ jobs:
     if: ${{ github.repository == 'gardener/gardener' }}
     runs-on: ubuntu-latest
     outputs:
-      date: ${{ steps.metadata.outputs.date }}
-      short-sha: ${{ steps.metadata.outputs.short-sha }}
+      date: ${{ steps.date.outputs.date }}
+      short-sha: ${{ steps.short-sha.outputs.short-sha }}
     steps:
       - name: Generate date
-        id: metadata
+        id: date
         run: echo "date=$(date +%Y%m%d)" >> $GITHUB_OUTPUT
       - name: Generate short-sha
+        id: short-sha
         run: echo "short-sha=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
 
   generate-matrix:
