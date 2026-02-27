@@ -13,8 +13,8 @@ import (
 	"github.com/gardener/gardener/pkg/nodeagent/features"
 )
 
-func TestOperatingSystemConfig(t *testing.T) {
+func TestContainerd(t *testing.T) {
 	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Containerd Client Suite")
+	RunSpecs(t, "NodeAgent Containerd Suite")
 }
