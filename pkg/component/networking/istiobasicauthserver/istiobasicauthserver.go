@@ -98,6 +98,10 @@ func (i *istioBasicAuthServer) Deploy(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to generate ca certificate: %w", err)
 	}
+	caBundle, found := i.secretsManager.Get(caName)
+	if !found {
+		return fmt.Errorf("failed not find ca certificate bundle %q: %w", caName, err)
+	}
 
 	serverSecret, err := i.secretsManager.Generate(ctx,
 		&secretsutils.CertificateSecretConfig{
@@ -152,7 +156,7 @@ func (i *istioBasicAuthServer) Deploy(ctx context.Context) error {
 		i.getService(isShootNamespace),
 		destinationRule,
 		i.getEnvoyFilter(configPatches, ownerReference),
-		i.getTLSSecret(caSecret, secretNameInIstioNamespace, ownerReference),
+		i.getTLSSecret(caBundle, secretNameInIstioNamespace, ownerReference),
 		i.getVPA(),
 	)
 	if err != nil {
