@@ -100,7 +100,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 		}).Should(Succeed())
 
 		By("Create ControllerInstallation")
-		controllerInstallation.Spec.SeedRef = corev1.ObjectReference{Name: seed.Name}
+		controllerInstallation.Spec.SeedRef = &corev1.ObjectReference{Name: seed.Name}
 		controllerInstallation.Spec.RegistrationRef = corev1.ObjectReference{Name: controllerRegistration.Name}
 		controllerInstallation.Spec.DeploymentRef = &corev1.ObjectReference{Name: controllerDeployment.Name}
 		Expect(testClient.Create(ctx, controllerInstallation)).To(Succeed())

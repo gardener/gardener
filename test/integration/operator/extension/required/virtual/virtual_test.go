@@ -187,7 +187,7 @@ func createControllerInstallation(ctx context.Context, cl client.Client, control
 		RegistrationRef: corev1.ObjectReference{
 			Name: extensionName,
 		},
-		SeedRef: corev1.ObjectReference{
+		SeedRef: &corev1.ObjectReference{
 			Name: "local",
 		},
 	}

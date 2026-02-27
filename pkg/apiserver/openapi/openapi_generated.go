@@ -3062,7 +3062,12 @@ func schema_pkg_apis_core_v1beta1_ControllerInstallationSpec(ref common.Referenc
 					"seedRef": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SeedRef is used to reference a Seed resource. The name field of the SeedRef is immutable.",
-							Default:     map[string]interface{}{},
+							Ref:         ref(corev1.ObjectReference{}.OpenAPIModelName()),
+						},
+					},
+					"shootRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootRef is used to reference a Shoot resource. The name and namespace fields of the ShootRef are immutable.",
 							Ref:         ref(corev1.ObjectReference{}.OpenAPIModelName()),
 						},
 					},
@@ -3073,7 +3078,7 @@ func schema_pkg_apis_core_v1beta1_ControllerInstallationSpec(ref common.Referenc
 						},
 					},
 				},
-				Required: []string{"registrationRef", "seedRef"},
+				Required: []string{"registrationRef"},
 			},
 		},
 		Dependencies: []string{

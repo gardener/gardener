@@ -83,7 +83,7 @@ var _ = Describe("Add", func() {
 			It("should return true if seed ref's resourceVersion changed", func() {
 				oldControllerInstallation := controllerInstallation.DeepCopy()
 				controllerInstallation.ResourceVersion = "2"
-				controllerInstallation.Spec.SeedRef.ResourceVersion = "foo"
+				controllerInstallation.Spec.SeedRef = &corev1.ObjectReference{ResourceVersion: "foo"}
 
 				Expect(p.Update(event.UpdateEvent{ObjectNew: controllerInstallation, ObjectOld: oldControllerInstallation})).To(BeTrue())
 			})

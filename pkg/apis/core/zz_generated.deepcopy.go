@@ -1378,7 +1378,16 @@ func (in *ControllerInstallationList) DeepCopyObject() runtime.Object {
 func (in *ControllerInstallationSpec) DeepCopyInto(out *ControllerInstallationSpec) {
 	*out = *in
 	out.RegistrationRef = in.RegistrationRef
-	out.SeedRef = in.SeedRef
+	if in.SeedRef != nil {
+		in, out := &in.SeedRef, &out.SeedRef
+		*out = new(v1.ObjectReference)
+		**out = **in
+	}
+	if in.ShootRef != nil {
+		in, out := &in.ShootRef, &out.ShootRef
+		*out = new(v1.ObjectReference)
+		**out = **in
+	}
 	if in.DeploymentRef != nil {
 		in, out := &in.DeploymentRef, &out.DeploymentRef
 		*out = new(v1.ObjectReference)

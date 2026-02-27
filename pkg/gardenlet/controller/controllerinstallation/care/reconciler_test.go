@@ -55,7 +55,7 @@ var _ = Describe("Reconciler", func() {
 				Name: controllerInstallationName,
 			},
 			Spec: gardencorev1beta1.ControllerInstallationSpec{
-				SeedRef: corev1.ObjectReference{
+				SeedRef: &corev1.ObjectReference{
 					Name: "foo-seed",
 				},
 			},

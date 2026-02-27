@@ -89,12 +89,12 @@ This controller ensures that `ControllerDeployment` in-use always exists until t
 ### [`ControllerRegistration` Controller](../../pkg/controllermanager/controller/controllerregistration)
 
 The `ControllerRegistration` controller makes sure that the required [Gardener Extensions](../README.md#extensions) specified by the [`ControllerRegistration`](../extensions/registration.md#controllerregistrations) resources are present in the seed clusters.
-It also takes care of the creation and deletion of `ControllerInstallation` objects for a given seed cluster.
-The controller has three reconciliation loops.
+It also takes care of the creation and deletion of `ControllerInstallation` objects for a given seed cluster or self-hosted shoot.
+The controller has four reconciliation loops.
 
-#### ["Main" Reconciler](../../pkg/controllermanager/controller/controllerregistration/seed)
+#### ["Seed" Reconciler](../../pkg/controllermanager/controller/controllerregistration/controllerinstallation/seed)
 
-This reconciliation loop watches the `Seed` objects and determines which `ControllerRegistration`s are required for them and reconciles the corresponding `ControllerInstallation` resources to reach the determined state.
+This reconciliation loop watches `Seed` objects and determines which `ControllerRegistration`s are required for them, reconciling the corresponding `ControllerInstallation` resources to reach the determined state.
 To begin with, it computes the kind/type combinations of extensions required for the seed.
 For this, the controller examines a live list of `ControllerRegistration`s, `ControllerInstallation`s, `BackupBucket`s, `BackupEntry`s, `Shoot`s, and `Secret`s from the garden cluster.
 For example, it examines the shoots running on the seed and deducts the kind/type, like `Infrastructure/gcp`.
@@ -107,16 +107,28 @@ The controller then creates or updates the required `ControllerInstallation` obj
 It also deletes every existing `ControllerInstallation` whose referenced `ControllerRegistration` is not part of the required list.
 For example, if the shoots in the seed are no longer using the DNS provider `aws-route53`, then the controller proceeds to delete the respective `ControllerInstallation` object.
 
+#### ["Self-Hosted Shoot" Reconciler](../../pkg/controllermanager/controller/controllerregistration/controllerinstallation/shoot)
+
+This reconciliation loop uses the same shared reconciler logic but watches self-hosted `Shoot` objects (i.e., `Shoot`s whose worker pools are configured for self-hosting the control plane) instead of `Seed` objects.
+It determines which `ControllerRegistration`s are required for a given self-hosted shoot and reconciles the corresponding `ControllerInstallation` resources (referencing the shoot via `.spec.shootRef`) accordingly.
+
+The required kind/type combinations are computed directly from the shoot's own specification (e.g. its provider type, extensions, DNS providers).
+Unlike the seed-based reconciler, the seed provider type and seed DNS provider type are not considered, since there is no `Seed` object involved.
+When the shoot is marked for deletion (`.metadata.deletionTimestamp` is set), the set of required extensions is treated as empty so that all associated `ControllerInstallation`s are cleaned up.
+
+The controller also watches `BackupBucket`s and `BackupEntry`s that reference the shoot via `.spec.shootRef`, as well as `ControllerInstallation`s referencing the shoot via `.spec.shootRef`, and enqueues the shoot for reconciliation when those objects change.
+When a `ControllerRegistration` or `ControllerDeployment` changes, all self-hosted shoots are re-enqueued.
+
 #### ["`ControllerRegistration` Finalizer" Reconciler](../../pkg/controllermanager/controller/controllerregistration/controllerregistrationfinalizer)
 
 This reconciliation loop watches the `ControllerRegistration` resource and adds finalizers to it when they are created.
 In case a deletion request comes in for the resource, i.e., if a `.metadata.deletionTimestamp` is set, it actively scans for a `ControllerInstallation` resource using this `ControllerRegistration`, and decides whether the deletion can be allowed.
 In case no related `ControllerInstallation` is present, it removes the finalizer and marks it for deletion.
 
-#### ["`Seed` Finalizer" Reconciler](../../pkg/controllermanager/controller/controllerregistration/seedfinalizer)
+#### ["Cluster Finalizer" Reconciler](../../pkg/controllermanager/controller/controllerregistration/clusterfinalizer)
 
-This loop also watches the `Seed` object and adds finalizers to it at creation.
-If a `.metadata.deletionTimestamp` is set for the seed, then the controller checks for existing `ControllerInstallation` objects which reference this seed.
+This loop also watches the `Seed` or `Shoot` objects and adds finalizers to them at creation.
+If a `.metadata.deletionTimestamp` is set for the object, then the controller checks for existing `ControllerInstallation` objects which reference this `Seed` or `Shoot`.
 If no such objects exist, then it removes the finalizer and allows the deletion.
 
 #### ["Extension `ClusterRole`" Reconciler](../../pkg/controllermanager/controller/controllerregistration/extensionclusterrole)

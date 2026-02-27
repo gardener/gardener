@@ -105,21 +105,21 @@ var _ = Describe("Add", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: "inst1"},
 				Spec: gardencorev1beta1.ControllerInstallationSpec{
 					RegistrationRef: corev1.ObjectReference{Name: controllerRegistration1.Name},
-					SeedRef:         corev1.ObjectReference{Name: seedName},
+					SeedRef:         &corev1.ObjectReference{Name: seedName},
 				},
 			}
 			controllerInstallation2 = &gardencorev1beta1.ControllerInstallation{
 				ObjectMeta: metav1.ObjectMeta{Name: "inst2"},
 				Spec: gardencorev1beta1.ControllerInstallationSpec{
 					RegistrationRef: corev1.ObjectReference{Name: controllerRegistration2.Name},
-					SeedRef:         corev1.ObjectReference{Name: seedName},
+					SeedRef:         &corev1.ObjectReference{Name: seedName},
 				},
 			}
 			controllerInstallation3 = &gardencorev1beta1.ControllerInstallation{
 				ObjectMeta: metav1.ObjectMeta{Name: "inst3"},
 				Spec: gardencorev1beta1.ControllerInstallationSpec{
 					RegistrationRef: corev1.ObjectReference{Name: controllerRegistration3.Name},
-					SeedRef:         corev1.ObjectReference{Name: seedName},
+					SeedRef:         &corev1.ObjectReference{Name: seedName},
 				},
 			}
 

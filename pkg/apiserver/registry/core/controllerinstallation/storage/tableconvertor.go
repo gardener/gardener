@@ -29,7 +29,7 @@ func newTableConvertor() rest.TableConvertor {
 		headers: []metav1beta1.TableColumnDefinition{
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
 			{Name: "Registration", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["registration"]},
-			{Name: "Seed", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["seed"]},
+			{Name: "Cluster", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["cluster"]},
 			{Name: "Valid", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["Valid"]},
 			{Name: "Installed", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["installed"]},
 			{Name: "Healthy", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["healthy"]},
@@ -65,7 +65,16 @@ func (c *convertor) ConvertToTable(_ context.Context, o runtime.Object, _ runtim
 
 		cells = append(cells, obj.Name)
 		cells = append(cells, obj.Spec.RegistrationRef.Name)
-		cells = append(cells, obj.Spec.SeedRef.Name)
+
+		switch {
+		case obj.Spec.SeedRef != nil:
+			cells = append(cells, "Seed/"+obj.Spec.SeedRef.Name)
+		case obj.Spec.ShootRef != nil:
+			cells = append(cells, "Shoot/"+obj.Spec.ShootRef.Namespace+"/"+obj.Spec.ShootRef.Name)
+		default:
+			cells = append(cells, "<unknown>")
+		}
+
 		if cond := helper.GetCondition(obj.Status.Conditions, core.ControllerInstallationValid); cond != nil {
 			cells = append(cells, cond.Status)
 		} else {

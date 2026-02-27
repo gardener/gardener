@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -322,6 +323,20 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 
 			backupEntry := &gardencorev1beta1.BackupEntry{ObjectMeta: metav1.ObjectMeta{Name: backupEntryName, Namespace: shootNamespace}}
 			Eventually(ctx, gardenKomega.Object(backupEntry)).Should(BeHealthy(health.CheckBackupEntry))
+		}, SpecTimeout(time.Minute))
+
+		It("should observe created ControllerInstallations for the self-hosted Shoot", func(ctx SpecContext) {
+			Eventually(ctx, func(g Gomega) []gardencorev1beta1.ControllerInstallation {
+				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+				g.Expect(gardenClientSet.Client().List(ctx, controllerInstallationList, client.MatchingFields{
+					core.ShootRefName:      shoot.Name,
+					core.ShootRefNamespace: shoot.Namespace,
+				})).To(Succeed())
+				return controllerInstallationList.Items
+			}).Should(ConsistOf(
+				MatchFields(IgnoreExtras, Fields{"Spec": MatchFields(IgnoreExtras, Fields{"RegistrationRef": MatchFields(IgnoreExtras, Fields{"Name": Equal("provider-local")})})}),
+				MatchFields(IgnoreExtras, Fields{"Spec": MatchFields(IgnoreExtras, Fields{"RegistrationRef": MatchFields(IgnoreExtras, Fields{"Name": Equal("networking-calico")})})}),
+			))
 		}, SpecTimeout(time.Minute))
 	})
 })

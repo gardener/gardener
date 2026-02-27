@@ -25,15 +25,22 @@ func TestControllerInstallation(t *testing.T) {
 
 var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {
-		result := controllerinstallation.ToSelectableFields(newControllerInstallation())
+		controllerInstallation := newControllerInstallation()
+		controllerInstallation.Spec.ShootRef = &corev1.ObjectReference{Name: "abc", Namespace: "def"}
 
-		Expect(result).To(HaveLen(3))
+		result := controllerinstallation.ToSelectableFields(controllerInstallation)
+
+		Expect(result).To(HaveLen(5))
 		Expect(result.Has("metadata.name")).To(BeTrue())
 		Expect(result.Get("metadata.name")).To(Equal("test"))
 		Expect(result.Has(core.RegistrationRefName)).To(BeTrue())
 		Expect(result.Get(core.RegistrationRefName)).To(Equal("baz"))
 		Expect(result.Has(core.SeedRefName)).To(BeTrue())
 		Expect(result.Get(core.SeedRefName)).To(Equal("qux"))
+		Expect(result.Has(core.ShootRefName)).To(BeTrue())
+		Expect(result.Get(core.ShootRefName)).To(Equal("abc"))
+		Expect(result.Has(core.ShootRefNamespace)).To(BeTrue())
+		Expect(result.Get(core.ShootRefNamespace)).To(Equal("def"))
 	})
 })
 
@@ -74,6 +81,17 @@ var _ = Describe("#SeedRefNameIndexFunc", func() {
 	})
 })
 
+var _ = Describe("#ShootRefNameIndexFunc", func() {
+	It("should return the shoot name", func() {
+		controllerInstallation := newControllerInstallation()
+		controllerInstallation.Spec.ShootRef = controllerInstallation.Spec.SeedRef.DeepCopy()
+		controllerInstallation.Spec.SeedRef = nil
+		result, err := controllerinstallation.ShootRefNameIndexFunc(controllerInstallation)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(ConsistOf("qux"))
+	})
+})
+
 var _ = Describe("#RegistrationRefNameIndexFunc", func() {
 	It("should return the registration name", func() {
 		result, err := controllerinstallation.RegistrationRefNameIndexFunc(newControllerInstallation())
@@ -92,7 +110,7 @@ func newControllerInstallation() *core.ControllerInstallation {
 			RegistrationRef: corev1.ObjectReference{
 				Name: "baz",
 			},
-			SeedRef: corev1.ObjectReference{
+			SeedRef: &corev1.ObjectReference{
 				Name: "qux",
 			},
 		},

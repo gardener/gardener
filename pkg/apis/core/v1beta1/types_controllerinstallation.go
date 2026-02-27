@@ -46,7 +46,11 @@ type ControllerInstallationSpec struct {
 	// The name field of the RegistrationRef is immutable.
 	RegistrationRef corev1.ObjectReference `json:"registrationRef" protobuf:"bytes,1,opt,name=registrationRef"`
 	// SeedRef is used to reference a Seed resource. The name field of the SeedRef is immutable.
-	SeedRef corev1.ObjectReference `json:"seedRef" protobuf:"bytes,2,opt,name=seedRef"`
+	// +optional
+	SeedRef *corev1.ObjectReference `json:"seedRef,omitempty" protobuf:"bytes,2,opt,name=seedRef"`
+	// ShootRef is used to reference a Shoot resource. The name and namespace fields of the ShootRef are immutable.
+	// +optional
+	ShootRef *corev1.ObjectReference `json:"shootRef,omitempty" protobuf:"bytes,4,opt,name=shootRef"`
 	// DeploymentRef is used to reference a ControllerDeployment resource.
 	// +optional
 	DeploymentRef *corev1.ObjectReference `json:"deploymentRef,omitempty" protobuf:"bytes,3,opt,name=deploymentRef"`

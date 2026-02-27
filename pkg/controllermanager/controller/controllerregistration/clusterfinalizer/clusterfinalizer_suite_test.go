@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package seedfinalizer_test
+package clusterfinalizer_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestSeedFinalizer(t *testing.T) {
+func TestClusterFinalizer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager Controller ControllerRegistration SeedFinalizer Suite")
+	RunSpecs(t, "ControllerManager Controller ControllerRegistration ClusterFinalizer Suite")
 }

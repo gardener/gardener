@@ -62,6 +62,8 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 			AttrFunc:    controllerinstallation.GetAttrs,
 			Indexers: &cache.Indexers{
 				storage.FieldIndex(core.SeedRefName):         controllerinstallation.SeedRefNameIndexFunc,
+				storage.FieldIndex(core.ShootRefName):        controllerinstallation.ShootRefNameIndexFunc,
+				storage.FieldIndex(core.ShootRefNamespace):   controllerinstallation.ShootRefNamespaceIndexFunc,
 				storage.FieldIndex(core.RegistrationRefName): controllerinstallation.RegistrationRefNameIndexFunc,
 			},
 		}

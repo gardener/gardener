@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestControllerRegistrationSeed(t *testing.T) {
+func TestSeed(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager Controller ControllerRegistration Seed Suite")
+	RunSpecs(t, "ControllerManager Controller ControllerRegistration ControllerInstallation Seed Suite")
 }

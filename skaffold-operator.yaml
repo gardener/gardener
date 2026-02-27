@@ -667,10 +667,12 @@ build:
             - pkg/controllermanager/controller/cloudprofile
             - pkg/controllermanager/controller/controllerdeployment
             - pkg/controllermanager/controller/controllerregistration
+            - pkg/controllermanager/controller/controllerregistration/clusterfinalizer
+            - pkg/controllermanager/controller/controllerregistration/controllerinstallation
+            - pkg/controllermanager/controller/controllerregistration/controllerinstallation/seed
+            - pkg/controllermanager/controller/controllerregistration/controllerinstallation/shoot
             - pkg/controllermanager/controller/controllerregistration/controllerregistrationfinalizer
             - pkg/controllermanager/controller/controllerregistration/extensionclusterrole
-            - pkg/controllermanager/controller/controllerregistration/seed
-            - pkg/controllermanager/controller/controllerregistration/seedfinalizer
             - pkg/controllermanager/controller/credentialsbinding
             - pkg/controllermanager/controller/event
             - pkg/controllermanager/controller/exposureclass

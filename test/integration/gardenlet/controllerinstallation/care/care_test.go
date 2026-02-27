@@ -29,7 +29,7 @@ var _ = Describe("ControllerInstallation Care controller tests", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ControllerInstallationSpec{
-				SeedRef: corev1.ObjectReference{
+				SeedRef: &corev1.ObjectReference{
 					Name: "foo-seed",
 				},
 				RegistrationRef: corev1.ObjectReference{

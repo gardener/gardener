@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package seed_test
+package shoot_test
 
 import (
 	"context"
@@ -11,10 +11,10 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -33,19 +33,17 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
 
-func TestControllerRegistration(t *testing.T) {
+func TestShoot(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration ControllerManager ControllerRegistration Suite")
+	RunSpecs(t, "Test Integration ControllerManager ControllerRegistration ControllerInstallation Shoot Suite")
 }
 
 // testID is used for generating test namespace names and other IDs
-const testID = "controllerregistration-controller-test"
+const testID = "controllerinstallation-shoot-controller-test"
 
 var (
 	ctx = context.Background()
@@ -59,13 +57,9 @@ var (
 	testNamespace *corev1.Namespace
 	testRunID     string
 
-	providerType               = "provider"
-	seedName                   string
-	seed                       *gardencorev1beta1.Seed
-	seedNamespace              *corev1.Namespace
-	seedSecret                 *corev1.Secret
-	internalDomainSecret       *corev1.Secret
-	seedControllerRegistration *gardencorev1beta1.ControllerRegistration
+	providerType           = "provider"
+	shoot                  *gardencorev1beta1.Shoot
+	controllerRegistration *gardencorev1beta1.ControllerRegistration
 )
 
 var _ = BeforeSuite(func() {
@@ -130,11 +124,13 @@ var _ = BeforeSuite(func() {
 	mgrClient = mgr.GetClient()
 
 	By("Setup field indexes")
-	Expect(indexer.AddBackupBucketSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
-	Expect(indexer.AddBackupEntrySeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
-	Expect(indexer.AddShootSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
-	Expect(indexer.AddShootStatusSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+	Expect(indexer.AddBackupBucketShootRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+	Expect(indexer.AddBackupBucketShootRefNamespace(ctx, mgr.GetFieldIndexer())).To(Succeed())
+	Expect(indexer.AddBackupEntryShootRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+	Expect(indexer.AddBackupEntryShootRefNamespace(ctx, mgr.GetFieldIndexer())).To(Succeed())
 	Expect(indexer.AddControllerInstallationSeedRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+	Expect(indexer.AddControllerInstallationShootRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+	Expect(indexer.AddControllerInstallationShootRefNamespace(ctx, mgr.GetFieldIndexer())).To(Succeed())
 	Expect(indexer.AddControllerInstallationRegistrationRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 	By("Register controller")
@@ -159,163 +155,111 @@ var _ = BeforeSuite(func() {
 		mgrCancel()
 	})
 
-	seedControllerRegistration = &gardencorev1beta1.ControllerRegistration{
+	controllerRegistration = &gardencorev1beta1.ControllerRegistration{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "ctrlreg-seed-",
+			GenerateName: "ctrlreg-shoot-",
 			Labels:       map[string]string{testID: testRunID},
 		},
 		Spec: gardencorev1beta1.ControllerRegistrationSpec{
 			Resources: []gardencorev1beta1.ControllerResource{
-				{Kind: extensionsv1alpha1.DNSRecordResource, Type: providerType},
 				{Kind: extensionsv1alpha1.ControlPlaneResource, Type: providerType},
 				{Kind: extensionsv1alpha1.InfrastructureResource, Type: providerType},
 				{Kind: extensionsv1alpha1.WorkerResource, Type: providerType},
+				{Kind: extensionsv1alpha1.NetworkResource, Type: providerType},
+				{Kind: extensionsv1alpha1.ContainerRuntimeResource, Type: providerType},
+				{Kind: extensionsv1alpha1.DNSRecordResource, Type: providerType},
+				{Kind: extensionsv1alpha1.OperatingSystemConfigResource, Type: providerType},
+				{Kind: extensionsv1alpha1.ExtensionResource, Type: providerType},
 			},
 		},
 	}
 
 	By("Create ControllerRegistration")
-	Expect(testClient.Create(ctx, seedControllerRegistration)).To(Succeed())
-	log.Info("Created ControllerRegistration for seed", "controllerRegistration", client.ObjectKeyFromObject(seedControllerRegistration))
+	Expect(testClient.Create(ctx, controllerRegistration)).To(Succeed())
+	log.Info("Created ControllerRegistration for shoot", "controllerRegistration", client.ObjectKeyFromObject(controllerRegistration))
 
 	DeferCleanup(func() {
-		By("Delete seed ControllerRegistration")
-		Expect(testClient.Delete(ctx, seedControllerRegistration)).To(Or(Succeed(), BeNotFoundError()))
+		By("Delete ControllerRegistration")
+		Expect(testClient.Delete(ctx, controllerRegistration)).To(Or(Succeed(), BeNotFoundError()))
 
-		By("Wait until manager has observed controllerregistration deletion")
+		By("Wait until manager has observed ControllerRegistration deletion")
 		Eventually(func() error {
-			return mgrClient.Get(ctx, client.ObjectKeyFromObject(seedControllerRegistration), seedControllerRegistration)
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistration), controllerRegistration)
 		}).Should(BeNotFoundError())
 	})
 
-	seedName = "seed-ctrl-reg-test-" + utils.ComputeSHA256Hex([]byte(testID + uuid.NewUUID()))[:8]
-	seedNamespace = &corev1.Namespace{
+	shoot = &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: gardenerutils.ComputeGardenNamespace(seedName),
+			GenerateName: testID + "-",
+			Namespace:    testNamespace.Name,
+			Labels:       map[string]string{testID: testRunID},
+		},
+		Spec: gardencorev1beta1.ShootSpec{
+			CredentialsBindingName: ptr.To("my-provider-account"),
+			CloudProfile:           &gardencorev1beta1.CloudProfileReference{Kind: "CloudProfile", Name: "test-cloudprofile"},
+			Region:                 "foo-region",
+			Provider: gardencorev1beta1.Provider{
+				Type: providerType,
+				Workers: []gardencorev1beta1.Worker{{
+					Name:         "controlplane",
+					ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+					Minimum:      1,
+					Maximum:      1,
+					Machine: gardencorev1beta1.Machine{
+						Type:  "large",
+						Image: &gardencorev1beta1.ShootMachineImage{Name: providerType, Version: ptr.To("0.0.0")},
+					},
+					CRI: &gardencorev1beta1.CRI{
+						Name:              gardencorev1beta1.CRINameContainerD,
+						ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: providerType}},
+					},
+				}},
+			},
+			Kubernetes: gardencorev1beta1.Kubernetes{
+				Version: "1.31.1",
+			},
+			Networking: &gardencorev1beta1.Networking{
+				Type: &providerType,
+			},
+			Extensions: []gardencorev1beta1.Extension{{
+				Type: providerType,
+			}},
+			DNS: &gardencorev1beta1.DNS{
+				Providers: []gardencorev1beta1.DNSProvider{{
+					Type:           &providerType,
+					CredentialsRef: &autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"},
+				}},
+			},
 		},
 	}
 
-	seedSecret = &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "seed-secret",
-			Namespace: seedNamespace.Name,
-			Labels:    map[string]string{"gardener.cloud/role": "global-monitoring"},
-		},
-	}
-
-	internalDomainSecret = &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "internal-domain-secret",
-			Namespace: seedNamespace.Name,
-		},
-	}
-
-	By("Create Seed Namespace")
-	Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
-	log.Info("Created Seed Namespace for test", "namespace", client.ObjectKeyFromObject(seedNamespace))
-
-	By("Create Seed Secret")
-	Expect(testClient.Create(ctx, seedSecret)).To(Succeed())
-	log.Info("Created Seed Secret for test", "secret", client.ObjectKeyFromObject(seedSecret))
-
-	By("Create Internal Domain Secret")
-	Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
-	log.Info("Created Internal Domain Secret for test", "secret", client.ObjectKeyFromObject(internalDomainSecret))
+	By("Create Shoot")
+	Expect(testClient.Create(ctx, shoot)).To(Succeed())
+	log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 
 	DeferCleanup(func() {
-		By("Delete Internal Domain Secret")
-		Expect(testClient.Delete(ctx, internalDomainSecret)).To(Or(Succeed(), BeNotFoundError()))
+		By("Delete Shoot")
+		Expect(testClient.Delete(ctx, shoot)).To(Or(Succeed(), BeNotFoundError()))
 
-		By("Delete Seed Secret")
-		Expect(testClient.Delete(ctx, seedSecret)).To(Or(Succeed(), BeNotFoundError()))
-
-		By("Delete Seed Namespace")
-		Expect(testClient.Delete(ctx, seedNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
-
-	seed = &gardencorev1beta1.Seed{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   seedName,
-			Labels: map[string]string{testID: testRunID},
-		},
-		Spec: gardencorev1beta1.SeedSpec{
-			Provider: gardencorev1beta1.SeedProvider{
-				Region: "region",
-				Type:   providerType,
-			},
-			Ingress: &gardencorev1beta1.Ingress{
-				Domain: "seed.example.com",
-				Controller: gardencorev1beta1.IngressController{
-					Kind: "nginx",
-				},
-			},
-			DNS: gardencorev1beta1.SeedDNS{
-				Provider: &gardencorev1beta1.SeedDNSProvider{
-					Type: providerType,
-					CredentialsRef: &corev1.ObjectReference{
-						APIVersion: "v1",
-						Kind:       "Secret",
-						Name:       "some-secret",
-						Namespace:  "some-namespace",
-					},
-				},
-				Internal: &gardencorev1beta1.SeedDNSProviderConfig{
-					Type:   providerType,
-					Domain: "internal.example.com",
-					CredentialsRef: corev1.ObjectReference{
-						APIVersion: "v1",
-						Kind:       "Secret",
-						Name:       "internal-domain-secret",
-						Namespace:  seedNamespace.Name,
-					},
-				},
-			},
-			Settings: &gardencorev1beta1.SeedSettings{
-				Scheduling: &gardencorev1beta1.SeedSettingScheduling{Visible: true},
-			},
-			Networks: gardencorev1beta1.SeedNetworks{
-				Pods:     "10.0.0.0/16",
-				Services: "10.1.0.0/16",
-				Nodes:    ptr.To("10.2.0.0/16"),
-				ShootDefaults: &gardencorev1beta1.ShootNetworks{
-					Pods:     ptr.To("100.128.0.0/11"),
-					Services: ptr.To("100.72.0.0/13"),
-				},
-			},
-		},
-	}
-
-	By("Create Seed")
-	Expect(testClient.Create(ctx, seed)).To(Succeed())
-	log.Info("Created Seed for test", "seed", client.ObjectKeyFromObject(seed))
-
-	DeferCleanup(func() {
-		By("Delete Seed")
-		Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
-
-		By("Wait until manager has observed seed deletion")
+		By("Wait until manager has observed Shoot deletion")
 		Eventually(func() error {
-			return mgrClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 		}).Should(BeNotFoundError())
+
+		By("Expect ControllerInstallation to be deleted")
+		Eventually(func(g Gomega) []gardencorev1beta1.ControllerInstallation {
+			controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+			g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
+				core.RegistrationRefName: controllerRegistration.Name,
+				core.ShootRefName:        shoot.Name,
+				core.ShootRefNamespace:   shoot.Namespace,
+			})).To(Succeed())
+			return controllerInstallationList.Items
+		}).Should(BeEmpty())
 	})
 
 	Eventually(func(g Gomega) []string {
-		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-		return seed.Finalizers
+		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+		return shoot.Finalizers
 	}).Should(ConsistOf("core.gardener.cloud/controllerregistration"))
-})
-
-var _ = AfterSuite(func() {
-	By("Delete Seed")
-	Expect(testClient.Delete(ctx, seed)).To(Succeed())
-
-	By("Expect ControllerInstallation to be deleted")
-	Eventually(func(g Gomega) {
-		controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-		g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
-			core.RegistrationRefName: seedControllerRegistration.Name,
-			core.SeedRefName:         seed.Name,
-		})).To(Succeed())
-		g.Expect(controllerInstallationList.Items).To(BeEmpty())
-	}).Should(Succeed())
 })

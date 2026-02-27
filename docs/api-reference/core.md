@@ -720,7 +720,22 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>SeedRef is used to reference a Seed resource. The name field of the SeedRef is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>shootRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ShootRef is used to reference a Shoot resource. The name and namespace fields of the ShootRef are immutable.</p>
 </td>
 </tr>
 <tr>
@@ -4655,7 +4670,22 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>SeedRef is used to reference a Seed resource. The name field of the SeedRef is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>shootRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ShootRef is used to reference a Shoot resource. The name and namespace fields of the ShootRef are immutable.</p>
 </td>
 </tr>
 <tr>
