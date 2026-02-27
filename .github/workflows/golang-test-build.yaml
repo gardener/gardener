@@ -58,5 +58,5 @@ jobs:
       oci-repository: golang-test
       oci-platforms: linux/amd64,linux/arm64
       ocm-labels: ""
-      extra-tags: v${{ needs.prepare-metadata.outputs.date }}-${{ needs.prepare-metadata.outputs.short-sha }}-${{ matrix.images.version }}
+      extra-tags: v${{ needs.prepare-metadata.outputs.date }}-${{ needs.prepare-metadata.outputs.short-sha }}-${{ matrix.images.version }},latest-${{ matrix.images.version }}
       push: always
