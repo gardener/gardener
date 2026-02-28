@@ -13,6 +13,8 @@ import (
 	containerd "github.com/containerd/containerd/v2/client"
 	"github.com/containerd/containerd/v2/defaults"
 	"github.com/containerd/containerd/v2/pkg/namespaces"
+
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // Client defines the containerd client Interface exported for testing.
@@ -60,10 +62,5 @@ func versionGreaterThanEqual(ctx context.Context, client Client, s *semver.Versi
 		return false, err
 	}
 
-	v, err := semver.NewVersion(containerdVersion.Version)
-	if err != nil {
-		return false, err
-	}
-
-	return v.GreaterThanEqual(s), nil
+	return versionutils.CompareVersions(containerdVersion.Version, ">=", s.String())
 }
