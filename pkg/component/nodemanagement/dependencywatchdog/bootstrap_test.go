@@ -339,8 +339,6 @@ spec:
           name: metrics
           protocol: TCP
         resources:
-          limits:
-            memory: 512Mi
           requests:
             cpu: 200m
             memory: 256Mi
