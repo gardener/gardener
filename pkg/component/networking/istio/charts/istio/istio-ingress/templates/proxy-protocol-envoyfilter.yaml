@@ -57,7 +57,6 @@ spec:
             allow_requests_without_proxy_protocol: true
         per_connection_buffer_limit_bytes: 32768
 {{- end }}
-{{- if .Values.httpProxy.unifiedPort.enabled }}
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
@@ -75,7 +74,7 @@ spec:
     match:
       context: GATEWAY
       listener:
-        portNumber: {{ .Values.httpProxy.unifiedPort.port }}
+        portNumber: 8443
     patch:
       operation: MERGE
       value:
@@ -85,5 +84,4 @@ spec:
             '@type': type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol
             allow_requests_without_proxy_protocol: true
         per_connection_buffer_limit_bytes: 32768
-{{- end }}
 {{ end -}}

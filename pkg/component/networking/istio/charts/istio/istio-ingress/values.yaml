@@ -43,7 +43,3 @@ httpProxy:
     enabled: false
     header: Reversed-VPN
     port: 8132
-  unifiedPort:
-    enabled: false
-    header: X-Gardener-Destination
-    port: 8443

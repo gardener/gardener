@@ -90,11 +90,6 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 				"port":    vpnseedserver.GatewayPort,
 				"header":  "Reversed-VPN",
 			},
-			"unifiedPort": map[string]any{
-				"enabled": true,
-				"port":    vpnseedserver.HTTPProxyGatewayPort,
-				"header":  "X-Gardener-Destination",
-			},
 		}
 
 		values := map[string]any{
