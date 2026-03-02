@@ -222,9 +222,6 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 										corev1.ResourceCPU:    resource.MustParse("25m"),
 										corev1.ResourceMemory: resource.MustParse("25Mi"),
 									},
-									Limits: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("200Mi"),
-									},
 								},
 								SecurityContext: &corev1.SecurityContext{
 									AllowPrivilegeEscalation: ptr.To(false),

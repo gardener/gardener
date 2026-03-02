@@ -461,9 +461,6 @@ status:
 										Name:  "node-cache",
 										Image: values.Image,
 										Resources: corev1.ResourceRequirements{
-											Limits: corev1.ResourceList{
-												corev1.ResourceMemory: resource.MustParse("200Mi"),
-											},
 											Requests: corev1.ResourceList{
 												corev1.ResourceCPU:    resource.MustParse("25m"),
 												corev1.ResourceMemory: resource.MustParse("25Mi"),
