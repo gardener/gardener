@@ -174,7 +174,7 @@ var _ = Describe("ActuatorReconcile", func() {
 			err := deployMachineDeployments(ctx, log, seedClient, cluster, worker, &existingMachineDeployments, wantedMachineDeployments, true)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(testDeployment), &returnedDeployment)).To(Succeed())
-			Expect(returnedDeployment.Spec.Replicas).To(Equal(int32(wantedMachineDeployments[0].Minimum)))
+			Expect(returnedDeployment.Spec.Replicas).To(Equal(wantedMachineDeployments[0].Minimum))
 		})
 	})
 	Describe("#updateWorkerStatusInPlaceUpdateWorkerPoolHash", func() {
