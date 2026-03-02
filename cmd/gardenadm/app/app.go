@@ -38,6 +38,13 @@ func NewCommand() *cobra.Command {
 			// TODO(vitanovs): Clean up once VPAInPlaceUpdates gets promoted to GA.
 			// Disable the feature gate as there are no VPA components that manage VPA resources and
 			// there is no reason for the GRM webhook, introduced by the gate, to be deployed.
+			//
+			// Further more, upon invocation, the GRM's /webhooks/vpa-in-place-updates endpoint,
+			// introduced by the webhook, fails to verify the request certificate with the following error message:
+			//
+			// "x509: certificate is valid for machine-0, not gardener-resource-manager.kube-system.svc"
+			//
+			// indicating that the gardenadm's initialization flow introduces a side effect when redeplying the GRM.
 			utilruntime.Must(features.DefaultFeatureGate.Set("VPAInPlaceUpdates=false"))
 
 			if err := opts.Validate(); err != nil {
