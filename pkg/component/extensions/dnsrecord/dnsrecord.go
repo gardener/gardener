@@ -109,12 +109,7 @@ func New(
 		waitTimeout:         waitTimeout,
 		deployCredentials:   deployCredentials,
 
-		dnsRecord: &extensionsv1alpha1.DNSRecord{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      values.Name,
-				Namespace: values.Namespace,
-			},
-		},
+		dnsRecord: newDNSRecord(values),
 		secret: &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      values.SecretName,
@@ -187,12 +182,26 @@ func (d *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 		return nil
 	}
 
-	if d.values.ReconcileOnlyOnChangeOrError {
-		if err := d.client.Get(ctx, client.ObjectKeyFromObject(d.dnsRecord), d.dnsRecord); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return nil, err
-			}
+	var create bool
+	if err := d.client.Get(ctx, client.ObjectKeyFromObject(d.dnsRecord), d.dnsRecord); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return nil, err
+		}
+		create = true
+	}
 
+	// if the DNSRecord does not exist yet, we don't need to recreate
+	if !create && d.recordTypeChanged(d.dnsRecord.Spec.RecordType, d.values.RecordType) {
+		if err := component.OpDestroyAndWait(d).Destroy(ctx); err != nil {
+			return nil, err
+		}
+		// set dnsRecord to be "unpopulated" so that we don't issue create request with a set resourceVersion
+		d.dnsRecord = newDNSRecord(d.values)
+		create = true
+	}
+
+	if d.values.ReconcileOnlyOnChangeOrError {
+		if create {
 			// DNSRecord doesn't exist yet, create it.
 			_ = mutateFn()
 			if err := d.client.Create(ctx, d.dnsRecord); err != nil {
@@ -357,6 +366,19 @@ func (d *dnsRecord) isTimestampInvalidOrAfterLastUpdateTime() bool {
 	}
 
 	return false
+}
+
+func (d *dnsRecord) recordTypeChanged(old, new extensionsv1alpha1.DNSRecordType) bool {
+	return old != new
+}
+
+func newDNSRecord(values *Values) *extensionsv1alpha1.DNSRecord {
+	return &extensionsv1alpha1.DNSRecord{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      values.Name,
+			Namespace: values.Namespace,
+		},
+	}
 }
 
 // DeploySecretCredentials returns a [CredentialsDeployFunc] that deploys the given secret data into a Secret.

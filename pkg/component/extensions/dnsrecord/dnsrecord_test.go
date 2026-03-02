@@ -45,6 +45,7 @@ const (
 	zone                = "zone"
 	dnsName             = "foo.bar.external.example.com"
 	address             = "1.2.3.4"
+	addressIP6          = "2001:db8::1"
 	ttl           int64 = 300
 )
 
@@ -342,6 +343,33 @@ var _ = Describe("DNSRecord", func() {
 			}))
 		})
 
+		It("should recreate the DNSRecord", func(ctx context.Context) {
+			By("Deploy DNSRecord")
+			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout, credentialsDeployFunc)
+			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+			By("Verify DNSRecord")
+			deployedDNS := &extensionsv1alpha1.DNSRecord{}
+			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
+			oldResourceVersion := deployedDNS.ResourceVersion
+			Expect(err).NotTo(HaveOccurred())
+			Expect(deployedDNS.Spec.RecordType).To(Equal(values.RecordType))
+
+			By("Change DNSRecordType to AAAA")
+			dnsRecord.SetRecordType(extensionsv1alpha1.DNSRecordTypeAAAA)
+			dnsRecord.SetValues([]string{addressIP6})
+			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+			By("Verify DNSRecord got recreated")
+			err = c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
+			Expect(err).NotTo(HaveOccurred())
+			// check that we didn't do an update but rather a recreation.
+			// Unfortunately the UID field is not populated by fake client
+			Expect(deployedDNS.ResourceVersion).To(Equal(oldResourceVersion))
+			Expect(deployedDNS.Spec.RecordType).To(Equal(extensionsv1alpha1.DNSRecordTypeAAAA))
+			Expect(deployedDNS.Spec.Values).To(ContainElement(addressIP6))
+		})
+
 		It("should deploy the DNSRecord without operation annotation if it exists with desired spec", func() {
 			By("Create existing DNSRecord")
 			existingDNS := dns.DeepCopy()
@@ -551,8 +579,10 @@ var _ = Describe("DNSRecord", func() {
 					Expect(actual).To(DeepEqual(secret))
 					return nil
 				})
+			//  get should be called twice as its first used to decide whether we need to recreate
 			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(dns), gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{})).
-				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("dnsrecords"), name))
+				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("dnsrecords"), name)).MaxTimes(2)
+
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(dns)).DoAndReturn(
 				func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(dns))
@@ -660,7 +690,6 @@ var _ = Describe("DNSRecord", func() {
 				Entry("zone is nil", func() { values.Zone = nil }, func() { expectedDNSRecord.Spec.Zone = nil }),
 			)
 		})
-
 	})
 
 	Describe("#Wait", func() {
@@ -854,8 +883,10 @@ var _ = Describe("DNSRecord", func() {
 				})
 
 			metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationWaitForState)
+
+			//  get should be called twice as its first used to decide whether we need to recreate
 			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(dns), gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{})).
-				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("dnsrecords"), name))
+				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("dnsrecords"), name)).MaxTimes(2)
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(dns)).DoAndReturn(
 				func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(dns))
