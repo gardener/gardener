@@ -320,6 +320,13 @@ var _ = Describe("ExtensionValidator", func() {
 									Name: "foo5",
 								},
 							},
+							ControlPlane: &core.WorkerControlPlane{
+								Exposure: &core.Exposure{
+									Extension: &core.ExtensionExposure{
+										Type: ptr.To("foo-exposure"),
+									},
+								},
+							},
 						},
 						{
 							CRI: &core.CRI{Name: "cri",
@@ -351,6 +358,7 @@ var _ = Describe("ExtensionValidator", func() {
 				{extensionsv1alpha1.WorkerResource, shoot.Spec.Provider.Type, nil},
 				{extensionsv1alpha1.ContainerRuntimeResource, shoot.Spec.Provider.Workers[1].CRI.ContainerRuntimes[0].Type, nil},
 				{extensionsv1alpha1.ContainerRuntimeResource, shoot.Spec.Provider.Workers[1].CRI.ContainerRuntimes[1].Type, nil},
+				{extensionsv1alpha1.SelfHostedShootExposureResource, *shoot.Spec.Provider.Workers[0].ControlPlane.Exposure.Extension.Type, nil},
 			}
 			registerAllExtensions = func() {
 				for _, registration := range kindToTypes {

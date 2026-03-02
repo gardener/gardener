@@ -109,6 +109,7 @@ var _ = Describe("ShootState", func() {
 				createExtensionObject(ctx, fakeSeedClient, "infrastructure", seedNamespace, &extensionsv1alpha1.Infrastructure{}, &runtime.RawExtension{Raw: []byte(`{"name":"infrastructure"}`)})
 				createExtensionObject(ctx, fakeSeedClient, "network", seedNamespace, &extensionsv1alpha1.Network{}, &runtime.RawExtension{Raw: []byte(`{"name":"network"}`)})
 				createExtensionObject(ctx, fakeSeedClient, "osc", seedNamespace, &extensionsv1alpha1.OperatingSystemConfig{}, &runtime.RawExtension{Raw: []byte(`{"name":"osc"}`)})
+				createExtensionObject(ctx, fakeSeedClient, "selfhostedshootexposure", seedNamespace, &extensionsv1alpha1.SelfHostedShootExposure{}, &runtime.RawExtension{Raw: []byte(`{"name":"selfhostedshootexposure"}`)})
 				createExtensionObject(ctx, fakeSeedClient, "worker", seedNamespace, &extensionsv1alpha1.Worker{}, &runtime.RawExtension{Raw: []byte(`{"name":"worker"}`)})
 				// this extension object has no state, hence it should not be persisted in the ShootState
 				createExtensionObject(ctx, fakeSeedClient, "osc2", seedNamespace, &extensionsv1alpha1.OperatingSystemConfig{}, nil)
@@ -185,6 +186,11 @@ var _ = Describe("ShootState", func() {
 							Name:    ptr.To("osc"),
 							Purpose: ptr.To(""),
 							State:   &runtime.RawExtension{Raw: []byte(`{"name":"osc"}`)},
+						},
+						{
+							Kind:  "SelfHostedShootExposure",
+							Name:  ptr.To("selfhostedshootexposure"),
+							State: &runtime.RawExtension{Raw: []byte(`{"name":"selfhostedshootexposure"}`)},
 						},
 						{
 							Kind:  "Worker",

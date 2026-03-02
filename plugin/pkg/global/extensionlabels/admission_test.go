@@ -476,6 +476,23 @@ var _ = Describe("ExtensionLabels tests", func() {
 			Expect(newShoot.ObjectMeta.Labels).To(Equal(expectedLabels))
 		})
 
+		It("should add the correct label for self-hosted shoot exposure", func() {
+			shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
+				Exposure: &core.Exposure{
+					Extension: &core.ExtensionExposure{
+						Type: &providerType,
+					},
+				},
+			}
+
+			attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("Shoot").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(shoot.ObjectMeta.Labels).To(HaveKeyWithValue("selfhostedshootexposure.extensions.gardener.cloud/"+providerType, "true"))
+		})
+
 		Context("Workerless Shoot", func() {
 			BeforeEach(func() {
 				shoot = &core.Shoot{

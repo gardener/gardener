@@ -17,18 +17,19 @@ import (
 )
 
 type (
-	backupBucketValidator          struct{}
-	backupEntryValidator           struct{}
-	bastionValidator               struct{}
-	containerRuntimeValidator      struct{}
-	controlPlaneValidator          struct{}
-	dnsRecordValidator             struct{}
-	etcdValidator                  struct{}
-	extensionValidator             struct{}
-	infrastructureValidator        struct{}
-	networkValidator               struct{}
-	operatingSystemConfigValidator struct{}
-	workerValidator                struct{}
+	backupBucketValidator            struct{}
+	backupEntryValidator             struct{}
+	bastionValidator                 struct{}
+	containerRuntimeValidator        struct{}
+	controlPlaneValidator            struct{}
+	dnsRecordValidator               struct{}
+	etcdValidator                    struct{}
+	extensionValidator               struct{}
+	infrastructureValidator          struct{}
+	networkValidator                 struct{}
+	operatingSystemConfigValidator   struct{}
+	selfHostedShootExposureValidator struct{}
+	workerValidator                  struct{}
 )
 
 func (backupBucketValidator) ValidateCreate(_ context.Context, obj *extensionsv1alpha1.BackupBucket) (admission.Warnings, error) {
@@ -190,6 +191,24 @@ func (infrastructureValidator) ValidateUpdate(_ context.Context, oldObj, newObj 
 }
 
 func (infrastructureValidator) ValidateDelete(_ context.Context, _ *extensionsv1alpha1.Infrastructure) (admission.Warnings, error) {
+	return nil, nil
+}
+
+func (selfHostedShootExposureValidator) ValidateCreate(_ context.Context, obj *extensionsv1alpha1.SelfHostedShootExposure) (admission.Warnings, error) {
+	if errs := validation.ValidateSelfHostedShootExposure(obj); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.SelfHostedShootExposureResource), obj.GetName(), errs)
+	}
+	return nil, nil
+}
+
+func (selfHostedShootExposureValidator) ValidateUpdate(_ context.Context, oldObj, newObj *extensionsv1alpha1.SelfHostedShootExposure) (admission.Warnings, error) {
+	if errs := validation.ValidateSelfHostedShootExposureUpdate(newObj, oldObj); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.SelfHostedShootExposureResource), newObj.GetName(), errs)
+	}
+	return nil, nil
+}
+
+func (selfHostedShootExposureValidator) ValidateDelete(_ context.Context, _ *extensionsv1alpha1.SelfHostedShootExposure) (admission.Warnings, error) {
 	return nil, nil
 }
 

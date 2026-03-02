@@ -59,6 +59,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&OperatingSystemConfigList{},
 		&Worker{},
 		&WorkerList{},
+		&SelfHostedShootExposure{},
+		&SelfHostedShootExposureList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 

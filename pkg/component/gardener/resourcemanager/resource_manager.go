@@ -1436,6 +1436,7 @@ func NewCRDDeletionProtectionValidatingWebhooks(secretServerCA *corev1.Secret, b
 							"infrastructures",
 							"networks",
 							"operatingsystemconfigs",
+							"selfhostedshootexposures",
 							"workers",
 						},
 					},
@@ -1561,6 +1562,15 @@ func NewExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 				Resources:   []string{"operatingsystemconfigs"},
 			},
 			path: extensionvalidation.WebhookPathOperatingSystemConfig,
+		},
+		{
+			resource: "selfhostedshootexposures",
+			rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+				Resources:   []string{"selfhostedshootexposures"},
+			},
+			path: extensionvalidation.WebhookPathSelfHostedShootExposure,
 		},
 		{
 			resource: "workers",
