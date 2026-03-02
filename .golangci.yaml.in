@@ -4,6 +4,7 @@ run:
 linters:
   enable:
     - embeddedstructfieldcheck
+    - exptostd
     - ginkgolinter
     - importas
     - logcheck
@@ -12,6 +13,7 @@ linters:
     - revive
     - unconvert
     - unparam
+    - usestdlibvars
     - whitespace
   settings:
     embeddedstructfieldcheck:
