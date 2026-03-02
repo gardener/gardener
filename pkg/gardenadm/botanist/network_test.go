@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Network", func() {
@@ -115,16 +116,69 @@ var _ = Describe("Network", func() {
 	})
 
 	Describe("#MachineIP", func() {
-		It("should return the IP address for a resolvable hostname", func() {
-			b.HostName = "localhost"
+		var ipv4, ipv6 net.IP
+
+		BeforeEach(func() {
+			ipv4 = net.ParseIP("1.2.3.4").To4()
+			ipv6 = net.ParseIP("::1")
+			b.HostName = "some-host"
+		})
+
+		It("should return an IPv4 address when IPv4 is the primary IP family", func() {
+			b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
+					},
+				},
+			})
+			DeferCleanup(test.WithVar(&LookupIP, func(_ string) ([]net.IP, error) {
+				return []net.IP{ipv6, ipv4}, nil
+			}))
 
 			ip, err := b.MachineIP()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(ip).NotTo(BeNil())
+			Expect(ip.To4()).NotTo(BeNil(), "expected an IPv4 address")
+		})
+
+		It("should return an IPv6 address when IPv6 is the primary IP family", func() {
+			b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6},
+					},
+				},
+			})
+			DeferCleanup(test.WithVar(&LookupIP, func(_ string) ([]net.IP, error) {
+				return []net.IP{ipv4, ipv6}, nil
+			}))
+
+			ip, err := b.MachineIP()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ip.To4()).To(BeNil(), "expected an IPv6 address")
+		})
+
+		It("should fall back to any available address when no address of the preferred family is found", func() {
+			b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6},
+					},
+				},
+			})
+			DeferCleanup(test.WithVar(&LookupIP, func(_ string) ([]net.IP, error) {
+				return []net.IP{ipv4}, nil
+			}))
+
+			ip, err := b.MachineIP()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ip.Equal(ipv4)).To(BeTrue())
 		})
 
 		It("should return an error when no IP address is found", func() {
-			b.HostName = "this-hostname-does-not-exist.invalid"
+			DeferCleanup(test.WithVar(&LookupIP, func(_ string) ([]net.IP, error) {
+				return nil, nil
+			}))
 
 			ip, err := b.MachineIP()
 			Expect(err).To(MatchError("no IP address found for node"))

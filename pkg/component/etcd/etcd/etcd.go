@@ -106,7 +106,7 @@ type Interface interface {
 	GetReplicas() *int32
 	// SetReplicas sets the Replicas field in the Values.
 	SetReplicas(*int32)
-	// SetStaticPodControlPlaneNodesIPAddresses sets the IP addresses of the control plane nodes when etcd is ran as
+	// SetStaticPodControlPlaneNodesIPAddresses sets the IP addresses of all control plane nodes when etcd is run as
 	// static pod.
 	SetStaticPodControlPlaneNodesIPAddresses(...net.IP)
 }
@@ -164,7 +164,7 @@ type Values struct {
 	PriorityClassName           string
 	HighAvailabilityEnabled     bool
 	TopologyAwareRoutingEnabled bool
-	StaticPod                   *StaticPodConfig
+	StaticPodConfig             *StaticPodConfig
 }
 
 // BackupConfig contains information for configuring the backup-restore sidecar so that it takes regularly backups of
@@ -241,22 +241,22 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 		metrics = druidcorev1alpha1.Extensive
 
-		if e.values.StaticPod == nil {
+		if e.values.StaticPodConfig == nil {
 			volumeClaimTemplate = e.values.Role + "-" + strings.TrimSuffix(e.etcd.Name, "-"+e.values.Role)
 		}
 	}
 
 	var controlPlaneNodeIP net.IP
-	if e.values.StaticPod != nil && len(e.values.StaticPod.ControlPlaneNodesIPAddresses) > 0 {
+	if e.values.StaticPodConfig != nil && len(e.values.StaticPodConfig.ControlPlaneNodesIPAddresses) > 0 {
 		// TODO(rfranzke): Handle multiple control plane nodes later on as part of GEP-28.
-		controlPlaneNodeIP = e.values.StaticPod.ControlPlaneNodesIPAddresses[0]
+		controlPlaneNodeIP = e.values.StaticPodConfig.ControlPlaneNodesIPAddresses[0]
 	}
 
 	etcdCASecret, serverSecret, clientSecret, err := GenerateServerAndClientCertificates(
 		ctx,
 		e.secretsManager,
 		e.values.Role,
-		ClientServiceDNSNames(e.etcd.Name, e.namespace, e.values.StaticPod != nil),
+		ClientServiceDNSNames(e.etcd.Name, e.namespace, e.values.StaticPodConfig != nil),
 		controlPlaneNodeIP,
 	)
 	if err != nil {
@@ -435,7 +435,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			}
 		}
 
-		if e.values.StaticPod != nil {
+		if e.values.StaticPodConfig != nil {
 			e.etcd.Spec.RunAsRoot = ptr.To(true)
 			metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, druidcorev1alpha1.DisableEtcdRuntimeComponentCreationAnnotation, "")
 		}
@@ -967,8 +967,8 @@ func (e *etcd) GetReplicas() *int32 { return e.values.Replicas }
 func (e *etcd) SetReplicas(replicas *int32) { e.values.Replicas = replicas }
 
 func (e *etcd) SetStaticPodControlPlaneNodesIPAddresses(ips ...net.IP) {
-	if e.values.StaticPod != nil {
-		e.values.StaticPod.ControlPlaneNodesIPAddresses = append(e.values.StaticPod.ControlPlaneNodesIPAddresses, ips...)
+	if e.values.StaticPodConfig != nil {
+		e.values.StaticPodConfig.ControlPlaneNodesIPAddresses = ips
 	}
 }
 
@@ -1062,7 +1062,7 @@ func (e *etcd) computeFullSnapshotSchedule(existingEtcd *druidcorev1alpha1.Etcd)
 }
 
 func (e *etcd) defaultPortOrEtcdEventsStaticPodPort(defaultPort, etcdEventsPortWhenRunningAsStaticPod int32) int32 {
-	if e.values.Role == v1beta1constants.ETCDRoleMain || e.values.StaticPod == nil {
+	if e.values.Role == v1beta1constants.ETCDRoleMain || e.values.StaticPodConfig == nil {
 		return defaultPort
 	}
 	return etcdEventsPortWhenRunningAsStaticPod

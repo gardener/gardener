@@ -757,7 +757,7 @@ var _ = Describe("Etcd", func() {
 			MaintenanceTimeWindow:   maintenanceTimeWindow,
 			HighAvailabilityEnabled: highAvailabilityEnabled,
 			BackupConfig:            backupConfig,
-			StaticPod:               staticPodConfig,
+			StaticPodConfig:         staticPodConfig,
 		})
 	})
 

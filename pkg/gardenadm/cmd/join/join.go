@@ -402,12 +402,15 @@ type etcdRoleToTLSSecrets map[string]etcdTLSSecrets
 
 func (e etcdRoleToTLSSecrets) writeToDisk(fs afero.Afero) error {
 	for role, tlsSecrets := range e {
-		dir := staticpodtranslator.HostPath(etcd.Name(role), etcdconstants.VolumeNameServerTLS)
-		if err := fs.MkdirAll(dir, os.ModeDir); err != nil {
-			return fmt.Errorf("failed creating directory %s: %w", dir, err)
-		}
+		for volumeName, secret := range map[string]*corev1.Secret{
+			etcdconstants.VolumeNameServerTLS: tlsSecrets.server,
+			etcdconstants.VolumeNamePeerTLS:   tlsSecrets.peer,
+		} {
+			dir := staticpodtranslator.HostPath(etcd.Name(role), volumeName)
+			if err := fs.MkdirAll(dir, os.ModeDir); err != nil {
+				return fmt.Errorf("failed creating directory %s: %w", dir, err)
+			}
 
-		for _, secret := range []*corev1.Secret{tlsSecrets.server, tlsSecrets.peer} {
 			for key, value := range secret.Data {
 				path := filepath.Join(dir, key)
 				if err := fs.WriteFile(path, value, 0640); err != nil {

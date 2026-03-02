@@ -67,7 +67,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 	}
 
 	if b.Shoot.RunsControlPlane() {
-		values.StaticPod = &etcd.StaticPodConfig{}
+		values.StaticPodConfig = &etcd.StaticPodConfig{}
 	}
 
 	return NewEtcd(b.Logger, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.SecretsManager, values), nil
