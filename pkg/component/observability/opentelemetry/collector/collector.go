@@ -23,6 +23,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	victorialogsconstants "github.com/gardener/gardener/pkg/component/observability/logging/victorialogs/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
@@ -603,6 +604,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 			},
 		}
 
+		obj.Labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port)] = v1beta1constants.LabelNetworkPolicyAllowed
 		obj.Spec.Volumes = []corev1.Volume{gardenerutils.GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, "kubeconfig")}
 		obj.Spec.AdditionalContainers[0].VolumeMounts = []corev1.VolumeMount{gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)}
 		obj.Spec.AdditionalContainers[1].VolumeMounts = []corev1.VolumeMount{gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)}
@@ -757,7 +759,6 @@ func getLabels() map[string]string {
 		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort):                         v1beta1constants.LabelNetworkPolicyAllowed,
 		gardenerutils.NetworkPolicyLabel(victorialogsconstants.ServiceName, victorialogsconstants.VictoriaLogsPort): v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToDNS:                                                                    v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                                                       v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelObservabilityApplication:                                                              "opentelemetry-collector",
 	}
 }

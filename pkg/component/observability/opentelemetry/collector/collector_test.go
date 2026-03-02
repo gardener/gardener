@@ -26,6 +26,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	. "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
@@ -604,6 +605,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			openTelemetryCollector.Spec.Ports = append(openTelemetryCollector.Spec.Ports, otelv1beta1.PortsSpec{
 				ServicePort: kubeRBACOTLPServicePort,
 			})
+			openTelemetryCollector.Labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port)] = v1beta1constants.LabelNetworkPolicyAllowed
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
 				getIngress(),
@@ -928,7 +930,6 @@ func getLabels() map[string]string {
 		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
 		gardenerutils.NetworkPolicyLabel("logging-vl", 9428):                                v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToDNS:                                            v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                               v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelObservabilityApplication:                                      "opentelemetry-collector",
 	}
 }
