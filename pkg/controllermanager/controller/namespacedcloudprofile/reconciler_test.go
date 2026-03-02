@@ -863,7 +863,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfile.Name, Namespace: namespaceName}})
 				Expect(err).ToNot(HaveOccurred())
 
-				// Expect that the NamepacedCloudProfile Status is as expected.
+				// Expect that the NamespacedCloudProfile Status is as expected.
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
 				Expect(namespacedCloudProfile.Status.CloudProfileSpec.MachineImages).To(Equal(namespacedCloudProfile.Spec.MachineImages))
 			})
