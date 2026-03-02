@@ -6,6 +6,7 @@ linters:
     - embeddedstructfieldcheck
     - exptostd
     - ginkgolinter
+    - gocritic
     - importas
     - logcheck
     - misspell
@@ -19,6 +20,19 @@ linters:
     embeddedstructfieldcheck:
       # Checks that sync.Mutex and sync.RWMutex are not used as embedded fields.
       forbid-mutex: true
+    gocritic:
+      disable-all: true
+      enabled-checks:
+      - badSorting
+      - captLocal
+      - commentedOutCode
+      - commentedOutImport
+      - deprecatedComment
+      - dupArg
+      - dupBranchBody
+      - dupCase
+      - emptyDecl
+      - yodaStyleExpr
     importas:
       alias:
         # External imported packages
