@@ -260,6 +260,7 @@ spec:
   #       memory: 3Gi
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
+  #   nodeCIDRMaskSizeIPv6: 80
   #   podEvictionTimeout: 2m0s # This field is no-op and is forbidden to be set starting from Kubernetes 1.33
   #   nodeMonitorGracePeriod: 40s
   #   featureGates:

@@ -3703,7 +3703,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSizeIPv6"),
-						"Detail": ContainSubstring("nodeCIDRMaskSizeIPv6 must be between 64 and 128"),
+						"Detail": ContainSubstring("nodeCIDRMaskSizeIPv6 must be between 64 and 124"),
 					}))))
 				})
 
@@ -3714,7 +3714,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSizeIPv6"),
-						"Detail": ContainSubstring("nodeCIDRMaskSizeIPv6 must be between 64 and 128"),
+						"Detail": ContainSubstring("nodeCIDRMaskSizeIPv6 must be between 64 and 124"),
 					}))))
 				})
 
@@ -3751,7 +3751,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-							"Detail": ContainSubstring("nodeCIDRMaskSize must be between 64 and 128"),
+							"Detail": ContainSubstring("nodeCIDRMaskSize must be between 64 and 124"),
 						})),
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeForbidden),
