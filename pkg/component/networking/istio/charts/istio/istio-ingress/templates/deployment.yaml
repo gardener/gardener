@@ -83,8 +83,6 @@ spec:
             requests:
               cpu: {{ .Values.cpuRequests }}
               memory: 600Mi
-            limits:
-              memory: 4800Mi
           env:
           - name: PILOT_CERT_PROVIDER
             value: istiod
