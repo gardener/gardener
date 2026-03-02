@@ -30,7 +30,7 @@ vpa-in-place-updates.resources.gardener.cloud/skip
 
 ### gardenlet
 
-> With Gardener [v1.137](https://github.com/gardener/gardener/releases/tag/v1.137.0), the `VPAInPlaceUpdates` feature gate got promoted to `Beta` and is now __enabled by default__.
+> With Gardener [v1.138](https://github.com/gardener/gardener/releases/tag/v1.138.0), the `VPAInPlaceUpdates` feature gate got promoted to `Beta` and is now __enabled by default__.
 
 To enable the _mutating_ [resource manager](../concepts/resource-manager.md) webhook, the `VPAInPlaceUpdates` feature gate must be set to `true`:
 
@@ -55,7 +55,7 @@ To make use of the _mutating_ resource manager webhook, the `Seed`'s [Vertical P
 
 ### Gardener Operator
 
-> With Gardener [v1.137](https://github.com/gardener/gardener/releases/tag/v1.137.0), the `VPAInPlaceUpdates` feature gate got promoted to `Beta` and is now __enabled by default__.
+> With Gardener [v1.138](https://github.com/gardener/gardener/releases/tag/v1.138.0), the `VPAInPlaceUpdates` feature gate got promoted to `Beta` and is now __enabled by default__.
 
 To enable the _mutating_ [resource manager](../concepts/resource-manager.md) webhook, the `VPAInPlaceUpdates` feature gate must be set to `true`:
 

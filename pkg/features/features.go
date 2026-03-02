@@ -87,7 +87,7 @@ const (
 	// to perform in-place Pod resource updates.
 	// owner: @vitanovs @ialidzhikov
 	// alpha: v1.133.0
-	// beta: v1.137.0
+	// beta: v1.138.0
 	VPAInPlaceUpdates featuregate.Feature = "VPAInPlaceUpdates"
 
 	// CustomDNSServerInNodeLocalDNS enables custom server block support for NodeLocalDNS in the custom CoreDNS configuration of Shoot clusters.
