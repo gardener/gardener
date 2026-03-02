@@ -480,6 +480,10 @@ type Gardener struct {
 	// +optional
 	Dashboard *GardenerDashboardConfig `json:"gardenerDashboard,omitempty"`
 	// DiscoveryServer contains configuration settings for the gardener-discovery-server.
+	// Once enabled, the gardener-discovery-server deployment cannot be removed and its domain cannot be changed.
+	// Otherwise, workload identity and/or shoot service account tokens referencing the gardener-discovery-server in the
+	// issuer URL might become unusable.
+	// This field is optional, but once set, it cannot be removed anymore.
 	// +optional
 	DiscoveryServer *GardenerDiscoveryServerConfig `json:"gardenerDiscoveryServer,omitempty"`
 	// ResourceManager contains configuration settings for the gardener-resource-manager.
@@ -744,6 +748,7 @@ type DashboardIngress struct {
 // GardenerDiscoveryServerConfig contains configuration settings for the gardener-discovery-server.
 type GardenerDiscoveryServerConfig struct {
 	// Domain overrides the default ingress domain and optionally the DNS provider for the gardener-discovery-server.
+	// This field is optional, but once the gardener-discovery-server is enabled, its domain cannot be changed anymore.
 	// Defaults to "discovery.<first-runtime-ingress-domain>".
 	// +optional
 	Domain *DNSDomain `json:"domain,omitempty"`

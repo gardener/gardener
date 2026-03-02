@@ -189,15 +189,20 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 	}
 
 	// Discovery server cannot be disabled once enabled, and its domain is immutable.
-	// Disabling it or changing the domain would invalidate all workload identity tokens that reference the issuer URL.
 	discoveryServerPath := fldPath.Child("gardener", "gardenerDiscoveryServer")
 	if oldVirtualCluster.Gardener.DiscoveryServer != nil && newVirtualCluster.Gardener.DiscoveryServer == nil {
-		allErrs = append(allErrs, field.Forbidden(discoveryServerPath, "discovery server must not be disabled once enabled (workload identity tokens might have been issued)"))
+		allErrs = append(allErrs, field.Forbidden(discoveryServerPath, "discovery server must not be disabled once enabled"))
 	}
-	if oldVirtualCluster.Gardener.DiscoveryServer != nil && newVirtualCluster.Gardener.DiscoveryServer != nil {
+	if oldVirtualCluster.Gardener.DiscoveryServer != nil && newVirtualCluster.Gardener.DiscoveryServer != nil &&
+		(oldVirtualCluster.Gardener.DiscoveryServer.Domain != nil || newVirtualCluster.Gardener.DiscoveryServer.Domain != nil) {
+		// If the discovery server domain is not configured explicitly, it is derived from the first ingress domain, which
+		// is already checked for immutability. So we only need to check the immutability when at least one of the old and
+		// new discovery server domain is explicitly set. This is done to avoid confusing validation errors when the
+		// discovery server domain is derived from the ingress domain, and the user tries to change the first ingress domain
+		// which causes the discovery server domain to change as well.
 		oldDomain := helper.DiscoveryServerDomain(oldGarden)
 		newDomain := helper.DiscoveryServerDomain(newGarden)
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldDomain, newDomain, discoveryServerPath.Child("domain"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newDomain, oldDomain, discoveryServerPath.Child("domain"))...)
 	}
 
 	allErrs = append(allErrs, gardencorevalidation.ValidateKubernetesVersionUpdate(newVirtualCluster.Kubernetes.Version, oldVirtualCluster.Kubernetes.Version, false, fldPath.Child("kubernetes", "version"))...)
