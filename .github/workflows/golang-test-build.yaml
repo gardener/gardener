@@ -19,6 +19,8 @@ jobs:
     outputs:
       date: ${{ steps.date.outputs.date }}
       short-sha: ${{ steps.short-sha.outputs.short-sha }}
+    permissions:
+      contents: read
     steps:
       - name: Generate date
         id: date
@@ -30,6 +32,8 @@ jobs:
   generate-matrix:
     name: Generate Matrix
     if: ${{ github.repository == 'gardener/gardener' }}
+    permissions:
+      contents: read
     uses: ./.github/workflows/golang-test-images.yaml
 
   oci-images:
