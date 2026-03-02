@@ -2022,7 +2022,11 @@ GardenerDiscoveryServerConfig
 </td>
 <td>
 <em>(Optional)</em>
-<p>DiscoveryServer contains configuration settings for the gardener-discovery-server.</p>
+<p>DiscoveryServer contains configuration settings for the gardener-discovery-server.
+Once enabled, the gardener-discovery-server deployment cannot be removed and its domain cannot be changed.
+Otherwise, workload identity and/or shoot service account tokens referencing the gardener-discovery-server in the
+issuer URL might become unusable.
+This field is optional, but once set, it cannot be removed anymore.</p>
 </td>
 </tr>
 <tr>
@@ -2463,6 +2467,7 @@ DNSDomain
 <td>
 <em>(Optional)</em>
 <p>Domain overrides the default ingress domain and optionally the DNS provider for the gardener-discovery-server.
+This field is optional, but once the gardener-discovery-server is enabled, its domain cannot be changed anymore.
 Defaults to &ldquo;discovery.<first-runtime-ingress-domain>&rdquo;.</p>
 </td>
 </tr>

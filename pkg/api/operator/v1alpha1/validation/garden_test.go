@@ -3240,6 +3240,24 @@ var _ = Describe("Validation Tests", func() {
 						"Field": Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer.domain"),
 					}))))
 				})
+
+				It("should not complain about the default discovery server domain when changing the ingress domain", func() {
+					oldGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{}
+					newGarden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{}
+					// effectively changing the default discovery server domain
+					newGarden.Spec.RuntimeCluster.Ingress.Domains[0] = operatorv1alpha1.DNSDomain{Name: "new-ingress-domain.com"}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(And(
+						// does not complain about the discovery server domain (derived from the ingress domain)
+						Not(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Field": Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer.domain"),
+						})))),
+						// but complains about the changed ingress domain as it is not allowed to change the first entry
+						ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Field": Equal("spec.runtimeCluster.ingress.domains[0]"),
+						}))),
+					))
+				})
 			})
 
 			Context("kubernetes", func() {
