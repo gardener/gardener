@@ -47,12 +47,6 @@ func RestoreWithoutReconcile(
 		return fmt.Errorf("failed to generate the machine deployments: %w", err)
 	}
 
-	// Get the list of all existing machine deployments.
-	existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
-	if err := seedClient.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
-		return err
-	}
-
 	// Parse the worker state to a separate machineDeployment states and attach them to
 	// the corresponding machineDeployments which are to be deployed later
 	log.Info("Extracting machine state")
@@ -70,6 +64,12 @@ func RestoreWithoutReconcile(
 	// Do the actual restoration
 	if err := restoreMachineSetsAndMachines(ctx, log, seedClient, wantedMachineDeployments); err != nil {
 		return fmt.Errorf("failed restoration of the machineSet and the machines: %w", err)
+	}
+
+	// Get the list of all existing machine deployments.
+	existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
+	if err := seedClient.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
+		return err
 	}
 
 	// Generate machine deployment configuration based on previously computed list of deployments and deploy them.

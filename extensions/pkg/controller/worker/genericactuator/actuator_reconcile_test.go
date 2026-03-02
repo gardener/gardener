@@ -161,6 +161,21 @@ var _ = Describe("ActuatorReconcile", func() {
 				"autoscaler.gardener.cloud/scale-down-unneeded-time": "20m",
 			}))
 		})
+		It("should modify replicas of the existing machine deployment to the Minimum", func() {
+			wantedMachineDeployments[0].Minimum = 2
+			wantedMachineDeployments[0].Maximum = 5
+			existingMachineDeployments = machinev1alpha1.MachineDeploymentList{
+				Items: []machinev1alpha1.MachineDeployment{
+					*testDeployment,
+				},
+			}
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(testDeployment), &returnedDeployment)).To(Succeed())
+			Expect(returnedDeployment.Spec.Replicas).To(Equal(int32(0)))
+			err := deployMachineDeployments(ctx, log, seedClient, cluster, worker, &existingMachineDeployments, wantedMachineDeployments, true)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(testDeployment), &returnedDeployment)).To(Succeed())
+			Expect(returnedDeployment.Spec.Replicas).To(Equal(int32(wantedMachineDeployments[0].Minimum)))
+		})
 	})
 	Describe("#updateWorkerStatusInPlaceUpdateWorkerPoolHash", func() {
 		var (
