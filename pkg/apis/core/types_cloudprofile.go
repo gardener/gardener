@@ -149,9 +149,11 @@ type ExpirableVersion struct {
 	// Version is the version identifier.
 	Version string
 	// ExpirationDate defines the time at which this version expires.
+	//
 	// Deprecated: Is replaced by Lifecycle; mutually exclusive with it.
 	ExpirationDate *metav1.Time
 	// Classification defines the state of a version (preview, supported, deprecated).
+	//
 	// Deprecated: Is replaced by Lifecycle. mutually exclusive with it.
 	Classification *VersionClassification
 	// Lifecycle defines the lifecycle stages for this version.
