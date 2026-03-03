@@ -6,6 +6,7 @@ package gardenletdeployer
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 
 	"k8s.io/component-base/version"
@@ -213,7 +214,7 @@ func (vp *valuesHelper) getGardenletConfigurationValues(config *gardenletconfigv
 		return nil, err
 	}
 	if kubeconfigPath != nil && kubeconfigPath.(string) != "" {
-		kubeconfig, err := os.ReadFile(kubeconfigPath.(string))
+		kubeconfig, err := os.ReadFile(filepath.Clean(kubeconfigPath.(string)))
 		if err != nil {
 			return nil, err
 		}
@@ -229,7 +230,7 @@ func (vp *valuesHelper) getGardenletConfigurationValues(config *gardenletconfigv
 		return nil, err
 	}
 	if certPath != nil && certPath.(string) != "" && !strings.Contains(certPath.(string), secrets.TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern) {
-		cert, err := os.ReadFile(certPath.(string))
+		cert, err := os.ReadFile(filepath.Clean(certPath.(string)))
 		if err != nil {
 			return nil, err
 		}
@@ -245,7 +246,7 @@ func (vp *valuesHelper) getGardenletConfigurationValues(config *gardenletconfigv
 		return nil, err
 	}
 	if keyPath != nil && keyPath.(string) != "" && !strings.Contains(keyPath.(string), secrets.TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern) {
-		key, err := os.ReadFile(keyPath.(string))
+		key, err := os.ReadFile(filepath.Clean(keyPath.(string)))
 		if err != nil {
 			return nil, err
 		}
