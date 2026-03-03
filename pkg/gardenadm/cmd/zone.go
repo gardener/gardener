@@ -11,8 +11,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
-// ValidateZone validates the provided zone against the zones configured for the given worker pool.
-func ValidateZone(worker gardencorev1beta1.Worker, providedZone string) (string, error) {
+// DetermineZone determines the effective zone for the node based on the shoot specification.
+func DetermineZone(worker gardencorev1beta1.Worker, providedZone string) (string, error) {
 	switch len(worker.Zones) {
 	case 0:
 		if providedZone != "" {

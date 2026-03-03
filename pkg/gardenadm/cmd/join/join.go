@@ -164,10 +164,10 @@ func run(ctx context.Context, opts *Options) error {
 			},
 			SkipIf: !opts.ControlPlane,
 		})
-		validateZone = g.Add(flow.Task{
-			Name: "Validate zone configuration",
+		determineZone = g.Add(flow.Task{
+			Name: "Determine zone configuration",
 			Fn: func(ctx context.Context) error {
-				effectiveZone, err := ValidateZone(ctx, opts, b)
+				effectiveZone, err := DetermineZone(ctx, opts, b)
 				if err != nil {
 					return err
 				}
@@ -186,7 +186,7 @@ func run(ctx context.Context, opts *Options) error {
 				gardenerNodeAgentSecret, err = GetGardenerNodeAgentSecret(ctx, opts, b)
 				return err
 			},
-			Dependencies: flow.NewTaskIDs(validateZone),
+			Dependencies: flow.NewTaskIDs(determineZone),
 		})
 
 		generateETCDCertificates = g.Add(flow.Task{
@@ -370,8 +370,8 @@ func getWorkerPool(opts *Options, workers []gardencorev1beta1.Worker) (gardencor
 	return gardencorev1beta1.Worker{}, fmt.Errorf("no non-control-plane pool found in Shoot manifest")
 }
 
-// ValidateZone validates the zone configuration against the shoot specification.
-func ValidateZone(ctx context.Context, opts *Options, b *botanist.GardenadmBotanist) (effectiveZone string, err error) {
+// DetermineZone determines the effective zone for the node based on the shoot specification.
+func DetermineZone(ctx context.Context, opts *Options, b *botanist.GardenadmBotanist) (effectiveZone string, err error) {
 	cluster, err := gardenerextensions.GetCluster(ctx, b.ShootClientSet.Client(), metav1.NamespaceSystem)
 	if err != nil {
 		return "", fmt.Errorf("failed reading extensions.gardener.cloud/v1alpha1.Cluster object: %w", err)
@@ -389,7 +389,7 @@ func ValidateZone(ctx context.Context, opts *Options, b *botanist.GardenadmBotan
 		return "", fmt.Errorf("failed to get worker pool: %w", err)
 	}
 
-	effectiveZone, err = cmd.ValidateZone(worker, opts.Zone)
+	effectiveZone, err = cmd.DetermineZone(worker, opts.Zone)
 	if err != nil {
 		return "", fmt.Errorf("zone validation failed: %w", err)
 	}

@@ -68,7 +68,7 @@ func (o *Options) validateZone() error {
 		return fmt.Errorf("zone validation failed, shoot doesn't have a control plane worker pool configured")
 	}
 
-	effectiveZone, err := cmd.ValidateZone(*controlPlanePool, o.Zone)
+	effectiveZone, err := cmd.DetermineZone(*controlPlanePool, o.Zone)
 	if err != nil {
 		return err
 	}

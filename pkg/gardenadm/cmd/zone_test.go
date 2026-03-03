@@ -12,7 +12,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 )
 
-var _ = Describe("ValidateZone", func() {
+var _ = Describe("DetermineZone", func() {
 	var worker gardencorev1beta1.Worker
 
 	Context("when worker has no zones configured", func() {
@@ -24,13 +24,13 @@ var _ = Describe("ValidateZone", func() {
 		})
 
 		It("should return error when zone is provided", func() {
-			zone, err := cmd.ValidateZone(worker, "custom-zone")
+			zone, err := cmd.DetermineZone(worker, "custom-zone")
 			Expect(err).To(MatchError(ContainSubstring("worker \"test-worker\" has no zones configured, but zone \"custom-zone\" was provided")))
 			Expect(zone).To(BeEmpty())
 		})
 
 		It("should return empty zone when no zone is provided", func() {
-			zone, err := cmd.ValidateZone(worker, "")
+			zone, err := cmd.DetermineZone(worker, "")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(zone).To(BeEmpty())
 		})
@@ -45,19 +45,19 @@ var _ = Describe("ValidateZone", func() {
 		})
 
 		It("should auto-apply the configured zone when no zone provided", func() {
-			zone, err := cmd.ValidateZone(worker, "")
+			zone, err := cmd.DetermineZone(worker, "")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(zone).To(Equal("zone-1"))
 		})
 
 		It("should accept the correct zone when provided", func() {
-			zone, err := cmd.ValidateZone(worker, "zone-1")
+			zone, err := cmd.DetermineZone(worker, "zone-1")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(zone).To(Equal("zone-1"))
 		})
 
 		It("should reject an incorrect zone when provided", func() {
-			zone, err := cmd.ValidateZone(worker, "zone-2")
+			zone, err := cmd.DetermineZone(worker, "zone-2")
 			Expect(err).To(MatchError(ContainSubstring("provided zone \"zone-2\" does not match the configured zones [zone-1] for worker \"test-worker\"")))
 			Expect(zone).To(BeEmpty())
 		})
@@ -72,19 +72,19 @@ var _ = Describe("ValidateZone", func() {
 		})
 
 		It("should require zone flag when no zone provided", func() {
-			zone, err := cmd.ValidateZone(worker, "")
+			zone, err := cmd.DetermineZone(worker, "")
 			Expect(err).To(MatchError(ContainSubstring("worker \"test-worker\" has multiple zones configured [zone-1 zone-2 zone-3], --zone flag is required")))
 			Expect(zone).To(BeEmpty())
 		})
 
 		It("should accept a valid zone when provided", func() {
-			zone, err := cmd.ValidateZone(worker, "zone-2")
+			zone, err := cmd.DetermineZone(worker, "zone-2")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(zone).To(Equal("zone-2"))
 		})
 
 		It("should reject an invalid zone when provided", func() {
-			zone, err := cmd.ValidateZone(worker, "zone-4")
+			zone, err := cmd.DetermineZone(worker, "zone-4")
 			Expect(err).To(MatchError(ContainSubstring("provided zone \"zone-4\" does not match the configured zones [zone-1 zone-2 zone-3] for worker \"test-worker\"")))
 			Expect(zone).To(BeEmpty())
 		})

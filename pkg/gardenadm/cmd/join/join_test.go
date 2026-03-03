@@ -219,10 +219,10 @@ var _ = Describe("Join", func() {
 			})
 		})
 
-		Describe("#validateZone", func() {
+		Describe("#DetermineZone", func() {
 			When("cluster object does not exist", func() {
 				It("should fail", func() {
-					effectiveZone, err := ValidateZone(ctx, options, b)
+					effectiveZone, err := DetermineZone(ctx, options, b)
 					Expect(err).To(MatchError(ContainSubstring(`clusters.extensions.gardener.cloud "kube-system" not found`)))
 					Expect(effectiveZone).To(BeEmpty())
 				})
@@ -245,7 +245,7 @@ var _ = Describe("Join", func() {
 				It("should reject zone when provided for managed infrastructure", func() {
 					options.Zone = "us-east-1a"
 
-					effectiveZone, err := ValidateZone(ctx, options, b)
+					effectiveZone, err := DetermineZone(ctx, options, b)
 					Expect(err).To(MatchError(ContainSubstring("zone can't be configured for shoot with managed infrastructure")))
 					Expect(effectiveZone).To(BeEmpty())
 				})
@@ -253,7 +253,7 @@ var _ = Describe("Join", func() {
 				It("should allow empty zone for managed infrastructure", func() {
 					options.Zone = ""
 
-					effectiveZone, err := ValidateZone(ctx, options, b)
+					effectiveZone, err := DetermineZone(ctx, options, b)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(effectiveZone).To(BeEmpty())
 				})
@@ -275,7 +275,7 @@ var _ = Describe("Join", func() {
 					It("should reject zone when worker has no zones configured", func() {
 						options.Zone = "custom-zone"
 
-						effectiveZone, err := ValidateZone(ctx, options, b)
+						effectiveZone, err := DetermineZone(ctx, options, b)
 						Expect(err).To(MatchError("zone validation failed: worker \"worker1\" has no zones configured, but zone \"custom-zone\" was provided"))
 						Expect(effectiveZone).To(BeEmpty())
 					})
@@ -283,7 +283,7 @@ var _ = Describe("Join", func() {
 					It("should allow empty zone when worker has no zones", func() {
 						options.Zone = ""
 
-						effectiveZone, err := ValidateZone(ctx, options, b)
+						effectiveZone, err := DetermineZone(ctx, options, b)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(effectiveZone).To(BeEmpty())
 					})
@@ -305,7 +305,7 @@ var _ = Describe("Join", func() {
 					It("should auto-apply the single zone when not provided", func() {
 						options.Zone = ""
 
-						effectiveZone, err := ValidateZone(ctx, options, b)
+						effectiveZone, err := DetermineZone(ctx, options, b)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(effectiveZone).To(Equal("zone-1"))
 					})
@@ -313,7 +313,7 @@ var _ = Describe("Join", func() {
 					It("should accept matching zone when provided", func() {
 						options.Zone = "zone-1"
 
-						effectiveZone, err := ValidateZone(ctx, options, b)
+						effectiveZone, err := DetermineZone(ctx, options, b)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(effectiveZone).To(Equal("zone-1"))
 					})
@@ -321,7 +321,7 @@ var _ = Describe("Join", func() {
 					It("should reject non-matching zone when provided", func() {
 						options.Zone = "zone-2"
 
-						effectiveZone, err := ValidateZone(ctx, options, b)
+						effectiveZone, err := DetermineZone(ctx, options, b)
 						Expect(err).To(MatchError("zone validation failed: provided zone \"zone-2\" does not match the configured zones [zone-1] for worker \"worker1\""))
 						Expect(effectiveZone).To(BeEmpty())
 					})
@@ -343,7 +343,7 @@ var _ = Describe("Join", func() {
 					It("should require zone flag when not provided", func() {
 						options.Zone = ""
 
-						effectiveZone, err := ValidateZone(ctx, options, b)
+						effectiveZone, err := DetermineZone(ctx, options, b)
 						Expect(err).To(MatchError("zone validation failed: worker \"worker1\" has multiple zones configured [zone-1 zone-2 zone-3], --zone flag is required"))
 						Expect(effectiveZone).To(BeEmpty())
 					})
@@ -351,7 +351,7 @@ var _ = Describe("Join", func() {
 					It("should accept valid zone when provided", func() {
 						options.Zone = "zone-2"
 
-						effectiveZone, err := ValidateZone(ctx, options, b)
+						effectiveZone, err := DetermineZone(ctx, options, b)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(effectiveZone).To(Equal("zone-2"))
 					})
@@ -359,7 +359,7 @@ var _ = Describe("Join", func() {
 					It("should reject invalid zone when provided", func() {
 						options.Zone = "zone-4"
 
-						effectiveZone, err := ValidateZone(ctx, options, b)
+						effectiveZone, err := DetermineZone(ctx, options, b)
 						Expect(err).To(MatchError("zone validation failed: provided zone \"zone-4\" does not match the configured zones [zone-1 zone-2 zone-3] for worker \"worker1\""))
 						Expect(effectiveZone).To(BeEmpty())
 					})
@@ -388,7 +388,7 @@ var _ = Describe("Join", func() {
 						options.WorkerPoolName = "worker2"
 						options.Zone = "zone-b"
 
-						effectiveZone, err := ValidateZone(ctx, options, b)
+						effectiveZone, err := DetermineZone(ctx, options, b)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(effectiveZone).To(Equal("zone-b"))
 					})
@@ -397,7 +397,7 @@ var _ = Describe("Join", func() {
 						options.WorkerPoolName = "worker2"
 						options.Zone = "zone-a"
 
-						effectiveZone, err := ValidateZone(ctx, options, b)
+						effectiveZone, err := DetermineZone(ctx, options, b)
 						Expect(err).To(MatchError("zone validation failed: provided zone \"zone-a\" does not match the configured zones [zone-b zone-c] for worker \"worker2\""))
 						Expect(effectiveZone).To(BeEmpty())
 					})
