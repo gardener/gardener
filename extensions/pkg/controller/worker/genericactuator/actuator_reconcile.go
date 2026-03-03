@@ -236,11 +236,11 @@ func deployMachineDeployments(
 				machineDeployment.Spec.Replicas = deployment.Minimum
 			// If the shoot worker pool minimum was updated and if the current machine deployment replica
 			// count is less than minimum, we update the machine deployment replica count to updated minimum.
-			case existingMachineDeployment.Spec.Replicas < deployment.Minimum:
+			case machineDeployment.Spec.Replicas < deployment.Minimum:
 				machineDeployment.Spec.Replicas = deployment.Minimum
 			// If the shoot worker pool maximum was updated and if the current machine deployment replica
 			// count is greater than maximum, we update the machine deployment replica count to updated maximum.
-			case existingMachineDeployment.Spec.Replicas > deployment.Maximum:
+			case machineDeployment.Spec.Replicas > deployment.Maximum:
 				machineDeployment.Spec.Replicas = deployment.Maximum
 			}
 

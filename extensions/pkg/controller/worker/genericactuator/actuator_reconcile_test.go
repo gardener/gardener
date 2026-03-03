@@ -161,6 +161,23 @@ var _ = Describe("ActuatorReconcile", func() {
 				"autoscaler.gardener.cloud/scale-down-unneeded-time": "20m",
 			}))
 		})
+		It("should not modify replicas of the existing machine deployment if they're within acceptable range", func() {
+			wantedMachineDeployments[0].Minimum = 2
+			wantedMachineDeployments[0].Maximum = 5
+			testDeployment.Spec.Replicas = 4
+			Expect(seedClient.Update(ctx, testDeployment)).To(Succeed())
+			existingMachineDeployments = machinev1alpha1.MachineDeploymentList{
+				Items: []machinev1alpha1.MachineDeployment{
+					*testDeployment,
+				},
+			}
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(testDeployment), &returnedDeployment)).To(Succeed())
+			Expect(returnedDeployment.Spec.Replicas).To(Equal(int32(4)))
+			err := deployMachineDeployments(ctx, log, seedClient, cluster, worker, &existingMachineDeployments, wantedMachineDeployments, true)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(testDeployment), &returnedDeployment)).To(Succeed())
+			Expect(returnedDeployment.Spec.Replicas).To(Equal(int32(4)))
+		})
 		It("should modify replicas of the existing machine deployment to the Minimum", func() {
 			wantedMachineDeployments[0].Minimum = 2
 			wantedMachineDeployments[0].Maximum = 5
@@ -175,6 +192,24 @@ var _ = Describe("ActuatorReconcile", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(testDeployment), &returnedDeployment)).To(Succeed())
 			Expect(returnedDeployment.Spec.Replicas).To(Equal(wantedMachineDeployments[0].Minimum))
+		})
+		It("should set deployment replicas to 0 when marked for hibernation", func() {
+			wantedMachineDeployments[0].Minimum = 0
+			wantedMachineDeployments[0].Maximum = 3
+			testDeployment.Spec.Replicas = 2
+			Expect(seedClient.Update(ctx, testDeployment)).To(Succeed())
+			existingMachineDeployments = machinev1alpha1.MachineDeploymentList{
+				Items: []machinev1alpha1.MachineDeployment{
+					*testDeployment,
+				},
+			}
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(testDeployment), &returnedDeployment)).To(Succeed())
+			Expect(returnedDeployment.Spec.Replicas).To(Equal(int32(2)))
+			cluster.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: ptr.To(true)}
+			err := deployMachineDeployments(ctx, log, seedClient, cluster, worker, &existingMachineDeployments, wantedMachineDeployments, true)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(testDeployment), &returnedDeployment)).To(Succeed())
+			Expect(returnedDeployment.Spec.Replicas).To(Equal(int32(0)))
 		})
 	})
 	Describe("#updateWorkerStatusInPlaceUpdateWorkerPoolHash", func() {
