@@ -105,6 +105,9 @@ var _ = Describe("ActuatorReconcile", func() {
 					Name: "cluster",
 				},
 				Shoot: &gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Hibernation: nil,
+					},
 					Status: gardencorev1beta1.ShootStatus{},
 				},
 			}
