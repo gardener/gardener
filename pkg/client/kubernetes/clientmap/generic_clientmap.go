@@ -223,7 +223,7 @@ func (cm *GenericClientMap) Start(ctx context.Context) error {
 }
 
 func (cm *GenericClientMap) startClientSet(key ClientSetKey, entry *clientMapEntry) error {
-	clientSetContext, clientSetCancel := context.WithCancel(context.Background())
+	clientSetContext, clientSetCancel := context.WithCancel(context.Background()) // #nosec: G118 -- clientSetCancel is stored in entry.cancel and called during InvalidateClient.
 
 	go func() {
 		select {
