@@ -21,5 +21,6 @@ func (b *GardenadmBotanist) NewRuntimeGardenerResourceManager() (resourcemanager
 		PriorityClassName:                    v1beta1constants.PriorityClassNameShootControlPlane400,
 		SecretNameServerCA:                   v1beta1constants.SecretNameCACluster,
 		SystemComponentTolerations:           gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
+		VPAInPlaceUpdatesEnabled:             features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates),
 	})
 }
