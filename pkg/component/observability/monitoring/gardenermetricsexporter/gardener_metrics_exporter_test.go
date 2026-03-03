@@ -685,7 +685,8 @@ func deployment(namespace string, testValues Values) *appsv1.Deployment {
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},
-								PeriodSeconds: 5,
+								PeriodSeconds:       5,
+								InitialDelaySeconds: 120,
 							},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
