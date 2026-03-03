@@ -408,9 +408,6 @@ func (b *bootstrapper) getDeployment(serviceAccountName string, configMapName st
 								corev1.ResourceCPU:    resource.MustParse("200m"),
 								corev1.ResourceMemory: resource.MustParse("256Mi"),
 							},
-							Limits: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("512Mi"),
-							},
 						},
 						SecurityContext: &corev1.SecurityContext{
 							AllowPrivilegeEscalation: ptr.To(false),
