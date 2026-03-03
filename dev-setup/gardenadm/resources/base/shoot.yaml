@@ -36,6 +36,8 @@ spec:
       minimum: 1
       # Setting max > min triggers the deployment of the cluster-autoscaler
       maximum: 2
+      systemComponents:
+        allow: false
   kubernetes:
     version: 1.33.0
     kubelet:

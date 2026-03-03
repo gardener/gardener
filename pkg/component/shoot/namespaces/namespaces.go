@@ -78,15 +78,9 @@ func (n *namespaces) WaitCleanup(ctx context.Context) error {
 func (n *namespaces) computeResourcesData() (map[string][]byte, error) {
 	zones := sets.New[string]()
 
-	// For self-hosted shoots, only consider zones from the control plane worker pool.
-	// For regular shoots, collect zones from all pools that allow system components.
-	if controlPlaneWorkerPool := v1beta1helper.ControlPlaneWorkerPoolForShoot(n.workerPools); controlPlaneWorkerPool != nil {
-		zones.Insert(controlPlaneWorkerPool.Zones...)
-	} else {
-		for _, pool := range n.workerPools {
-			if v1beta1helper.SystemComponentsAllowed(&pool) && pool.Maximum > 0 {
-				zones.Insert(pool.Zones...)
-			}
+	for _, pool := range n.workerPools {
+		if v1beta1helper.SystemComponentsAllowed(&pool) && pool.Maximum > 0 {
+			zones.Insert(pool.Zones...)
 		}
 	}
 

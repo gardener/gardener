@@ -41,11 +41,11 @@ func (o *Options) Validate() error {
 		return err
 	}
 
-	return o.validateZone()
+	return o.validateShoot()
 }
 
-// validateZone validates the zone configuration against the shoot specification.
-func (o *Options) validateZone() error {
+// validateShoot validates the shoot specification.
+func (o *Options) validateShoot() error {
 	resources, err := gardenadm.ReadManifests(o.Log, os.DirFS(o.ConfigDir))
 	if err != nil {
 		return fmt.Errorf("failed loading resources for zone validation: %w", err)
@@ -65,7 +65,17 @@ func (o *Options) validateZone() error {
 	// init command is only for control plane node, therefore we look for the control plane pool
 	var controlPlanePool *gardencorev1beta1.Worker
 	if controlPlanePool = v1beta1helper.ControlPlaneWorkerPoolForShoot(resources.Shoot.Spec.Provider.Workers); controlPlanePool == nil {
-		return fmt.Errorf("zone validation failed, shoot doesn't have a control plane worker pool configured")
+		return fmt.Errorf("shoot doesn't have a control plane worker pool configured")
+	}
+
+	if !v1beta1helper.SystemComponentsAllowed(controlPlanePool) {
+		return fmt.Errorf("control plane worker pool %q must allow system components", controlPlanePool.Name)
+	}
+
+	for _, workerPool := range resources.Shoot.Spec.Provider.Workers {
+		if workerPool.Name != controlPlanePool.Name && v1beta1helper.SystemComponentsAllowed(&workerPool) {
+			return fmt.Errorf("only the control plane worker pool can have system components, worker pool %q should set systemComponents to false", workerPool.Name)
+		}
 	}
 
 	effectiveZone, err := cmd.DetermineZone(*controlPlanePool, o.Zone)
