@@ -86,6 +86,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 					predicateutils.IsDeleting(),
 				),
 			)),
+			// Only react on secret updates to minimize the handler calls during start up.
+			// Since the controller-runtime has started to wait for all handler syncs, cache sync timeouts blocked the GRM from starting.
+			// See https://github.com/kubernetes-sigs/controller-runtime/pull/3406 for more information.
+			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Update)),
 		).
 		Complete(reconcilerutils.OperationAnnotationWrapper(
 			mgr,
