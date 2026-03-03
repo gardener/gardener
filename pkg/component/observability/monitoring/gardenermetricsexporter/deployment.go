@@ -82,7 +82,8 @@ func (g *gardenerMetricsExporter) deployment(secretGenericTokenKubeconfig, secre
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},
-								PeriodSeconds: 5,
+								PeriodSeconds:       5,
+								InitialDelaySeconds: 120, // Wait for informer cache to be synced
 							},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
