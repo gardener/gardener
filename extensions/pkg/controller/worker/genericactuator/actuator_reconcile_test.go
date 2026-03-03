@@ -112,6 +112,7 @@ var _ = Describe("ActuatorReconcile", func() {
 				},
 			}
 		})
+
 		It("should remove cluster autoscaler annotations with no values", func() {
 			err := deployMachineDeployments(ctx, log, seedClient, cluster, worker, &existingMachineDeployments, wantedMachineDeployments, caUsed)
 			Expect(err).NotTo(HaveOccurred())
@@ -164,6 +165,7 @@ var _ = Describe("ActuatorReconcile", func() {
 				"autoscaler.gardener.cloud/scale-down-unneeded-time": "20m",
 			}))
 		})
+
 		It("should not modify replicas of the existing machine deployment if they're within acceptable range", func() {
 			wantedMachineDeployments[0].Minimum = 2
 			wantedMachineDeployments[0].Maximum = 5
@@ -181,6 +183,7 @@ var _ = Describe("ActuatorReconcile", func() {
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(testDeployment), &returnedDeployment)).To(Succeed())
 			Expect(returnedDeployment.Spec.Replicas).To(Equal(int32(4)))
 		})
+
 		It("should modify replicas of the existing machine deployment to the Minimum", func() {
 			wantedMachineDeployments[0].Minimum = 2
 			wantedMachineDeployments[0].Maximum = 5
@@ -196,6 +199,7 @@ var _ = Describe("ActuatorReconcile", func() {
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(testDeployment), &returnedDeployment)).To(Succeed())
 			Expect(returnedDeployment.Spec.Replicas).To(Equal(wantedMachineDeployments[0].Minimum))
 		})
+
 		It("should set deployment replicas to 0 when marked for hibernation", func() {
 			wantedMachineDeployments[0].Minimum = 0
 			wantedMachineDeployments[0].Maximum = 3
