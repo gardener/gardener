@@ -243,6 +243,11 @@ func deployMachineDeployments(
 				machineDeployment.Spec.Replicas = deployment.Maximum
 			}
 
+			// machineDeployment.Spec.Replicas is not explicitly set for default switch case,
+			// as it would have been already set by the client.Get() call in getAndCreateOrMergePatch().
+			// This is done to avoid overwriting the machineDeployment.Spec.Replicas value
+			// which is fetched from the client.Get() call in getAndCreateOrMergePatch()
+			// and hence causing unnecessary updates to the machineDeployment.Spec.Replicas
 			machineDeployment.Spec.RevisionHistoryLimit = ptr.To[int32](0)
 			machineDeployment.Spec.MinReadySeconds = 500
 			machineDeployment.Spec.Strategy = deployment.Strategy
