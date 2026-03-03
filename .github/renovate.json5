@@ -517,6 +517,7 @@
         'cmd/**',
         'extensions/**',
         'pkg/**',
+        '!pkg/apis/go.mod',
         'plugin/**',
         'test/**',
         'third_party/**',
