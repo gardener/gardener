@@ -141,7 +141,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			reflect.NewAt(rf.Type(), unsafe.Pointer(rf.UnsafeAddr())).Elem().Set(reflect.ValueOf(oscSecret))
 		})
 
-		Context("when Zone is nil", func() {
+		When("Zone is nil", func() {
 			BeforeEach(func() {
 				b.Zone = nil
 			})
@@ -154,7 +154,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			})
 		})
 
-		Context("when Zone is set", func() {
+		When("Zone is set", func() {
 			BeforeEach(func() {
 				zone = "zone-a"
 				b.Zone = ptr.To(zone)

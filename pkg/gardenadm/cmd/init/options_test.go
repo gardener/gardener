@@ -109,17 +109,13 @@ spec:`)
 		It("should fail when config directory does not exist", func() {
 			options.ConfigDir = "non-existent-directory"
 
-			err := options.Validate()
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("failed loading resources for zone validation"))
+			Expect(options.Validate()).To(MatchError(ContainSubstring("failed loading resources for zone validation")))
 		})
 
 		It("should fail when control plane worker pool is not found", func() {
 			createShootManifest("", nil, false)
 
-			err := options.Validate()
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("shoot doesn't have a control plane worker pool configured"))
+			Expect(options.Validate()).To(MatchError(ContainSubstring("shoot doesn't have a control plane worker pool configured")))
 		})
 
 		Context("zone validation with managed infrastructure", func() {
@@ -130,9 +126,7 @@ spec:`)
 			It("should reject zone when provided for managed infrastructure", func() {
 				options.Zone = "us-east-1a"
 
-				err := options.Validate()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("zone can't be configured for shoot with managed infrastrcture"))
+				Expect(options.Validate()).To(MatchError(ContainSubstring("zone can't be configured for shoot with managed infrastructure")))
 			})
 
 			It("should allow empty zone for managed infrastructure", func() {
@@ -152,9 +146,7 @@ spec:`)
 				It("should reject zone when worker has no zones configured", func() {
 					options.Zone = "custom-zone"
 
-					err := options.Validate()
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("worker \"control-plane\" has no zones configured, but zone \"custom-zone\" was provided"))
+					Expect(options.Validate()).To(MatchError(ContainSubstring("worker \"control-plane\" has no zones configured, but zone \"custom-zone\" was provided")))
 				})
 
 				It("should allow empty zone when worker has no zones", func() {
@@ -187,9 +179,7 @@ spec:`)
 				It("should reject non-matching zone when provided", func() {
 					options.Zone = "zone-2"
 
-					err := options.Validate()
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("provided zone \"zone-2\" does not match the configured zones [zone-1] for worker \"control-plane\""))
+					Expect(options.Validate()).To(MatchError(ContainSubstring("provided zone \"zone-2\" does not match the configured zones [zone-1] for worker \"control-plane\"")))
 				})
 			})
 
@@ -201,9 +191,7 @@ spec:`)
 				It("should require zone flag when not provided", func() {
 					options.Zone = ""
 
-					err := options.Validate()
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("worker \"control-plane\" has multiple zones configured [zone-1 zone-2 zone-3], --zone flag is required"))
+					Expect(options.Validate()).To(MatchError(ContainSubstring("worker \"control-plane\" has multiple zones configured [zone-1 zone-2 zone-3], --zone flag is required")))
 				})
 
 				It("should accept valid zone when provided", func() {
@@ -216,9 +204,7 @@ spec:`)
 				It("should reject invalid zone when provided", func() {
 					options.Zone = "zone-4"
 
-					err := options.Validate()
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("provided zone \"zone-4\" does not match the configured zones [zone-1 zone-2 zone-3] for worker \"control-plane\""))
+					Expect(options.Validate()).To(MatchError(ContainSubstring("provided zone \"zone-4\" does not match the configured zones [zone-1 zone-2 zone-3] for worker \"control-plane\"")))
 				})
 			})
 		})

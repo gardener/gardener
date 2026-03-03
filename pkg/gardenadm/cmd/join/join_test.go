@@ -246,7 +246,7 @@ var _ = Describe("Join", func() {
 					options.Zone = "us-east-1a"
 
 					effectiveZone, err := ValidateZone(ctx, options, b)
-					Expect(err).To(MatchError(ContainSubstring("zone can't be configured for shoot with managed infrastrcture")))
+					Expect(err).To(MatchError(ContainSubstring("zone can't be configured for shoot with managed infrastructure")))
 					Expect(effectiveZone).To(BeEmpty())
 				})
 

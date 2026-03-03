@@ -51,9 +51,9 @@ func (o *Options) validateZone() error {
 		return fmt.Errorf("failed loading resources for zone validation: %w", err)
 	}
 
-	if resources.Shoot.Spec.CredentialsBindingName != nil || resources.Shoot.Spec.SecretBindingName != nil {
+	if v1beta1helper.HasManagedInfrastructure(resources.Shoot) {
 		if o.Zone != "" {
-			return fmt.Errorf("zone can't be configured for shoot with managed infrastrcture")
+			return fmt.Errorf("zone can't be configured for shoot with managed infrastructure")
 		}
 		return nil
 	}
@@ -62,13 +62,13 @@ func (o *Options) validateZone() error {
 		return fmt.Errorf("zone validation failed shoot resource is missing in the manifests")
 	}
 
-	// init command is only for control plane node, therefore we look for the control plane worker
-	var controlPlaneWorkerPool *gardencorev1beta1.Worker
-	if controlPlaneWorkerPool = v1beta1helper.ControlPlaneWorkerPoolForShoot(resources.Shoot.Spec.Provider.Workers); controlPlaneWorkerPool == nil {
+	// init command is only for control plane node, therefore we look for the control plane pool
+	var controlPlanePool *gardencorev1beta1.Worker
+	if controlPlanePool = v1beta1helper.ControlPlaneWorkerPoolForShoot(resources.Shoot.Spec.Provider.Workers); controlPlanePool == nil {
 		return fmt.Errorf("zone validation failed, shoot doesn't have a control plane worker pool configured")
 	}
 
-	effectiveZone, err := cmd.ValidateZone(*controlPlaneWorkerPool, o.Zone)
+	effectiveZone, err := cmd.ValidateZone(*controlPlanePool, o.Zone)
 	if err != nil {
 		return err
 	}

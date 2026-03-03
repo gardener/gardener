@@ -180,10 +180,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		patch := client.MergeFrom(node.DeepCopy())
 		metav1.SetMetaDataLabel(&node.ObjectMeta, "node-role.kubernetes.io/"+nodeRole, "")
 
-		if zone, err := r.FS.ReadFile(nodeagentconfigv1alpha1.ZoneFilePath); err == nil {
+		if zone, err := r.FS.ReadFile(nodeagentconfigv1alpha1.ZoneFilePath); err != nil {
+			if !errors.Is(err, afero.ErrFileNotFound) {
+				return reconcile.Result{}, fmt.Errorf("failed to read zone file %q: %w", nodeagentconfigv1alpha1.ZoneFilePath, err)
+			}
+		} else {
 			metav1.SetMetaDataLabel(&node.ObjectMeta, corev1.LabelTopologyZone, strings.TrimSpace(string(zone)))
-		} else if !errors.Is(err, afero.ErrFileNotFound) {
-			return reconcile.Result{}, fmt.Errorf("failed to read zone file %q: %w", nodeagentconfigv1alpha1.ZoneFilePath, err)
 		}
 
 		if err := r.Client.Patch(ctx, node, patch); err != nil {

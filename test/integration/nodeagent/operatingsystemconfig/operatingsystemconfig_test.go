@@ -908,6 +908,30 @@ units: {}
 		})
 	})
 
+	Context("zone label", func() {
+		When("zone file does not exist", func() {
+			It("should not add the zone label to the node", func() {
+				Eventually(func(g Gomega) map[string]string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+					return node.Labels
+				}).ShouldNot(HaveKey(corev1.LabelTopologyZone))
+			})
+		})
+
+		When("zone file exists", func() {
+			BeforeEach(func() {
+				Expect(fakeFS.WriteFile(nodeagentconfigv1alpha1.ZoneFilePath, []byte("zone-a"), 0600)).To(Succeed())
+			})
+
+			It("should add the zone label to the node", func() {
+				Eventually(func(g Gomega) map[string]string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+					return node.Labels
+				}).Should(HaveKeyWithValue(corev1.LabelTopologyZone, "zone-a"))
+			})
+		})
+	})
+
 	Context("static pods", func() {
 		var (
 			filePath            = "/etc/kubernetes/manifests/kube-apiserver.yaml"

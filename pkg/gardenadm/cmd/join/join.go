@@ -336,15 +336,15 @@ func getWorkerPoolName(ctx context.Context, opts *Options, b *botanist.Gardenadm
 		return "", fmt.Errorf("failed reading extensions.gardener.cloud/v1alpha1.Cluster object: %w", err)
 	}
 
-	worker, err := getWorker(opts, cluster.Shoot.Spec.Provider.Workers)
+	worker, err := getWorkerPool(opts, cluster.Shoot.Spec.Provider.Workers)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get worker pool: %w", err)
 	}
 
 	return worker.Name, nil
 }
 
-func getWorker(opts *Options, workers []gardencorev1beta1.Worker) (gardencorev1beta1.Worker, error) {
+func getWorkerPool(opts *Options, workers []gardencorev1beta1.Worker) (gardencorev1beta1.Worker, error) {
 	if opts.ControlPlane {
 		if pool := v1beta1helper.ControlPlaneWorkerPoolForShoot(workers); pool != nil {
 			return *pool, nil
@@ -377,16 +377,16 @@ func ValidateZone(ctx context.Context, opts *Options, b *botanist.GardenadmBotan
 		return "", fmt.Errorf("failed reading extensions.gardener.cloud/v1alpha1.Cluster object: %w", err)
 	}
 
-	if cluster.Shoot.Spec.CredentialsBindingName != nil || cluster.Shoot.Spec.SecretBindingName != nil {
+	if helper.HasManagedInfrastructure(cluster.Shoot) {
 		if opts.Zone != "" {
-			return "", fmt.Errorf("zone can't be configured for shoot with managed infrastrcture")
+			return "", fmt.Errorf("zone can't be configured for shoot with managed infrastructure")
 		}
 		return "", nil
 	}
 
-	worker, err := getWorker(opts, cluster.Shoot.Spec.Provider.Workers)
+	worker, err := getWorkerPool(opts, cluster.Shoot.Spec.Provider.Workers)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get worker pool: %w", err)
 	}
 
 	effectiveZone, err = cmd.ValidateZone(worker, opts.Zone)
