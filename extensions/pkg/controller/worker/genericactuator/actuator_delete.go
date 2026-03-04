@@ -130,7 +130,7 @@ func markAllMachinesForcefulDeletion(ctx context.Context, log logr.Logger, cl cl
 		})
 	}
 
-	if err := flow.ParallelN(maxConcurrentMachineTasks, tasks...)(ctx); err != nil {
+	if err := flow.ParallelN(MaxConcurrentMachineTasks, tasks...)(ctx); err != nil {
 		return fmt.Errorf("failed labelling machines for forceful deletion: %w", err)
 	}
 

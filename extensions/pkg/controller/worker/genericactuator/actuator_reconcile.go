@@ -245,7 +245,7 @@ func deployMachineDeployments(
 		})
 	}
 
-	return flow.ParallelN(maxConcurrentMachineTasks, taskFns...)(ctx)
+	return flow.ParallelN(MaxConcurrentMachineTasks, taskFns...)(ctx)
 }
 
 func deployMachineDeployment(
