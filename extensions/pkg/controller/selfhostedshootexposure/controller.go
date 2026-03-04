@@ -27,8 +27,6 @@ const (
 type AddArgs struct {
 	// Actuator is a selfhostedshootexposure actuator.
 	Actuator Actuator
-	// ConfigValidator is a selfhostedshootexposure config validator.
-	ConfigValidator ConfigValidator
 	// ControllerOptions are the controller options used for creating a controller.
 	// The options.Reconciler is always overridden with a reconciler created from the
 	// given actuator.
@@ -65,5 +63,5 @@ func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) er
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicates...),
 		).
-		Complete(NewReconciler(mgr, args.Actuator, args.ConfigValidator))
+		Complete(NewReconciler(mgr, args.Actuator))
 }

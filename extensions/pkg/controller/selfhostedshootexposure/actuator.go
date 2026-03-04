@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -19,7 +20,7 @@ type Actuator interface {
 	//
 	// Implementations should ensure that the self-hosted shoot exposure is created or
 	// updated in order to reach its desired state.
-	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.SelfHostedShootExposure, *extensionscontroller.Cluster) error
+	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.SelfHostedShootExposure, *extensionscontroller.Cluster) ([]corev1.LoadBalancerIngress, error)
 
 	// Delete is invoked when the [extensionsv1alpha1.SelfHostedShootExposure] resource is
 	// deleted.
