@@ -179,7 +179,9 @@ func restoreMachineSetsAndMachines(ctx context.Context, log logr.Logger, cl clie
 func createIfNotExists(ctx context.Context, cl client.Client, obj client.Object) error {
 	err := cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)
 	if apierrors.IsNotFound(err) {
-		return cl.Create(ctx, obj)
+		// Ignore AlreadyExists error which could happen if the client's cache
+		// was not yet updated with the recently created Object.
+		return client.IgnoreAlreadyExists(cl.Create(ctx, obj))
 	}
 
 	return err
