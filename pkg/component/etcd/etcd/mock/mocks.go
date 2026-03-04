@@ -11,6 +11,7 @@ package mock
 
 import (
 	context "context"
+	net "net"
 	reflect "reflect"
 
 	v1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
@@ -164,6 +165,22 @@ func (m *MockInterface) SetReplicas(arg0 *int32) {
 func (mr *MockInterfaceMockRecorder) SetReplicas(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetReplicas", reflect.TypeOf((*MockInterface)(nil).SetReplicas), arg0)
+}
+
+// SetStaticPodControlPlaneNodesIPAddresses mocks base method.
+func (m *MockInterface) SetStaticPodControlPlaneNodesIPAddresses(arg0 ...net.IP) {
+	m.ctrl.T.Helper()
+	varargs := []any{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "SetStaticPodControlPlaneNodesIPAddresses", varargs...)
+}
+
+// SetStaticPodControlPlaneNodesIPAddresses indicates an expected call of SetStaticPodControlPlaneNodesIPAddresses.
+func (mr *MockInterfaceMockRecorder) SetStaticPodControlPlaneNodesIPAddresses(arg0 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetStaticPodControlPlaneNodesIPAddresses", reflect.TypeOf((*MockInterface)(nil).SetStaticPodControlPlaneNodesIPAddresses), arg0...)
 }
 
 // Snapshot mocks base method.

@@ -595,6 +595,11 @@ var _ = Describe("ShootSystem", func() {
 								Resources: []string{"nodes"},
 								Verbs:     []string{"get", "list", "watch"},
 							},
+							{
+								APIGroups: []string{""},
+								Resources: []string{"secrets"},
+								Verbs:     []string{"get", "list", "watch", "create", "patch", "update"},
+							},
 						},
 					}
 
@@ -614,42 +619,9 @@ var _ = Describe("ShootSystem", func() {
 						}},
 					}
 
-					expectedRole := &rbacv1.Role{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "gardener.cloud:gardenadm",
-							Namespace: "kube-system",
-						},
-						Rules: []rbacv1.PolicyRule{
-							{
-								APIGroups: []string{""},
-								Resources: []string{"secrets"},
-								Verbs:     []string{"get", "list", "watch"},
-							},
-						},
-					}
-
-					expectedRoleBinding := &rbacv1.RoleBinding{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "gardener.cloud:gardenadm",
-							Namespace: "kube-system",
-						},
-						RoleRef: rbacv1.RoleRef{
-							APIGroup: "rbac.authorization.k8s.io",
-							Kind:     "Role",
-							Name:     "gardener.cloud:gardenadm",
-						},
-						Subjects: []rbacv1.Subject{{
-							APIGroup: "rbac.authorization.k8s.io",
-							Kind:     "Group",
-							Name:     "gardener.cloud:system:shoots",
-						}},
-					}
-
 					Expect(managedResource).To(contain(
 						expectedClusterRole,
 						expectedClusterRoleBinding,
-						expectedRole,
-						expectedRoleBinding,
 					))
 				})
 			})

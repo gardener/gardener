@@ -309,8 +309,17 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})
 		deployEtcds = g.Add(flow.Task{
-			Name:         "Deploying main and events ETCDs",
-			Fn:           b.DeployEtcd,
+			Name: "Deploying main and events ETCDs",
+			Fn: func(ctx context.Context) error {
+				machineIP, err := b.MachineIP()
+				if err != nil {
+					return fmt.Errorf("failed determining the machine IP address")
+				}
+
+				b.Shoot.Components.ControlPlane.EtcdMain.SetStaticPodControlPlaneNodesIPAddresses(machineIP)
+				b.Shoot.Components.ControlPlane.EtcdEvents.SetStaticPodControlPlaneNodesIPAddresses(machineIP)
+				return b.DeployEtcd(ctx)
+			},
 			SkipIf:       opts.UseBootstrapEtcd,
 			Dependencies: flow.NewTaskIDs(deployEtcdDruid, reconcileBackupEntry),
 		})

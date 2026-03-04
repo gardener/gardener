@@ -905,6 +905,12 @@ kind: Config
 		})
 	})
 
+	Describe("#HostPath", func() {
+		It("should return the expected path", func() {
+			Expect(HostPath("my-pod", "my-volume")).To(Equal("/var/lib/my-pod/my-volume"))
+		})
+	})
+
 	Describe("#StatefulSetVolumeClaimTemplateHostPath", func() {
 		It("should return the expected path", func() {
 			Expect(StatefulSetVolumeClaimTemplateHostPath("foo")).To(Equal("/var/lib/foo/data"))
