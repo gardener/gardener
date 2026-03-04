@@ -687,6 +687,18 @@ func deployment(namespace string, testValues Values) *appsv1.Deployment {
 								},
 								PeriodSeconds: 5,
 							},
+							StartupProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/",
+										Port:   intstr.FromInt32(2718),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								// Wait for 2 minutes to allow the informer cache to sync
+								PeriodSeconds:    5,
+								FailureThreshold: 24,
+							},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
