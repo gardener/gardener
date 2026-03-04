@@ -604,6 +604,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			openTelemetryCollector.Spec.Ports = append(openTelemetryCollector.Spec.Ports, otelv1beta1.PortsSpec{
 				ServicePort: kubeRBACOTLPServicePort,
 			})
+			metav1.SetMetaDataLabel(&openTelemetryCollector.ObjectMeta, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443", "allowed")
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
 				getIngress(),
@@ -928,7 +929,6 @@ func getLabels() map[string]string {
 		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
 		gardenerutils.NetworkPolicyLabel("logging-vl", 9428):                                v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToDNS:                                            v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                               v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelObservabilityApplication:                                      "opentelemetry-collector",
 	}
 }
