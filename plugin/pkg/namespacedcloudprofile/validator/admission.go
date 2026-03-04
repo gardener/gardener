@@ -242,7 +242,7 @@ func (c *validationContext) validateKubernetesVersionOverrides(attr admission.At
 		if newVersion.ExpirationDate == nil {
 			return fmt.Errorf("specified version '%s' does not set expiration date", newVersion.Version)
 		}
-		if attr.GetOperation() == admission.Update && gardencorehelper.CurrentLifecycleClassification(newVersion) == gardencore.ClassificationExpired {
+		if attr.GetOperation() == admission.Update && gardencorehelper.VersionIsExpired(newVersion) {
 			if override, exists := currentVersionsMerged[newVersion.Version]; !exists || !override.ExpirationDate.Equal(newVersion.ExpirationDate) {
 				return fmt.Errorf("expiration date for version %q is in the past", newVersion.Version)
 			}
@@ -320,7 +320,7 @@ func (c *validationContext) validateMachineImageOverrides(ctx context.Context, a
 						}
 					}
 
-					if attr.GetOperation() == admission.Update && gardencorehelper.CurrentLifecycleClassification(imageVersion.ExpirableVersion) == gardencore.ClassificationExpired {
+					if attr.GetOperation() == admission.Update && gardencorehelper.VersionIsExpired(imageVersion.ExpirableVersion) {
 						var (
 							override gardencore.MachineImageVersion
 							exists   bool
