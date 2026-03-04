@@ -115,7 +115,7 @@ func dropInactiveKubernetesVersions(newProfile, oldProfile *core.NamespacedCloud
 
 		for _, version := range newProfile.Spec.Kubernetes.Versions {
 			if _, exists := existingKubernetesVersions[version.Version]; !exists &&
-				!helper.CurrentLifecycleClassification(version).IsActive() {
+				!helper.VersionIsActive(version) {
 				continue
 			}
 			validKubernetesVersions = append(validKubernetesVersions, version)
@@ -138,7 +138,7 @@ func dropInactiveMachineImageVersions(newProfile, oldProfile *core.NamespacedClo
 
 		for _, version := range machineImage.Versions {
 			if _, exists := existingMachineImageVersions.GetImageVersion(machineImage.Name, version.Version); !exists &&
-				!helper.CurrentLifecycleClassification(version.ExpirableVersion).IsActive() {
+				!helper.VersionIsActive(version.ExpirableVersion) {
 				continue
 			}
 			validMachineImageVersions = append(validMachineImageVersions, version)

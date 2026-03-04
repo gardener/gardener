@@ -140,7 +140,7 @@ func getImageName(bastion *gardencorev1beta1.Bastion, images []gardencorev1beta1
 	// take the first image from cloud profile that is supported and capabilities including arch are compatible
 	for _, image := range images {
 		for _, version := range image.Versions {
-			if v1beta1helper.CurrentLifecycleClassification(version.ExpirableVersion) != gardencorev1beta1.ClassificationSupported {
+			if !v1beta1helper.VersionIsSupported(version.ExpirableVersion) {
 				continue
 			}
 			if !slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(version, capabilityDefinitions), bastionArchitecture) {
@@ -183,7 +183,7 @@ func getImageVersion(bastion *gardencorev1beta1.Bastion, imageName, machineArch 
 
 	var greatest *semver.Version
 	for _, version := range image.Versions {
-		if v1beta1helper.CurrentLifecycleClassification(version.ExpirableVersion) != gardencorev1beta1.ClassificationSupported {
+		if !v1beta1helper.VersionIsSupported(version.ExpirableVersion) {
 			continue
 		}
 		if !slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(version, capabilityDefinitions), machineArch) {
