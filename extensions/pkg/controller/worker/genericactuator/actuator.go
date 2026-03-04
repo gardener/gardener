@@ -28,13 +28,13 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-// maxConcurrentMachineTasks defines the maximum number of machine-related tasks that can run concurrently.
+// MaxConcurrentMachineTasks defines the maximum number of machine-related tasks that can run concurrently.
 // A value of 50 was chosen because using more parallel tasks brings a marginal speed increase and risks
 // running into client-side rate limits which could slow down the operations.
 // Once client-side rate limits are dropped this number can be re-evaluated.
 // See also https://github.com/kubernetes-sigs/controller-runtime/pull/3119 for the removal of client-side
 // rate limits in controller-runtime.
-const maxConcurrentMachineTasks = 50
+const MaxConcurrentMachineTasks = 50
 
 type genericActuator struct {
 	delegateFactory    DelegateFactory
