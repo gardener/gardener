@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: pvc
+spec:
+  groups:
+  - name: pvc.rules
+    rules:
+
+    - record: seed:persistentvolumeclaims_capacity:sum
+      expr: sum(kubelet_volume_stats_capacity_bytes)
+
+    - record: seed:persistentvolumeclaims_capacity:sum_by_pvc
+      expr: sum(kubelet_volume_stats_capacity_bytes) by (namespace, persistentvolumeclaim)
+
+    - record: seed:persistentvolumeclaims_usage:sum
+      expr: sum(kubelet_volume_stats_used_bytes)
+
+    - record: seed:persistentvolumeclaims_usage:sum_by_pvc
+      expr: sum(kubelet_volume_stats_used_bytes) by (namespace, persistentvolumeclaim)
