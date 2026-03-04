@@ -1,4 +1,3 @@
-{{- if eq .Values.terminateAPIServerTLS true }}
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
@@ -22,4 +21,3 @@ spec:
       - memory
     - containerName: '*'
       mode: "Off"
-{{- end }}
