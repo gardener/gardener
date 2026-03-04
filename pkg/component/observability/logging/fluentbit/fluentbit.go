@@ -407,7 +407,7 @@ func (f *fluentBit) getFluentBit() *fluentbitv1alpha2.FluentBit {
 			},
 			Resources: corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("650Mi"),
+					corev1.ResourceMemory: resource.MustParse("1Gi"),
 				},
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("150m"),
@@ -430,8 +430,8 @@ func (f *fluentBit) getFluentBit() *fluentbitv1alpha2.FluentBit {
 						Port: intstr.FromInt32(2021),
 					},
 				},
-				PeriodSeconds:       300,
-				InitialDelaySeconds: 90,
+				PeriodSeconds:       60,
+				InitialDelaySeconds: 120,
 			},
 			Tolerations: []corev1.Toleration{
 				{
