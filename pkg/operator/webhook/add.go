@@ -138,6 +138,9 @@ func GetValidatingWebhookConfiguration(mode, url string) *admissionregistrationv
 						},
 					},
 				},
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{"kubernetes.io/metadata.name": v1beta1constants.GardenNamespace},
+				},
 				SideEffects:    &sideEffects,
 				FailurePolicy:  &failurePolicy,
 				MatchPolicy:    &matchPolicy,

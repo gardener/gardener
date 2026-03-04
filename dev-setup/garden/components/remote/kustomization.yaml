@@ -1,0 +1,39 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+patches:
+- patch: |-
+    - op: replace
+      path: /metadata/name
+      value: remote
+    - op: replace
+      path: /spec/virtualCluster/gardener/clusterIdentity
+      value: gardener-remote
+    - op: remove
+      path: /spec/dns
+    - op: remove
+      path: /spec/runtimeCluster/ingress/domains
+    - op: remove
+      path: /spec/runtimeCluster/networking
+    - op: remove
+      path: /spec/runtimeCluster/provider
+    - op: remove
+      path: /spec/virtualCluster/dns
+    - op: remove
+      path: /spec/virtualCluster/etcd/main/backup
+    - op: remove
+      path: /spec/virtualCluster/networking
+  target:
+    kind: Garden
+    name: local
+- patch: |-
+    - op: replace
+      path: /metadata/name
+      value: garden-dns-remote
+  target:
+    kind: Secret
+    name: garden-dns-local
+- path: secret-backup.yaml
+  target:
+    kind: Secret
+    name: virtual-garden-etcd-main-backup-local
