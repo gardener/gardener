@@ -148,8 +148,8 @@ var _ = Describe("istiod", func() {
 			return str
 		}
 
-		istioIngressAutoscalerTLSTerminationVPA = func() string {
-			data, _ := os.ReadFile("./test_charts/ingress_autoscaler_tls_termination_vpa.yaml")
+		istioIngressAutoscalerVPA = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_autoscaler_vpa.yaml")
 			return string(data)
 		}
 
@@ -467,11 +467,11 @@ var _ = Describe("istiod", func() {
 
 			expectedIstioManifests = append(expectedIstioManifests, istioIngressPodDisruptionBudget())
 			expectedIstioSystemManifests = append(expectedIstioSystemManifests, istiodPodDisruptionBudget())
+			expectedIstioManifests = append(expectedIstioManifests, istioIngressAutoscalerVPA())
 
 			if expectAPIServerTLSTermination {
 				expectedIstioManifests = append(expectedIstioManifests, istioAPIServerTLSTerminationEnvoyFilter())
 				expectedIstioManifests = append(expectedIstioManifests, istioIngressAutoscalerTLSTerminationHPA(minReplicas, maxReplicas))
-				expectedIstioManifests = append(expectedIstioManifests, istioIngressAutoscalerTLSTerminationVPA())
 				expectedIstioManifests = append(expectedIstioManifests, istioStripTrailingDotEnvoyFilter())
 			} else {
 				expectedIstioManifests = append(expectedIstioManifests, istioIngressAutoscaler(minReplicas, maxReplicas))
