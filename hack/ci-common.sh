@@ -6,11 +6,15 @@
 
 set -o errexit
 
-export_artifacts_host() {
+export_artifacts_host_services() {
   mkdir -p "${ARTIFACTS:-}"
 
   echo "> Exporting logs of host services"
   cp /var/log/{docker,dnsmasq}.log "${ARTIFACTS:-}/" || true
+}
+
+export_artifacts_infra() {
+  mkdir -p "${ARTIFACTS:-}"
 
   echo "> Exporting logs of local infrastructure managed via docker compose"
   mkdir -p "${ARTIFACTS:-}/infra"

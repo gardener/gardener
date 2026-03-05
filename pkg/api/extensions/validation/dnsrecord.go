@@ -87,7 +87,8 @@ func ValidateDNSRecordSpec(spec *extensionsv1alpha1.DNSRecordSpec, fldPath *fiel
 	}
 
 	if spec.TTL != nil {
-		for _, msg := range validation.IsInRange(int(*spec.TTL), 0, math.MaxUint32) {
+		// see https://www.rfc-editor.org/rfc/rfc2181#section-8 or https://webmasters.stackexchange.com/questions/115390/what-is-the-maximum-practical-ttl
+		for _, msg := range validation.IsInRange(int(*spec.TTL), 0, math.MaxInt32) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("ttl"), *spec.TTL, msg))
 		}
 	}

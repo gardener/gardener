@@ -92,7 +92,7 @@ setup_local_dns_resolver() {
   # requests to the default nameservers (the Prow cluster's coredns), which works fine.
   if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
     mkdir -p /etc/dnsmasq.d/
-    cp /etc/resolv.conf /etc/resolv-kubernetes.conf
+    cp /etc/resolv.conf /etc/resolv-default.conf
     tee /etc/dnsmasq.d/gardener-local.conf <<EOF
 # Force dnsmasq to listen ONLY on standard localhost and prevent it from scanning other interfaces/IPs.
 # Without this, it ignores the server directive for local.gardener.cloud because the IP is bound to the loopback
@@ -103,7 +103,7 @@ bind-interfaces
 # Configure conditional forwarding for local.gardener.cloud but use the resolv.conf from Kubernetes (coredns) as
 # upstream for all other requests, which is required for resolving the registry cache services in the Prow cluster.
 server=/local.gardener.cloud/$dns_ip
-resolv-file=/etc/resolv-kubernetes.conf
+resolv-file=/etc/resolv-default.conf
 
 # Export dnsmasq logs to a file for debugging purposes
 log-facility=/var/log/dnsmasq.log
@@ -147,7 +147,7 @@ EOF
       echo "restarting systemd-resolved"
       ${SUDO}systemctl restart systemd-resolved
     fi
-  else
+  elif ! nslookup -type=ns local.gardener.cloud >/dev/null 2>/dev/null ; then
     echo "Warning: Unknown OS. Make sure your host resolves the local.gardener.cloud zone using the local setup's DNS server at $dns_ip or $dns_ipv6 respectively."
     return 0
   fi

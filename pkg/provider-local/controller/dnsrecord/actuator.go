@@ -157,7 +157,7 @@ func resourceRecordForValue(recordType extensionsv1alpha1.DNSRecordType, header 
 
 	case extensionsv1alpha1.DNSRecordTypeAAAA:
 		ip := net.ParseIP(value)
-		if ip == nil || ip.To16() == nil {
+		if ip == nil {
 			return nil, fmt.Errorf("invalid IPv6 address: %s", value)
 		}
 		return &dns.AAAA{Hdr: header, AAAA: ip.To16()}, nil

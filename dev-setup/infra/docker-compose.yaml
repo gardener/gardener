@@ -1,7 +1,7 @@
 services:
   bind9:
     container_name: bind9
-    image: europe-docker.pkg.dev/gardener-project/releases/3rd/ubuntu/bind9:9.18-22.04_beta
+    image: europe-docker.pkg.dev/gardener-project/releases/3rd/ubuntu/bind9:9.18-24.04_beta
     restart: unless-stopped
     ports:
       - "172.18.255.53:53:53/tcp"
