@@ -708,6 +708,23 @@ var _ = Describe("Helper", func() {
 		})
 	})
 
+	Describe("#HasManagedInfrastructure", func() {
+		It("should return false when both CredentialsBindingName and SecretBindingName are nil", func() {
+			shoot := &core.Shoot{Spec: core.ShootSpec{CredentialsBindingName: nil, SecretBindingName: nil}}
+			Expect(HasManagedInfrastructure(shoot)).To(BeFalse())
+		})
+
+		It("should return true when CredentialsBindingName is set", func() {
+			shoot := &core.Shoot{Spec: core.ShootSpec{CredentialsBindingName: ptr.To("binding")}}
+			Expect(HasManagedInfrastructure(shoot)).To(BeTrue())
+		})
+
+		It("should return true when SecretBindingName is set", func() {
+			shoot := &core.Shoot{Spec: core.ShootSpec{SecretBindingName: ptr.To("binding")}}
+			Expect(HasManagedInfrastructure(shoot)).To(BeTrue())
+		})
+	})
+
 	Describe("#ControlPlaneWorkerPoolForShoot", func() {
 		It("should return nil because shoot has no workers", func() {
 			shoot := &core.Shoot{}

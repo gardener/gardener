@@ -380,6 +380,14 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), *spec.SeedName, "cannot set seedName for self-hosted shoots"))
 	}
 
+	if helper.IsShootSelfHosted(spec.Provider.Workers) && !helper.HasManagedInfrastructure(&core.Shoot{Spec: *spec}) {
+		for i, w := range spec.Provider.Workers {
+			if w.ControlPlane == nil && helper.SystemComponentsAllowed(&w) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "workers").Index(i).Child("systemComponents"), *w.SystemComponents, "systemComponents is only allowed for the control plane worker pool when the shoot does not have managed infrastructure"))
+			}
+		}
+	}
+
 	if spec.SchedulerName != nil {
 		allErrs = append(allErrs, validateDNS1123Label(*spec.SchedulerName, fldPath.Child("schedulerName"))...)
 	}

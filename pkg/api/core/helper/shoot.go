@@ -317,6 +317,11 @@ func IsShootSelfHosted(workers []core.Worker) bool {
 	})
 }
 
+// HasManagedInfrastructure returns true if the shoot's infrastructure (network, machines, etc.) is managed by Gardener.
+func HasManagedInfrastructure(shoot *core.Shoot) bool {
+	return shoot.Spec.CredentialsBindingName != nil || shoot.Spec.SecretBindingName != nil
+}
+
 // ControlPlaneWorkerPoolForShoot returns the worker pool running the control plane in case the shoot is self-hosted.
 func ControlPlaneWorkerPoolForShoot(workers []core.Worker) *core.Worker {
 	idx := slices.IndexFunc(workers, func(worker core.Worker) bool {

@@ -1906,6 +1906,39 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					Expect(ValidateShoot(shoot)).To(BeEmpty())
 				})
+
+				Context("systemComponents without managed infrastructure", func() {
+					BeforeEach(func() {
+						nonCPWorker := *shoot.Spec.Provider.Workers[0].DeepCopy()
+						nonCPWorker.Name = "non-cp-pool"
+						nonCPWorker.SystemComponents = &core.WorkerSystemComponents{Allow: false}
+						shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, nonCPWorker)
+						shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
+						shoot.Spec.SecretBindingName = nil
+						shoot.Spec.CredentialsBindingName = nil
+					})
+
+					It("should allow systemComponents only on the control plane worker pool", func() {
+						Expect(ValidateShoot(shoot)).To(BeEmpty())
+					})
+
+					It("should forbid systemComponents on non control-plane worker pool", func() {
+						shoot.Spec.Provider.Workers[1].SystemComponents.Allow = true
+
+						Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.provider.workers[1].systemComponents"),
+							"Detail": ContainSubstring("systemComponents is only allowed for the control plane worker pool when the shoot does not have managed infrastructure"),
+						}))))
+					})
+
+					It("should allow systemComponents on non control-plane worker pool with managed infrastructure", func() {
+						shoot.Spec.CredentialsBindingName = ptr.To("my-secret")
+						shoot.Spec.Provider.Workers[1].SystemComponents.Allow = true
+
+						Expect(ValidateShoot(shoot)).To(BeEmpty())
+					})
+				})
 			})
 
 			Describe("ClusterAutoscaler options validation", func() {
