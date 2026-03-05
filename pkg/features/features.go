@@ -52,7 +52,7 @@ const (
 	// VersionClassificationLifecycle enables the features introduced by GEP-0032,
 	// including lifecycle-based classification for Kubernetes and machine image versions.
 	// owner: @rapsnx
-	// alpha: v1.136.0
+	// alpha: v1.137.0
 	VersionClassificationLifecycle featuregate.Feature = "VersionClassificationLifecycle"
 
 	// DoNotCopyBackupCredentials disables the copying of Shoot infrastructure credentials as backup credentials when the Shoot is used as a ManagedSeed.
