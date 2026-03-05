@@ -223,6 +223,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		v1beta1.SeedSettingScheduling{}.OpenAPIModelName():                        schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref),
 		v1beta1.SeedSettingTopologyAwareRouting{}.OpenAPIModelName():              schema_pkg_apis_core_v1beta1_SeedSettingTopologyAwareRouting(ref),
 		v1beta1.SeedSettingVerticalPodAutoscaler{}.OpenAPIModelName():             schema_pkg_apis_core_v1beta1_SeedSettingVerticalPodAutoscaler(ref),
+		v1beta1.SeedSettingZoneSelection{}.OpenAPIModelName():                     schema_pkg_apis_core_v1beta1_SeedSettingZoneSelection(ref),
 		v1beta1.SeedSettings{}.OpenAPIModelName():                                 schema_pkg_apis_core_v1beta1_SeedSettings(ref),
 		v1beta1.SeedSpec{}.OpenAPIModelName():                                     schema_pkg_apis_core_v1beta1_SeedSpec(ref),
 		v1beta1.SeedStatus{}.OpenAPIModelName():                                   schema_pkg_apis_core_v1beta1_SeedStatus(ref),
@@ -9169,6 +9170,28 @@ func schema_pkg_apis_core_v1beta1_SeedSettingVerticalPodAutoscaler(ref common.Re
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_SeedSettingZoneSelection(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingZoneSelection controls whether shoot control plane zone placement is derived from the shoot's worker pool zones rather than randomly selected from seed zones.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"mode": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Mode controls the zone selection behavior. \"Prefer\" tries to match worker pool zones to seed zones, falling back to random selection on mismatch. \"Enforce\" requires worker pool zones to be present in the seed's zone list; scheduling fails otherwise.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"mode"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_SeedSettings(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -9212,11 +9235,17 @@ func schema_pkg_apis_core_v1beta1_SeedSettings(ref common.ReferenceCallback) com
 							Ref:         ref(v1beta1.SeedSettingTopologyAwareRouting{}.OpenAPIModelName()),
 						},
 					},
+					"zoneSelection": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ZoneSelection controls whether shoot control plane zone placement is derived from the shoot's worker pool zones rather than randomly selected from seed zones. See https://github.com/gardener/gardener/blob/master/docs/operations/seed_settings.md#zone-selection.",
+							Ref:         ref(v1beta1.SeedSettingZoneSelection{}.OpenAPIModelName()),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			v1beta1.SeedSettingDependencyWatchdog{}.OpenAPIModelName(), v1beta1.SeedSettingExcessCapacityReservation{}.OpenAPIModelName(), v1beta1.SeedSettingLoadBalancerServices{}.OpenAPIModelName(), v1beta1.SeedSettingScheduling{}.OpenAPIModelName(), v1beta1.SeedSettingTopologyAwareRouting{}.OpenAPIModelName(), v1beta1.SeedSettingVerticalPodAutoscaler{}.OpenAPIModelName()},
+			v1beta1.SeedSettingDependencyWatchdog{}.OpenAPIModelName(), v1beta1.SeedSettingExcessCapacityReservation{}.OpenAPIModelName(), v1beta1.SeedSettingLoadBalancerServices{}.OpenAPIModelName(), v1beta1.SeedSettingScheduling{}.OpenAPIModelName(), v1beta1.SeedSettingTopologyAwareRouting{}.OpenAPIModelName(), v1beta1.SeedSettingVerticalPodAutoscaler{}.OpenAPIModelName(), v1beta1.SeedSettingZoneSelection{}.OpenAPIModelName()},
 	}
 }
 

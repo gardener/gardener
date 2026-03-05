@@ -400,6 +400,8 @@ func (m *SeedSettingTopologyAwareRouting) Reset() { *m = SeedSettingTopologyAwar
 
 func (m *SeedSettingVerticalPodAutoscaler) Reset() { *m = SeedSettingVerticalPodAutoscaler{} }
 
+func (m *SeedSettingZoneSelection) Reset() { *m = SeedSettingZoneSelection{} }
+
 func (m *SeedSettings) Reset() { *m = SeedSettings{} }
 
 func (m *SeedSpec) Reset() { *m = SeedSpec{} }
@@ -10608,6 +10610,34 @@ func (m *SeedSettingVerticalPodAutoscaler) MarshalToSizedBuffer(dAtA []byte) (in
 	return len(dAtA) - i, nil
 }
 
+func (m *SeedSettingZoneSelection) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SeedSettingZoneSelection) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SeedSettingZoneSelection) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	i -= len(m.Mode)
+	copy(dAtA[i:], m.Mode)
+	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Mode)))
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
 func (m *SeedSettings) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -10628,6 +10658,18 @@ func (m *SeedSettings) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.ZoneSelection != nil {
+		{
+			size, err := m.ZoneSelection.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x4a
+	}
 	if m.TopologyAwareRouting != nil {
 		{
 			size, err := m.TopologyAwareRouting.MarshalToSizedBuffer(dAtA[:i])
@@ -17347,6 +17389,17 @@ func (m *SeedSettingVerticalPodAutoscaler) Size() (n int) {
 	return n
 }
 
+func (m *SeedSettingZoneSelection) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Mode)
+	n += 1 + l + sovGenerated(uint64(l))
+	return n
+}
+
 func (m *SeedSettings) Size() (n int) {
 	if m == nil {
 		return 0
@@ -17375,6 +17428,10 @@ func (m *SeedSettings) Size() (n int) {
 	}
 	if m.TopologyAwareRouting != nil {
 		l = m.TopologyAwareRouting.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
+	if m.ZoneSelection != nil {
+		l = m.ZoneSelection.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
 	return n
@@ -21089,6 +21146,16 @@ func (this *SeedSettingVerticalPodAutoscaler) String() string {
 	}, "")
 	return s
 }
+func (this *SeedSettingZoneSelection) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&SeedSettingZoneSelection{`,
+		`Mode:` + fmt.Sprintf("%v", this.Mode) + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func (this *SeedSettings) String() string {
 	if this == nil {
 		return "nil"
@@ -21100,6 +21167,7 @@ func (this *SeedSettings) String() string {
 		`VerticalPodAutoscaler:` + strings.Replace(this.VerticalPodAutoscaler.String(), "SeedSettingVerticalPodAutoscaler", "SeedSettingVerticalPodAutoscaler", 1) + `,`,
 		`DependencyWatchdog:` + strings.Replace(this.DependencyWatchdog.String(), "SeedSettingDependencyWatchdog", "SeedSettingDependencyWatchdog", 1) + `,`,
 		`TopologyAwareRouting:` + strings.Replace(this.TopologyAwareRouting.String(), "SeedSettingTopologyAwareRouting", "SeedSettingTopologyAwareRouting", 1) + `,`,
+		`ZoneSelection:` + strings.Replace(this.ZoneSelection.String(), "SeedSettingZoneSelection", "SeedSettingZoneSelection", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -51613,6 +51681,88 @@ func (m *SeedSettingVerticalPodAutoscaler) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *SeedSettingZoneSelection) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SeedSettingZoneSelection: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SeedSettingZoneSelection: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Mode", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Mode = ZoneSelectionMode(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *SeedSettings) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -51855,6 +52005,42 @@ func (m *SeedSettings) Unmarshal(dAtA []byte) error {
 				m.TopologyAwareRouting = &SeedSettingTopologyAwareRouting{}
 			}
 			if err := m.TopologyAwareRouting.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ZoneSelection", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ZoneSelection == nil {
+				m.ZoneSelection = &SeedSettingZoneSelection{}
+			}
+			if err := m.ZoneSelection.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

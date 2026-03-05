@@ -12569,6 +12569,41 @@ For more information, see <a href="https://github.com/kubernetes/autoscaler/blob
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingZoneSelection">SeedSettingZoneSelection
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettings">SeedSettings</a>)
+</p>
+<p>
+<p>SeedSettingZoneSelection controls whether shoot control plane zone placement is derived
+from the shoot&rsquo;s worker pool zones rather than randomly selected from seed zones.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>mode</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ZoneSelectionMode">
+ZoneSelectionMode
+</a>
+</em>
+</td>
+<td>
+<p>Mode controls the zone selection behavior.
+&ldquo;Prefer&rdquo; tries to match worker pool zones to seed zones, falling back to random selection on mismatch.
+&ldquo;Enforce&rdquo; requires worker pool zones to be present in the seed&rsquo;s zone list; scheduling fails otherwise.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSettings">SeedSettings
 </h3>
 <p>
@@ -12669,6 +12704,22 @@ SeedSettingTopologyAwareRouting
 <em>(Optional)</em>
 <p>TopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md">https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>zoneSelection</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingZoneSelection">
+SeedSettingZoneSelection
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ZoneSelection controls whether shoot control plane zone placement is derived from the shoot&rsquo;s worker pool zones
+rather than randomly selected from seed zones.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/operations/seed_settings.md#zone-selection">https://github.com/gardener/gardener/blob/master/docs/operations/seed_settings.md#zone-selection</a>.</p>
 </td>
 </tr>
 </tbody>
@@ -16180,6 +16231,15 @@ SSHAccess
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ZoneSelectionMode">ZoneSelectionMode
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingZoneSelection">SeedSettingZoneSelection</a>)
+</p>
+<p>
+<p>ZoneSelectionMode is the mode for zone selection.</p>
+</p>
 <hr/>
 <p><em>
 Generated with <a href="https://github.com/ahmetb/gen-crd-api-reference-docs">gen-crd-api-reference-docs</a>

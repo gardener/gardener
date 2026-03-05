@@ -3144,6 +3144,16 @@ message SeedSettingVerticalPodAutoscaler {
   map<string, .k8s.io.apimachinery.pkg.api.resource.Quantity> maxAllowed = 3;
 }
 
+// SeedSettingZoneSelection controls whether shoot control plane zone placement is derived
+// from the shoot's worker pool zones rather than randomly selected from seed zones.
+message SeedSettingZoneSelection {
+  // Mode controls the zone selection behavior.
+  // "Prefer" tries to match worker pool zones to seed zones, falling back to random selection on mismatch.
+  // "Enforce" requires worker pool zones to be present in the seed's zone list; scheduling fails otherwise.
+  // +kubebuilder:validation:Enum=Prefer;Enforce
+  optional string mode = 1;
+}
+
 // SeedSettings contains certain settings for this seed cluster.
 message SeedSettings {
   // ExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.
@@ -3170,6 +3180,12 @@ message SeedSettings {
   // See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
   // +optional
   optional SeedSettingTopologyAwareRouting topologyAwareRouting = 8;
+
+  // ZoneSelection controls whether shoot control plane zone placement is derived from the shoot's worker pool zones
+  // rather than randomly selected from seed zones.
+  // See https://github.com/gardener/gardener/blob/master/docs/operations/seed_settings.md#zone-selection.
+  // +optional
+  optional SeedSettingZoneSelection zoneSelection = 9;
 }
 
 // SeedSpec is the specification of a Seed.
