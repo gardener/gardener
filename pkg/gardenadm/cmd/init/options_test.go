@@ -11,7 +11,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	. "github.com/gardener/gardener/pkg/gardenadm/cmd/init"
@@ -58,14 +57,7 @@ spec:
 		})
 	})
 
-	type workerConfig struct {
-		name             string
-		isControlPlane   bool
-		zones            []string
-		systemComponents *bool
-	}
-
-	writeShootManifest := func(credentialsBindingName string, workers []workerConfig) {
+	createShootManifest := func(credentialsBindingName string, zones []string, isControlPlane bool) {
 		var shootManifest strings.Builder
 		shootManifest.WriteString(`apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
@@ -80,48 +72,26 @@ spec:`)
 		shootManifest.WriteString(`
   provider:
     type: local
-    workers:`)
-		for _, w := range workers {
-			shootManifest.WriteString(`
-    - name: ` + w.name + `
+    workers:
+    - name: control-plane
       minimum: 1
       maximum: 1`)
-			if w.isControlPlane {
-				shootManifest.WriteString(`
+		if isControlPlane {
+			shootManifest.WriteString(`
       controlPlane:
         highAvailability: {}`)
-			}
-			if w.systemComponents != nil {
-				if *w.systemComponents {
-					shootManifest.WriteString(`
-      systemComponents:
-        allow: true`)
-				} else {
-					shootManifest.WriteString(`
-      systemComponents:
-        allow: false`)
-				}
-			}
-			if len(w.zones) > 0 {
-				shootManifest.WriteString(`
+		}
+		if len(zones) > 0 {
+			shootManifest.WriteString(`
       zones:`)
-				for _, zone := range w.zones {
-					shootManifest.WriteString(`
+			for _, zone := range zones {
+				shootManifest.WriteString(`
       - ` + zone)
-				}
 			}
 		}
 		shootManifest.WriteString(`
 `)
 		Expect(os.WriteFile(filepath.Join(configDir, "shoot.yaml"), []byte(shootManifest.String()), 0644)).To(Succeed())
-	}
-
-	createShootManifest := func(credentialsBindingName string, zones []string, isControlPlane bool) {
-		writeShootManifest(credentialsBindingName, []workerConfig{{
-			name:           "control-plane",
-			isControlPlane: isControlPlane,
-			zones:          zones,
-		}})
 	}
 
 	Describe("#ParseArgs", func() {
@@ -164,49 +134,6 @@ spec:`)
 
 				Expect(options.Validate()).To(Succeed())
 				Expect(options.Zone).To(BeEmpty())
-			})
-		})
-
-		Context("system components validation", func() {
-			It("should fail when control plane pool disallows system components", func() {
-				writeShootManifest("", []workerConfig{{
-					name:             "control-plane",
-					isControlPlane:   true,
-					systemComponents: ptr.To(false),
-				}})
-
-				Expect(options.Validate()).To(MatchError(ContainSubstring("control plane worker pool \"control-plane\" must allow system components")))
-			})
-
-			It("should fail when a non-control-plane pool has system components", func() {
-				writeShootManifest("", []workerConfig{
-					{
-						name:           "control-plane",
-						isControlPlane: true,
-					},
-					{
-						name:             "worker",
-						systemComponents: ptr.To(true),
-					},
-				})
-
-				Expect(options.Validate()).To(MatchError(ContainSubstring("only the control plane worker pool can have system components, worker pool \"worker\" should set systemComponents to false")))
-			})
-
-			It("should succeed when only control plane pool allows system components", func() {
-				writeShootManifest("", []workerConfig{
-					{
-						name:             "control-plane",
-						isControlPlane:   true,
-						systemComponents: ptr.To(true),
-					},
-					{
-						name:             "worker",
-						systemComponents: ptr.To(false),
-					},
-				})
-
-				Expect(options.Validate()).To(Succeed())
 			})
 		})
 
