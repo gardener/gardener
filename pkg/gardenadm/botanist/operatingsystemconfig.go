@@ -132,7 +132,7 @@ func (b *GardenadmBotanist) ApplyOperatingSystemConfig(ctx context.Context) erro
 		return fmt.Errorf("failed connecting to containerd: %w", err)
 	}
 
-	reconcilerCtx, cancelFunc := context.WithCancel(ctx)
+	reconcilerCtx, cancelFunc := context.WithCancel(ctx) // #nosec: G118 -- cancelFunc is passed to Reconciler.CancelContext.
 	reconcilerCtx = log.IntoContext(reconcilerCtx, b.Logger.WithName("operatingsystemconfig-reconciler").WithValues("secret", client.ObjectKeyFromObject(b.operatingSystemConfigSecret)))
 
 	_, err = (&operatingsystemconfigcontroller.Reconciler{

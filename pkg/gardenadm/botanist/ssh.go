@@ -127,7 +127,7 @@ func copyImageVectorOverrides(ctx context.Context, conn *sshutils.Connection) er
 		}
 
 		if err := func() (rErr error) {
-			localFile, err := os.Open(localPath) // #nosec: G304 -- ImageVectorOverwrite is a feature.
+			localFile, err := os.Open(localPath) // #nosec: G304,G703 -- ImageVectorOverwrite is a feature.
 			if err != nil {
 				return fmt.Errorf("error opening %s file: %w", env, err)
 			}

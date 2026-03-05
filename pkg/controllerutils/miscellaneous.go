@@ -86,7 +86,7 @@ func setTaskAnnotations(annotations map[string]string, tasks []string) {
 func GetChildReconciliationContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
 	t := min(timeout, DefaultReconciliationTimeout)
 
-	return context.WithTimeout(ctx, t/2)
+	return context.WithTimeout(ctx, t/2) // #nosec: G118 -- cancel function is returned to the caller.
 }
 
 // GetControllerInstallationNames returns a list of the names of the controllerinstallations passed.
