@@ -305,7 +305,33 @@ type SeedSettings struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
 	// +optional
 	TopologyAwareRouting *SeedSettingTopologyAwareRouting `json:"topologyAwareRouting,omitempty" protobuf:"bytes,8,opt,name=topologyAwareRouting"`
+	// ZoneSelection controls whether shoot control plane zone placement is derived from the shoot's worker pool zones
+	// rather than randomly selected from seed zones.
+	// See https://github.com/gardener/gardener/blob/master/docs/operations/seed_settings.md#zone-selection.
+	// +optional
+	ZoneSelection *SeedSettingZoneSelection `json:"zoneSelection,omitempty" protobuf:"bytes,9,opt,name=zoneSelection"`
 }
+
+// SeedSettingZoneSelection controls whether shoot control plane zone placement is derived
+// from the shoot's worker pool zones rather than randomly selected from seed zones.
+type SeedSettingZoneSelection struct {
+	// Mode controls the zone selection behavior.
+	// "Prefer" tries to match worker pool zones to seed zones, falling back to random selection on mismatch.
+	// "Enforce" requires worker pool zones to be present in the seed's zone list; scheduling fails otherwise.
+	// +kubebuilder:validation:Enum=Prefer;Enforce
+	Mode ZoneSelectionMode `json:"mode" protobuf:"bytes,1,opt,name=mode,casttype=ZoneSelectionMode"`
+}
+
+// ZoneSelectionMode is the mode for zone selection.
+// +kubebuilder:validation:Enum=Prefer;Enforce
+type ZoneSelectionMode string
+
+const (
+	// ZoneSelectionModePrefer tries to match worker pool zones to seed zones, falling back to random selection on mismatch.
+	ZoneSelectionModePrefer ZoneSelectionMode = "Prefer"
+	// ZoneSelectionModeEnforce requires worker pool zones to be present in the seed's zone list; scheduling fails otherwise.
+	ZoneSelectionModeEnforce ZoneSelectionMode = "Enforce"
+)
 
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.
 type SeedSettingExcessCapacityReservation struct {

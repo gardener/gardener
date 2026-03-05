@@ -96,6 +96,14 @@ func SeedSettingZonalIngressEnabled(settings *gardencorev1beta1.SeedSettings) bo
 	return ptr.Deref(settings.LoadBalancerServices.ZonalIngress.Enabled, true)
 }
 
+// SeedSettingZoneSelectionMode returns the zone selection mode, or empty string if not configured.
+func SeedSettingZoneSelectionMode(settings *gardencorev1beta1.SeedSettings) gardencorev1beta1.ZoneSelectionMode {
+	if settings == nil || settings.ZoneSelection == nil {
+		return ""
+	}
+	return settings.ZoneSelection.Mode
+}
+
 // SeedBackupCredentialsRefEqual returns true when the credentials reference of the backup configuration is the same.
 func SeedBackupCredentialsRefEqual(oldBackup, newBackup *gardencorev1beta1.Backup) bool {
 	var (
