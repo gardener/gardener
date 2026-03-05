@@ -6,6 +6,7 @@ package progressing
 
 import (
 	"context"
+	"fmt"
 
 	certv1alpha1 "github.com/gardener/cert-management/pkg/apis/cert/v1alpha1"
 	"github.com/go-logr/logr"
@@ -19,6 +20,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -81,7 +83,11 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 		"certificates":  &certv1alpha1.Certificate{},
 		"issuers":       &certv1alpha1.Issuer{},
 	} {
-		gvr := schema.GroupVersionResource{Group: appsv1.SchemeGroupVersion.Group, Version: appsv1.SchemeGroupVersion.Version, Resource: resource}
+		gvk, err := apiutil.GVKForObject(obj, mgr.GetScheme())
+		if err != nil {
+			return fmt.Errorf("cannot determine GVK for object %T: %w", obj, err)
+		}
+		gvr := schema.GroupVersionResource{Group: gvk.Group, Version: gvk.Version, Resource: resource}
 
 		if _, err := targetCluster.GetRESTMapper().KindFor(gvr); err != nil {
 			if !meta.IsNoMatchError(err) {
