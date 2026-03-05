@@ -163,16 +163,23 @@ func controllerRegistrationSliceToList(controllerRegistrations []*gardencorev1be
 // ReconcileExtensionControllerInstallations reconciles the ControllerInstallation resources necessary to deploy the
 // extension controllers.
 func (b *GardenadmBotanist) ReconcileExtensionControllerInstallations(ctx context.Context, bootstrapMode bool) error {
-	reconciler := controllerinstallation.Reconciler{
-		GardenClient:              b.GardenClient,
-		SeedClientSet:             b.SeedClientSet,
-		HelmRegistry:              oci.NewHelmRegistry(b.SeedClientSet.Client()),
-		Clock:                     b.Clock,
-		Identity:                  &b.Shoot.GetInfo().Status.Gardener,
-		GardenNamespace:           b.Shoot.ControlPlaneNamespace,
-		BootstrapControlPlaneNode: bootstrapMode,
-		ForSelfHostedShoot:        true,
-	}
+	var (
+		shoot      = b.Shoot.GetInfo()
+		reconciler = controllerinstallation.Reconciler{
+			GardenClient:              b.GardenClient,
+			SeedClientSet:             b.SeedClientSet,
+			HelmRegistry:              oci.NewHelmRegistry(b.SeedClientSet.Client()),
+			Clock:                     b.Clock,
+			Identity:                  &shoot.Status.Gardener,
+			GardenNamespace:           b.Shoot.ControlPlaneNamespace,
+			BootstrapControlPlaneNode: bootstrapMode,
+			ForSelfHostedShoot:        true,
+			SelfHostedShootMeta: &types.NamespacedName{
+				Namespace: shoot.Namespace,
+				Name:      shoot.Name,
+			},
+		}
+	)
 
 	for _, extension := range b.Extensions {
 		b.Logger.Info("Reconciling ControllerInstallation using gardenlet's reconciliation logic", "controllerInstallationName", extension.ControllerInstallation.Name)
