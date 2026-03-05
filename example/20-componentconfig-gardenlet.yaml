@@ -89,6 +89,7 @@ controllers:
     syncPeriod: 1h
     waitSyncPeriod: 15s
     syncJitterPeriod: 5m
+  # jitterUpdates: false
   tokenRequestor:
     concurrentSyncs: 5
   tokenRequestorWorkloadIdentity:
@@ -128,29 +129,20 @@ logging:
   enabled: true
   vali:
     enabled: true
+  # garden:
+  #   storage: "100Gi"
   victoriaLogs:
     enabled: true
+  # garden:
+  #   storage: "100Gi"
   shootNodeLogging:
     shootPurposes:
     - "infrastructure"
     - "production"
     - "development"
     - "evaluation"
-# logging:
-#   enabled: false
-#   vali:
-#     enabled: true
-#     garden:
-#       storage: "100Gi"
-#   victoriaLogs:
-#     enabled: true
-#     garden:
-#       storage: "100Gi"
-#   shootNodeLogging:
-#     shootPurposes:
-#     - "development"
-#   shootEventLogging:
-#     enabled: true
+  shootEventLogging:
+    enabled: true
 # sni:
 #   ingress:
 #     serviceName: istio-ingress
@@ -163,6 +155,7 @@ logging:
 #   loadBalancerService:
 #     annotations:
 #       loadbalancer/network: internet
+#     class: my-lb-class
 # - name: internal-config
 #   loadBalancerService:
 #     annotations:
@@ -185,6 +178,8 @@ etcdConfig:
     activeDeadlineDuration: "3h"
     metricsScrapeWaitDuration: "60s"
   deltaSnapshotRetentionPeriod: 48h
+# featureGates:
+#   UseEtcdWrapper: true
 # backupLeaderElection:
 #   reelectionPeriod: 5s
 #   etcdConnectionTimeout: 5s
