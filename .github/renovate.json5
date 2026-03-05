@@ -274,6 +274,19 @@
       ],
     },
     {
+      // Group Perses operator updates in one PR.
+      groupName: 'perses-operator',
+      matchDatasources: [
+        'docker',
+        'go',
+        'github-releases',
+      ],
+      matchPackageNames: [
+        'github.com/perses/perses-operator',
+        'perses/perses-operator',
+      ],
+    },
+    {
       // Ask for manual approval to create PRs for minor and major updates of dependencies which most likely
       // require manual adaptations of the code.
       matchDatasources: [
