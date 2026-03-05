@@ -65,7 +65,7 @@ func (k *kubeAPIServer) reconcileServiceMonitor(ctx context.Context, serviceMoni
 					"apiserver_audit_error_total",
 					"apiserver_audit_requests_rejected_total",
 					"apiserver_cache_list_.+",
-					"apiserver_crd_webhook_conversion_duration_seconds_.+",
+					"apiserver_crd_conversion_webhook_duration_seconds_.+",
 					"apiserver_current_inflight_requests",
 					"apiserver_current_inqueue_requests",
 					"apiserver_flowcontrol_rejected_requests_total",
