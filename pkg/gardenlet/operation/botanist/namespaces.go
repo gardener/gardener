@@ -88,7 +88,7 @@ func (b *Botanist) DeployControlPlaneNamespace(ctx context.Context) error {
 
 		if seedZones := b.Seed.GetInfo().Spec.Provider.Zones; len(seedZones) > 0 &&
 			(!failureToleranceTypeExisting || existingFailureToleranceType != newFailureToleranceType) {
-			zones, err := calculateShootZones(ctx, b.SeedClientSet.Client(), b.Logger, namespace, shootFailureToleranceType, seedZones)
+			zones, err := calculateShootZones(ctx, b.SeedClientSet.Client(), b.Logger, namespace, shootFailureToleranceType, seedZones, allShootZones(b.Shoot.GetInfo().Spec.Provider.Workers), v1beta1helper.SeedSettingZoneSelectionMode(b.Seed.GetInfo().Spec.Settings))
 			if err != nil {
 				return err
 			}
@@ -105,18 +105,54 @@ func (b *Botanist) DeployControlPlaneNamespace(ctx context.Context) error {
 	return nil
 }
 
+func allShootZones(workerPools []gardencorev1beta1.Worker) []string {
+	zones := sets.New[string]()
+	for _, pool := range workerPools {
+		zones.Insert(pool.Zones...)
+	}
+	return zones.UnsortedList()
+}
+
 // calculateShootZones calculates and picks zones for the shoot cluster based on the passed 'failureToleranceType'.
 // 'failureToleranceType' == 'zone' -> 3 zones
 // 'failureToleranceType' != 'zone' -> 1 zone
 // If there are volumes in already used zones, then these zones will be part of the list too.
-func calculateShootZones(ctx context.Context, cl client.Client, log logr.Logger, namespace *corev1.Namespace, failureToleranceType *gardencorev1beta1.FailureToleranceType, seedZones []string) ([]string, error) {
-	zonesToSelect := 1
-	if failureToleranceType != nil && *failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone {
+func calculateShootZones(
+	ctx context.Context,
+	cl client.Client,
+	log logr.Logger,
+	namespace *corev1.Namespace,
+	failureToleranceType *gardencorev1beta1.FailureToleranceType,
+	seedZones []string,
+	shootZones []string,
+	zoneSelectionMode gardencorev1beta1.ZoneSelectionMode,
+) (
+	[]string,
+	error,
+) {
+	var (
 		zonesToSelect = 3
+		zonePool      = slices.Clone(seedZones)
+	)
+
+	if failureToleranceType == nil || *failureToleranceType != gardencorev1beta1.FailureToleranceTypeZone {
+		zonesToSelect = 1
+
+		if zoneSelectionMode != "" {
+			if intersection := sets.New[string](seedZones...).Intersection(sets.New[string](shootZones...)); intersection.Len() == 0 {
+				switch zoneSelectionMode {
+				case gardencorev1beta1.ZoneSelectionModePrefer:
+					log.Info("Shoot zones are not part of the seed zones, but selection mode allows continuation", "zoneSelectionMode", zoneSelectionMode, "seedZones", seedZones, "shootZones", shootZones)
+				case gardencorev1beta1.ZoneSelectionModeEnforce:
+					return nil, fmt.Errorf("seed zone selection mode is %s but the shoot zones %v are not part of the seed zones %v, cannot select appropriate zone for shoot control plane in seed", zoneSelectionMode, shootZones, seedZones)
+				}
+			} else {
+				zonePool = intersection.UnsortedList()
+			}
+		}
 	}
 
 	chosenZones := sets.New[string]()
-
 	if zones, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok {
 		chosenZones.Insert(strings.Split(zones, ",")...)
 	}
@@ -172,7 +208,7 @@ func calculateShootZones(ctx context.Context, cl client.Client, log logr.Logger,
 	}
 
 	for chosenZones.Len() < zonesToSelect {
-		chosenZones.Insert(seedZones[rand.Intn(len(seedZones))])
+		chosenZones.Insert(zonePool[rand.Intn(len(zonePool))])
 	}
 
 	return sets.List(chosenZones), nil

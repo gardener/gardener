@@ -482,6 +482,116 @@ var _ = Describe("Namespaces", func() {
 			})
 		})
 
+		Context("zone selection", func() {
+			workerWithZones := func(zones []string) gardencorev1beta1.Worker {
+				return gardencorev1beta1.Worker{
+					Name:    "worker",
+					Minimum: 1,
+					Maximum: 3,
+					Zones:   zones,
+				}
+			}
+
+			It("should use worker pool zones when zone selection mode is Prefer and zones match seed zones", func() {
+				defaultSeedInfo.Spec.Settings = &gardencorev1beta1.SeedSettings{
+					ZoneSelection: &gardencorev1beta1.SeedSettingZoneSelection{Mode: gardencorev1beta1.ZoneSelectionModePrefer},
+				}
+				botanist.Seed.SetInfo(defaultSeedInfo)
+
+				defaultShootInfo.Spec.Provider.Workers = []gardencorev1beta1.Worker{workerWithZones([]string{"a", "b"})}
+				botanist.Shoot.SetInfo(defaultShootInfo)
+
+				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
+				Expect(botanist.SeedNamespaceObject).To(BeNil())
+
+				Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
+
+				// One zone is picked randomly from the intersection [a, b]
+				Expect(strings.Split(botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"], ",")).To(ConsistOf(
+					Or(Equal("a"), Equal("b")),
+				))
+			})
+
+			It("should fall back to random selection when zone selection mode is Prefer and zones don't match seed zones", func() {
+				defaultSeedInfo.Spec.Settings = &gardencorev1beta1.SeedSettings{
+					ZoneSelection: &gardencorev1beta1.SeedSettingZoneSelection{Mode: gardencorev1beta1.ZoneSelectionModePrefer},
+				}
+				botanist.Seed.SetInfo(defaultSeedInfo)
+
+				defaultShootInfo.Spec.Provider.Workers = []gardencorev1beta1.Worker{workerWithZones([]string{"zone-x", "zone-y"})}
+				botanist.Shoot.SetInfo(defaultShootInfo)
+
+				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
+				Expect(botanist.SeedNamespaceObject).To(BeNil())
+
+				Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
+
+				defaultExpectations("", 1)
+				// Zone should be one of the seed zones (random fallback), not the worker zones
+				Expect(strings.Split(botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"], ",")).To(ConsistOf(
+					Or(Equal("a"), Equal("b"), Equal("c"), Equal("d"), Equal("e")),
+				))
+			})
+
+			It("should use worker pool zones when zone selection mode is Enforce and zones match seed zones", func() {
+				defaultSeedInfo.Spec.Settings = &gardencorev1beta1.SeedSettings{
+					ZoneSelection: &gardencorev1beta1.SeedSettingZoneSelection{Mode: gardencorev1beta1.ZoneSelectionModeEnforce},
+				}
+				botanist.Seed.SetInfo(defaultSeedInfo)
+
+				defaultShootInfo.Spec.Provider.Workers = []gardencorev1beta1.Worker{workerWithZones([]string{"b", "c"})}
+				botanist.Shoot.SetInfo(defaultShootInfo)
+
+				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
+				Expect(botanist.SeedNamespaceObject).To(BeNil())
+
+				Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
+
+				// One zone is picked randomly from the intersection [b, c]
+				Expect(strings.Split(botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"], ",")).To(ConsistOf(
+					Or(Equal("b"), Equal("c")),
+				))
+			})
+
+			It("should fail when zone selection mode is Enforce and zones don't match seed zones", func() {
+				defaultSeedInfo.Spec.Settings = &gardencorev1beta1.SeedSettings{
+					ZoneSelection: &gardencorev1beta1.SeedSettingZoneSelection{Mode: gardencorev1beta1.ZoneSelectionModeEnforce},
+				}
+				botanist.Seed.SetInfo(defaultSeedInfo)
+
+				defaultShootInfo.Spec.Provider.Workers = []gardencorev1beta1.Worker{workerWithZones([]string{"zone-x"})}
+				botanist.Shoot.SetInfo(defaultShootInfo)
+
+				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
+				Expect(botanist.SeedNamespaceObject).To(BeNil())
+
+				Expect(botanist.DeployControlPlaneNamespace(ctx)).To(MatchError(ContainSubstring("zone selection mode is")))
+			})
+
+			It("should use all worker pools for zone selection", func() {
+				defaultSeedInfo.Spec.Settings = &gardencorev1beta1.SeedSettings{
+					ZoneSelection: &gardencorev1beta1.SeedSettingZoneSelection{Mode: gardencorev1beta1.ZoneSelectionModePrefer},
+				}
+				botanist.Seed.SetInfo(defaultSeedInfo)
+
+				defaultShootInfo.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+					{Name: "small", Minimum: 0, Maximum: 0, Zones: []string{"a"}},
+					workerWithZones([]string{"c"}),
+				}
+				botanist.Shoot.SetInfo(defaultShootInfo)
+
+				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
+				Expect(botanist.SeedNamespaceObject).To(BeNil())
+
+				Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
+
+				// One zone is picked randomly from [a, c] (both pools considered)
+				Expect(strings.Split(botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"], ",")).To(ConsistOf(
+					Or(Equal("a"), Equal("c")),
+				))
+			})
+		})
+
 		It("should successfully remove extension labels from the namespace when extensions are deleted from shoot spec or marked as disabled", func() {
 			defaultShootInfo.Spec.Extensions = []gardencorev1beta1.Extension{
 				{Type: extensionType1},
