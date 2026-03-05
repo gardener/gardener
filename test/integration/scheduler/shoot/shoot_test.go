@@ -242,6 +242,118 @@ var _ = Describe("Scheduler tests", func() {
 				return shoot.Status.LastOperation.Description
 			}).Should(ContainSubstring("none of the 1 seeds have enabled shoot reconciliations currently"))
 		})
+
+		Context("ZoneSelection", func() {
+			createSeedWithZoneSelection := func(zones []string, mode gardencorev1beta1.ZoneSelectionMode) *gardencorev1beta1.Seed {
+				return createSeedWithSettings("some-region", zones, nil, &gardencorev1beta1.SeedSettingZoneSelection{Mode: mode})
+			}
+
+			// createCloudProfileWithZones creates a CloudProfile whose region includes the given zones,
+			// so the shoot admission webhook accepts workers pinned to those zones.
+			createCloudProfileWithZones := func(zones []string) *gardencorev1beta1.CloudProfile {
+				cp := createCloudProfile("some-region")
+				zoneSpecs := make([]gardencorev1beta1.AvailabilityZone, len(zones))
+				for i, z := range zones {
+					zoneSpecs[i] = gardencorev1beta1.AvailabilityZone{Name: z}
+				}
+				cp.Spec.Regions[0].Zones = zoneSpecs
+				ExpectWithOffset(1, testClient.Update(ctx, cp)).To(Succeed())
+				By("Wait until the manager has observed the CloudProfile zones update")
+				Eventually(func(g Gomega) {
+					var updated gardencorev1beta1.CloudProfile
+					g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(cp), &updated)).To(Succeed())
+					g.Expect(updated.Spec.Regions[0].Zones).To(HaveLen(len(zones)))
+				}).Should(Succeed())
+				return cp
+			}
+
+			createShootWithWorkerZones := func(shootName, cloudProfileName string, workerZones []string) *gardencorev1beta1.Shoot {
+				return createShoot(shootName, cloudProfileName, "some-region", nil,
+					ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)),
+					nil, nil,
+					workerZones,
+				)
+			}
+
+			It("Enforce — seed zones contain worker zones → schedules successfully", func() {
+				cloudProfile := createCloudProfileWithZones([]string{"zone-a", "zone-b"})
+				seed := createSeedWithZoneSelection([]string{"zone-a", "zone-b"}, gardencorev1beta1.ZoneSelectionModeEnforce)
+				shootName := generateShootName()
+				shoot := createShootWithWorkerZones(shootName, cloudProfile.Name, []string{"zone-a"})
+
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					g.Expect(shoot.Spec.SeedName).To(PointTo(Equal(seed.Name)))
+				}).Should(Succeed())
+			})
+
+			It("Enforce — seed zones don't contain worker zones → fails with error", func() {
+				cloudProfile := createCloudProfileWithZones([]string{"zone-a", "zone-x", "zone-y"})
+				_ = createSeedWithZoneSelection([]string{"zone-x", "zone-y"}, gardencorev1beta1.ZoneSelectionModeEnforce)
+				shootName := generateShootName()
+				shoot := createShootWithWorkerZones(shootName, cloudProfile.Name, []string{"zone-a"})
+
+				Consistently(func(g Gomega) *string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					return shoot.Spec.SeedName
+				}).Should(BeNil())
+
+				Eventually(func(g Gomega) string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					g.Expect(shoot.Status.LastOperation).NotTo(BeNil())
+					return shoot.Status.LastOperation.Description
+				}).Should(ContainSubstring("none of the 1 seeds contains all worker pool zones required by the shoot (zone selection mode: Enforce)"))
+			})
+
+			It("Enforce — two seeds, only one matches worker zones → schedules to matching seed", func() {
+				cloudProfile := createCloudProfileWithZones([]string{"zone-a", "zone-b"})
+				seed1 := createSeedWithZoneSelection([]string{"zone-a"}, gardencorev1beta1.ZoneSelectionModeEnforce)
+				_ = createSeedWithZoneSelection([]string{"zone-b"}, gardencorev1beta1.ZoneSelectionModeEnforce)
+				shootName := generateShootName()
+				shoot := createShootWithWorkerZones(shootName, cloudProfile.Name, []string{"zone-a"})
+
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					g.Expect(shoot.Spec.SeedName).To(PointTo(Equal(seed1.Name)))
+				}).Should(Succeed())
+			})
+
+			It("Prefer — seed zones match worker zones → schedules", func() {
+				cloudProfile := createCloudProfileWithZones([]string{"zone-a", "zone-b"})
+				seed := createSeedWithZoneSelection([]string{"zone-a", "zone-b"}, gardencorev1beta1.ZoneSelectionModePrefer)
+				shootName := generateShootName()
+				shoot := createShootWithWorkerZones(shootName, cloudProfile.Name, []string{"zone-a"})
+
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					g.Expect(shoot.Spec.SeedName).To(PointTo(Equal(seed.Name)))
+				}).Should(Succeed())
+			})
+
+			It("Prefer — seed zones don't match worker zones → falls back, still schedules", func() {
+				cloudProfile := createCloudProfileWithZones([]string{"zone-a", "zone-x"})
+				seed := createSeedWithZoneSelection([]string{"zone-x"}, gardencorev1beta1.ZoneSelectionModePrefer)
+				shootName := generateShootName()
+				shoot := createShootWithWorkerZones(shootName, cloudProfile.Name, []string{"zone-a"})
+
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					g.Expect(shoot.Spec.SeedName).To(PointTo(Equal(seed.Name)))
+				}).Should(Succeed())
+			})
+
+			It("No zone selection — shoot with worker zones schedules normally", func() {
+				cloudProfile := createCloudProfileWithZones([]string{"zone-a"})
+				seed := createSeed("some-region", []string{"zone-a"}, nil)
+				shootName := generateShootName()
+				shoot := createShootWithWorkerZones(shootName, cloudProfile.Name, []string{"zone-a"})
+
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					g.Expect(shoot.Spec.SeedName).To(PointTo(Equal(seed.Name)))
+				}).Should(Succeed())
+			})
+		})
 	})
 
 	Context("MinimalDistance Scheduling Strategy", func() {
@@ -662,6 +774,10 @@ func createAndStartManager(config *schedulerconfigv1alpha1.ShootSchedulerConfigu
 }
 
 func createSeed(region string, zones []string, accessRestrictions []gardencorev1beta1.AccessRestriction) *gardencorev1beta1.Seed {
+	return createSeedWithSettings(region, zones, accessRestrictions, nil)
+}
+
+func createSeedWithSettings(region string, zones []string, accessRestrictions []gardencorev1beta1.AccessRestriction, zoneSelection *gardencorev1beta1.SeedSettingZoneSelection) *gardencorev1beta1.Seed {
 	By("Create Seed")
 	seed := &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
@@ -713,7 +829,8 @@ func createSeed(region string, zones []string, accessRestrictions []gardencorev1
 				},
 			},
 			Settings: &gardencorev1beta1.SeedSettings{
-				Scheduling: &gardencorev1beta1.SeedSettingScheduling{Visible: true},
+				Scheduling:    &gardencorev1beta1.SeedSettingScheduling{Visible: true},
+				ZoneSelection: zoneSelection,
 			},
 			Networks: gardencorev1beta1.SeedNetworks{
 				Pods:     "10.0.0.0/16",
@@ -801,7 +918,7 @@ func createCloudProfile(region string) *gardencorev1beta1.CloudProfile {
 	return cloudProfile
 }
 
-func createShoot(shootName, cloudProfile, region string, schedulerName, dnsDomain *string, controlPlane *gardencorev1beta1.ControlPlane, accessRestrictions []gardencorev1beta1.AccessRestrictionWithOptions) *gardencorev1beta1.Shoot {
+func createShoot(shootName, cloudProfile, region string, schedulerName, dnsDomain *string, controlPlane *gardencorev1beta1.ControlPlane, accessRestrictions []gardencorev1beta1.AccessRestrictionWithOptions, workerZones ...[]string) *gardencorev1beta1.Shoot {
 	By("Create Shoot")
 	shoot := &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
@@ -814,8 +931,8 @@ func createShoot(shootName, cloudProfile, region string, schedulerName, dnsDomai
 			Region:           region,
 			Provider: gardencorev1beta1.Provider{
 				Type: "provider-type",
-				Workers: []gardencorev1beta1.Worker{
-					{
+				Workers: func() []gardencorev1beta1.Worker {
+					w := gardencorev1beta1.Worker{
 						Name:             "worker1",
 						SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true},
 						Minimum:          1,
@@ -824,8 +941,13 @@ func createShoot(shootName, cloudProfile, region string, schedulerName, dnsDomai
 							Type:  "large",
 							Image: &gardencorev1beta1.ShootMachineImage{Name: "some-OS"},
 						},
-					},
-				},
+					}
+					if len(workerZones) > 0 {
+						w.Zones = workerZones[0]
+						w.Maximum = 3
+					}
+					return []gardencorev1beta1.Worker{w}
+				}(),
 			},
 			Networking: &gardencorev1beta1.Networking{
 				Pods:     ptr.To("10.3.0.0/16"),
