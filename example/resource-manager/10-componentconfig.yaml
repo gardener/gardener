@@ -115,3 +115,5 @@ webhooks:
     enabled: true
     machineNamespace: shoot--foo--bar
     authorizeWithSelectors: false
+  vpaInPlaceUpdates:
+    enabled: false
