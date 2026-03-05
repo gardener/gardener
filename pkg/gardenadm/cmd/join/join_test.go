@@ -228,7 +228,7 @@ var _ = Describe("Join", func() {
 				})
 			})
 
-			Context("zone validation with managed infrastructure", func() {
+			When("zone validation with managed infrastructure", func() {
 				BeforeEach(func() {
 					shoot.Spec.CredentialsBindingName = ptr.To("test-credentials")
 					shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
@@ -259,8 +259,8 @@ var _ = Describe("Join", func() {
 				})
 			})
 
-			Context("zone validation with unmanaged infrastructure", func() {
-				Context("worker with no zones configured", func() {
+			When("zone validation with unmanaged infrastructure", func() {
+				When("worker with no zones configured", func() {
 					BeforeEach(func() {
 						shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
 							{
@@ -276,7 +276,7 @@ var _ = Describe("Join", func() {
 						options.Zone = "custom-zone"
 
 						effectiveZone, err := DetermineZone(ctx, options, b)
-						Expect(err).To(MatchError("zone validation failed: worker \"worker1\" has no zones configured, but zone \"custom-zone\" was provided"))
+						Expect(err).To(MatchError(`worker "worker1" has no zones configured, but zone "custom-zone" was provided`))
 						Expect(effectiveZone).To(BeEmpty())
 					})
 
@@ -289,7 +289,7 @@ var _ = Describe("Join", func() {
 					})
 				})
 
-				Context("worker with single zone configured", func() {
+				When("worker with single zone configured", func() {
 					BeforeEach(func() {
 						shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
 							{
@@ -322,12 +322,12 @@ var _ = Describe("Join", func() {
 						options.Zone = "zone-2"
 
 						effectiveZone, err := DetermineZone(ctx, options, b)
-						Expect(err).To(MatchError("zone validation failed: provided zone \"zone-2\" does not match the configured zones [zone-1] for worker \"worker1\""))
+						Expect(err).To(MatchError(`provided zone "zone-2" does not match the configured zones [zone-1] for worker "worker1"`))
 						Expect(effectiveZone).To(BeEmpty())
 					})
 				})
 
-				Context("worker with multiple zones configured", func() {
+				When("worker with multiple zones configured", func() {
 					BeforeEach(func() {
 						shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
 							{
@@ -344,7 +344,7 @@ var _ = Describe("Join", func() {
 						options.Zone = ""
 
 						effectiveZone, err := DetermineZone(ctx, options, b)
-						Expect(err).To(MatchError("zone validation failed: worker \"worker1\" has multiple zones configured [zone-1 zone-2 zone-3], --zone flag is required"))
+						Expect(err).To(MatchError(`worker "worker1" has multiple zones configured [zone-1 zone-2 zone-3], --zone flag is required`))
 						Expect(effectiveZone).To(BeEmpty())
 					})
 
@@ -360,12 +360,12 @@ var _ = Describe("Join", func() {
 						options.Zone = "zone-4"
 
 						effectiveZone, err := DetermineZone(ctx, options, b)
-						Expect(err).To(MatchError("zone validation failed: provided zone \"zone-4\" does not match the configured zones [zone-1 zone-2 zone-3] for worker \"worker1\""))
+						Expect(err).To(MatchError(`provided zone "zone-4" does not match the configured zones [zone-1 zone-2 zone-3] for worker "worker1"`))
 						Expect(effectiveZone).To(BeEmpty())
 					})
 				})
 
-				Context("specific worker pool selection", func() {
+				When("specific worker pool selection", func() {
 					BeforeEach(func() {
 						shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
 							{
@@ -398,7 +398,7 @@ var _ = Describe("Join", func() {
 						options.Zone = "zone-a"
 
 						effectiveZone, err := DetermineZone(ctx, options, b)
-						Expect(err).To(MatchError("zone validation failed: provided zone \"zone-a\" does not match the configured zones [zone-b zone-c] for worker \"worker2\""))
+						Expect(err).To(MatchError(`provided zone "zone-a" does not match the configured zones [zone-b zone-c] for worker "worker2"`))
 						Expect(effectiveZone).To(BeEmpty())
 					})
 				})

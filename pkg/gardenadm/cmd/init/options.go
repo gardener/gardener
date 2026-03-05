@@ -24,9 +24,10 @@ type Options struct {
 	// UseBootstrapEtcd indicates whether to use the bootstrap etcd instead of transitioning to etcd-druid.
 	UseBootstrapEtcd bool
 	// Zone is the availability zone in which the new node is being initialized.
-	// For shoot's worker with multiple zones configured, this flag is required.
-	// For shoot's worker with a single zone configured, this zone is automatically applied.
-	// For shoot's worker with no zones, this flag is optional.
+	// It is validated against the `.spec.provider.workers[].zones` field of the Shoot manifest.
+	// If the worker pool has multiple zones configured, this flag is required.
+	// If it has exactly one zone configured, that zone is automatically applied and the flag is optional.
+	// If it has no zones configured, this flag must not be set.
 	Zone string
 }
 
@@ -70,7 +71,7 @@ func (o *Options) validateZone() error {
 
 	effectiveZone, err := cmd.DetermineZone(*controlPlanePool, o.Zone)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed determining zone for control plane worker pool %q: %w", controlPlanePool.Name, err)
 	}
 
 	o.Zone = effectiveZone
@@ -85,5 +86,5 @@ func (o *Options) Complete() error {
 func (o *Options) addFlags(fs *pflag.FlagSet) {
 	o.ManifestOptions.AddFlags(fs)
 	fs.BoolVar(&o.UseBootstrapEtcd, "use-bootstrap-etcd", false, "If set, the control plane continues using the bootstrap etcd instead of transitioning to etcd-druid. This is useful for testing purposes to save time.")
-	fs.StringVarP(&o.Zone, "zone", "z", "", "Zone in which this new node is being initialized. Required when the control plane worker pool has multiple zones configured, optional when a single zone is configured (automatically applied), and optional when no zones are configured.")
+	fs.StringVarP(&o.Zone, "zone", "z", "", "Availability zone for the new node. Required when the control plane worker pool has multiple zones configured. Optional when exactly one zone is configured (automatically applied). Must not be set when no zones are configured.")
 }

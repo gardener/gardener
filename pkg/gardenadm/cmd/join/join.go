@@ -21,7 +21,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -170,7 +169,7 @@ func run(ctx context.Context, opts *Options) error {
 			Fn: func(ctx context.Context) error {
 				effectiveZone, err := DetermineZone(ctx, opts, b)
 				if err != nil {
-					return err
+					return fmt.Errorf("failed determining zone configuration: %w", err)
 				}
 
 				if effectiveZone != "" {
@@ -178,7 +177,6 @@ func run(ctx context.Context, opts *Options) error {
 				}
 				return nil
 			},
-			Dependencies: flow.NewTaskIDs(ensureNoActiveShootReconciliation),
 		})
 		determineGardenerNodeAgentSecretName = g.Add(flow.Task{
 			Name: "Determining gardener-node-agent Secret containing the configuration for this node",
@@ -187,7 +185,6 @@ func run(ctx context.Context, opts *Options) error {
 				gardenerNodeAgentSecret, err = GetGardenerNodeAgentSecret(ctx, opts, b)
 				return err
 			},
-			Dependencies: flow.NewTaskIDs(determineZone),
 		})
 
 		generateETCDCertificates = g.Add(flow.Task{
@@ -227,6 +224,7 @@ func run(ctx context.Context, opts *Options) error {
 		syncPointReadyForGardenerNodeInit = flow.NewTaskIDs(
 			determineGardenerNodeAgentSecretName,
 			ensureNoActiveShootReconciliation,
+			determineZone,
 			writeETCDFilesToDisk,
 		)
 
@@ -378,7 +376,7 @@ func DetermineZone(ctx context.Context, opts *Options, b *botanist.GardenadmBota
 		return "", fmt.Errorf("failed reading extensions.gardener.cloud/v1alpha1.Cluster object: %w", err)
 	}
 
-	if helper.HasManagedInfrastructure(cluster.Shoot) {
+	if v1beta1helper.HasManagedInfrastructure(cluster.Shoot) {
 		if opts.Zone != "" {
 			return "", fmt.Errorf("zone can't be configured for shoot with managed infrastructure")
 		}
@@ -390,12 +388,7 @@ func DetermineZone(ctx context.Context, opts *Options, b *botanist.GardenadmBota
 		return "", fmt.Errorf("failed to get worker pool: %w", err)
 	}
 
-	effectiveZone, err = cmd.DetermineZone(worker, opts.Zone)
-	if err != nil {
-		return "", fmt.Errorf("zone validation failed: %w", err)
-	}
-
-	return effectiveZone, nil
+	return cmd.DetermineZone(worker, opts.Zone)
 }
 
 func waitForNodeToJoinCluster(ctx context.Context, log logr.Logger, c client.Client, hostName string) (*corev1.Node, error) {

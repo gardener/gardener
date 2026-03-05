@@ -15,7 +15,7 @@ import (
 var _ = Describe("DetermineZone", func() {
 	var worker gardencorev1beta1.Worker
 
-	Context("when worker has no zones configured", func() {
+	When("when worker has no zones configured", func() {
 		BeforeEach(func() {
 			worker = gardencorev1beta1.Worker{
 				Name:  "test-worker",
@@ -25,7 +25,7 @@ var _ = Describe("DetermineZone", func() {
 
 		It("should return error when zone is provided", func() {
 			zone, err := cmd.DetermineZone(worker, "custom-zone")
-			Expect(err).To(MatchError(ContainSubstring("worker \"test-worker\" has no zones configured, but zone \"custom-zone\" was provided")))
+			Expect(err).To(MatchError(ContainSubstring(`worker "test-worker" has no zones configured, but zone "custom-zone" was provided`)))
 			Expect(zone).To(BeEmpty())
 		})
 
@@ -36,7 +36,7 @@ var _ = Describe("DetermineZone", func() {
 		})
 	})
 
-	Context("when worker has a single zone configured", func() {
+	When("when worker has a single zone configured", func() {
 		BeforeEach(func() {
 			worker = gardencorev1beta1.Worker{
 				Name:  "test-worker",
@@ -58,12 +58,12 @@ var _ = Describe("DetermineZone", func() {
 
 		It("should reject an incorrect zone when provided", func() {
 			zone, err := cmd.DetermineZone(worker, "zone-2")
-			Expect(err).To(MatchError(ContainSubstring("provided zone \"zone-2\" does not match the configured zones [zone-1] for worker \"test-worker\"")))
+			Expect(err).To(MatchError(ContainSubstring(`provided zone "zone-2" does not match the configured zones [zone-1] for worker "test-worker"`)))
 			Expect(zone).To(BeEmpty())
 		})
 	})
 
-	Context("when worker has multiple zones configured", func() {
+	When("when worker has multiple zones configured", func() {
 		BeforeEach(func() {
 			worker = gardencorev1beta1.Worker{
 				Name:  "test-worker",
@@ -73,7 +73,7 @@ var _ = Describe("DetermineZone", func() {
 
 		It("should require zone flag when no zone provided", func() {
 			zone, err := cmd.DetermineZone(worker, "")
-			Expect(err).To(MatchError(ContainSubstring("worker \"test-worker\" has multiple zones configured [zone-1 zone-2 zone-3], --zone flag is required")))
+			Expect(err).To(MatchError(ContainSubstring(`worker "test-worker" has multiple zones configured [zone-1 zone-2 zone-3], --zone flag is required`)))
 			Expect(zone).To(BeEmpty())
 		})
 
@@ -85,7 +85,7 @@ var _ = Describe("DetermineZone", func() {
 
 		It("should reject an invalid zone when provided", func() {
 			zone, err := cmd.DetermineZone(worker, "zone-4")
-			Expect(err).To(MatchError(ContainSubstring("provided zone \"zone-4\" does not match the configured zones [zone-1 zone-2 zone-3] for worker \"test-worker\"")))
+			Expect(err).To(MatchError(ContainSubstring(`provided zone "zone-4" does not match the configured zones [zone-1 zone-2 zone-3] for worker "test-worker"`)))
 			Expect(zone).To(BeEmpty())
 		})
 	})
