@@ -15,6 +15,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // FromUserInfoInterface returns the shoot namespace and name, a boolean indicating whether the provided user is an
@@ -103,8 +104,28 @@ func userTypeFromPrefix(prefix string) gardenletidentity.UserType {
 	return ""
 }
 
-func getIdentityForServiceAccountsGroup(_ user.Info) (namespace string, name string, isSelfHostedShoot bool, userType gardenletidentity.UserType) {
-	// TODO(rfranzke): Implement this function once the concept of how extensions running in self-hosted shoots
-	//  authenticate with the garden cluster gets clear.
-	return "", "", false, gardenletidentity.UserTypeExtension
+func getIdentityForServiceAccountsGroup(u user.Info) (namespace string, name string, isSelfHostedShoot bool, userType gardenletidentity.UserType) {
+	saNamespace, saName, err := serviceaccount.SplitUsername(u.GetName())
+	if err != nil {
+		return "", "", false, ""
+	}
+
+	// SA must be in the garden namespace or a project namespace (garden-<project>).
+	if saNamespace != v1beta1constants.GardenNamespace && !strings.HasPrefix(saNamespace, gardenerutils.ProjectNamespacePrefix) {
+		return "", "", false, ""
+	}
+
+	// SA name must start with the extension-shoot-- prefix.
+	if !strings.HasPrefix(saName, v1beta1constants.ExtensionShootServiceAccountPrefix) {
+		return "", "", false, ""
+	}
+
+	// Parse: extension-shoot--<shoot-name>--<controller-installation-name>
+	withoutPrefix := strings.TrimPrefix(saName, v1beta1constants.ExtensionShootServiceAccountPrefix)
+	shootName, _, found := strings.Cut(withoutPrefix, "--")
+	if !found || shootName == "" {
+		return "", "", false, ""
+	}
+
+	return saNamespace, shootName, true, gardenletidentity.UserTypeExtension
 }
