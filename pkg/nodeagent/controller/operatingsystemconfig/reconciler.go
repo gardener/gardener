@@ -66,7 +66,6 @@ import (
 )
 
 const (
-	lastAppliedOperatingSystemConfigFilePath         = nodeagentconfigv1alpha1.BaseDir + "/last-applied-osc.yaml"
 	lastComputedOperatingSystemConfigChangesFilePath = nodeagentconfigv1alpha1.BaseDir + "/last-computed-osc-changes.yaml"
 
 	annotationUpdatingOperatingSystemVersion = "node-agent.gardener.cloud/updating-operating-system-version"
@@ -337,14 +336,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	log.Info("Successfully applied operating system config")
 
 	if !r.SkipWritingStateFiles {
-		log.Info("Persisting current operating system config as 'last-applied' file to the disk", "path", lastAppliedOperatingSystemConfigFilePath)
+		log.Info("Persisting current operating system config as 'last-applied' file to the disk", "path", nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigFilePath)
 		oscRaw, err := runtime.Encode(codec, osc)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("unable to encode OSC: %w", err)
 		}
 
-		if err := r.FS.WriteFile(lastAppliedOperatingSystemConfigFilePath, oscRaw, 0600); err != nil {
-			return reconcile.Result{}, fmt.Errorf("unable to write current OSC to file path %q: %w", lastAppliedOperatingSystemConfigFilePath, err)
+		if err := r.FS.WriteFile(nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigFilePath, oscRaw, 0600); err != nil {
+			return reconcile.Result{}, fmt.Errorf("unable to write current OSC to file path %q: %w", nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigFilePath, err)
 		}
 	}
 
