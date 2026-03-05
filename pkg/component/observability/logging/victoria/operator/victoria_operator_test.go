@@ -315,7 +315,7 @@ var _ = Describe("VictoriaOperator", func() {
 					Resources: []string{
 						"vlsingles", "vlsingles/finalizers", "vlsingles/status",
 					},
-					Verbs: []string{"*"},
+					Verbs: []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 				},
 				{
 					APIGroups: []string{"coordination.k8s.io"},
