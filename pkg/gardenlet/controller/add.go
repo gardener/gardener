@@ -135,6 +135,15 @@ func AddToManager(
 			return fmt.Errorf("failed adding TokenRequestorWorkloadIdentity controller: %w", err)
 		}
 
+		// TargetNamespace is intentionally left empty: the SA namespace is provided via the
+		// serviceaccount.resources.gardener.cloud/namespace annotation set by AccessSecret.Reconcile().
+		if err := (&tokenrequestor.Reconciler{
+			ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs, 0),
+			Class:           ptr.To(resourcesv1alpha1.ResourceManagerClassGarden),
+		}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
+			return fmt.Errorf("failed adding TokenRequestorServiceAccount controller: %w", err)
+		}
+
 		return nil
 	}
 

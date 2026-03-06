@@ -34,7 +34,12 @@ var _ = Describe("identity", func() {
 		Entry("user name prefix but shoot group not present", &user.DefaultInfo{Name: "gardener.cloud:system:shoot:foo:bar", Groups: []string{"bar"}}, "", "", false, gardenletidentity.UserType("")),
 		Entry("user name prefix and shoot group", &user.DefaultInfo{Name: "gardener.cloud:system:shoot:foo:bar", Groups: []string{"gardener.cloud:system:shoots"}}, "foo", "bar", true, gardenletidentity.UserTypeGardenlet),
 		Entry("gardenadm usertype", &user.DefaultInfo{Name: "gardener.cloud:gardenadm:shoot:foo:bar", Groups: []string{"gardener.cloud:system:shoots"}}, "foo", "bar", true, gardenletidentity.UserTypeGardenadm),
-		Entry("Extension ServiceAccount", &user.DefaultInfo{Name: "system:serviceaccount:foo:extension-bar", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:foo"}}, "", "", false, gardenletidentity.UserTypeExtension),
+		Entry("Extension ServiceAccount in non-project namespace", &user.DefaultInfo{Name: "system:serviceaccount:foo:extension-bar", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:foo"}}, "", "", false, gardenletidentity.UserType("")),
+		Entry("Extension ServiceAccount missing extension-shoot-- prefix", &user.DefaultInfo{Name: "system:serviceaccount:garden-my-project:extension-myshoot--myext", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:garden-my-project"}}, "", "", false, gardenletidentity.UserType("")),
+		Entry("Extension ServiceAccount with valid extension-shoot-- prefix in project namespace", &user.DefaultInfo{Name: "system:serviceaccount:garden-my-project:extension-shoot--myshoot--myext", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:garden-my-project"}}, "garden-my-project", "myshoot", true, gardenletidentity.UserTypeExtension),
+		Entry("Extension ServiceAccount with valid extension-shoot-- prefix in garden namespace", &user.DefaultInfo{Name: "system:serviceaccount:garden:extension-shoot--myshoot--myext", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:garden"}}, "garden", "myshoot", true, gardenletidentity.UserTypeExtension),
+		Entry("Extension ServiceAccount missing shoot name separator", &user.DefaultInfo{Name: "system:serviceaccount:garden-my-project:extension-shoot--myshoot", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:garden-my-project"}}, "", "", false, gardenletidentity.UserType("")),
+		Entry("Extension ServiceAccount with empty shoot name", &user.DefaultInfo{Name: "system:serviceaccount:garden-my-project:extension-shoot----myext", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:garden-my-project"}}, "", "", false, gardenletidentity.UserType("")),
 	)
 
 	DescribeTable("#FromAuthenticationV1UserInfo",
@@ -52,7 +57,9 @@ var _ = Describe("identity", func() {
 		Entry("user name prefix but shoot group not present", authenticationv1.UserInfo{Username: "gardener.cloud:system:shoot:foo:bar", Groups: []string{"bar"}}, "", "", false, gardenletidentity.UserType("")),
 		Entry("user name prefix and shoot group", authenticationv1.UserInfo{Username: "gardener.cloud:system:shoot:foo:bar", Groups: []string{"gardener.cloud:system:shoots"}}, "foo", "bar", true, gardenletidentity.UserTypeGardenlet),
 		Entry("gardenadm usertype", authenticationv1.UserInfo{Username: "gardener.cloud:gardenadm:shoot:foo:bar", Groups: []string{"gardener.cloud:system:shoots"}}, "foo", "bar", true, gardenletidentity.UserTypeGardenadm),
-		Entry("Extension ServiceAccount", authenticationv1.UserInfo{Username: "system:serviceaccount:foo:extension-bar", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:foo"}, Extra: map[string]authenticationv1.ExtraValue{}}, "", "", false, gardenletidentity.UserTypeExtension),
+		Entry("Extension ServiceAccount in non-project namespace", authenticationv1.UserInfo{Username: "system:serviceaccount:foo:extension-bar", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:foo"}, Extra: map[string]authenticationv1.ExtraValue{}}, "", "", false, gardenletidentity.UserType("")),
+		Entry("Extension ServiceAccount with valid extension-shoot-- prefix in project namespace", authenticationv1.UserInfo{Username: "system:serviceaccount:garden-my-project:extension-shoot--myshoot--myext", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:garden-my-project"}}, "garden-my-project", "myshoot", true, gardenletidentity.UserTypeExtension),
+		Entry("Extension ServiceAccount with valid extension-shoot-- prefix in garden namespace", authenticationv1.UserInfo{Username: "system:serviceaccount:garden:extension-shoot--myshoot--myext", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:garden"}}, "garden", "myshoot", true, gardenletidentity.UserTypeExtension),
 	)
 
 	DescribeTable("#FromCertificateSigningRequest",

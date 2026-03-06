@@ -321,6 +321,7 @@ type AccessSecret struct {
 	targetSecretName        string
 	targetSecretNamespace   string
 	serviceAccountLabels    map[string]string
+	serviceAccountNamespace string
 }
 
 // NewShootAccessSecret returns a new AccessSecret object and initializes it with an empty corev1.Secret object
@@ -367,6 +368,14 @@ func (s *AccessSecret) WithServiceAccountLabels(labels map[string]string) *Acces
 	return s
 }
 
+// WithServiceAccountNamespace overrides the namespace of the ServiceAccount to be created. If empty, the
+// TokenRequestor's TargetNamespace is used (or kube-system for shoot class). Use this when the ServiceAccount must
+// live in a different namespace than the TokenRequestor's default TargetNamespace.
+func (s *AccessSecret) WithServiceAccountNamespace(namespace string) *AccessSecret {
+	s.serviceAccountNamespace = namespace
+	return s
+}
+
 // WithTokenExpirationDuration sets the tokenExpirationDuration field of the AccessSecret.
 func (s *AccessSecret) WithTokenExpirationDuration(duration string) *AccessSecret {
 	s.tokenExpirationDuration = duration
@@ -397,6 +406,8 @@ func (s *AccessSecret) Reconcile(ctx context.Context, c client.Client) error {
 
 		if s.Class == resourcesv1alpha1.ResourceManagerClassShoot {
 			metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.ServiceAccountNamespace, metav1.NamespaceSystem)
+		} else if s.serviceAccountNamespace != "" {
+			metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.ServiceAccountNamespace, s.serviceAccountNamespace)
 		}
 
 		if s.serviceAccountLabels != nil {

@@ -19,6 +19,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -85,7 +86,9 @@ func (r *Reconciler) computeSubjects(ctx context.Context, clusterRole *metav1.Pa
 
 	var subjects []rbacv1.Subject
 	for _, serviceAccount := range serviceAccountList.Items {
-		if strings.HasPrefix(serviceAccount.GetNamespace(), gardenerutils.SeedNamespaceNamePrefix) {
+		if strings.HasPrefix(serviceAccount.Namespace, gardenerutils.SeedNamespaceNamePrefix) ||
+			((serviceAccount.Namespace == v1beta1constants.GardenNamespace || strings.HasPrefix(serviceAccount.Namespace, gardenerutils.ProjectNamespacePrefix)) &&
+				strings.HasPrefix(serviceAccount.Name, v1beta1constants.ExtensionShootServiceAccountPrefix)) {
 			subjects = append(subjects, rbacv1.Subject{
 				Kind:      rbacv1.ServiceAccountKind,
 				Name:      serviceAccount.Name,

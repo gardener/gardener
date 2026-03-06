@@ -107,6 +107,10 @@ const (
 	// ExtensionGardenServiceAccountPrefix is the prefix of the default garden ServiceAccount generated for each
 	// ControllerInstallation.
 	ExtensionGardenServiceAccountPrefix = "extension-"
+	// ExtensionShootServiceAccountPrefix is the prefix for garden ServiceAccounts generated for extensions in
+	// self-hosted shoot clusters. The full name is extension-shoot--<shoot-name>--<controller-installation-name>.
+	// The ServiceAccount is located in the shoot's project namespace.
+	ExtensionShootServiceAccountPrefix = "extension-shoot--"
 
 	// ReferenceProtectionFinalizerName is the name of the finalizer used for the reference protection.
 	ReferenceProtectionFinalizerName = "gardener.cloud/reference-protection"

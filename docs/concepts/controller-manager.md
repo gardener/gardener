@@ -136,10 +136,11 @@ If no such objects exist, then it removes the finalizer and allows the deletion.
 This reconciler watches two resources in the garden cluster:
 
 - `ClusterRole`s labelled with `authorization.gardener.cloud/custom-extensions-permissions=true`
-- `ServiceAccount`s in seed namespaces matching the selector provided via the `authorization.gardener.cloud/extensions-serviceaccount-selector` annotation of such `ClusterRole`s.
+- `ServiceAccount`s in seed namespaces, the `garden` namespace, and project namespaces (`garden-*`) matching the selector provided via the `authorization.gardener.cloud/extensions-serviceaccount-selector` annotation of such `ClusterRole`s.
 
 Its core task is to maintain a `ClusterRoleBinding` resource referencing the respective `ClusterRole`.
-This gets bound to all `ServiceAccount`s in seed namespaces whose labels match the selector provided via the `authorization.gardener.cloud/extensions-serviceaccount-selector` annotation of such `ClusterRole`s.
+This gets bound to all extension `ServiceAccount`s whose labels match the selector provided via the `authorization.gardener.cloud/extensions-serviceaccount-selector` annotation of such `ClusterRole`s.
+`ServiceAccount`s are considered from seed namespaces (all names), the `garden` namespace, and project namespaces (`garden-*`), but only those whose name is prefixed with `extension-shoot--` in the latter two cases (i.e., extension clients of self-hosted shoot clusters).
 
 You can read more about the purpose of this reconciler in [this document](../extensions/garden-api-access.md#additional-permissions).
 
