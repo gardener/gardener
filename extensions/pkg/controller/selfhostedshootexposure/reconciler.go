@@ -70,7 +70,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	switch {
 	case selfHostedShootExposure.DeletionTimestamp != nil:
-		return r.delete(ctx, log, selfHostedShootExposure, cluster)
+		return r.delete(ctx, log, selfHostedShootExposure, cluster, operationType)
 	default:
 		return r.reconcile(ctx, log, selfHostedShootExposure, cluster, operationType)
 	}
@@ -124,6 +124,7 @@ func (r *reconciler) delete(
 	log logr.Logger,
 	selfHostedShootExposure *extensionsv1alpha1.SelfHostedShootExposure,
 	cluster *extensionscontroller.Cluster,
+	operationType gardencorev1beta1.LastOperationType,
 ) (
 	reconcile.Result,
 	error,
@@ -133,7 +134,6 @@ func (r *reconciler) delete(
 		return reconcile.Result{}, nil
 	}
 
-	operationType := v1beta1helper.ComputeOperationType(selfHostedShootExposure.ObjectMeta, selfHostedShootExposure.Status.LastOperation)
 	if err := r.statusUpdater.Processing(ctx, log, selfHostedShootExposure, operationType, "Deleting the SelfHostedShootExposure"); err != nil {
 		return reconcile.Result{}, err
 	}
