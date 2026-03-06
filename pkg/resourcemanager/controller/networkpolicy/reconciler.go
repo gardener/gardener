@@ -590,7 +590,7 @@ func (r *Reconciler) collectIstioNamespaces(ctx context.Context, gateway *istion
 	}
 
 	// Ignore gateways with empty selector even though istio allows it.
-	if gateway.Spec.Selector == nil || len(gateway.Spec.Selector) == 0 {
+	if len(gateway.Spec.Selector) == 0 {
 		return nil, fmt.Errorf("gateway %q in namespace %q has no selector, which is not supported by the network policy controller", gateway.Name, gateway.Namespace)
 	}
 
