@@ -45,6 +45,12 @@ controllers:
         eventsThreshold: 1000000
         activeDeadlineDuration: "3h"
         metricsScrapeWaitDuration: "60s"
+    # deltaSnapshotRetentionPeriod: 48h
+    # featureGates:
+    #   UseEtcdWrapper: true
+    # backupLeaderElection:
+    #   reelectionPeriod: 5s
+    #   etcdConnectionTimeout: 5s
   gardenCare:
     syncPeriod: 1m
     conditionThresholds:
@@ -56,9 +62,6 @@ controllers:
       duration: 1m
     - type: ObservabilityComponentsHealthy
       duration: 1m
-    # backupLeaderElection:
-    #   reelectionPeriod: 5s
-    #   etcdConnectionTimeout: 5s
   gardenletDeployer:
     concurrentSyncs: 5
   networkPolicy:
