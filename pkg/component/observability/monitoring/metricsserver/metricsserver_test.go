@@ -311,8 +311,8 @@ status:
 				Type: corev1.SecretTypeTLS,
 			}
 
-			serverSecret.Data["ca.crt"] = data["ca.crt"]
-			serverSecret.Data["ca.key"] = data["ca.key"]
+			serverSecret.Data["tls.crt"] = data["tls.crt"]
+			serverSecret.Data["tls.key"] = data["tls.key"]
 
 			ExpectWithOffset(1, kubernetesutils.MakeUnique(serverSecret)).To(Succeed())
 			serverSecretYAML, err := kubernetesutils.Serialize(serverSecret, kubernetes.ShootScheme)
