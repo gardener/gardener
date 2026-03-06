@@ -30,11 +30,10 @@ controllers:
     concurrentSyncs: 5
   operatingsystemconfig:
     concurrentSyncs: 5
-  ingress:
-    concurrentSyncs: 5
   service:
     concurrentSyncs: 5
     hostIP: "172.18.255.1"
+    hostIP2: "172.18.255.2"
     virtualGardenIP: "172.18.255.3"
     zone0IP: "172.18.255.10"
     zone1IP: "172.18.255.11"
@@ -86,12 +85,6 @@ metrics:
   ##
   enableScraping: true
 
-coredns:
-  enabled: true
-  # ipFamilies:
-  #   - IPv6
-  #   - IPv4
-  # ipFamilyPolicy: PreferDualStack
 gardener:
   version: ""
   gardenlet:

@@ -21,6 +21,9 @@ patches:
         path: /spec/virtualCluster/networking/services
         value:
         - fd00:10:4::/112
+      - op: add
+        path: /spec/runtimeCluster/networking/ipFamilies
+        value: ["IPv6"]
     target:
       group: operator.gardener.cloud
       kind: Garden

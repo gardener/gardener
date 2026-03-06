@@ -18,10 +18,14 @@ spec:
         cidr: 172.18.0.0/24
     - ipBlock:
         cidr: fd00:10::/64
-    # range for "load balancer" IPs (manually added to loopback interface on host)
+    # range for "load balancer" IPs (manually added to loopback interface on host), including:
+    # - local DNS server (bind9): 172.18.255.53 / fd00:ff::53
+    # - seed istio ingress-gateway: 172.18.255.1 / fd00:ff::1
+    # - seed istio ingress-gateway zones: 172.18.255.1{0,1,2} / fd00:ff::1{0,1,2}
+    # - virtual garden istio ingress-gateway: 172.18.255.3 / fd00:ff::3
     - ipBlock:
         cidr: 172.18.255.0/24
     - ipBlock:
-        cidr: ::/120
+        cidr: fd00:ff::/64
   policyTypes:
   - Egress

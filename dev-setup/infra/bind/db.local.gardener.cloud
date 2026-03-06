@@ -1,0 +1,37 @@
+;
+; BIND data file for local.gardener.cloud
+;
+$TTL    30
+@       IN      SOA     ns.local.gardener.cloud. admin.local.gardener.cloud. (
+                     2026021101         ; Serial
+                             30         ; Refresh
+                             30         ; Retry
+                             30         ; Expire
+                              1 )       ; Negative Cache TTL
+
+; Name Servers
+@       IN      NS      ns.local.gardener.cloud.
+ns      IN      A       172.18.255.53
+ns      IN      AAAA    fd00:ff::53
+
+; Delegate the registry and registry-cache zone to Docker's built-in DNS server which resolves
+; the host aliases configured in the docker compose file.
+; We wouldn't need this if we had separate zones for registry records outside of local.gardener.cloud.
+; Note that, on the host, registry.local.gardener.cloud points to 127.0.0.1 and ::1 respectively as configured
+; in /etc/hosts (see ensure_local_registry_hosts in kind-up.sh), so the delegation here only applies to containers.
+registry        IN      NS      docker-dns.local.gardener.cloud.
+registry-cache  IN      NS      docker-dns.local.gardener.cloud.
+docker-dns      IN      A       127.0.0.11
+
+; The garden.local.gardener.cloud cluster is used in the non-operator setup for connecting to the kind cluster that
+; acts as the garden cluster. Historically, we injected the kind cluster's control plane IP address (address of the
+; *-control-plane node) as an host alias for garden.local.gardener.cloud into all kind nodes (/etc/hosts).
+; In the operator setup, the garden cluster is accessible at api.virtual-garden.local.gardener.cloud, which is
+; provisioned via a DNSRecord. provider-local pushes this record to bind9 making it resolvable from the host and
+; containers.
+; Until we have migrated all local setup scenarios to the operator setup, we need to keep the old record for
+; garden.local.gardener.cloud. Instead of injecting it into the nodes and coredns, we simply create a CNAME record
+; pointing to the control plane node name, which will be resolved by Docker's built-in DNS server to correct container
+; IP.
+; TODO(rfranzke): Remove this after legacy helm-based dev setup has been dropped.
+garden          IN  CNAME       gardener-local-control-plane.

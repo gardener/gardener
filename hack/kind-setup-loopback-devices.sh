@@ -35,29 +35,29 @@ parse_flags() {
 
 parse_flags "$@"
 
-LOOPBACK_IP_ADDRESSES=(172.18.255.1)
+LOOPBACK_IP_ADDRESSES=(172.18.255.1 172.18.255.53 fd00:ff::53)
 if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-  LOOPBACK_IP_ADDRESSES+=(::1)
+  LOOPBACK_IP_ADDRESSES+=(fd00:ff::1)
 fi
 
 if [[ "$MULTI_ZONAL" == "true" ]]; then
   LOOPBACK_IP_ADDRESSES+=(172.18.255.10 172.18.255.11 172.18.255.12)
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-    LOOPBACK_IP_ADDRESSES+=(::10 ::11 ::12)
+    LOOPBACK_IP_ADDRESSES+=(fd00:ff::10 fd00:ff::11 fd00:ff::12)
   fi
 fi
 
 if [[ "$CLUSTER_NAME" != "*local2*" ]] ; then
   LOOPBACK_IP_ADDRESSES+=(172.18.255.22)
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-    LOOPBACK_IP_ADDRESSES+=(::22)
+    LOOPBACK_IP_ADDRESSES+=(fd00:ff::22)
   fi
 fi
 
 if [[ "$CLUSTER_NAME" == "gardener-operator-local" ]]; then
   LOOPBACK_IP_ADDRESSES+=(172.18.255.3)
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-    LOOPBACK_IP_ADDRESSES+=(::3)
+    LOOPBACK_IP_ADDRESSES+=(fd00:ff::3)
   fi
 elif [[ "$CLUSTER_NAME" == "gardener-local2" || "$CLUSTER_NAME" == "gardener-local-multi-node2" ]]; then
   LOOPBACK_IP_ADDRESSES+=(172.18.255.2)
@@ -77,14 +77,14 @@ fi
 
 # In some scenarios a developer might run the kind cluster with a docker daemon that is running inside a VM.
 #
-# Most people are using Docker Desktop which is able to mirror the IP addresses 
+# Most people are using Docker Desktop which is able to mirror the IP addresses
 # added to the loopback device on the host into it's managed VM running the docker daemon.
 #
 # However if people are not using this approach,
 # docker might not be able to start the kind containers as the IP
 # is not visible for it since it's only attached to the loopback device on the host.
 #
-# We test the loopback devices by checking on the host directly as well as checking 
+# We test the loopback devices by checking on the host directly as well as checking
 # the loopback on the docker host using an container that is running in the host network.
 
 container_ip() {
@@ -92,6 +92,12 @@ container_ip() {
 }
 
 for ip_func in "ip" "container_ip"; do
+  if [[ ${ip_func} == "container_ip" ]] && docker info | grep -q 'Operating System: Docker Desktop' ; then
+    # For Docker Desktop, we don't need to add the IP addresses to the loopback device inside the VM, as Docker Desktop
+    # automatically mirrors the IPs of the host's loopback device into the VM.
+    continue
+  fi
+
   LOOPBACK_DEVICE=$(${ip_func} address | grep LOOPBACK | sed "s/^[0-9]\+: //g" | awk '{print $1}' | sed "s/:$//g")
   echo "Checking loopback device ${LOOPBACK_DEVICE} with ${ip_func}..."
 
@@ -102,7 +108,7 @@ for ip_func in "ip" "container_ip"; do
       echo "Adding IP address $address to ${LOOPBACK_DEVICE}..."
       if [[ ${ip_func} == "ip" ]]; then
         sudo_ip_func=${SUDO}${ip_func}
-      else 
+      else
         sudo_ip_func=${ip_func}
       fi
       ${sudo_ip_func} address add "$address" dev "${LOOPBACK_DEVICE}"

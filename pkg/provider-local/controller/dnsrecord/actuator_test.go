@@ -5,284 +5,268 @@
 package dnsrecord_test
 
 import (
-	"context"
+	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/miekg/dns"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
+	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
+	extensionsdnsrecordcontroller "github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/component/networking/coredns"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/provider-local/controller/dnsrecord"
 )
 
 var _ = Describe("Actuator", func() {
-	Describe("DNS Rewriting", func() {
-		var (
-			log        logr.Logger
-			fakeClient client.Client
+	var (
+		log       logr.Logger
+		dnsClient *fakeDNSClient
 
-			actuator dnsrecord.Actuator
+		actuator extensionsdnsrecordcontroller.Actuator
 
-			namespace           string
-			cluster             *extensionscontroller.Cluster
-			singleZoneNamespace *corev1.Namespace
-			multiZoneNamespace  *corev1.Namespace
-			apiDNSRecord        *extensionsv1alpha1.DNSRecord
-			otherDNSRecord      *extensionsv1alpha1.DNSRecord
+		cluster   *extensionscontroller.Cluster
+		dnsRecord *extensionsv1alpha1.DNSRecord
+	)
 
-			extensionNamespace *corev1.Namespace
-			emptyConfigMap     *corev1.ConfigMap
-			configMapWithRule  *corev1.ConfigMap
-		)
+	BeforeEach(func() {
+		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter))
+		dnsClient = &fakeDNSClient{resp: successResponse()}
 
-		BeforeEach(func(ctx SpecContext) {
-			log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter))
-			fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+		actuator = &Actuator{
+			DNSClient: dnsClient,
+		}
 
-			actuator = &Actuator{
-				RuntimeClient: fakeClient,
-			}
+		cluster = &extensionscontroller.Cluster{
+			Shoot: &gardencorev1beta1.Shoot{},
+			Seed:  &gardencorev1beta1.Seed{},
+		}
 
-			namespace = "foo"
-			cluster = &extensionscontroller.Cluster{
-				Shoot: &gardencorev1beta1.Shoot{},
-				Seed: &gardencorev1beta1.Seed{
-					Spec: gardencorev1beta1.SeedSpec{
-						Provider: gardencorev1beta1.SeedProvider{
-							Zones: []string{"a", "b", "c"},
-						},
-					},
-				},
-			}
-			singleZoneNamespace = &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace,
-					Annotations: map[string]string{
-						"high-availability-config.resources.gardener.cloud/zones": "a",
-					},
-				},
-			}
-			multiZoneNamespace = &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace,
-					Annotations: map[string]string{
-						"high-availability-config.resources.gardener.cloud/zones": "a,b,c",
-					},
-				},
-			}
+		dnsRecord = &extensionsv1alpha1.DNSRecord{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "foo",
+			},
+			Spec: extensionsv1alpha1.DNSRecordSpec{
+				Name:       "api.something.local.gardener.cloud",
+				RecordType: extensionsv1alpha1.DNSRecordTypeA,
+				Values:     []string{"1.2.3.4", "5.6.7.8"},
+				TTL:        ptr.To[int64](123),
+			},
+		}
+	})
 
-			dnsSecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "dns-secret",
-					Namespace: namespace,
-				},
-			}
-			Expect(fakeClient.Create(ctx, dnsSecret)).To(Succeed())
+	Describe("Reconcile", func() {
+		It("should send DNS UPDATE for A records", func(ctx SpecContext) {
+			Expect(actuator.Reconcile(ctx, log, dnsRecord, cluster)).To(Succeed())
 
-			apiDNSRecord = &extensionsv1alpha1.DNSRecord{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: namespace,
-				},
-				Spec: extensionsv1alpha1.DNSRecordSpec{
-					Name:   "api.something.local.gardener.cloud",
-					Values: []string{"1.2.3.4", "5.6.7.8"},
-					TTL:    ptr.To[int64](123),
-					SecretRef: corev1.SecretReference{
-						Name:      dnsSecret.Name,
-						Namespace: dnsSecret.Namespace,
-					},
-				},
-			}
-			otherDNSRecord = &extensionsv1alpha1.DNSRecord{
-				Spec: extensionsv1alpha1.DNSRecordSpec{
-					Name: "foo.bar",
-				},
-			}
-			extensionNamespace = &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "gardener-extension-provider-local-coredns",
-				},
-			}
-			emptyConfigMap = &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      coredns.CustomConfigMapName,
-					Namespace: extensionNamespace.Name,
-				},
-				Data: map[string]string{"test": "data"},
-			}
-			configMapWithRule = &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      coredns.CustomConfigMapName,
-					Namespace: extensionNamespace.Name,
-				},
-				Data: map[string]string{
-					"test":                               "data",
-					apiDNSRecord.Spec.Name + ".override": "some rule",
-				},
-			}
+			Expect(dnsClient.messages).To(HaveLen(1))
+			msg := dnsClient.messages[0]
+
+			// Zone section
+			Expect(msg.Question).To(HaveLen(1))
+			Expect(msg.Question[0].Name).To(Equal("local.gardener.cloud."))
+
+			// Ns section contains the resource records to update
+			Expect(msg.Ns).To(HaveExactElements(
+				// First RR: RemoveRRset (class ANY)
+				PointTo(MatchAllFields(Fields{
+					"Hdr": MatchFields(IgnoreExtras, Fields{
+						"Name":   Equal("api.something.local.gardener.cloud."),
+						"Class":  BeEquivalentTo(dns.ClassANY),
+						"Rrtype": Equal(dns.TypeA),
+						"Ttl":    BeEquivalentTo(0),
+					}),
+				})),
+				// Other RRs: Insert (class INET)
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Hdr": MatchFields(IgnoreExtras, Fields{
+						"Name":   Equal("api.something.local.gardener.cloud."),
+						"Class":  BeEquivalentTo(dns.ClassINET),
+						"Rrtype": Equal(dns.TypeA),
+						"Ttl":    BeEquivalentTo(123),
+					}),
+					"A": MatchRegexp(`1\.2\.3\.4`),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Hdr": MatchFields(IgnoreExtras, Fields{
+						"Name":   Equal("api.something.local.gardener.cloud."),
+						"Class":  BeEquivalentTo(dns.ClassINET),
+						"Rrtype": Equal(dns.TypeA),
+						"Ttl":    BeEquivalentTo(123),
+					}),
+					"A": MatchRegexp(`5\.6\.7\.8`),
+				})),
+			))
 		})
 
-		Describe("Reconcile", func() {
-			It("should add single zone rewrite rule", func(ctx SpecContext) {
-				createObjects(fakeClient, singleZoneNamespace, extensionNamespace, emptyConfigMap)
+		It("should send DNS UPDATE for AAAA records", func(ctx SpecContext) {
+			dnsRecord.Spec.RecordType = extensionsv1alpha1.DNSRecordTypeAAAA
+			dnsRecord.Spec.Values = []string{"2001:db8::1"}
 
-				Expect(actuator.Reconcile(ctx, log, apiDNSRecord, cluster)).To(Succeed())
+			Expect(actuator.Reconcile(ctx, log, dnsRecord, cluster)).To(Succeed())
 
-				result := &corev1.ConfigMap{}
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(emptyConfigMap), result)).To(Succeed())
-				Expect(result.Data[apiDNSRecord.Spec.Name+".override"]).To(
-					Equal("rewrite stop name regex api\\.something\\.local\\.gardener\\.cloud istio-ingressgateway.istio-ingress--a.svc.cluster.local answer auto"))
-			})
+			Expect(dnsClient.messages).To(HaveLen(1))
+			msg := dnsClient.messages[0]
 
-			It("should add multi zone rewrite rule", func(ctx SpecContext) {
-				createObjects(fakeClient, multiZoneNamespace, extensionNamespace, emptyConfigMap)
+			// Zone section
+			Expect(msg.Question).To(HaveLen(1))
+			Expect(msg.Question[0].Name).To(Equal("local.gardener.cloud."))
 
-				Expect(actuator.Reconcile(ctx, log, apiDNSRecord, cluster)).To(Succeed())
-
-				result := &corev1.ConfigMap{}
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(emptyConfigMap), result)).To(Succeed())
-				Expect(result.Data[apiDNSRecord.Spec.Name+".override"]).To(
-					Equal("rewrite stop name regex api\\.something\\.local\\.gardener\\.cloud istio-ingressgateway.istio-ingress.svc.cluster.local answer auto"))
-			})
-
-			It("should ignore other dns entries", func(ctx SpecContext) {
-				createObjects(fakeClient, singleZoneNamespace, extensionNamespace, emptyConfigMap)
-
-				Expect(actuator.Reconcile(ctx, log, otherDNSRecord, cluster)).To(Succeed())
-
-				result := &corev1.ConfigMap{}
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(emptyConfigMap), result)).To(Succeed())
-				Expect(result.Data).To(Equal(map[string]string{"test": "data"}))
-			})
+			// Ns section contains the resource records to update
+			Expect(msg.Ns).To(HaveExactElements(
+				// First RR: RemoveRRset (class ANY)
+				PointTo(MatchAllFields(Fields{
+					"Hdr": MatchFields(IgnoreExtras, Fields{
+						"Name":   Equal("api.something.local.gardener.cloud."),
+						"Class":  BeEquivalentTo(dns.ClassANY),
+						"Rrtype": Equal(dns.TypeAAAA),
+						"Ttl":    BeEquivalentTo(0),
+					}),
+				})),
+				// Other RRs: Insert (class INET)
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Hdr": MatchFields(IgnoreExtras, Fields{
+						"Name":   Equal("api.something.local.gardener.cloud."),
+						"Class":  BeEquivalentTo(dns.ClassINET),
+						"Rrtype": Equal(dns.TypeAAAA),
+						"Ttl":    BeEquivalentTo(123),
+					}),
+					"AAAA": MatchRegexp(`2001:db8::1`),
+				})),
+			))
 		})
 
-		Describe("Delete", func() {
-			It("should remove single zone rewrite rule", func(ctx SpecContext) {
-				createObjects(fakeClient, singleZoneNamespace, extensionNamespace, configMapWithRule)
+		It("should send DNS UPDATE for CNAME records", func(ctx SpecContext) {
+			dnsRecord.Spec.RecordType = extensionsv1alpha1.DNSRecordTypeCNAME
+			dnsRecord.Spec.Values = []string{"some.other.name.gardener.cloud"}
 
-				Expect(actuator.Delete(ctx, log, apiDNSRecord, cluster)).To(Succeed())
+			Expect(actuator.Reconcile(ctx, log, dnsRecord, cluster)).To(Succeed())
 
-				result := &corev1.ConfigMap{}
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapWithRule), result)).To(Succeed())
-				Expect(result.Data).To(Equal(map[string]string{"test": "data"}))
-			})
+			Expect(dnsClient.messages).To(HaveLen(1))
+			msg := dnsClient.messages[0]
 
-			It("should remove multi zone rewrite rule", func(ctx SpecContext) {
-				createObjects(fakeClient, multiZoneNamespace, extensionNamespace, configMapWithRule)
+			// Zone section
+			Expect(msg.Question).To(HaveLen(1))
+			Expect(msg.Question[0].Name).To(Equal("local.gardener.cloud."))
 
-				Expect(actuator.Delete(ctx, log, apiDNSRecord, cluster)).To(Succeed())
-
-				result := &corev1.ConfigMap{}
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapWithRule), result)).To(Succeed())
-				Expect(result.Data).To(Equal(map[string]string{"test": "data"}))
-			})
-
-			It("should ignore other dns entries", func(ctx SpecContext) {
-				createObjects(fakeClient, singleZoneNamespace, extensionNamespace, configMapWithRule)
-
-				Expect(actuator.Delete(ctx, log, otherDNSRecord, cluster)).To(Succeed())
-
-				result := &corev1.ConfigMap{}
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapWithRule), result)).To(Succeed())
-				Expect(result.Data).To(Equal(map[string]string{"test": "data", apiDNSRecord.Spec.Name + ".override": "some rule"}))
-			})
+			// Ns section contains the resource records to update
+			Expect(msg.Ns).To(HaveExactElements(
+				// First RR: RemoveRRset (class ANY)
+				PointTo(MatchAllFields(Fields{
+					"Hdr": MatchFields(IgnoreExtras, Fields{
+						"Name":   Equal("api.something.local.gardener.cloud."),
+						"Class":  BeEquivalentTo(dns.ClassANY),
+						"Rrtype": Equal(dns.TypeCNAME),
+						"Ttl":    BeEquivalentTo(0),
+					}),
+				})),
+				// Other RRs: Insert (class INET)
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Hdr": MatchFields(IgnoreExtras, Fields{
+						"Name":   Equal("api.something.local.gardener.cloud."),
+						"Class":  BeEquivalentTo(dns.ClassINET),
+						"Rrtype": Equal(dns.TypeCNAME),
+						"Ttl":    BeEquivalentTo(123),
+					}),
+					"Target": Equal("some.other.name.gardener.cloud."),
+				})),
+			))
 		})
 
-		Describe("Migrate", func() {
-			It("should remove the rewrite rule", func(ctx SpecContext) {
-				createObjects(fakeClient, extensionNamespace, configMapWithRule)
+		It("should use default TTL when none is specified", func(ctx SpecContext) {
+			dnsRecord.Spec.TTL = nil
 
-				Expect(actuator.Migrate(ctx, log, apiDNSRecord, cluster)).To(Succeed())
+			Expect(actuator.Reconcile(ctx, log, dnsRecord, cluster)).To(Succeed())
 
-				result := &corev1.ConfigMap{}
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapWithRule), result)).To(Succeed())
-				Expect(result.Data).To(Equal(map[string]string{"test": "data"}))
-			})
+			Expect(dnsClient.messages).To(HaveLen(1))
+			// Insert RR should use default TTL of 120
+			Expect(dnsClient.messages[0].Ns[1].Header().Ttl).To(Equal(uint32(120)))
+		})
+	})
+
+	Describe("Delete", func() {
+		It("should send DNS UPDATE with RemoveRRset", func(ctx SpecContext) {
+			Expect(actuator.Delete(ctx, log, dnsRecord, cluster)).To(Succeed())
+
+			Expect(dnsClient.messages).To(HaveLen(1))
+			msg := dnsClient.messages[0]
+
+			// Zone section
+			Expect(msg.Question).To(HaveLen(1))
+			Expect(msg.Question[0].Name).To(Equal("local.gardener.cloud."))
+
+			// Ns section contains the resource records to update
+			Expect(msg.Ns).To(HaveExactElements(
+				// First RR: RemoveRRset (class ANY)
+				PointTo(MatchAllFields(Fields{
+					"Hdr": MatchFields(IgnoreExtras, Fields{
+						"Name":   Equal("api.something.local.gardener.cloud."),
+						"Class":  BeEquivalentTo(dns.ClassANY),
+						"Rrtype": Equal(dns.TypeA),
+						"Ttl":    BeEquivalentTo(0),
+					}),
+				})),
+			))
+		})
+	})
+
+	Describe("Migrate", func() {
+		It("should delete for non-self-hosted shoots", func(ctx SpecContext) {
+			Expect(actuator.Migrate(ctx, log, dnsRecord, cluster)).To(Succeed())
+
+			Expect(dnsClient.messages).To(HaveLen(1))
+			msg := dnsClient.messages[0]
+
+			// Zone section
+			Expect(msg.Question).To(HaveLen(1))
+			Expect(msg.Question[0].Name).To(Equal("local.gardener.cloud."))
+
+			// Ns section contains the resource records to update
+			Expect(msg.Ns).To(HaveExactElements(
+				// First RR: RemoveRRset (class ANY)
+				PointTo(MatchAllFields(Fields{
+					"Hdr": MatchFields(IgnoreExtras, Fields{
+						"Name":   Equal("api.something.local.gardener.cloud."),
+						"Class":  BeEquivalentTo(dns.ClassANY),
+						"Rrtype": Equal(dns.TypeA),
+						"Ttl":    BeEquivalentTo(0),
+					}),
+				})),
+			))
 		})
 
-		Context("self-hosted shoots", func() {
-			BeforeEach(func() {
-				cluster.Shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{
-					ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
-				}}
-			})
+		It("should not delete for self-hosted shoots", func(ctx SpecContext) {
+			cluster.Shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{
+				ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+			}}
 
-			Describe("Reconcile", func() {
-				It("should add config for A record", func(ctx SpecContext) {
-					createObjects(fakeClient, extensionNamespace, emptyConfigMap)
-
-					apiDNSRecord.Spec.RecordType = "A"
-					Expect(actuator.Reconcile(ctx, log, apiDNSRecord, cluster)).To(Succeed())
-
-					result := &corev1.ConfigMap{}
-					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(emptyConfigMap), result)).To(Succeed())
-					Expect(result.Data[apiDNSRecord.Spec.Name+".override"]).To(
-						Equal(`template IN A local.gardener.cloud {
-  match "^api\.something\.local\.gardener\.cloud\.$"
-  answer "{{ .Name }} 123 IN A 1.2.3.4 5.6.7.8"
-  fallthrough
-}
-`))
-				})
-
-				It("should add config for AAAA record", func(ctx SpecContext) {
-					createObjects(fakeClient, extensionNamespace, emptyConfigMap)
-
-					apiDNSRecord.Spec.RecordType = "AAAA"
-					Expect(actuator.Reconcile(ctx, log, apiDNSRecord, cluster)).To(Succeed())
-
-					result := &corev1.ConfigMap{}
-					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(emptyConfigMap), result)).To(Succeed())
-					Expect(result.Data[apiDNSRecord.Spec.Name+".override"]).To(
-						Equal(`template IN AAAA local.gardener.cloud {
-  match "^api\.something\.local\.gardener\.cloud\.$"
-  answer "{{ .Name }} 123 IN AAAA 1.2.3.4 5.6.7.8"
-  fallthrough
-}
-`))
-				})
-
-				It("should fail for CNAME record", func(ctx SpecContext) {
-					createObjects(fakeClient, extensionNamespace, emptyConfigMap)
-
-					apiDNSRecord.Spec.RecordType = "CNAME"
-					apiDNSRecord.Spec.Values = []string{"some.other.name.gardener.cloud"}
-					Expect(actuator.Reconcile(ctx, log, apiDNSRecord, cluster)).To(MatchError(ContainSubstring(`unsupported record type "CNAME" for self-hosted shoot`)))
-				})
-			})
-
-			Describe("Migrate", func() {
-				It("should not delete rule from ConfigMap", func(ctx SpecContext) {
-					createObjects(fakeClient, extensionNamespace, configMapWithRule)
-
-					Expect(actuator.Migrate(ctx, log, apiDNSRecord, cluster)).To(Succeed())
-
-					result := &corev1.ConfigMap{}
-					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(emptyConfigMap), result)).To(Succeed())
-					Expect(result.Data[apiDNSRecord.Spec.Name+".override"]).To(
-						Equal("some rule"))
-				})
-			})
+			Expect(actuator.Migrate(ctx, log, dnsRecord, cluster)).To(Succeed())
+			Expect(dnsClient.messages).To(BeEmpty())
 		})
 	})
 })
 
-func createObjects(c client.Client, objs ...client.Object) {
-	GinkgoHelper()
+// fakeDNSClient captures DNS messages sent via Exchange and returns configurable responses.
+type fakeDNSClient struct {
+	messages []*dns.Msg
+	resp     *dns.Msg
+	err      error
+}
 
-	for _, obj := range objs {
-		Expect(c.Create(context.Background(), obj)).To(Succeed())
+func (m *fakeDNSClient) Exchange(msg *dns.Msg, _ string) (*dns.Msg, time.Duration, error) {
+	m.messages = append(m.messages, msg.Copy())
+	if m.err != nil {
+		return nil, 0, m.err
 	}
+	return m.resp, 0, nil
+}
+
+func successResponse() *dns.Msg {
+	return &dns.Msg{MsgHdr: dns.MsgHdr{Rcode: dns.RcodeSuccess}}
 }
