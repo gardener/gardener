@@ -45,6 +45,7 @@ var (
 	leaseResource                     = coordinationv1.Resource("leases")
 	projectResource                   = gardencorev1beta1.Resource("projects")
 	secretResource                    = corev1.Resource("secrets")
+	serviceAccountResource            = corev1.Resource("serviceaccounts")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
 	shootStateResource                = gardencorev1beta1.Resource("shootstates")
 	workloadIdentityResource          = securityv1alpha1.Resource("workloadidentities")
@@ -86,6 +87,9 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 
 	case secretResource:
 		return h.admitSecret(ctx, gardenletShootInfo, request)
+
+	case serviceAccountResource:
+		return h.admitServiceAccount(gardenletShootInfo, userType, request)
 
 	case shootStateResource:
 		return h.admitShootState(gardenletShootInfo, request)
@@ -189,6 +193,25 @@ func (h *Handler) admitLease(gardenletShootInfo types.NamespacedName, userType g
 	}
 
 	return h.admitCreateWithResourcePrefix(gardenletShootInfo, request)
+}
+
+func (h *Handler) admitServiceAccount(gardenletShootInfo types.NamespacedName, userType gardenletidentity.UserType, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Create {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	if userType == gardenletidentity.UserTypeExtension {
+		return admission.Errored(http.StatusForbidden, fmt.Errorf("extension client may not create ServiceAccounts"))
+	}
+
+	// Allow gardenlet to create service accounts for extensions in the shoot's project namespace.
+	// The SA name must be prefixed with extension-shoot--<shootName>-- to scope to this shoot.
+	if request.Namespace == gardenletShootInfo.Namespace &&
+		strings.HasPrefix(request.Name, v1beta1constants.ExtensionShootServiceAccountPrefix+gardenletShootInfo.Name+"--") {
+		return admission.Allowed("")
+	}
+
+	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to shoot %s", gardenletShootInfo))
 }
 
 func (h *Handler) admitCreateWithResourcePrefix(gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {
