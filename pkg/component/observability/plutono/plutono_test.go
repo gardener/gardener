@@ -491,17 +491,7 @@ kind: Service
 metadata:
   annotations:
     networking.istio.io/exportTo: '*'
-`
-
-				if values.ClusterType == comp.ClusterTypeShoot {
-					out += `    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchExpressions":[{"key":"handler.exposureclass.gardener.cloud/name","operator":"Exists"}]}]'
-    networking.resources.gardener.cloud/pod-label-selector-namespace-alias: all-shoots
-`
-				} else {
-					out += `    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]'
-`
-				}
-				out += `  labels:
+  labels:
     component: plutono
 `
 				if values.ClusterType == comp.ClusterTypeSeed {
