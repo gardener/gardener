@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
@@ -46,6 +45,7 @@ type KubeconfigREST struct {
 	gvk            schema.GroupVersionKind
 	newObjectFunc  func() runtime.Object
 	userGroupsFunc func(context.Context, user.Info, clientauthorizationv1.SubjectAccessReviewInterface) ([]string, error)
+	userNamePrefix string
 }
 
 var (
@@ -156,19 +156,13 @@ func (r *KubeconfigREST) Create(ctx context.Context, name string, obj runtime.Ob
 		kubeconfigRequest.Spec.ExpirationSeconds = r.maxExpirationSeconds
 	}
 
-	// generate a random user name prefix to avoid conflicts with (cluster)role bindings for existing users
-	userNamePrefix, err := utils.GenerateRandomString(10)
-	if err != nil {
-		return nil, apierrors.NewInternalError(fmt.Errorf("failed to generate user name prefix: %w", err))
-	}
-
 	var (
 		validity = time.Duration(kubeconfigRequest.Spec.ExpirationSeconds) * time.Second
 		authName = fmt.Sprintf("%s--%s", shoot.Namespace, shoot.Name)
 		cpsc     = secrets.ControlPlaneSecretConfig{
 			Name: authName,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				CommonName:   userNamePrefix + ":" + userInfo.GetName(),
+				CommonName:   r.userNamePrefix + userInfo.GetName(),
 				Organization: groups,
 				CertType:     secrets.ClientCert,
 				Validity:     &validity,

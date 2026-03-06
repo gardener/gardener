@@ -40,5 +40,6 @@ var _ = Describe("Admin Kubeconfig", func() {
 		},
 		ConsistOf("gardener.cloud:system:admins"),
 		ConsistOf("gardener.cloud:project:admins"),
+		"gardener.cloud:admin:",
 	)
 })
