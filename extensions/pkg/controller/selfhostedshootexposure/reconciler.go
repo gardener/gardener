@@ -19,11 +19,9 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 type reconciler struct {
@@ -31,7 +29,7 @@ type reconciler struct {
 
 	client        client.Client
 	reader        client.Reader
-	statusUpdater extensionscontroller.StatusUpdater
+	statusUpdater extensionscontroller.StatusUpdaterCustom
 }
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
@@ -70,7 +68,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	switch {
 	case selfHostedShootExposure.DeletionTimestamp != nil:
-		return r.delete(ctx, log, selfHostedShootExposure, cluster)
+		return r.delete(ctx, log, selfHostedShootExposure, cluster, operationType)
 	default:
 		return r.reconcile(ctx, log, selfHostedShootExposure, cluster, operationType)
 	}
@@ -93,26 +91,26 @@ func (r *reconciler) reconcile(
 		}
 	}
 
-	if err := r.statusUpdater.Processing(ctx, log, selfHostedShootExposure, operationType, "Reconciling the SelfHostedShootExposure"); err != nil {
+	if err := r.statusUpdater.ProcessingCustom(ctx, log, selfHostedShootExposure, operationType, "Reconciling the SelfHostedShootExposure", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the reconciliation of SelfHostedShootExposure")
 	loadBalancerIngresses, err := r.actuator.Reconcile(ctx, log, selfHostedShootExposure, cluster)
+
+	updateIngressFunc := func(_ extensionsv1alpha1.Status) error {
+		if len(loadBalancerIngresses) > 0 {
+			selfHostedShootExposure.Status.Ingress = loadBalancerIngresses
+		}
+		return nil
+	}
+
 	if err != nil {
-		_ = r.statusUpdater.Error(ctx, log, selfHostedShootExposure, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling SelfHostedShootExposure")
+		_ = r.statusUpdater.ErrorCustom(ctx, log, selfHostedShootExposure, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling SelfHostedShootExposure", updateIngressFunc)
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if len(loadBalancerIngresses) > 0 {
-		patch := client.MergeFrom(selfHostedShootExposure.DeepCopy())
-		selfHostedShootExposure.Status.Ingress = loadBalancerIngresses
-		if err := r.client.Status().Patch(ctx, selfHostedShootExposure, patch); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not update status ingress: %w", err)
-		}
-	}
-
-	if err := r.statusUpdater.Success(ctx, log, selfHostedShootExposure, operationType, "Successfully reconciled SelfHostedShootExposure"); err != nil {
+	if err := r.statusUpdater.SuccessCustom(ctx, log, selfHostedShootExposure, operationType, "Successfully reconciled SelfHostedShootExposure", updateIngressFunc); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -124,6 +122,7 @@ func (r *reconciler) delete(
 	log logr.Logger,
 	selfHostedShootExposure *extensionsv1alpha1.SelfHostedShootExposure,
 	cluster *extensionscontroller.Cluster,
+	operationType gardencorev1beta1.LastOperationType,
 ) (
 	reconcile.Result,
 	error,
@@ -133,24 +132,23 @@ func (r *reconciler) delete(
 		return reconcile.Result{}, nil
 	}
 
-	operationType := v1beta1helper.ComputeOperationType(selfHostedShootExposure.ObjectMeta, selfHostedShootExposure.Status.LastOperation)
-	if err := r.statusUpdater.Processing(ctx, log, selfHostedShootExposure, operationType, "Deleting the SelfHostedShootExposure"); err != nil {
+	if err := r.statusUpdater.ProcessingCustom(ctx, log, selfHostedShootExposure, operationType, "Deleting the SelfHostedShootExposure", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the deletion of SelfHostedShootExposure")
 	var err error
-	if kubernetesutils.HasMetaDataAnnotation(&selfHostedShootExposure.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "true") {
+	if cluster != nil && v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot) {
 		err = r.actuator.ForceDelete(ctx, log, selfHostedShootExposure, cluster)
 	} else {
 		err = r.actuator.Delete(ctx, log, selfHostedShootExposure, cluster)
 	}
 	if err != nil {
-		_ = r.statusUpdater.Error(ctx, log, selfHostedShootExposure, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting SelfHostedShootExposure")
+		_ = r.statusUpdater.ErrorCustom(ctx, log, selfHostedShootExposure, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting SelfHostedShootExposure", nil)
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, log, selfHostedShootExposure, operationType, "Successfully reconciled SelfHostedShootExposure"); err != nil {
+	if err := r.statusUpdater.SuccessCustom(ctx, log, selfHostedShootExposure, operationType, "Successfully reconciled SelfHostedShootExposure", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
