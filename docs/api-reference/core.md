@@ -2172,8 +2172,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
-This field is immutable.</p>
+<p>ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.</p>
 </td>
 </tr>
 <tr>
@@ -14172,8 +14171,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
-This field is immutable.</p>
+<p>ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.</p>
 </td>
 </tr>
 <tr>
@@ -14922,8 +14920,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
-This field is immutable.</p>
+<p>ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.</p>
 </td>
 </tr>
 <tr>
