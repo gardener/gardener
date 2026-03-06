@@ -4560,6 +4560,7 @@ func autoConvert_v1beta1_KubeControllerManagerConfig_To_core_KubeControllerManag
 	out.NodeCIDRMaskSize = (*int32)(unsafe.Pointer(in.NodeCIDRMaskSize))
 	out.PodEvictionTimeout = (*metav1.Duration)(unsafe.Pointer(in.PodEvictionTimeout))
 	out.NodeMonitorGracePeriod = (*metav1.Duration)(unsafe.Pointer(in.NodeMonitorGracePeriod))
+	out.NodeCIDRMaskSizeIPv6 = (*int32)(unsafe.Pointer(in.NodeCIDRMaskSizeIPv6))
 	return nil
 }
 
@@ -4574,6 +4575,7 @@ func autoConvert_core_KubeControllerManagerConfig_To_v1beta1_KubeControllerManag
 	}
 	out.HorizontalPodAutoscalerConfig = (*HorizontalPodAutoscalerConfig)(unsafe.Pointer(in.HorizontalPodAutoscalerConfig))
 	out.NodeCIDRMaskSize = (*int32)(unsafe.Pointer(in.NodeCIDRMaskSize))
+	out.NodeCIDRMaskSizeIPv6 = (*int32)(unsafe.Pointer(in.NodeCIDRMaskSizeIPv6))
 	out.PodEvictionTimeout = (*metav1.Duration)(unsafe.Pointer(in.PodEvictionTimeout))
 	out.NodeMonitorGracePeriod = (*metav1.Duration)(unsafe.Pointer(in.NodeMonitorGracePeriod))
 	return nil
@@ -4847,7 +4849,15 @@ func autoConvert_v1beta1_Kubernetes_To_core_Kubernetes(in *Kubernetes, out *core
 	} else {
 		out.KubeAPIServer = nil
 	}
-	out.KubeControllerManager = (*core.KubeControllerManagerConfig)(unsafe.Pointer(in.KubeControllerManager))
+	if in.KubeControllerManager != nil {
+		in, out := &in.KubeControllerManager, &out.KubeControllerManager
+		*out = new(core.KubeControllerManagerConfig)
+		if err := Convert_v1beta1_KubeControllerManagerConfig_To_core_KubeControllerManagerConfig(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.KubeControllerManager = nil
+	}
 	out.KubeScheduler = (*core.KubeSchedulerConfig)(unsafe.Pointer(in.KubeScheduler))
 	out.KubeProxy = (*core.KubeProxyConfig)(unsafe.Pointer(in.KubeProxy))
 	if in.Kubelet != nil {
@@ -4889,7 +4899,15 @@ func autoConvert_core_Kubernetes_To_v1beta1_Kubernetes(in *core.Kubernetes, out 
 	} else {
 		out.KubeAPIServer = nil
 	}
-	out.KubeControllerManager = (*KubeControllerManagerConfig)(unsafe.Pointer(in.KubeControllerManager))
+	if in.KubeControllerManager != nil {
+		in, out := &in.KubeControllerManager, &out.KubeControllerManager
+		*out = new(KubeControllerManagerConfig)
+		if err := Convert_core_KubeControllerManagerConfig_To_v1beta1_KubeControllerManagerConfig(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.KubeControllerManager = nil
+	}
 	out.KubeScheduler = (*KubeSchedulerConfig)(unsafe.Pointer(in.KubeScheduler))
 	out.KubeProxy = (*KubeProxyConfig)(unsafe.Pointer(in.KubeProxy))
 	if in.Kubelet != nil {

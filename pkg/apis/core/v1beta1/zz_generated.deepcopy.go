@@ -2785,6 +2785,11 @@ func (in *KubeControllerManagerConfig) DeepCopyInto(out *KubeControllerManagerCo
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.NodeCIDRMaskSizeIPv6 != nil {
+		in, out := &in.NodeCIDRMaskSizeIPv6, &out.NodeCIDRMaskSizeIPv6
+		*out = new(int32)
+		**out = **in
+	}
 	return
 }
 
