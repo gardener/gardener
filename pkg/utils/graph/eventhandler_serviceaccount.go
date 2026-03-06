@@ -14,6 +14,7 @@ import (
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 )
 
@@ -25,7 +26,8 @@ func (g *graph) setupServiceAccountWatch(_ context.Context, informer cache.Infor
 				return
 			}
 
-			if !strings.HasPrefix(serviceAccount.Name, gardenletbootstraputil.ServiceAccountNamePrefix) {
+			if !strings.HasPrefix(serviceAccount.Name, gardenletbootstraputil.ServiceAccountNamePrefix) &&
+				!strings.HasPrefix(serviceAccount.Name, v1beta1constants.ExtensionShootServiceAccountPrefix) {
 				return
 			}
 
@@ -57,7 +59,8 @@ func (g *graph) setupServiceAccountWatch(_ context.Context, informer cache.Infor
 				return
 			}
 
-			if !strings.HasPrefix(serviceAccount.Name, gardenletbootstraputil.ServiceAccountNamePrefix) {
+			if !strings.HasPrefix(serviceAccount.Name, gardenletbootstraputil.ServiceAccountNamePrefix) &&
+				!strings.HasPrefix(serviceAccount.Name, v1beta1constants.ExtensionShootServiceAccountPrefix) {
 				return
 			}
 
@@ -75,6 +78,11 @@ func (g *graph) handleServiceAccountCreateOrUpdate(serviceAccount *corev1.Servic
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
+	if g.forSelfHostedShoots {
+		g.handleServiceAccountCreateOrUpdateForShoots(serviceAccount)
+		return
+	}
+
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeServiceAccount, serviceAccount.Namespace, serviceAccount.Name)
 
 	serviceAccountVertex := g.getOrCreateVertex(VertexTypeServiceAccount, serviceAccount.Namespace, serviceAccount.Name)
@@ -83,6 +91,25 @@ func (g *graph) handleServiceAccountCreateOrUpdate(serviceAccount *corev1.Servic
 		secretVertex := g.getOrCreateVertex(VertexTypeSecret, serviceAccount.Namespace, secret.Name)
 		g.addEdge(secretVertex, serviceAccountVertex)
 	}
+}
+
+func (g *graph) handleServiceAccountCreateOrUpdateForShoots(serviceAccount *corev1.ServiceAccount) {
+	if !strings.HasPrefix(serviceAccount.Name, v1beta1constants.ExtensionShootServiceAccountPrefix) {
+		return
+	}
+
+	// SA name: extension-shoot--<shootName>--<controllerInstallationName>
+	withoutPrefix := strings.TrimPrefix(serviceAccount.Name, v1beta1constants.ExtensionShootServiceAccountPrefix)
+	shootName, _, found := strings.Cut(withoutPrefix, "--")
+	if !found || shootName == "" {
+		return
+	}
+
+	g.deleteAllOutgoingEdges(VertexTypeServiceAccount, serviceAccount.Namespace, serviceAccount.Name, VertexTypeShoot)
+
+	serviceAccountVertex := g.getOrCreateVertex(VertexTypeServiceAccount, serviceAccount.Namespace, serviceAccount.Name)
+	shootVertex := g.getOrCreateVertex(VertexTypeShoot, serviceAccount.Namespace, shootName)
+	g.addEdge(serviceAccountVertex, shootVertex)
 }
 
 func (g *graph) handleServiceAccountDelete(serviceAccount *corev1.ServiceAccount) {

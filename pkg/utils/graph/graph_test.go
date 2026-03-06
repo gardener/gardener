@@ -31,6 +31,7 @@ import (
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -2518,6 +2519,7 @@ var _ = Describe("graph for shoots", func() {
 		fakeInformerBackupEntry               *controllertest.FakeInformer
 		fakeInformerCertificateSigningRequest *controllertest.FakeInformer
 		fakeInformerGardenlet                 *controllertest.FakeInformer
+		fakeInformerServiceAccount            *controllertest.FakeInformer
 		fakeInformerShoot                     *controllertest.FakeInformer
 		fakeInformers                         *informertest.FakeInformers
 
@@ -2526,6 +2528,8 @@ var _ = Describe("graph for shoots", func() {
 
 		shootNamespace = "shoot-namespace"
 		shootName      = "shoot-name"
+
+		serviceAccount1 *corev1.ServiceAccount
 
 		backupBucket1                               *gardencorev1beta1.BackupBucket
 		backupBucket1SecretCredentialsRef           = corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Namespace: "baz", Name: "secret1"}
@@ -2573,6 +2577,7 @@ var _ = Describe("graph for shoots", func() {
 		fakeInformerBackupEntry = &controllertest.FakeInformer{}
 		fakeInformerCertificateSigningRequest = &controllertest.FakeInformer{}
 		fakeInformerGardenlet = &controllertest.FakeInformer{}
+		fakeInformerServiceAccount = &controllertest.FakeInformer{}
 		fakeInformerShoot = &controllertest.FakeInformer{}
 
 		fakeInformers = &informertest.FakeInformers{
@@ -2582,6 +2587,7 @@ var _ = Describe("graph for shoots", func() {
 				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntry"):            fakeInformerBackupEntry,
 				certificatesv1.SchemeGroupVersion.WithKind("CertificateSigningRequest"): fakeInformerCertificateSigningRequest,
 				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("Gardenlet"):         fakeInformerGardenlet,
+				corev1.SchemeGroupVersion.WithKind("ServiceAccount"):                    fakeInformerServiceAccount,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"):                  fakeInformerShoot,
 			},
 		}
@@ -2620,6 +2626,13 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 
 		gardenlet1 = &seedmanagementv1alpha1.Gardenlet{
 			ObjectMeta: metav1.ObjectMeta{Name: "self-hosted-shoot-" + shootName, Namespace: shootNamespace},
+		}
+
+		serviceAccount1 = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: shootNamespace,
+				Name:      v1beta1constants.ExtensionShootServiceAccountPrefix + shootName + "--provider-aws",
+			},
 		}
 
 		namespace1 = &corev1.Namespace{
@@ -2862,6 +2875,20 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 		Expect(graph.graph.Nodes().Len()).To(BeZero())
 		Expect(graph.graph.Edges().Len()).To(BeZero())
 		Expect(graph.HasPathFrom(VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeFalse())
+	})
+
+	It("should behave as expected for corev1.ServiceAccount", func() {
+		By("Add")
+		fakeInformerServiceAccount.Add(serviceAccount1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeTrue())
+
+		By("Delete")
+		fakeInformerServiceAccount.Delete(serviceAccount1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeFalse())
 	})
 
 	It("should behave as expected for gardencorev1beta1.Shoot", func() {
