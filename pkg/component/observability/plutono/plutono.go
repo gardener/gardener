@@ -30,7 +30,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
@@ -293,17 +292,12 @@ func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, 
 		return nil, nil, err
 	}
 
-	isShootNamespace, err := gardenerutils.IsShootNamespace(ctx, p.client, p.namespace)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed checking if namespace is a shoot namespace: %w", err)
-	}
-
 	resources := append([]client.Object{
 		plutonoConfigSecret,
 		providerConfigMap,
 		dataSourceConfigMap,
 		p.getDeployment(providerConfigMap, plutonoConfigSecret, plutonoAdminUserSecret),
-		p.getService(isShootNamespace),
+		p.getService(),
 		p.getServiceAccount(),
 		p.getRole(),
 		p.getRoleBinding(),
@@ -582,7 +576,7 @@ func (p *plutono) getRoleBinding() *rbacv1.RoleBinding {
 	}
 }
 
-func (p *plutono) getService(isShootNamespace bool) *corev1.Service {
+func (p *plutono) getService() *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -609,18 +603,6 @@ func (p *plutono) getService(isShootNamespace bool) *corev1.Service {
 	if p.values.ClusterType == component.ClusterTypeSeed {
 		service.Labels = utils.MergeStringMaps(service.Labels, map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring})
 	}
-
-	namespaceSelectors := []metav1.LabelSelector{{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}}}
-
-	if isShootNamespace {
-		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
-
-		namespaceSelectors = append(namespaceSelectors,
-			metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
-		)
-	}
-
-	utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service, namespaceSelectors...))
 
 	return service
 }

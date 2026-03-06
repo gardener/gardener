@@ -39,7 +39,6 @@ import (
 	corebackupbucket "github.com/gardener/gardener/pkg/component/garden/backupbucket"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
-	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	kubernetesdashboard "github.com/gardener/gardener/pkg/component/kubernetes/dashboard"
 	kubeproxy "github.com/gardener/gardener/pkg/component/kubernetes/proxy"
@@ -365,7 +364,6 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, seedIsGar
 		!seedIsGarden,
 		labels,
 		[]string{
-			gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port),
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+v1beta1constants.DeploymentNameIstioBasicAuthServer, istiobasicauthserver.Port),
 		},
 		seed.GetLoadBalancerServiceAnnotations(),

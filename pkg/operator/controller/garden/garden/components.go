@@ -944,7 +944,6 @@ func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Gard
 		true,
 		sharedcomponent.GetIstioZoneLabels(nil, nil),
 		[]string{
-			gardenerutils.NetworkPolicyLabel(r.GardenNamespace+"-"+kubeapiserverconstants.ServiceName(operatorv1alpha1.VirtualGardenNamePrefix), kubeapiserverconstants.Port),
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameIstioBasicAuthServer, istiobasicauthserver.Port),
 		},
 		annotations,
