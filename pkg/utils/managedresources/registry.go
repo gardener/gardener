@@ -139,8 +139,7 @@ func (r *Registry) AddSerialized(filename string, serializationYAML []byte) {
 // The map holds a single key `data.yaml.br` with a value containing all objects,
 // concatenated and compressed by the Brotli algorithm.
 func (r *Registry) SerializedObjects() (map[string][]byte, error) {
-	objectKeys := slices.Collect(maps.Keys(r.nameToObject))
-	slices.Sort(objectKeys)
+	objectKeys := slices.Sorted(maps.Keys(r.nameToObject))
 
 	var (
 		buf bytes.Buffer
@@ -185,8 +184,7 @@ func (r *Registry) AddAllAndSerialize(objects ...client.Object) (map[string][]by
 
 // RegisteredObjects returns a slice of registered objects.
 func (r *Registry) RegisteredObjects() []client.Object {
-	objectKeys := slices.Collect(maps.Keys(r.nameToObject))
-	slices.Sort(objectKeys)
+	objectKeys := slices.Sorted(maps.Keys(r.nameToObject))
 
 	out := make([]client.Object, 0, len(r.nameToObject))
 	for _, objectKey := range objectKeys {
