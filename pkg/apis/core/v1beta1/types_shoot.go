@@ -64,11 +64,12 @@ type ShootTemplate struct {
 // ShootSpec is the specification of a Shoot.
 type ShootSpec struct {
 	// Addons contains information about enabled/disabled addons and their configuration.
+	//
 	// Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.
-	// TODO(timuthy): Drop this field when support for Kubernetes 1.34 is dropped.
 	// +optional
-	Addons *Addons `json:"addons,omitempty" protobuf:"bytes,1,opt,name=addons"`
+	Addons *Addons `json:"addons,omitempty" protobuf:"bytes,1,opt,name=addons"` // TODO(timuthy): Drop this field when support for Kubernetes 1.34 is dropped.
 	// CloudProfileName is a name of a CloudProfile object.
+	//
 	// Deprecated: This field will be removed in a future version of Gardener. Use `CloudProfile` instead.
 	// Until Kubernetes v1.33, this field is synced with the `CloudProfile` field.
 	// Starting with Kubernetes v1.34, this field is set to empty string and must not be provided anymore.
@@ -124,7 +125,7 @@ type ShootSpec struct {
 	// +patchMergeKey=key
 	// +patchStrategy=merge
 	// +optional
-	Tolerations []Toleration `json:"tolerations,omitempty" patchStrategy:"merge" patchMergeKey:"key" protobuf:"bytes,17,rep,name=tolerations"`
+	Tolerations []Toleration `json:"tolerations,omitempty" patchMergeKey:"key" patchStrategy:"merge" protobuf:"bytes,17,rep,name=tolerations"`
 	// ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
 	// This field is immutable.
 	// +optional
@@ -158,12 +159,12 @@ type ShootStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional
-	Conditions []Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	Conditions []Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
 	// Constraints represents conditions of a Shoot's current state that constraint some operations on it.
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional
-	Constraints []Condition `json:"constraints,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,2,rep,name=constraints"`
+	Constraints []Condition `json:"constraints,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,2,rep,name=constraints"`
 	// Gardener holds information about the Gardener which last acted on the Shoot.
 	Gardener Gardener `json:"gardener" protobuf:"bytes,3,opt,name=gardener"`
 	// IsHibernated indicates whether the Shoot is currently hibernated.
@@ -201,7 +202,7 @@ type ShootStatus struct {
 	// +optional
 	// +patchMergeKey=name
 	// +patchStrategy=merge
-	AdvertisedAddresses []ShootAdvertisedAddress `json:"advertisedAddresses,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,13,rep,name=advertisedAddresses"`
+	AdvertisedAddresses []ShootAdvertisedAddress `json:"advertisedAddresses,omitempty" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,13,rep,name=advertisedAddresses"`
 	// MigrationStartTime is the time when a migration to a different seed was initiated.
 	// +optional
 	MigrationStartTime *metav1.Time `json:"migrationStartTime,omitempty" protobuf:"bytes,14,opt,name=migrationStartTime"`
@@ -732,6 +733,7 @@ type ClusterAutoscaler struct {
 	// +optional
 	MaxGracefulTerminationSeconds *int32 `json:"maxGracefulTerminationSeconds,omitempty" protobuf:"varint,9,opt,name=maxGracefulTerminationSeconds"`
 	// IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+	//
 	// Deprecated: Ignore taints are deprecated and treated as startup taints
 	// +optional
 	IgnoreTaints []string `json:"ignoreTaints,omitempty" protobuf:"bytes,10,opt,name=ignoreTaints"`
@@ -951,7 +953,7 @@ type KubeAPIServerConfig struct {
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	// +optional
-	AdmissionPlugins []AdmissionPlugin `json:"admissionPlugins,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,2,rep,name=admissionPlugins"`
+	AdmissionPlugins []AdmissionPlugin `json:"admissionPlugins,omitempty" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,2,rep,name=admissionPlugins"`
 	// APIAudiences are the identifiers of the API. The service account token authenticator will
 	// validate that tokens used against the API are bound to at least one of these audiences.
 	// Defaults to ["kubernetes"].
@@ -1225,10 +1227,10 @@ type AdmissionPlugin struct {
 type WatchCacheSizes struct {
 	// Default is not respected anymore by kube-apiserver.
 	// The cache is sized automatically.
+	//
 	// Deprecated: This field is deprecated. Setting the default cache size will be forbidden starting from Kubernetes 1.35.
-	// TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.
 	// +optional
-	Default *int32 `json:"default,omitempty" protobuf:"varint,1,opt,name=default"`
+	Default *int32 `json:"default,omitempty" protobuf:"varint,1,opt,name=default"` // TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.
 	// Resources configures the watch cache size of the kube-apiserver per resource
 	// (flag `--watch-cache-sizes`).
 	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
@@ -1319,10 +1321,10 @@ type KubeSchedulerConfig struct {
 	// KubeMaxPDVols is not respected anymore by kube-scheduler.
 	// The maximum number of attached volumes is configured by the CSI driver.
 	// More information can be found at https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits.
+	//
 	// Deprecated: This field is deprecated. Using this field will be forbidden starting from Kubernetes 1.35.
-	// TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.
 	// +optional
-	KubeMaxPDVols *string `json:"kubeMaxPDVols,omitempty" protobuf:"bytes,2,opt,name=kubeMaxPDVols"`
+	KubeMaxPDVols *string `json:"kubeMaxPDVols,omitempty" protobuf:"bytes,2,opt,name=kubeMaxPDVols"` // TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.
 	// Profile configures the scheduling profile for the cluster.
 	// If not specified, the used profile is "balanced" (provides the default kube-scheduler behavior).
 	// +optional
@@ -1744,7 +1746,7 @@ type Provider struct {
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	// +optional
-	Workers []Worker `json:"workers,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,4,rep,name=workers"`
+	Workers []Worker `json:"workers,omitempty" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,4,rep,name=workers"`
 	// WorkersSettings contains settings for all workers.
 	// +optional
 	WorkersSettings *WorkersSettings `json:"workersSettings,omitempty" protobuf:"bytes,5,opt,name=workersSettings"`

@@ -4,7 +4,10 @@ run:
 linters:
   enable:
     - embeddedstructfieldcheck
+    - exptostd
+    - depguard
     - ginkgolinter
+    - gocritic
     - importas
     - logcheck
     - misspell
@@ -12,11 +15,33 @@ linters:
     - revive
     - unconvert
     - unparam
+    - usestdlibvars
     - whitespace
   settings:
+    depguard:
+      rules:
+        utils:
+          files:
+            - $all
+          deny:
+            - pkg: "k8s.io/utils/pointer"
+              desc: "k8s.io/utils/pointer shall no longer be used, please use k8s.io/utils/ptr."
     embeddedstructfieldcheck:
       # Checks that sync.Mutex and sync.RWMutex are not used as embedded fields.
       forbid-mutex: true
+    gocritic:
+      disable-all: true
+      enabled-checks:
+      - badSorting
+      - captLocal
+      - commentedOutCode
+      - commentedOutImport
+      - deprecatedComment
+      - dupArg
+      - dupBranchBody
+      - dupCase
+      - emptyDecl
+      - yodaStyleExpr
     importas:
       alias:
         # External imported packages
@@ -236,12 +261,12 @@ linters:
       mode: restricted # only check comments
     revive:
       rules:
-        - name: duplicated-imports
-        - name: unused-parameter
-        - name: unreachable-code
         - name: context-as-argument
+        - name: duplicated-imports
         - name: early-return
         - name: exported
+        - name: unreachable-code
+        - name: unused-parameter
     custom:
       logcheck:
         path: <<LOGCHECK_PLUGIN_PATH>>/logcheck.so

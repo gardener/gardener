@@ -14,7 +14,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -173,7 +172,7 @@ func podForBastion(bastion *extensionsv1alpha1.Bastion, image, userDataSecretNam
 					Image:           image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: pointer.Bool(true),
+						Privileged: ptr.To(true),
 					},
 					VolumeMounts: []corev1.VolumeMount{
 						{
@@ -201,7 +200,7 @@ func podForBastion(bastion *extensionsv1alpha1.Bastion, image, userDataSecretNam
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  userDataSecretName,
-							DefaultMode: pointer.Int32(0777),
+							DefaultMode: ptr.To[int32](0777),
 						},
 					},
 				},

@@ -26,26 +26,26 @@ import (
 )
 
 // ValidateManagedSeedSet validates a ManagedSeedSet object.
-func ValidateManagedSeedSet(ManagedSeedSet *seedmanagement.ManagedSeedSet) field.ErrorList {
+func ValidateManagedSeedSet(managedSeedSet *seedmanagement.ManagedSeedSet) field.ErrorList {
 	opts := gardencorevalidation.KubeAPIServerValidationOptions{
 		AllowInvalidAcceptedIssuers: false,
 		AllowInvalidEventTTL:        false,
 	}
 
-	return ValidateManagedSeedSetWithOps(ManagedSeedSet, opts)
+	return ValidateManagedSeedSetWithOps(managedSeedSet, opts)
 }
 
 // ValidateManagedSeedSetWithOps validates ManagedSeedSet with given validation options.
-func ValidateManagedSeedSetWithOps(ManagedSeedSet *seedmanagement.ManagedSeedSet, opts gardencorevalidation.KubeAPIServerValidationOptions) field.ErrorList {
+func ValidateManagedSeedSetWithOps(managedSeedSet *seedmanagement.ManagedSeedSet, opts gardencorevalidation.KubeAPIServerValidationOptions) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// Ensure namespace is garden
-	if ManagedSeedSet.Namespace != v1beta1constants.GardenNamespace {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("metadata", "namespace"), ManagedSeedSet.Namespace, "namespace must be garden"))
+	if managedSeedSet.Namespace != v1beta1constants.GardenNamespace {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("metadata", "namespace"), managedSeedSet.Namespace, "namespace must be garden"))
 	}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&ManagedSeedSet.ObjectMeta, true, gardencorevalidation.ValidateName, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateManagedSeedSetSpec(&ManagedSeedSet.Spec, opts, field.NewPath("spec"))...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&managedSeedSet.ObjectMeta, true, gardencorevalidation.ValidateName, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateManagedSeedSetSpec(&managedSeedSet.Spec, opts, field.NewPath("spec"))...)
 
 	return allErrs
 }

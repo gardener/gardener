@@ -7,9 +7,10 @@ package crddeployer
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
-	"golang.org/x/exp/maps"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -116,12 +117,12 @@ func (c *crdDeployer) Destroy(ctx context.Context) error {
 
 // Wait waits for the CRDs to be deployed.
 func (c *crdDeployer) Wait(ctx context.Context) error {
-	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, c.client, maps.Keys(c.crdNameToCRD)...)
+	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, c.client, slices.Collect(maps.Keys(c.crdNameToCRD))...)
 }
 
 // WaitCleanup waits for destruction to finish and CRDs to be fully removed.
 func (c *crdDeployer) WaitCleanup(ctx context.Context) error {
-	return kubernetesutils.WaitUntilCRDManifestsDestroyed(ctx, c.client, maps.Keys(c.crdNameToCRD)...)
+	return kubernetesutils.WaitUntilCRDManifestsDestroyed(ctx, c.client, slices.Collect(maps.Keys(c.crdNameToCRD))...)
 }
 
 // generateCRDNameToCRDMap returns a map that has the name of the resource as key, and the corresponding CRD as value.

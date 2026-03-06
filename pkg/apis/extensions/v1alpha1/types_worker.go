@@ -96,7 +96,7 @@ type WorkerSpec struct {
 	// Pools is a list of worker pools.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
-	Pools []WorkerPool `json:"pools" patchStrategy:"merge" patchMergeKey:"name"`
+	Pools []WorkerPool `json:"pools" patchMergeKey:"name" patchStrategy:"merge"`
 }
 
 // WorkerPool is the definition of a specific worker pool.
@@ -252,7 +252,7 @@ type WorkerStatus struct {
 	// the cluster-autoscaler properly.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
-	MachineDeployments []MachineDeployment `json:"machineDeployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	MachineDeployments []MachineDeployment `json:"machineDeployments,omitempty" patchMergeKey:"name" patchStrategy:"merge"`
 	// MachineDeploymentsLastUpdateTime is the timestamp when the status.MachineDeployments slice was last updated.
 	// +optional
 	MachineDeploymentsLastUpdateTime *metav1.Time `json:"machineDeploymentsLastUpdateTime,omitempty"`

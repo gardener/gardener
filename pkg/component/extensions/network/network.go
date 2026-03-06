@@ -173,11 +173,11 @@ func (n *network) WaitCleanup(ctx context.Context) error {
 	)
 }
 
-func getCIDRforSpec(ipFamilies []extensionsv1alpha1.IPFamily, PodCIDRs []net.IPNet) string {
+func getCIDRforSpec(ipFamilies []extensionsv1alpha1.IPFamily, podCIDRs []net.IPNet) string {
 	if len(ipFamilies) == 2 && ipFamilies[0] == extensionsv1alpha1.IPFamilyIPv6 {
-		return PodCIDRs[1].String()
+		return podCIDRs[1].String()
 	}
-	return PodCIDRs[0].String()
+	return podCIDRs[0].String()
 }
 
 func (n *network) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {

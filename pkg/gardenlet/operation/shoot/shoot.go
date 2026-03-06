@@ -272,11 +272,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		shoot.VPNVPAUpdateDisabled = vpnVPAUpdateDisabled
 	}
 
-	needsClusterAutoscaler, err := v1beta1helper.ShootWantsClusterAutoscaler(shootObject)
-	if err != nil {
-		return nil, err
-	}
-	shoot.WantsClusterAutoscaler = needsClusterAutoscaler
+	shoot.WantsClusterAutoscaler = v1beta1helper.ShootWantsClusterAutoscaler(shootObject)
 
 	if shoot.IsWorkerless && shootObject.Spec.Networking != nil {
 		networks, err := ToNetworks(shootObject, shoot.IsWorkerless)

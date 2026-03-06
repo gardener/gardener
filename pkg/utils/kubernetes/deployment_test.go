@@ -119,8 +119,6 @@ var _ = Describe("Deployments", func() {
 					deployment *appsv1.Deployment,
 					_ ...client.GetOption,
 				) error {
-					var ()
-
 					deployment.Generation = generation
 					deployment.Spec.Replicas = &replicas
 					deployment.Status = appsv1.DeploymentStatus{
@@ -160,8 +158,6 @@ var _ = Describe("Deployments", func() {
 					deployment *appsv1.Deployment,
 					_ ...client.GetOption,
 				) error {
-					var ()
-
 					deployment.Generation = generation
 					deployment.Spec.Replicas = &replicas
 					deployment.Status = appsv1.DeploymentStatus{
@@ -201,8 +197,6 @@ var _ = Describe("Deployments", func() {
 					deployment *appsv1.Deployment,
 					_ ...client.GetOption,
 				) error {
-					var ()
-
 					deployment.Generation = generation
 					deployment.Spec.Replicas = &replicas
 					deployment.Status = appsv1.DeploymentStatus{

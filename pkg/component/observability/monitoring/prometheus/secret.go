@@ -16,7 +16,6 @@ import (
 
 const (
 	secretNameSuffixAdditionalScrapeConfigs       = "-additional-scrape-configs"
-	secretNameSuffixAdditionalAlertRelabelConfigs = "-additional-alert-relabel-configs"
 	secretNameSuffixAdditionalAlertmanagerConfigs = "-additional-alertmanager-configs"
 	secretNameSuffixRemoteWriteBasicAuth          = "-remote-write-basic-auth"
 )
