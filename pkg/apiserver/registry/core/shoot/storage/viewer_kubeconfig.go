@@ -47,6 +47,7 @@ func NewViewerKubeconfigREST(
 			return &authenticationv1alpha1.ViewerKubeconfigRequest{}
 		},
 		userGroupsFunc: getViewerUserGroups,
+		userNamePrefix: "gardener:viewer:",
 	}
 }
 
