@@ -183,6 +183,54 @@ use MaxAllowed aligned with the allocatable resources of the largest worker.
 
 Refer to the [Topology-Aware Traffic Routing documentation](./topology_aware_routing.md) as this document contains the documentation for the topology-aware routing Seed setting.
 
+## Zone Selection
+
+> [!NOTE]
+> Zone selection only has an effect on **non-HA shoots** and HA shoots with **failure tolerance type `node`**.
+> HA shoots with failure tolerance type `zone` are already spread across all available zones by definition, so zone selection has no additional effect on them.
+
+By default, Gardener randomly selects an availability zone from `.spec.provider.zones[]` in the `Seed` when creating the shoot control plane namespace in the seed cluster.
+This works well for most use cases, but operators with stretched seeds (multi-AZ) and AZ-local shoots may want the control plane pods to run in the same availability zone as the shoot's worker nodes, minimizing cross-zonal traffic and latency.
+
+The `.spec.settings.zoneSelection` field allows seed operators to configure this behavior.
+When zone selection is enabled, Gardener can derive the control plane zone from the shoot's worker pool zones instead of selecting randomly.
+
+### Modes
+
+Two modes are supported:
+
+#### `Prefer`
+
+Gardener attempts to match the shoot's collected worker zones to the zones available in the seed.
+If a non-empty intersection is found, those matching zones are used for the control plane namespace.
+If no intersection exists (e.g., due to a zone name mismatch across providers), Gardener falls back to the default random zone selection.
+This mode will never fail scheduling — it is safe to enable broadly.
+
+**Single-zone shoot** (worker in `eu-central-1a`, seed has `[eu-central-1a, eu-central-1b, eu-central-1c]`):
+→ Control plane namespace is pinned to `eu-central-1a`.
+
+**Multi-zone shoot** (workers in `[eu-central-1a, eu-central-1b]`, seed has `[eu-central-1a, eu-central-1b, eu-central-1c]`):
+→ One zone is picked randomly from the intersection (`eu-central-1a` or `eu-central-1b`).
+
+**No overlap** (workers in `[us-east-1a]`, seed has `[eu-central-1a, eu-central-1b]`):
+→ Falls back to random zone selection; scheduling still succeeds.
+
+#### `Enforce`
+
+Gardener requires the shoot's collected worker zones to all be present in the seed's zone list.
+If the intersection is non-empty, those zones are used for the control plane namespace.
+If no intersection exists, the control plane reconciliation fails with an error.
+Additionally, the Gardener Scheduler filters out seeds in `Enforce` mode whose zone list does not contain all of the shoot's worker zones, preventing assignment of incompatible shoots to those seeds.
+
+**Single-zone shoot** (worker in `eu-central-1a`, seed has `[eu-central-1a, eu-central-1b]`):
+→ Control plane namespace is pinned to `eu-central-1a`.
+
+**Multi-zone shoot** (workers in `[eu-central-1a, eu-central-1b]`, seed has `[eu-central-1a, eu-central-1b, eu-central-1c]`):
+→ One zone is picked randomly from the intersection (`eu-central-1a` or `eu-central-1b`).
+
+**No overlap** (workers in `[eu-central-1a]`, seed has `[eu-central-1b, eu-central-1c]`):
+→ The scheduler excludes this seed; if no compatible seed is found, scheduling fails with an error.
+
 ## Temporarily Disabling Shoot Reconciliations
 
 There may be emergency situations where you need to temporarily stop the reconciliation of `Shoot` clusters in a `Seed` cluster,

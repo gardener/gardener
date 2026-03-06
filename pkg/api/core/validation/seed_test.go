@@ -1524,6 +1524,52 @@ var _ = Describe("Seed Validation Tests", func() {
 				Expect(ValidateSeed(seed)).To(BeEmpty())
 			})
 
+			Context("zone selection", func() {
+				It("should prevent configuring zone selection when spec.provider.zones is empty", func() {
+					seed.Spec.Provider.Zones = nil
+					seed.Spec.Settings = &core.SeedSettings{
+						ZoneSelection: &core.SeedSettingZoneSelection{
+							Mode: core.ZoneSelectionModePrefer,
+						},
+					}
+
+					Expect(ValidateSeed(seed)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.settings.zoneSelection"),
+							"Detail": Equal("zone selection can only be configured when spec.provider.zones is non-empty"),
+						})),
+					))
+				})
+
+				It("should allow configuring zone selection when spec.provider.zones is non-empty", func() {
+					seed.Spec.Provider.Zones = []string{"a", "b"}
+					seed.Spec.Settings = &core.SeedSettings{
+						ZoneSelection: &core.SeedSettingZoneSelection{
+							Mode: core.ZoneSelectionModeEnforce,
+						},
+					}
+
+					Expect(ValidateSeed(seed)).To(BeEmpty())
+				})
+
+				It("should prevent configuring an unsupported zone selection mode", func() {
+					seed.Spec.Provider.Zones = []string{"a"}
+					seed.Spec.Settings = &core.SeedSettings{
+						ZoneSelection: &core.SeedSettingZoneSelection{
+							Mode: "Foobar",
+						},
+					}
+
+					Expect(ValidateSeed(seed)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeNotSupported),
+							"Field": Equal("spec.settings.zoneSelection.mode"),
+						})),
+					))
+				})
+			})
+
 			Context("verticalPodAutoscaler", func() {
 				It("should not allow unknown feature gates", func() {
 					seed.Spec.Settings.VerticalPodAutoscaler.FeatureGates = map[string]bool{

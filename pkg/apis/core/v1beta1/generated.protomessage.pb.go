@@ -371,6 +371,8 @@ func (*SeedSettingTopologyAwareRouting) ProtoMessage() {}
 
 func (*SeedSettingVerticalPodAutoscaler) ProtoMessage() {}
 
+func (*SeedSettingZoneSelection) ProtoMessage() {}
+
 func (*SeedSettings) ProtoMessage() {}
 
 func (*SeedSpec) ProtoMessage() {}

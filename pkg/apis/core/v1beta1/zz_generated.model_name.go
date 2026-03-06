@@ -910,6 +910,11 @@ func (in SeedSettingVerticalPodAutoscaler) OpenAPIModelName() string {
 }
 
 // OpenAPIModelName returns the OpenAPI model name for this type.
+func (in SeedSettingZoneSelection) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.SeedSettingZoneSelection"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
 func (in SeedSettings) OpenAPIModelName() string {
 	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.SeedSettings"
 }
