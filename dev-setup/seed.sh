@@ -41,7 +41,6 @@ SYSTEM_ARCH=$(kubectl get nodes -o yaml | yq '.items[0].status.nodeInfo.architec
 case "$COMMAND" in
   up)
     skaffold run \
-      -v debug \
       -m garden-config \
       --kubeconfig "$VIRTUAL_GARDEN_KUBECONFIG" \
       --status-check=false --platform="linux/$SYSTEM_ARCH" # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/

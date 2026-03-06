@@ -298,9 +298,25 @@ if [[ "$IPFAMILY" == "ipv6" ]] && [[ "$MULTI_ZONAL" == "true" ]]; then
   ADDITIONAL_ARGS="$ADDITIONAL_ARGS --set gardener.seed.istio.listenAddresses={::1,::10,::11,::12}"
 fi
 
-kind create cluster \
+if ! kind create cluster \
   --name "$CLUSTER_NAME" \
   --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "gardener.repositoryRoot"=$(dirname "$0")/..)
+then
+  echo "Kind cluster creation failed"
+  echo "=== Docker containers ==="
+  docker ps -a || true
+  echo "=== Docker images ==="
+  docker images | head -20 || true
+  echo "=== System resources ==="
+  free -h 2>/dev/null || true
+  df -h 2>/dev/null || true
+  echo "=== Container logs (if any) ==="
+  for container in $(docker ps -a --filter "name=${CLUSTER_NAME}" --format '{{.Names}}'); do
+    echo "=== Logs from container: $container ==="
+    docker logs "$container" 2>&1 | tail -500 || true
+  done
+  exit 1
+fi
 
 nodes=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}')
 
