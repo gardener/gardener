@@ -1235,6 +1235,124 @@ var _ = Describe("Shoot", func() {
 				)
 			})
 
+			When("requested for ServiceAccounts", func() {
+				var (
+					name, namespace string
+					attrs           *auth.AttributesRecord
+				)
+
+				BeforeEach(func() {
+					name, namespace = "foo", "bar"
+					attrs = &auth.AttributesRecord{
+						User:            gardenletUser,
+						Name:            name,
+						Namespace:       namespace,
+						APIGroup:        corev1.SchemeGroupVersion.Group,
+						Resource:        "serviceaccounts",
+						ResourceRequest: true,
+						Verb:            "get",
+					}
+				})
+
+				It("should allow because path to shoot exists", func() {
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeServiceAccount, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(true)
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should have no opinion because path to shoot does not exist", func() {
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeServiceAccount, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(false)
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("no relationship found"))
+				})
+
+				DescribeTable("should allow without consulting the graph because object is an extension SA of this shoot in the shoot's project namespace",
+					func(verb string) {
+						attrs.Namespace = shootNamespace
+						attrs.Name = "extension-shoot--" + shootName + "--provider-aws"
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+					Entry("create", "create"),
+					Entry("update", "update"),
+					Entry("patch", "patch"),
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
+				)
+
+				It("should fall through to graph check because SA name does not have the shoot's extension prefix (different shoot's SA)", func() {
+					attrs.Namespace = shootNamespace
+					attrs.Name = "extension-shoot--other-shoot--provider-aws"
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeServiceAccount, shootNamespace, "extension-shoot--other-shoot--provider-aws", graphutils.VertexTypeShoot, shootNamespace, shootName).Return(false)
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("no relationship found"))
+				})
+
+				Context("extension client", func() {
+					BeforeEach(func() {
+						attrs.User = extensionUser
+					})
+
+					It("should allow because path to shoot exists", func() {
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeServiceAccount, namespace, name, graphutils.VertexTypeShoot, extensionShootNamespace, shootName).Return(true)
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					})
+
+					It("should have no opinion because path to shoot does not exist", func() {
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeServiceAccount, namespace, name, graphutils.VertexTypeShoot, extensionShootNamespace, shootName).Return(false)
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("no relationship found"))
+					})
+
+					DescribeTable("should not have an opinion because verb is not allowed",
+						func(verb string) {
+							attrs.Verb = verb
+
+							decision, reason, err := authorizer.Authorize(ctx, attrs)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get]"))
+						},
+
+						Entry("create", "create"),
+						Entry("list", "list"),
+						Entry("watch", "watch"),
+						Entry("patch", "patch"),
+						Entry("update", "update"),
+						Entry("delete", "delete"),
+						Entry("deletecollection", "deletecollection"),
+					)
+				})
+			})
+
 			Context("when requested for Shoots", func() {
 				var (
 					name, namespace string
