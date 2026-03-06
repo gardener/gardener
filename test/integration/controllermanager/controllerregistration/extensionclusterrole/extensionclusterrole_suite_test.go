@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
@@ -27,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/extensionclusterrole"
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 )
@@ -74,6 +76,14 @@ var _ = BeforeSuite(func() {
 	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{})
 	Expect(err).NotTo(HaveOccurred())
+
+	By("Create garden namespace")
+	gardenNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "garden"}}
+	Expect(testClient.Create(ctx, gardenNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+	DeferCleanup(func() {
+		By("Delete garden namespace")
+		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
