@@ -6,6 +6,7 @@ package progressing
 
 import (
 	"context"
+	"fmt"
 
 	certv1alpha1 "github.com/gardener/cert-management/pkg/apis/cert/v1alpha1"
 	"github.com/go-logr/logr"
@@ -14,11 +15,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -81,14 +82,17 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 		"certificates":  &certv1alpha1.Certificate{},
 		"issuers":       &certv1alpha1.Issuer{},
 	} {
-		gvr := schema.GroupVersionResource{Group: appsv1.SchemeGroupVersion.Group, Version: appsv1.SchemeGroupVersion.Version, Resource: resource}
+		gvk, err := apiutil.GVKForObject(obj, r.TargetClient.Scheme())
+		if err != nil {
+			return fmt.Errorf("cannot determine GVK for object %T: %w", obj, err)
+		}
 
-		if _, err := targetCluster.GetRESTMapper().KindFor(gvr); err != nil {
+		if _, err = targetCluster.GetRESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version); err != nil {
 			if !meta.IsNoMatchError(err) {
 				return err
 			}
-			c.GetLogger().Info("Resource is not available/enabled API of the target cluster, skip adding watches", "gvr", gvr)
 
+			c.GetLogger().Info("Resource is not available/enabled API of the target cluster, skip adding watches", "gvk", gvk)
 			continue
 		}
 
