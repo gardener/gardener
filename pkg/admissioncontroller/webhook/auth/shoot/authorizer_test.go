@@ -48,10 +48,12 @@ var _ = Describe("Shoot", func() {
 		fakeWithSelectorsChecker authorizerwebhook.WithSelectorsChecker
 		authorizer               auth.Authorizer
 
-		shootNamespace string
-		shootName      string
-		gardenletUser  user.Info
-		gardenadmUser  user.Info
+		shootNamespace          string
+		shootName               string
+		extensionShootNamespace string
+		gardenletUser           user.Info
+		gardenadmUser           user.Info
+		extensionUser           user.Info
 	)
 
 	BeforeEach(func() {
@@ -66,6 +68,7 @@ var _ = Describe("Shoot", func() {
 
 		shootNamespace = "shoot-namespace"
 		shootName = "shoot-name"
+		extensionShootNamespace = "garden-project"
 		gardenletUser = &user.DefaultInfo{
 			Name:   "gardener.cloud:system:shoot:" + shootNamespace + ":" + shootName,
 			Groups: []string{"gardener.cloud:system:shoots"},
@@ -73,6 +76,10 @@ var _ = Describe("Shoot", func() {
 		gardenadmUser = &user.DefaultInfo{
 			Name:   "gardener.cloud:gardenadm:shoot:" + shootNamespace + ":" + shootName,
 			Groups: []string{"gardener.cloud:system:shoots"},
+		}
+		extensionUser = &user.DefaultInfo{
+			Name:   "system:serviceaccount:" + extensionShootNamespace + ":extension-shoot--" + shootName + "--foo",
+			Groups: []string{"system:serviceaccounts"},
 		}
 	})
 
@@ -855,6 +862,67 @@ var _ = Describe("Shoot", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
 					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
+				})
+
+				Context("extension client", func() {
+					BeforeEach(func() {
+						attrs.User = extensionUser
+						attrs.Namespace = extensionShootNamespace
+						attrs.Name = shootName + "--provider-aws-leader-election"
+					})
+
+					DescribeTable("should allow when lease is in shoot namespace with correct name prefix and verb is allowed",
+						func(verb string) {
+							attrs.Verb = verb
+
+							decision, reason, err := authorizer.Authorize(ctx, attrs)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(decision).To(Equal(auth.DecisionAllow))
+							Expect(reason).To(BeEmpty())
+						},
+
+						Entry("create", "create"),
+						Entry("get", "get"),
+						Entry("update", "update"),
+					)
+
+					It("should allow list/watch without a name in the shoot namespace",
+						func() {
+							attrs.Verb = "list"
+							attrs.Name = ""
+
+							decision, reason, err := authorizer.Authorize(ctx, attrs)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(decision).To(Equal(auth.DecisionAllow))
+							Expect(reason).To(BeEmpty())
+						},
+					)
+
+					It("should have no opinion when lease name does not have the shoot name as prefix", func() {
+						attrs.Verb = "get"
+						attrs.Name = "other-shoot--provider-aws-leader-election"
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("lease object name does not have the shoot name as prefix"))
+					})
+
+					DescribeTable("should have no opinion when lease is outside shoot namespace",
+						func(verb string) {
+							attrs.Namespace = "other-namespace"
+							attrs.Verb = verb
+
+							decision, reason, err := authorizer.Authorize(ctx, attrs)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("lease object is not in shoot namespace"))
+						},
+
+						Entry("get", "get"),
+						Entry("create", "create"),
+						Entry("update", "update"),
+					)
 				})
 			})
 
