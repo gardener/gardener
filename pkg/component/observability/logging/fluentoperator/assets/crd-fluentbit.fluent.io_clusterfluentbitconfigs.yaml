@@ -369,6 +369,11 @@ spec:
                     - debug
                     - trace
                     type: string
+                  multilineBufferLimit:
+                    description: Set a default buffer size limit for multiline parsers.
+                      The value must be according to the Unit Size specification.
+                    pattern: ^\d+(k|K|KB|kb|m|M|MB|mb|g|G|GB|gb)?$
+                    type: string
                   parsersFile:
                     description: Optional 'parsers' config file (can be multiple)
                     type: string
