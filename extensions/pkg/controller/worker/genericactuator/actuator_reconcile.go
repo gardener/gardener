@@ -30,6 +30,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
@@ -184,21 +185,25 @@ func deployMachineDeployments(
 	clusterAutoscalerUsed bool,
 ) error {
 	log.Info("Deploying machine deployments")
+
+	// If the Shoot is hibernated, then mark all machines for forceful deletion to avoid respecting of PDBs/SLAs.
+	if extensionscontroller.IsHibernationEnabled(cluster) {
+		if err := markAllMachinesForcefulDeletion(ctx, log, cl, worker.Namespace); err != nil {
+			return fmt.Errorf("marking all machines for forceful deletion failed: %w", err)
+		}
+	}
+
+	taskFns := make([]flow.TaskFn, 0, len(wantedMachineDeployments))
 	for _, deployment := range wantedMachineDeployments {
 		var (
-			labels                    = map[string]string{extensionsworkercontroller.LabelKeyMachineDeploymentName: deployment.Name}
 			existingMachineDeployment = getExistingMachineDeployment(existingMachineDeployments, deployment.Name)
 			replicas                  int32
 		)
 
 		switch {
 		// If the Shoot is hibernated then the machine deployment's replicas should be zero.
-		// Also mark all machines for forceful deletion to avoid respecting of PDBs/SLAs in case of cluster hibernation.
 		case extensionscontroller.IsHibernationEnabled(cluster):
 			replicas = 0
-			if err := markAllMachinesForcefulDeletion(ctx, log, cl, worker.Namespace); err != nil {
-				return fmt.Errorf("marking all machines for forceful deletion failed: %w", err)
-			}
 		// If the cluster autoscaler is not enabled then min=max (as per API validation), hence
 		// we can use either min or max.
 		case !clusterAutoscalerUsed:
@@ -235,63 +240,81 @@ func deployMachineDeployments(
 			}
 		}
 
-		machineDeployment := &machinev1alpha1.MachineDeployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      deployment.Name,
-				Namespace: worker.Namespace,
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			return deployMachineDeployment(ctx, log, cl, worker, deployment, existingMachineDeployment, replicas)
+		})
+	}
+
+	return flow.ParallelN(MaxConcurrentMachineTasks, taskFns...)(ctx)
+}
+
+func deployMachineDeployment(
+	ctx context.Context,
+	log logr.Logger,
+	cl client.Client,
+	worker *extensionsv1alpha1.Worker,
+	deployment extensionsworkercontroller.MachineDeployment,
+	existingMachineDeployment *machinev1alpha1.MachineDeployment,
+	replicas int32,
+) error {
+	machineDeployment := &machinev1alpha1.MachineDeployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deployment.Name,
+			Namespace: worker.Namespace,
+		},
+	}
+	labels := map[string]string{extensionsworkercontroller.LabelKeyMachineDeploymentName: deployment.Name}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, cl, machineDeployment, func() error {
+		metav1.SetMetaDataLabel(&machineDeployment.ObjectMeta, v1beta1constants.LabelWorkerPool, deployment.PoolName)
+		for k, v := range deployment.ClusterAutoscalerAnnotations {
+			if v == "" {
+				delete(machineDeployment.GetAnnotations(), k)
+			} else {
+				metav1.SetMetaDataAnnotation(&machineDeployment.ObjectMeta, k, v)
+			}
+		}
+
+		machineDeployment.Spec = machinev1alpha1.MachineDeploymentSpec{
+			Replicas:             replicas,
+			RevisionHistoryLimit: ptr.To[int32](0),
+			MinReadySeconds:      500,
+			Strategy:             deployment.Strategy,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			Template: machinev1alpha1.MachineTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: getMachineLabels(deployment.Strategy, labels, worker.Name),
+				},
+				Spec: machinev1alpha1.MachineSpec{
+					Class: machinev1alpha1.ClassSpec{
+						Kind: "MachineClass",
+						Name: deployment.ClassName,
+					},
+					NodeTemplateSpec: machinev1alpha1.NodeTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Annotations: deployment.Annotations,
+							Labels:      deployment.Labels,
+						},
+						Spec: corev1.NodeSpec{
+							Taints: deployment.Taints,
+						},
+					},
+					MachineConfiguration: deployment.MachineConfiguration,
+				},
 			},
 		}
-
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, cl, machineDeployment, func() error {
-			metav1.SetMetaDataLabel(&machineDeployment.ObjectMeta, v1beta1constants.LabelWorkerPool, deployment.PoolName)
-			for k, v := range deployment.ClusterAutoscalerAnnotations {
-				if v == "" {
-					delete(machineDeployment.GetAnnotations(), k)
-				} else {
-					metav1.SetMetaDataAnnotation(&machineDeployment.ObjectMeta, k, v)
-				}
+		if existingMachineDeployment != nil && existingMachineDeployment.Spec.Template.Annotations != nil {
+			for k, v := range existingMachineDeployment.Spec.Template.Annotations {
+				metav1.SetMetaDataAnnotation(&machineDeployment.Spec.Template.ObjectMeta, k, v)
 			}
-			machineDeployment.Spec = machinev1alpha1.MachineDeploymentSpec{
-				Replicas:             replicas,
-				RevisionHistoryLimit: ptr.To[int32](0),
-				MinReadySeconds:      500,
-				Strategy:             deployment.Strategy,
-				Selector: &metav1.LabelSelector{
-					MatchLabels: labels,
-				},
-				Template: machinev1alpha1.MachineTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: getMachineLabels(deployment.Strategy, labels, worker.Name),
-					},
-					Spec: machinev1alpha1.MachineSpec{
-						Class: machinev1alpha1.ClassSpec{
-							Kind: "MachineClass",
-							Name: deployment.ClassName,
-						},
-						NodeTemplateSpec: machinev1alpha1.NodeTemplateSpec{
-							ObjectMeta: metav1.ObjectMeta{
-								Annotations: deployment.Annotations,
-								Labels:      deployment.Labels,
-							},
-							Spec: corev1.NodeSpec{
-								Taints: deployment.Taints,
-							},
-						},
-						MachineConfiguration: deployment.MachineConfiguration,
-					},
-				},
-			}
-			if existingMachineDeployment != nil && existingMachineDeployment.Spec.Template.Annotations != nil {
-				for k, v := range existingMachineDeployment.Spec.Template.Annotations {
-					metav1.SetMetaDataAnnotation(&machineDeployment.Spec.Template.ObjectMeta, k, v)
-				}
-			}
-
-			log.Info("Deploying machine deployment", "machineDeploymentName", machineDeployment.Name, "replicas", machineDeployment.Spec.Replicas)
-			return nil
-		}); err != nil {
-			return err
 		}
+
+		log.Info("Deploying machine deployment", "machineDeploymentName", client.ObjectKeyFromObject(machineDeployment), "replicas", machineDeployment.Spec.Replicas)
+		return nil
+	}); err != nil {
+		return fmt.Errorf("could not deploy machine deployment '%s': %w", client.ObjectKeyFromObject(machineDeployment), err)
 	}
 
 	return nil

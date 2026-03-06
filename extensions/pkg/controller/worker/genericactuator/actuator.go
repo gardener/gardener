@@ -28,6 +28,9 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
+// MaxConcurrentMachineTasks defines the maximum number of machine-related tasks that can run concurrently.
+const MaxConcurrentMachineTasks = 10
+
 type genericActuator struct {
 	delegateFactory    DelegateFactory
 	gardenReader       client.Reader
