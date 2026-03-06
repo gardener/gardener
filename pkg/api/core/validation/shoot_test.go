@@ -1906,6 +1906,30 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					Expect(ValidateShoot(shoot)).To(BeEmpty())
 				})
+
+				Context("systemComponents setting", func() {
+					BeforeEach(func() {
+						nonCPWorker := *shoot.Spec.Provider.Workers[0].DeepCopy()
+						nonCPWorker.Name = "non-cp-pool"
+						nonCPWorker.SystemComponents = &core.WorkerSystemComponents{Allow: false}
+						shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, nonCPWorker)
+						shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
+					})
+
+					It("should allow systemComponents only on the control plane worker pool", func() {
+						Expect(ValidateShoot(shoot)).To(BeEmpty())
+					})
+
+					It("should forbid systemComponents on non control-plane worker pool", func() {
+						shoot.Spec.Provider.Workers[1].SystemComponents.Allow = true
+
+						Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.provider.workers[1].systemComponents"),
+							"Detail": ContainSubstring("systemComponents is only allowed for the control plane worker pool for self-hosted shoots"),
+						}))))
+					})
+				})
 			})
 
 			Describe("ClusterAutoscaler options validation", func() {
