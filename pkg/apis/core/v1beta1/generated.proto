@@ -1111,14 +1111,12 @@ message ExpirableVersion {
   // ExpirationDate defines the time at which this version expires.
   //
   // Deprecated: Is replaced by Lifecycle; mutually exclusive with it.
-  //
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationDate = 2;
 
   // Classification defines the state of a version (preview, supported, deprecated).
   //
   // Deprecated: Is replaced by Lifecycle. mutually exclusive with it.
-  //
   // +optional
   optional string classification = 3;
 

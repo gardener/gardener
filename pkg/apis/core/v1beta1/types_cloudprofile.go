@@ -168,13 +168,11 @@ type ExpirableVersion struct {
 	// ExpirationDate defines the time at which this version expires.
 	//
 	// Deprecated: Is replaced by Lifecycle; mutually exclusive with it.
-	//
 	// +optional
 	ExpirationDate *metav1.Time `json:"expirationDate,omitempty" protobuf:"bytes,2,opt,name=expirationDate"`
 	// Classification defines the state of a version (preview, supported, deprecated).
 	//
 	// Deprecated: Is replaced by Lifecycle. mutually exclusive with it.
-	//
 	// +optional
 	Classification *VersionClassification `json:"classification,omitempty" protobuf:"bytes,3,opt,name=classification,casttype=VersionClassification"`
 	// Lifecycle defines the lifecycle stages for this version.
