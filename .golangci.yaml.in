@@ -5,6 +5,7 @@ linters:
   enable:
     - embeddedstructfieldcheck
     - exptostd
+    - depguard
     - ginkgolinter
     - gocritic
     - importas
@@ -17,6 +18,14 @@ linters:
     - usestdlibvars
     - whitespace
   settings:
+    depguard:
+      rules:
+        utils:
+          files:
+            - $all
+          deny:
+            - pkg: "k8s.io/utils/pointer"
+              desc: "k8s.io/utils/pointer shall no longer be used, please use k8s.io/utils/ptr."
     embeddedstructfieldcheck:
       # Checks that sync.Mutex and sync.RWMutex are not used as embedded fields.
       forbid-mutex: true
