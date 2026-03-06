@@ -15,7 +15,7 @@ import (
 var _ = Describe("DetermineZone", func() {
 	var worker gardencorev1beta1.Worker
 
-	When("when worker has no zones configured", func() {
+	When("worker has no zones configured", func() {
 		BeforeEach(func() {
 			worker = gardencorev1beta1.Worker{
 				Name:  "test-worker",
@@ -36,7 +36,7 @@ var _ = Describe("DetermineZone", func() {
 		})
 	})
 
-	When("when worker has a single zone configured", func() {
+	When("worker has a single zone configured", func() {
 		BeforeEach(func() {
 			worker = gardencorev1beta1.Worker{
 				Name:  "test-worker",
@@ -63,7 +63,7 @@ var _ = Describe("DetermineZone", func() {
 		})
 	})
 
-	When("when worker has multiple zones configured", func() {
+	When("worker has multiple zones configured", func() {
 		BeforeEach(func() {
 			worker = gardencorev1beta1.Worker{
 				Name:  "test-worker",

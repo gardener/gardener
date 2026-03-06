@@ -376,14 +376,14 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 		}
 	}
 
-	if helper.IsShootSelfHosted(spec.Provider.Workers) && spec.SeedName != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), *spec.SeedName, "cannot set seedName for self-hosted shoots"))
-	}
+	if helper.IsShootSelfHosted(spec.Provider.Workers) {
+		if spec.SeedName != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), *spec.SeedName, "cannot set seedName for self-hosted shoots"))
+		}
 
-	if helper.IsShootSelfHosted(spec.Provider.Workers) && !helper.HasManagedInfrastructure(&core.Shoot{Spec: *spec}) {
-		for i, w := range spec.Provider.Workers {
-			if w.ControlPlane == nil && helper.SystemComponentsAllowed(&w) {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "workers").Index(i).Child("systemComponents"), *w.SystemComponents, "systemComponents is only allowed for the control plane worker pool when the shoot does not have managed infrastructure"))
+		for i, worker := range spec.Provider.Workers {
+			if worker.ControlPlane == nil && helper.SystemComponentsAllowed(&worker) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "workers").Index(i).Child("systemComponents"), *worker.SystemComponents, "systemComponents is only allowed for the control plane worker pool for self-hosted shoots"))
 			}
 		}
 	}

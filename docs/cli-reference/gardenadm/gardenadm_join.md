@@ -40,7 +40,7 @@ gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --zone zone-
       --control-plane                Create a new control plane instance on this node
   -h, --help                         help for join
   -w, --worker-pool-name string      Name of the worker pool to assign the joining node.
-  -z, --zone string                  Availability zone for the new node. Required when the worker pool has multiple zones configured. Optional when exactly one zone is configured (automatically applied). Must not be set when no zones are configured.
+  -z, --zone Shoot                   Availability zone for the new node. Required if the worker pool in the Shoot has multiple zones configured. Optional if exactly one zone is configured (applied automatically). Must not be set if no zones are configured.
 ```
 
 ### Options inherited from parent commands

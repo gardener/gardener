@@ -37,7 +37,7 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 		Example: `# Bootstrap the first control plane node
 gardenadm init --config-dir /path/to/manifests
 
-# Bootstrap the first control plane node in a specific zone (required when multiple zones are configured)
+# Bootstrap the first control plane node in a specific zone (required when multiple zones are configured in the ` + "`Shoot`" + ` resource)
 gardenadm init --config-dir /path/to/manifests --zone zone-a`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
