@@ -104,17 +104,17 @@ var _ = Describe("Fluent Operator", func() {
 				{
 					APIGroups: []string{""},
 					Resources: []string{"secrets", "configmaps", "serviceaccounts", "services"},
-					Verbs:     []string{"get", "list", "watch"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 				},
 				{
 					APIGroups: []string{"apps"},
 					Resources: []string{"daemonsets", "statefulsets"},
-					Verbs:     []string{"get", "list", "watch"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 				},
 				{
 					APIGroups: []string{"rbac.authorization.k8s.io"},
 					Resources: []string{"clusterrolebindings", "clusterroles"},
-					Verbs:     []string{"get", "list", "watch", "create"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 				},
 				{
 					APIGroups: []string{""},
@@ -124,6 +124,11 @@ var _ = Describe("Fluent Operator", func() {
 				{
 					APIGroups: []string{"extensions.gardener.cloud"},
 					Resources: []string{"clusters"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"opentelemetry.io"},
+					Resources: []string{"opentelemetrycollectors"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 			},

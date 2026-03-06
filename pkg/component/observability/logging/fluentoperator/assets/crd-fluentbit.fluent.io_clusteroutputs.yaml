@@ -1721,6 +1721,10 @@ spec:
                         description: Hostname to be used for TLS SNI extension
                         type: string
                     type: object
+                  totalLimitSize:
+                    description: Limit the maximum number of Chunks in the filesystem
+                      for the current output logical destination.
+                    type: string
                   uri:
                     description: 'Specify an optional HTTP URI for the target web
                       server, e.g: /something'
