@@ -1937,8 +1937,7 @@ Addons
 <td>
 <em>(Optional)</em>
 <p>Addons contains information about enabled/disabled addons and their configuration.</p>
-<p>Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.
-TODO(timuthy): Drop this field when support for Kubernetes 1.34 is dropped.</p>
+<p>Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.</p>
 </td>
 </tr>
 <tr>
@@ -7445,8 +7444,7 @@ string
 <p>KubeMaxPDVols is not respected anymore by kube-scheduler.
 The maximum number of attached volumes is configured by the CSI driver.
 More information can be found at <a href="https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits">https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits</a>.</p>
-<p>Deprecated: This field is deprecated. Using this field will be forbidden starting from Kubernetes 1.35.
-TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.</p>
+<p>Deprecated: This field is deprecated. Using this field will be forbidden starting from Kubernetes 1.35.</p>
 </td>
 </tr>
 <tr>
@@ -13913,8 +13911,7 @@ Addons
 <td>
 <em>(Optional)</em>
 <p>Addons contains information about enabled/disabled addons and their configuration.</p>
-<p>Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.
-TODO(timuthy): Drop this field when support for Kubernetes 1.34 is dropped.</p>
+<p>Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.</p>
 </td>
 </tr>
 <tr>
@@ -14663,8 +14660,7 @@ Addons
 <td>
 <em>(Optional)</em>
 <p>Addons contains information about enabled/disabled addons and their configuration.</p>
-<p>Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.
-TODO(timuthy): Drop this field when support for Kubernetes 1.34 is dropped.</p>
+<p>Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.</p>
 </td>
 </tr>
 <tr>
@@ -15644,8 +15640,7 @@ int32
 <em>(Optional)</em>
 <p>Default is not respected anymore by kube-apiserver.
 The cache is sized automatically.</p>
-<p>Deprecated: This field is deprecated. Setting the default cache size will be forbidden starting from Kubernetes 1.35.
-TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.</p>
+<p>Deprecated: This field is deprecated. Setting the default cache size will be forbidden starting from Kubernetes 1.35.</p>
 </td>
 </tr>
 <tr>
