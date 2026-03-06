@@ -149,10 +149,7 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 			)
 
 		case leaseResource:
-			return requestAuthorizer.Check(graph.VertexTypeLease, attrs,
-				authwebhook.WithAllowedVerbs("get", "update", "patch", "list", "watch"),
-				authwebhook.WithAlwaysAllowedVerbs("create"),
-			)
+			return a.authorizeLease(requestAuthorizer, userType, shootNamespace, shootName, attrs)
 
 		case secretResource:
 			return a.authorizeSecret(ctx, requestAuthorizer, attrs)
@@ -206,6 +203,29 @@ func (a *authorizer) authorizeEvent(log logr.Logger, attrs auth.Attributes) (aut
 	}
 
 	return auth.DecisionAllow, "", nil
+}
+
+func (a *authorizer) authorizeLease(requestAuthorizer *authwebhook.RequestAuthorizer, userType gardenletidentity.UserType, shootNamespace, shootName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	// extension clients may only work with leases in the shoot namespace and whose name is prefixed with
+	// the shoot name to avoid tampering with leases belonging to other shoots in the same project namespace
+	if userType == gardenletidentity.UserTypeExtension {
+		if attrs.GetNamespace() != shootNamespace {
+			return auth.DecisionNoOpinion, "lease object is not in shoot namespace", nil
+		}
+		// list/watch have no name; for all other verbs check the name prefix
+		if attrs.GetName() != "" && !strings.HasPrefix(attrs.GetName(), shootName+"--") {
+			return auth.DecisionNoOpinion, "lease object name does not have the shoot name as prefix", nil
+		}
+		if ok, reason := authwebhook.CheckVerb(requestAuthorizer.Log, attrs, "create", "get", "list", "watch", "update", "patch", "delete", "deletecollection"); !ok {
+			return auth.DecisionNoOpinion, reason, nil
+		}
+		return auth.DecisionAllow, "", nil
+	}
+
+	return requestAuthorizer.Check(graph.VertexTypeLease, attrs,
+		authwebhook.WithAllowedVerbs("get", "update", "patch", "list", "watch"),
+		authwebhook.WithAlwaysAllowedVerbs("create"),
+	)
 }
 
 func (a *authorizer) authorizeSecret(ctx context.Context, requestAuthorizer *authwebhook.RequestAuthorizer, attrs auth.Attributes) (auth.Decision, string, error) {

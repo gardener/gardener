@@ -48,10 +48,12 @@ var _ = Describe("handler", func() {
 		request admission.Request
 		encoder runtime.Encoder
 
-		shootNamespace string
-		shootName      string
-		gardenletUser  authenticationv1.UserInfo
-		gardenadmUser  authenticationv1.UserInfo
+		shootNamespace          string
+		shootName               string
+		extensionShootNamespace string
+		gardenletUser           authenticationv1.UserInfo
+		gardenadmUser           authenticationv1.UserInfo
+		extensionUser           authenticationv1.UserInfo
 
 		responseAllowed = admission.Response{
 			AdmissionResponse: admissionv1.AdmissionResponse{
@@ -76,6 +78,7 @@ var _ = Describe("handler", func() {
 
 		shootNamespace = "shoot-namespace"
 		shootName = "shoot-name"
+		extensionShootNamespace = "garden-project"
 		gardenletUser = authenticationv1.UserInfo{
 			Username: "gardener.cloud:system:shoot:" + shootNamespace + ":" + shootName,
 			Groups:   []string{"gardener.cloud:system:shoots"},
@@ -83,6 +86,10 @@ var _ = Describe("handler", func() {
 		gardenadmUser = authenticationv1.UserInfo{
 			Username: "gardener.cloud:gardenadm:shoot:" + shootNamespace + ":" + shootName,
 			Groups:   []string{"gardener.cloud:system:shoots"},
+		}
+		extensionUser = authenticationv1.UserInfo{
+			Username: "system:serviceaccount:" + extensionShootNamespace + ":extension-shoot--" + shootName + "--foo",
+			Groups:   []string{"system:serviceaccounts"},
 		}
 	})
 
@@ -422,6 +429,47 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 						request.Namespace = shootNamespace
 
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+				})
+
+				Context("extension client", func() {
+					BeforeEach(func() {
+						request.UserInfo = extensionUser
+						request.Operation = admissionv1.Create
+						request.Namespace = extensionShootNamespace
+						request.Name = shootName + "--provider-aws-leader-election"
+					})
+
+					It("should allow lease creation in shoot namespace with correct name prefix", func() {
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should forbid lease creation outside shoot namespace", func() {
+						request.Namespace = "other-namespace"
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("extension client can only create leases in the namespace for shoot \"%s/%s\"", extensionShootNamespace, shootName),
+								},
+							},
+						}))
+					})
+
+					It("should forbid lease creation when name does not have the shoot name as prefix", func() {
+						request.Name = "other-shoot--provider-aws-leader-election"
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("extension client can only create leases with the shoot name %q as prefix", shootName),
+								},
+							},
+						}))
 					})
 				})
 			})

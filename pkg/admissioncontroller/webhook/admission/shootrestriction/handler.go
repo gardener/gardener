@@ -82,7 +82,7 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 		return h.admitCreateWithResourcePrefix(gardenletShootInfo, request)
 
 	case leaseResource:
-		return h.admitCreateWithResourcePrefix(gardenletShootInfo, request)
+		return h.admitLease(gardenletShootInfo, userType, request)
 
 	case secretResource:
 		return h.admitSecret(ctx, gardenletShootInfo, request)
@@ -169,6 +169,26 @@ func (h *Handler) admit(gardenletShootInfo, objectShootInfo types.NamespacedName
 	}
 
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to shoot %s", gardenletShootInfo))
+}
+
+func (h *Handler) admitLease(gardenletShootInfo types.NamespacedName, userType gardenletidentity.UserType, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Create {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	// extension clients may only create leases in the shoot namespace and whose name is prefixed with
+	// the shoot name to avoid tampering with leases belonging to other shoots in the same project namespace
+	if userType == gardenletidentity.UserTypeExtension {
+		if request.Namespace != gardenletShootInfo.Namespace {
+			return admission.Errored(http.StatusForbidden, fmt.Errorf("extension client can only create leases in the namespace for shoot %q", gardenletShootInfo))
+		}
+		if !strings.HasPrefix(request.Name, gardenletShootInfo.Name+"--") {
+			return admission.Errored(http.StatusForbidden, fmt.Errorf("extension client can only create leases with the shoot name %q as prefix", gardenletShootInfo.Name))
+		}
+		return admission.Allowed("")
+	}
+
+	return h.admitCreateWithResourcePrefix(gardenletShootInfo, request)
 }
 
 func (h *Handler) admitCreateWithResourcePrefix(gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {
