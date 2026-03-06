@@ -5870,7 +5870,9 @@ EncryptionProviderType
 <p>Type contains the type of the encryption provider.</p>
 <p>Supported types:
 - &ldquo;aescbc&rdquo;
-Defaults to aescbc.</p>
+- &ldquo;aesgcm&rdquo;
+- &ldquo;secretbox&rdquo;
+Defaults to aesgcm.</p>
 </td>
 </tr>
 </tbody>

@@ -821,7 +821,9 @@ type EncryptionProvider struct {
 	//
 	// Supported types:
 	//   - "aescbc"
-	// Defaults to aescbc.
+	//   - "aesgcm"
+	//   - "secretbox"
+	// Defaults to aesgcm.
 	Type *EncryptionProviderType
 }
 

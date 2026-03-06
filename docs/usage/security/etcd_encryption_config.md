@@ -16,6 +16,11 @@ The `spec.kubernetes.kubeAPIServer.encryptionConfig` field in the Shoot API allo
 - The `provider` field specifies which provider type is used for encryption.
   - Supported provider types:
     - `aescbc`
+    - `aesgcm`
+    - `secretbox`
+  - The default encryption provider is `aesgcm`. Shoot clusters that were created before Gardener `v1.137` have defaulted to the `aescbc` provider.
+  - This field is immutable.
+  - **Important for `aesgcm`**: The `aesgcm` provider uses 96-bit IVs (nonces), and per [NIST SP 800-38D](https://csrc.nist.gov/pubs/sp/800/38/d/final), the total number of encryption invocations with a given key should not exceed 2³². To mitigate the risk of nonce collisions, Gardener defaults and requires ETCD encryption key auto-rotation to be enabled. By default the period is set to **28 days** for newly created Shoots using `aesgcm`. The maximum allowed rotation period for `aesgcm` is **90 days**.
 
 ## Example Usage in a `Shoot`
 
@@ -29,5 +34,5 @@ spec:
           - statefulsets.apps
           - customresource.fancyoperator.io
         provider:
-          type: "aescbc"
+          type: "secretbox"
 ```

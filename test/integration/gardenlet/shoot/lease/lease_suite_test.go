@@ -120,6 +120,15 @@ var _ = BeforeSuite(func() {
 			CredentialsBindingName: ptr.To("my-provider-account"),
 			CloudProfile:           &gardencorev1beta1.CloudProfileReference{Name: "test-cloudprofile", Kind: "CloudProfile"},
 			Region:                 "foo-region",
+			Maintenance: &gardencorev1beta1.Maintenance{
+				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+						ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+							RotationPeriod: &metav1.Duration{Duration: 7 * 24 * time.Hour},
+						},
+					},
+				},
+			},
 			Provider: gardencorev1beta1.Provider{
 				Type: "test",
 				Workers: []gardencorev1beta1.Worker{

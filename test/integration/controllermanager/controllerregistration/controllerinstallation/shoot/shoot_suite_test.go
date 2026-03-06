@@ -7,6 +7,7 @@ package shoot_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -198,6 +199,15 @@ var _ = BeforeSuite(func() {
 			CredentialsBindingName: ptr.To("my-provider-account"),
 			CloudProfile:           &gardencorev1beta1.CloudProfileReference{Kind: "CloudProfile", Name: "test-cloudprofile"},
 			Region:                 "foo-region",
+			Maintenance: &gardencorev1beta1.Maintenance{
+				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+						ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+							RotationPeriod: &metav1.Duration{Duration: 7 * 24 * time.Hour},
+						},
+					},
+				},
+			},
 			Provider: gardencorev1beta1.Provider{
 				Type: providerType,
 				Workers: []gardencorev1beta1.Worker{{
