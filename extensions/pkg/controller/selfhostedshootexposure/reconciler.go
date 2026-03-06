@@ -98,15 +98,15 @@ func (r *reconciler) reconcile(
 	}
 
 	log.Info("Starting the reconciliation of SelfHostedShootExposure")
-	loadbalancerIngresses, err := r.actuator.Reconcile(ctx, log, selfHostedShootExposure, cluster)
+	loadBalancerIngresses, err := r.actuator.Reconcile(ctx, log, selfHostedShootExposure, cluster)
 	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, selfHostedShootExposure, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling SelfHostedShootExposure")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if len(loadbalancerIngresses) > 0 {
+	if len(loadBalancerIngresses) > 0 {
 		patch := client.MergeFrom(selfHostedShootExposure.DeepCopy())
-		selfHostedShootExposure.Status.Ingress = loadbalancerIngresses
+		selfHostedShootExposure.Status.Ingress = loadBalancerIngresses
 		if err := r.client.Status().Patch(ctx, selfHostedShootExposure, patch); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status ingress: %w", err)
 		}
