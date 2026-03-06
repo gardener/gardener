@@ -77,10 +77,13 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Complete(r)
 }
 
-// ServiceAccountPredicate returns true when the namespace is prefixed with `seed-`.
+// ServiceAccountPredicate returns true for ServiceAccounts in seed namespaces (`seed-*`), the garden namespace, or
+// project namespaces (`garden-*`) when their name is prefixed with `extension-shoot--`.
 func (r *Reconciler) ServiceAccountPredicate() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		return strings.HasPrefix(obj.GetNamespace(), gardenerutils.SeedNamespaceNamePrefix)
+		return strings.HasPrefix(obj.GetNamespace(), gardenerutils.SeedNamespaceNamePrefix) ||
+			((obj.GetNamespace() == v1beta1constants.GardenNamespace || strings.HasPrefix(obj.GetNamespace(), gardenerutils.ProjectNamespacePrefix)) &&
+				strings.HasPrefix(obj.GetName(), v1beta1constants.ExtensionShootServiceAccountPrefix))
 	})
 }
 

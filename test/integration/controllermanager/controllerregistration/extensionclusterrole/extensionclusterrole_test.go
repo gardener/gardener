@@ -29,6 +29,12 @@ var _ = Describe("ExtensionClusterRole controller tests", func() {
 		nonSeedNamespace                *corev1.Namespace
 		serviceAccount1NonSeedNamespace *corev1.ServiceAccount
 
+		extensionSAGardenNamespace *corev1.ServiceAccount
+
+		projectNamespace               *corev1.Namespace
+		extensionSAProjectNamespace    *corev1.ServiceAccount
+		nonExtensionSAProjectNamespace *corev1.ServiceAccount
+
 		clusterRole        *rbacv1.ClusterRole
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
 	)
@@ -149,6 +155,68 @@ var _ = Describe("ExtensionClusterRole controller tests", func() {
 			}).Should(BeNotFoundError())
 		})
 
+		// Extension SA in the garden namespace (not garden-* project namespace).
+		extensionSAGardenNamespace = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "extension-shoot--my-shoot--foo",
+				Namespace: "garden",
+				Labels:    map[string]string{testID: testRunID, "relevant": "true"},
+			},
+		}
+
+		By("Create extension ServiceAccount in garden namespace")
+		Expect(testClient.Create(ctx, extensionSAGardenNamespace)).To(Succeed())
+		log.Info("Created ServiceAccount for test", "serviceAccount", client.ObjectKeyFromObject(extensionSAGardenNamespace))
+
+		DeferCleanup(func() {
+			By("Delete extension ServiceAccount from garden namespace")
+			Expect(testClient.Delete(ctx, extensionSAGardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
+		projectNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "garden-my-project",
+				Labels: map[string]string{testID: testRunID},
+			},
+		}
+		// Extension SA: prefixed with "extension-shoot--", should be included in binding subjects.
+		extensionSAProjectNamespace = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "extension-shoot--my-shoot--foo",
+				Namespace: projectNamespace.Name,
+				Labels:    map[string]string{testID: testRunID, "relevant": "true"},
+			},
+		}
+		// Non-extension SA: no "extension-shoot--" prefix, must be excluded even though labels match.
+		nonExtensionSAProjectNamespace = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "non-extension-sa",
+				Namespace: projectNamespace.Name,
+				Labels:    map[string]string{testID: testRunID, "relevant": "true"},
+			},
+		}
+
+		By("Create project Namespace and ServiceAccounts")
+		Expect(testClient.Create(ctx, projectNamespace)).To(Succeed())
+		log.Info("Created Namespace for test", "namespace", client.ObjectKeyFromObject(projectNamespace))
+
+		Expect(testClient.Create(ctx, extensionSAProjectNamespace)).To(Succeed())
+		log.Info("Created ServiceAccount for test", "serviceAccount", client.ObjectKeyFromObject(extensionSAProjectNamespace))
+
+		Expect(testClient.Create(ctx, nonExtensionSAProjectNamespace)).To(Succeed())
+		log.Info("Created ServiceAccount for test", "serviceAccount", client.ObjectKeyFromObject(nonExtensionSAProjectNamespace))
+
+		DeferCleanup(func() {
+			By("Delete ServiceAccounts and project Namespace")
+			Expect(testClient.Delete(ctx, extensionSAProjectNamespace)).To(Or(Succeed(), BeNotFoundError()))
+			Expect(testClient.Delete(ctx, nonExtensionSAProjectNamespace)).To(Or(Succeed(), BeNotFoundError()))
+			Expect(testClient.Delete(ctx, projectNamespace)).To(Or(Succeed(), BeNotFoundError()))
+
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(projectNamespace), &corev1.Namespace{})
+			}).Should(BeNotFoundError())
+		})
+
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: testRunID,
@@ -216,6 +284,16 @@ var _ = Describe("ExtensionClusterRole controller tests", func() {
 		Expect(clusterRoleBinding.Subjects).To(HaveExactElements(
 			rbacv1.Subject{
 				Kind:      "ServiceAccount",
+				Name:      extensionSAGardenNamespace.Name,
+				Namespace: extensionSAGardenNamespace.Namespace,
+			},
+			rbacv1.Subject{
+				Kind:      "ServiceAccount",
+				Name:      extensionSAProjectNamespace.Name,
+				Namespace: projectNamespace.Name,
+			},
+			rbacv1.Subject{
+				Kind:      "ServiceAccount",
 				Name:      serviceAccount1SeedNamespace1.Name,
 				Namespace: seedNamespace1.Name,
 			},
@@ -262,6 +340,16 @@ var _ = Describe("ExtensionClusterRole controller tests", func() {
 			}).Should(HaveExactElements(
 				rbacv1.Subject{
 					Kind:      "ServiceAccount",
+					Name:      extensionSAGardenNamespace.Name,
+					Namespace: extensionSAGardenNamespace.Namespace,
+				},
+				rbacv1.Subject{
+					Kind:      "ServiceAccount",
+					Name:      extensionSAProjectNamespace.Name,
+					Namespace: projectNamespace.Name,
+				},
+				rbacv1.Subject{
+					Kind:      "ServiceAccount",
 					Name:      serviceAccount3SeedNamespace1.Name,
 					Namespace: seedNamespace1.Name,
 				},
@@ -289,6 +377,16 @@ var _ = Describe("ExtensionClusterRole controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), clusterRoleBinding)).To(Succeed())
 				return clusterRoleBinding.Subjects
 			}).Should(HaveExactElements(
+				rbacv1.Subject{
+					Kind:      "ServiceAccount",
+					Name:      extensionSAGardenNamespace.Name,
+					Namespace: extensionSAGardenNamespace.Namespace,
+				},
+				rbacv1.Subject{
+					Kind:      "ServiceAccount",
+					Name:      extensionSAProjectNamespace.Name,
+					Namespace: projectNamespace.Name,
+				},
 				rbacv1.Subject{
 					Kind:      "ServiceAccount",
 					Name:      serviceAccount3SeedNamespace1.Name,
@@ -342,6 +440,16 @@ var _ = Describe("ExtensionClusterRole controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), clusterRoleBinding)).To(Succeed())
 				return clusterRoleBinding.Subjects
 			}).Should(HaveExactElements(
+				rbacv1.Subject{
+					Kind:      "ServiceAccount",
+					Name:      extensionSAGardenNamespace.Name,
+					Namespace: extensionSAGardenNamespace.Namespace,
+				},
+				rbacv1.Subject{
+					Kind:      "ServiceAccount",
+					Name:      extensionSAProjectNamespace.Name,
+					Namespace: projectNamespace.Name,
+				},
 				rbacv1.Subject{
 					Kind:      "ServiceAccount",
 					Name:      serviceAccount1SeedNamespace1.Name,
