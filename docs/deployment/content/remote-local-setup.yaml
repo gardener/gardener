@@ -102,7 +102,7 @@ spec:
           echo "172.18.255.3 api.virtual-garden.local.gardener.cloud"                    >> /etc/hosts
           echo "172.18.255.3 plutono-garden.ingress.runtime-garden.local.gardener.cloud" >> /etc/hosts
           echo "172.18.255.3 dashboard.ingress.runtime-garden.local.gardener.cloud"      >> /etc/hosts
-          echo "172.18.255.3 discovery.ingress.runtime-garden.local.gardener.cloud"      >> /etc/hosts
+          echo "172.18.255.3 discovery.local.gardener.cloud"                             >> /etc/hosts
           echo "127.0.0.1 garden.local.gardener.cloud"                                   >> /etc/hosts
           echo "127.0.0.1 registry.local.gardener.cloud"                                 >> /etc/hosts
           echo ""                                                                        >> /etc/hosts
@@ -118,7 +118,7 @@ spec:
           echo "::3 api.virtual-garden.local.gardener.cloud"                             >> /etc/hosts
           echo "::3 plutono-garden.ingress.runtime-garden.local.gardener.cloud"          >> /etc/hosts
           echo "::3 dashboard.ingress.runtime-garden.local.gardener.cloud"               >> /etc/hosts
-          echo "::3 discovery.ingress.runtime-garden.local.gardener.cloud"               >> /etc/hosts
+          echo "::3 discovery.local.gardener.cloud"                                      >> /etc/hosts
           echo "::1 garden.local.gardener.cloud"                                         >> /etc/hosts
           echo "::1 registry.local.gardener.cloud"                                       >> /etc/hosts
 

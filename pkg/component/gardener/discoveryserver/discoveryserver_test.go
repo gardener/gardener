@@ -704,6 +704,56 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 				Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
 			})
 		})
+
+		// When TLSSecretName is explicitly set, the component must use it directly instead of
+		// auto-generating a self-signed certificate via the secrets manager.
+		When("TLSSecretName is explicitly set", func() {
+			BeforeEach(func() {
+				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       managedResourceNameRuntime,
+						Namespace:  namespace,
+						Generation: 1,
+					},
+					Status: healthyManagedResourceStatus,
+				})).To(Succeed())
+				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       managedResourceNameVirtual,
+						Namespace:  namespace,
+						Generation: 1,
+					},
+					Status: healthyManagedResourceStatus,
+				})).To(Succeed())
+			})
+
+			JustBeforeEach(func() {
+				values.TLSSecretName = ptr.To("my-tls-secret")
+				deployer = discoveryserver.New(fakeClient, namespace, fakeSecretManager, values)
+				// Update the deployment fixture to match what the code produces with an explicit TLS secret.
+				deployment.Spec.Template.Spec.Volumes[0].Secret.SecretName = "my-tls-secret"
+				utilruntime.Must(references.InjectAnnotations(deployment))
+			})
+
+			It("should use the provided TLS secret name without generating a certificate", func() {
+				Expect(deployer.Deploy(ctx)).To(Succeed())
+
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(Succeed())
+
+				Expect(managedResourceRuntime).To(consistOf(
+					deployment,
+					service,
+					podDisruptionBudget,
+					vpa,
+					ingress,
+					serviceMonitor,
+					workloadIdentitySecret,
+				))
+
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "gardener-discovery-server-tls"},
+					&corev1.Secret{})).To(BeNotFoundError())
+			})
+		})
 	})
 
 	Describe("#Destroy", func() {

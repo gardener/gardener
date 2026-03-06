@@ -270,7 +270,6 @@ func (r *Reconciler) instantiateComponents(
 	c.virtualGardenGardenerAccess = r.newGardenerAccess(garden, secretsManager)
 
 	// gardener control plane components
-	discoveryServerDomain := discoveryServerDomain(garden)
 	workloadIdentityTokenIssuer := workloadIdentityTokenIssuerURL(garden)
 	c.gardenerAPIServer, err = r.newGardenerAPIServer(ctx, garden, secretsManager, workloadIdentityTokenIssuer, targetVersion)
 	if err != nil {
@@ -296,7 +295,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.gardenerDiscoveryServer, err = r.newGardenerDiscoveryServer(secretsManager, discoveryServerDomain, wildcardCertSecretName, workloadIdentityTokenIssuer)
+	c.gardenerDiscoveryServer, err = r.newGardenerDiscoveryServer(garden, secretsManager, wildcardCertSecretName, workloadIdentityTokenIssuer)
 	if err != nil {
 		return
 	}
@@ -1047,18 +1046,6 @@ func getAPIServerDomains(domains []operatorv1alpha1.DNSDomain) []operatorv1alpha
 	return apiServerDomains
 }
 
-func getIngressWildcardDomains(domains []operatorv1alpha1.DNSDomain) []operatorv1alpha1.DNSDomain {
-	wildcardDomains := make([]operatorv1alpha1.DNSDomain, 0, len(domains))
-	for _, domain := range domains {
-		wildcardDomains = append(wildcardDomains,
-			operatorv1alpha1.DNSDomain{
-				Name:     "*." + domain.Name,
-				Provider: domain.Provider,
-			})
-	}
-	return wildcardDomains
-}
-
 func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, ingressGatewayValues []istio.IngressGatewayValues) (component.DeployWaiter, error) {
 	providerConfig, err := getNginxIngressConfig(garden)
 	if err != nil {
@@ -1069,7 +1056,7 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, 
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
 	}
 
-	ingressDomains := toDomainNames(getIngressWildcardDomains(garden.Spec.RuntimeCluster.Ingress.Domains))
+	ingressDomains := toDomainNames(helper.GetAllIngressDomains(garden))
 
 	return sharedcomponent.NewNginxIngress(
 		r.RuntimeClientSet.Client(),
@@ -1572,8 +1559,8 @@ func (r *Reconciler) newVictoriaOperator() (component.DeployWaiter, error) {
 }
 
 func (r *Reconciler) newGardenerDiscoveryServer(
+	garden *operatorv1alpha1.Garden,
 	secretsManager secretsmanager.Interface,
-	domain string,
 	wildcardCertSecretName *string,
 	workloadIdentityTokenIssuer string,
 ) (component.DeployWaiter, error) {
@@ -1588,8 +1575,8 @@ func (r *Reconciler) newGardenerDiscoveryServer(
 		secretsManager,
 		gardenerdiscoveryserver.Values{
 			Image:                       image.String(),
-			Domain:                      domain,
-			TLSSecretName:               wildcardCertSecretName,
+			Domain:                      helper.DiscoveryServerDomain(garden),
+			TLSSecretName:               discoveryServerTLSSecretName(garden, wildcardCertSecretName),
 			WorkloadIdentityTokenIssuer: workloadIdentityTokenIssuer,
 		},
 	), nil
@@ -1679,10 +1666,13 @@ func (r *Reconciler) newExtensions(log logr.Logger, garden *operatorv1alpha1.Gar
 	return extension.New(log, r.RuntimeClientSet.Client(), values, extension.DefaultInterval, extension.DefaultSevereThreshold, extension.DefaultTimeout)
 }
 
-func discoveryServerDomain(garden *operatorv1alpha1.Garden) string {
-	return "discovery." + garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
+func discoveryServerTLSSecretName(garden *operatorv1alpha1.Garden, wildcardCertSecretName *string) *string {
+	if config := garden.Spec.VirtualCluster.Gardener.DiscoveryServer; config != nil && config.TLSSecretName != nil {
+		return config.TLSSecretName
+	}
+	return wildcardCertSecretName
 }
 
 func workloadIdentityTokenIssuerURL(garden *operatorv1alpha1.Garden) string {
-	return "https://" + discoveryServerDomain(garden) + "/garden/workload-identity/issuer"
+	return "https://" + helper.DiscoveryServerDomain(garden) + "/garden/workload-identity/issuer"
 }

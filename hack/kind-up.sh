@@ -419,7 +419,7 @@ kubectl -n kube-system get configmap coredns -ojson | \
       $local_address_virtual_garden gardener.virtual-garden.local.gardener.cloud\n\
       $local_address_virtual_garden api.virtual-garden.local.gardener.cloud\n\
       $local_address_virtual_garden dashboard.ingress.runtime-garden.local.gardener.cloud\n\
-      $local_address_virtual_garden discovery.ingress.runtime-garden.local.gardener.cloud\n\
+      $local_address_virtual_garden discovery.local.gardener.cloud\n\
       fallthrough\n\
     }\
 "'/' | \
