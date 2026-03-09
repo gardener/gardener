@@ -104,6 +104,13 @@ const (
 	// owner: @vicwicker @istvanballok
 	// alpha: v1.135.0
 	PrometheusHealthChecks featuregate.Feature = "PrometheusHealthChecks"
+
+	// RemoveVali enables the automatic removal of Vali log aggregation components once VictoriaLogs has been deployed
+	// for a sufficient period. Requires VictoriaLogsBackend to be enabled. When both feature gates are enabled,
+	// Vali will be destroyed after VictoriaLogs has been running for 2 weeks.
+	// owner: @rrhubenov
+	// alpha: v1.138.0
+	RemoveVali featuregate.Feature = "RemoveVali"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -145,6 +152,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	VPNBondingModeRoundRobin:       {Default: false, PreRelease: featuregate.Alpha},
 	PrometheusHealthChecks:         {Default: false, PreRelease: featuregate.Alpha},
 	VersionClassificationLifecycle: {Default: false, PreRelease: featuregate.Alpha},
+	RemoveVali:                     {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

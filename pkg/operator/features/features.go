@@ -20,5 +20,6 @@ func RegisterFeatureGates() {
 		features.UseUnifiedHTTPProxyPort,
 		features.VPAInPlaceUpdates,
 		features.PrometheusHealthChecks,
+		features.RemoveVali,
 	)))
 }
