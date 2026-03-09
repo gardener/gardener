@@ -329,6 +329,9 @@ type Values struct {
 	NodeAgentAuthorizerAuthorizeWithSelectors *bool
 	// MachineNamespace is the namespace in the source cluster in which the Machine objects are stored.
 	MachineNamespace *string
+	// NodeAgentAuthorizerImagePullSecretName is the name of the kubernetes.io/dockerconfigjson Secret in
+	// kube-system that gardener-node-agent is permitted to read for image pull credentials.
+	NodeAgentAuthorizerImagePullSecretName *string
 	// PodKubeAPIServerLoadBalancingWebhook specifies the settings of pod-kube-apiserver-load-balancing webhook.
 	PodKubeAPIServerLoadBalancingWebhook PodKubeAPIServerLoadBalancingWebhook
 	// VPAInPlaceUpdatesEnabled specifies if a vpa-in-place-pod-vertical-scaling webhook should be enabled.
@@ -609,6 +612,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 				Enabled:                r.values.NodeAgentAuthorizerEnabled,
 				AuthorizeWithSelectors: r.values.NodeAgentAuthorizerAuthorizeWithSelectors,
 				MachineNamespace:       r.values.MachineNamespace,
+				ImagePullSecretName:    r.values.NodeAgentAuthorizerImagePullSecretName,
 			},
 			SeccompProfile: resourcemanagerconfigv1alpha1.SeccompProfileWebhookConfig{
 				Enabled: r.values.DefaultSeccompProfileEnabled,

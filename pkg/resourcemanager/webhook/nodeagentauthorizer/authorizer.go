@@ -29,13 +29,14 @@ import (
 )
 
 // NewAuthorizer returns a new authorizer for requests from gardener-node-agents. It never has an opinion on the request.
-func NewAuthorizer(logger logr.Logger, sourceClient, targetClient client.Client, machineNamespace *string, authorizeWithSelectors bool) *authorizer {
+func NewAuthorizer(logger logr.Logger, sourceClient, targetClient client.Client, machineNamespace *string, authorizeWithSelectors bool, imagePullSecretName *string) *authorizer {
 	return &authorizer{
 		sourceClient:           sourceClient,
 		targetClient:           targetClient,
 		logger:                 logger,
 		machineNamespace:       machineNamespace,
 		authorizeWithSelectors: authorizeWithSelectors,
+		imagePullSecretName:    imagePullSecretName,
 	}
 }
 
@@ -62,6 +63,9 @@ type authorizer struct {
 	// authorization instead of the machine name. This scenario is used for gardenadm scenario.
 	machineNamespace       *string
 	authorizeWithSelectors bool
+	// imagePullSecretName is the name of the kubernetes.io/dockerconfigjson Secret in kube-system
+	// that gardener-node-agent is permitted to read for image pull credentials.
+	imagePullSecretName *string
 }
 
 var _ auth.Authorizer = (*authorizer)(nil)
@@ -277,6 +281,10 @@ func (a *authorizer) authorizeSecret(ctx context.Context, log logr.Logger, machi
 	}
 
 	validSecrets := []string{valitailTokenSecretName, openTelemetryCollectorTokenSecretName}
+
+	if a.imagePullSecretName != nil {
+		validSecrets = append(validSecrets, *a.imagePullSecretName)
+	}
 
 	if a.machineNamespace != nil {
 		machine := &machinev1alpha1.Machine{}
