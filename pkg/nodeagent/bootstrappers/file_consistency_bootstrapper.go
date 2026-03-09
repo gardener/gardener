@@ -89,15 +89,24 @@ func (c *OSCChecker) Start(ctx context.Context) error {
 	}
 
 	for _, unit := range osc.Spec.Units {
-		c.checkUnitFile(&unit)
+		unitPath := c.resolveUnitPath(unit.Name)
+		if unitPath == "" {
+			c.emitEvent(
+				"UnitFileMissing",
+				fmt.Sprintf("Unit file %s is missing", unit.Name),
+			)
+			continue
+		}
+
+		c.checkUnitFile(&unit, unitPath)
 
 		for _, di := range unit.DropIns {
-			diPath := c.resolveDropInPath(unit.Name, di.Name)
+			diPath := c.resolveDropInPath(unitPath, di.Name)
 			c.checkDropInFile(diPath, &di, unit.Name)
 		}
 
 		if unit.Enable != nil {
-			c.checkUnitEnabled(unit.Name, *unit.Enable, unitMap)
+			c.checkUnitEnabled(unit.Name, *unit.Enable, unitMap, unitPath)
 		}
 
 		for _, dep := range unit.FilePaths {
@@ -169,9 +178,7 @@ func (c *OSCChecker) checkFile(file v1alpha1.File) {
 	}
 }
 
-func (c *OSCChecker) checkUnitFile(unit *v1alpha1.Unit) {
-	path := c.resolveUnitPath(unit.Name)
-
+func (c *OSCChecker) checkUnitFile(unit *v1alpha1.Unit, path string) {
 	raw, err := c.FS.ReadFile(path)
 	if err != nil {
 		c.emitEvent(
@@ -217,11 +224,10 @@ func (c *OSCChecker) checkDropInFile(path string, dropIn *v1alpha1.DropIn, unitN
 	}
 }
 
-func (c *OSCChecker) checkUnitEnabled(name string, expectedEnabled bool, unitMap map[string]dbus.UnitStatus) {
+func (c *OSCChecker) checkUnitEnabled(name string, expectedEnabled bool, unitMap map[string]dbus.UnitStatus, unitPath string) {
 	_, isEnabled := unitMap[name]
 
 	if !isEnabled && expectedEnabled {
-		unitPath := c.resolveUnitPath(name)
 		if data, err := c.FS.ReadFile(unitPath); err == nil {
 			if !strings.Contains(string(data), "[Install]") {
 				isEnabled = true // static unit
@@ -250,13 +256,12 @@ func (c *OSCChecker) resolveUnitPath(name string) string {
 			return p
 		}
 	}
-	return filepath.Join(systemdSystemPath, name) // fallback
+	return "" // fallback
 }
 
-func (c *OSCChecker) resolveDropInPath(unitName, dropInName string) string {
-	unitPath := c.resolveUnitPath(unitName)
+func (c *OSCChecker) resolveDropInPath(unitPath, dropInName string) string {
 	unitDir := filepath.Dir(unitPath)
-
+	unitName := filepath.Base(unitPath)
 	return filepath.Join(unitDir, unitName+".d", dropInName)
 }
 
