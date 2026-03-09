@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	vmv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
@@ -322,7 +323,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.vali, err = r.newVali()
+	c.vali, err = r.newVali(ctx)
 	if err != nil {
 		return
 	}
@@ -1390,8 +1391,8 @@ func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) 
 	)
 }
 
-func (r *Reconciler) newVali() (component.Deployer, error) {
-	return sharedcomponent.NewVali(
+func (r *Reconciler) newVali(ctx context.Context) (component.Deployer, error) {
+	deployer, err := sharedcomponent.NewVali(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		nil,
@@ -1403,10 +1404,30 @@ func (r *Reconciler) newVali() (component.Deployer, error) {
 		"",
 		true,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	shouldDestroy := false
+
+	if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) && features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+		vlSingle := &vmv1.VLSingle{}
+		if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: "victoria-logs", Namespace: r.GardenNamespace}, vlSingle); err == nil {
+			if time.Since(vlSingle.CreationTimestamp.Time) >= 2*7*24*time.Hour {
+				shouldDestroy = true
+			}
+		}
+	}
+
+	if shouldDestroy {
+		return component.OpDestroy(deployer), nil
+	}
+
+	return deployer, nil
 }
 
 func (r *Reconciler) newVictoriaLogs() (component.DeployWaiter, error) {
-	return sharedcomponent.NewVictoriaLogs(
+	deployer, err := sharedcomponent.NewVictoriaLogs(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		component.ClusterTypeSeed,
@@ -1415,6 +1436,15 @@ func (r *Reconciler) newVictoriaLogs() (component.DeployWaiter, error) {
 		nil,
 		true,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	if !features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
+		return component.OpDestroyAndWait(deployer), nil
+	}
+
+	return deployer, nil
 }
 
 func (r *Reconciler) newPrometheusOperator() (component.DeployWaiter, error) {
