@@ -32,6 +32,8 @@ const (
 	MachineNameFilePath = BaseDir + "/machine-name"
 	// ZoneFilePath is the file path on the worker node that contains the zone name for the node.
 	ZoneFilePath = BaseDir + "/zone"
+	// LastAppliedOperatingSystemConfigFilePath is the file path on the worker node that contains the last applied OSC information.
+	LastAppliedOperatingSystemConfigFilePath = BaseDir + "/last-applied-osc.yaml"
 
 	// UnitName is the name of the gardener-node-agent systemd service.
 	UnitName = "gardener-node-agent.service"
