@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"path"
 
+	"github.com/docker/cli/cli/config/configfile"
 	"github.com/spf13/afero"
 
 	"github.com/gardener/gardener/pkg/nodeagent/files"
@@ -29,7 +30,7 @@ func NewExtractor(fakeFS afero.Afero, sourceDirectory string) registry.Extractor
 }
 
 // CopyFromImage copies a file from a given image reference to the destination file.
-func (e *fakeRegistryExtractor) CopyFromImage(_ context.Context, _ string, filePathInImage string, destination string, permissions fs.FileMode) error {
+func (e *fakeRegistryExtractor) CopyFromImage(_ context.Context, _ string, filePathInImage string, destination string, permissions fs.FileMode, _ *configfile.ConfigFile) error {
 	source := path.Join(e.sourceDirectory, filePathInImage)
 	if err := files.Copy(e.fakeFS, source, destination, permissions); err != nil {
 		return fmt.Errorf("error copying file %s to %s: %w", source, destination, err)
