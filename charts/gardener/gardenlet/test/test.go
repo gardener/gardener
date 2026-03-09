@@ -372,6 +372,11 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 				Resources: []string{"servicemonitors", "scrapeconfigs", "prometheusrules", "prometheuses"},
 				Verbs:     []string{"list", "watch", "get", "create", "patch", "update", "delete"},
 			},
+			{
+				APIGroups: []string{"operator.victoriametrics.com"},
+				Resources: []string{"vlsingles"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
 		},
 	}
 }
