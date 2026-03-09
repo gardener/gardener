@@ -16,7 +16,7 @@ spec:
     singular: persesdashboard
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1alpha2
     schema:
       openAPIV3Schema:
         description: PersesDashboard is the Schema for the persesdashboards API
@@ -39,23 +39,74 @@ spec:
           metadata:
             type: object
           spec:
+            description: spec is the desired state of the PersesDashboard resource
             properties:
-              datasources:
-                additionalProperties:
-                  properties:
-                    default:
-                      type: boolean
-                    display:
+              config:
+                description: config specifies the Perses dashboard configuration
+                properties:
+                  datasources:
+                    additionalProperties:
                       properties:
-                        description:
-                          type: string
-                        name:
-                          type: string
+                        default:
+                          type: boolean
+                        display:
+                          properties:
+                            description:
+                              type: string
+                            name:
+                              type: string
+                          type: object
+                        plugin:
+                          description: |-
+                            Plugin will contain the datasource configuration.
+                            The data typed is available in Cue.
+                          properties:
+                            kind:
+                              description: Kind is the type of the plugin (e.g., Panel,
+                                Variable, Datasource, etc.).
+                              type: string
+                            metadata:
+                              description: Metadata is an optional field that contains
+                                additional information such as version and registry
+                                of the plugin.
+                              properties:
+                                registry:
+                                  description: 'Registry is optional. If not provided,
+                                    it means the default registry: "perses.dev".'
+                                  type: string
+                                version:
+                                  description: Version is optional. If not provided,
+                                    it means the latest version available in the Perses
+                                    instance.
+                                  type: string
+                              type: object
+                            spec:
+                              x-kubernetes-preserve-unknown-fields: true
+                          required:
+                          - kind
+                          - spec
+                          type: object
+                      required:
+                      - default
+                      - plugin
                       type: object
-                    plugin:
-                      description: |-
-                        Plugin will contain the datasource configuration.
-                        The data typed is available in Cue.
+                    description: Datasources is an optional list of datasource definition.
+                    type: object
+                  display:
+                    properties:
+                      description:
+                        type: string
+                      name:
+                        type: string
+                    type: object
+                  duration:
+                    description: Duration is the default time range to use when getting
+                      data to fill the dashboard
+                    format: duration
+                    pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                    type: string
+                  layouts:
+                    items:
                       properties:
                         kind:
                           type: string
@@ -65,143 +116,219 @@ spec:
                       - kind
                       - spec
                       type: object
-                  required:
-                  - default
-                  - plugin
-                  type: object
-                description: Datasources is an optional list of datasource definition.
-                type: object
-              display:
-                properties:
-                  description:
-                    type: string
-                  name:
-                    type: string
-                type: object
-              duration:
-                description: Duration is the default time range to use when getting
-                  data to fill the dashboard
-                format: duration
-                pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
-                type: string
-              layouts:
-                items:
-                  properties:
-                    kind:
-                      type: string
-                    spec:
-                      x-kubernetes-preserve-unknown-fields: true
-                  required:
-                  - kind
-                  - spec
-                  type: object
-                type: array
-              panels:
-                additionalProperties:
-                  properties:
-                    kind:
-                      type: string
-                    spec:
+                    type: array
+                  links:
+                    description: Links is an optional list of links to display at
+                      the dashboard level
+                    items:
                       properties:
-                        display:
+                        name:
+                          type: string
+                        renderVariables:
+                          type: boolean
+                        targetBlank:
+                          type: boolean
+                        tooltip:
+                          type: string
+                        url:
+                          type: string
+                      required:
+                      - url
+                      type: object
+                    type: array
+                  panels:
+                    additionalProperties:
+                      properties:
+                        kind:
+                          type: string
+                        spec:
                           properties:
-                            description:
-                              type: string
-                            name:
-                              type: string
-                          required:
-                          - name
-                          type: object
-                        links:
-                          items:
-                            properties:
-                              name:
-                                type: string
-                              renderVariables:
-                                type: boolean
-                              targetBlank:
-                                type: boolean
-                              tooltip:
-                                type: string
-                              url:
-                                type: string
-                            required:
-                            - url
-                            type: object
-                          type: array
-                        plugin:
-                          properties:
-                            kind:
-                              type: string
-                            spec:
-                              x-kubernetes-preserve-unknown-fields: true
-                          required:
-                          - kind
-                          - spec
-                          type: object
-                        queries:
-                          items:
-                            properties:
-                              kind:
-                                type: string
-                              spec:
+                            display:
+                              properties:
+                                description:
+                                  type: string
+                                name:
+                                  type: string
+                              type: object
+                            links:
+                              items:
                                 properties:
-                                  plugin:
+                                  name:
+                                    type: string
+                                  renderVariables:
+                                    type: boolean
+                                  targetBlank:
+                                    type: boolean
+                                  tooltip:
+                                    type: string
+                                  url:
+                                    type: string
+                                required:
+                                - url
+                                type: object
+                              type: array
+                            plugin:
+                              properties:
+                                kind:
+                                  description: Kind is the type of the plugin (e.g.,
+                                    Panel, Variable, Datasource, etc.).
+                                  type: string
+                                metadata:
+                                  description: Metadata is an optional field that
+                                    contains additional information such as version
+                                    and registry of the plugin.
+                                  properties:
+                                    registry:
+                                      description: 'Registry is optional. If not provided,
+                                        it means the default registry: "perses.dev".'
+                                      type: string
+                                    version:
+                                      description: Version is optional. If not provided,
+                                        it means the latest version available in the
+                                        Perses instance.
+                                      type: string
+                                  type: object
+                                spec:
+                                  x-kubernetes-preserve-unknown-fields: true
+                              required:
+                              - kind
+                              - spec
+                              type: object
+                            queries:
+                              items:
+                                properties:
+                                  kind:
+                                    type: string
+                                  spec:
                                     properties:
-                                      kind:
-                                        type: string
-                                      spec:
-                                        x-kubernetes-preserve-unknown-fields: true
+                                      plugin:
+                                        properties:
+                                          kind:
+                                            description: Kind is the type of the plugin
+                                              (e.g., Panel, Variable, Datasource,
+                                              etc.).
+                                            type: string
+                                          metadata:
+                                            description: Metadata is an optional field
+                                              that contains additional information
+                                              such as version and registry of the
+                                              plugin.
+                                            properties:
+                                              registry:
+                                                description: 'Registry is optional.
+                                                  If not provided, it means the default
+                                                  registry: "perses.dev".'
+                                                type: string
+                                              version:
+                                                description: Version is optional.
+                                                  If not provided, it means the latest
+                                                  version available in the Perses
+                                                  instance.
+                                                type: string
+                                            type: object
+                                          spec:
+                                            x-kubernetes-preserve-unknown-fields: true
+                                        required:
+                                        - kind
+                                        - spec
+                                        type: object
                                     required:
-                                    - kind
-                                    - spec
+                                    - plugin
                                     type: object
                                 required:
-                                - plugin
+                                - kind
+                                - spec
                                 type: object
-                            required:
-                            - kind
-                            - spec
-                            type: object
-                          type: array
+                              type: array
+                          required:
+                          - plugin
+                          type: object
                       required:
-                      - display
-                      - plugin
+                      - kind
+                      - spec
                       type: object
-                  required:
-                  - kind
-                  - spec
-                  type: object
+                    type: object
+                  refreshInterval:
+                    description: RefreshInterval is the default refresh interval to
+                      use when landing on the dashboard
+                    format: duration
+                    pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                    type: string
+                  variables:
+                    items:
+                      properties:
+                        kind:
+                          description: Kind is the type of the variable. Depending
+                            on the value of Kind, it will change the content of Spec.
+                          type: string
+                        spec:
+                          x-kubernetes-preserve-unknown-fields: true
+                      required:
+                      - kind
+                      - spec
+                      type: object
+                    type: array
+                required:
+                - duration
+                - layouts
+                - panels
                 type: object
-              refreshInterval:
-                description: RefreshInterval is the default refresh interval to use
-                  when landing on the dashboard
-                format: duration
-                pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
-                type: string
-              variables:
-                items:
-                  properties:
-                    kind:
-                      description: Kind is the type of the variable. Depending on
-                        the value of Kind, it will change the content of Spec.
+              instanceSelector:
+                description: instanceSelector selects Perses instances where this
+                  dashboard will be created
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  matchLabels:
+                    additionalProperties:
                       type: string
-                    spec:
-                      x-kubernetes-preserve-unknown-fields: true
-                  required:
-                  - kind
-                  - spec
-                  type: object
-                type: array
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
             required:
-            - duration
-            - layouts
-            - panels
+            - config
             type: object
           status:
-            description: PersesDashboardStatus defines the observed state of PersesDashboard
+            description: status is the observed state of the PersesDashboard resource
             properties:
               conditions:
+                description: conditions represent the latest observations of the PersesDashboard
+                  resource state
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -257,7 +384,12 @@ spec:
                   - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true
