@@ -56,6 +56,7 @@ var _ = Describe("Authorizer", func() {
 		newMachine           *machinev1alpha1.Machine
 		nodeAgentUser        user.Info
 		newNodeAgentUser     user.Info
+		pullSecretNames      []string
 	)
 
 	BeforeEach(func() {
@@ -68,13 +69,14 @@ var _ = Describe("Authorizer", func() {
 		sourceClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjectTracker(objectTracker).Build()
 		targetClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
 		machineNamespace = "shoot--foo"
-		authorizer = NewAuthorizer(log, sourceClient, targetClient, &machineNamespace, true)
+		authorizer = NewAuthorizer(log, sourceClient, targetClient, &machineNamespace, true, pullSecretNames)
 
 		machineName = "foo-machine"
 		machineSecretName = "foo-machine-secret"
 		newMachineName = "bar-machine"
 		newMachineSecretName = "bar-machine-secret"
 		nodeName = "foo-node"
+		pullSecretNames = []string{"pull-secret-1", "pull-secret-2"}
 		nodeAgentUser = &user.DefaultInfo{
 			Name:   fmt.Sprintf("%s%s", v1beta1constants.NodeAgentUserNamePrefix, machineName),
 			Groups: []string{v1beta1constants.NodeAgentsGroup},
@@ -647,6 +649,7 @@ var _ = Describe("Authorizer", func() {
 					Verb:            verb,
 				}
 				secretNames := []string{machineSecretName, "gardener-valitail"}
+				secretNames = append(secretNames, pullSecretNames...)
 
 				for _, secretName := range secretNames {
 					attrs.Name = secretName
@@ -677,7 +680,7 @@ var _ = Describe("Authorizer", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionDeny))
-				Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [gardener-valitail gardener-opentelemetry-collector %s] in \"kube-system\" namespace", machineSecretName)))
+				Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [gardener-valitail gardener-opentelemetry-collector %s %s %s] in \"kube-system\" namespace", pullSecretNames[0], pullSecretNames[1], machineSecretName)))
 			},
 				Entry("get", "get"),
 				Entry("list", "list"),
@@ -695,6 +698,7 @@ var _ = Describe("Authorizer", func() {
 					Verb:            verb,
 				}
 				secretNames := []string{machineSecretName, "gardener-valitail"}
+				secretNames = append(secretNames, pullSecretNames...)
 
 				for _, secretName := range secretNames {
 					attrs.Name = secretName
@@ -702,7 +706,8 @@ var _ = Describe("Authorizer", func() {
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionDeny))
-					Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [gardener-valitail gardener-opentelemetry-collector %s] in \"kube-system\" namespace", machineSecretName)))
+					fmt.Println(reason)
+					Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [gardener-valitail gardener-opentelemetry-collector %s %s %s] in \"kube-system\" namespace", pullSecretNames[0], pullSecretNames[1], machineSecretName)))
 				}
 			},
 				Entry("get", "get"),
@@ -1085,7 +1090,7 @@ var _ = Describe("Authorizer", func() {
 			DescribeTable("should allow accessing the pods because authorizeWithSelectors is false", func(verb string) {
 				attrs.Name = ""
 				attrs.Verb = verb
-				authorizer = NewAuthorizer(log, sourceClient, targetClient, &machineNamespace, false)
+				authorizer = NewAuthorizer(log, sourceClient, targetClient, &machineNamespace, false, pullSecretNames)
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 
 				Expect(err).NotTo(HaveOccurred())
