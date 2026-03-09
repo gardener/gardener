@@ -613,7 +613,7 @@ spec:
 		}).Should(Equal(map[string]string{
 			"networking.istio.io/exportTo": "*",
 			"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
-			"networking.resources.gardener.cloud/namespace-selectors":                          `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}}]`,
+			"networking.resources.gardener.cloud/namespace-selectors":                          `[{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}}]`,
 		}))
 
 		// The garden controller waits for the Etcd resources to be healthy, but etcd-druid is not really running in
