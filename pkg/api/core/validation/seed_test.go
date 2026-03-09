@@ -1542,7 +1542,18 @@ var _ = Describe("Seed Validation Tests", func() {
 					))
 				})
 
-				It("should allow configuring zone selection when spec.provider.zones is non-empty", func() {
+				It("should allow configuring zone selection with Prefer mode when spec.provider.zones is non-empty", func() {
+					seed.Spec.Provider.Zones = []string{"a", "b"}
+					seed.Spec.Settings = &core.SeedSettings{
+						ZoneSelection: &core.SeedSettingZoneSelection{
+							Mode: core.ZoneSelectionModePrefer,
+						},
+					}
+
+					Expect(ValidateSeed(seed)).To(BeEmpty())
+				})
+
+				It("should allow configuring zone selection with Enforce mode when spec.provider.zones is non-empty", func() {
 					seed.Spec.Provider.Zones = []string{"a", "b"}
 					seed.Spec.Settings = &core.SeedSettings{
 						ZoneSelection: &core.SeedSettingZoneSelection{

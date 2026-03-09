@@ -303,10 +303,11 @@ func filterSeedsForZonalShootControlPlanes(seedList []gardencorev1beta1.Seed, sh
 	return seedList, nil
 }
 
-// filterSeedsForZoneSelection filters seeds with zone selection mode Enforce that do not contain all worker pool zones
-// required by the shoot. Seeds with Prefer mode or no zone selection are always included.
-// Zone selection only applies to non-HA shoots and HA shoots with failure tolerance type 'node'.
-// For shoots with failure tolerance type 'zone', the control plane is spread across all zones anyway.
+// filterSeedsForZoneSelection filters seeds based on zone selection mode.
+// Seeds with `Enforce` mode are excluded when they have no zone overlap with the shoot's worker pools.
+// Seeds with `Prefer` mode that have matching zones are preferred over those without, but all are kept as fallback.
+// Zone selection only applies to non-HA shoots and HA shoots with failure tolerance type `node`.
+// For shoots with failure tolerance type `zone`, the control plane is spread across all zones anyway.
 func filterSeedsForZoneSelection(seedList []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) ([]gardencorev1beta1.Seed, error) {
 	if v1beta1helper.IsMultiZonalShootControlPlane(shoot) {
 		return seedList, nil
@@ -317,20 +318,40 @@ func filterSeedsForZoneSelection(seedList []gardencorev1beta1.Seed, shoot *garde
 		matchingSeeds []gardencorev1beta1.Seed
 	)
 
+	// First pass: exclude `Enforce` seeds that have no zone overlap with the shoot's worker pools.
 	for _, seed := range seedList {
 		if v1beta1helper.SeedSettingZoneSelectionMode(seed.Spec.Settings) != gardencorev1beta1.ZoneSelectionModeEnforce {
 			matchingSeeds = append(matchingSeeds, seed)
 			continue
 		}
-		// Enforce mode: seed must contain all worker pool zones.
-		if len(shootZones) == 0 || sets.New(seed.Spec.Provider.Zones...).HasAll(shootZones...) {
+		if len(shootZones) == 0 || sets.New(seed.Spec.Provider.Zones...).HasAny(shootZones...) {
 			matchingSeeds = append(matchingSeeds, seed)
 		}
 	}
 
 	if len(matchingSeeds) == 0 {
-		return nil, fmt.Errorf("none of the %d seeds contains all worker pool zones required by the shoot (zone selection mode: %s)", len(seedList), gardencorev1beta1.ZoneSelectionModeEnforce)
+		return nil, fmt.Errorf("none of the %d seeds has any zone overlap with the shoot's worker pool zones (zone selection mode: %s)", len(seedList), gardencorev1beta1.ZoneSelectionModeEnforce)
 	}
+
+	// Second pass: prefer `Prefer` seeds with matching zones. If any match, exclude `Prefer` seeds without overlap.
+	if len(shootZones) > 0 {
+		var preferredSeeds []gardencorev1beta1.Seed
+
+		for _, seed := range matchingSeeds {
+			if v1beta1helper.SeedSettingZoneSelectionMode(seed.Spec.Settings) != gardencorev1beta1.ZoneSelectionModePrefer {
+				preferredSeeds = append(preferredSeeds, seed)
+				continue
+			}
+			if sets.New(seed.Spec.Provider.Zones...).HasAny(shootZones...) {
+				preferredSeeds = append(preferredSeeds, seed)
+			}
+		}
+
+		if len(preferredSeeds) > 0 {
+			return preferredSeeds, nil
+		}
+	}
+
 	return matchingSeeds, nil
 }
 

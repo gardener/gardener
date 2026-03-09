@@ -302,7 +302,7 @@ var _ = Describe("Scheduler tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 					g.Expect(shoot.Status.LastOperation).NotTo(BeNil())
 					return shoot.Status.LastOperation.Description
-				}).Should(ContainSubstring("none of the 1 seeds contains all worker pool zones required by the shoot (zone selection mode: Enforce)"))
+				}).Should(ContainSubstring("none of the 1 seeds has any zone overlap with the shoot's worker pool zones (zone selection mode: Enforce)"))
 			})
 
 			It("Enforce — two seeds, only one matches worker zones → schedules to matching seed", func() {
