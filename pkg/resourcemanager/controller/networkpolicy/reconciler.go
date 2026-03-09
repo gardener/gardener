@@ -544,7 +544,7 @@ func (r *Reconciler) calculateIstioResources(
 						return nil, err
 					}
 
-					networkPolicyPorts := serviceBackendPortsToNetworkPolicyPorts(service, []networkingv1.ServiceBackendPort{{Number: int32(destination.Port.Number)}})
+					networkPolicyPorts := serviceBackendPortsToNetworkPolicyPorts(service, []networkingv1.ServiceBackendPort{{Number: int32(destination.Port.Number)}}) // #nosec G115 -- Port number is already validated by istio admission webhook to be in range 1-65535, so it cannot cause overflow in int32 conversion.
 
 					if len(networkPolicyPorts) == 0 {
 						continue
