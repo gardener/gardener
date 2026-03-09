@@ -21,12 +21,6 @@ spec:
       target:
         averageUtilization: 80
         type: Utilization
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        averageUtilization: 80
-        type: Utilization
   behavior:
     scaleDown:
       stabilizationWindowSeconds: 1800
