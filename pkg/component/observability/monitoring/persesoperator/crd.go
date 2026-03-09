@@ -20,6 +20,8 @@ var (
 	crdPersesDashboards string
 	//go:embed templates/crd-perses.dev_persesdatasources.yaml
 	crdPersesDatasources string
+	//go:embed templates/crd-perses.dev_persesglobaldatasources.yaml
+	crdPersesGlobalDatasources string
 )
 
 // NewCRDs can be used to deploy perses-operator CRDs.
@@ -28,6 +30,7 @@ func NewCRDs(client client.Client) (component.DeployWaiter, error) {
 		crdPerses,
 		crdPersesDashboards,
 		crdPersesDatasources,
+		crdPersesGlobalDatasources,
 	}
 	return crddeployer.New(client, resources, false)
 }

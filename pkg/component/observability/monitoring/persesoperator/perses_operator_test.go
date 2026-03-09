@@ -275,6 +275,21 @@ var _ = Describe("PersesOperator", func() {
 					Resources: []string{"persesdatasources/status"},
 					Verbs:     []string{"get", "patch", "update"},
 				},
+				{
+					APIGroups: []string{"perses.dev"},
+					Resources: []string{"persesglobaldatasources"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"perses.dev"},
+					Resources: []string{"persesglobaldatasources/finalizers"},
+					Verbs:     []string{"update"},
+				},
+				{
+					APIGroups: []string{"perses.dev"},
+					Resources: []string{"persesglobaldatasources/status"},
+					Verbs:     []string{"get", "patch", "update"},
+				},
 			},
 		}
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{

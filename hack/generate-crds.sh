@@ -60,8 +60,8 @@ get_group_package () {
   "monitoring.coreos.com_v1alpha1")
     echo "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
     ;;
-  "perses.dev_v1alpha1")
-    echo "github.com/perses/perses-operator/api/v1alpha1"
+  "perses.dev_v1alpha2")
+    echo "github.com/perses/perses-operator/api/v1alpha2"
     ;;
   "operator.victoriametrics.com_v1")
     echo "github.com/VictoriaMetrics/operator/api/operator/v1"
@@ -103,7 +103,7 @@ generate_all_groups () {
   generate_group monitoring.coreos.com_v1
   generate_group monitoring.coreos.com_v1beta1
   generate_group monitoring.coreos.com_v1alpha1
-  generate_group perses.dev_v1alpha1
+  generate_group perses.dev_v1alpha2
   generate_group machine.sapcloud.io
   generate_group dashboard.gardener.cloud
   generate_group opentelemetry.io
@@ -135,7 +135,7 @@ generate_group () {
     generate="controller-gen crd"$crd_options" paths="$package_path" output:crd:dir="$output_dir_temp" output:stdout"
     $generate &> "$generator_output" ||:
     grep -v -e 'map keys must be strings, not int' -e 'not all generators ran successfully' -e 'usage' "$generator_output" && { echo "Failed to generate CRD YAMLs."; exit 1; }
-  elif [[ "$group" == "perses.dev_v1alpha1" ]]; then
+  elif [[ "$group" == "perses.dev_v1alpha2" ]]; then
     generate="controller-gen crd:ignoreUnexportedFields=true"$crd_options" paths="$package_path" output:crd:dir="$output_dir_temp" output:stdout"
     $generate
   else

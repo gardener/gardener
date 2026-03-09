@@ -40,6 +40,7 @@ var _ = Describe("CRD", func() {
 			Expect(c.Get(ctx, client.ObjectKey{Name: "perses.perses.dev"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "persesdashboards.perses.dev"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "persesdatasources.perses.dev"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "persesglobaldatasources.perses.dev"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 		})
 	})
 
@@ -49,6 +50,7 @@ var _ = Describe("CRD", func() {
 			Expect(c.Get(ctx, client.ObjectKey{Name: "perses.perses.dev"}, &apiextensionsv1.CustomResourceDefinition{})).To(matchers.BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "persesdashboards.perses.dev"}, &apiextensionsv1.CustomResourceDefinition{})).To(matchers.BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "persesdatasources.perses.dev"}, &apiextensionsv1.CustomResourceDefinition{})).To(matchers.BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "persesglobaldatasources.perses.dev"}, &apiextensionsv1.CustomResourceDefinition{})).To(matchers.BeNotFoundError())
 		})
 	})
 })
