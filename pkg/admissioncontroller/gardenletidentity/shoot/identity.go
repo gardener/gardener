@@ -110,17 +110,17 @@ func getIdentityForServiceAccountsGroup(u user.Info) (namespace string, name str
 		return "", "", false, ""
 	}
 
-	// SA must be in the garden namespace or a project namespace (garden-<project>).
+	// The SA must be in the garden namespace or a project namespace (garden-<project>).
 	if saNamespace != v1beta1constants.GardenNamespace && !strings.HasPrefix(saNamespace, gardenerutils.ProjectNamespacePrefix) {
 		return "", "", false, ""
 	}
 
-	// SA name must start with the extension-shoot-- prefix.
+	// The SA name must start with the extension-shoot-- prefix.
 	if !strings.HasPrefix(saName, v1beta1constants.ExtensionShootServiceAccountPrefix) {
 		return "", "", false, ""
 	}
 
-	// Parse: extension-shoot--<shoot-name>--<controller-installation-name>
+	// Parse: extension-shoot--<shoot-name>--<controller-installation-name>.
 	withoutPrefix := strings.TrimPrefix(saName, v1beta1constants.ExtensionShootServiceAccountPrefix)
 	shootName, _, found := strings.Cut(withoutPrefix, "--")
 	if !found || shootName == "" {

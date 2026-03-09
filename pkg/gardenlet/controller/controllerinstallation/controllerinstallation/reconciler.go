@@ -79,11 +79,8 @@ type Reconciler struct {
 	// to nodes even when they are not ready yet. Furthermore, the replicas are set to 1 and a usable port range is
 	// provided.
 	BootstrapControlPlaneNode bool
-	// ForSelfHostedShoot should be set to true if this reconciler is run in the context of a self-hosted shoot (e.g.,
-	// in gardenadm or in the shoot gardenlet).
-	ForSelfHostedShoot bool
-	// SelfHostedShootMeta holds the namespace and name of the self-hosted shoot. Required when ForSelfHostedShoot=true
-	// to construct the ServiceAccount name and namespace for extensions.
+	// SelfHostedShootMeta holds the namespace and name of the self-hosted shoot. When set, this reconciler runs in the
+	// context of a self-hosted shoot (e.g., in gardenadm or in the shoot gardenlet).
 	SelfHostedShootMeta *types.NamespacedName
 }
 
@@ -224,7 +221,7 @@ func (r *Reconciler) reconcile(
 	}
 
 	var gardenAccessSecret *gardenerutils.AccessSecret
-	if r.ForSelfHostedShoot && r.SelfHostedShootMeta != nil {
+	if r.SelfHostedShootMeta != nil {
 		gardenAccessSecret = gardenerutils.NewGardenAccessSecret("extension", namespace.Name).
 			WithServiceAccountName(extensionServiceAccountName(r.SelfHostedShootMeta.Name, controllerInstallation.Name)).
 			WithServiceAccountNamespace(r.SelfHostedShootMeta.Namespace).
@@ -467,7 +464,7 @@ func (r *Reconciler) delete(
 	conditionInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionSuccessful", "Deletion of old resources succeeded.")
 
 	var gardenClusterServiceAccount *corev1.ServiceAccount
-	if r.ForSelfHostedShoot && r.SelfHostedShootMeta != nil {
+	if r.SelfHostedShootMeta != nil {
 		gardenClusterServiceAccount = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
 			Name:      extensionServiceAccountName(r.SelfHostedShootMeta.Name, controllerInstallation.Name),
 			Namespace: r.SelfHostedShootMeta.Namespace,
@@ -611,7 +608,7 @@ func objectEnablesGardenKubeconfig(o runtime.Object) bool {
 // MutateSpecForSelfHostedShootExtensions adapts host network, replicas, tolerations and usable ports range for
 // self-hosted shoot clusters if necessary.
 func (r *Reconciler) MutateSpecForSelfHostedShootExtensions(obj runtime.Object) error {
-	if !r.ForSelfHostedShoot {
+	if r.SelfHostedShootMeta == nil {
 		return nil
 	}
 

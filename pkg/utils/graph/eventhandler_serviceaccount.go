@@ -98,7 +98,7 @@ func (g *graph) handleServiceAccountCreateOrUpdateForShoots(serviceAccount *core
 		return
 	}
 
-	// SA name: extension-shoot--<shootName>--<controllerInstallationName>
+	// SA name: extension-shoot--<shootName>--<controllerInstallationName>.
 	withoutPrefix := strings.TrimPrefix(serviceAccount.Name, v1beta1constants.ExtensionShootServiceAccountPrefix)
 	shootName, _, found := strings.Cut(withoutPrefix, "--")
 	if !found || shootName == "" {

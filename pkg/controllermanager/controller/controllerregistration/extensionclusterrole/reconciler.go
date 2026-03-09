@@ -24,6 +24,18 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
+func isExtensionServiceAccount(name, namespace string) bool {
+	if strings.HasPrefix(namespace, gardenerutils.SeedNamespaceNamePrefix) {
+		return true
+	}
+
+	if !strings.HasPrefix(name, v1beta1constants.ExtensionShootServiceAccountPrefix) {
+		return false
+	}
+
+	return namespace == v1beta1constants.GardenNamespace || strings.HasPrefix(namespace, gardenerutils.ProjectNamespacePrefix)
+}
+
 // Reconciler reconciles ClusterRoles for additional extension permissions and creates ClusterRoleBindings for binding
 // extension service accounts to such ClusterRoles.
 type Reconciler struct {
@@ -86,9 +98,7 @@ func (r *Reconciler) computeSubjects(ctx context.Context, clusterRole *metav1.Pa
 
 	var subjects []rbacv1.Subject
 	for _, serviceAccount := range serviceAccountList.Items {
-		if strings.HasPrefix(serviceAccount.Namespace, gardenerutils.SeedNamespaceNamePrefix) ||
-			((serviceAccount.Namespace == v1beta1constants.GardenNamespace || strings.HasPrefix(serviceAccount.Namespace, gardenerutils.ProjectNamespacePrefix)) &&
-				strings.HasPrefix(serviceAccount.Name, v1beta1constants.ExtensionShootServiceAccountPrefix)) {
+		if isExtensionServiceAccount(serviceAccount.Name, serviceAccount.Namespace) {
 			subjects = append(subjects, rbacv1.Subject{
 				Kind:      rbacv1.ServiceAccountKind,
 				Name:      serviceAccount.Name,

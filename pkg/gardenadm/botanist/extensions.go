@@ -173,7 +173,6 @@ func (b *GardenadmBotanist) ReconcileExtensionControllerInstallations(ctx contex
 			Identity:                  &shoot.Status.Gardener,
 			GardenNamespace:           b.Shoot.ControlPlaneNamespace,
 			BootstrapControlPlaneNode: bootstrapMode,
-			ForSelfHostedShoot:        true,
 			SelfHostedShootMeta: &types.NamespacedName{
 				Namespace: shoot.Namespace,
 				Name:      shoot.Name,

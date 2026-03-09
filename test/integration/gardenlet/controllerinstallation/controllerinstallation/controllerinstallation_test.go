@@ -569,7 +569,6 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				selfHostedControllerInstall = &gardencorev1beta1.ControllerInstallation{
 					ObjectMeta: metav1.ObjectMeta{
 						GenerateName: "install-sh-",
-						Annotations:  map[string]string{"security.gardener.cloud/pod-security-enforce": "privileged"},
 						// Intentionally no testID label so the test manager does not watch this object.
 					},
 				}
@@ -604,7 +603,6 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 					Identity:              identity,
 					GardenClusterIdentity: gardenClusterIdentity,
 					GardenNamespace:       v1beta1constants.GardenNamespace,
-					ForSelfHostedShoot:    true,
 					SelfHostedShootMeta: &types.NamespacedName{
 						Namespace: projectNamespace.Name,
 						Name:      "my-shoot",

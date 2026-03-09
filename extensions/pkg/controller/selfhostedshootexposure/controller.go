@@ -19,7 +19,7 @@ import (
 const (
 	// FinalizerName is the selfhostedshootexposure controller finalizer.
 	FinalizerName = "extensions.gardener.cloud/selfhostedshootexposure"
-	// ControllerName is the name of the controller
+	// ControllerName is the name of the controller.
 	ControllerName = "selfhostedshootexposure"
 )
 

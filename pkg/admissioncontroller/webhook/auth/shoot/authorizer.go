@@ -158,8 +158,6 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 
 		case serviceAccountResource:
 			if userType == gardenletidentity.UserTypeExtension {
-				// We don't use CheckRead here, as it would also grant list and watch permissions, which gardenlet doesn't
-				// have. We want to grant the read-only subset of gardenlet's permissions.
 				return requestAuthorizer.Check(graph.VertexTypeServiceAccount, attrs,
 					authwebhook.WithAllowedVerbs("get"),
 				)
@@ -219,13 +217,13 @@ func (a *authorizer) authorizeEvent(log logr.Logger, attrs auth.Attributes) (aut
 }
 
 func (a *authorizer) authorizeLease(requestAuthorizer *authwebhook.RequestAuthorizer, userType gardenletidentity.UserType, shootNamespace, shootName string, attrs auth.Attributes) (auth.Decision, string, error) {
-	// extension clients may only work with leases in the shoot namespace and whose name is prefixed with
-	// the shoot name to avoid tampering with leases belonging to other shoots in the same project namespace
+	// Extension clients may only work with leases in the shoot namespace and whose name is prefixed with
+	// the shoot name to avoid tampering with leases belonging to other shoots in the same project namespace.
 	if userType == gardenletidentity.UserTypeExtension {
 		if attrs.GetNamespace() != shootNamespace {
 			return auth.DecisionNoOpinion, "lease object is not in shoot namespace", nil
 		}
-		// list/watch have no name; for all other verbs check the name prefix
+		// List/watch have no name; for all other verbs check the name prefix.
 		if attrs.GetName() != "" && !strings.HasPrefix(attrs.GetName(), shootName+"--") {
 			return auth.DecisionNoOpinion, "lease object name does not have the shoot name as prefix", nil
 		}

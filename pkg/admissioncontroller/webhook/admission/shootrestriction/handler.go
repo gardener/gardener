@@ -180,8 +180,8 @@ func (h *Handler) admitLease(gardenletShootInfo types.NamespacedName, userType g
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
 
-	// extension clients may only create leases in the shoot namespace and whose name is prefixed with
-	// the shoot name to avoid tampering with leases belonging to other shoots in the same project namespace
+	// Extension clients may only create leases in the shoot namespace and whose name is prefixed with
+	// the shoot name to avoid tampering with leases belonging to other shoots in the same project namespace.
 	if userType == gardenletidentity.UserTypeExtension {
 		if request.Namespace != gardenletShootInfo.Namespace {
 			return admission.Errored(http.StatusForbidden, fmt.Errorf("extension client can only create leases in the namespace for shoot %q", gardenletShootInfo))

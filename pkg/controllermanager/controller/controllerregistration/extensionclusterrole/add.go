@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -29,7 +28,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ControllerName is the name of this controller.
@@ -81,9 +79,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 // project namespaces (`garden-*`) when their name is prefixed with `extension-shoot--`.
 func (r *Reconciler) ServiceAccountPredicate() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		return strings.HasPrefix(obj.GetNamespace(), gardenerutils.SeedNamespaceNamePrefix) ||
-			((obj.GetNamespace() == v1beta1constants.GardenNamespace || strings.HasPrefix(obj.GetNamespace(), gardenerutils.ProjectNamespacePrefix)) &&
-				strings.HasPrefix(obj.GetName(), v1beta1constants.ExtensionShootServiceAccountPrefix))
+		return isExtensionServiceAccount(obj.GetName(), obj.GetNamespace())
 	})
 }
 

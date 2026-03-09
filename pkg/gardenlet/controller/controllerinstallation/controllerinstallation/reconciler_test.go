@@ -14,6 +14,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
@@ -53,8 +54,6 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should not change objects if not responsible for self-hosted shoots", func() {
-			reconciler.ForSelfHostedShoot = false
-
 			p := pod.DeepCopy()
 			Expect(reconciler.MutateSpecForSelfHostedShootExtensions(p)).To(Succeed())
 			Expect(p).To(Equal(pod))
@@ -137,7 +136,7 @@ var _ = Describe("Reconciler", func() {
 			)
 
 			BeforeEach(func() {
-				reconciler.ForSelfHostedShoot = true
+				reconciler.SelfHostedShootMeta = &types.NamespacedName{Namespace: "garden-my-project", Name: "my-shoot"}
 			})
 
 			When("BootstrapControlPlaneNode is true", func() {
