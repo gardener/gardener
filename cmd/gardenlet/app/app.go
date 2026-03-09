@@ -466,7 +466,7 @@ func (g *garden) Start(ctx context.Context) error {
 		}
 
 		log.Info("Registering Seed object in garden cluster")
-		if err := g.registerSeed(ctx, gardenCluster.GetClient()); err != nil {
+		if err := g.registerSeed(ctx, gardenCluster.GetClient(), isSelfHostedShoot); err != nil {
 			return err
 		}
 	}
@@ -553,7 +553,7 @@ func (g *garden) Start(ctx context.Context) error {
 	return nil
 }
 
-func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) error {
+func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client, isSelfHostedShoot bool) error {
 	seed := &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: g.config.SeedConfig.Name,
@@ -565,6 +565,10 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 		seed.Labels = utils.MergeStringMaps(map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
 		}, g.config.SeedConfig.Labels)
+
+		if isSelfHostedShoot {
+			metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSelfHostedShootCluster, "true")
+		}
 
 		var (
 			internalDNS = seed.Spec.DNS.Internal
