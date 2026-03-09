@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/cli/cli/config/configfile"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
@@ -59,6 +60,7 @@ import (
 	filespkg "github.com/gardener/gardener/pkg/nodeagent/files"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
@@ -109,7 +111,8 @@ func init() {
 // Reconciler decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
 // node.
 type Reconciler struct {
-	Client client.Client
+	APIReader client.Reader
+	Client    client.Client
 	// LeaseClient is a cached client just for the leader election Lease in case the OperatingSystemConfig
 	// reconciliation is serialised.
 	LeaseClient      client.Client
@@ -429,6 +432,24 @@ func getFilePermissions(file extensionsv1alpha1.File) os.FileMode {
 }
 
 func (r *Reconciler) applyChangedImageRefFiles(ctx context.Context, log logr.Logger, changes *operatingSystemConfigChanges) error {
+	var (
+		imagePullSecret *corev1.Secret
+		configFile      *configfile.ConfigFile
+		err             error
+	)
+
+	if r.Config.ImagePullSecretName != nil {
+		imagePullSecret = &corev1.Secret{}
+		if err := r.APIReader.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: *r.Config.ImagePullSecretName}, imagePullSecret); err != nil {
+			return fmt.Errorf("error fetching image pull secret %q: %w", *r.Config.ImagePullSecretName, err)
+		}
+
+		configFile, err = imagevector.ConfigFileFromImagePullSecret(imagePullSecret)
+		if err != nil {
+			return fmt.Errorf("error parsing image pull secret %q: %w", *r.Config.ImagePullSecretName, err)
+		}
+	}
+
 	for _, file := range slices.Clone(changes.Files.Changed) {
 		if file.Content.ImageRef == nil {
 			continue
@@ -440,7 +461,7 @@ func (r *Reconciler) applyChangedImageRefFiles(ctx context.Context, log logr.Log
 			fileLog         = log.WithValues("path", file.Path, "image", file.Content.ImageRef.Image)
 		)
 
-		err := r.Extractor.CopyFromImage(ctx, file.Content.ImageRef.Image, filePathInImage, file.Path, permissions)
+		err := r.Extractor.CopyFromImage(ctx, file.Content.ImageRef.Image, filePathInImage, file.Path, permissions, configFile)
 
 		// Fall back to /ko-app/gardener-node-agent if /gardener-node-agent doesn't exist in image to support images built
 		// with ko.
@@ -449,7 +470,7 @@ func (r *Reconciler) applyChangedImageRefFiles(ctx context.Context, log logr.Log
 		if errors.Is(err, fs.ErrNotExist) && filePathInImage == "/gardener-node-agent" {
 			filePathInImage = "/ko-app/gardener-node-agent"
 			fileLog.Info("Could not find gardener-node-agent in root directory of image, falling back to ko binary path")
-			err = r.Extractor.CopyFromImage(ctx, file.Content.ImageRef.Image, filePathInImage, file.Path, permissions)
+			err = r.Extractor.CopyFromImage(ctx, file.Content.ImageRef.Image, filePathInImage, file.Path, permissions, configFile)
 		}
 
 		if err != nil {
