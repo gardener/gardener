@@ -97,7 +97,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			openTelemetryCollectorLogShipperEnabled = false
 
 			//nolint:unparam
-			initConfigFn = func(worker gardencorev1beta1.Worker, nodeAgentImage string, config *nodeagentconfigv1alpha1.NodeAgentConfiguration) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+			initConfigFn = func(worker gardencorev1beta1.Worker, nodeAgentImage string, config *nodeagentconfigv1alpha1.NodeAgentConfiguration, _ *corev1.Secret) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 				return []extensionsv1alpha1.Unit{
 						{Name: worker.Name},
 						{
@@ -200,6 +200,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Server:   apiServerURLForWorker,
 						CABundle: []byte(caBundle),
 					}},
+					nil,
 				)
 				componentsContext := components.Context{
 					Key:                 key,
@@ -752,8 +753,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("should exclude the bootstrap token file if purpose is not provision", func() {
 				bootstrapTokenFile := extensionsv1alpha1.File{Path: "/var/lib/gardener-node-agent/credentials/bootstrap-token"}
-				initConfigFnWithBootstrapToken := func(worker gardencorev1beta1.Worker, nodeAgentImage string, config *nodeagentconfigv1alpha1.NodeAgentConfiguration) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-					units, files, err := initConfigFn(worker, nodeAgentImage, config)
+				initConfigFnWithBootstrapToken := func(worker gardencorev1beta1.Worker, nodeAgentImage string, config *nodeagentconfigv1alpha1.NodeAgentConfiguration, _ *corev1.Secret) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+					units, files, err := initConfigFn(worker, nodeAgentImage, config, nil)
 					return units, append(files, bootstrapTokenFile), err
 				}
 

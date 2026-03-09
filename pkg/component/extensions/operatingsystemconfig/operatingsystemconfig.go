@@ -919,10 +919,17 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 
 	switch d.purpose {
 	case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
+		// TODO: rethink the namespace
+		imagePullSecret, err := imagevectorutils.GetImagePullSecretForImage(ctx, d.client, d.images[imagevector.ContainerImageNameGardenerNodeAgent], d.osc.Namespace)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get image pull secret for gardener node agent image: %w", err)
+		}
+
 		units, files, err = InitConfigFn(
 			d.worker,
 			d.images[imagevector.ContainerImageNameGardenerNodeAgent].String(),
 			nodeagent.ComponentConfig(d.key, d.kubernetesVersion, d.apiServerURL, d.clusterCABundle, nil),
+			imagePullSecret,
 		)
 		if err != nil {
 			return nil, err
