@@ -178,8 +178,8 @@ etcdConfig:
     activeDeadlineDuration: "3h"
     metricsScrapeWaitDuration: "60s"
   deltaSnapshotRetentionPeriod: 48h
-# featureGates:
-#   UseEtcdWrapper: true
+  featureGates:
+    UpgradeEtcdVersion: false
 # backupLeaderElection:
 #   reelectionPeriod: 5s
 #   etcdConnectionTimeout: 5s
