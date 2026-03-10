@@ -35,7 +35,7 @@ func (p *persesOperator) clusterRole() *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{corev1.GroupName},
-				Resources: []string{"services", "configmaps"},
+				Resources: []string{"configmaps", "secrets", "services"},
 				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
 			{
