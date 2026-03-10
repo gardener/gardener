@@ -89,7 +89,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// Live lookup to prevent working on a stale cache and trying to create multiple installations for the same
 	// registration/seed/shoot combination.
 	controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-	if err := r.Client.List(ctx, controllerInstallationList); err != nil {
+	if err := r.APIReader.List(ctx, controllerInstallationList); err != nil {
 		return reconcile.Result{}, err
 	}
 
