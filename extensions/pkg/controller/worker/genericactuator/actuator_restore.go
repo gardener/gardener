@@ -10,7 +10,6 @@ import (
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -152,11 +151,11 @@ func addStateToMachineDeployment(
 func restoreMachineSetsAndMachines(ctx context.Context, log logr.Logger, cl client.Client, wantedMachineDeployments extensionsworkercontroller.MachineDeployments) error {
 	log.Info("Deploying Machines and MachineSets")
 
-	taskFns := []flow.TaskFn{}
+	var taskFns []flow.TaskFn
 	for _, wantedMachineDeployment := range wantedMachineDeployments {
 		for _, machineSet := range wantedMachineDeployment.State.MachineSets {
 			taskFns = append(taskFns, func(ctx context.Context) error {
-				if err := createIfNotExists(ctx, cl, &machineSet); err != nil {
+				if err := client.IgnoreAlreadyExists(cl.Create(ctx, &machineSet)); err != nil {
 					return fmt.Errorf("could not restore MachineSet '%s': %w", client.ObjectKeyFromObject(&machineSet), err)
 				}
 				return nil
@@ -165,7 +164,7 @@ func restoreMachineSetsAndMachines(ctx context.Context, log logr.Logger, cl clie
 
 		for _, machine := range wantedMachineDeployment.State.Machines {
 			taskFns = append(taskFns, func(ctx context.Context) error {
-				if err := createIfNotExists(ctx, cl, &machine); err != nil {
+				if err := client.IgnoreAlreadyExists(cl.Create(ctx, &machine)); err != nil {
 					return fmt.Errorf("could not restore Machine '%s': %w", client.ObjectKeyFromObject(&machine), err)
 				}
 				return nil
@@ -174,17 +173,6 @@ func restoreMachineSetsAndMachines(ctx context.Context, log logr.Logger, cl clie
 	}
 
 	return flow.ParallelN(maxConcurrentMachineTasks, taskFns...)(ctx)
-}
-
-func createIfNotExists(ctx context.Context, cl client.Client, obj client.Object) error {
-	err := cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)
-	if apierrors.IsNotFound(err) {
-		// Ignore AlreadyExists error which could happen if the client's cache
-		// was not yet updated with the recently created Object.
-		return client.IgnoreAlreadyExists(cl.Create(ctx, obj))
-	}
-
-	return err
 }
 
 func removeWantedDeploymentWithoutState(wantedMachineDeployments extensionsworkercontroller.MachineDeployments) extensionsworkercontroller.MachineDeployments {
