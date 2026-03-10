@@ -372,6 +372,10 @@ func (g *garden) Start(ctx context.Context) error {
 						}),
 						Namespaces: map[string]cache.Config{g.selfHostedShootInfo.Meta.Namespace: {}},
 					},
+					&operationsv1alpha1.Bastion{}: {
+						Field:      fields.SelectorFromSet(fields.Set{operations.BastionShootName: g.selfHostedShootInfo.Meta.Name}),
+						Namespaces: map[string]cache.Config{g.selfHostedShootInfo.Meta.Namespace: {}},
+					},
 					&gardencorev1beta1.Shoot{}: {
 						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: g.selfHostedShootInfo.Meta.Name}),
 						Namespaces: map[string]cache.Config{g.selfHostedShootInfo.Meta.Namespace: {}},

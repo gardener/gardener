@@ -104,6 +104,12 @@ func AddToManager(
 			return fmt.Errorf("failed adding BackupEntry controller: %w", err)
 		}
 
+		if err := (&bastion.Reconciler{
+			Config: *cfg.Controllers.Bastion,
+		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+			return fmt.Errorf("failed adding Bastion controller: %w", err)
+		}
+
 		if err := (&gardenlet.Reconciler{
 			Config: *cfg,
 		}).AddToManager(mgr, gardenCluster, seedClientSet); err != nil {
