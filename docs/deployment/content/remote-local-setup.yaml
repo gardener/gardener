@@ -348,7 +348,7 @@ spec:
             KUBECONFIG=<(generate-admin-kubeconf.sh) kubectl get pods -A
           EOF
           new_pane "Run simple e2e test (create and delete shoot)" <<"EOF"
-            make test-e2e-local-simple
+            GOFLAGS="-tags=musl" make test-e2e-local-simple
           EOF
           new_window "ad-hoc" "ad-hoc" Enter <<"EOF"
             # Use this pane for ad-hoc commands
@@ -406,7 +406,7 @@ spec:
             git log --oneline -1
           EOF
           new_window "make generate" "make generate" <<"EOF"
-            nice make generate check test test-integration
+            GOFLAGS-"-tags=musl" nice make generate check test test-integration
           EOF
           new_window "ad-hoc" "ad-hoc" Enter <<"EOF"
             # Use this pane for ad-hoc commands
@@ -537,7 +537,7 @@ spec:
             git log --oneline -1
           EOF
           new_window "make generate" "make generate" <<"EOF"
-            nice make generate check test test-integration
+            GOFLAGS="-tags=musl" nice make generate check test test-integration
           EOF
           new_window "ad-hoc" "ad-hoc" Enter <<"EOF"
             # Use this pane for ad-hoc commands
