@@ -27,6 +27,8 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/operations"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
@@ -58,6 +60,7 @@ var (
 	// group and the resource (but it ignores the version).
 	backupBucketResource              = gardencorev1beta1.Resource("backupbuckets")
 	backupEntryResource               = gardencorev1beta1.Resource("backupentries")
+	bastionResource                   = operationsv1alpha1.Resource("bastions")
 	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
 	cloudProfileResource              = gardencorev1beta1.Resource("cloudprofiles")
 	configMapResource                 = corev1.Resource("configmaps")
@@ -121,6 +124,16 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 				authwebhook.WithFieldSelectors(map[string]string{
 					core.BackupEntryShootRefName:      shootName,
 					core.BackupEntryShootRefNamespace: shootNamespace,
+				}),
+			)
+
+		case bastionResource:
+			return requestAuthorizer.Check(graph.VertexTypeBastion, attrs,
+				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
+				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithAllowedNamespaces(requestAuthorizer.ToNamespace),
+				authwebhook.WithFieldSelectors(map[string]string{
+					operations.BastionShootName: shootName,
 				}),
 			)
 

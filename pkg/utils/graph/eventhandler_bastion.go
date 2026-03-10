@@ -63,10 +63,18 @@ func (g *graph) handleBastionCreateOrUpdate(bastion *operationsv1alpha1.Bastion)
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	g.deleteVertex(VertexTypeBastion, bastion.Namespace, bastion.Name)
+	if g.forSelfHostedShoots {
+		g.deleteAllOutgoingEdges(VertexTypeBastion, bastion.Namespace, bastion.Name, VertexTypeShoot)
+	} else {
+		g.deleteAllOutgoingEdges(VertexTypeBastion, bastion.Namespace, bastion.Name, VertexTypeSeed)
+	}
 
-	if bastion.Spec.SeedName != nil {
-		bastionVertex := g.getOrCreateVertex(VertexTypeBastion, bastion.Namespace, bastion.Name)
+	bastionVertex := g.getOrCreateVertex(VertexTypeBastion, bastion.Namespace, bastion.Name)
+
+	if g.forSelfHostedShoots {
+		shootVertex := g.getOrCreateVertex(VertexTypeShoot, bastion.Namespace, bastion.Spec.ShootRef.Name)
+		g.addEdge(bastionVertex, shootVertex)
+	} else if bastion.Spec.SeedName != nil {
 		seedVertex := g.getOrCreateVertex(VertexTypeSeed, "", *bastion.Spec.SeedName)
 		g.addEdge(bastionVertex, seedVertex)
 	}
