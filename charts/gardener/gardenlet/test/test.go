@@ -255,6 +255,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 					"perses.perses.dev",
 					"persesdashboards.perses.dev",
 					"persesdatasources.perses.dev",
+					"persesglobaldatasources.perses.dev",
 					"opentelemetrycollectors.opentelemetry.io",
 					"targetallocators.opentelemetry.io",
 					"opampbridges.opentelemetry.io",

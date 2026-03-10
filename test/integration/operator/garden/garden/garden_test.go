@@ -488,6 +488,7 @@ spec:
 			"perses.perses.dev",
 			"persesdashboards.perses.dev",
 			"persesdatasources.perses.dev",
+			"persesglobaldatasources.perses.dev",
 			// opentelemetry-operator
 			"instrumentations.opentelemetry.io",
 			"opampbridges.opentelemetry.io",
