@@ -74,6 +74,11 @@ func ValidateGarden(garden *operatorv1alpha1.Garden, extensions []operatorv1alph
 	opts := gardencorevalidation.KubeAPIServerValidationOptions{
 		AllowInvalidAcceptedIssuers: false,
 		AllowInvalidEventTTL:        false,
+		// Skip validation for auto rotation of etcd encryption key, since the rotation cannot be automated for the Garden API.
+		// It is the responsibility of the Garden operator to perform manual rotations.
+		ETCDEncryptionConfigValidationOptions: gardencorevalidation.ETCDEncryptionConfigValidationOptions{
+			SkipAESGCMAutoRotationValidation: true,
+		},
 	}
 
 	return ValidateGardenWithOps(garden, extensions, opts)
@@ -393,13 +398,7 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 				return allErrs
 			}
 
-			// Skip validation for auto rotation of etcd encryption key, since the rotation cannot be automated for the Garden API.
-			// It is the responsibility of the Garden operator to perform manual rotations.
-			encryptionConfigValidationOptions := gardencorevalidation.EncryptionConfigValidationOptions{
-				SkipAutoRotationValidation: true,
-			}
-
-			allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, opts, encryptionConfigValidationOptions, true, gardenerutils.DefaultGroupResourcesForEncryption(), path)...)
+			allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, opts, true, gardenerutils.DefaultGroupResourcesForEncryption(), path)...)
 		}
 
 		// The API server domain of the virtual cluster which is derived from the primary (immutable) DNS name does not
