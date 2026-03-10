@@ -1936,9 +1936,8 @@ Addons
 </td>
 <td>
 <em>(Optional)</em>
-<p>Addons contains information about enabled/disabled addons and their configuration.
-Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.
-TODO(timuthy): Drop this field when support for Kubernetes 1.34 is dropped.</p>
+<p>Addons contains information about enabled/disabled addons and their configuration.</p>
+<p>Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.</p>
 </td>
 </tr>
 <tr>
@@ -1950,8 +1949,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CloudProfileName is a name of a CloudProfile object.
-Deprecated: This field will be removed in a future version of Gardener. Use <code>CloudProfile</code> instead.
+<p>CloudProfileName is a name of a CloudProfile object.</p>
+<p>Deprecated: This field will be removed in a future version of Gardener. Use <code>CloudProfile</code> instead.
 Until Kubernetes v1.33, this field is synced with the <code>CloudProfile</code> field.
 Starting with Kubernetes v1.34, this field is set to empty string and must not be provided anymore.</p>
 </td>
@@ -4133,8 +4132,8 @@ int32
 </td>
 <td>
 <em>(Optional)</em>
-<p>IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
-Deprecated: Ignore taints are deprecated and treated as startup taints</p>
+<p>IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.</p>
+<p>Deprecated: Ignore taints are deprecated and treated as startup taints</p>
 </td>
 </tr>
 <tr>
@@ -5976,8 +5975,8 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <em>(Optional)</em>
-<p>ExpirationDate defines the time at which this version expires.
-Deprecated: Is replaced by Lifecycle; mutually exclusive with it.</p>
+<p>ExpirationDate defines the time at which this version expires.</p>
+<p>Deprecated: Is replaced by Lifecycle; mutually exclusive with it.</p>
 </td>
 </tr>
 <tr>
@@ -5991,8 +5990,8 @@ VersionClassification
 </td>
 <td>
 <em>(Optional)</em>
-<p>Classification defines the state of a version (preview, supported, deprecated).
-Deprecated: Is replaced by Lifecycle. mutually exclusive with it.</p>
+<p>Classification defines the state of a version (preview, supported, deprecated).</p>
+<p>Deprecated: Is replaced by Lifecycle. mutually exclusive with it.</p>
 </td>
 </tr>
 <tr>
@@ -7456,9 +7455,8 @@ string
 <em>(Optional)</em>
 <p>KubeMaxPDVols is not respected anymore by kube-scheduler.
 The maximum number of attached volumes is configured by the CSI driver.
-More information can be found at <a href="https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits">https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits</a>.
-Deprecated: This field is deprecated. Using this field will be forbidden starting from Kubernetes 1.35.
-TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.</p>
+More information can be found at <a href="https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits">https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits</a>.</p>
+<p>Deprecated: This field is deprecated. Using this field will be forbidden starting from Kubernetes 1.35.</p>
 </td>
 </tr>
 <tr>
@@ -13936,9 +13934,8 @@ Addons
 </td>
 <td>
 <em>(Optional)</em>
-<p>Addons contains information about enabled/disabled addons and their configuration.
-Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.
-TODO(timuthy): Drop this field when support for Kubernetes 1.34 is dropped.</p>
+<p>Addons contains information about enabled/disabled addons and their configuration.</p>
+<p>Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.</p>
 </td>
 </tr>
 <tr>
@@ -13950,8 +13947,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CloudProfileName is a name of a CloudProfile object.
-Deprecated: This field will be removed in a future version of Gardener. Use <code>CloudProfile</code> instead.
+<p>CloudProfileName is a name of a CloudProfile object.</p>
+<p>Deprecated: This field will be removed in a future version of Gardener. Use <code>CloudProfile</code> instead.
 Until Kubernetes v1.33, this field is synced with the <code>CloudProfile</code> field.
 Starting with Kubernetes v1.34, this field is set to empty string and must not be provided anymore.</p>
 </td>
@@ -14686,9 +14683,8 @@ Addons
 </td>
 <td>
 <em>(Optional)</em>
-<p>Addons contains information about enabled/disabled addons and their configuration.
-Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.
-TODO(timuthy): Drop this field when support for Kubernetes 1.34 is dropped.</p>
+<p>Addons contains information about enabled/disabled addons and their configuration.</p>
+<p>Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.</p>
 </td>
 </tr>
 <tr>
@@ -14700,8 +14696,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CloudProfileName is a name of a CloudProfile object.
-Deprecated: This field will be removed in a future version of Gardener. Use <code>CloudProfile</code> instead.
+<p>CloudProfileName is a name of a CloudProfile object.</p>
+<p>Deprecated: This field will be removed in a future version of Gardener. Use <code>CloudProfile</code> instead.
 Until Kubernetes v1.33, this field is synced with the <code>CloudProfile</code> field.
 Starting with Kubernetes v1.34, this field is set to empty string and must not be provided anymore.</p>
 </td>
@@ -15667,9 +15663,8 @@ int32
 <td>
 <em>(Optional)</em>
 <p>Default is not respected anymore by kube-apiserver.
-The cache is sized automatically.
-Deprecated: This field is deprecated. Setting the default cache size will be forbidden starting from Kubernetes 1.35.
-TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.</p>
+The cache is sized automatically.</p>
+<p>Deprecated: This field is deprecated. Setting the default cache size will be forbidden starting from Kubernetes 1.35.</p>
 </td>
 </tr>
 <tr>

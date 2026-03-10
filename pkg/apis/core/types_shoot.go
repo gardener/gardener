@@ -56,10 +56,11 @@ type ShootTemplate struct {
 // ShootSpec is the specification of a Shoot.
 type ShootSpec struct {
 	// Addons contains information about enabled/disabled addons and their configuration.
+	//
 	// Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.
-	// TODO(timuthy): Drop this field when support for Kubernetes 1.34 is dropped.
-	Addons *Addons
+	Addons *Addons // TODO(timuthy): Drop this field when support for Kubernetes 1.34 is dropped.
 	// CloudProfileName is a name of a CloudProfile object.
+	//
 	// Deprecated: This field will be removed in a future version of Gardener. Use `CloudProfile` instead.
 	// Until Kubernetes v1.33, this field is synced with the `CloudProfile` field.
 	// Starting with Kubernetes v1.34, this field is set to empty string and must not be provided anymore.
@@ -938,9 +939,9 @@ type AdmissionPlugin struct {
 type WatchCacheSizes struct {
 	// Default is not respected anymore by kube-apiserver.
 	// The cache is sized automatically.
+	//
 	// Deprecated: This field is deprecated. Setting the default cache size will be forbidden starting from Kubernetes 1.35.
-	// TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.
-	Default *int32
+	Default *int32 // TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.
 	// Resources configures the watch cache size of the kube-apiserver per resource
 	// (flag `--watch-cache-sizes`).
 	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
@@ -1007,9 +1008,9 @@ type KubeSchedulerConfig struct {
 	// KubeMaxPDVols is not respected anymore by kube-scheduler.
 	// The maximum number of attached volumes is configured by the CSI driver.
 	// More information can be found at https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits.
+	//
 	// Deprecated: This field is deprecated. Using this field will be forbidden starting from Kubernetes 1.35.
-	// TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.
-	KubeMaxPDVols *string
+	KubeMaxPDVols *string // TODO(timuthy): Drop this field when support for Kubernetes 1.35 is dropped.
 	// Profile configures the scheduling profile for the cluster.
 	// If not specified, the used profile is "balanced" (provides the default kube-scheduler behavior).
 	Profile *SchedulingProfile

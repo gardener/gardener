@@ -79,7 +79,7 @@ type BastionStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional
-	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,2,rep,name=conditions"`
+	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,2,rep,name=conditions"`
 	// LastHeartbeatTimestamp is the time when the bastion was last marked as
 	// not to be deleted. When this is set, the ExpirationTimestamp is advanced
 	// as well.

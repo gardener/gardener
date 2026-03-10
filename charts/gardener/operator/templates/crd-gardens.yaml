@@ -771,6 +771,7 @@ spec:
                                 description: |-
                                   Default is not respected anymore by kube-apiserver.
                                   The cache is sized automatically.
+
                                   Deprecated: This field is deprecated. Setting the default cache size will be forbidden starting from Kubernetes 1.35.
                                 format: int32
                                 type: integer
@@ -1869,6 +1870,7 @@ spec:
                                 description: |-
                                   Default is not respected anymore by kube-apiserver.
                                   The cache is sized automatically.
+
                                   Deprecated: This field is deprecated. Setting the default cache size will be forbidden starting from Kubernetes 1.35.
                                 format: int32
                                 type: integer

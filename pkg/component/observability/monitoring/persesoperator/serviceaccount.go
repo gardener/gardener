@@ -7,7 +7,7 @@ package persesoperator
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 const serviceAccountName = "perses-operator"
@@ -19,6 +19,6 @@ func (p *persesOperator) serviceAccount() *corev1.ServiceAccount {
 			Namespace: p.namespace,
 			Labels:    GetLabels(),
 		},
-		AutomountServiceAccountToken: pointer.Bool(false),
+		AutomountServiceAccountToken: ptr.To(false),
 	}
 }

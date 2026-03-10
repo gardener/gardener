@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -169,7 +168,7 @@ func (d *localDriver) applyPod(
 				Image:           providerSpec.Image,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				SecurityContext: &corev1.SecurityContext{
-					Privileged: pointer.Bool(true),
+					Privileged: ptr.To(true),
 				},
 				Env: []corev1.EnvVar{{
 					Name: "NODE_NAME",
@@ -219,7 +218,7 @@ func (d *localDriver) applyPod(
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
 						SecretName:  userDataSecret.Name,
-						DefaultMode: pointer.Int32(0777),
+						DefaultMode: ptr.To[int32](0777),
 					},
 				},
 			},

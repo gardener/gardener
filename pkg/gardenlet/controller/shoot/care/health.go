@@ -939,12 +939,7 @@ func ComputeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (set
 		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameKubeScheduler)
 		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameMachineControllerManager)
 
-		shootWantsClusterAutoscaler, err := v1beta1helper.ShootWantsClusterAutoscaler(shoot)
-		if err != nil {
-			return nil, err
-		}
-
-		if shootWantsClusterAutoscaler {
+		if v1beta1helper.ShootWantsClusterAutoscaler(shoot) {
 			requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameClusterAutoscaler)
 		}
 

@@ -8,12 +8,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"slices"
 	"strings"
 
 	"github.com/go-logr/logr"
-	"golang.org/x/exp/maps"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -624,11 +624,8 @@ func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta
 }
 
 func errorMapToString(seedNameToErr map[string]error) string {
-	sortedSeeds := maps.Keys(seedNameToErr)
-	slices.Sort(sortedSeeds)
-
 	res := "{"
-	for _, seed := range sortedSeeds {
+	for _, seed := range slices.Sorted(maps.Keys(seedNameToErr)) {
 		res += fmt.Sprintf("%s => %s, ", seed, seedNameToErr[seed].Error())
 	}
 	res = strings.TrimSuffix(res, ", ") + "}"

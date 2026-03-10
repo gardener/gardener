@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -300,12 +301,9 @@ func (r *Reconciler) NodeReadyForInPlaceUpdate() predicate.Predicate {
 }
 
 func nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(conditions []corev1.NodeCondition) bool {
-	for _, condition := range conditions {
-		if condition.Type == machinev1alpha1.NodeInPlaceUpdate && condition.Reason == machinev1alpha1.ReadyForUpdate {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(conditions, func(condition corev1.NodeCondition) bool {
+		return condition.Type == machinev1alpha1.NodeInPlaceUpdate && condition.Reason == machinev1alpha1.ReadyForUpdate
+	})
 }
 
 type delayer struct {

@@ -603,10 +603,10 @@ func validateAdvertiseAddresses(addresses []core.ShootAdvertisedAddress, fldPath
 }
 
 // validateAdvertisedURL validates kube-apiserver's URL.
-func validateAdvertisedURL(URL string, fldPath *field.Path) field.ErrorList {
+func validateAdvertisedURL(rawURL string, fldPath *field.Path) field.ErrorList {
 	var allErrors field.ErrorList
 	const form = "; desired format: https://host[:port]"
-	if u, err := url.Parse(URL); err != nil {
+	if u, err := url.Parse(rawURL); err != nil {
 		allErrors = append(allErrors, field.Required(fldPath, "url must be a valid URL: "+err.Error()+form))
 	} else {
 		if u.Scheme != "https" {
@@ -3029,15 +3029,15 @@ func IsNotMoreThan100Percent(intOrStringValue *intstr.IntOrString, fldPath *fiel
 }
 
 // ValidateCRI validates container runtime interface name and its container runtimes
-func ValidateCRI(CRI *core.CRI, fldPath *field.Path) field.ErrorList {
+func ValidateCRI(cri *core.CRI, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if !availableWorkerCRINames.Has(string(CRI.Name)) {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("name"), string(CRI.Name), sets.List(availableWorkerCRINames)))
+	if !availableWorkerCRINames.Has(string(cri.Name)) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("name"), string(cri.Name), sets.List(availableWorkerCRINames)))
 	}
 
-	if CRI.ContainerRuntimes != nil {
-		allErrs = append(allErrs, ValidateContainerRuntimes(CRI.ContainerRuntimes, fldPath.Child("containerruntimes"))...)
+	if cri.ContainerRuntimes != nil {
+		allErrs = append(allErrs, ValidateContainerRuntimes(cri.ContainerRuntimes, fldPath.Child("containerruntimes"))...)
 	}
 
 	return allErrs

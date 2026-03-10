@@ -2522,7 +2522,7 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 					},
 					"ignoreTaints": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group. Deprecated: Ignore taints are deprecated and treated as startup taints",
+							Description: "IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.\n\nDeprecated: Ignore taints are deprecated and treated as startup taints",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -3983,13 +3983,13 @@ func schema_pkg_apis_core_v1beta1_ExpirableVersion(ref common.ReferenceCallback)
 					},
 					"expirationDate": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ExpirationDate defines the time at which this version expires. Deprecated: Is replaced by Lifecycle; mutually exclusive with it.",
+							Description: "ExpirationDate defines the time at which this version expires.\n\nDeprecated: Is replaced by Lifecycle; mutually exclusive with it.",
 							Ref:         ref(metav1.Time{}.OpenAPIModelName()),
 						},
 					},
 					"classification": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Classification defines the state of a version (preview, supported, deprecated). Deprecated: Is replaced by Lifecycle. mutually exclusive with it.",
+							Description: "Classification defines the state of a version (preview, supported, deprecated).\n\nDeprecated: Is replaced by Lifecycle. mutually exclusive with it.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -5170,7 +5170,7 @@ func schema_pkg_apis_core_v1beta1_KubeSchedulerConfig(ref common.ReferenceCallba
 					},
 					"kubeMaxPDVols": {
 						SchemaProps: spec.SchemaProps{
-							Description: "KubeMaxPDVols is not respected anymore by kube-scheduler. The maximum number of attached volumes is configured by the CSI driver. More information can be found at https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits. Deprecated: This field is deprecated. Using this field will be forbidden starting from Kubernetes 1.35.",
+							Description: "KubeMaxPDVols is not respected anymore by kube-scheduler. The maximum number of attached volumes is configured by the CSI driver. More information can be found at https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits.\n\nDeprecated: This field is deprecated. Using this field will be forbidden starting from Kubernetes 1.35.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -6210,13 +6210,13 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 					},
 					"expirationDate": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ExpirationDate defines the time at which this version expires. Deprecated: Is replaced by Lifecycle; mutually exclusive with it.",
+							Description: "ExpirationDate defines the time at which this version expires.\n\nDeprecated: Is replaced by Lifecycle; mutually exclusive with it.",
 							Ref:         ref(metav1.Time{}.OpenAPIModelName()),
 						},
 					},
 					"classification": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Classification defines the state of a version (preview, supported, deprecated). Deprecated: Is replaced by Lifecycle. mutually exclusive with it.",
+							Description: "Classification defines the state of a version (preview, supported, deprecated).\n\nDeprecated: Is replaced by Lifecycle. mutually exclusive with it.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -10024,13 +10024,13 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 				Properties: map[string]spec.Schema{
 					"addons": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Addons contains information about enabled/disabled addons and their configuration. Deprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.",
+							Description: "Addons contains information about enabled/disabled addons and their configuration.\n\nDeprecated: This field is deprecated. Enabling addons will be forbidden starting from Kubernetes 1.35.",
 							Ref:         ref(v1beta1.Addons{}.OpenAPIModelName()),
 						},
 					},
 					"cloudProfileName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CloudProfileName is a name of a CloudProfile object. Deprecated: This field will be removed in a future version of Gardener. Use `CloudProfile` instead. Until Kubernetes v1.33, this field is synced with the `CloudProfile` field. Starting with Kubernetes v1.34, this field is set to empty string and must not be provided anymore.",
+							Description: "CloudProfileName is a name of a CloudProfile object.\n\nDeprecated: This field will be removed in a future version of Gardener. Use `CloudProfile` instead. Until Kubernetes v1.33, this field is synced with the `CloudProfile` field. Starting with Kubernetes v1.34, this field is set to empty string and must not be provided anymore.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -11008,7 +11008,7 @@ func schema_pkg_apis_core_v1beta1_WatchCacheSizes(ref common.ReferenceCallback) 
 				Properties: map[string]spec.Schema{
 					"default": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Default is not respected anymore by kube-apiserver. The cache is sized automatically. Deprecated: This field is deprecated. Setting the default cache size will be forbidden starting from Kubernetes 1.35.",
+							Description: "Default is not respected anymore by kube-apiserver. The cache is sized automatically.\n\nDeprecated: This field is deprecated. Setting the default cache size will be forbidden starting from Kubernetes 1.35.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},

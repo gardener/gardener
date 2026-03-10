@@ -6,10 +6,10 @@ package bastion
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/Masterminds/semver/v3"
-	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 
@@ -107,7 +107,7 @@ func findSupportedArchitectures(images []gardencorev1beta1.MachineImage, machine
 		}
 	}
 
-	return maps.Keys(architectures)
+	return slices.Collect(maps.Keys(architectures))
 }
 
 // getImageArchitectures finds the supported architectures of the cloudProfile images

@@ -6,6 +6,7 @@ package terraformer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -42,7 +43,7 @@ func (t *terraformer) WaitForCleanEnvironment(ctx context.Context) error {
 		return retry.Ok()
 	})
 
-	if err == context.DeadlineExceeded && len(podList.Items) > 0 {
+	if errors.Is(err, context.DeadlineExceeded) && len(podList.Items) > 0 {
 		t.logger.Info("Fetching logs of Terraformer pods as waiting for clean environment timed out")
 		for _, pod := range podList.Items {
 			podLogger := t.logger.WithValues("pod", client.ObjectKeyFromObject(&pod))

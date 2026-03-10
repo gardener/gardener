@@ -406,7 +406,6 @@ func createOldCASecrets(c client.Client, name string, caConfigs []SecretConfigWi
 		Expect(err).NotTo(HaveOccurred(), caConfig.Config.GetName())
 
 		dataMap := secretData.SecretData()
-		// dataMap["dummy"] = []byte("")
 
 		Expect(c.Create(context.Background(), &corev1.Secret{
 			ObjectMeta: secretMeta,
