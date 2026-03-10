@@ -60,6 +60,9 @@ func (p *persesOperator) deployment() *appsv1.Deployment {
 								fmt.Sprintf("--health-probe-bind-address=:%d", healthProbePort),
 								fmt.Sprintf("--metrics-bind-address=:%d", metricsPort),
 							},
+							Env: []corev1.EnvVar{
+								{Name: "ENABLE_WEBHOOKS", Value: "false"},
+							},
 							Resources: corev1.ResourceRequirements{
 								Requests: map[corev1.ResourceName]resource.Quantity{
 									corev1.ResourceCPU:    resource.MustParse("10m"),

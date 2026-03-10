@@ -139,6 +139,9 @@ var _ = Describe("PersesOperator", func() {
 									"--health-probe-bind-address=:8081",
 									"--metrics-bind-address=:8082",
 								},
+								Env: []corev1.EnvVar{
+									{Name: "ENABLE_WEBHOOKS", Value: "false"},
+								},
 								Resources: corev1.ResourceRequirements{
 									Requests: map[corev1.ResourceName]resource.Quantity{
 										corev1.ResourceCPU:    resource.MustParse("10m"),
