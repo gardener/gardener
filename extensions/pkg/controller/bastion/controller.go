@@ -5,6 +5,8 @@
 package bastion
 
 import (
+	"time"
+
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -13,7 +15,6 @@ import (
 
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
@@ -58,7 +59,7 @@ func Add(mgr manager.Manager, args AddArgs) error {
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) error {
 	if args.ControllerOptions.ReconciliationTimeout == 0 {
-		args.ControllerOptions.ReconciliationTimeout = controllerutils.DefaultReconciliationTimeout
+		args.ControllerOptions.ReconciliationTimeout = 20 * time.Minute
 	}
 	return builder.
 		ControllerManagedBy(mgr).

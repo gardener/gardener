@@ -7,6 +7,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
@@ -23,7 +24,6 @@ import (
 
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -69,7 +69,7 @@ func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	predicates := predicateutils.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClasses, args.Type)
 
 	if args.ControllerOptions.ReconciliationTimeout == 0 {
-		args.ControllerOptions.ReconciliationTimeout = controllerutils.DefaultReconciliationTimeout
+		args.ControllerOptions.ReconciliationTimeout = 20 * time.Minute
 	}
 
 	c, err := builder.

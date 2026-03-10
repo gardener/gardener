@@ -6,6 +6,7 @@ package infrastructure
 
 import (
 	"context"
+	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,7 +20,6 @@ import (
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
@@ -73,7 +73,7 @@ func add(mgr manager.Manager, args AddArgs) error {
 	predicates := predicateutils.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClasses, args.Type)
 
 	if args.ControllerOptions.ReconciliationTimeout == 0 {
-		args.ControllerOptions.ReconciliationTimeout = controllerutils.DefaultReconciliationTimeout // TODO(vpnachev): Is this enough?
+		args.ControllerOptions.ReconciliationTimeout = 20 * time.Minute
 	}
 
 	c, err := builder.
