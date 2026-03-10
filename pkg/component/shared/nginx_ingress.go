@@ -29,7 +29,7 @@ func NewNginxIngress(
 	clusterType component.ClusterType,
 	externalTrafficPolicy corev1.ServiceExternalTrafficPolicy,
 	ingressClass string,
-	wildcardIngressDomains []string,
+	domains []string,
 	istioIngressGatewayLabels map[string]string,
 	seedIsGarden bool,
 ) (
@@ -57,7 +57,7 @@ func NewNginxIngress(
 		TargetNamespace:           targetNamespace,
 		ClusterType:               clusterType,
 		ExternalTrafficPolicy:     externalTrafficPolicy,
-		WildcardIngressDomains:    wildcardIngressDomains,
+		Domains:                   domains,
 		IstioIngressGatewayLabels: istioIngressGatewayLabels,
 		SeedIsGarden:              seedIsGarden,
 	}

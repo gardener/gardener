@@ -365,6 +365,53 @@ var _ = Describe("helper", func() {
 		)
 	})
 
+	DescribeTable("#DiscoveryServerDomain",
+		func(garden *operatorv1alpha1.Garden, expected string) {
+			Expect(DiscoveryServerDomain(garden)).To(Equal(expected))
+		},
+		Entry("no discovery server config, uses first ingress domain", &operatorv1alpha1.Garden{
+			Spec: operatorv1alpha1.GardenSpec{
+				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+					Ingress: operatorv1alpha1.Ingress{
+						Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.example.com"}},
+					},
+				},
+			},
+		}, "discovery.ingress.example.com"),
+		Entry("discovery server config without custom domain, uses first ingress domain", &operatorv1alpha1.Garden{
+			Spec: operatorv1alpha1.GardenSpec{
+				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+					Ingress: operatorv1alpha1.Ingress{
+						Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.example.com"}},
+					},
+				},
+				VirtualCluster: operatorv1alpha1.VirtualCluster{
+					Gardener: operatorv1alpha1.Gardener{
+						DiscoveryServer: &operatorv1alpha1.GardenerDiscoveryServerConfig{},
+					},
+				},
+			},
+		}, "discovery.ingress.example.com"),
+		Entry("discovery server config with custom domain, uses custom domain", &operatorv1alpha1.Garden{
+			Spec: operatorv1alpha1.GardenSpec{
+				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+					Ingress: operatorv1alpha1.Ingress{
+						Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.example.com"}},
+					},
+				},
+				VirtualCluster: operatorv1alpha1.VirtualCluster{
+					Gardener: operatorv1alpha1.Gardener{
+						DiscoveryServer: &operatorv1alpha1.GardenerDiscoveryServerConfig{
+							Domain: &operatorv1alpha1.DNSDomain{
+								Name: "custom.discovery.example.com",
+							},
+						},
+					},
+				},
+			},
+		}, "custom.discovery.example.com"),
+	)
+
 	DescribeTable("#GetGardenerOperations",
 		func(annotations map[string]string, expectedResult []string) {
 			Expect(GetGardenerOperations(annotations)).To(Equal(expectedResult))
@@ -386,4 +433,94 @@ var _ = Describe("helper", func() {
 			"gardener.cloud/operation": "reconcile ;rotate-credentials-start  ; rotate-ssh-keypair;   ",
 		}, []string{"reconcile", "rotate-credentials-start", "rotate-ssh-keypair", ""}),
 	)
+
+	Describe("#GetAllIngressDomains", func() {
+		var garden *operatorv1alpha1.Garden
+
+		BeforeEach(func() {
+			garden = &operatorv1alpha1.Garden{
+				Spec: operatorv1alpha1.GardenSpec{
+					RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+						Ingress: operatorv1alpha1.Ingress{
+							Domains: []operatorv1alpha1.DNSDomain{
+								{
+									Name:     "ingress.local.gardener.cloud",
+									Provider: ptr.To("primary"),
+								},
+								{
+									Name:     "secondary.local.gardener.cloud",
+									Provider: ptr.To("secondary"),
+								},
+							},
+						},
+					},
+					VirtualCluster: operatorv1alpha1.VirtualCluster{
+						Gardener: operatorv1alpha1.Gardener{
+							DiscoveryServer: &operatorv1alpha1.GardenerDiscoveryServerConfig{
+								Domain: &operatorv1alpha1.DNSDomain{
+									Name:     "discovery.local.gardener.cloud",
+									Provider: ptr.To("primary"),
+								},
+							},
+						},
+					},
+				},
+			}
+		})
+
+		It("should return the ingress wildcard domains and the discovery server domain", func() {
+			Expect(GetAllIngressDomains(garden)).To(ConsistOf(
+				operatorv1alpha1.DNSDomain{
+					Name:     "*.ingress.local.gardener.cloud",
+					Provider: ptr.To("primary"),
+				},
+				operatorv1alpha1.DNSDomain{
+					Name:     "*.secondary.local.gardener.cloud",
+					Provider: ptr.To("secondary"),
+				},
+				operatorv1alpha1.DNSDomain{
+					Name:     "discovery.local.gardener.cloud",
+					Provider: ptr.To("primary"),
+				},
+			))
+		})
+
+		When("the discovery server is not configured with an explicit domain", func() {
+			BeforeEach(func() {
+				garden.Spec.VirtualCluster.Gardener.DiscoveryServer.Domain = nil
+			})
+
+			It("should only return the ingress wildcard domains", func() {
+				Expect(GetAllIngressDomains(garden)).To(ConsistOf(
+					operatorv1alpha1.DNSDomain{
+						Name:     "*.ingress.local.gardener.cloud",
+						Provider: ptr.To("primary"),
+					},
+					operatorv1alpha1.DNSDomain{
+						Name:     "*.secondary.local.gardener.cloud",
+						Provider: ptr.To("secondary"),
+					},
+				))
+			})
+		})
+
+		When("the discovery server domain overlaps with the ingress domains", func() {
+			BeforeEach(func() {
+				garden.Spec.VirtualCluster.Gardener.DiscoveryServer.Domain.Name = "discovery." + garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
+			})
+
+			It("should only return the ingress wildcard domains but not the discovery server domain", func() {
+				Expect(GetAllIngressDomains(garden)).To(ConsistOf(
+					operatorv1alpha1.DNSDomain{
+						Name:     "*.ingress.local.gardener.cloud",
+						Provider: ptr.To("primary"),
+					},
+					operatorv1alpha1.DNSDomain{
+						Name:     "*.secondary.local.gardener.cloud",
+						Provider: ptr.To("secondary"),
+					},
+				))
+			})
+		})
+	})
 })

@@ -1327,8 +1327,38 @@ spec:
                             type: object
                         type: object
                       gardenerDiscoveryServer:
-                        description: DiscoveryServer contains configuration settings
-                          for the gardener-discovery-server.
+                        description: |-
+                          DiscoveryServer contains configuration settings for the gardener-discovery-server.
+                          Once enabled, the gardener-discovery-server deployment cannot be removed and its domain cannot be changed.
+                          Otherwise, workload identity and/or shoot service account tokens referencing the gardener-discovery-server in the
+                          issuer URL might become unusable.
+                          This field is optional, but once set, it cannot be removed anymore.
+                        properties:
+                          domain:
+                            description: |-
+                              Domain overrides the default ingress domain and optionally the DNS provider for the gardener-discovery-server.
+                              This field is optional, but once the gardener-discovery-server is enabled, its domain cannot be changed anymore.
+                              Defaults to "discovery.<first-runtime-ingress-domain>".
+                            properties:
+                              name:
+                                description: Name is the domain name.
+                                minLength: 1
+                                type: string
+                              provider:
+                                description: |-
+                                  Provider is the name of the DNS provider as declared in the '.spec.dns.providers' section.
+                                  It is only optional, if the `.spec.dns` section is not provided at all.
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          tlsSecretName:
+                            description: |-
+                              TLSSecretName is the name of a secret (in the garden namespace) containing
+                              a trusted TLS certificate for the domain. If not configured, Gardener falls
+                              back to a secret labelled with 'gardener.cloud/role=garden-cert', if in turn not
+                              configured it generates a self-signed certificate.
+                            type: string
                         type: object
                       gardenerResourceManager:
                         description: ResourceManager contains configuration settings
