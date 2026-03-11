@@ -402,6 +402,9 @@ status:
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "node-local-dns-worker-aaaa",
 						Namespace: metav1.NamespaceSystem,
+						Annotations: map[string]string{
+							resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
+						},
 						Labels: map[string]string{
 							labelKey:                                    labelValue,
 							v1beta1constants.GardenRole:                 v1beta1constants.GardenRoleSystemComponent,
