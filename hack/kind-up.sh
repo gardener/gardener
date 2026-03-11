@@ -446,6 +446,12 @@ if [[ "$CLUSTER_NAME" == "gardener-operator-local" ]] ; then
   sed "s/127\.0\.0\.1:[0-9]\+/$CLUSTER_NAME-control-plane:6443/g" "$PATH_KUBECONFIG" > "$(dirname "$0")/../dev-setup/gardenconfig/components/credentials/secret-project-garden-with-kind-kubeconfig/kubeconfig"
 fi
 
+if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
+  # All outgoing traffic from the cluster is masqueraded to the host's IPv6 address. This is to ensure outgoing traffic
+  # can also be routed back to the cluster.
+  ip6tables -t nat -A POSTROUTING -o $(ip route | grep '^default' | awk '{print $5}') -s $(docker network inspect kind -f='{{json .IPAM.Config}}' | jq -r '.[1].Subnet') -j MASQUERADE
+fi
+
 kubectl apply -k "$(dirname "$0")/../dev-setup/kind/calico/overlays/$IPFAMILY" --server-side
 kubectl apply -k "$(dirname "$0")/../dev-setup/kind/metrics-server"            --server-side
 kubectl apply -k "$(dirname "$0")/../dev-setup/kind/node-status-capacity"      --server-side

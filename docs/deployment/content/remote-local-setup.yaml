@@ -95,7 +95,7 @@ spec:
           echo '
           listen-address=127.0.0.1
           bind-interfaces
-          address=/.local.gardener.cloud/172.18.255.53
+          server=/.local.gardener.cloud/172.18.255.53
           ' > /etc/dnsmasq.d/gardener.conf
           sed '1inameserver 127.0.0.1' /etc/resolv.conf > /tmp/resolv.conf && cat /tmp/resolv.conf > /etc/resolv.conf
           nice dnsmasq --no-daemon --log-debug --log-queries 2>&1 | ts > ~/.dnsmasq.log &
@@ -348,7 +348,7 @@ spec:
             KUBECONFIG=<(generate-admin-kubeconf.sh) kubectl get pods -A
           EOF
           new_pane "Run simple e2e test (create and delete shoot)" <<"EOF"
-            make test-e2e-local-simple
+            GOFLAGS="-tags=musl" make test-e2e-local-simple
           EOF
           new_window "ad-hoc" "ad-hoc" Enter <<"EOF"
             # Use this pane for ad-hoc commands
@@ -369,7 +369,7 @@ spec:
           tmux select-pane -T top; rm -f ~/.config/procps/toprc
           for k in top Enter z C c i t t m m V s 5 Enter E e W; do sleep .2; tmux send $k; done
           new_pane "make kind-multi-zone-up" <<"EOF"
-            sync_kubeconfig example/gardener-local/kind/multi-zone & sleep 1
+            sync_kubeconfig dev-setup/kubeconfigs/runtime & sleep 1
             nice make kind-multi-zone-down kind-multi-zone-up && kubectl wait --for=condition=ready pod -A --all --timeout=-1s
           EOF
           new_pane "make operator-up" <<"EOF"
@@ -406,7 +406,7 @@ spec:
             git log --oneline -1
           EOF
           new_window "make generate" "make generate" <<"EOF"
-            nice make generate check test test-integration
+            GOFLAGS-"-tags=musl" nice make generate check test test-integration
           EOF
           new_window "ad-hoc" "ad-hoc" Enter <<"EOF"
             # Use this pane for ad-hoc commands
@@ -427,7 +427,7 @@ spec:
           tmux select-pane -T top; rm -f ~/.config/procps/toprc
           for k in top Enter z C c i t t m m V s 5 Enter E e W; do sleep .2; tmux send $k; done
           new_pane "make kind-multi-zone-up" <<"EOF"
-            sync_kubeconfig example/gardener-local/kind/multi-zone & sleep 1
+            sync_kubeconfig dev-setup/kubeconfigs/runtime & sleep 1
             nice make kind-multi-zone-down kind-multi-zone-up && kubectl wait --for=condition=ready pod -A --all --timeout=-1s
           EOF
           new_pane "make operator-up" <<"EOF"
@@ -537,7 +537,7 @@ spec:
             git log --oneline -1
           EOF
           new_window "make generate" "make generate" <<"EOF"
-            nice make generate check test test-integration
+            GOFLAGS="-tags=musl" nice make generate check test test-integration
           EOF
           new_window "ad-hoc" "ad-hoc" Enter <<"EOF"
             # Use this pane for ad-hoc commands
