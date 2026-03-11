@@ -725,30 +725,6 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.ETCDConfig.CustodianController).NotTo(BeNil())
 			Expect(obj.ETCDConfig.BackupCompactionController).NotTo(BeNil())
 		})
-
-		It("should default UpgradeEtcdVersion feature gate to false when not set", func() {
-			SetObjectDefaults_GardenletConfiguration(obj)
-
-			Expect(obj.ETCDConfig.FeatureGates).To(HaveKeyWithValue("UpgradeEtcdVersion", false))
-		})
-
-		It("should not overwrite UpgradeEtcdVersion feature gate when explicitly set to true", func() {
-			obj.ETCDConfig = &ETCDConfig{
-				FeatureGates: map[string]bool{"UpgradeEtcdVersion": true},
-			}
-			SetObjectDefaults_GardenletConfiguration(obj)
-
-			Expect(obj.ETCDConfig.FeatureGates).To(HaveKeyWithValue("UpgradeEtcdVersion", true))
-		})
-
-		It("should not overwrite UpgradeEtcdVersion feature gate when explicitly set to false", func() {
-			obj.ETCDConfig = &ETCDConfig{
-				FeatureGates: map[string]bool{"UpgradeEtcdVersion": false},
-			}
-			SetObjectDefaults_GardenletConfiguration(obj)
-
-			Expect(obj.ETCDConfig.FeatureGates).To(HaveKeyWithValue("UpgradeEtcdVersion", false))
-		})
 	})
 
 	Describe("ETCDController defaulting", func() {

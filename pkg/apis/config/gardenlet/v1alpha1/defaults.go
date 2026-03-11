@@ -522,12 +522,6 @@ func SetDefaults_ETCDConfig(obj *ETCDConfig) {
 	if obj.BackupCompactionController == nil {
 		obj.BackupCompactionController = &BackupCompactionController{}
 	}
-	if _, ok := obj.FeatureGates["UpgradeEtcdVersion"]; !ok {
-		if obj.FeatureGates == nil {
-			obj.FeatureGates = make(map[string]bool)
-		}
-		obj.FeatureGates["UpgradeEtcdVersion"] = false
-	}
 }
 
 // SetDefaults_ETCDController sets defaults for the ETCD controller.
