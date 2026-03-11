@@ -1220,22 +1220,27 @@ func (r *Reconciler) deployGardenerDashboard(ctx context.Context, dashboard gard
 		}
 		dashboard.SetAPIServerCABundle(ptr.To(utils.EncodeBase64(caSecret.Data[secretsutils.DataKeyCertificateBundle])))
 	} else {
-		tlsSecretName := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI.SecretName
-		if tlsSecretName == nil {
-			tlsSecret, err := gardenerutils.GetRequiredGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace)
-			if err != nil {
-				return fmt.Errorf("failed getting SNI TLS secret for dashboard API server CA bundle: %w", err)
+		// Best-effort: try to populate CA bundle from SNI TLS secret for private CA setups.
+		// If neither an explicit secret name nor a wildcard cert is available, skip gracefully
+		// (same behavior as before this change).
+		var tlsSecret *corev1.Secret
+
+		if secretName := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI.SecretName; secretName != nil {
+			s := &corev1.Secret{}
+			if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: *secretName, Namespace: r.GardenNamespace}, s); err == nil {
+				tlsSecret = s
 			}
-			tlsSecretName = &tlsSecret.Name
+		} else {
+			// Fallback: try wildcard cert (non-default/exceptional case)
+			if s, err := gardenerutils.GetRequiredGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace); err == nil {
+				tlsSecret = s
+			}
 		}
 
-		tlsSecret := &corev1.Secret{}
-		if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: *tlsSecretName, Namespace: r.GardenNamespace}, tlsSecret); err != nil {
-			return fmt.Errorf("failed getting SNI TLS secret %q for dashboard API server CA bundle: %w", *tlsSecretName, err)
-		}
-
-		if caData, ok := tlsSecret.Data[secretsutils.DataKeyCertificateCA]; ok {
-			dashboard.SetAPIServerCABundle(ptr.To(utils.EncodeBase64(caData)))
+		if tlsSecret != nil {
+			if caData, ok := tlsSecret.Data[secretsutils.DataKeyCertificateCA]; ok {
+				dashboard.SetAPIServerCABundle(ptr.To(utils.EncodeBase64(caData)))
+			}
 		}
 	}
 
