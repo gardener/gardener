@@ -102,10 +102,10 @@ func computeOperatingSystemConfigChanges(
 	// The reason for assigning files to units is the detection of changes which require the restart of a unit.
 	newOSCFiles := CollectAllFiles(newOSC, hostName)
 
-	oldOSCRaw, err := fs.ReadFile(lastAppliedOperatingSystemConfigFilePath)
+	oldOSCRaw, err := fs.ReadFile(nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigFilePath)
 	if err != nil {
 		if !errors.Is(err, afero.ErrFileNotFound) {
-			return nil, fmt.Errorf("error reading last applied OSC from file path %s: %w", lastAppliedOperatingSystemConfigFilePath, err)
+			return nil, fmt.Errorf("error reading last applied OSC from file path %s: %w", nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigFilePath, err)
 		}
 
 		var (
@@ -150,7 +150,7 @@ func computeOperatingSystemConfigChanges(
 
 	oldOSC := &extensionsv1alpha1.OperatingSystemConfig{}
 	if err := runtime.DecodeInto(decoder, oldOSCRaw, oldOSC); err != nil {
-		return nil, fmt.Errorf("unable to decode the old OSC read from file path %s: %w", lastAppliedOperatingSystemConfigFilePath, err)
+		return nil, fmt.Errorf("unable to decode the old OSC read from file path %s: %w", nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigFilePath, err)
 	}
 
 	oldOSCFiles := CollectAllFiles(oldOSC, hostName)
