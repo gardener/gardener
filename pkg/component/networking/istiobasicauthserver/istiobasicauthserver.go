@@ -101,7 +101,7 @@ func (i *istioBasicAuthServer) Deploy(ctx context.Context) error {
 	}
 	caBundle, found := i.secretsManager.Get(caName)
 	if !found {
-		return fmt.Errorf("failed not find ca certificate bundle %q: %w", caName, err)
+		return fmt.Errorf("failed to find ca certificate bundle %q", caName)
 	}
 
 	serverSecret, err := i.secretsManager.Generate(ctx,

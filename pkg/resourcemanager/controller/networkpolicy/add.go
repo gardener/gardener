@@ -119,7 +119,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 	crd := &metav1.PartialObjectMetadata{}
 	crd.SetGroupVersionKind(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"))
 	if err := targetCluster.GetAPIReader().Get(ctx, client.ObjectKey{Name: "virtualservices.networking.istio.io"}, crd); err != nil {
-		logf.FromContext(ctx).Info("network policy controller deactivated because istio CRDs are not installed", "error", err)
+		logf.FromContext(ctx).Info("Network policy controller deactivated because istio CRDs are not installed", "error", err)
 		return nil
 	}
 	r.istioCRDsFound = true
