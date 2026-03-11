@@ -63,6 +63,7 @@ var _ = Describe("NodeLocalDNS", func() {
 		ipvsAddress           = "169.254.20.10"
 		labelKey              = "k8s-app"
 		labelValue            = "node-local-dns"
+		labelKeyPool          = "pool"
 		prometheusPort        = 9253
 		prometheusErrorPort   = 9353
 		prometheusScrape      = true
@@ -401,6 +402,9 @@ status:
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "node-local-dns-worker-aaaa",
 						Namespace: metav1.NamespaceSystem,
+						Annotations: map[string]string{
+							resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
+						},
 						Labels: map[string]string{
 							labelKey:                                    labelValue,
 							v1beta1constants.GardenRole:                 v1beta1constants.GardenRoleSystemComponent,
@@ -417,14 +421,16 @@ status:
 						RevisionHistoryLimit: ptr.To[int32](2),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
-								labelKey: labelValue,
+								labelKey:     labelValue,
+								labelKeyPool: "worker-aaaa",
 							},
 						},
 						Template: corev1.PodTemplateSpec{
 							ObjectMeta: metav1.ObjectMeta{
 								Labels: map[string]string{
-									labelKey:                                    labelValue,
-									v1beta1constants.LabelNetworkPolicyToDNS:    "allowed",
+									labelKey:                                 labelValue,
+									labelKeyPool:                             "worker-aaaa",
+									v1beta1constants.LabelNetworkPolicyToDNS: "allowed",
 									v1beta1constants.LabelNodeCriticalComponent: "true",
 								},
 								Annotations: map[string]string{
