@@ -32,7 +32,7 @@ func ValidateManagedSeedSet(managedSeedSet *seedmanagement.ManagedSeedSet) field
 		AllowInvalidAcceptedIssuers: false,
 		AllowInvalidEventTTL:        false,
 		ETCDEncryptionConfigValidationOptions: gardencorevalidation.ETCDEncryptionConfigValidationOptions{
-			AutoRotationEnabled: helper.IsETCDEncryptionKeyAutoRotationEnabled(ManagedSeedSet.Spec.ShootTemplate.Spec.Maintenance),
+			AutoRotationEnabled: helper.IsETCDEncryptionKeyAutoRotationEnabled(managedSeedSet.Spec.ShootTemplate.Spec.Maintenance),
 		},
 	}
 
