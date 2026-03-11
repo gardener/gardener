@@ -16,13 +16,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
 
 	"github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -525,6 +530,97 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				Expect(testClient.Update(ctx, controllerDeployment)).To(Succeed())
 
 				test()
+			})
+		})
+
+		When("reconciler is configured for a self-hosted shoot", func() {
+			var (
+				projectNamespace               *corev1.Namespace
+				selfHostedControllerDeployment *gardencorev1.ControllerDeployment
+				selfHostedControllerInstall    *gardencorev1beta1.ControllerInstallation
+			)
+
+			BeforeEach(func() {
+				projectNamespace = &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "garden-",
+					},
+				}
+				Expect(testClient.Create(ctx, projectNamespace)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, projectNamespace))).To(Succeed())
+				})
+
+				selfHostedControllerDeployment = &gardencorev1.ControllerDeployment{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "deploy-sh-",
+						// Intentionally no testID label so the test manager does not watch this object.
+					},
+					Helm: &gardencorev1.HelmControllerDeployment{
+						RawChart: chartWithGardenKubeconfig,
+					},
+					InjectGardenKubeconfig: ptr.To(true),
+				}
+				Expect(testClient.Create(ctx, selfHostedControllerDeployment)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, selfHostedControllerDeployment))).To(Succeed())
+				})
+
+				selfHostedControllerInstall = &gardencorev1beta1.ControllerInstallation{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "install-sh-",
+						// Intentionally no testID label so the test manager does not watch this object.
+					},
+				}
+			})
+
+			JustBeforeEach(func() {
+				selfHostedControllerInstall.Spec.SeedRef = &corev1.ObjectReference{Name: seed.Name}
+				selfHostedControllerInstall.Spec.RegistrationRef = corev1.ObjectReference{Name: controllerRegistration.Name}
+				selfHostedControllerInstall.Spec.DeploymentRef = &corev1.ObjectReference{Name: selfHostedControllerDeployment.Name}
+				Expect(testClient.Create(ctx, selfHostedControllerInstall)).To(Succeed())
+				log.Info("Created self-hosted ControllerInstallation", "controllerInstallation", client.ObjectKeyFromObject(selfHostedControllerInstall))
+
+				DeferCleanup(func() {
+					By("Remove finalizer from self-hosted ControllerInstallation to allow deletion")
+					patch := client.MergeFrom(selfHostedControllerInstall.DeepCopy())
+					selfHostedControllerInstall.Finalizers = nil
+					Expect(client.IgnoreNotFound(testClient.Patch(ctx, selfHostedControllerInstall, patch))).To(Succeed())
+
+					By("Delete self-hosted ControllerInstallation")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, selfHostedControllerInstall))).To(Succeed())
+				})
+			})
+
+			It("should create the garden access secret with the self-hosted shoot SA name and namespace annotation", func() {
+				r := &controllerinstallation.Reconciler{
+					GardenClient:          testClient,
+					GardenConfig:          restConfig,
+					SeedClientSet:         testClientSet,
+					HelmRegistry:          fakeRegistry,
+					Clock:                 clock.RealClock{},
+					Config:                gardenletconfigv1alpha1.GardenletConfiguration{Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{ControllerInstallation: &gardenletconfigv1alpha1.ControllerInstallationControllerConfiguration{ConcurrentSyncs: ptr.To(5)}}},
+					Identity:              identity,
+					GardenClusterIdentity: gardenClusterIdentity,
+					GardenNamespace:       v1beta1constants.GardenNamespace,
+					SelfHostedShootMeta: &types.NamespacedName{
+						Namespace: projectNamespace.Name,
+						Name:      "my-shoot",
+					},
+				}
+
+				By("Reconcile the self-hosted ControllerInstallation")
+				_, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: selfHostedControllerInstall.Name}})
+				Expect(err).NotTo(HaveOccurred())
+
+				By("Ensure garden access secret has self-hosted shoot SA name and namespace annotation")
+				secret := &corev1.Secret{}
+				extensionNamespace := "extension-" + selfHostedControllerInstall.Name
+				Expect(testClient.Get(ctx, client.ObjectKey{Namespace: extensionNamespace, Name: "garden-access-extension"}, secret)).To(Succeed())
+				Expect(secret.Annotations).To(And(
+					HaveKeyWithValue("serviceaccount.resources.gardener.cloud/name", v1beta1constants.ExtensionShootServiceAccountPrefix+"my-shoot--"+selfHostedControllerInstall.Name),
+					HaveKeyWithValue("serviceaccount.resources.gardener.cloud/namespace", projectNamespace.Name),
+				))
 			})
 		})
 

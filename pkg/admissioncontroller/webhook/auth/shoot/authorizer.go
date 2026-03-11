@@ -26,6 +26,7 @@ import (
 	authwebhook "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
@@ -70,6 +71,7 @@ var (
 	projectResource                   = gardencorev1beta1.Resource("projects")
 	secretResource                    = corev1.Resource("secrets")
 	secretBindingResource             = gardencorev1beta1.Resource("secretbindings")
+	serviceAccountResource            = corev1.Resource("serviceaccounts")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
 	shootStateResource                = gardencorev1beta1.Resource("shootstates")
 	workloadIdentityResource          = securityv1alpha1.Resource("workloadidentities")
@@ -149,13 +151,19 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 			)
 
 		case leaseResource:
-			return requestAuthorizer.Check(graph.VertexTypeLease, attrs,
-				authwebhook.WithAllowedVerbs("get", "update", "patch", "list", "watch"),
-				authwebhook.WithAlwaysAllowedVerbs("create"),
-			)
+			return a.authorizeLease(requestAuthorizer, userType, shootNamespace, shootName, attrs)
 
 		case secretResource:
 			return a.authorizeSecret(ctx, requestAuthorizer, attrs)
+
+		case serviceAccountResource:
+			if userType == gardenletidentity.UserTypeExtension {
+				return requestAuthorizer.Check(graph.VertexTypeServiceAccount, attrs,
+					authwebhook.WithAllowedVerbs("get"),
+				)
+			}
+
+			return a.authorizeServiceAccount(requestAuthorizer, shootNamespace, shootName, attrs)
 
 		case shootResource:
 			// This allows the gardenlet to read its own Shoot resource even if it does not yet exist in the system.
@@ -206,6 +214,44 @@ func (a *authorizer) authorizeEvent(log logr.Logger, attrs auth.Attributes) (aut
 	}
 
 	return auth.DecisionAllow, "", nil
+}
+
+func (a *authorizer) authorizeLease(requestAuthorizer *authwebhook.RequestAuthorizer, userType gardenletidentity.UserType, shootNamespace, shootName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	// Extension clients may only work with leases in the shoot namespace and whose name is prefixed with
+	// the shoot name to avoid tampering with leases belonging to other shoots in the same project namespace.
+	if userType == gardenletidentity.UserTypeExtension {
+		if attrs.GetNamespace() != shootNamespace {
+			return auth.DecisionNoOpinion, "lease object is not in shoot namespace", nil
+		}
+		// List/watch have no name; for all other verbs check the name prefix.
+		if attrs.GetName() != "" && !strings.HasPrefix(attrs.GetName(), shootName+"--") {
+			return auth.DecisionNoOpinion, "lease object name does not have the shoot name as prefix", nil
+		}
+		if ok, reason := authwebhook.CheckVerb(requestAuthorizer.Log, attrs, "create", "get", "list", "watch", "update", "patch", "delete", "deletecollection"); !ok {
+			return auth.DecisionNoOpinion, reason, nil
+		}
+		return auth.DecisionAllow, "", nil
+	}
+
+	return requestAuthorizer.Check(graph.VertexTypeLease, attrs,
+		authwebhook.WithAllowedVerbs("get", "update", "patch", "list", "watch"),
+		authwebhook.WithAlwaysAllowedVerbs("create"),
+	)
+}
+
+func (a *authorizer) authorizeServiceAccount(requestAuthorizer *authwebhook.RequestAuthorizer, shootNamespace, shootName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	// Allow all verbs for extension ServiceAccounts belonging to this shoot in the shoot's project namespace.
+	// The name must be prefixed with extension-shoot--<shootName>-- to scope to this shoot and prevent a
+	// gardenlet from accessing unrelated ServiceAccounts of other shoots sharing the same project namespace.
+	if attrs.GetNamespace() == shootNamespace &&
+		strings.HasPrefix(attrs.GetName(), v1beta1constants.ExtensionShootServiceAccountPrefix+shootName+"--") {
+		return auth.DecisionAllow, "", nil
+	}
+
+	return requestAuthorizer.Check(graph.VertexTypeServiceAccount, attrs,
+		authwebhook.WithAllowedVerbs("get", "patch", "update"),
+		authwebhook.WithAlwaysAllowedVerbs("create"),
+	)
 }
 
 func (a *authorizer) authorizeSecret(ctx context.Context, requestAuthorizer *authwebhook.RequestAuthorizer, attrs auth.Attributes) (auth.Decision, string, error) {

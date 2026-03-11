@@ -745,9 +745,14 @@ func (r *Reconciler) newKubeAPIServer(
 				fmt.Sprintf("'%s' in request.groups || request.groups.exists(e, e.startsWith('%s%s'))", v1beta1constants.SeedsGroup, serviceaccount.ServiceAccountGroupPrefix, gardenerutils.SeedNamespaceNamePrefix),
 			),
 			newAuthorizationWebhook("shoot", kubeconfigShootAuthz,
-				// only intercept request from shoot gardenlets
-				// TODO(rfranzke): Also handle requests from ServiceAccounts of extensions running in the self-hosted shoot.
-				fmt.Sprintf("'%s' in request.groups", v1beta1constants.ShootsGroup),
+				// Only intercept requests from shoot gardenlets and extension ServiceAccounts in garden/project namespaces.
+				// Extension SA usernames follow the format system:serviceaccount:<garden|garden-*>:extension-shoot--<shoot>--<ci>.
+				fmt.Sprintf("'%s' in request.groups || (request.groups.exists(e, e == '%s%s' || e.startsWith('%s%s')) && request.user.contains(':%s'))",
+					v1beta1constants.ShootsGroup,
+					serviceaccount.ServiceAccountGroupPrefix, v1beta1constants.GardenNamespace,
+					serviceaccount.ServiceAccountGroupPrefix, gardenerutils.ProjectNamespacePrefix,
+					v1beta1constants.ExtensionShootServiceAccountPrefix,
+				),
 			),
 		)
 	}

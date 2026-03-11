@@ -53,13 +53,37 @@ var _ = Describe("Add", func() {
 				Expect(f(&corev1.ConfigMap{})).To(BeFalse())
 			})
 
-			It("should return false because namespace is not prefixed with 'seed-'", func() {
+			It("should return false because namespace is not prefixed with 'seed-' or 'garden-'", func() {
 				serviceAccount.Namespace = "foo"
 				Expect(f(serviceAccount)).To(BeFalse())
 			})
 
-			It("should return true because object matches all conditions", func() {
+			It("should return true because namespace is prefixed with 'seed-'", func() {
 				Expect(f(serviceAccount)).To(BeTrue())
+			})
+
+			It("should return true because namespace is the garden namespace and name is an extension SA", func() {
+				serviceAccount.Namespace = "garden"
+				serviceAccount.Name = "extension-shoot--my-shoot--foo"
+				Expect(f(serviceAccount)).To(BeTrue())
+			})
+
+			It("should return false because namespace is the garden namespace but name is not an extension SA", func() {
+				serviceAccount.Namespace = "garden"
+				serviceAccount.Name = "non-extension-sa"
+				Expect(f(serviceAccount)).To(BeFalse())
+			})
+
+			It("should return true because namespace is a project namespace and name is an extension SA", func() {
+				serviceAccount.Namespace = "garden-my-project"
+				serviceAccount.Name = "extension-shoot--my-shoot--foo"
+				Expect(f(serviceAccount)).To(BeTrue())
+			})
+
+			It("should return false because namespace is a project namespace but name is not an extension SA", func() {
+				serviceAccount.Namespace = "garden-my-project"
+				serviceAccount.Name = "non-extension-sa"
+				Expect(f(serviceAccount)).To(BeFalse())
 			})
 		}
 

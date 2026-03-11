@@ -171,7 +171,7 @@ rules:
 Note the label `authorization.gardener.cloud/extensions-serviceaccount-selector` which contains a label selector for `ServiceAccount`s.
 
 There is a controller part of `gardener-controller-manager` which takes care of maintaining the respective `ClusterRoleBinding` resources.
-It binds all `ServiceAccount`s in the seed namespaces in the garden cluster (i.e., all extension clients) whose labels match.
+It binds all extension `ServiceAccount`s in the garden cluster whose labels match: those in seed namespaces (all names), the `garden` namespace, and project namespaces (`garden-*`) — where the latter two are restricted to `ServiceAccount`s whose name is prefixed with `extension-shoot--` (i.e., extension clients of self-hosted shoot clusters).
 You can read more about this controller [here](../concepts/controller-manager.md#-extension-clusterrole--reconciler).
 
 #### Custom Permissions

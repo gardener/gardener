@@ -48,10 +48,12 @@ var _ = Describe("Shoot", func() {
 		fakeWithSelectorsChecker authorizerwebhook.WithSelectorsChecker
 		authorizer               auth.Authorizer
 
-		shootNamespace string
-		shootName      string
-		gardenletUser  user.Info
-		gardenadmUser  user.Info
+		shootNamespace          string
+		shootName               string
+		extensionShootNamespace string
+		gardenletUser           user.Info
+		gardenadmUser           user.Info
+		extensionUser           user.Info
 	)
 
 	BeforeEach(func() {
@@ -66,6 +68,7 @@ var _ = Describe("Shoot", func() {
 
 		shootNamespace = "shoot-namespace"
 		shootName = "shoot-name"
+		extensionShootNamespace = "garden-project"
 		gardenletUser = &user.DefaultInfo{
 			Name:   "gardener.cloud:system:shoot:" + shootNamespace + ":" + shootName,
 			Groups: []string{"gardener.cloud:system:shoots"},
@@ -73,6 +76,10 @@ var _ = Describe("Shoot", func() {
 		gardenadmUser = &user.DefaultInfo{
 			Name:   "gardener.cloud:gardenadm:shoot:" + shootNamespace + ":" + shootName,
 			Groups: []string{"gardener.cloud:system:shoots"},
+		}
+		extensionUser = &user.DefaultInfo{
+			Name:   "system:serviceaccount:" + extensionShootNamespace + ":extension-shoot--" + shootName + "--foo",
+			Groups: []string{"system:serviceaccounts"},
 		}
 	})
 
@@ -856,6 +863,67 @@ var _ = Describe("Shoot", func() {
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
 					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
 				})
+
+				Context("extension client", func() {
+					BeforeEach(func() {
+						attrs.User = extensionUser
+						attrs.Namespace = extensionShootNamespace
+						attrs.Name = shootName + "--provider-aws-leader-election"
+					})
+
+					DescribeTable("should allow when lease is in shoot namespace with correct name prefix and verb is allowed",
+						func(verb string) {
+							attrs.Verb = verb
+
+							decision, reason, err := authorizer.Authorize(ctx, attrs)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(decision).To(Equal(auth.DecisionAllow))
+							Expect(reason).To(BeEmpty())
+						},
+
+						Entry("create", "create"),
+						Entry("get", "get"),
+						Entry("update", "update"),
+					)
+
+					It("should allow list/watch without a name in the shoot namespace",
+						func() {
+							attrs.Verb = "list"
+							attrs.Name = ""
+
+							decision, reason, err := authorizer.Authorize(ctx, attrs)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(decision).To(Equal(auth.DecisionAllow))
+							Expect(reason).To(BeEmpty())
+						},
+					)
+
+					It("should have no opinion when lease name does not have the shoot name as prefix", func() {
+						attrs.Verb = "get"
+						attrs.Name = "other-shoot--provider-aws-leader-election"
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("lease object name does not have the shoot name as prefix"))
+					})
+
+					DescribeTable("should have no opinion when lease is outside shoot namespace",
+						func(verb string) {
+							attrs.Namespace = "other-namespace"
+							attrs.Verb = verb
+
+							decision, reason, err := authorizer.Authorize(ctx, attrs)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("lease object is not in shoot namespace"))
+						},
+
+						Entry("get", "get"),
+						Entry("create", "create"),
+						Entry("update", "update"),
+					)
+				})
 			})
 
 			Context("when requested for ShootStates", func() {
@@ -1165,6 +1233,124 @@ var _ = Describe("Shoot", func() {
 					},
 					Entry("deletecollection", "deletecollection"),
 				)
+			})
+
+			When("requested for ServiceAccounts", func() {
+				var (
+					name, namespace string
+					attrs           *auth.AttributesRecord
+				)
+
+				BeforeEach(func() {
+					name, namespace = "foo", "bar"
+					attrs = &auth.AttributesRecord{
+						User:            gardenletUser,
+						Name:            name,
+						Namespace:       namespace,
+						APIGroup:        corev1.SchemeGroupVersion.Group,
+						Resource:        "serviceaccounts",
+						ResourceRequest: true,
+						Verb:            "get",
+					}
+				})
+
+				It("should allow because path to shoot exists", func() {
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeServiceAccount, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(true)
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should have no opinion because path to shoot does not exist", func() {
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeServiceAccount, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(false)
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("no relationship found"))
+				})
+
+				DescribeTable("should allow without consulting the graph because object is an extension SA of this shoot in the shoot's project namespace",
+					func(verb string) {
+						attrs.Namespace = shootNamespace
+						attrs.Name = "extension-shoot--" + shootName + "--provider-aws"
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+					Entry("create", "create"),
+					Entry("update", "update"),
+					Entry("patch", "patch"),
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
+				)
+
+				It("should fall through to graph check because SA name does not have the shoot's extension prefix (different shoot's SA)", func() {
+					attrs.Namespace = shootNamespace
+					attrs.Name = "extension-shoot--other-shoot--provider-aws"
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeServiceAccount, shootNamespace, "extension-shoot--other-shoot--provider-aws", graphutils.VertexTypeShoot, shootNamespace, shootName).Return(false)
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("no relationship found"))
+				})
+
+				Context("extension client", func() {
+					BeforeEach(func() {
+						attrs.User = extensionUser
+					})
+
+					It("should allow because path to shoot exists", func() {
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeServiceAccount, namespace, name, graphutils.VertexTypeShoot, extensionShootNamespace, shootName).Return(true)
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					})
+
+					It("should have no opinion because path to shoot does not exist", func() {
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeServiceAccount, namespace, name, graphutils.VertexTypeShoot, extensionShootNamespace, shootName).Return(false)
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("no relationship found"))
+					})
+
+					DescribeTable("should not have an opinion because verb is not allowed",
+						func(verb string) {
+							attrs.Verb = verb
+
+							decision, reason, err := authorizer.Authorize(ctx, attrs)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get]"))
+						},
+
+						Entry("create", "create"),
+						Entry("list", "list"),
+						Entry("watch", "watch"),
+						Entry("patch", "patch"),
+						Entry("update", "update"),
+						Entry("delete", "delete"),
+						Entry("deletecollection", "deletecollection"),
+					)
+				})
 			})
 
 			Context("when requested for Shoots", func() {

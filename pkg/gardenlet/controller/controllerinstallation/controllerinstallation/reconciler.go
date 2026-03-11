@@ -21,6 +21,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -78,9 +79,9 @@ type Reconciler struct {
 	// to nodes even when they are not ready yet. Furthermore, the replicas are set to 1 and a usable port range is
 	// provided.
 	BootstrapControlPlaneNode bool
-	// ForSelfHostedShoot should be set to true if this reconciler is run in the context of a self-hosted shoot (e.g.,
-	// in gardenadm or in the shoot gardenlet).
-	ForSelfHostedShoot bool
+	// SelfHostedShootMeta holds the namespace and name of the self-hosted shoot. When set, this reconciler runs in the
+	// context of a self-hosted shoot (e.g., in gardenadm or in the shoot gardenlet).
+	SelfHostedShootMeta *types.NamespacedName
 }
 
 // Reconcile reconciles ControllerInstallations and deploys them into the seed cluster or the self-hosted shoot cluster.
@@ -219,11 +220,19 @@ func (r *Reconciler) reconcile(
 		}
 	}
 
-	var (
+	var gardenAccessSecret *gardenerutils.AccessSecret
+	if r.SelfHostedShootMeta != nil {
 		gardenAccessSecret = gardenerutils.NewGardenAccessSecret("extension", namespace.Name).
-					WithServiceAccountName(v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallation.Name).
-					WithServiceAccountLabels(map[string]string{v1beta1constants.LabelControllerRegistrationName: controllerRegistration.Name})
+			WithServiceAccountName(extensionServiceAccountName(r.SelfHostedShootMeta.Name, controllerInstallation.Name)).
+			WithServiceAccountNamespace(r.SelfHostedShootMeta.Namespace).
+			WithServiceAccountLabels(map[string]string{v1beta1constants.LabelControllerRegistrationName: controllerRegistration.Name})
+	} else {
+		gardenAccessSecret = gardenerutils.NewGardenAccessSecret("extension", namespace.Name).
+			WithServiceAccountName(v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallation.Name).
+			WithServiceAccountLabels(map[string]string{v1beta1constants.LabelControllerRegistrationName: controllerRegistration.Name})
+	}
 
+	var (
 		volumeProvider  string
 		volumeProviders []gardencorev1beta1.SeedVolumeProvider
 	)
@@ -454,10 +463,18 @@ func (r *Reconciler) delete(
 
 	conditionInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionSuccessful", "Deletion of old resources succeeded.")
 
-	gardenClusterServiceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
-		Name:      v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallation.Name,
-		Namespace: gardenerutils.ComputeGardenNamespace(seed.Name),
-	}}
+	var gardenClusterServiceAccount *corev1.ServiceAccount
+	if r.SelfHostedShootMeta != nil {
+		gardenClusterServiceAccount = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+			Name:      extensionServiceAccountName(r.SelfHostedShootMeta.Name, controllerInstallation.Name),
+			Namespace: r.SelfHostedShootMeta.Namespace,
+		}}
+	} else {
+		gardenClusterServiceAccount = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+			Name:      v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallation.Name,
+			Namespace: gardenerutils.ComputeGardenNamespace(seed.Name),
+		}}
+	}
 	if err := r.GardenClient.Delete(gardenCtx, gardenClusterServiceAccount); client.IgnoreNotFound(err) != nil {
 		conditionInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of ServiceAccount %q in garden cluster failed: %+v", client.ObjectKeyFromObject(gardenClusterServiceAccount), err))
 		return reconcile.Result{}, err
@@ -591,7 +608,7 @@ func objectEnablesGardenKubeconfig(o runtime.Object) bool {
 // MutateSpecForSelfHostedShootExtensions adapts host network, replicas, tolerations and usable ports range for
 // self-hosted shoot clusters if necessary.
 func (r *Reconciler) MutateSpecForSelfHostedShootExtensions(obj runtime.Object) error {
-	if !r.ForSelfHostedShoot {
+	if r.SelfHostedShootMeta == nil {
 		return nil
 	}
 
@@ -629,4 +646,10 @@ func (r *Reconciler) CalculateUsablePorts() ([]int, error) {
 		ports = append(ports, p)
 	}
 	return ports, nil
+}
+
+// extensionServiceAccountName returns the name of the garden ServiceAccount for an extension in a self-hosted shoot
+// cluster. The format is extension-shoot--<shoot-name>--<controller-installation-name>.
+func extensionServiceAccountName(shootName, controllerInstallationName string) string {
+	return v1beta1constants.ExtensionShootServiceAccountPrefix + shootName + "--" + controllerInstallationName
 }
