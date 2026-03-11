@@ -64,6 +64,8 @@ It also watches `Node`s and requeues the corresponding `Secret` when the reason 
 The controller decodes the configuration and computes the files and units that have changed since its last reconciliation.
 It writes or update the files and units to the file system, removes no longer needed files and units, reloads the systemd daemon, and starts or stops the units accordingly.
 
+If the `controllers.operatingSystemConfig.imagePullSecretName` field in the `gardener-node-agent`'s configuration is set, the controller uses the specified secret to authenticate against container registries when pulling images. This secret must be located in the `kube-system` namespace and be of type `kubernetes.io/dockerconfigjson`.
+
 After successful reconciliation, it persists the just applied `OperatingSystemConfig` into a file on the host.
 This file will be used for future reconciliations to compute file/unit changes.
 
