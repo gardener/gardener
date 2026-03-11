@@ -15,6 +15,7 @@ import (
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -28,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -43,7 +45,7 @@ import (
 const ControllerName = "networkpolicy"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targetCluster cluster.Cluster) error {
 	if r.TargetClient == nil {
 		r.TargetClient = targetCluster.GetClient()
 	}
@@ -108,12 +110,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 			r.EventHandlerForPod(mgr.GetLogger().WithValues("controller", ControllerName)),
 			r.PodPredicate(),
 		)).
-		WatchesRawSource(source.Kind[client.Object](
-			targetCluster.GetCache(),
-			&istionetworkingv1beta1.VirtualService{},
-			handler.EnqueueRequestsFromMapFunc(r.MapVirtualServiceToServices),
-			r.VirtualServicePredicate(),
-		)).
 		Build(r)
 	if err != nil {
 		return err
@@ -130,7 +126,20 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		}
 	}
 
-	return nil
+	crd := &metav1.PartialObjectMetadata{}
+	crd.SetGroupVersionKind(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"))
+	if err := targetCluster.GetAPIReader().Get(ctx, client.ObjectKey{Name: "virtualservices.networking.istio.io"}, crd); err != nil {
+		logf.FromContext(ctx).Info("network policy controller deactivated because istio CRDs are not installed", "error", err)
+		return nil
+	}
+	r.istioCRDsFound = true
+
+	return c.Watch(source.Kind[client.Object](
+		targetCluster.GetCache(),
+		&istionetworkingv1beta1.VirtualService{},
+		handler.EnqueueRequestsFromMapFunc(r.MapVirtualServiceToServices),
+		r.VirtualServicePredicate(),
+	))
 }
 
 // ServicePredicate returns a predicate which filters UPDATE events on services such that only updates to the deletion

@@ -69,7 +69,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 	if cfg.Controllers.NetworkPolicy.Enabled {
 		if err := (&networkpolicy.Reconciler{
 			Config: cfg.Controllers.NetworkPolicy,
-		}).AddToManager(mgr, targetCluster); err != nil {
+		}).AddToManager(ctx, mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding networkpolicy controller: %w", err)
 		}
 	}
