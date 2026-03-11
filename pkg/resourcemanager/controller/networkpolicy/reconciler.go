@@ -43,7 +43,8 @@ type Reconciler struct {
 	Config       resourcemanagerconfigv1alpha1.NetworkPolicyControllerConfig
 	Recorder     events.EventRecorder
 
-	selectors []labels.Selector
+	selectors      []labels.Selector
+	istioCRDsFound bool
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -463,6 +464,10 @@ type istioResources struct {
 }
 
 func (r *Reconciler) portsExposedByVirtualServiceResources(ctx context.Context, service *corev1.Service) ([]istioResources, error) {
+	if !r.istioCRDsFound {
+		return nil, nil
+	}
+
 	virtualServiceList := &istionetworkingv1beta1.VirtualServiceList{}
 	if err := r.TargetClient.List(ctx, virtualServiceList, client.InNamespace(service.Namespace)); err != nil {
 		return nil, fmt.Errorf("failed listing virtual services in namespace %q: %w", service.Namespace, err)

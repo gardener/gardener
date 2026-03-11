@@ -115,7 +115,7 @@ var _ = BeforeSuite(func() {
 				PodSelector: ingressControllerPodSelector,
 			},
 		},
-	}).AddToManager(mgr, mgr)).To(Succeed())
+	}).AddToManager(ctx, mgr, mgr)).To(Succeed())
 
 	// We create and delete namespace in every test, so let's ensure they get finalized.
 	Expect((&namespacefinalizer.Reconciler{Exceptions: sets.New(finalizer)}).AddToManager(mgr)).To(Succeed())

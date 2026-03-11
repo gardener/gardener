@@ -260,10 +260,16 @@ func (r *Reconciler) runReconcileSeedFlow(
 			},
 			Dependencies: flow.NewTaskIDs(syncPointCRDs),
 		})
+		waitForIstioCRDs = g.Add(flow.Task{
+			Name:         "Waiting for custom resource definitions for Istio",
+			Fn:           c.istioCRD.Wait,
+			Dependencies: flow.NewTaskIDs(deployIstioCRDs),
+			SkipIf:       seedIsGarden,
+		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
 			Fn:           component.OpWait(c.gardenerResourceManager).Deploy,
-			Dependencies: flow.NewTaskIDs(syncPointCRDs),
+			Dependencies: flow.NewTaskIDs(syncPointCRDs, waitForIstioCRDs),
 			SkipIf:       seedIsGarden,
 		})
 		deploySystemResources = g.Add(flow.Task{
