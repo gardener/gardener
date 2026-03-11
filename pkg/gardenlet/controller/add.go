@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/lease"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/state"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/status"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/tokenrequestor/workloadidentity"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/vpaevictionrequirements"
 	"github.com/gardener/gardener/pkg/healthz"
@@ -119,6 +120,12 @@ func AddToManager(
 			Config: *cfg.Controllers.ShootState,
 		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 			return fmt.Errorf("failed adding ShootState controller: %w", err)
+		}
+		// TODO(tobschli): Remove this once all shoot reconcilers are added via `shoot.AddToManager`.
+		if err := (&status.Reconciler{
+			Config: *cfg.Controllers.ShootStatus,
+		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+			return fmt.Errorf("failed adding status reconciler: %w", err)
 		}
 
 		if err := networkpolicy.AddToManager(ctx, mgr, gardenletCancel, seedCluster, *cfg.Controllers.NetworkPolicy, seedNetworks, nil); err != nil {
