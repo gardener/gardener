@@ -44,7 +44,7 @@ var _ = Describe("CRD", func() {
 			Expect(c.Get(ctx, client.ObjectKey{Name: "persesglobaldatasources.perses.dev"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 		})
 
-		// TODO: Remove this test after v1.141 has been released.
+		// TODO(rickardsjp): Remove this test after v1.141 has been released.
 		It("should delete old v1alpha1 CRDs before deploying new ones", func() {
 			for _, name := range []string{
 				"perses.perses.dev",

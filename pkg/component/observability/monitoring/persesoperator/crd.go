@@ -28,7 +28,7 @@ var (
 	//go:embed templates/crd-perses.dev_persesglobaldatasources.yaml
 	crdPersesGlobalDatasources string
 
-	// TODO: Remove this variable after v1.141 has been released.
+	// TODO(rickardsjp): Remove this variable after v1.141 has been released.
 	v1alpha1CRDNames = []string{
 		"perses.perses.dev",
 		"persesdashboards.perses.dev",
@@ -53,6 +53,7 @@ func NewCRDs(c client.Client) (component.DeployWaiter, error) {
 	return &crdDeployerWithCleanup{DeployWaiter: inner, client: c}, nil
 }
 
+// TODO(rickardsjp): Remove this struct after v1.141 has been released.
 type crdDeployerWithCleanup struct {
 	component.DeployWaiter
 
@@ -60,7 +61,7 @@ type crdDeployerWithCleanup struct {
 }
 
 func (c *crdDeployerWithCleanup) Deploy(ctx context.Context) error {
-	// TODO: Remove this code after v1.141 has been released.
+	// TODO(rickardsjp): Remove this code after v1.141 has been released.
 	var deletedCRDs []string
 
 	for _, name := range v1alpha1CRDNames {
