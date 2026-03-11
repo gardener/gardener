@@ -71,7 +71,7 @@ KUBECTL_VERSION ?= v1.35.2
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
 KUSTOMIZE_VERSION ?= v5.3.0
 # renovate: datasource=github-releases depName=prometheus/prometheus
-PROMTOOL_VERSION ?= 3.9.1
+PROMTOOL_VERSION ?= 3.10.0
 # renovate: datasource=github-releases depName=protocolbuffers/protobuf
 PROTOC_VERSION ?= v34.0
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
