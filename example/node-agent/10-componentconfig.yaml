@@ -25,6 +25,7 @@ controllers:
   operatingSystemConfig:
     secretName: name-of-osc-secret
     kubernetesVersion: 1.28.2
+  # imagePullSecretName: name-of-image-pull-secret-in-kube-system
   # syncPeriod: 10m
   token:
     syncConfigs:
