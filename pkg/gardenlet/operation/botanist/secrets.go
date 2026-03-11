@@ -151,6 +151,11 @@ func restoreSecretFromPersistedData(ctx context.Context, seedClient client.Clien
 			return fmt.Errorf("failed unmarshalling secret data for secret %s: neither new nor old format matched: %w", objectMeta.Name, err)
 		}
 
+		if objectMeta.Labels[secretsmanager.LabelKeyManagedBy] == secretsmanager.LabelValueSecretsManager {
+			secret := secretsmanager.Secret(objectMeta, oldSecretData)
+			return client.IgnoreAlreadyExists(seedClient.Create(ctx, secret))
+		}
+
 		secretData = oldSecretData
 		Immutable = nil
 		Type = corev1.SecretTypeOpaque
