@@ -123,8 +123,7 @@ func AddToManager(
 		}
 		// TODO(tobschli): Remove this once all shoot reconcilers are added via `shoot.AddToManager`.
 		if err := (&status.Reconciler{
-			Config:   *cfg.Controllers.ShootStatus,
-			SeedName: "",
+			Config: *cfg.Controllers.ShootStatus,
 		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 			return fmt.Errorf("failed adding status reconciler: %w", err)
 		}
