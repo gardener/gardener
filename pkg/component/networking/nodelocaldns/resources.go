@@ -184,11 +184,11 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 				},
 				RevisionHistoryLimit: ptr.To[int32](2),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: getMatchLabels(worker.Name),
+					MatchLabels: getPoolLabels(worker.Name),
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: utils.MergeStringMaps(getMatchLabels(worker.Name), map[string]string{
+						Labels: utils.MergeStringMaps(getPoolLabels(worker.Name), map[string]string{
 							v1beta1constants.LabelNetworkPolicyToDNS:    "allowed",
 							v1beta1constants.LabelNodeCriticalComponent: "true",
 						}),
@@ -449,7 +449,7 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 	return clientObjects
 }
 
-func getMatchLabels(workerName string) map[string]string {
+func getPoolLabels(workerName string) map[string]string {
 	return map[string]string{
 		labelKey:     nodelocaldnsconstants.LabelValue,
 		labelKeyPool: workerName,
