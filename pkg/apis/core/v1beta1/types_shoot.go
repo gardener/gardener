@@ -127,7 +127,6 @@ type ShootSpec struct {
 	// +optional
 	Tolerations []Toleration `json:"tolerations,omitempty" patchMergeKey:"key" patchStrategy:"merge" protobuf:"bytes,17,rep,name=tolerations"`
 	// ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
-	// This field is immutable.
 	// +optional
 	ExposureClassName *string `json:"exposureClassName,omitempty" protobuf:"bytes,18,opt,name=exposureClassName"`
 	// SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
