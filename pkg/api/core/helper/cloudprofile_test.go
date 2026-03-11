@@ -433,6 +433,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 			Expect(diff.RemovedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.RemovedVersions).To(BeEmpty())
+			// TODO:(rapsnx)
 			// TODO(LucaBernstein, vknabel): Add RemovedVersionClassifications case
 			Expect(diff.AddedImages.UnsortedList()).To(ConsistOf("image-2", "image-3"))
 			Expect(diff.AddedVersions).To(BeEquivalentTo(
@@ -469,6 +470,7 @@ var _ = Describe("CloudProfile Helper", func() {
 					"image-3": sets.New("version-1", "version-2"),
 				},
 			))
+			// TODO:(rapsnx)
 			// TODO(LucaBernstein, vknabel): Add RemovedVersionClassifications case
 			Expect(diff.AddedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.AddedVersions).To(BeEmpty())
@@ -479,6 +481,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 			Expect(diff.RemovedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.RemovedVersions).To(BeEmpty())
+			// TODO:(rapsnx)
 			// TODO(LucaBernstein, vknabel): Add RemovedVersionClassifications case
 			Expect(diff.AddedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.AddedVersions).To(BeEmpty())
