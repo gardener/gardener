@@ -3035,6 +3035,32 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 				})
 
+				It("should deny removing autoRotation configuration when provider type is aesgcm", func() {
+					shoot.Spec.Maintenance.AutoRotation = &core.MaintenanceAutoRotation{
+						Credentials: &core.MaintenanceCredentialsAutoRotation{
+							ETCDEncryptionKey: &core.MaintenanceRotationConfig{
+								RotationPeriod: &metav1.Duration{Duration: 30 * 24 * time.Hour},
+							},
+						},
+					}
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Provider: core.EncryptionProvider{
+							Type: ptr.To(core.EncryptionProviderTypeAESGCM),
+						},
+					}
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Maintenance.AutoRotation = nil
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.provider.type"),
+						"Detail": ContainSubstring("etcdEncryptionKey auto rotation must be enabled when encryption at rest provider is AES-GCM"),
+					}))
+				})
+
 				It("should fail updating immutable provider type field", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Provider: core.EncryptionProvider{

@@ -244,6 +244,9 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 				apiequality.Semantic.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers, newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers),
 			AllowInvalidEventTTL: oldShoot.Spec.Kubernetes.KubeAPIServer != nil && newShoot.Spec.Kubernetes.KubeAPIServer != nil &&
 				apiequality.Semantic.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.EventTTL, newShoot.Spec.Kubernetes.KubeAPIServer.EventTTL),
+			ETCDEncryptionConfigValidationOptions: ETCDEncryptionConfigValidationOptions{
+				AutoRotationEnabled: helper.IsETCDEncryptionKeyAutoRotationEnabled(newShoot.Spec.Maintenance),
+			},
 		},
 	}
 
