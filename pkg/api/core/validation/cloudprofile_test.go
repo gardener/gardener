@@ -400,6 +400,44 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 					})
 
+					It("should allow multiple supported within the some minor", func() {
+						cloudProfile.Spec.MachineImages = []core.MachineImage{
+							{
+								Name: machineImageName,
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: "3.4.6",
+											Lifecycle: []core.LifecycleStage{
+												{
+													Classification: supportedClassification,
+												},
+											},
+										},
+										CRI:           []core.CRI{{Name: "containerd"}},
+										Architectures: []string{"amd64"},
+									},
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: "3.4.7",
+											Lifecycle: []core.LifecycleStage{
+												{
+													Classification: supportedClassification,
+												},
+											},
+										},
+										CRI:           []core.CRI{{Name: "containerd"}},
+										Architectures: []string{"amd64"},
+									},
+								},
+								UpdateStrategy: &updateStrategyMajor,
+							},
+						}
+						errorList := ValidateCloudProfile(cloudProfile)
+
+						Expect(errorList).To(BeEmpty())
+					})
+
 					It("should forbid expired lifecycle stage on latest kubernetes version", func() {
 						expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
 						cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
@@ -669,34 +707,38 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						}))))
 					})
 
-					It("only allow one supported version per minor version using Lifecycle", func() {
-						time1 := metav1.Now()
-						time2 := metav1.Time{Time: metav1.Now().Add(time.Hour)}
-						time3 := metav1.Time{Time: metav1.Now().Add(2 * time.Hour)}
-						cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
-							{
-								Version: "1.1.0",
-								Lifecycle: []core.LifecycleStage{
-									{Classification: previewClassification},
-									{Classification: supportedClassification, StartTime: &time1},
-									{Classification: deprecatedClassification, StartTime: &time3},
-								},
-							},
-							{
-								Version: "1.1.1",
-								Lifecycle: []core.LifecycleStage{
-									{Classification: supportedClassification, StartTime: &time2},
-								},
-							},
-						}
-						errorList := ValidateCloudProfile(cloudProfile)
+					// FIXME:(rapnx) If in old classifications classification is nil, check got skipped, therefore it was possible to have
+					// multiple patch versions supported within the same minor.
+					// For now we keep this behavior for both new & old lifecycle, until issue <issue> is resolved.
 
-						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeForbidden),
-							"Field":  Equal("spec.kubernetes.versions[0]"),
-							"Detail": ContainSubstring("\"supported\" lifecycle stages must not overlap per minor version"),
-						}))))
-					})
+					// It("only allow one supported version per minor version using Lifecycle", func() {
+					// 	time1 := metav1.Now()
+					// 	time2 := metav1.Time{Time: metav1.Now().Add(time.Hour)}
+					// 	time3 := metav1.Time{Time: metav1.Now().Add(2 * time.Hour)}
+					// 	cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
+					// 		{
+					// 			Version: "1.1.0",
+					// 			Lifecycle: []core.LifecycleStage{
+					// 				{Classification: previewClassification},
+					// 				{Classification: supportedClassification, StartTime: &time1},
+					// 				{Classification: deprecatedClassification, StartTime: &time3},
+					// 			},
+					// 		},
+					// 		{
+					// 			Version: "1.1.1",
+					// 			Lifecycle: []core.LifecycleStage{
+					// 				{Classification: supportedClassification, StartTime: &time2},
+					// 			},
+					// 		},
+					// 	}
+					// 	errorList := ValidateCloudProfile(cloudProfile)
+					//
+					// 	Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					// 		"Type":   Equal(field.ErrorTypeForbidden),
+					// 		"Field":  Equal("spec.kubernetes.versions[0]"),
+					// 		"Detail": ContainSubstring("\"supported\" lifecycle stages must not overlap per minor version"),
+					// 	}))))
+					// })
 
 					It("allow multiple supported version per minor version if their lifecycle start times do not overlap", func() {
 						time1 := metav1.Now()
