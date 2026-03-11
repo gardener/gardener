@@ -189,49 +189,7 @@ func deployMachineDeployments(
 		var (
 			labels                    = map[string]string{extensionsworkercontroller.LabelKeyMachineDeploymentName: deployment.Name}
 			existingMachineDeployment = getExistingMachineDeployment(existingMachineDeployments, deployment.Name)
-			replicas                  int32
 		)
-
-		switch {
-		// If the Shoot is hibernated then the machine deployment's replicas should be zero.
-		// Also mark all machines for forceful deletion to avoid respecting of PDBs/SLAs in case of cluster hibernation.
-		case extensionscontroller.IsHibernationEnabled(cluster):
-			replicas = 0
-			if err := markAllMachinesForcefulDeletion(ctx, log, cl, worker.Namespace); err != nil {
-				return fmt.Errorf("marking all machines for forceful deletion failed: %w", err)
-			}
-		// If the cluster autoscaler is not enabled then min=max (as per API validation), hence
-		// we can use either min or max.
-		case !clusterAutoscalerUsed:
-			replicas = deployment.Minimum
-		// If the machine deployment does not yet exist we set replicas to min so that the cluster
-		// autoscaler can scale them as required.
-		case existingMachineDeployment == nil:
-			if deployment.State != nil {
-				// During restoration the actual replica count is in the State.Replicas
-				// If wanted deployment has no corresponding existing deployment, but has State, then we are in restoration process
-				replicas = deployment.State.Replicas
-			} else {
-				replicas = deployment.Minimum
-			}
-		// If the Shoot was hibernated and is now woken up we set replicas to min so that the cluster
-		// autoscaler can scale them as required.
-		case shootIsAwake(extensionscontroller.IsHibernationEnabled(cluster), existingMachineDeployments):
-			replicas = deployment.Minimum
-		// If the shoot worker pool minimum was updated and if the current machine deployment replica
-		// count is less than minimum, we update the machine deployment replica count to updated minimum.
-		case existingMachineDeployment.Spec.Replicas < deployment.Minimum:
-			replicas = deployment.Minimum
-		// If the shoot worker pool maximum was updated and if the current machine deployment replica
-		// count is greater than maximum, we update the machine deployment replica count to updated maximum.
-		case existingMachineDeployment.Spec.Replicas > deployment.Maximum:
-			replicas = deployment.Maximum
-		// In this case the machine deployment must exist (otherwise the above case was already true),
-		// and the cluster autoscaler must be enabled. We do not want to override the machine deployment's
-		// replicas as the cluster autoscaler is responsible for setting appropriate values.
-		default:
-			replicas = existingMachineDeployment.Spec.Replicas
-		}
 
 		machineDeployment := &machinev1alpha1.MachineDeployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -249,34 +207,73 @@ func deployMachineDeployments(
 					metav1.SetMetaDataAnnotation(&machineDeployment.ObjectMeta, k, v)
 				}
 			}
-			machineDeployment.Spec = machinev1alpha1.MachineDeploymentSpec{
-				Replicas:             replicas,
-				RevisionHistoryLimit: ptr.To[int32](0),
-				MinReadySeconds:      500,
-				Strategy:             deployment.Strategy,
-				Selector: &metav1.LabelSelector{
-					MatchLabels: labels,
+
+			switch {
+			// If the Shoot is hibernated then the machine deployment's replicas should be zero.
+			// Also mark all machines for forceful deletion to avoid respecting of PDBs/SLAs in case of cluster hibernation.
+			case extensionscontroller.IsHibernationEnabled(cluster):
+				machineDeployment.Spec.Replicas = 0
+				if err := markAllMachinesForcefulDeletion(ctx, log, cl, worker.Namespace); err != nil {
+					return fmt.Errorf("marking all machines for forceful deletion failed: %w", err)
+				}
+			// If the cluster autoscaler is not enabled then min=max (as per API validation), hence
+			// we can use either min or max.
+			case !clusterAutoscalerUsed:
+				machineDeployment.Spec.Replicas = deployment.Minimum
+			// If the machine deployment does not yet exist we set replicas to min so that the cluster
+			// autoscaler can scale them as required.
+			case existingMachineDeployment == nil:
+				if deployment.State != nil {
+					// During restoration the actual replica count is in the State.Replicas
+					// If wanted deployment has no corresponding existing deployment, but has State, then we are in restoration process
+					machineDeployment.Spec.Replicas = deployment.State.Replicas
+				} else {
+					machineDeployment.Spec.Replicas = deployment.Minimum
+				}
+			// If the Shoot was hibernated and is now woken up we set replicas to min so that the cluster
+			// autoscaler can scale them as required.
+			case shootIsAwake(extensionscontroller.IsHibernationEnabled(cluster), existingMachineDeployments):
+				machineDeployment.Spec.Replicas = deployment.Minimum
+			// If the shoot worker pool minimum was updated and if the current machine deployment replica
+			// count is less than minimum, we update the machine deployment replica count to updated minimum.
+			case machineDeployment.Spec.Replicas < deployment.Minimum:
+				machineDeployment.Spec.Replicas = deployment.Minimum
+			// If the shoot worker pool maximum was updated and if the current machine deployment replica
+			// count is greater than maximum, we update the machine deployment replica count to updated maximum.
+			case machineDeployment.Spec.Replicas > deployment.Maximum:
+				machineDeployment.Spec.Replicas = deployment.Maximum
+			}
+
+			// machineDeployment.Spec.Replicas is not explicitly set for default switch case,
+			// as it would have been already set by the client.Get() call in getAndCreateOrMergePatch().
+			// This is done to avoid overwriting the machineDeployment.Spec.Replicas value
+			// which is fetched from the client.Get() call in getAndCreateOrMergePatch()
+			// and hence causing unnecessary updates to the machineDeployment.Spec.Replicas
+			machineDeployment.Spec.RevisionHistoryLimit = ptr.To[int32](0)
+			machineDeployment.Spec.MinReadySeconds = 500
+			machineDeployment.Spec.Strategy = deployment.Strategy
+			machineDeployment.Spec.Selector = &metav1.LabelSelector{
+				MatchLabels: labels,
+			}
+			machineDeployment.Spec.Template = machinev1alpha1.MachineTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: getMachineLabels(deployment.Strategy, labels, worker.Name),
 				},
-				Template: machinev1alpha1.MachineTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: getMachineLabels(deployment.Strategy, labels, worker.Name),
+				Spec: machinev1alpha1.MachineSpec{
+					Class: machinev1alpha1.ClassSpec{
+						Kind: "MachineClass",
+						Name: deployment.ClassName,
 					},
-					Spec: machinev1alpha1.MachineSpec{
-						Class: machinev1alpha1.ClassSpec{
-							Kind: "MachineClass",
-							Name: deployment.ClassName,
+					NodeTemplateSpec: machinev1alpha1.NodeTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Annotations: deployment.Annotations,
+							Labels:      deployment.Labels,
 						},
-						NodeTemplateSpec: machinev1alpha1.NodeTemplateSpec{
-							ObjectMeta: metav1.ObjectMeta{
-								Annotations: deployment.Annotations,
-								Labels:      deployment.Labels,
-							},
-							Spec: corev1.NodeSpec{
-								Taints: deployment.Taints,
-							},
+						Spec: corev1.NodeSpec{
+							Taints: deployment.Taints,
 						},
-						MachineConfiguration: deployment.MachineConfiguration,
 					},
+					MachineConfiguration: deployment.MachineConfiguration,
 				},
 			}
 			if existingMachineDeployment != nil && existingMachineDeployment.Spec.Template.Annotations != nil {
