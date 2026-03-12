@@ -580,6 +580,7 @@ var _ = Describe("Seed controller tests", func() {
 						"perses.perses.dev",
 						"persesdashboards.perses.dev",
 						"persesdatasources.perses.dev",
+						"persesglobaldatasources.perses.dev",
 						// victoria-operator
 						"vlsingles.operator.victoriametrics.com",
 						// opentelemetry-operator

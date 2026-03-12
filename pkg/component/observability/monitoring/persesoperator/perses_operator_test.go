@@ -139,6 +139,9 @@ var _ = Describe("PersesOperator", func() {
 									"--health-probe-bind-address=:8081",
 									"--metrics-bind-address=:8082",
 								},
+								Env: []corev1.EnvVar{
+									{Name: "ENABLE_WEBHOOKS", Value: "false"},
+								},
 								Resources: corev1.ResourceRequirements{
 									Requests: map[corev1.ResourceName]resource.Quantity{
 										corev1.ResourceCPU:    resource.MustParse("10m"),
@@ -227,7 +230,12 @@ var _ = Describe("PersesOperator", func() {
 				},
 				{
 					APIGroups: []string{corev1.GroupName},
-					Resources: []string{"services", "configmaps"},
+					Resources: []string{"pods"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{corev1.GroupName},
+					Resources: []string{"configmaps", "secrets", "services"},
 					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 				},
 				{
@@ -273,6 +281,21 @@ var _ = Describe("PersesOperator", func() {
 				{
 					APIGroups: []string{"perses.dev"},
 					Resources: []string{"persesdatasources/status"},
+					Verbs:     []string{"get", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"perses.dev"},
+					Resources: []string{"persesglobaldatasources"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"perses.dev"},
+					Resources: []string{"persesglobaldatasources/finalizers"},
+					Verbs:     []string{"update"},
+				},
+				{
+					APIGroups: []string{"perses.dev"},
+					Resources: []string{"persesglobaldatasources/status"},
 					Verbs:     []string{"get", "patch", "update"},
 				},
 			},
