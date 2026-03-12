@@ -89,15 +89,9 @@ func createIstio(testValues istioTestValues) istio.Interface {
 }
 
 func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
-	var minReplicas, maxReplicas *int
-
-	if zoneSize := len(testValues.zones); zoneSize > 1 {
-		minReplicas = ptr.To(zoneSize * 2)
-		maxReplicas = ptr.To(zoneSize * 6)
-		if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
-			maxReplicas = ptr.To(zoneSize * 8)
-		}
-	}
+	zoneSize := len(testValues.zones)
+	minReplicas := ptr.To(max(1, zoneSize) * 2)
+	maxReplicas := ptr.To(max(1, zoneSize) * 16)
 
 	networkPolicyLabels := map[string]string{
 		"networking.gardener.cloud/to-dns":                                     "allowed",
@@ -160,21 +154,24 @@ func checkAdditionalIstioGateway(cl client.Client,
 	dualstack bool) {
 	var (
 		zones                    []string
-		minReplicas              *int
-		maxReplicas              *int
 		enforceSpreadAcrossHosts bool
 		err                      error
 
 		ingressValues = istioDeploy.GetValues().IngressGateway
 	)
 
-	if zone == nil {
-		minReplicas = ingressValues[0].MinReplicas
-		maxReplicas = ingressValues[0].MaxReplicas
-	} else {
-		zones = []string{*zone}
+	minReplicas := ingressValues[0].MinReplicas
+	maxReplicas := ingressValues[0].MaxReplicas
 
-		enforceSpreadAcrossHosts, err = ShouldEnforceSpreadAcrossHosts(context.Background(), cl, []string{*zone})
+	enforceSpreadAcrossHosts = ingressValues[0].EnforceSpreadAcrossHosts
+
+	if zone != nil {
+		zones = append(zones, *zone)
+
+		minReplicas = ptr.To(2)
+		maxReplicas = ptr.To(16)
+
+		enforceSpreadAcrossHosts, err = ShouldEnforceSpreadAcrossHosts(context.Background(), cl, zones)
 		Expect(err).ToNot(HaveOccurred())
 	}
 
