@@ -62,7 +62,7 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	gonum.org/v1/gonum v0.17.0
 	google.golang.org/protobuf v1.36.11
-	helm.sh/helm/v3 v3.19.5
+	helm.sh/helm/v3 v3.20.1
 	istio.io/api v1.27.8
 	istio.io/client-go v1.27.2
 	k8s.io/api v0.35.2
@@ -97,7 +97,7 @@ require (
 	cyphar.com/go-pathrs v0.2.1 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
-	github.com/BurntSushi/toml v1.5.0 // indirect
+	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Microsoft/hcsshim v0.14.0-rc.1 // indirect
@@ -134,7 +134,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/containerd/cgroups/v3 v3.1.2 // indirect
-	github.com/containerd/containerd v1.7.29 // indirect
+	github.com/containerd/containerd v1.7.30 // indirect
 	github.com/containerd/containerd/api v1.10.0 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
