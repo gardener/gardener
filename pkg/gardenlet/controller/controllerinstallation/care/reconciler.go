@@ -26,11 +26,11 @@ import (
 
 // Reconciler reconciles ControllerInstallations, checks their health status and reports it via conditions.
 type Reconciler struct {
-	GardenClient    client.Client
-	SeedClient      client.Client
-	Config          gardenletconfigv1alpha1.ControllerInstallationCareControllerConfiguration
-	Clock           clock.Clock
-	GardenNamespace string
+	GardenClient             client.Client
+	SeedClient               client.Client
+	Config                   gardenletconfigv1alpha1.ControllerInstallationCareControllerConfiguration
+	Clock                    clock.Clock
+	ManagedResourceNamespace string
 }
 
 // Reconcile reconciles ControllerInstallations, checks their health status and reports it via conditions.
@@ -64,7 +64,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	managedResource := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controllerInstallation.Name,
-			Namespace: r.GardenNamespace,
+			Namespace: r.ManagedResourceNamespace,
 		},
 	}
 

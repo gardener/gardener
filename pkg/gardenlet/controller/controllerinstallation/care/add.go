@@ -42,8 +42,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
 	}
-	if r.GardenNamespace == "" {
-		r.GardenNamespace = v1beta1constants.GardenNamespace
+	if r.ManagedResourceNamespace == "" {
+		r.ManagedResourceNamespace = v1beta1constants.GardenNamespace
 	}
 
 	return builder.
@@ -75,7 +75,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 // the 'controllerinstallation-name' label is present.
 func (r *Reconciler) IsExtensionDeployment() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		return obj.GetNamespace() == v1beta1constants.GardenNamespace &&
+		return obj.GetNamespace() == r.ManagedResourceNamespace &&
 			obj.GetLabels()[utils.LabelKeyControllerInstallationName] != ""
 	})
 }
