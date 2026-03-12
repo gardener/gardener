@@ -121,6 +121,11 @@ func ValidateGardenUpdate(oldGarden, newGarden *operatorv1alpha1.Garden, extensi
 			apiequality.Semantic.DeepEqual(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers),
 		AllowInvalidEventTTL: oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil &&
 			apiequality.Semantic.DeepEqual(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EventTTL, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EventTTL),
+		// Skip validation for auto rotation of etcd encryption key, since the rotation cannot be automated for the Garden API.
+		// It is the responsibility of the Garden operator to perform manual rotations.
+		ETCDEncryptionConfigValidationOptions: gardencorevalidation.ETCDEncryptionConfigValidationOptions{
+			SkipAESGCMAutoRotationValidation: true,
+		},
 	}
 
 	allErrs = append(allErrs, validateRuntimeClusterUpdate(oldGarden, newGarden)...)
