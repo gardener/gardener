@@ -77,8 +77,8 @@ var _ = Describe("Reconciler", func() {
 			Config: gardenletconfigv1alpha1.ControllerInstallationCareControllerConfiguration{
 				SyncPeriod: &metav1.Duration{Duration: syncPeriodDuration},
 			},
-			Clock:           fakeClock,
-			GardenNamespace: gardenNamespace,
+			Clock:                    fakeClock,
+			ManagedResourceNamespace: gardenNamespace,
 		}
 	})
 
