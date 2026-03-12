@@ -147,11 +147,6 @@ func (d *delegateFactory) WorkerDelegate(ctx context.Context, worker *extensions
 		return nil, err
 	}
 
-	seedChartApplier, err := kubernetesclient.NewChartApplierForConfig(d.restConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	return NewWorkerDelegate(
 		ctx,
 		logf.FromContext(ctx),
@@ -159,7 +154,6 @@ func (d *delegateFactory) WorkerDelegate(ctx context.Context, worker *extensions
 		d.restConfig,
 		d.decoder,
 		d.scheme,
-		seedChartApplier,
 		serverVersion.GitVersion,
 		worker,
 		cluster,
@@ -179,7 +173,6 @@ type workerDelegate struct {
 	decoder        runtime.Decoder
 	scheme         *runtime.Scheme
 
-	seedChartApplier    kubernetesclient.ChartApplier
 	podExecutor         kubernetesclient.PodExecutor
 	serverVersion       string
 	cloudProfileConfig  *api.CloudProfileConfig
@@ -199,7 +192,6 @@ func NewWorkerDelegate(
 	restConfig *rest.Config,
 	decoder runtime.Decoder,
 	scheme *runtime.Scheme,
-	seedChartApplier kubernetesclient.ChartApplier,
 	serverVersion string,
 	worker *extensionsv1alpha1.Worker,
 	cluster *extensionscontroller.Cluster,
@@ -244,7 +236,6 @@ func NewWorkerDelegate(
 		runtimeClient:      runtimeClient,
 		providerClient:     providerClient,
 		decoder:            decoder,
-		seedChartApplier:   seedChartApplier,
 		podExecutor:        podExecutor,
 		serverVersion:      serverVersion,
 		cloudProfileConfig: config,
