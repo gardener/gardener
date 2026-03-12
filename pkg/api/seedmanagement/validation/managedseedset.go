@@ -63,6 +63,9 @@ func ValidateManagedSeedSetUpdate(newManagedSeedSet, oldManagedSeedSet *seedmana
 			apiequality.Semantic.DeepEqual(oldManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers, newManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers),
 		AllowInvalidEventTTL: oldManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer != nil && newManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer != nil &&
 			apiequality.Semantic.DeepEqual(oldManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer.EventTTL, newManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer.EventTTL),
+		ETCDEncryptionConfigValidationOptions: gardencorevalidation.ETCDEncryptionConfigValidationOptions{
+			AutoRotationEnabled: helper.IsETCDEncryptionKeyAutoRotationEnabled(newManagedSeedSet.Spec.ShootTemplate.Spec.Maintenance),
+		},
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newManagedSeedSet.ObjectMeta, &oldManagedSeedSet.ObjectMeta, field.NewPath("metadata"))...)
