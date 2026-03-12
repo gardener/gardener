@@ -489,7 +489,6 @@ build:
             - pkg/apiserver/registry/seedmanagement/managedseedset
             - pkg/apiserver/registry/seedmanagement/managedseedset/storage
             - pkg/apiserver/registry/seedmanagement/rest
-            - pkg/apiserver/registry/seedmanagement/utils
             - pkg/apiserver/registry/settings/clusteropenidconnectpreset
             - pkg/apiserver/registry/settings/clusteropenidconnectpreset/storage
             - pkg/apiserver/registry/settings/openidconnectpreset
@@ -986,8 +985,8 @@ deploy:
 profiles:
   - name: ipv6
     activation:
-    - env: IPFAMILY=ipv6
-    - env: IPFAMILY=dual
+      - env: IPFAMILY=ipv6
+      - env: IPFAMILY=dual
     patches:
       - op: add
         path: /deploy/helm/releases/0/setValueTemplates/env[1].name
