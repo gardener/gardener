@@ -2400,6 +2400,29 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))))
 				})
 			})
+
+			DescribeTable("secretName validation for Kubernetes >= 1.35",
+				func(kubernetesVersion string, expectForbidden bool) {
+					shoot.Spec.Kubernetes.Version = kubernetesVersion
+					shoot.Spec.DNS.Providers[0].SecretName = &dnsSecretName
+					shoot.Spec.DNS.Providers[0].CredentialsRef = &dnsSecretRef
+
+					matcher := ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.dns.providers[0].secretName"),
+						"Detail": Equal("for Kubernetes versions >= 1.35, secretName field is no longer supported"),
+					})))
+
+					if !expectForbidden {
+						matcher = Not(matcher)
+					}
+
+					Expect(ValidateShoot(shoot)).To(matcher)
+				},
+				Entry("should allow secretName for Kubernetes < 1.35", "1.34.0", false),
+				Entry("should forbid secretName for Kubernetes = 1.35", "1.35.0", true),
+				Entry("should forbid secretName for Kubernetes > 1.35", "1.36.0", true),
+			)
 		})
 
 		Context("ETCD validation", func() {

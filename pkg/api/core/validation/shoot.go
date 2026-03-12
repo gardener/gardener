@@ -316,7 +316,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 	allErrs = append(allErrs, ValidateCloudProfileReference(spec.CloudProfile, spec.CloudProfileName, spec.Kubernetes.Version, fldPath)...)
 	allErrs = append(allErrs, validateProvider(meta.Namespace, spec.Provider, spec.Kubernetes, spec.Networking, workerless, fldPath.Child("provider"), inTemplate)...)
 	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Purpose, workerless, spec.Kubernetes.Version, fldPath.Child("addons"))...)
-	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
+	allErrs = append(allErrs, validateDNS(spec.DNS, spec.Kubernetes.Version, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, ValidateResources(spec.Resources, fldPath.Child("resources"), true)...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, opts, workerless, fldPath.Child("kubernetes"))...)
@@ -1037,7 +1037,7 @@ func validateDNSCredentialsRef(provider core.DNSProvider, fldPath *field.Path) f
 	return allErrs
 }
 
-func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
+func validateDNS(dns *core.DNS, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if dns == nil {
@@ -1067,6 +1067,10 @@ func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
 	)
 	for i, provider := range dns.Providers {
 		idxPath := fldPath.Child("providers").Index(i)
+
+		if provider.SecretName != nil && versionutils.ConstraintK8sGreaterEqual135.CheckVersion(kubernetesVersion) {
+			allErrs = append(allErrs, field.Forbidden(idxPath.Child("secretName"), "for Kubernetes versions >= 1.35, secretName field is no longer supported"))
+		}
 
 		allErrs = append(allErrs, validateDNSCredentialsRef(provider, idxPath)...)
 
