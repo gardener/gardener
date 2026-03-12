@@ -98,32 +98,33 @@ type SelfHostedShootInfo struct {
 }
 
 // ShootMetaFromBootstrapToken extracts the shoot namespace and name from the description of the given bootstrap token
-// secret. This only works if the secret has been created with 'gardenadm token create' which writes a proper
-// description.
-func ShootMetaFromBootstrapToken(ctx context.Context, reader client.Reader, bootstrapTokenSecretName string) (types.NamespacedName, error) {
+// secret. The returned bool indicates whether the secret contains shoot metadata (i.e., it is a self-hosted shoot
+// bootstrap token). If false, the token is likely for a ManagedSeed rather than a self-hosted shoot.
+func ShootMetaFromBootstrapToken(ctx context.Context, reader client.Reader, bootstrapTokenSecretName string) (types.NamespacedName, bool, error) {
 	bootstrapTokenSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: bootstrapTokenSecretName, Namespace: metav1.NamespaceSystem}}
 	if err := reader.Get(ctx, client.ObjectKeyFromObject(bootstrapTokenSecret), bootstrapTokenSecret); err != nil {
-		return types.NamespacedName{}, fmt.Errorf("failed to read bootstrap token secret %s: %w", client.ObjectKeyFromObject(bootstrapTokenSecret), err)
+		return types.NamespacedName{}, false, fmt.Errorf("failed to read bootstrap token secret %s: %w", client.ObjectKeyFromObject(bootstrapTokenSecret), err)
 	}
 
-	return extractShootMetaFromBootstrapToken(bootstrapTokenSecret)
+	shootMeta, found := extractShootMetaFromBootstrapToken(bootstrapTokenSecret)
+	return shootMeta, found, nil
 }
 
-func extractShootMetaFromBootstrapToken(bootstrapTokenSecret *corev1.Secret) (types.NamespacedName, error) {
+func extractShootMetaFromBootstrapToken(bootstrapTokenSecret *corev1.Secret) (types.NamespacedName, bool) {
 	description := string(bootstrapTokenSecret.Data[bootstraptokenapi.BootstrapTokenDescriptionKey])
 	if !strings.HasPrefix(description, bootstraptoken.SelfHostedShootBootstrapTokenSecretDescriptionPrefix) {
-		return types.NamespacedName{}, fmt.Errorf("bootstrap token description does not start with %q: %s", bootstraptoken.SelfHostedShootBootstrapTokenSecretDescriptionPrefix, description)
+		return types.NamespacedName{}, false
 	}
 
 	parts := strings.Fields(strings.TrimPrefix(description, bootstraptoken.SelfHostedShootBootstrapTokenSecretDescriptionPrefix))
 	if len(parts) == 0 {
-		return types.NamespacedName{}, fmt.Errorf("could not extract shoot meta from bootstrap token description: %s", description)
+		return types.NamespacedName{}, false
 	}
 
 	split := strings.Split(parts[0], "/")
 	if len(split) != 2 {
-		return types.NamespacedName{}, fmt.Errorf("could not extract shoot namespace and name from bootstrap token description: %s", description)
+		return types.NamespacedName{}, false
 	}
 
-	return types.NamespacedName{Namespace: split[0], Name: split[1]}, nil
+	return types.NamespacedName{Namespace: split[0], Name: split[1]}, true
 }
