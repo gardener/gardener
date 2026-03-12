@@ -270,6 +270,22 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 	}
 
+	// Set the .spec.dns.providers[].secretName field to nil, when Shoot cluster is being forcefully updated to K8s >= 1.35.
+	// Gardener forbids setting the field for Shoots with K8s 1.35+.
+	{
+		oldK8sLess135, _ := versionutils.CheckVersionMeetsConstraint(oldShootKubernetesVersion.String(), "< 1.35")
+		newK8sGreaterEqual135, _ := versionutils.CheckVersionMeetsConstraint(shootKubernetesVersion.String(), ">= 1.35")
+		if oldK8sLess135 && newK8sGreaterEqual135 {
+			for i := range maintainedShoot.Spec.DNS.Providers {
+				if maintainedShoot.Spec.DNS.Providers[i].SecretName != nil {
+					maintainedShoot.Spec.DNS.Providers[i].SecretName = nil
+					reason := fmt.Sprintf(".spec.dns.providers[%d].secretName was removed. Reason: The field is no longer supported for Shoot clusters using Kubernetes version 1.35+", i)
+					operations = append(operations, reason)
+				}
+			}
+		}
+	}
+
 	// Now it's time to update worker pool kubernetes version if specified
 	for i, pool := range maintainedShoot.Spec.Provider.Workers {
 		if pool.Kubernetes == nil || pool.Kubernetes.Version == nil {
