@@ -156,4 +156,105 @@ var _ = Describe("ActuatorRestore", func() {
 			})
 		})
 	})
+
+	Describe("#restoreMachineSetsAndMachines", func() {
+		var (
+			ctx            = context.Background()
+			log            = logr.Discard()
+			fakeSeedClient client.Client
+
+			machineDeployments extensionsworkercontroller.MachineDeployments
+			expectedMachineSet machinev1alpha1.MachineSet
+			expectedMachine1   machinev1alpha1.Machine
+			expectedMachine2   machinev1alpha1.Machine
+		)
+
+		BeforeEach(func() {
+			fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+
+			expectedMachineSet = machinev1alpha1.MachineSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "machineset",
+					Namespace: "test-ns",
+					Labels: map[string]string{
+						"name": "pool1",
+					},
+				},
+			}
+
+			expectedMachine1 = machinev1alpha1.Machine{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "machine",
+					Namespace: "test-ns",
+					Labels: map[string]string{
+						"node": "node-name-one",
+					},
+				},
+			}
+
+			expectedMachine2 = machinev1alpha1.Machine{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "machine-two",
+					Namespace: "test-ns",
+					Labels: map[string]string{
+						"node": "node-name-two",
+					},
+				},
+			}
+
+			machineDeployments = extensionsworkercontroller.MachineDeployments{
+				{
+					State: &shootstate.MachineDeploymentState{
+						Replicas: 2,
+						MachineSets: []machinev1alpha1.MachineSet{
+							expectedMachineSet,
+						},
+						Machines: []machinev1alpha1.Machine{
+							expectedMachine1,
+							expectedMachine2,
+						},
+					},
+				},
+			}
+		})
+
+		test := func() {
+			Expect(restoreMachineSetsAndMachines(ctx, log, fakeSeedClient, machineDeployments)).To(Succeed())
+
+			var actualMachineSet machinev1alpha1.MachineSet
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(&expectedMachineSet), &actualMachineSet)).To(Succeed())
+			expectedMachineSet.ResourceVersion = "1"
+			Expect(actualMachineSet).To(Equal(expectedMachineSet))
+
+			for _, expectedMachine := range []machinev1alpha1.Machine{expectedMachine1, expectedMachine2} {
+				var actualMachine machinev1alpha1.Machine
+				Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(&expectedMachine), &actualMachine)).To(Succeed(), expectedMachine.Name+" should be retrieved successfully")
+				expectedMachine.ResourceVersion = "1"
+				Expect(actualMachine).To(Equal(expectedMachine), "actual should be equal to expected Machine"+expectedMachine.Name)
+			}
+		}
+
+		When("MachineSets and Machines do not exist", func() {
+			It("should deploy MachineSets and Machines present in the MachineDeployments' state", func() {
+				test()
+			})
+		})
+
+		When("MachineSet and Machines already exist", func() {
+			BeforeEach(func() {
+				expectedMachineSet.Labels = map[string]string{"foo": "bar"}
+				Expect(fakeSeedClient.Create(ctx, &expectedMachineSet)).To(Succeed())
+
+				expectedMachine1.Labels = map[string]string{"foo": "bar"}
+				expectedMachine2.Labels = map[string]string{"foo": "bar"}
+				for _, expectedMachine := range []machinev1alpha1.Machine{expectedMachine1, expectedMachine2} {
+					Expect(fakeSeedClient.Create(ctx, &expectedMachine)).To(Succeed(), expectedMachine.Name+" should be created successfully")
+				}
+			})
+
+			It("should not re-deploy MachineSets and Machines present in the MachineDeployments' state", func() {
+				test()
+			})
+		})
+	})
 })

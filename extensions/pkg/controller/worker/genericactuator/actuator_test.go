@@ -10,18 +10,13 @@ import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Actuator", func() {
@@ -211,93 +206,5 @@ var _ = Describe("Actuator", func() {
 			Entry("should be stuck - machine set does not have matching matching class", []machinev1alpha1.MachineSet{machineSetOtherMachineClass}, machineDeployments, true),
 			Entry("should be stuck - no machine set with matching owner reference", []machinev1alpha1.MachineSet{machineSetOtherOwner}, machineDeployments, true),
 		)
-	})
-
-	Describe("#restoreMachineSetsAndMachines", func() {
-		var (
-			ctx    = context.TODO()
-			logger = log.Log.WithName("test")
-
-			mockCtrl   *gomock.Controller
-			mockClient *mockclient.MockClient
-
-			a *genericActuator
-
-			machineDeployments worker.MachineDeployments
-			expectedMachineSet machinev1alpha1.MachineSet
-			expectedMachine1   machinev1alpha1.Machine
-			expectedMachine2   machinev1alpha1.Machine
-
-			alreadyExistsError = apierrors.NewAlreadyExists(schema.GroupResource{Resource: "Machines"}, "machine")
-		)
-
-		BeforeEach(func() {
-			mockCtrl = gomock.NewController(GinkgoT())
-			mockClient = mockclient.NewMockClient(mockCtrl)
-
-			a = &genericActuator{seedClient: mockClient}
-
-			expectedMachineSet = machinev1alpha1.MachineSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "machineset",
-					Namespace: "test-ns",
-				},
-			}
-
-			expectedMachine1 = machinev1alpha1.Machine{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "machine",
-					Namespace: "test-ns",
-					Labels: map[string]string{
-						"node": "node-name-one",
-					},
-				},
-			}
-
-			expectedMachine2 = machinev1alpha1.Machine{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "machine-two",
-					Namespace: "test-ns",
-					Labels: map[string]string{
-						"node": "node-name-two",
-					},
-				},
-			}
-
-			machineDeployments = worker.MachineDeployments{
-				{
-					State: &shootstate.MachineDeploymentState{
-						Replicas: 2,
-						MachineSets: []machinev1alpha1.MachineSet{
-							expectedMachineSet,
-						},
-						Machines: []machinev1alpha1.Machine{
-							expectedMachine1,
-							expectedMachine2,
-						},
-					},
-				},
-			}
-		})
-
-		AfterEach(func() {
-			mockCtrl.Finish()
-		})
-
-		It("should deploy machinesets and machines present in the machine deployments' state", func() {
-			mockClient.EXPECT().Create(ctx, &expectedMachineSet)
-			mockClient.EXPECT().Create(ctx, &expectedMachine1)
-			mockClient.EXPECT().Create(ctx, &expectedMachine2)
-
-			Expect(restoreMachineSetsAndMachines(ctx, logger, a.seedClient, machineDeployments)).To(Succeed())
-		})
-
-		It("should not return error if machineset and machines already exist", func() {
-			mockClient.EXPECT().Create(ctx, &expectedMachineSet).Return(alreadyExistsError)
-			mockClient.EXPECT().Create(ctx, &expectedMachine1).Return(alreadyExistsError)
-			mockClient.EXPECT().Create(ctx, &expectedMachine2).Return(alreadyExistsError)
-
-			Expect(restoreMachineSetsAndMachines(ctx, logger, a.seedClient, machineDeployments)).To(Succeed())
-		})
 	})
 })
