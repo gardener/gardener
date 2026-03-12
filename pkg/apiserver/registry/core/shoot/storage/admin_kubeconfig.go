@@ -47,6 +47,7 @@ func NewAdminKubeconfigREST(
 			return &authenticationv1alpha1.AdminKubeconfigRequest{}
 		},
 		userGroupsFunc: getAdminUserGroups,
+		userNamePrefix: "gardener.cloud:admin:",
 	}
 }
 

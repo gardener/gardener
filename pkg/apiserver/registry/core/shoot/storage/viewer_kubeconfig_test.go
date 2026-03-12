@@ -40,5 +40,6 @@ var _ = Describe("Viewer Kubeconfig", func() {
 		},
 		ConsistOf("gardener.cloud:system:viewers"),
 		ConsistOf("gardener.cloud:project:viewers"),
+		"gardener.cloud:viewer:",
 	)
 })
