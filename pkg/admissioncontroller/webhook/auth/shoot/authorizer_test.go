@@ -649,6 +649,100 @@ var _ = Describe("Shoot", func() {
 				})
 			})
 
+			When("requested for ControllerInstallations", func() {
+				var (
+					name  string
+					attrs *auth.AttributesRecord
+				)
+
+				BeforeEach(func() {
+					name = "foo"
+					attrs = &auth.AttributesRecord{
+						User:            gardenletUser,
+						Name:            name,
+						APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+						Resource:        "controllerinstallations",
+						ResourceRequest: true,
+						Verb:            "list",
+					}
+				})
+
+				DescribeTable("should have no opinion because no allowed verb",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list patch watch]"))
+					},
+
+					Entry("create", "create"),
+					Entry("update", "update"),
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
+				)
+
+				It("should have no opinion because no allowed subresource", func() {
+					attrs.Subresource = "foo"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [status]"))
+				})
+
+				DescribeTable("should return correct result if path exists",
+					func(verb, subresource string) {
+						attrs.Verb = verb
+						attrs.Subresource = subresource
+
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeControllerInstallation, "", name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(true)
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeControllerInstallation, "", name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(false)
+						decision, reason, err = authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("no relationship found"))
+					},
+
+					Entry("get w/o subresource", "get", ""),
+					Entry("patch w/o subresource", "patch", ""),
+					Entry("patch w/ status subresource", "patch", "status"),
+				)
+
+				DescribeTable("should allow list/watch requests if field selector is provided",
+					func(verb string, withSelector bool) {
+						attrs.Name = ""
+						attrs.Verb = verb
+
+						if withSelector {
+							selector, err := fields.ParseSelector("spec.shootRef.name=" + shootName + ",spec.shootRef.namespace=" + shootNamespace)
+							Expect(err).NotTo(HaveOccurred())
+							attrs.FieldSelectorRequirements = selector.Requirements()
+						}
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+
+						if withSelector {
+							Expect(decision).To(Equal(auth.DecisionAllow))
+							Expect(reason).To(BeEmpty())
+						} else {
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("must specify field or label selector"))
+						}
+					},
+
+					Entry("list w/ needed selector", "list", true),
+					Entry("list w/o needed selector", "list", false),
+				)
+			})
+
 			Context("when requested for corev1.Events", func() {
 				var (
 					name, namespace string

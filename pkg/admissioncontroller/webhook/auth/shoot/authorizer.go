@@ -65,6 +65,7 @@ var (
 	cloudProfileResource              = gardencorev1beta1.Resource("cloudprofiles")
 	configMapResource                 = corev1.Resource("configmaps")
 	controllerDeploymentResource      = gardencorev1beta1.Resource("controllerdeployments")
+	controllerInstallationResource    = gardencorev1beta1.Resource("controllerinstallations")
 	controllerRegistrationResource    = gardencorev1beta1.Resource("controllerregistrations")
 	credentialsBindingResource        = securityv1alpha1.Resource("credentialsbindings")
 	eventCoreResource                 = corev1.Resource("events")
@@ -150,6 +151,16 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 
 		case configMapResource:
 			return requestAuthorizer.CheckRead(graph.VertexTypeConfigMap, attrs)
+
+		case controllerInstallationResource:
+			return requestAuthorizer.Check(graph.VertexTypeControllerInstallation, attrs,
+				authwebhook.WithAllowedVerbs("get", "list", "watch", "patch"),
+				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithFieldSelectors(map[string]string{
+					core.ShootRefName:      shootName,
+					core.ShootRefNamespace: shootNamespace,
+				}),
+			)
 
 		case eventCoreResource, eventResource:
 			return a.authorizeEvent(log, attrs)
