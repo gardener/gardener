@@ -359,6 +359,88 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 				})
 			})
 
+			When("requested for ManagedSeeds", func() {
+				BeforeEach(func() {
+					request.Name = "foo"
+					request.Namespace = shootNamespace
+					request.UserInfo = gardenletUser
+					request.Resource = metav1.GroupVersionResource{
+						Group:    seedmanagementv1alpha1.SchemeGroupVersion.Group,
+						Version:  seedmanagementv1alpha1.SchemeGroupVersion.Version,
+						Resource: "managedseeds",
+					}
+				})
+
+				DescribeTable("should not allow the request because no allowed verb",
+					func(operation admissionv1.Operation) {
+						request.Operation = operation
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: fmt.Sprintf("unexpected operation: %q", operation),
+								},
+							},
+						}))
+					},
+
+					Entry("create", admissionv1.Create),
+					Entry("delete", admissionv1.Delete),
+				)
+
+				When("operation is update", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Update
+					})
+
+					It("should return an error because the ManagedSeed was not found", func() {
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("managedseeds.seedmanagement.gardener.cloud %q not found", "foo"),
+								},
+							},
+						}))
+					})
+
+					It("should forbid because the ManagedSeed does not belong to gardenlet's shoot", func() {
+						managedSeed := &seedmanagementv1alpha1.ManagedSeed{
+							ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: shootNamespace},
+							Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+								Shoot: &seedmanagementv1alpha1.Shoot{Name: "other-shoot"},
+							},
+						}
+						Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("object does not belong to shoot %s/%s", shootNamespace, shootName),
+								},
+							},
+						}))
+					})
+
+					It("should allow because the ManagedSeed belongs to gardenlet's shoot", func() {
+						managedSeed := &seedmanagementv1alpha1.ManagedSeed{
+							ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: shootNamespace},
+							Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+								Shoot: &seedmanagementv1alpha1.Shoot{Name: shootName},
+							},
+						}
+						Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+				})
+			})
+
 			Context("when requested for Leases", func() {
 				var name string
 
@@ -562,6 +644,67 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 							Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
 							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+						})
+					})
+
+					Context("ManagedSeed bootstrap token secret", func() {
+						BeforeEach(func() {
+							request.Name = "bootstrap-token-abcdef"
+							request.Namespace = metav1.NamespaceSystem
+						})
+
+						It("should allow because the ManagedSeed belongs to gardenlet's shoot", func() {
+							managedSeed := &seedmanagementv1alpha1.ManagedSeed{
+								ObjectMeta: metav1.ObjectMeta{Name: "my-managed-seed", Namespace: shootNamespace},
+								Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+									Shoot: &seedmanagementv1alpha1.Shoot{Name: shootName},
+								},
+							}
+							Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
+
+							secret := &corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{Name: "bootstrap-token-abcdef", Namespace: metav1.NamespaceSystem},
+								Type:       corev1.SecretTypeBootstrapToken,
+								Data: map[string][]byte{
+									"description": []byte("A bootstrap token for the Gardenlet for seedmanagement.gardener.cloud/v1alpha1.ManagedSeed resource " + shootNamespace + "/my-managed-seed."),
+								},
+							}
+							objData, err := runtime.Encode(encoder, secret)
+							Expect(err).NotTo(HaveOccurred())
+							request.Object.Raw = objData
+
+							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+						})
+
+						It("should forbid because the ManagedSeed does not belong to gardenlet's shoot", func() {
+							managedSeed := &seedmanagementv1alpha1.ManagedSeed{
+								ObjectMeta: metav1.ObjectMeta{Name: "my-managed-seed", Namespace: "other-namespace"},
+								Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+									Shoot: &seedmanagementv1alpha1.Shoot{Name: "other-shoot"},
+								},
+							}
+							Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
+
+							secret := &corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{Name: "bootstrap-token-abcdef", Namespace: metav1.NamespaceSystem},
+								Type:       corev1.SecretTypeBootstrapToken,
+								Data: map[string][]byte{
+									"description": []byte("A bootstrap token for the Gardenlet for seedmanagement.gardener.cloud/v1alpha1.ManagedSeed resource other-namespace/my-managed-seed."),
+								},
+							}
+							objData, err := runtime.Encode(encoder, secret)
+							Expect(err).NotTo(HaveOccurred())
+							request.Object.Raw = objData
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusForbidden),
+										Message: fmt.Sprintf("object does not belong to shoot %s/%s", shootNamespace, shootName),
+									},
+								},
+							}))
 						})
 					})
 				})

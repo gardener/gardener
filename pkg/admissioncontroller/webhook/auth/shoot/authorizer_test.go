@@ -28,12 +28,12 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	graphutils "github.com/gardener/gardener/pkg/utils/graph"
 	mockgraph "github.com/gardener/gardener/pkg/utils/graph/mock"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	authorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer"
 	fakeauthorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer/fake"
 )
@@ -988,6 +988,206 @@ var _ = Describe("Shoot", func() {
 				)
 			})
 
+			When("requested for Seeds", func() {
+				var (
+					name  string
+					attrs *auth.AttributesRecord
+				)
+
+				BeforeEach(func() {
+					name = "foo"
+					attrs = &auth.AttributesRecord{
+						User:            gardenletUser,
+						Name:            name,
+						APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+						Resource:        "seeds",
+						ResourceRequest: true,
+						Verb:            "get",
+					}
+				})
+
+				DescribeTable("should have no opinion because verb is not allowed",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [delete get list watch]"))
+					},
+
+					Entry("create", "create"),
+					Entry("update", "update"),
+					Entry("patch", "patch"),
+					Entry("deletecollection", "deletecollection"),
+				)
+
+				It("should have no opinion because no allowed subresource", func() {
+					attrs.Subresource = "foo"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
+				})
+
+				DescribeTable("should always allow list/watch requests",
+					func(verb string) {
+						attrs.Name = ""
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+				)
+
+				It("should allow when verb is delete and resource does not exist", func() {
+					attrs.Verb = "delete"
+
+					graph.EXPECT().HasVertex(graphutils.VertexTypeSeed, "", name).Return(false)
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+
+				DescribeTable("should return correct result if path exists",
+					func(verb string) {
+						attrs.Verb = verb
+
+						if verb == "delete" {
+							graph.EXPECT().HasVertex(graphutils.VertexTypeSeed, "", name).Return(true).Times(2)
+						}
+
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeSeed, "", name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(true)
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeSeed, "", name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(false)
+						decision, reason, err = authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("no relationship found"))
+					},
+
+					Entry("get", "get"),
+					Entry("delete", "delete"),
+				)
+			})
+
+			When("requested for ManagedSeeds", func() {
+				var (
+					name, namespace string
+					attrs           *auth.AttributesRecord
+				)
+
+				BeforeEach(func() {
+					name, namespace = "foo", shootNamespace
+					attrs = &auth.AttributesRecord{
+						User:            gardenletUser,
+						Name:            name,
+						Namespace:       namespace,
+						APIGroup:        seedmanagementv1alpha1.SchemeGroupVersion.Group,
+						Resource:        "managedseeds",
+						ResourceRequest: true,
+						Verb:            "list",
+					}
+				})
+
+				DescribeTable("should have no opinion because verb is not allowed",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list patch update watch]"))
+					},
+
+					Entry("create", "create"),
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
+				)
+
+				It("should have no opinion because no allowed subresource", func() {
+					attrs.Subresource = "foo"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [status]"))
+				})
+
+				It("should have no opinion because namespace does not match", func() {
+					attrs.Namespace = "not-allowed"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring(fmt.Sprintf("only the following namespaces are allowed for this resource type: [%s]", shootNamespace)))
+				})
+
+				DescribeTable("should allow list/watch requests if field selector is provided",
+					func(verb string, withSelector bool) {
+						attrs.Name = ""
+						attrs.Verb = verb
+
+						if withSelector {
+							selector, err := fields.ParseSelector(seedmanagement.ManagedSeedShootName + "=" + shootName)
+							Expect(err).NotTo(HaveOccurred())
+							attrs.FieldSelectorRequirements = selector.Requirements()
+						}
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+
+						if withSelector {
+							Expect(decision).To(Equal(auth.DecisionAllow))
+							Expect(reason).To(BeEmpty())
+						} else {
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("must specify field or label selector"))
+						}
+					},
+
+					Entry("list w/ needed selector", "list", true),
+					Entry("list w/o needed selector", "list", false),
+				)
+
+				DescribeTable("should return correct result if path exists",
+					func(verb, subresource string) {
+						attrs.Verb = verb
+						attrs.Subresource = subresource
+
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeManagedSeed, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(true)
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeManagedSeed, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(false)
+						decision, reason, err = authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("no relationship found"))
+					},
+
+					Entry("get w/o subresource", "get", ""),
+					Entry("get w/ subresource", "get", "status"),
+					Entry("patch w/o subresource", "patch", ""),
+					Entry("patch w/ subresource", "patch", "status"),
+					Entry("update w/o subresource", "update", ""),
+					Entry("update w/ subresource", "update", "status"),
+				)
+			})
+
 			Context("when requested for Leases", func() {
 				var (
 					name, namespace string
@@ -1362,19 +1562,22 @@ var _ = Describe("Shoot", func() {
 						Expect(reason).To(ContainSubstring(`shoot meta in bootstrap token secret not-the-namespace/not-the-name does not match with identity of requestor`))
 					})
 
-					It("should return an error if description cannot be fetched", func() {
+					It("should fall through to graph-based authorization if description is not a self-hosted shoot token", func() {
 						Expect(fakeClient.Create(ctx, bootstrapTokenSecret)).To(Succeed())
 
+						graph.EXPECT().HasVertex(graphutils.VertexTypeSecret, bootstrapTokenSecret.Namespace, bootstrapTokenSecret.Name).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeSecret, bootstrapTokenSecret.Namespace, bootstrapTokenSecret.Name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
-						Expect(err).To(MatchError(ContainSubstring(`failed fetching shoot meta from bootstrap token description: bootstrap token description does not start with "Used for connecting the self-hosted Shoot "`)))
-						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
 						Expect(reason).To(BeEmpty())
 					})
 
-					It("should return an error if secret is not found", func() {
+					It("should fall through to graph-based authorization if secret is not found", func() {
+						graph.EXPECT().HasVertex(graphutils.VertexTypeSecret, bootstrapTokenSecret.Namespace, bootstrapTokenSecret.Name).Return(false)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
-						Expect(err).To(BeNotFoundError())
-						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
 						Expect(reason).To(BeEmpty())
 					})
 				})

@@ -15,6 +15,7 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
@@ -30,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/graph"
@@ -72,7 +74,9 @@ var (
 	eventResource                     = eventsv1.Resource("events")
 	gardenletResource                 = seedmanagementv1alpha1.Resource("gardenlets")
 	leaseResource                     = coordinationv1.Resource("leases")
+	managedSeedResource               = seedmanagementv1alpha1.Resource("managedseeds")
 	projectResource                   = gardencorev1beta1.Resource("projects")
+	seedResource                      = gardencorev1beta1.Resource("seeds")
 	secretResource                    = corev1.Resource("secrets")
 	secretBindingResource             = gardencorev1beta1.Resource("secretbindings")
 	serviceAccountResource            = corev1.Resource("serviceaccounts")
@@ -177,6 +181,22 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 		case leaseResource:
 			return a.authorizeLease(requestAuthorizer, userType, shootNamespace, shootName, attrs)
 
+		case managedSeedResource:
+			return requestAuthorizer.Check(graph.VertexTypeManagedSeed, attrs,
+				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
+				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithAllowedNamespaces(requestAuthorizer.ToNamespace),
+				authwebhook.WithFieldSelectors(map[string]string{
+					seedmanagement.ManagedSeedShootName: shootName,
+				}),
+			)
+
+		case seedResource:
+			return requestAuthorizer.Check(graph.VertexTypeSeed, attrs,
+				authwebhook.WithAllowedVerbs("get", "delete"),
+				authwebhook.WithAlwaysAllowedVerbs("list", "watch"),
+			)
+
 		case secretResource:
 			return a.authorizeSecret(ctx, requestAuthorizer, attrs)
 
@@ -279,18 +299,21 @@ func (a *authorizer) authorizeServiceAccount(requestAuthorizer *authwebhook.Requ
 }
 
 func (a *authorizer) authorizeSecret(ctx context.Context, requestAuthorizer *authwebhook.RequestAuthorizer, attrs auth.Attributes) (auth.Decision, string, error) {
-	// Allow gardenlet to delete its bootstrap token.
+	// Allow gardenlet to delete bootstrap tokens for its own shoot or for ManagedSeeds referencing its shoot.
 	if attrs.GetVerb() == "delete" && attrs.GetNamespace() == metav1.NamespaceSystem && strings.HasPrefix(attrs.GetName(), bootstraptokenapi.BootstrapTokenSecretPrefix) {
-		shootMeta, err := gardenletutils.ShootMetaFromBootstrapToken(ctx, a.client, attrs.GetName())
+		shootMeta, found, err := gardenletutils.ShootMetaFromBootstrapToken(ctx, a.client, attrs.GetName())
 		if err != nil {
-			return auth.DecisionNoOpinion, "", fmt.Errorf("failed fetching shoot meta from bootstrap token description: %w", err)
-		}
-
-		if shootMeta.Namespace == requestAuthorizer.ToNamespace && shootMeta.Name == requestAuthorizer.ToName {
-			return auth.DecisionAllow, "", nil
-		} else {
+			if !apierrors.IsNotFound(err) {
+				return auth.DecisionNoOpinion, "", err
+			}
+		} else if found {
+			if shootMeta.Namespace == requestAuthorizer.ToNamespace && shootMeta.Name == requestAuthorizer.ToName {
+				return auth.DecisionAllow, "", nil
+			}
 			return auth.DecisionNoOpinion, fmt.Sprintf("shoot meta in bootstrap token secret %s does not match with identity of requestor %s/%s", shootMeta, requestAuthorizer.ToNamespace, requestAuthorizer.ToName), nil
 		}
+		// No shoot meta found — fall through to graph-based authorization which handles ManagedSeed bootstrap
+		// tokens via the Secret → ManagedSeed → Shoot edges.
 	}
 
 	return requestAuthorizer.Check(graph.VertexTypeSecret, attrs,
