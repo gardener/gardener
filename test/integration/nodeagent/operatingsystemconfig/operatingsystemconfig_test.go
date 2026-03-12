@@ -67,7 +67,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		containerdConfigFileContent string
 
-		file1, file2, file3, file4, file5, file6, file7, file8                                                                         extensionsv1alpha1.File
+		file1, file2, file3, file4, file5, file6, file7, file8, file9                                                                  extensionsv1alpha1.File
 		gnaUnit, unit1, unit2, unit3, unit4, unit5, unit5DropInsOnly, unit6, unit7, unit8, unit9, existingUnitDropIn, containerdDropIn extensionsv1alpha1.Unit
 		cgroupDriver                                                                                                                   extensionsv1alpha1.CgroupDriverName
 		registryConfig1, registryConfig2                                                                                               extensionsv1alpha1.RegistryConfig
@@ -244,6 +244,25 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file8"}},
 			Permissions: ptr.To[uint32](0644),
 		}
+		file9 = extensionsv1alpha1.File{
+			Path:        "/secretref/file",
+			Content:     extensionsv1alpha1.FileContent{SecretRef: &extensionsv1alpha1.FileContentSecretRef{Name: "file9-secret", DataKey: "content"}},
+			Permissions: ptr.To[uint32](0750),
+		}
+
+		By("Create Secret referenced by file9")
+		file9Secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      file9.Content.SecretRef.Name,
+				Namespace: metav1.NamespaceSystem,
+				Labels:    map[string]string{testID: testRunID},
+			},
+			Data: map[string][]byte{"content": []byte("file9")},
+		}
+		Expect(testClient.Create(ctx, file9Secret)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, file9Secret)).To(Succeed())
+		})
 
 		gnaUnit = extensionsv1alpha1.Unit{
 			Name:    "gardener-node-agent.service",
@@ -387,7 +406,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		operatingSystemConfig = &extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
-				Files: []extensionsv1alpha1.File{file1, file3, file5, file8},
+				Files: []extensionsv1alpha1.File{file1, file3, file5, file8, file9},
 				Units: []extensionsv1alpha1.Unit{unit1, unit2, unit5, unit5DropInsOnly, unit6, unit7},
 				CRIConfig: &extensionsv1alpha1.CRIConfig{
 					Name:         "containerd",
@@ -461,6 +480,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertFileOnDisk(fakeFS, file5.Path, "file5", 0750)
 		test.AssertFileOnDisk(fakeFS, file6.Path, "file6", 0750)
 		test.AssertFileOnDisk(fakeFS, file7.Path, "file7", 0750)
+		test.AssertFileOnDisk(fakeFS, file9.Path, "file9", 0750)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name, "#unit1", 0600)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name+".d/"+unit1.DropIns[0].Name, "#unit1drop", 0600)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit2.Name, "#unit2", 0600)
@@ -502,7 +522,7 @@ inPlaceUpdates:
   operatingSystem: false
   serviceAccountKeyRotation: false
 mustRestartNodeAgent: false
-operatingSystemConfigChecksum: ddafef1ed407f75f5fc6a8a075ff430fb03b348a4c00474978e2650a22edd9ff
+operatingSystemConfigChecksum: `+utils.ComputeSHA256Hex(oscRaw)+`
 units: {}
 `, 0600)
 
@@ -640,6 +660,7 @@ units: {}
 		test.AssertFileOnDisk(fakeFS, file5.Path, "changeme", 0750)
 		test.AssertFileOnDisk(fakeFS, file6.Path, "changed", 0750)
 		test.AssertFileOnDisk(fakeFS, file7.Path, "changed-as-well", 0750)
+		test.AssertFileOnDisk(fakeFS, file9.Path, "file9", 0750)
 		test.AssertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name)
 		test.AssertNoDirectoryOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name+".d")
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit2.Name, "#unit2", 0600)
