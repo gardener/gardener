@@ -12,12 +12,13 @@ spec:
     kind: Deployment
     name: istio-ingressgateway
   updatePolicy:
-    updateMode: Initial
+    updateMode: InPlaceOrRecreate
   resourcePolicy:
     containerPolicies:
     - containerName: istio-proxy
       controlledValues: RequestsOnly
       controlledResources:
+      - cpu
       - memory
     - containerName: '*'
       mode: "Off"

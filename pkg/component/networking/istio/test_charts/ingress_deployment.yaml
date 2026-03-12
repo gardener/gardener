@@ -29,7 +29,6 @@ spec:
       annotations:
         sidecar.istio.io/inject: "false"
         proxy.istio.io/config: |-
-          concurrency: 4
           protocolDetectionTimeout: 100ms
           runtimeValues:
             "overload.global_downstream_max_connections": "750000"
