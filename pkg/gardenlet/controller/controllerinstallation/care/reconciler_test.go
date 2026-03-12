@@ -128,7 +128,7 @@ var _ = Describe("Reconciler", func() {
 			Expect(controllerInstallation.Status.Conditions).To(matchExpectedConditions)
 		},
 			Entry("managed resource conditions are not set",
-				managedResource(nil),
+				managedResource(controllerInstallationName, nil),
 				ConsistOf(
 					conditionWithTypeStatusAndReason(gardencorev1beta1.ControllerInstallationInstalled, gardencorev1beta1.ConditionFalse, "InstallationPending"),
 					conditionWithTypeStatusAndReason(gardencorev1beta1.ControllerInstallationHealthy, gardencorev1beta1.ConditionFalse, "ControllerNotHealthy"),
@@ -136,7 +136,7 @@ var _ = Describe("Reconciler", func() {
 				),
 			),
 			Entry("managed resource is not healthy",
-				notHealthyManagedResource(),
+				notHealthyManagedResource(controllerInstallationName),
 				ConsistOf(
 					conditionWithTypeStatusAndReason(gardencorev1beta1.ControllerInstallationInstalled, gardencorev1beta1.ConditionFalse, "InstallationPending"),
 					conditionWithTypeStatusAndReason(gardencorev1beta1.ControllerInstallationHealthy, gardencorev1beta1.ConditionFalse, "ControllerNotHealthy"),
@@ -144,7 +144,7 @@ var _ = Describe("Reconciler", func() {
 				),
 			),
 			Entry("managed resource is healthy",
-				healthyManagedResource(),
+				healthyManagedResource(controllerInstallationName),
 				ConsistOf(
 					conditionWithTypeStatusAndReason(gardencorev1beta1.ControllerInstallationInstalled, gardencorev1beta1.ConditionTrue, "InstallationSuccessful"),
 					conditionWithTypeStatusAndReason(gardencorev1beta1.ControllerInstallationHealthy, gardencorev1beta1.ConditionTrue, "ControllerHealthy"),
@@ -152,6 +152,29 @@ var _ = Describe("Reconciler", func() {
 				),
 			),
 		)
+
+		When("ControllerInstallation has ShootRef", func() {
+			BeforeEach(func() {
+				controllerInstallation.Spec.SeedRef = nil
+				controllerInstallation.Spec.ShootRef = &corev1.ObjectReference{Name: "shoot1", Namespace: "garden"}
+				controllerInstallation.Spec.RegistrationRef = corev1.ObjectReference{Name: "my-extension"}
+			})
+
+			It("should look up the ManagedResource by RegistrationRef name", func() {
+				Expect(seedClient.Create(ctx, healthyManagedResource("my-extension"))).To(Succeed())
+
+				result, err := reconciler.Reconcile(ctx, request)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{RequeueAfter: syncPeriodDuration}))
+
+				Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+				Expect(controllerInstallation.Status.Conditions).To(ConsistOf(
+					conditionWithTypeStatusAndReason(gardencorev1beta1.ControllerInstallationInstalled, gardencorev1beta1.ConditionTrue, "InstallationSuccessful"),
+					conditionWithTypeStatusAndReason(gardencorev1beta1.ControllerInstallationHealthy, gardencorev1beta1.ConditionTrue, "ControllerHealthy"),
+					conditionWithTypeStatusAndReason(gardencorev1beta1.ControllerInstallationProgressing, gardencorev1beta1.ConditionFalse, "ControllerRolledOut"),
+				))
+			})
+		})
 	})
 })
 
@@ -171,52 +194,50 @@ func conditionWithTypeStatusReasonAndMessage(condType gardencorev1beta1.Conditio
 	return And(OfType(condType), WithStatus(status), WithReason(reason), WithMessage(message))
 }
 
-func healthyManagedResource() *resourcesv1alpha1.ManagedResource {
-	return managedResource(
-		[]gardencorev1beta1.Condition{
-			{
-				Type:   resourcesv1alpha1.ResourcesApplied,
-				Status: gardencorev1beta1.ConditionTrue,
-			},
-			{
-				Type:   resourcesv1alpha1.ResourcesHealthy,
-				Status: gardencorev1beta1.ConditionTrue,
-			},
-			{
-				Type:   resourcesv1alpha1.ResourcesProgressing,
-				Status: gardencorev1beta1.ConditionFalse,
-			},
-		})
+func healthyManagedResource(name string) *resourcesv1alpha1.ManagedResource {
+	return managedResource(name, []gardencorev1beta1.Condition{
+		{
+			Type:   resourcesv1alpha1.ResourcesApplied,
+			Status: gardencorev1beta1.ConditionTrue,
+		},
+		{
+			Type:   resourcesv1alpha1.ResourcesHealthy,
+			Status: gardencorev1beta1.ConditionTrue,
+		},
+		{
+			Type:   resourcesv1alpha1.ResourcesProgressing,
+			Status: gardencorev1beta1.ConditionFalse,
+		},
+	})
 }
 
-func notHealthyManagedResource() *resourcesv1alpha1.ManagedResource {
-	return managedResource(
-		[]gardencorev1beta1.Condition{
-			{
-				Type:    resourcesv1alpha1.ResourcesApplied,
-				Reason:  "NotApplied",
-				Message: "Resources are not applied",
-				Status:  gardencorev1beta1.ConditionFalse,
-			},
-			{
-				Type:    resourcesv1alpha1.ResourcesHealthy,
-				Reason:  "NotHealthy",
-				Message: "Resources are not healthy",
-				Status:  gardencorev1beta1.ConditionFalse,
-			},
-			{
-				Type:    resourcesv1alpha1.ResourcesProgressing,
-				Reason:  "ResourcesProgressing",
-				Message: "Resources are progressing",
-				Status:  gardencorev1beta1.ConditionTrue,
-			},
-		})
+func notHealthyManagedResource(name string) *resourcesv1alpha1.ManagedResource {
+	return managedResource(name, []gardencorev1beta1.Condition{
+		{
+			Type:    resourcesv1alpha1.ResourcesApplied,
+			Reason:  "NotApplied",
+			Message: "Resources are not applied",
+			Status:  gardencorev1beta1.ConditionFalse,
+		},
+		{
+			Type:    resourcesv1alpha1.ResourcesHealthy,
+			Reason:  "NotHealthy",
+			Message: "Resources are not healthy",
+			Status:  gardencorev1beta1.ConditionFalse,
+		},
+		{
+			Type:    resourcesv1alpha1.ResourcesProgressing,
+			Reason:  "ResourcesProgressing",
+			Message: "Resources are progressing",
+			Status:  gardencorev1beta1.ConditionTrue,
+		},
+	})
 }
 
-func managedResource(conditions []gardencorev1beta1.Condition) *resourcesv1alpha1.ManagedResource {
+func managedResource(name string, conditions []gardencorev1beta1.Condition) *resourcesv1alpha1.ManagedResource {
 	return &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controllerInstallationName,
+			Name:      name,
 			Namespace: gardenNamespace,
 		},
 		Status: resourcesv1alpha1.ManagedResourceStatus{
