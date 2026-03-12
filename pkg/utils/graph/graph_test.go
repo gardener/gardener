@@ -2938,8 +2938,9 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 	It("should behave as expected for seedmanagementv1alpha1.ManagedSeed", func() {
 		By("Add")
 		fakeInformerManagedSeed.Add(managedSeed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(3))
-		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.graph.Nodes().Len()).To(Equal(4))
+		Expect(graph.graph.Edges().Len()).To(Equal(3))
+		Expect(graph.HasPathFrom(VertexTypeSeed, "", managedSeed1.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, "kube-system", "bootstrap-token-"+bootstraptoken.TokenID(managedSeed1.ObjectMeta), VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 
@@ -2947,6 +2948,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 		fakeInformerManagedSeed.Delete(managedSeed1)
 		Expect(graph.graph.Nodes().Len()).To(BeZero())
 		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeSeed, "", managedSeed1.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, "kube-system", "bootstrap-token-"+bootstraptoken.TokenID(managedSeed1.ObjectMeta), VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeFalse())
 	})

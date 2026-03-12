@@ -73,14 +73,17 @@ func (g *graph) handleManagedSeedCreateOrUpdate(ctx context.Context, managedSeed
 }
 
 func (g *graph) handleManagedSeedCreateOrUpdateForShoots(managedSeed *seedmanagementv1alpha1.ManagedSeed) {
+	g.deleteAllIncomingEdges(VertexTypeSeed, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
 	g.deleteAllOutgoingEdges(VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name, VertexTypeShoot)
 
 	var (
+		seedVertex        = g.getOrCreateVertex(VertexTypeSeed, "", managedSeed.Name)
 		managedSeedVertex = g.getOrCreateVertex(VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
 		shootVertex       = g.getOrCreateVertex(VertexTypeShoot, managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
 	)
 
+	g.addEdge(seedVertex, managedSeedVertex)
 	g.addEdge(managedSeedVertex, shootVertex)
 
 	// Always add the bootstrap token edge for self-hosted shoots. The Seed typically doesn't exist yet at this point,
@@ -187,8 +190,9 @@ func (g *graph) handleManagedSeedDelete(managedSeed *seedmanagementv1alpha1.Mana
 	defer g.lock.Unlock()
 
 	if g.forSelfHostedShoots {
-		g.deleteAllOutgoingEdges(VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name, VertexTypeShoot)
+		g.deleteAllIncomingEdges(VertexTypeSeed, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
 		g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
+		g.deleteAllOutgoingEdges(VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name, VertexTypeShoot)
 	} else {
 		g.deleteVertex(VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
 	}
