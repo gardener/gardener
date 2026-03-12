@@ -73,6 +73,7 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 		setups = append(setups,
 			resourceSetup{&gardencorev1beta1.BackupBucket{}, g.setupBackupBucketWatch},
 			resourceSetup{&gardencorev1beta1.BackupEntry{}, g.setupBackupEntryWatch},
+			resourceSetup{&operationsv1alpha1.Bastion{}, g.setupBastionWatch},
 			resourceSetup{&certificatesv1.CertificateSigningRequest{}, g.setupCertificateSigningRequestWatch},
 			resourceSetup{&seedmanagementv1alpha1.Gardenlet{}, g.setupGardenletWatch},
 			resourceSetup{&corev1.ServiceAccount{}, g.setupServiceAccountWatch},

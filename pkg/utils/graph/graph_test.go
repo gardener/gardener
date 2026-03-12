@@ -2517,6 +2517,7 @@ var _ = Describe("graph for shoots", func() {
 		fakeClient                            client.Client
 		fakeInformerBackupBucket              *controllertest.FakeInformer
 		fakeInformerBackupEntry               *controllertest.FakeInformer
+		fakeInformerBastion                   *controllertest.FakeInformer
 		fakeInformerCertificateSigningRequest *controllertest.FakeInformer
 		fakeInformerGardenlet                 *controllertest.FakeInformer
 		fakeInformerServiceAccount            *controllertest.FakeInformer
@@ -2537,6 +2538,8 @@ var _ = Describe("graph for shoots", func() {
 		backupBucket1GeneratedSecretRef             = corev1.SecretReference{Namespace: "generated", Name: "secret"}
 
 		backupEntry1 *gardencorev1beta1.BackupEntry
+
+		bastion1 *operationsv1alpha1.Bastion
 
 		csr1 *certificatesv1.CertificateSigningRequest
 
@@ -2575,6 +2578,7 @@ var _ = Describe("graph for shoots", func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		fakeInformerBackupBucket = &controllertest.FakeInformer{}
 		fakeInformerBackupEntry = &controllertest.FakeInformer{}
+		fakeInformerBastion = &controllertest.FakeInformer{}
 		fakeInformerCertificateSigningRequest = &controllertest.FakeInformer{}
 		fakeInformerGardenlet = &controllertest.FakeInformer{}
 		fakeInformerServiceAccount = &controllertest.FakeInformer{}
@@ -2585,6 +2589,7 @@ var _ = Describe("graph for shoots", func() {
 			InformersByGVK: map[schema.GroupVersionKind]toolscache.SharedIndexInformer{
 				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"):           fakeInformerBackupBucket,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntry"):            fakeInformerBackupEntry,
+				operationsv1alpha1.SchemeGroupVersion.WithKind("Bastion"):               fakeInformerBastion,
 				certificatesv1.SchemeGroupVersion.WithKind("CertificateSigningRequest"): fakeInformerCertificateSigningRequest,
 				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("Gardenlet"):         fakeInformerGardenlet,
 				corev1.SchemeGroupVersion.WithKind("ServiceAccount"):                    fakeInformerServiceAccount,
@@ -2727,6 +2732,13 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 				ShootRef:   &corev1.ObjectReference{Name: shoot1.Name, Namespace: "backupentry1namespace"},
 			},
 		}
+
+		bastion1 = &operationsv1alpha1.Bastion{
+			ObjectMeta: metav1.ObjectMeta{Name: "bastion1", Namespace: namespace1.Name},
+			Spec: operationsv1alpha1.BastionSpec{
+				ShootRef: corev1.LocalObjectReference{Name: shoot1.Name},
+			},
+		}
 	})
 
 	It("should behave as expected for gardencorev1beta1.BackupBucket", func() {
@@ -2840,6 +2852,36 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupEntry1.Spec.BucketName, VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeShoot, backupEntry1.Namespace, shoot1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeShoot, backupEntry1.Namespace, shoot1.Name)).To(BeFalse())
+	})
+
+	It("should behave as expected for operationsv1alpha1.Bastion", func() {
+		By("Add")
+		fakeInformerBastion.Add(bastion1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeBastion, bastion1.Namespace, bastion1.Name, VertexTypeShoot, bastion1.Namespace, bastion1.Spec.ShootRef.Name)).To(BeTrue())
+
+		By("Update (irrelevant change)")
+		bastion1Copy := bastion1.DeepCopy()
+		bastion1.Spec.SSHPublicKey = "foobar"
+		fakeInformerBastion.Update(bastion1Copy, bastion1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeBastion, bastion1.Namespace, bastion1.Name, VertexTypeShoot, bastion1.Namespace, bastion1.Spec.ShootRef.Name)).To(BeTrue())
+
+		By("Update (seed name)")
+		bastion1Copy = bastion1.DeepCopy()
+		bastion1.Spec.SeedName = ptr.To("newseed")
+		fakeInformerBastion.Update(bastion1Copy, bastion1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeBastion, bastion1.Namespace, bastion1.Name, VertexTypeShoot, bastion1.Namespace, bastion1.Spec.ShootRef.Name)).To(BeTrue())
+
+		By("Delete")
+		fakeInformerBastion.Delete(bastion1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeBastion, bastion1.Namespace, bastion1.Name, VertexTypeShoot, bastion1.Namespace, bastion1.Spec.ShootRef.Name)).To(BeFalse())
 	})
 
 	It("should behave as expected for certificatesv1.CertificateSigningRequest", func() {

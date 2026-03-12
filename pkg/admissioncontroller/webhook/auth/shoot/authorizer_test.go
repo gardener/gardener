@@ -26,6 +26,7 @@ import (
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/shoot"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -374,6 +375,113 @@ var _ = Describe("Shoot", func() {
 
 					Entry("list w/ needed selector", "list", true),
 					Entry("list w/o needed selector", "list", false),
+				)
+			})
+
+			When("requested for Bastions", func() {
+				var (
+					name, namespace string
+					attrs           *auth.AttributesRecord
+				)
+
+				BeforeEach(func() {
+					name, namespace = "foo", shootNamespace
+					attrs = &auth.AttributesRecord{
+						User:            gardenletUser,
+						Name:            name,
+						Namespace:       namespace,
+						APIGroup:        operationsv1alpha1.SchemeGroupVersion.Group,
+						Resource:        "bastions",
+						ResourceRequest: true,
+						Verb:            "get",
+					}
+				})
+
+				DescribeTable("should have no opinion because no allowed verb",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list patch update watch]"))
+					},
+
+					Entry("create", "create"),
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
+				)
+
+				It("should have no opinion because no allowed subresource", func() {
+					attrs.Subresource = "foo"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [status]"))
+				})
+
+				It("should have no opinion because request is for a namespace the gardenlet is not responsible for", func() {
+					attrs.Namespace = "other-namespace"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following namespaces are allowed for this resource type"))
+				})
+
+				DescribeTable("should return correct result if path exists",
+					func(verb, subresource string) {
+						attrs.Verb = verb
+						attrs.Subresource = subresource
+
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeBastion, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(true)
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeBastion, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(false)
+						decision, reason, err = authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("no relationship found"))
+					},
+
+					Entry("get", "get", ""),
+					Entry("patch w/o subresource", "patch", ""),
+					Entry("patch w/ status subresource", "patch", "status"),
+					Entry("update w/o subresource", "update", ""),
+					Entry("update w/ status subresource", "update", "status"),
+				)
+
+				DescribeTable("should allow list/watch requests if field selector is provided",
+					func(verb string, withSelector bool) {
+						attrs.Name = ""
+						attrs.Verb = verb
+
+						if withSelector {
+							selector, err := fields.ParseSelector("spec.shootRef.name=" + shootName)
+							Expect(err).NotTo(HaveOccurred())
+							attrs.FieldSelectorRequirements = selector.Requirements()
+						}
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+
+						if withSelector {
+							Expect(decision).To(Equal(auth.DecisionAllow))
+							Expect(reason).To(BeEmpty())
+						} else {
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("must specify field or label selector"))
+						}
+					},
+
+					Entry("list w/ needed selector", "list", true),
+					Entry("list w/o needed selector", "list", false),
+					Entry("watch w/ needed selector", "watch", true),
+					Entry("watch w/o needed selector", "watch", false),
 				)
 			})
 
