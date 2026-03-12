@@ -47,7 +47,7 @@ export_artifacts() {
 
 export_skaffold_events() {
   echo "> Exporting skaffold events > $ARTIFACTS/skaffold"
-  cp -r "$(dirname "$0")/../tmp/skaffold" "$ARTIFACTS/skaffold/" || true
+  cp -r "$(dirname "$0")/../tmp/skaffold/." "$ARTIFACTS/skaffold/" || true
 }
 
 export_resource_yamls_for() {
