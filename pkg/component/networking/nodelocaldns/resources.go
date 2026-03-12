@@ -21,9 +21,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/networking/coredns"
 	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/constants"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
@@ -118,11 +120,13 @@ ip6.arpa:53 {
 				Name:      serviceName,
 				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
-					"k8s-app": "kube-dns-upstream",
+					labelKey: "kube-dns-upstream",
 				},
 			},
 			Spec: corev1.ServiceSpec{
-				Selector: map[string]string{"k8s-app": "kube-dns"},
+				Selector: map[string]string{
+					labelKey: "kube-dns",
+				},
 				Ports: []corev1.ServicePort{
 					{
 						Name:       "dns",
@@ -158,6 +162,13 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "node-local-dns-" + worker.Name,
 				Namespace: metav1.NamespaceSystem,
+				Annotations: map[string]string{
+					// This annotation is required so that the new label selector that includes the worker's name,
+					// introduced with https://github.com/gardener/gardener/pull/14286, can be applied by GRM as
+					// the `spec.selector` field is immutable.
+					// TODO(plkokanov): Remove this annotation after v1.140 has been released.
+					resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
+				},
 				Labels: map[string]string{
 					labelKey:                                    nodelocaldnsconstants.LabelValue,
 					v1beta1constants.GardenRole:                 v1beta1constants.GardenRoleSystemComponent,
@@ -173,17 +184,14 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 				},
 				RevisionHistoryLimit: ptr.To[int32](2),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						labelKey: nodelocaldnsconstants.LabelValue,
-					},
+					MatchLabels: getPoolLabels(worker.Name),
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: map[string]string{
-							labelKey:                                    nodelocaldnsconstants.LabelValue,
+						Labels: utils.MergeStringMaps(getPoolLabels(worker.Name), map[string]string{
 							v1beta1constants.LabelNetworkPolicyToDNS:    "allowed",
 							v1beta1constants.LabelNodeCriticalComponent: "true",
-						},
+						}),
 						Annotations: map[string]string{
 							"prometheus.io/port":   strconv.Itoa(prometheusPort),
 							"prometheus.io/scrape": strconv.FormatBool(prometheusScrape),
@@ -437,4 +445,11 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 		}
 	}
 	return clientObjects
+}
+
+func getPoolLabels(workerName string) map[string]string {
+	return map[string]string{
+		labelKey:     nodelocaldnsconstants.LabelValue,
+		labelKeyPool: workerName,
+	}
 }
