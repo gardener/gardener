@@ -136,7 +136,7 @@ var _ = BeforeSuite(func() {
 			ConcurrentSyncs: ptr.To(5),
 			SyncPeriod:      &metav1.Duration{Duration: 500 * time.Millisecond},
 		},
-		GardenNamespace: gardenNamespace.Name,
+		ManagedResourceNamespace: gardenNamespace.Name,
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
 	By("Start manager")

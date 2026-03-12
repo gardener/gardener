@@ -28,7 +28,7 @@ var _ = Describe("Add", func() {
 	)
 
 	BeforeEach(func() {
-		reconciler = &Reconciler{}
+		reconciler = &Reconciler{ManagedResourceNamespace: "garden"}
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "garden",
