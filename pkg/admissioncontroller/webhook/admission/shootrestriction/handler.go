@@ -17,8 +17,10 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -29,6 +31,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
@@ -43,6 +46,7 @@ var (
 	configMapResource                 = corev1.Resource("configmaps")
 	gardenletResource                 = seedmanagementv1alpha1.Resource("gardenlets")
 	leaseResource                     = coordinationv1.Resource("leases")
+	managedSeedResource               = seedmanagementv1alpha1.Resource("managedseeds")
 	projectResource                   = gardencorev1beta1.Resource("projects")
 	secretResource                    = corev1.Resource("secrets")
 	serviceAccountResource            = corev1.Resource("serviceaccounts")
@@ -84,6 +88,9 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 
 	case leaseResource:
 		return h.admitLease(gardenletShootInfo, userType, request)
+
+	case managedSeedResource:
+		return h.admitManagedSeed(ctx, gardenletShootInfo, request)
 
 	case secretResource:
 		return h.admitSecret(ctx, gardenletShootInfo, request)
@@ -133,6 +140,22 @@ func (h *Handler) admitCertificateSigningRequest(gardenletShootInfo types.Namesp
 	return h.admit(gardenletShootInfo, types.NamespacedName{Name: name, Namespace: namespace})
 }
 
+func (h *Handler) admitManagedSeed(ctx context.Context, gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Update {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	managedSeed := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: request.Name, Namespace: request.Namespace}}
+	if err := h.Client.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err != nil {
+		if apierrors.IsNotFound(err) {
+			return admission.Errored(http.StatusForbidden, err)
+		}
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
+	return h.admit(gardenletShootInfo, types.NamespacedName{Name: managedSeed.Spec.Shoot.Name, Namespace: managedSeed.Namespace})
+}
+
 func (h *Handler) admitSecret(ctx context.Context, gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {
 	if request.Operation != admissionv1.Create {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
@@ -153,6 +176,27 @@ func (h *Handler) admitSecret(ctx context.Context, gardenletShootInfo types.Name
 		}
 
 		return h.admit(gardenletShootInfo, types.NamespacedName{Name: backupBucket.Spec.ShootRef.Name, Namespace: backupBucket.Spec.ShootRef.Namespace})
+	}
+
+	// Check if the secret is a bootstrap token for a ManagedSeed referencing the gardenlet's shoot.
+	if request.Namespace == metav1.NamespaceSystem && strings.HasPrefix(request.Name, bootstraptokenapi.BootstrapTokenSecretPrefix) {
+		secret := &corev1.Secret{}
+		if err := h.Decoder.Decode(request, secret); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+
+		kind, namespace, name := gardenletbootstraputil.MetadataFromDescription(string(secret.Data[bootstraptokenapi.BootstrapTokenDescriptionKey]))
+		if kind == gardenletbootstraputil.KindManagedSeed {
+			managedSeed := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
+			if err := h.Client.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err != nil {
+				if apierrors.IsNotFound(err) {
+					return admission.Errored(http.StatusForbidden, err)
+				}
+				return admission.Errored(http.StatusInternalServerError, err)
+			}
+
+			return h.admit(gardenletShootInfo, types.NamespacedName{Name: managedSeed.Spec.Shoot.Name, Namespace: managedSeed.Namespace})
+		}
 	}
 
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to shoot %s", gardenletShootInfo))
