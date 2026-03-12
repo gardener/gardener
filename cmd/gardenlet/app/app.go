@@ -376,6 +376,12 @@ func (g *garden) Start(ctx context.Context) error {
 						Field:      fields.SelectorFromSet(fields.Set{operations.BastionShootName: g.selfHostedShootInfo.Meta.Name}),
 						Namespaces: map[string]cache.Config{g.selfHostedShootInfo.Meta.Namespace: {}},
 					},
+					&gardencorev1beta1.ControllerInstallation{}: {
+						Field: fields.SelectorFromSet(fields.Set{
+							gardencore.ShootRefName:      g.selfHostedShootInfo.Meta.Name,
+							gardencore.ShootRefNamespace: g.selfHostedShootInfo.Meta.Namespace,
+						}),
+					},
 					&gardencorev1beta1.Shoot{}: {
 						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: g.selfHostedShootInfo.Meta.Name}),
 						Namespaces: map[string]cache.Config{g.selfHostedShootInfo.Meta.Namespace: {}},
@@ -803,6 +809,8 @@ func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 		fns = []func(context.Context, client.FieldIndexer) error{
 			// core API group
 			indexer.AddBackupEntryBucketName,
+			indexer.AddControllerInstallationShootRefName,
+			indexer.AddControllerInstallationShootRefNamespace,
 		}
 	}
 
