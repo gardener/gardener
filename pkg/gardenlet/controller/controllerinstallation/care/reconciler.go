@@ -21,6 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
@@ -63,7 +64,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	managedResource := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controllerInstallation.Name,
+			Name:      gardenerutils.ManagedResourceNameForControllerInstallation(controllerInstallation),
 			Namespace: r.ManagedResourceNamespace,
 		},
 	}
