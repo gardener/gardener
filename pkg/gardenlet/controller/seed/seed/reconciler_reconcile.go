@@ -53,6 +53,7 @@ func (r *Reconciler) reconcile(
 	seedObj *seedpkg.Seed,
 	seedIsGarden bool,
 	seedIsShoot bool,
+	seedIsSelfHostedShoot bool,
 ) error {
 	seed := seedObj.GetInfo()
 
@@ -68,7 +69,7 @@ func (r *Reconciler) reconcile(
 		return err
 	}
 
-	return r.runReconcileSeedFlow(ctx, log, seedObj, seedIsGarden, seedIsShoot)
+	return r.runReconcileSeedFlow(ctx, log, seedObj, seedIsGarden, seedIsShoot, seedIsSelfHostedShoot)
 }
 
 func (r *Reconciler) checkMinimumK8SVersion(version string) error {
@@ -91,6 +92,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	seed *seedpkg.Seed,
 	seedIsGarden bool,
 	seedIsShoot bool,
+	seedIsSelfHostedShoot bool,
 ) error {
 	// VPA is a prerequisite. If it's enabled then we deploy the CRD (and later also the related components) as part of
 	// the flow. However, when it's disabled then we check whether it is indeed available (and fail, otherwise).
@@ -175,7 +177,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	log.Info("Instantiating component deployers")
-	c, err := r.instantiateComponents(ctx, log, seed, secretsManager, seedIsGarden, globalMonitoringSecretSeed, alertingSMTPSecret, wildcardCertSecret, seedIsShoot)
+	c, err := r.instantiateComponents(ctx, log, seed, secretsManager, seedIsGarden, globalMonitoringSecretSeed, alertingSMTPSecret, wildcardCertSecret, seedIsShoot, seedIsSelfHostedShoot)
 	if err != nil {
 		return err
 	}
@@ -204,7 +206,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		deployEtcdCRDs = g.Add(flow.Task{
 			Name:   "Deploying ETCD-related custom resource definitions",
 			Fn:     component.OpWait(c.etcdCRD).Deploy,
-			SkipIf: seedIsGarden,
+			SkipIf: seedIsGarden || seedIsSelfHostedShoot,
 		})
 		deployIstioCRDs = g.Add(flow.Task{
 			Name:   "Deploying Istio-related custom resource definitions",
@@ -264,7 +266,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
 			Fn:           component.OpWait(c.gardenerResourceManager).Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointCRDs),
-			SkipIf:       seedIsGarden,
+			SkipIf:       seedIsGarden || seedIsSelfHostedShoot,
 		})
 		deploySystemResources = g.Add(flow.Task{
 			Name:         "Deploying system resources",
@@ -419,7 +421,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Name:         "Deploying ETCD Druid",
 			Fn:           c.etcdDruid.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
-			SkipIf:       seedIsGarden,
+			SkipIf:       seedIsGarden || seedIsSelfHostedShoot,
 		})
 
 		_ = g.Add(flow.Task{
