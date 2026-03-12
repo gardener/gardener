@@ -341,9 +341,6 @@ var _ = Describe("ControllerInstallation controller tests", func() {
             kind: Secret
             name: ` + seed.Spec.DNS.Provider.CredentialsRef.Name + `
             namespace: ` + seed.Spec.DNS.Provider.CredentialsRef.Namespace + `
-          secretRef:
-            name: ` + seed.Spec.DNS.Provider.SecretRef.Name + `
-            namespace: ` + seed.Spec.DNS.Provider.SecretRef.Namespace + `
           type: ` + seed.Spec.DNS.Provider.Type + `
       ingress:
         controller:
