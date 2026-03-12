@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	vmv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
@@ -322,7 +321,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.vali, err = r.newVali(ctx)
+	c.vali, err = r.newVali()
 	if err != nil {
 		return
 	}
@@ -1383,7 +1382,7 @@ func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) 
 	)
 }
 
-func (r *Reconciler) newVali(ctx context.Context) (component.Deployer, error) {
+func (r *Reconciler) newVali() (component.Deployer, error) {
 	deployer, err := sharedcomponent.NewVali(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -1400,18 +1399,9 @@ func (r *Reconciler) newVali(ctx context.Context) (component.Deployer, error) {
 		return nil, err
 	}
 
-	shouldDestroy := false
-
-	if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) && features.DefaultFeatureGate.Enabled(features.RemoveVali) {
-		vlSingle := &vmv1.VLSingle{}
-		if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: "victoria-logs", Namespace: r.GardenNamespace}, vlSingle); err == nil {
-			if time.Since(vlSingle.CreationTimestamp.Time) >= 2*7*24*time.Hour {
-				shouldDestroy = true
-			}
-		}
-	}
-
-	if shouldDestroy {
+	// Destroy Vali if RemoveVali feature gate is enabled (requires VictoriaLogsBackend as well)
+	if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) &&
+		features.DefaultFeatureGate.Enabled(features.RemoveVali) {
 		return component.OpDestroy(deployer), nil
 	}
 

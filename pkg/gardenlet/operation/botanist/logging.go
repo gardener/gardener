@@ -9,10 +9,6 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
-	"time"
-
-	vmv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
 	gardenlethelper "github.com/gardener/gardener/pkg/api/config/gardenlet/v1alpha1/helper"
@@ -25,11 +21,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
-)
-
-const (
-	// valiMigrationGracePeriod is the time to wait after VictoriaLogs is created before destroying Vali.
-	valiMigrationGracePeriod = 2 * 7 * 24 * time.Hour // 2 weeks
 )
 
 // DeployLogging will install the logging stack for the Shoot in the Seed clusters.
@@ -93,7 +84,7 @@ func (b *Botanist) deployOtelCollector(ctx context.Context, grmIsPresent bool) e
 func (b *Botanist) deployVali(ctx context.Context, grmIsPresent bool) error {
 	b.Shoot.Components.ControlPlane.Vali.WithAuthenticationProxy(grmIsPresent && !features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector))
 
-	if b.shouldDestroyVali(ctx) {
+	if b.shouldDestroyVali() {
 		if err := b.Shoot.Components.ControlPlane.Vali.Destroy(ctx); err != nil {
 			return fmt.Errorf("destroying Vali: %w", err)
 		}
@@ -105,23 +96,20 @@ func (b *Botanist) deployVali(ctx context.Context, grmIsPresent bool) error {
 	return nil
 }
 
-func (b *Botanist) shouldDestroyVali(ctx context.Context) bool {
+func (b *Botanist) shouldDestroyVali() bool {
+	// Always destroy if Vali is explicitly disabled in config
 	if !gardenlethelper.IsValiEnabled(b.Config) {
 		return true
 	}
-	if !features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) ||
-		!features.DefaultFeatureGate.Enabled(features.RemoveVali) {
-		return false
+
+	// Destroy if RemoveVali feature gate is enabled (requires VictoriaLogsBackend as well)
+	if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) &&
+		features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+		return true
 	}
 
-	vlSingle := &vmv1.VLSingle{}
-	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{
-		Name:      "victoria-logs",
-		Namespace: b.Shoot.ControlPlaneNamespace,
-	}, vlSingle); err != nil {
-		return false
-	}
-	return time.Since(vlSingle.CreationTimestamp.Time) >= valiMigrationGracePeriod
+	// Otherwise, keep Vali running
+	return false
 }
 
 // DestroySeedLogging will uninstall the logging stack for the Shoot in the Seed clusters.

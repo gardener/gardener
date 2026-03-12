@@ -8,9 +8,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
-	"time"
 
-	vmv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
 	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
@@ -253,7 +251,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.vali, err = r.newVali(ctx)
+	c.vali, err = r.newVali()
 	if err != nil {
 		return
 	}
@@ -548,7 +546,7 @@ func (r *Reconciler) newSystem(seed *gardencorev1beta1.Seed) (component.DeployWa
 	), nil
 }
 
-func (r *Reconciler) newVali(ctx context.Context) (component.Deployer, error) {
+func (r *Reconciler) newVali() (component.Deployer, error) {
 	var storage *resource.Quantity
 	if r.Config.Logging != nil && r.Config.Logging.Vali != nil && r.Config.Logging.Vali.Garden != nil {
 		storage = r.Config.Logging.Vali.Garden.Storage
@@ -570,18 +568,14 @@ func (r *Reconciler) newVali(ctx context.Context) (component.Deployer, error) {
 		return nil, err
 	}
 
-	shouldDestroy := !gardenlethelper.IsLoggingEnabled(&r.Config)
-
-	if !shouldDestroy && features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) && features.DefaultFeatureGate.Enabled(features.RemoveVali) {
-		vlSingle := &vmv1.VLSingle{}
-		if err := r.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: "victoria-logs", Namespace: r.GardenNamespace}, vlSingle); err == nil {
-			if time.Since(vlSingle.CreationTimestamp.Time) >= 2*7*24*time.Hour {
-				shouldDestroy = true
-			}
-		}
+	// Destroy Vali if logging is disabled in config
+	if !gardenlethelper.IsLoggingEnabled(&r.Config) {
+		return component.OpDestroy(deployer), err
 	}
 
-	if shouldDestroy {
+	// Destroy Vali if RemoveVali feature gate is enabled (requires VictoriaLogsBackend as well)
+	if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) &&
+		features.DefaultFeatureGate.Enabled(features.RemoveVali) {
 		return component.OpDestroy(deployer), err
 	}
 

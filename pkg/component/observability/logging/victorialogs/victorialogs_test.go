@@ -8,8 +8,8 @@ import (
 	"context"
 	"fmt"
 
-	vmv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
-	vmv1beta1 "github.com/VictoriaMetrics/operator/api/operator/v1beta1"
+	victoriametricsv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
+	victoriametricsv1beta1 "github.com/VictoriaMetrics/operator/api/operator/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -65,7 +65,7 @@ var _ = Describe("VictoriaLogs", func() {
 		customResourcesManagedResource       *resourcesv1alpha1.ManagedResource
 		customResourcesManagedResourceSecret *corev1.Secret
 
-		vlSingle       *vmv1.VLSingle
+		vlSingle       *victoriametricsv1.VLSingle
 		vpa            *vpaautoscalingv1.VerticalPodAutoscaler
 		serviceMonitor *monitoringv1.ServiceMonitor
 		prometheusRule *monitoringv1.PrometheusRule
@@ -74,7 +74,7 @@ var _ = Describe("VictoriaLogs", func() {
 	BeforeEach(func() {
 		scheme := kubernetes.SeedScheme
 		// Register VictoriaMetrics VLSingle types
-		utilruntime.Must(vmv1.AddToScheme(scheme))
+		utilruntime.Must(victoriametricsv1.AddToScheme(scheme))
 
 		c = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 		component = New(c, namespace, values)
@@ -95,23 +95,23 @@ var _ = Describe("VictoriaLogs", func() {
 			},
 		}
 
-		vlSingle = &vmv1.VLSingle{
+		vlSingle = &victoriametricsv1.VLSingle{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      victorialogsconstants.VLSingleResourceName,
 				Namespace: namespace,
 				Labels:    getLabels(),
 			},
-			Spec: vmv1.VLSingleSpec{
-				PodMetadata: &vmv1beta1.EmbeddedObjectMetadata{
+			Spec: victoriametricsv1.VLSingleSpec{
+				PodMetadata: &victoriametricsv1beta1.EmbeddedObjectMetadata{
 					Labels: map[string]string{
 						v1beta1constants.LabelObservabilityApplication: victorialogsconstants.VLSingleResourceName,
 					},
 				},
-				CommonDefaultableParams: vmv1beta1.CommonDefaultableParams{
+				CommonDefaultableParams: victoriametricsv1beta1.CommonDefaultableParams{
 					DisableSelfServiceScrape: ptr.To(true),
 					UseStrictSecurity:        ptr.To(true),
 					UseDefaultResources:      ptr.To(false),
-					Image: vmv1beta1.Image{
+					Image: victoriametricsv1beta1.Image{
 						Repository: "europe-docker.pkg.dev/gardener-project/releases/some-image",
 						Tag:        "some-tag",
 					},
@@ -123,7 +123,7 @@ var _ = Describe("VictoriaLogs", func() {
 						},
 					},
 				},
-				CommonApplicationDeploymentParams: vmv1beta1.CommonApplicationDeploymentParams{
+				CommonApplicationDeploymentParams: victoriametricsv1beta1.CommonApplicationDeploymentParams{
 					ReplicaCount: ptr.To(int32(0)),
 				},
 				RetentionPeriod: "15d",
@@ -135,8 +135,8 @@ var _ = Describe("VictoriaLogs", func() {
 						},
 					},
 				},
-				ServiceSpec: &vmv1beta1.AdditionalServiceSpec{
-					EmbeddedObjectMetadata: vmv1beta1.EmbeddedObjectMetadata{
+				ServiceSpec: &victoriametricsv1beta1.AdditionalServiceSpec{
+					EmbeddedObjectMetadata: victoriametricsv1beta1.EmbeddedObjectMetadata{
 						Name: "logging-vl",
 					},
 				},
@@ -279,7 +279,7 @@ var _ = Describe("VictoriaLogs", func() {
 
 				// Verify VLSingle has seed-specific network policy annotations
 				expectedVlSingle := vlSingle.DeepCopy()
-				expectedVlSingle.Spec.ManagedMetadata = &vmv1beta1.ManagedObjectsMetadata{
+				expectedVlSingle.Spec.ManagedMetadata = &victoriametricsv1beta1.ManagedObjectsMetadata{
 					Annotations: map[string]string{
 						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicySeedScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, victorialogsconstants.VictoriaLogsPort),
 					},
@@ -322,7 +322,7 @@ var _ = Describe("VictoriaLogs", func() {
 
 				// Verify VLSingle has garden-specific network policy annotations
 				expectedVlSingle := vlSingle.DeepCopy()
-				expectedVlSingle.Spec.ManagedMetadata = &vmv1beta1.ManagedObjectsMetadata{
+				expectedVlSingle.Spec.ManagedMetadata = &victoriametricsv1beta1.ManagedObjectsMetadata{
 					Annotations: map[string]string{
 						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicyGardenScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, victorialogsconstants.VictoriaLogsPort),
 					},
@@ -362,7 +362,7 @@ var _ = Describe("VictoriaLogs", func() {
 
 				// Verify VLSingle has shoot-specific network policy annotations
 				expectedVlSingle := vlSingle.DeepCopy()
-				expectedVlSingle.Spec.ManagedMetadata = &vmv1beta1.ManagedObjectsMetadata{
+				expectedVlSingle.Spec.ManagedMetadata = &victoriametricsv1beta1.ManagedObjectsMetadata{
 					Annotations: map[string]string{
 						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicyScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, victorialogsconstants.VictoriaLogsPort),
 						resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias: v1beta1constants.LabelNetworkPolicyShootNamespaceAlias,
