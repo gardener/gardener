@@ -81,6 +81,28 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 		warnings = append(warnings, GetKubeAPIServerWarnings(kubeAPIServer, path)...)
 	}
 
+	if shoot.Spec.DNS != nil {
+		warnings = append(warnings, GetDNSProviderWarnings(shoot.Spec.DNS, field.NewPath("spec", "dns"))...)
+	}
+
+	return warnings
+}
+
+// GetDNSProviderWarnings returns warnings for the given DNS configuration.
+func GetDNSProviderWarnings(dns *core.DNS, fldPath *field.Path) []string {
+	var warnings []string
+
+	for i, provider := range dns.Providers {
+		if provider.SecretName != nil {
+			providerPath := fldPath.Child("providers").Index(i)
+			warnings = append(warnings, fmt.Sprintf(
+				"you are setting the %s field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use %s instead.",
+				providerPath.Child("secretName").String(),
+				providerPath.Child("credentialsRef").String(),
+			))
+		}
+	}
+
 	return warnings
 }
 

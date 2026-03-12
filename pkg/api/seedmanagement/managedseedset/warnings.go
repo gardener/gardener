@@ -24,5 +24,10 @@ func GetWarnings(managedseedset *seedmanagement.ManagedSeedSet) []string {
 		warnings = append(warnings, shoot.GetKubeAPIServerWarnings(kubeAPIServer, path)...)
 	}
 
+	if dns := managedseedset.Spec.ShootTemplate.Spec.DNS; dns != nil {
+		path := field.NewPath("spec", "shootTemplate", "spec", "dns")
+		warnings = append(warnings, shoot.GetDNSProviderWarnings(dns, path)...)
+	}
+
 	return warnings
 }

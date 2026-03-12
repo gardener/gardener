@@ -381,7 +381,11 @@ spec:
     # Provider configuration required if custom shoot domain is configured.
   # providers:
   # - type: aws-route53
-  #   secretName: my-custom-domain-secret
+  #   secretName: my-custom-domain-secret # Deprecated, will be removed in a future version of gardener. Use `credentialsRef` instead.
+  #   credentialsRef:
+  #     apiVersion: v1
+  #     kind: Secret
+  #     name: my-custom-domain-secret
   extensions:
   - type: foobar
   # providerConfig:
