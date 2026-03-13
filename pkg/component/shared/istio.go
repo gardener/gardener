@@ -25,13 +25,22 @@ import (
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ImageVector is an alias for imagevector.Containers(). Exposed for testing.
 var ImageVector = imagevector.Containers()
+
+const (
+	// Each availability zone should have at least 2 replicas as on some infrastructures each
+	// zonal load balancer is exposed individually via its own IP address. Therefore, having
+	// just one replica may negatively affect availability.
+	minReplicasPerZone = 2
+	// The maximum is chosen high enough to allow for sufficient scaling headroom during peak
+	// load while still providing a reasonable upper bound to prevent runaway scaling.
+	maxReplicasPerZone = 16
+)
 
 // NewIstio returns a deployer for Istio.
 func NewIstio(
@@ -58,11 +67,6 @@ func NewIstio(
 	istio.Interface,
 	error,
 ) {
-	var (
-		minReplicas *int
-		maxReplicas *int
-	)
-
 	istiodImage, err := ImageVector.FindImage(imagevector.ContainerImageNameIstioIstiod)
 	if err != nil {
 		return nil, err
@@ -73,20 +77,8 @@ func NewIstio(
 		return nil, err
 	}
 
-	if len(zones) > 1 {
-		// Each availability zone should have at least 2 replicas as on some infrastructures each
-		// zonal load balancer is exposed individually via its own IP address. Therefore, having
-		// just one replica may negatively affect availability.
-		minReplicas = ptr.To(len(zones) * 2)
-		// The default configuration without availability zones has 9 as the maximum amount of
-		// replicas, which apparently works in all known Gardener scenarios. Reducing it to less
-		// per zone gives some room for autoscaling while it is assumed to never reach the maximum.
-		maxReplicas = ptr.To(len(zones) * 6)
-		if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
-			// When IstioTLSTermination server is enabled, more resources might be required on seeds.
-			maxReplicas = ptr.To(len(zones) * 8)
-		}
-	}
+	minReplicas := ptr.To(max(1, len(zones)) * minReplicasPerZone)
+	maxReplicas := ptr.To(max(1, len(zones)) * maxReplicasPerZone)
 
 	policyLabels := commonIstioIngressNetworkPolicyLabels(vpnEnabled)
 	policyLabels[toKubeAPIServerPolicyLabel] = v1beta1constants.LabelNetworkPolicyAllowed
@@ -168,27 +160,21 @@ func AddIstioIngressGateway(
 	// Take the first ingress gateway values to create additional gateways
 	templateValues := gatewayValues[0]
 
-	var (
-		zones                    []string
-		minReplicas              *int
-		maxReplicas              *int
-		enforceSpreadAcrossHosts bool
-		err                      error
-	)
+	var zones []string
 
-	if zone == nil {
-		minReplicas = templateValues.MinReplicas
-		maxReplicas = templateValues.MaxReplicas
-		enforceSpreadAcrossHosts = templateValues.EnforceSpreadAcrossHosts
-	} else {
+	minReplicas := templateValues.MinReplicas
+	maxReplicas := templateValues.MaxReplicas
+
+	enforceSpreadAcrossHosts := templateValues.EnforceSpreadAcrossHosts
+
+	if zone != nil {
 		zones = []string{*zone}
 
-		if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
-			// When IstioTLSTermination server is enabled, more resources might be required on seeds.
-			maxReplicas = ptr.To(len(zones) * 12)
-		}
+		minReplicas = ptr.To(minReplicasPerZone)
+		maxReplicas = ptr.To(maxReplicasPerZone)
 
-		enforceSpreadAcrossHosts, err = ShouldEnforceSpreadAcrossHosts(ctx, cl, []string{*zone})
+		var err error
+		enforceSpreadAcrossHosts, err = ShouldEnforceSpreadAcrossHosts(ctx, cl, zones)
 		if err != nil {
 			return err
 		}
