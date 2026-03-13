@@ -168,7 +168,7 @@ func AddIstioIngressGateway(
 	enforceSpreadAcrossHosts := templateValues.EnforceSpreadAcrossHosts
 
 	if zone != nil {
-		zones = append(zones, *zone)
+		zones = []string{*zone}
 
 		minReplicas = ptr.To(minReplicasPerZone)
 		maxReplicas = ptr.To(maxReplicasPerZone)

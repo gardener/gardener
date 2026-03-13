@@ -52,6 +52,7 @@ var _ = Describe("istiod", func() {
 		labels                        map[string]string
 		networkLabels                 map[string]string
 		expectAPIServerTLSTermination bool
+		expectVPARecreateMode         bool
 
 		managedResourceIstioName   string
 		managedResourceIstio       *resourcesv1alpha1.ManagedResource
@@ -150,6 +151,11 @@ var _ = Describe("istiod", func() {
 
 		istioIngressAutoscalerVPA = func() string {
 			data, _ := os.ReadFile("./test_charts/ingress_autoscaler_vpa.yaml")
+			return string(data)
+		}
+
+		istioIngressAutoscalerVPARecreate = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_autoscaler_vpa_recreate.yaml")
 			return string(data)
 		}
 
@@ -311,6 +317,7 @@ var _ = Describe("istiod", func() {
 		labels = map[string]string{"foo": "bar"}
 		networkLabels = map[string]string{"to-target": "allowed"}
 		expectAPIServerTLSTermination = false
+		expectVPARecreateMode = false
 		expectedCPURequests = "300m"
 		expectedMinReplicas = 2
 		expectedMaxReplicas = 9
@@ -467,7 +474,12 @@ var _ = Describe("istiod", func() {
 
 			expectedIstioManifests = append(expectedIstioManifests, istioIngressPodDisruptionBudget())
 			expectedIstioSystemManifests = append(expectedIstioSystemManifests, istiodPodDisruptionBudget())
-			expectedIstioManifests = append(expectedIstioManifests, istioIngressAutoscalerVPA())
+
+			if expectVPARecreateMode {
+				expectedIstioManifests = append(expectedIstioManifests, istioIngressAutoscalerVPARecreate())
+			} else {
+				expectedIstioManifests = append(expectedIstioManifests, istioIngressAutoscalerVPA())
+			}
 
 			if expectAPIServerTLSTermination {
 				expectedIstioManifests = append(expectedIstioManifests,
@@ -837,6 +849,17 @@ var _ = Describe("istiod", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
+				checkSuccessfulDeployment(nil, nil)
+			})
+		})
+
+		Context("With VPAInPlaceUpdates feature gate disabled", func() {
+			BeforeEach(func() {
+				expectVPARecreateMode = true
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VPAInPlaceUpdates, false))
+			})
+
+			It("should successfully deploy all resources with VPA Recreate mode", func() {
 				checkSuccessfulDeployment(nil, nil)
 			})
 		})

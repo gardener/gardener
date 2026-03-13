@@ -2,17 +2,18 @@ apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: istio-ingressgateway
-  namespace: {{ .Release.Namespace }}
+  namespace: test-ingress
   labels:
-    app.kubernetes.io/version: {{ .Values.ingressVersion }}
-{{ .Values.labels | toYaml | indent 4 }}
+    app.kubernetes.io/version: 1.27.1
+    app: istio-ingressgateway
+    foo: bar
 spec:
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: istio-ingressgateway
   updatePolicy:
-    updateMode: {{ .Values.vpaUpdateMode }}
+    updateMode: Recreate
   resourcePolicy:
     containerPolicies:
     - containerName: istio-proxy

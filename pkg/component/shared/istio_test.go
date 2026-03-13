@@ -166,7 +166,7 @@ func checkAdditionalIstioGateway(cl client.Client,
 	enforceSpreadAcrossHosts = ingressValues[0].EnforceSpreadAcrossHosts
 
 	if zone != nil {
-		zones = append(zones, *zone)
+		zones = []string{*zone}
 
 		minReplicas = ptr.To(2)
 		maxReplicas = ptr.To(16)
