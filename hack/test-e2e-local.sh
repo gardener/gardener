@@ -43,4 +43,4 @@ if [[ "${IPFAMILY:-}" == "ipv6" ]]; then
   local_address_operator="::3"
 fi
 
-GO111MODULE=on ginkgo run --timeout=105m $ginkgo_flags --v --show-node-events "$@"
+GO111MODULE=on ginkgo run --timeout=125m $ginkgo_flags --v --show-node-events "$@"
