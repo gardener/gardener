@@ -11,6 +11,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -1957,6 +1958,20 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 						Default: ptr.To[int32](50),
 					},
 				}
+				dnsCredentialsSecretName := "dns-credentials-secret"
+				shoot134.Spec.DNS = &gardencorev1beta1.DNS{
+					Providers: []gardencorev1beta1.DNSProvider{
+						{
+							Type:       ptr.To("test-dns"),
+							SecretName: &dnsCredentialsSecretName,
+							CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+								APIVersion: "v1",
+								Kind:       "Secret",
+								Name:       dnsCredentialsSecretName,
+							},
+						},
+					},
+				}
 
 				By("Create Shoot with k8s v1.34")
 				Expect(testClient.Create(ctx, shoot134)).To(Succeed())
@@ -1968,6 +1983,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 				})
 
 				Expect(shoot134.Spec.Addons.KubernetesDashboard).NotTo(BeNil())
+				Expect(shoot134.Spec.DNS.Providers[0].SecretName).NotTo(BeNil())
 
 				By("Expire Shoot's kubernetes version in the CloudProfile to force update to 1.35")
 				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, shoot134.Spec.CloudProfile.Name, "1.34.0", &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
@@ -1989,6 +2005,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 					g.Expect(shoot134.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols).To(BeNil(), "KubeMaxPDVols should be unset after migration")
 					g.Expect(shoot134.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(BeNil(), "Default watch cache size should be unset after migration")
 					g.Expect(shoot134.Spec.Kubernetes.KubeAPIServer.WatchCacheSizes.Default).To(BeNil(), "Default watch cache size should be unset after migration")
+					g.Expect(shoot134.Spec.DNS.Providers[0].SecretName).To(BeNil(), "DNS Provider secretName should be unset after migration")
 
 					g.Expect(shoot134.Status.LastMaintenance.Description).To(ContainSubstring(".spec.addons was removed"))
 					g.Expect(shoot134.Status.LastMaintenance.Description).To(ContainSubstring(".spec.kubernetes.kubeAPIServer.watchCacheSizes.default was removed"))
