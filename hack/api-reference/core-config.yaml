@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+
+processor:
+  ignoreFields:
+    - "TypeMeta"
+  ignoreTypes:
+    - "ParseError$"
+    - "List$"
+
+render:
+  kubernetesVersion: "1.33"
+  knownTypes:
+    - name: Duration
+      package: k8s.io/apimachinery/pkg/apis/meta/v1
+      link: https://pkg.go.dev/k8s.io/apimachinery/pkg/apis/meta/v1#Duration
+    - name: Quantity
+      package: k8s.io/apimachinery/pkg/api/resource
+      link: https://pkg.go.dev/k8s.io/apimachinery/pkg/api/resource#Quantity
+    - name: RawExtension
+      package: k8s.io/apimachinery/pkg/runtime
+      link: https://pkg.go.dev/k8s.io/apimachinery/pkg/runtime#RawExtension
+    - name: UID
+      package: k8s.io/apimachinery/pkg/types
+      link: https://pkg.go.dev/k8s.io/apimachinery/pkg/types#UID
+    - name: IntOrString
+      package: k8s.io/apimachinery/pkg/util/intstr
+      link: https://pkg.go.dev/k8s.io/apimachinery/pkg/util/intstr#IntOrString
+    - name: Duration
+      package: time
+      link: https://pkg.go.dev/time#Duration

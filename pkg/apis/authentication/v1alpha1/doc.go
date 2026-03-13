@@ -10,7 +10,7 @@
 // +k8s:protobuf-gen=package
 // +k8s:openapi-model-package=com.github.gardener.gardener.pkg.apis.authentication.v1alpha1
 
-//go:generate gen-crd-api-reference-docs -api-dir github.com/gardener/gardener/pkg/apis/authentication/v1alpha1 -config ../../../../hack/api-reference/authentication-config.json -template-dir ../../../../hack/api-reference/template -out-file ../../../../docs/api-reference/authentication.md
+//go:generate crd-ref-docs --source-path=. --config=../../../../hack/api-reference/authentication-config.yaml --renderer=markdown --templates-dir=../../../../hack/api-reference/template --log-level=ERROR --output-path=../../../../docs/api-reference/authentication.md
 
 // Package v1alpha1 is a version of the API.
 // "authentication.gardener.cloud/v1alpha1" API is already used for CRD registration and must not be served by the API server.
