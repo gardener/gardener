@@ -158,6 +158,10 @@ func (c *Certificate) SecretData() map[string][]byte {
 	data := map[string][]byte{}
 
 	switch {
+	case c.CA == nil && c.CertType == ServerCert:
+		data[DataKeyCertificate] = c.CertificatePEM
+		data[DataKeyPrivateKey] = c.PrivateKeyPEM
+
 	case c.CA == nil:
 		// The certificate is a CA certificate itself, so we use different keys in the secret data (for backwards-
 		// compatibility).

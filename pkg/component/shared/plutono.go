@@ -25,6 +25,7 @@ func NewPlutono(
 	isGardenCluster, vpnHighAvailabilityEnabled, vpaEnabled bool,
 	wildcardCertName *string,
 	onlyDeployDataSourcesAndDashboards bool,
+	istioIngressGatewayLabels map[string]string,
 ) (
 	plutono.Interface,
 	error,
@@ -51,6 +52,7 @@ func NewPlutono(
 			IngressHost:                        ingressHost,
 			IncludeIstioDashboards:             includeIstioDashboards,
 			IsGardenCluster:                    isGardenCluster,
+			IstioIngressGatewayLabels:          istioIngressGatewayLabels,
 			IsWorkerless:                       isWorkerless,
 			OnlyDeployDataSourcesAndDashboards: onlyDeployDataSourcesAndDashboards,
 			PriorityClassName:                  priorityClassName,
