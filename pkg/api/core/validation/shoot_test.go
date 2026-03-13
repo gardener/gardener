@@ -1538,10 +1538,26 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			Context("self-hosted shoots", func() {
+				BeforeEach(func() {
+					// Self-hosted shoots are required to reside in the garden namespace.
+					shoot.Namespace = "garden"
+				})
+
 				It("should allow 'ControlPlane' field for worker pool", func() {
 					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
 
 					Expect(ValidateShoot(shoot)).To(BeEmpty())
+				})
+
+				It("should prevent creating a self-hosted shoot outside the garden namespace", func() {
+					shoot.Namespace = "other-namespace"
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
+
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("metadata.namespace"),
+						"Detail": ContainSubstring(`self-hosted shoots must be in the "garden" namespace`),
+					}))))
 				})
 
 				It("should prevent having more then one 'ControlPlane' worker pool", func() {
@@ -1624,7 +1640,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 								APIVersion: "v1",
 								Kind:       "Secret",
 								Name:       "backup-foo",
-								Namespace:  shootNamespace,
+								Namespace:  "garden",
 							},
 						}}
 					})
@@ -1661,7 +1677,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						})
 
 						It("should forbid credentialsRef to refer a WorkloadIdentity", func() {
-							shoot.Spec.Provider.Workers[0].ControlPlane.Backup.CredentialsRef = &corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Namespace: shootNamespace, Name: "backup"}
+							shoot.Spec.Provider.Workers[0].ControlPlane.Backup.CredentialsRef = &corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Namespace: "garden", Name: "backup"}
 
 							Expect(ValidateShoot(shoot)).To(ConsistOf(
 								PointTo(MatchFields(IgnoreExtras, Fields{
@@ -1673,7 +1689,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						})
 
 						It("should allow credentialsRef to refer a Secret", func() {
-							shoot.Spec.Provider.Workers[0].ControlPlane.Backup.CredentialsRef = &corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Namespace: shootNamespace, Name: "backup"}
+							shoot.Spec.Provider.Workers[0].ControlPlane.Backup.CredentialsRef = &corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Namespace: "garden", Name: "backup"}
 
 							Expect(ValidateShoot(shoot)).To(BeEmpty())
 						})

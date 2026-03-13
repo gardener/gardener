@@ -446,8 +446,27 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	if !gardenlet.IsResponsibleForSelfHostedShoot() {
+		isSelfHostedShoot, err := gardenlet.SeedIsSelfHostedShoot(ctx, g.mgr.GetClient())
+		if err != nil {
+			return fmt.Errorf("failed checking if seed cluster is a self-hosted shoot: %w", err)
+		}
+
+		if isSelfHostedShoot {
+			// Abort startup if the corresponding Shoot does not yet exist in the garden cluster. This prevents
+			// GCM from creating `ControllerInstallation`s with `.spec.seedRef`. However, if the seed is a self-hosted
+			// shoot, we want all `ControllerInstallation`s to use `.spec.shootRef`. Self-hosted shoots must be in the
+			// garden namespace (for now), so the name is sufficient to identify the Shoot.
+			shoot := &gardencorev1beta1.Shoot{}
+			if err := gardenCluster.GetClient().Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: g.config.SeedConfig.Name}, shoot); err != nil {
+				if apierrors.IsNotFound(err) {
+					return fmt.Errorf("seed cluster is a self-hosted shoot but the corresponding Shoot %q does not yet exist in namespace %q; run `gardenadm connect` first", g.config.SeedConfig.Name, v1beta1constants.GardenNamespace)
+				}
+				return fmt.Errorf("failed getting Shoot for self-hosted seed: %w", err)
+			}
+		}
+
 		log.Info("Registering Seed object in garden cluster")
-		if err := g.registerSeed(ctx, gardenCluster.GetClient()); err != nil {
+		if err := g.registerSeed(ctx, gardenCluster.GetClient(), isSelfHostedShoot); err != nil {
 			return err
 		}
 	}
@@ -534,7 +553,7 @@ func (g *garden) Start(ctx context.Context) error {
 	return nil
 }
 
-func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) error {
+func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client, isSelfHostedShoot bool) error {
 	seed := &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: g.config.SeedConfig.Name,
@@ -546,6 +565,10 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 		seed.Labels = utils.MergeStringMaps(map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
 		}, g.config.SeedConfig.Labels)
+
+		if isSelfHostedShoot {
+			metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSelfHostedShootCluster, "true")
+		}
 
 		var (
 			internalDNS = seed.Spec.DNS.Internal
