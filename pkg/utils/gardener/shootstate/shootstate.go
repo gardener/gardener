@@ -169,12 +169,12 @@ func computeSecretsToPersist(
 	for _, secret := range secretList.Items {
 		secretInfo := struct {
 			Data      map[string][]byte `json:"data"`
-			Immutable *bool             `json:"immutable"`
-			Type      string            `json:"type"`
+			Immutable *bool             `json:"immutable,omitempty"`
+			Type      corev1.SecretType `json:"type,omitempty"`
 		}{
 			Data:      secret.Data,
 			Immutable: secret.Immutable,
-			Type:      string(secret.Type),
+			Type:      secret.Type,
 		}
 
 		dataJSON, err := json.Marshal(secretInfo)
