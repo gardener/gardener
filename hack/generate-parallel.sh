@@ -86,11 +86,11 @@ extract_mockgen_packages() {
 extract_api_dir_packages() {
   local file=$1
 
-  grep -E '//go:generate.*gen-crd-api-reference-docs' "$file" | while read -r line; do
-    # Extract -api-dir argument
-    if [[ "$line" =~ -api-dir[[:space:]]+([^[:space:]]+) ]]; then
+  grep -E '//go:generate.*crd-ref-docs' "$file" | while read -r line; do
+    # Extract --source-path argument
+    if [[ "$line" =~ --source-path[[:space:]]+([^[:space:]]+) ]]; then
       echo "${BASH_REMATCH[1]}"
-    elif [[ "$line" =~ -api-dir=([^[:space:]]+) ]]; then
+    elif [[ "$line" =~ --source-path=([^[:space:]]+) ]]; then
       echo "${BASH_REMATCH[1]}"
     fi
   done | sort -u
@@ -118,8 +118,8 @@ should_generate_api_docs() {
 
   # Check if output files exist
   local generated
-  generated=$(grep -E '//go:generate.*gen-crd-api-reference-docs' "$file" |
-    sed -n 's/.*-out-file[[:space:]]*\([^[:space:]]*\).*/\1/p')
+  generated=$(grep -E '//go:generate.*crd-ref-docs' "$file" |
+    sed -n 's/.*--output-path[[:space:]]*\([^[:space:]]*\).*/\1/p;s/.*--output-path=\([^[:space:]]*\).*/\1/p')
 
   for gen_file in $generated; do
     if [ ! -f "$dir/$gen_file" ]; then
@@ -244,9 +244,9 @@ echo "$ROOTS" | while IFS= read -r dir; do
     [ -f "$file" ] || continue
 
     if grep -q '//go:generate' "$file"; then
-      if grep -qE '//go:generate.*(mockgen|gen-crd-api-reference-docs|generate-crds\.sh)' "$file"; then
+      if grep -qE '//go:generate.*(mockgen|crd-ref-docs|generate-crds\.sh)' "$file"; then
         has_skippable=true
-        if grep '//go:generate' "$file" | grep -vE '(mockgen|gen-crd-api-reference-docs|generate-crds\.sh)' | grep -q .; then
+        if grep '//go:generate' "$file" | grep -vE '(mockgen|crd-ref-docs|generate-crds\.sh)' | grep -q .; then
           has_only_skippable=false
           break
         fi
@@ -267,7 +267,7 @@ echo "$ROOTS" | while IFS= read -r dir; do
         needs_gen=true
         break
       fi
-      if grep -q '//go:generate.*gen-crd-api-reference-docs' "$file" && should_generate_api_docs "$dir" "$file"; then
+      if grep -q '//go:generate.*crd-ref-docs' "$file" && should_generate_api_docs "$dir" "$file"; then
         needs_gen=true
         break
       fi
