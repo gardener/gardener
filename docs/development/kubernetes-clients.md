@@ -196,11 +196,12 @@ Note that the underlying Informers of a controller-runtime cache (`cache.Cache`)
 Both create `Informers` and watch objects on the API server individually.
 This means that if you read the same object from different cache implementations, you may receive different versions of the object because the watch connections of the individual Informers are not synced.
 
-> ⚠️ Because of this, controllers/reconcilers should get the object from the same cache in the reconcile loop, where the `EventHandler` was also added to set up the controller. For example, if a `SharedInformerFactory` is used for setting up the controller then read the object in the reconciler from the `Lister` instead of from a cached controller-runtime client.
+> [!WARNING]
+> Because of this, controllers/reconcilers should get the object from the same cache in the reconcile loop, where the `EventHandler` was also added to set up the controller. For example, if a `SharedInformerFactory` is used for setting up the controller then read the object in the reconciler from the `Lister` instead of from a cached controller-runtime client.
 
 By default, the `client.Client` created by a controller-runtime `Manager` is a `DelegatingClient`. It delegates `Get` and `List` calls to a `Cache`, and all other calls to a client that talks directly to the API server. Exceptions are requests with `*unstructured.Unstructured` objects and object kinds that were configured to be excluded from the cache in the `DelegatingClient`.
 
-> ℹ️
+> [!NOTE]
 > `kubernetes.Interface.Client()` returns a `DelegatingClient` that uses the cache returned from `kubernetes.Interface.Cache()` under the hood. This means that all `Client()` usages need to be ready for cached clients and should be able to cater with stale cache reads.
 
 _Important characteristics of cached controller-runtime clients:_
@@ -209,8 +210,10 @@ _Important characteristics of cached controller-runtime clients:_
 - In contrast to Listers, controller-runtime caches fill the passed in-memory object with the state of the object in the cache (i.e., they perform something like a "deep copy into"). This means that objects read from a controller-runtime cache can safely be modified without unintended side effects.
 - Reading from a controller-runtime cache or a cached controller-runtime client implicitly starts a watch for the given object kind under the hood. This has important consequences:
   - Reading a given object kind from the cache for the first time can take up to a few seconds depending on size and amount of objects as well as API server latency. This is because the cache has to do a full list operation and wait for an initial watch sync before returning results.
+  - Starting with controller-runtime `v0.23`, the initial informer sync waits for all handler functions to complete, which can significantly delay the overall startup process. For further details, see [this issue](https://github.com/kubernetes-sigs/controller-runtime/issues/3466) and [this example fix](https://github.com/gardener/gardener/pull/14212).
   - ⚠️ Controllers need appropriate RBAC permissions for the object kinds they retrieve via cached clients (i.e., `list` and `watch`).
   - ⚠️ By default, watches started by a controller-runtime cache are cluster-scoped, meaning it watches and caches objects across all namespaces. Thus, be careful which objects to read from the cache as it might significantly increase the controller's memory footprint.
+  - If the client's cache is restricted to a subset of objects, for example by namespace (see [this example](https://github.com/gardener/gardener/blob/154308b68a42bdce2ed896ba853551f35ed881dc/cmd/gardener-resource-manager/app/app.go#L196)), then only the cached subset can be retrieved using the client. There is no automatic fallback to direct API calls for objects outside of this subset.
 - There is no interaction with the cache on writing calls (`Create`, `Update`, `Patch` and `Delete`), see below.
 
 **Uncached objects, filtered caches, `APIReader`s:**
