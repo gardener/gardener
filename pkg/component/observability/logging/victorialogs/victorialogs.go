@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"time"
 
-	vmv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
-	vmv1beta1 "github.com/VictoriaMetrics/operator/api/operator/v1beta1"
+	victoriametricsv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
+	victoriametricsv1beta1 "github.com/VictoriaMetrics/operator/api/operator/v1beta1"
 	"github.com/google/go-containerregistry/pkg/name"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -115,23 +115,23 @@ func (v *victoriaLogs) WaitCleanup(ctx context.Context) error {
 	return managedresources.WaitUntilDeleted(timeoutCtx, v.client, v.namespace, constants.ManagedResourceNameRuntime)
 }
 
-func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *vmv1.VLSingle {
+func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *victoriametricsv1.VLSingle {
 	storage := resource.MustParse("30Gi")
 	if v.values.Storage != nil {
 		storage = *v.values.Storage
 	}
 
-	vlSingle := &vmv1.VLSingle{
+	vlSingle := &victoriametricsv1.VLSingle{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.VLSingleResourceName,
 			Namespace: v.namespace,
 			Labels:    getLabels(),
 		},
-		Spec: vmv1.VLSingleSpec{
-			CommonDefaultableParams: vmv1beta1.CommonDefaultableParams{
+		Spec: victoriametricsv1.VLSingleSpec{
+			CommonDefaultableParams: victoriametricsv1beta1.CommonDefaultableParams{
 				DisableSelfServiceScrape: ptr.To(true),
 				UseStrictSecurity:        ptr.To(true),
-				Image: vmv1beta1.Image{
+				Image: victoriametricsv1beta1.Image{
 					Repository: imageRepo,
 					Tag:        imageTag,
 				},
@@ -144,7 +144,7 @@ func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *vmv1.VLSingle {
 				},
 				UseDefaultResources: ptr.To(false),
 			},
-			CommonApplicationDeploymentParams: vmv1beta1.CommonApplicationDeploymentParams{
+			CommonApplicationDeploymentParams: victoriametricsv1beta1.CommonApplicationDeploymentParams{
 				ReplicaCount:      ptr.To(v.values.Replicas),
 				PriorityClassName: v.values.PriorityClassName,
 			},
@@ -157,8 +157,8 @@ func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *vmv1.VLSingle {
 					},
 				},
 			},
-			ServiceSpec: &vmv1beta1.AdditionalServiceSpec{
-				EmbeddedObjectMetadata: vmv1beta1.EmbeddedObjectMetadata{
+			ServiceSpec: &victoriametricsv1beta1.AdditionalServiceSpec{
+				EmbeddedObjectMetadata: victoriametricsv1beta1.EmbeddedObjectMetadata{
 					Name: constants.ServiceName,
 				},
 			},
@@ -181,7 +181,7 @@ func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *vmv1.VLSingle {
 		managedAnnotations[resourcesv1alpha1.NetworkingNamespaceSelectors] = `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`
 	}
 	if len(managedAnnotations) > 0 {
-		vlSingle.Spec.ManagedMetadata = &vmv1beta1.ManagedObjectsMetadata{
+		vlSingle.Spec.ManagedMetadata = &victoriametricsv1beta1.ManagedObjectsMetadata{
 			Annotations: managedAnnotations,
 		}
 	}
