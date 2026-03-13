@@ -33,6 +33,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/gardener/dashboard"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
@@ -757,6 +758,11 @@ frontend:
 				{
 					APIGroups: []string{"core.gardener.cloud"},
 					Resources: []string{"quotas", "projects", "shoots", "controllerregistrations", "namespacedcloudprofiles"},
+					Verbs:     []string{"list", "watch"},
+				},
+				{
+					APIGroups: []string{seedmanagementv1alpha1.GroupName},
+					Resources: []string{"managedseeds"},
 					Verbs:     []string{"list", "watch"},
 				},
 				{
