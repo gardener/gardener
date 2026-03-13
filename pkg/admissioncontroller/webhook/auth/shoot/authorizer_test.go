@@ -674,11 +674,10 @@ var _ = Describe("Shoot", func() {
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
-						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list patch watch]"))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list patch update watch]"))
 					},
 
 					Entry("create", "create"),
-					Entry("update", "update"),
 					Entry("delete", "delete"),
 					Entry("deletecollection", "deletecollection"),
 				)
@@ -711,6 +710,8 @@ var _ = Describe("Shoot", func() {
 					},
 
 					Entry("get w/o subresource", "get", ""),
+					Entry("update w/o subresource", "update", ""),
+					Entry("update w/ status subresource", "update", "status"),
 					Entry("patch w/o subresource", "patch", ""),
 					Entry("patch w/ status subresource", "patch", "status"),
 				)
