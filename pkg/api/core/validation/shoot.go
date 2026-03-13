@@ -1004,10 +1004,11 @@ func validateWorkerGroupAndControlPlaneKubernetesVersion(controlPlaneVersion, wo
 }
 
 // validateDNSCredentialsRef validates the DNS provider credentials reference and secret name for backward compatibility.
-func validateDNSCredentialsRef(provider core.DNSProvider, fldPath *field.Path) field.ErrorList {
+func validateDNSCredentialsRef(provider core.DNSProvider, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// How to achieve backward compatibility between secretName and credentialsRef?
+	// For kubernetes version >= 1.35, secretName must not be set.
 	// - if secretName is set, credentialsRef must be set and refer the same secret
 	// - if secretName is not set, then credentialsRef could be either unset or set but refer to a non-secret resource
 	//
@@ -1017,14 +1018,15 @@ func validateDNSCredentialsRef(provider core.DNSProvider, fldPath *field.Path) f
 	// - secretName can be unset only when workloadIdentity is used, which we respect here
 
 	if provider.CredentialsRef == nil {
-		if provider.SecretName != nil {
+		if provider.SecretName != nil && versionutils.ConstraintK8sLess135.CheckVersion(kubernetesVersion) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretName"), "must not be set when `credentialsRef` is not set"))
 		}
 	} else {
 		allErrs = append(allErrs, ValidateLocalCredentialsRef(*provider.CredentialsRef, fldPath.Child("credentialsRef"))...)
 
 		if provider.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() && provider.CredentialsRef.Kind == "Secret" {
-			if provider.SecretName == nil || *provider.SecretName != provider.CredentialsRef.Name {
+			if versionutils.ConstraintK8sLess135.CheckVersion(kubernetesVersion) &&
+				(provider.SecretName == nil || *provider.SecretName != provider.CredentialsRef.Name) {
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretName"), "must refer to the same secret as `credentialsRef`"))
 			}
 		} else {
@@ -1072,7 +1074,7 @@ func validateDNS(dns *core.DNS, kubernetesVersion string, fldPath *field.Path) f
 			allErrs = append(allErrs, field.Forbidden(idxPath.Child("secretName"), "for Kubernetes versions >= 1.35, secretName field is no longer supported"))
 		}
 
-		allErrs = append(allErrs, validateDNSCredentialsRef(provider, idxPath)...)
+		allErrs = append(allErrs, validateDNSCredentialsRef(provider, kubernetesVersion, idxPath)...)
 
 		if provider.CredentialsRef != nil && provider.Type != nil {
 			credential := credentialConfig{
