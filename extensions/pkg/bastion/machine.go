@@ -91,9 +91,10 @@ func findSupportedArchitectures(images []gardencorev1beta1.MachineImage, machine
 				// Skip versions that are not the specified one.
 				continue
 			}
-			// TODO(LucaBernstein): Check whether this behavior should be corrected (i.e. changed) in a later GEP-0032-PR.
-			//  The current behavior for nil classifications is treated differently across the codebase.
-			if version.Classification != nil && v1beta1helper.CurrentLifecycleClassification(version.ExpirableVersion) == gardencorev1beta1.ClassificationSupported {
+			// FIXME:(rapnx) If in old classifications classification is nil, check got skipped, therefore it was possible to have
+			// multiple patch versions supported within the same minor.
+			// For now we keep this behavior for both new & old lifecycle, until issue <issue> is resolved.
+			if version.Classification != nil && v1beta1helper.VersionIsSupported(version.ExpirableVersion) {
 				architectures.Insert(v1beta1helper.GetArchitecturesFromImageVersion(version, capabilityDefinitions)...)
 			}
 			if machineImageVersion != "" {
@@ -140,7 +141,7 @@ func getImageName(bastion *gardencorev1beta1.Bastion, images []gardencorev1beta1
 	// take the first image from cloud profile that is supported and capabilities including arch are compatible
 	for _, image := range images {
 		for _, version := range image.Versions {
-			if v1beta1helper.CurrentLifecycleClassification(version.ExpirableVersion) != gardencorev1beta1.ClassificationSupported {
+			if !v1beta1helper.VersionIsSupported(version.ExpirableVersion) {
 				continue
 			}
 			if !slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(version, capabilityDefinitions), bastionArchitecture) {
@@ -172,9 +173,11 @@ func getImageVersion(bastion *gardencorev1beta1.Bastion, imageName, machineArch 
 			return "", fmt.Errorf("image version %s not found not found in cloudProfile", *bastion.MachineImage.Version)
 		}
 
-		// TODO(LucaBernstein): Check whether this behavior should be corrected (i.e. changed) in a later GEP-0032-PR.
-		//  The current behavior for nil classifications is treated differently across the codebase.
-		if image.Versions[versionIndex].Classification != nil && v1beta1helper.CurrentLifecycleClassification(image.Versions[versionIndex].ExpirableVersion) != gardencorev1beta1.ClassificationSupported {
+		// FIXME:(rapnx) If in old classifications classification is nil, check got skipped, therefore it was possible to have
+		// multiple patch versions supported within the same minor.
+		// For now we keep this behavior for both new & old lifecycle, until issue <issue> is resolved.
+		v := image.Versions[versionIndex]
+		if v.Classification != nil && !v1beta1helper.VersionIsSupported(v.ExpirableVersion) {
 			return "", fmt.Errorf("specified image %s in version %s is not classified supported", imageName, *bastion.MachineImage.Version)
 		}
 
@@ -183,7 +186,7 @@ func getImageVersion(bastion *gardencorev1beta1.Bastion, imageName, machineArch 
 
 	var greatest *semver.Version
 	for _, version := range image.Versions {
-		if v1beta1helper.CurrentLifecycleClassification(version.ExpirableVersion) != gardencorev1beta1.ClassificationSupported {
+		if !v1beta1helper.VersionIsSupported(version.ExpirableVersion) {
 			continue
 		}
 		if !slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(version, capabilityDefinitions), machineArch) {

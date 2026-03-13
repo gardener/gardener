@@ -12,7 +12,9 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/api"
@@ -25,11 +27,6 @@ import (
 // CurrentLifecycleClassification returns the current lifecycle classification of the given version.
 // An empty classification is interpreted as supported. If the version is expired, it returns ClassificationExpired.
 func CurrentLifecycleClassification(version gardencorev1beta1.ExpirableVersion) gardencorev1beta1.VersionClassification {
-	var (
-		currentClassification = gardencorev1beta1.ClassificationUnavailable
-		currentTime           = time.Now()
-	)
-
 	if len(version.Lifecycle) == 0 && (version.Classification != nil || version.ExpirationDate != nil) {
 		// Deprecated: legacy classification/expiration fields are used, converting them to lifecycle stages.
 		// Remove once the legacy fields are removed.
@@ -51,6 +48,9 @@ func CurrentLifecycleClassification(version gardencorev1beta1.ExpirableVersion) 
 	if len(version.Lifecycle) == 0 {
 		return gardencorev1beta1.ClassificationSupported
 	}
+
+	currentTime := time.Now()
+	currentClassification := gardencorev1beta1.ClassificationUnavailable
 
 	for _, stage := range version.Lifecycle {
 		startTime := time.Time{}
@@ -85,6 +85,51 @@ func VersionIsSupported(version gardencorev1beta1.ExpirableVersion) bool {
 // VersionIsPreview reports whether the given version is in preview.
 func VersionIsPreview(version gardencorev1beta1.ExpirableVersion) bool {
 	return CurrentLifecycleClassification(version) == gardencorev1beta1.ClassificationPreview
+}
+
+// VersionIsDeprecated reports whether the given version is deprecated.
+func VersionIsDeprecated(version gardencorev1beta1.ExpirableVersion) bool {
+	return CurrentLifecycleClassification(version) == gardencorev1beta1.ClassificationDeprecated
+}
+
+// DurationUntilNextVersionLifecycleStage returns the duration until the earliest upcoming lifecycle start time
+// of any Kubernetes version or MachineImageVersion in the given <cloudProfile>.
+// If no future lifecycle start is found, it returns 0.
+func DurationUntilNextVersionLifecycleStage(cloudProfile *gardencorev1beta1.CloudProfileSpec, clock clock.Clock) time.Duration {
+	if cloudProfile == nil {
+		return 0
+	}
+
+	var next time.Time
+	now := clock.Now()
+
+	evaluate := func(t *metav1.Time) {
+		if t == nil {
+			return
+		}
+		if now.Before(t.Time) && (next.IsZero() || next.After(t.Time)) {
+			next = t.Time
+		}
+	}
+
+	for _, version := range cloudProfile.Kubernetes.Versions {
+		for _, stage := range version.Lifecycle {
+			evaluate(stage.StartTime)
+		}
+	}
+
+	for _, image := range cloudProfile.MachineImages {
+		for _, version := range image.Versions {
+			for _, stage := range version.Lifecycle {
+				evaluate(stage.StartTime)
+			}
+		}
+	}
+
+	if next.IsZero() {
+		return 0
+	}
+	return next.Sub(now)
 }
 
 // DetermineMachineImageForName finds the cloud specific machine images in the <cloudProfile> for the given <name> and
@@ -582,7 +627,7 @@ func FilterExpiredVersion() func(expirableVersion gardencorev1beta1.ExpirableVer
 // returns true if it is deprecated
 func FilterDeprecatedVersion() func(expirableVersion gardencorev1beta1.ExpirableVersion, version *semver.Version) (bool, error) {
 	return func(expirableVersion gardencorev1beta1.ExpirableVersion, _ *semver.Version) (bool, error) {
-		return CurrentLifecycleClassification(expirableVersion) == gardencorev1beta1.ClassificationDeprecated, nil
+		return VersionIsDeprecated(expirableVersion), nil
 	}
 }
 
