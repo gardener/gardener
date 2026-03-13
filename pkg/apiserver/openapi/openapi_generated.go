@@ -8453,13 +8453,6 @@ func schema_pkg_apis_core_v1beta1_SeedDNSProvider(ref common.ReferenceCallback) 
 							Format:      "",
 						},
 					},
-					"secretRef": {
-						SchemaProps: spec.SchemaProps{
-							Description: "SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.\n\nDeprecated: This field is deprecated and will be removed after v1.138.0 is released. Please use `CredentialsRef` instead. Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.",
-							Default:     map[string]interface{}{},
-							Ref:         ref(corev1.SecretReference{}.OpenAPIModelName()),
-						},
-					},
 					"credentialsRef": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CredentialsRef is a reference to a resource holding the credentials used for authentication with the DNS provider. Supported referenced resources are v1.Secrets and security.gardener.cloud/v1alpha1.WorkloadIdentity",
@@ -8467,11 +8460,11 @@ func schema_pkg_apis_core_v1beta1_SeedDNSProvider(ref common.ReferenceCallback) 
 						},
 					},
 				},
-				Required: []string{"type", "secretRef"},
+				Required: []string{"type"},
 			},
 		},
 		Dependencies: []string{
-			corev1.ObjectReference{}.OpenAPIModelName(), corev1.SecretReference{}.OpenAPIModelName()},
+			corev1.ObjectReference{}.OpenAPIModelName()},
 	}
 }
 

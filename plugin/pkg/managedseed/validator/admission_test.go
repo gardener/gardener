@@ -605,9 +605,11 @@ var _ = Describe("ManagedSeed", func() {
 										DNS: gardencorev1beta1.SeedDNS{
 											Provider: &gardencorev1beta1.SeedDNSProvider{
 												Type: dnsProvider,
-												SecretRef: corev1.SecretReference{
-													Name:      name,
-													Namespace: namespace,
+												CredentialsRef: &corev1.ObjectReference{
+													APIVersion: "v1",
+													Kind:       "Secret",
+													Name:       name,
+													Namespace:  namespace,
 												},
 											},
 										},
