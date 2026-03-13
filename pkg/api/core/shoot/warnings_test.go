@@ -421,6 +421,29 @@ var _ = Describe("Warnings", func() {
 				ContainElement(Equal("you are setting the spec.kubernetes.kubeAPIServer.eventTTL field to an invalid value. Invalid value: '240h0m0s', valid values: [0, 24h]. Invalid values for existing resources will be no longer allowed in Gardener v1.142.0. See: https://github.com/gardener/gardener/issues/13825")),
 			),
 		)
+
+		DescribeTable("spec.dns.providers[].secretName",
+			func(dns *core.DNS, matcher gomegatypes.GomegaMatcher) {
+				shoot.Spec.DNS = dns
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(matcher)
+			},
+			Entry("should not return a warning when dns is nil",
+				nil,
+				BeEmpty(),
+			),
+			Entry("should not return a warning when dns.providers is nil",
+				&core.DNS{Providers: nil},
+				BeEmpty(),
+			),
+			Entry("should not return a warning when secretName is not set",
+				&core.DNS{Providers: []core.DNSProvider{{SecretName: nil}}},
+				BeEmpty(),
+			),
+			Entry("should return a warning when secretName is set",
+				&core.DNS{Providers: []core.DNSProvider{{SecretName: ptr.To("secret")}}},
+				ContainElement(Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead.")),
+			),
+		)
 	})
 
 	Describe("#GetKubeAPIServerWarnings", func() {
