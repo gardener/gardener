@@ -4,17 +4,19 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-set -e
-set -o pipefail
+set -euo pipefail
 
-# Generates the ignoreDeps (or any other) section of a renovate.json5 file with the dependencies
-# that are shared between the local go.mod and the gardener/gardener go.mod.
+# Generates the ignoreDeps (or matchPackageNames, or any other) array section of a renovate.json5
+# file with the dependencies that are shared between the local go.mod and the gardener/gardener go.mod.
 #
 # Usage:
 #   GARDENER_HACK_DIR=<path>          (required) path to the gardener/gardener hack directory
 #   RENOVATE_CONFIG=<path>            (optional) path to the renovate config file (default: renovate.json5)
-#   NEEDLE=<comment>                  (optional) marker comment identifying the target array in the
-#                                     renovate config (default: "// GENERATOR-PIN")
+#   ARRAY_KEY=<key>                   (optional) the renovate config key whose array is replaced
+#                                     (default: "ignoreDeps")
+#   NEEDLE=<comment>                  (optional) marker comment on the opening line of the target array,
+#                                     used to disambiguate when the key appears multiple times
+#                                     (default: "", meaning the first occurrence of ARRAY_KEY is used)
 #   EXCLUDE_DEPS=<dep1,dep2,...>      (optional) comma-separated list of dependencies to exclude
 #                                     from the generated list
 #
@@ -23,7 +25,8 @@ set -o pipefail
 
 # Configurable defaults.
 RENOVATE_CONFIG="${RENOVATE_CONFIG:-renovate.json5}"
-NEEDLE="${NEEDLE:-// GENERATOR-PIN}"
+ARRAY_KEY="${ARRAY_KEY:-ignoreDeps}"
+NEEDLE="${NEEDLE:-}"
 
 # Takes the content of a go.mod file and an array name to add the extracted dependencies to.
 extract_dependencies() {
@@ -38,7 +41,7 @@ extract_dependencies() {
   done <<< "$go_mod"
 }
 
-echo "🪧 Generating section for '$RENOVATE_CONFIG' (needle: '$NEEDLE')"
+echo "🪧 Generating section for '$RENOVATE_CONFIG' (key: '$ARRAY_KEY', needle: '${NEEDLE:-<none>}')"
 
 # Only the dependency lines in a go.mod file are indented with a tab.
 local_go_mod=$(grep -P '^\t' go.mod)
@@ -83,18 +86,26 @@ echo "☯️  Found ${#common_dependencies[@]} common dependencies."
 ignore_deps=$(printf ',"%s"' "${common_dependencies[@]}")  # prepend comma to each element
 ignore_deps="[${ignore_deps:1}]"                           # remove leading comma, wrap in []
 
-# Detect indentation: look at the line after the needle in the config file and use its leading spaces.
+# Build the pattern that matches the opening line of the target array, e.g.:
+#   ignoreDeps: [
+#   matchPackageNames: [ // GENERATOR-PIN
+array_open="${ARRAY_KEY}: \[${NEEDLE:+ ${NEEDLE}}"
+
+# Detect indentation: look at the line after the array opening and use its leading spaces.
 # Falls back to 8 spaces if no existing entries are found.
-indent=$(grep -A1 "$NEEDLE" "$RENOVATE_CONFIG" | tail -1 | sed 's/\(^[[:space:]]*\).*/\1/' | head -1)
+indent=$(grep -A1 "$array_open" "$RENOVATE_CONFIG" | tail -1 | sed 's/\(^[[:space:]]*\).*/\1/' | head -1)
 if [[ -z "$indent" || "$indent" == *$'\t'* ]]; then
   indent="        "  # default: 8 spaces (fits inside a packageRules block)
 fi
 
+# Escape forward slashes in the pattern for use in sed address ranges.
+array_open_escaped="${array_open//\//\\/}"
+
 # Format each dependency on its own indented line with a trailing comma, then replace the
-# contents of the array delimited by the needle comment in the renovate config.
+# contents of the array delimited by the array opening line in the renovate config.
 echo "$ignore_deps" | yq -o json '.[]' \
   | sed "s/^/${indent}/; s/$/,/" \
   | sed -i \
-      -e "/  matchPackageNames: \[ ${NEEDLE//\//\\/}/,  /\]/{//!d;}" \
-      -e "/  matchPackageNames: \[ ${NEEDLE//\//\\/}/r /dev/stdin" \
+      -e "/  ${array_open_escaped}/,  /\]/{//!d;}" \
+      -e "/  ${array_open_escaped}/r /dev/stdin" \
       "$RENOVATE_CONFIG"
