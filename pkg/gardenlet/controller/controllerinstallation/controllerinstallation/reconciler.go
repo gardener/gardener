@@ -376,7 +376,10 @@ func (r *Reconciler) reconcile(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
 		managedResourceName,
-		map[string]string{ctrlinstutils.LabelKeyControllerInstallationName: controllerInstallation.Name},
+		map[string]string{
+			ctrlinstutils.LabelKeyControllerInstallationName: controllerInstallation.Name,
+			ctrlinstutils.LabelKeyControllerRegistrationName: controllerInstallation.Spec.RegistrationRef.Name,
+		},
 		false,
 		v1beta1constants.SeedResourceManagerClass,
 		secretData,
