@@ -43,6 +43,9 @@ config:
     VictoriaLogsBackend: true
     VPNBondingModeRoundRobin: true
     PrometheusHealthChecks: true
+  etcdConfig:
+    featureGates:
+      UpgradeEtcdVersion: false
   logging:
     enabled: true
     vali:
