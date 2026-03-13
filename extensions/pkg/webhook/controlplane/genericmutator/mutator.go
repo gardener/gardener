@@ -32,8 +32,9 @@ import (
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 )
 
-// Ensurer ensures that various standard Kubernetes control plane objects conform to the provider requirements.
-// If they don't initially, they are mutated accordingly.
+// Ensurer ensures that various standard Kubernetes and Gardener control-plane
+// objects conform to the provider requirements.  If they don't initially, they
+// are mutated accordingly.
 type Ensurer interface {
 	// EnsureKubeAPIServerDeployment ensures that the kube-apiserver deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
@@ -89,6 +90,9 @@ type Ensurer interface {
 	// EnsureCRIConfig ensures the CRI config.
 	// "old" might be "nil" and must always be checked.
 	EnsureCRIConfig(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *extensionsv1alpha1.CRIConfig) error
+	// EnsureGardenerResourceManagerDeployment ensures that the Resource Manager deployment conforms to the provider requirements.
+	// "old" might be "nil" and must always be checked.
+	EnsureGardenerResourceManagerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.Deployment) error
 }
 
 // NewMutator creates a new controlplane mutator.
@@ -157,6 +161,9 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 		case v1beta1constants.DeploymentNameVPNSeedServer:
 			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
 			return m.ensurer.EnsureVPNSeedServerDeployment(ctx, gctx, x, oldDep)
+		case v1beta1constants.DeploymentNameGardenerResourceManager, operatorv1alpha1.DeploymentNameVirtualGardenGardenerResourceManager:
+			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
+			return m.ensurer.EnsureGardenerResourceManagerDeployment(ctx, gctx, x, oldDep)
 		}
 	case *appsv1.StatefulSet:
 		var oldSet *appsv1.StatefulSet
