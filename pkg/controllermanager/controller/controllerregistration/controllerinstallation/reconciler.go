@@ -191,7 +191,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	if err := deleteUnneededInstallations(ctx, log, r.Client, wantedControllerRegistrationNames, registrationNameToInstallation); err != nil {
+	if err := deleteUnneededInstallations(ctx, log, r.Client, r.Kind, wantedControllerRegistrationNames, registrationNameToInstallation); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -599,6 +599,10 @@ func deployNeededInstallation(
 			}
 
 		case ShootKind:
+			// If this ControllerInstallation was previously created by the seed reconciler for a self-hosted-shoot
+			// seed, strip the ownership label to adopt it.
+			delete(controllerInstallation.Labels, SeedRefName)
+
 			shoot, ok := obj.(*gardencorev1beta1.Shoot)
 			if !ok {
 				return fmt.Errorf("cannot convert object of type %T to *gardencorev1beta1.Shoot", obj)
@@ -664,20 +668,44 @@ func deployNeededInstallation(
 // deleteUnneededInstallations takes the list of required names of ControllerRegistrations, and another mapping of
 // ControllerRegistration names to existing ControllerInstallations. It deletes every existing ControllerInstallation
 // whose referenced ControllerRegistration is not part of the given list of required list.
+// For the seed reconciler: ControllerInstallations with the SeedRefName label are not deleted but instead the label is
+// stripped — this hands ownership to the shoot reconciler.
+// For the shoot reconciler: ControllerInstallations with the SeedRefName label are skipped entirely (the seed
+// reconciler owns them).
 func deleteUnneededInstallations(
 	ctx context.Context,
 	log logr.Logger,
 	c client.Client,
+	kind Kind,
 	wantedControllerRegistrationNames sets.Set[string],
 	registrationNameToInstallation map[string]*gardencorev1beta1.ControllerInstallation,
 ) error {
 	for registrationName, installation := range registrationNameToInstallation {
-		if !wantedControllerRegistrationNames.Has(registrationName) {
-			log.Info("Deleting unneeded ControllerInstallation for ControllerRegistration", "controllerRegistrationName", registrationName, "controllerInstallationName", installation.Name)
+		if wantedControllerRegistrationNames.Has(registrationName) {
+			continue
+		}
 
-			if err := c.Delete(ctx, installation); client.IgnoreNotFound(err) != nil {
-				return err
+		// ControllerInstallations with the SeedRefName label are owned by the seed reconciler.
+		if metav1.HasLabel(installation.ObjectMeta, SeedRefName) {
+			if kind == ShootKind {
+				// The shoot reconciler must not delete or modify seed-owned ControllerInstallations.
+				continue
 			}
+
+			log.Info("Removing seed ownership label from ControllerInstallation to hand over to shoot reconciler", "controllerRegistrationName", registrationName, "controllerInstallationName", installation.Name)
+
+			patch := client.MergeFrom(installation.DeepCopy())
+			delete(installation.Labels, SeedRefName)
+			if err := c.Patch(ctx, installation, patch); err != nil {
+				return fmt.Errorf("failed removing %s label from ControllerInstallation %s: %w", SeedRefName, installation.Name, err)
+			}
+			continue
+		}
+
+		log.Info("Deleting unneeded ControllerInstallation for ControllerRegistration", "controllerRegistrationName", registrationName, "controllerInstallationName", installation.Name)
+
+		if err := c.Delete(ctx, installation); client.IgnoreNotFound(err) != nil {
+			return err
 		}
 	}
 
@@ -767,11 +795,12 @@ func controllerInstallationReferencesObject(controllerInstallation gardencorev1b
 	switch kind {
 	case SeedKind:
 		if selfHostedShoot != nil {
-			// For self-hosted-shoot seeds the seed reconciler creates ControllerInstallations with .spec.shootRef,
-			// so match by shootRef rather than seedRef.
+			// For self-hosted-shoot seeds the seed reconciler creates ControllerInstallations with .spec.shootRef
+			// and marks them with the SeedRefName label. Only match those — the shoot reconciler manages the rest.
 			if controllerInstallation.Spec.ShootRef == nil ||
 				controllerInstallation.Spec.ShootRef.Name != selfHostedShoot.Name ||
-				controllerInstallation.Spec.ShootRef.Namespace != selfHostedShoot.Namespace {
+				controllerInstallation.Spec.ShootRef.Namespace != selfHostedShoot.Namespace ||
+				!metav1.HasLabel(controllerInstallation.ObjectMeta, SeedRefName) {
 				return false
 			}
 		} else {
@@ -783,12 +812,6 @@ func controllerInstallationReferencesObject(controllerInstallation gardencorev1b
 		if controllerInstallation.Spec.ShootRef == nil ||
 			controllerInstallation.Spec.ShootRef.Name != obj.GetName() ||
 			controllerInstallation.Spec.ShootRef.Namespace != obj.GetNamespace() {
-			return false
-		}
-		// ControllerInstallations created by the seed reconciler for self-hosted-shoot seeds use .spec.shootRef
-		// as well (so the shoot gardenlet can manage them), but are marked with SeedRefName to prevent the shoot
-		// reconciler from managing or deleting them.
-		if metav1.HasLabel(controllerInstallation.ObjectMeta, SeedRefName) {
 			return false
 		}
 	}

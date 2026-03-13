@@ -1075,7 +1075,7 @@ var _ = Describe("Reconciler", func() {
 
 				k8sClient.EXPECT().Delete(ctx, controllerInstallation1).Return(fakeErr)
 
-				err := deleteUnneededInstallations(ctx, log, k8sClient, wantedControllerRegistrationNames, registrationNameToInstallation)
+				err := deleteUnneededInstallations(ctx, log, k8sClient, SeedKind, wantedControllerRegistrationNames, registrationNameToInstallation)
 
 				Expect(err).To(Equal(fakeErr))
 			})
@@ -1093,7 +1093,43 @@ var _ = Describe("Reconciler", func() {
 				k8sClient.EXPECT().Delete(ctx, controllerInstallation1)
 				k8sClient.EXPECT().Delete(ctx, controllerInstallation3)
 
-				err := deleteUnneededInstallations(ctx, log, k8sClient, wantedControllerRegistrationNames, registrationNameToInstallation)
+				err := deleteUnneededInstallations(ctx, log, k8sClient, SeedKind, wantedControllerRegistrationNames, registrationNameToInstallation)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should remove the seed ownership label instead of deleting when the ControllerInstallation has the seed-ref-name label", func() {
+				installation := controllerInstallation2.DeepCopy()
+				metav1.SetMetaDataLabel(&installation.ObjectMeta, SeedRefName, seedName)
+
+				var (
+					wantedControllerRegistrationNames = sets.New[string]()
+					registrationNameToInstallation    = map[string]*gardencorev1beta1.ControllerInstallation{
+						controllerRegistration2.Name: installation,
+					}
+				)
+
+				expectedInstallation := installation.DeepCopy()
+				delete(expectedInstallation.Labels, SeedRefName)
+				k8sClient.EXPECT().Patch(ctx, expectedInstallation, gomock.Any())
+
+				err := deleteUnneededInstallations(ctx, log, k8sClient, SeedKind, wantedControllerRegistrationNames, registrationNameToInstallation)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should skip seed-owned ControllerInstallations when the shoot reconciler calls", func() {
+				installation := controllerInstallation2.DeepCopy()
+				metav1.SetMetaDataLabel(&installation.ObjectMeta, SeedRefName, seedName)
+
+				var (
+					wantedControllerRegistrationNames = sets.New[string]()
+					registrationNameToInstallation    = map[string]*gardencorev1beta1.ControllerInstallation{
+						controllerRegistration2.Name: installation,
+					}
+				)
+
+				err := deleteUnneededInstallations(ctx, log, k8sClient, ShootKind, wantedControllerRegistrationNames, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
 			})

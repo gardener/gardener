@@ -110,6 +110,8 @@ For example, if the shoots in the seed are no longer using the DNS provider `aws
 When the `Seed` carries the label `seed.gardener.cloud/self-hosted-shoot-cluster=true`, the seed cluster is also a self-hosted shoot cluster managed by the ["Self-Hosted Shoot" Reconciler](#self-hosted-shoot-reconciler).
 In this case, the seed reconciler subtracts all kind/type combinations already covered by the self-hosted shoot (its own extensions, `BackupBucket`s, and `BackupEntry`s referencing the shoot) from the set of required kind/types, so that only extensions exclusively needed by the seed role remain.
 `ControllerInstallations` created for these seed-exclusive extensions reference the shoot via `.spec.shootRef` (not `.spec.seedRef`), so that extensions are not uninstalled if the seed is later deregistered while the shoot still exists.
+These `ControllerInstallation`s are marked with a `seed-ref-name` label so that the shoot reconciler does not accidentally manage or delete them.
+If an extension previously exclusive to the seed becomes also required by the shoot (e.g., because of a shoot spec change), the seed reconciler removes the `seed-ref-name` label instead of deleting the `ControllerInstallation`, handing ownership to the shoot reconciler.
 `Always` and `AlwaysExceptNoShoots` deployment policies are also suppressed for the seed reconciler in this case — they are handled by the self-hosted shoot reconciler.
 
 #### ["Self-Hosted Shoot" Reconciler](../../pkg/controllermanager/controller/controllerregistration/controllerinstallation/shoot)
