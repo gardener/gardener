@@ -154,7 +154,7 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 
 		case controllerInstallationResource:
 			return requestAuthorizer.Check(graph.VertexTypeControllerInstallation, attrs,
-				authwebhook.WithAllowedVerbs("get", "list", "watch", "patch"),
+				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
 				authwebhook.WithAllowedSubresources("status"),
 				authwebhook.WithFieldSelectors(map[string]string{
 					core.ShootRefName:      shootName,
