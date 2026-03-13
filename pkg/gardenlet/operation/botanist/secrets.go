@@ -128,44 +128,46 @@ func (b *Botanist) restoreSecretsFromShootState(ctx context.Context) error {
 func restoreSecretFromPersistedData(ctx context.Context, seedClient client.Client, objectMeta metav1.ObjectMeta, rawData []byte) error {
 	newSecretInfo := struct {
 		Data      map[string][]byte `json:"data"`
-		Immutable *bool             `json:"immutable"`
-		Type      string            `json:"type"`
+		Immutable *bool             `json:"immutable,omitempty"`
+		Type      corev1.SecretType `json:"type,omitempty"`
 	}{}
 
-	var secretData map[string][]byte
-	var Immutable *bool
-	var Type corev1.SecretType
+	var (
+		secretData map[string][]byte
+		immutable  *bool
+		secretType corev1.SecretType
+	)
 
-	if err := json.Unmarshal(rawData, &newSecretInfo); err == nil && newSecretInfo.Data != nil {
-		secretData = newSecretInfo.Data
-		Immutable = newSecretInfo.Immutable
-		if newSecretInfo.Type != "" {
-			Type = corev1.SecretType(newSecretInfo.Type)
-		} else {
-			Type = corev1.SecretTypeOpaque
-		}
-	} else {
+	if err := json.Unmarshal(rawData, &newSecretInfo); err != nil || newSecretInfo.Data == nil {
+		// TODO: Remove this fallback in a future release after all ShootStates have been reconciled and use the new format.
 		// plain map[string][]byte
-		oldSecretData := make(map[string][]byte)
-		if err := json.Unmarshal(rawData, &oldSecretData); err != nil {
+		if err := json.Unmarshal(rawData, &secretData); err != nil {
 			return fmt.Errorf("failed unmarshalling secret data for secret %s: neither new nor old format matched: %w", objectMeta.Name, err)
 		}
 
 		if objectMeta.Labels[secretsmanager.LabelKeyManagedBy] == secretsmanager.LabelValueSecretsManager {
-			secret := secretsmanager.Secret(objectMeta, oldSecretData)
+			secret := secretsmanager.Secret(objectMeta, secretData)
 			return client.IgnoreAlreadyExists(seedClient.Create(ctx, secret))
 		}
 
-		secretData = oldSecretData
-		Immutable = nil
-		Type = corev1.SecretTypeOpaque
+		secretData = secretData
+		immutable = nil
+		secretType = corev1.SecretTypeOpaque
+	} else {
+		secretData = newSecretInfo.Data
+		immutable = newSecretInfo.Immutable
+		if newSecretInfo.Type != "" {
+			secretType = corev1.SecretType(newSecretInfo.Type)
+		} else {
+			secretType = corev1.SecretTypeOpaque
+		}
 	}
 
 	secret := &corev1.Secret{
 		ObjectMeta: objectMeta,
-		Type:       Type,
+		Type:       secretType,
 		Data:       secretData,
-		Immutable:  Immutable,
+		Immutable:  immutable,
 	}
 
 	return client.IgnoreAlreadyExists(seedClient.Create(ctx, secret))
