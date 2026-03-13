@@ -27,6 +27,7 @@ func OperatingSystemConfigSecret(
 	osc *extensionsv1alpha1.OperatingSystemConfig,
 	secretName string,
 	workerPoolName string,
+	resolveSecretRefs bool,
 ) (
 	*corev1.Secret,
 	error,
@@ -47,23 +48,26 @@ func OperatingSystemConfigSecret(
 		},
 	}
 
-	// The OperatingSystemConfig will be deployed to the shoot to get processed by gardener-node-agent. It doesn't
-	// have access to the referenced secrets (stored in the shoot namespace in the seed), hence we have to translate
-	// all references into inline content.
-	for i, file := range operatingSystemConfig.Spec.Files {
-		if file.Content.SecretRef == nil {
-			continue
-		}
+	// The OperatingSystemConfig will be deployed to the shoot to get processed by gardener-node-agent. In the regular
+	// shoot case, it doesn't have access to the referenced secrets (stored in the shoot namespace in the seed), hence
+	// we have to translate all references into inline content. In the self-hosted shoot case (gardenadm), the secrets
+	// already exist in kube-system and gardener-node-agent can resolve them itself.
+	if resolveSecretRefs {
+		for i, file := range operatingSystemConfig.Spec.Files {
+			if file.Content.SecretRef == nil {
+				continue
+			}
 
-		secret := &corev1.Secret{}
-		if err := seedClient.Get(ctx, client.ObjectKey{Name: file.Content.SecretRef.Name, Namespace: osc.Namespace}, secret); err != nil {
-			return nil, fmt.Errorf("cannot resolve secret ref from osc: %w", err)
-		}
+			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: file.Content.SecretRef.Name, Namespace: osc.Namespace}}
+			if err := seedClient.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+				return nil, fmt.Errorf("cannot resolve secret ref from osc: %w", err)
+			}
 
-		operatingSystemConfig.Spec.Files[i].Content.SecretRef = nil
-		operatingSystemConfig.Spec.Files[i].Content.Inline = &extensionsv1alpha1.FileContentInline{
-			Encoding: "b64",
-			Data:     utils.EncodeBase64(secret.Data[file.Content.SecretRef.DataKey]),
+			operatingSystemConfig.Spec.Files[i].Content.SecretRef = nil
+			operatingSystemConfig.Spec.Files[i].Content.Inline = &extensionsv1alpha1.FileContentInline{
+				Encoding: "b64",
+				Data:     utils.EncodeBase64(secret.Data[file.Content.SecretRef.DataKey]),
+			}
 		}
 	}
 

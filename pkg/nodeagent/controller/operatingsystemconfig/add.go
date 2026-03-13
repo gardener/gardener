@@ -47,6 +47,9 @@ const ControllerName = "operatingsystemconfig"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
+	if r.APIReader == nil {
+		r.APIReader = mgr.GetAPIReader()
+	}
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}

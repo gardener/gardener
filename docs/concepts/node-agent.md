@@ -62,7 +62,9 @@ Amongst others, a prominent example is the configuration file for `kubelet` and 
 It also watches `Node`s and requeues the corresponding `Secret` when the reason of the node condition `InPlaceUpdate` changes to `ReadyForUpdate`.
 
 The controller decodes the configuration and computes the files and units that have changed since its last reconciliation.
-It writes or update the files and units to the file system, removes no longer needed files and units, reloads the systemd daemon, and starts or stops the units accordingly.
+File content can be provided inline, via an image reference, or via a `secretRef` pointing to a `Secret` in the `kube-system` namespace.
+For `secretRef` files, the controller reads the referenced `Secret` and extracts the data from the specified key.
+It writes or updates the files and units to the file system, removes no longer needed files and units, reloads the systemd daemon, and starts or stops the units accordingly.
 
 After successful reconciliation, it persists the just applied `OperatingSystemConfig` into a file on the host.
 This file will be used for future reconciliations to compute file/unit changes.

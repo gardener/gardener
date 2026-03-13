@@ -18,13 +18,19 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -52,7 +58,17 @@ var (
 	nodeResource                      = corev1.Resource("nodes")
 	podResource                       = corev1.Resource("pods")
 	secretsResource                   = corev1.Resource("secrets")
+
+	oscDecoder runtime.Decoder
 )
+
+func init() {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
+	ser := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, scheme, scheme, jsonserializer.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
+	versions := schema.GroupVersions([]schema.GroupVersion{extensionsv1alpha1.SchemeGroupVersion})
+	oscDecoder = serializer.NewCodecFactory(scheme).CodecForVersions(nil, ser, nil, versions)
+}
 
 type authorizer struct {
 	sourceClient client.Client
@@ -283,7 +299,33 @@ func (a *authorizer) authorizeSecret(ctx context.Context, log logr.Logger, machi
 		if err := a.sourceClient.Get(ctx, client.ObjectKey{Name: machineName, Namespace: *a.machineNamespace}, machine); err != nil {
 			return auth.DecisionDeny, "", fmt.Errorf("error getting machine %q: %w", machineName, err)
 		}
-		validSecrets = append(validSecrets, machine.Spec.NodeTemplateSpec.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName])
+
+		oscSecretName := machine.Spec.NodeTemplateSpec.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]
+		validSecrets = append(validSecrets, oscSecretName)
+
+		oscSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: oscSecretName, Namespace: metav1.NamespaceSystem}}
+		if err := a.targetClient.Get(ctx, client.ObjectKeyFromObject(oscSecret), oscSecret); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return auth.DecisionDeny, "", fmt.Errorf("error getting OSC secret %q: %w", oscSecretName, err)
+			}
+		} else {
+			var hostname string
+
+			node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machine.Labels[machinev1alpha1.NodeLabelKey]}}
+			if err := a.targetClient.Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return auth.DecisionDeny, "", fmt.Errorf("error getting node %q: %w", node.Name, err)
+				}
+			} else {
+				hostname = node.Labels[corev1.LabelHostname]
+			}
+
+			secretRefNames, err := secretRefNamesFromOSCSecret(oscSecret, hostname)
+			if err != nil {
+				return auth.DecisionDeny, "", fmt.Errorf("error reading secretRef names from OSC secret %q: %w", oscSecretName, err)
+			}
+			validSecrets = append(validSecrets, secretRefNames...)
+		}
 	} else {
 		var nodeNotFound bool
 
@@ -307,12 +349,25 @@ func (a *authorizer) authorizeSecret(ctx context.Context, log logr.Logger, machi
 			// gardener-node-agent uses, it needs access to all operating system config secrets.
 			for _, oscSecret := range oscSecretList.Items {
 				validSecrets = append(validSecrets, oscSecret.Name)
+
+				secretRefNames, err := secretRefNamesFromOSCSecret(&oscSecret, "")
+				if err != nil {
+					return auth.DecisionDeny, "", fmt.Errorf("error reading secretRef names from OSC secret %q: %w", oscSecret.Name, err)
+				}
+				validSecrets = append(validSecrets, secretRefNames...)
 			}
 		} else {
 			// Verify that the secret from node label is an operating system config secret.
+			hostname := node.Labels[corev1.LabelHostname]
 			for _, oscSecret := range oscSecretList.Items {
 				if oscSecret.Name == node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName] {
 					validSecrets = append(validSecrets, oscSecret.Name)
+
+					secretRefNames, err := secretRefNamesFromOSCSecret(&oscSecret, hostname)
+					if err != nil {
+						return auth.DecisionDeny, "", fmt.Errorf("error reading secretRef names from OSC secret %q: %w", oscSecret.Name, err)
+					}
+					validSecrets = append(validSecrets, secretRefNames...)
 					break
 				}
 			}
@@ -325,6 +380,27 @@ func (a *authorizer) authorizeSecret(ctx context.Context, log logr.Logger, machi
 	}
 
 	return auth.DecisionAllow, "", nil
+}
+
+func secretRefNamesFromOSCSecret(secret *corev1.Secret, hostname string) ([]string, error) {
+	oscRaw, ok := secret.Data[nodeagentconfigv1alpha1.DataKeyOperatingSystemConfig]
+	if !ok {
+		return nil, nil
+	}
+
+	osc := &extensionsv1alpha1.OperatingSystemConfig{}
+	if err := runtime.DecodeInto(oscDecoder, oscRaw, osc); err != nil {
+		return nil, fmt.Errorf("unable to decode OSC from secret %q: %w", secret.Name, err)
+	}
+
+	var names []string
+	for _, file := range append(osc.Spec.Files, osc.Status.ExtensionFiles...) {
+		if file.Content.SecretRef != nil && (hostname == "" || file.HostName == nil || *file.HostName == hostname) {
+			names = append(names, file.Content.SecretRef.Name)
+		}
+	}
+
+	return names, nil
 }
 
 func (a *authorizer) checkVerb(log logr.Logger, attrs auth.Attributes, allowedVerbs ...string) (bool, string) {

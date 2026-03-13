@@ -1279,6 +1279,7 @@ build:
             - pkg/apis/authentication/v1alpha1
             - pkg/apis/config
             - pkg/apis/config/gardenlet/v1alpha1
+            - pkg/apis/config/nodeagent/v1alpha1
             - pkg/apis/config/resourcemanager/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/install

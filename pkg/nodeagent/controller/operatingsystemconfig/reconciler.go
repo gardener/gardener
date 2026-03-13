@@ -108,7 +108,8 @@ func init() {
 // Reconciler decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
 // node.
 type Reconciler struct {
-	Client client.Client
+	APIReader client.Reader
+	Client    client.Client
 	// LeaseClient is a cached client just for the leader election Lease in case the OperatingSystemConfig
 	// reconciliation is serialised.
 	LeaseClient      client.Client
@@ -272,8 +273,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		)
 	}
 
-	log.Info("Applying new or changed inline files")
-	if err := r.applyChangedInlineFiles(log, oscChanges); err != nil {
+	log.Info("Applying new or changed inline and secretRef files")
+	if err := r.applyChangedInlineFiles(ctx, log, oscChanges); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed applying changed inline files: %w", err)
 	}
 
@@ -464,7 +465,41 @@ func (r *Reconciler) applyChangedImageRefFiles(ctx context.Context, log logr.Log
 	return nil
 }
 
-func (r *Reconciler) applyChangedInlineFiles(log logr.Logger, changes *operatingSystemConfigChanges) error {
+// getFileContentData resolves the data for a file from its inline content or secretRef.
+// It returns ok=false if the file has neither (e.g., imageRef files handled separately).
+func (r *Reconciler) getFileContentData(ctx context.Context, file extensionsv1alpha1.File) ([]byte, bool, error) {
+	switch {
+	case file.Content.Inline != nil:
+		data, err := extensionsv1alpha1helper.Decode(file.Content.Inline.Encoding, []byte(file.Content.Inline.Data))
+		if err != nil {
+			return nil, false, fmt.Errorf("unable to decode inline data: %w", err)
+		}
+		return data, true, nil
+
+	case file.Content.SecretRef != nil:
+		// APIReader is a direct client (not cached) for reading Secrets referenced via secretRef in the
+		// OperatingSystemConfig. gardener-node-agent only has permissions to watch the OSC secret by name (via the
+		// node-agent-authorizer) and the manager cache for Secrets is accordingly restricted. Hence, secretRef targets are
+		// invisible to the cached client.
+		// Since we plan to use files with secretRef only for the control plane worker pool of self-hosted shoots, the
+		// network I/O impact should be negligible.
+		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: file.Content.SecretRef.Name, Namespace: metav1.NamespaceSystem}}
+		if err := r.APIReader.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+			return nil, false, fmt.Errorf("unable to read referenced secret %q: %w", file.Content.SecretRef.Name, err)
+		}
+
+		data, ok := secret.Data[file.Content.SecretRef.DataKey]
+		if !ok {
+			return nil, false, fmt.Errorf("secret %q does not contain key %q", file.Content.SecretRef.Name, file.Content.SecretRef.DataKey)
+		}
+		return data, true, nil
+
+	default:
+		return nil, false, nil
+	}
+}
+
+func (r *Reconciler) applyChangedInlineFiles(ctx context.Context, log logr.Logger, changes *operatingSystemConfigChanges) error {
 	tmpDir, err := r.FS.TempDir(nodeagentconfigv1alpha1.TempDir, "osc-reconciliation-file-")
 	if err != nil {
 		return fmt.Errorf("unable to create temporary directory: %w", err)
@@ -473,17 +508,16 @@ func (r *Reconciler) applyChangedInlineFiles(log logr.Logger, changes *operating
 	defer func() { utilruntime.HandleError(r.FS.RemoveAll(tmpDir)) }()
 
 	for _, file := range slices.Clone(changes.Files.Changed) {
-		if file.Content.Inline == nil {
+		data, ok, err := r.getFileContentData(ctx, file)
+		if err != nil {
+			return fmt.Errorf("unable to get data of file %q: %w", file.Path, err)
+		}
+		if !ok {
 			continue
 		}
 
 		if err := r.FS.MkdirAll(filepath.Dir(file.Path), defaultDirPermissions); err != nil {
 			return fmt.Errorf("unable to create directory %q: %w", file.Path, err)
-		}
-
-		data, err := extensionsv1alpha1helper.Decode(file.Content.Inline.Encoding, []byte(file.Content.Inline.Data))
-		if err != nil {
-			return fmt.Errorf("unable to decode data of file %q: %w", file.Path, err)
 		}
 
 		tmpFilePath := filepath.Join(tmpDir, filepath.Base(file.Path))
@@ -1168,7 +1202,7 @@ func (r *Reconciler) restartNodeAgent(oscChanges *operatingSystemConfigChanges, 
 }
 
 func (r *Reconciler) ensureStaticPodsReconciledAndReady(ctx context.Context, log logr.Logger, node *corev1.Node, osc *extensionsv1alpha1.OperatingSystemConfig) (done bool, err error) {
-	staticPodNameToDesiredHash, err := r.getDesiredStaticPodHashes(log, osc)
+	staticPodNameToDesiredHash, err := r.getDesiredStaticPodHashes(ctx, log, osc)
 	if err != nil {
 		return false, fmt.Errorf("failed to retrieve desired static pod hashes from OperatingSystemConfig: %w", err)
 	}
@@ -1205,7 +1239,7 @@ func (r *Reconciler) ensureStaticPodsReconciledAndReady(ctx context.Context, log
 	return true, nil
 }
 
-func (r *Reconciler) getDesiredStaticPodHashes(log logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig) (map[string]string, error) {
+func (r *Reconciler) getDesiredStaticPodHashes(ctx context.Context, log logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig) (map[string]string, error) {
 	staticPodFiles := slices.DeleteFunc(append(osc.Spec.Files, osc.Status.ExtensionFiles...), func(file extensionsv1alpha1.File) bool {
 		return !strings.HasPrefix(file.Path, kubeletcomponent.FilePathKubernetesManifests) ||
 			(file.HostName != nil && *file.HostName != r.HostName)
@@ -1213,13 +1247,12 @@ func (r *Reconciler) getDesiredStaticPodHashes(log logr.Logger, osc *extensionsv
 
 	staticPodNameToHash := make(map[string]string)
 	for _, file := range staticPodFiles {
-		if file.Content.Inline == nil {
-			continue
-		}
-
-		data, err := extensionsv1alpha1helper.Decode(file.Content.Inline.Encoding, []byte(file.Content.Inline.Data))
+		data, ok, err := r.getFileContentData(ctx, file)
 		if err != nil {
-			return nil, fmt.Errorf("unable to decode data of file %q: %w", file.Path, err)
+			return nil, fmt.Errorf("unable to get data of file %q: %w", file.Path, err)
+		}
+		if !ok {
+			continue
 		}
 
 		pod := &corev1.Pod{}

@@ -16,16 +16,22 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apiserver/pkg/authentication/user"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/testing"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/nodeagentauthorizer"
@@ -727,6 +733,306 @@ var _ = Describe("Authorizer", func() {
 				Entry("delete", "delete"),
 				Entry("deletecollection", "deletecollection"),
 			)
+
+			It("should allow accessing secrets referenced via secretRef in the OSC", func() {
+				oscScheme := runtime.NewScheme()
+				Expect(extensionsv1alpha1.AddToScheme(oscScheme)).To(Succeed())
+				ser := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, oscScheme, oscScheme, jsonserializer.SerializerOptions{Yaml: true})
+				versions := schema.GroupVersions([]schema.GroupVersion{extensionsv1alpha1.SchemeGroupVersion})
+				codec := serializer.NewCodecFactory(oscScheme).CodecForVersions(ser, ser, versions, versions)
+
+				osc := &extensionsv1alpha1.OperatingSystemConfig{
+					Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+						Files: []extensionsv1alpha1.File{{
+							Path:    "/some/file",
+							Content: extensionsv1alpha1.FileContent{SecretRef: &extensionsv1alpha1.FileContentSecretRef{Name: "my-referenced-secret", DataKey: "data"}},
+						}},
+					},
+				}
+				oscRaw, err := runtime.Encode(codec, osc)
+				Expect(err).NotTo(HaveOccurred())
+
+				oscSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      machineSecretName,
+						Namespace: metav1.NamespaceSystem,
+					},
+					Data: map[string][]byte{"osc.yaml": oscRaw},
+				}
+				Expect(targetClient.Create(ctx, oscSecret)).To(Succeed())
+				DeferCleanup(func() { Expect(targetClient.Delete(ctx, oscSecret)).To(Succeed()) })
+
+				attrs := &auth.AttributesRecord{
+					User:            nodeAgentUser,
+					Name:            "my-referenced-secret",
+					Namespace:       "kube-system",
+					APIGroup:        "",
+					Resource:        "secrets",
+					ResourceRequest: true,
+					Verb:            "get",
+				}
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
+			It("should deny accessing host-specific secretRef files for a different hostname", func() {
+				patch := client.MergeFrom(node.DeepCopy())
+				metav1.SetMetaDataLabel(&node.ObjectMeta, corev1.LabelHostname, "my-hostname")
+				Expect(targetClient.Patch(ctx, node, patch)).To(Succeed())
+				DeferCleanup(func() {
+					patch := client.MergeFrom(node.DeepCopy())
+					delete(node.Labels, corev1.LabelHostname)
+					Expect(targetClient.Patch(ctx, node, patch)).To(Succeed())
+				})
+
+				oscScheme := runtime.NewScheme()
+				Expect(extensionsv1alpha1.AddToScheme(oscScheme)).To(Succeed())
+				ser := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, oscScheme, oscScheme, jsonserializer.SerializerOptions{Yaml: true})
+				versions := schema.GroupVersions([]schema.GroupVersion{extensionsv1alpha1.SchemeGroupVersion})
+				codec := serializer.NewCodecFactory(oscScheme).CodecForVersions(ser, ser, versions, versions)
+
+				osc := &extensionsv1alpha1.OperatingSystemConfig{
+					Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+						Files: []extensionsv1alpha1.File{
+							{
+								Path:     "/host-specific/file",
+								HostName: ptr.To("other-hostname"),
+								Content:  extensionsv1alpha1.FileContent{SecretRef: &extensionsv1alpha1.FileContentSecretRef{Name: "other-host-secret", DataKey: "data"}},
+							},
+							{
+								Path:     "/host-specific/file",
+								HostName: ptr.To("my-hostname"),
+								Content:  extensionsv1alpha1.FileContent{SecretRef: &extensionsv1alpha1.FileContentSecretRef{Name: "my-host-secret", DataKey: "data"}},
+							},
+						},
+					},
+				}
+				oscRaw, err := runtime.Encode(codec, osc)
+				Expect(err).NotTo(HaveOccurred())
+
+				oscSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      machineSecretName,
+						Namespace: metav1.NamespaceSystem,
+					},
+					Data: map[string][]byte{"osc.yaml": oscRaw},
+				}
+				Expect(targetClient.Create(ctx, oscSecret)).To(Succeed())
+				DeferCleanup(func() { Expect(targetClient.Delete(ctx, oscSecret)).To(Succeed()) })
+
+				By("Allowing the secret for the matching hostname")
+				decision, reason, err := authorizer.Authorize(ctx, &auth.AttributesRecord{
+					User: nodeAgentUser, Name: "my-host-secret", Namespace: "kube-system",
+					APIGroup: "", Resource: "secrets", ResourceRequest: true, Verb: "get",
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+
+				By("Denying the secret for a different hostname")
+				decision, _, err = authorizer.Authorize(ctx, &auth.AttributesRecord{
+					User: nodeAgentUser, Name: "other-host-secret", Namespace: "kube-system",
+					APIGroup: "", Resource: "secrets", ResourceRequest: true, Verb: "get",
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionDeny))
+			})
+
+			When("machineNamespace is nil (gardenadm mode)", func() {
+				var gardenadmAuthorizer auth.Authorizer
+
+				BeforeEach(func() {
+					gardenadmAuthorizer = NewAuthorizer(log, sourceClient, targetClient, nil, false)
+				})
+
+				It("should allow accessing secrets referenced via secretRef in the OSC when node exists", func() {
+					oscScheme := runtime.NewScheme()
+					Expect(extensionsv1alpha1.AddToScheme(oscScheme)).To(Succeed())
+					ser := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, oscScheme, oscScheme, jsonserializer.SerializerOptions{Yaml: true})
+					versions := schema.GroupVersions([]schema.GroupVersion{extensionsv1alpha1.SchemeGroupVersion})
+					codec := serializer.NewCodecFactory(oscScheme).CodecForVersions(ser, ser, versions, versions)
+
+					osc := &extensionsv1alpha1.OperatingSystemConfig{
+						Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+							Files: []extensionsv1alpha1.File{{
+								Path:    "/some/file",
+								Content: extensionsv1alpha1.FileContent{SecretRef: &extensionsv1alpha1.FileContentSecretRef{Name: "gardenadm-referenced-secret", DataKey: "data"}},
+							}},
+						},
+					}
+					oscRaw, err := runtime.Encode(codec, osc)
+					Expect(err).NotTo(HaveOccurred())
+
+					oscSecretName := "gardenadm-osc-secret"
+					oscSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      oscSecretName,
+							Namespace: metav1.NamespaceSystem,
+							Labels:    map[string]string{v1beta1constants.LabelWorkerPool: "pool"},
+						},
+						Data: map[string][]byte{"osc.yaml": oscRaw},
+					}
+					Expect(targetClient.Create(ctx, oscSecret)).To(Succeed())
+					DeferCleanup(func() { Expect(targetClient.Delete(ctx, oscSecret)).To(Succeed()) })
+
+					gardenadmNode := &corev1.Node{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "gardenadm-node",
+							Labels: map[string]string{
+								v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName: oscSecretName,
+							},
+						},
+					}
+					Expect(targetClient.Create(ctx, gardenadmNode)).To(Succeed())
+					DeferCleanup(func() { Expect(targetClient.Delete(ctx, gardenadmNode)).To(Succeed()) })
+
+					gardenadmUser := &user.DefaultInfo{
+						Name:   fmt.Sprintf("%s%s", v1beta1constants.NodeAgentUserNamePrefix, "gardenadm-node"),
+						Groups: []string{v1beta1constants.NodeAgentsGroup},
+					}
+
+					attrs := &auth.AttributesRecord{
+						User:            gardenadmUser,
+						Name:            "gardenadm-referenced-secret",
+						Namespace:       "kube-system",
+						APIGroup:        "",
+						Resource:        "secrets",
+						ResourceRequest: true,
+						Verb:            "get",
+					}
+
+					decision, reason, err := gardenadmAuthorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should deny accessing host-specific secretRef files for a different hostname", func() {
+					oscScheme := runtime.NewScheme()
+					Expect(extensionsv1alpha1.AddToScheme(oscScheme)).To(Succeed())
+					ser := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, oscScheme, oscScheme, jsonserializer.SerializerOptions{Yaml: true})
+					versions := schema.GroupVersions([]schema.GroupVersion{extensionsv1alpha1.SchemeGroupVersion})
+					codec := serializer.NewCodecFactory(oscScheme).CodecForVersions(ser, ser, versions, versions)
+
+					osc := &extensionsv1alpha1.OperatingSystemConfig{
+						Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+							Files: []extensionsv1alpha1.File{
+								{
+									Path:     "/host-specific/file",
+									HostName: ptr.To("other-hostname"),
+									Content:  extensionsv1alpha1.FileContent{SecretRef: &extensionsv1alpha1.FileContentSecretRef{Name: "other-host-secret", DataKey: "data"}},
+								},
+								{
+									Path:     "/host-specific/file",
+									HostName: ptr.To("gardenadm-hostname"),
+									Content:  extensionsv1alpha1.FileContent{SecretRef: &extensionsv1alpha1.FileContentSecretRef{Name: "my-host-secret", DataKey: "data"}},
+								},
+							},
+						},
+					}
+					oscRaw, err := runtime.Encode(codec, osc)
+					Expect(err).NotTo(HaveOccurred())
+
+					oscSecretName := "gardenadm-hostname-osc-secret"
+					oscSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      oscSecretName,
+							Namespace: metav1.NamespaceSystem,
+							Labels:    map[string]string{v1beta1constants.LabelWorkerPool: "pool"},
+						},
+						Data: map[string][]byte{"osc.yaml": oscRaw},
+					}
+					Expect(targetClient.Create(ctx, oscSecret)).To(Succeed())
+					DeferCleanup(func() { Expect(targetClient.Delete(ctx, oscSecret)).To(Succeed()) })
+
+					gardenadmNode := &corev1.Node{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "gardenadm-hostname-node",
+							Labels: map[string]string{
+								v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName: oscSecretName,
+								corev1.LabelHostname: "gardenadm-hostname",
+							},
+						},
+					}
+					Expect(targetClient.Create(ctx, gardenadmNode)).To(Succeed())
+					DeferCleanup(func() { Expect(targetClient.Delete(ctx, gardenadmNode)).To(Succeed()) })
+
+					gardenadmUser := &user.DefaultInfo{
+						Name:   fmt.Sprintf("%s%s", v1beta1constants.NodeAgentUserNamePrefix, "gardenadm-hostname-node"),
+						Groups: []string{v1beta1constants.NodeAgentsGroup},
+					}
+
+					By("Allowing the secret for the matching hostname")
+					decision, reason, err := gardenadmAuthorizer.Authorize(ctx, &auth.AttributesRecord{
+						User: gardenadmUser, Name: "my-host-secret", Namespace: "kube-system",
+						APIGroup: "", Resource: "secrets", ResourceRequest: true, Verb: "get",
+					})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+
+					By("Denying the secret for a different hostname")
+					decision, _, err = gardenadmAuthorizer.Authorize(ctx, &auth.AttributesRecord{
+						User: gardenadmUser, Name: "other-host-secret", Namespace: "kube-system",
+						APIGroup: "", Resource: "secrets", ResourceRequest: true, Verb: "get",
+					})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionDeny))
+				})
+
+				It("should allow accessing secrets referenced via secretRef in the OSC during bootstrap", func() {
+					oscScheme := runtime.NewScheme()
+					Expect(extensionsv1alpha1.AddToScheme(oscScheme)).To(Succeed())
+					ser := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, oscScheme, oscScheme, jsonserializer.SerializerOptions{Yaml: true})
+					versions := schema.GroupVersions([]schema.GroupVersion{extensionsv1alpha1.SchemeGroupVersion})
+					codec := serializer.NewCodecFactory(oscScheme).CodecForVersions(ser, ser, versions, versions)
+
+					osc := &extensionsv1alpha1.OperatingSystemConfig{
+						Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+							Files: []extensionsv1alpha1.File{{
+								Path:    "/some/file",
+								Content: extensionsv1alpha1.FileContent{SecretRef: &extensionsv1alpha1.FileContentSecretRef{Name: "bootstrap-referenced-secret", DataKey: "data"}},
+							}},
+						},
+					}
+					oscRaw, err := runtime.Encode(codec, osc)
+					Expect(err).NotTo(HaveOccurred())
+
+					oscSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "bootstrap-osc-secret",
+							Namespace: metav1.NamespaceSystem,
+							Labels:    map[string]string{v1beta1constants.LabelWorkerPool: "pool"},
+						},
+						Data: map[string][]byte{"osc.yaml": oscRaw},
+					}
+					Expect(targetClient.Create(ctx, oscSecret)).To(Succeed())
+					DeferCleanup(func() { Expect(targetClient.Delete(ctx, oscSecret)).To(Succeed()) })
+
+					gardenadmUser := &user.DefaultInfo{
+						Name:   fmt.Sprintf("%s%s", v1beta1constants.NodeAgentUserNamePrefix, "non-existing-node"),
+						Groups: []string{v1beta1constants.NodeAgentsGroup},
+					}
+
+					attrs := &auth.AttributesRecord{
+						User:            gardenadmUser,
+						Name:            "bootstrap-referenced-secret",
+						Namespace:       "kube-system",
+						APIGroup:        "",
+						Resource:        "secrets",
+						ResourceRequest: true,
+						Verb:            "get",
+					}
+
+					decision, reason, err := gardenadmAuthorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+			})
 		})
 
 		Context("#Pods", func() {

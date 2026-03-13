@@ -102,7 +102,7 @@ var _ = Describe("Secrets", func() {
 		})
 
 		It("should generate the expected secret", func() {
-			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, workerPoolName)
+			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, workerPoolName, true)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret).To(Equal(&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -146,6 +146,16 @@ status:
 			}))
 		})
 
+		It("should preserve secretRef when resolveSecretRefs is false", func() {
+			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, workerPoolName, false)
+			Expect(err).NotTo(HaveOccurred())
+
+			oscYAML := string(secret.Data["osc.yaml"])
+			Expect(oscYAML).To(ContainSubstring("secretRef:"))
+			Expect(oscYAML).NotTo(ContainSubstring("inline:"))
+			Expect(secret.Annotations).To(HaveKeyWithValue("checksum/data-script", utils.ComputeSHA256Hex(secret.Data["osc.yaml"])))
+		})
+
 		It("should return an error because a referenced secret cannot be found", func() {
 			osc.Spec.Files = append(osc.Spec.Files, extensionsv1alpha1.File{
 				Path: "/non/existing/path",
@@ -157,7 +167,7 @@ status:
 				},
 			})
 
-			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, workerPoolName)
+			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, workerPoolName, true)
 			Expect(err).To(MatchError(ContainSubstring(`cannot resolve secret ref from osc: secrets "non-existing" not found`)))
 			Expect(secret).To(BeNil())
 		})

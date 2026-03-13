@@ -277,6 +277,7 @@ build:
             - pkg/apis/authentication/v1alpha1
             - pkg/apis/config
             - pkg/apis/config/gardenlet/v1alpha1
+            - pkg/apis/config/nodeagent/v1alpha1
             - pkg/apis/config/resourcemanager/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/install
@@ -986,8 +987,8 @@ deploy:
 profiles:
   - name: ipv6
     activation:
-    - env: IPFAMILY=ipv6
-    - env: IPFAMILY=dual
+      - env: IPFAMILY=ipv6
+      - env: IPFAMILY=dual
     patches:
       - op: add
         path: /deploy/helm/releases/0/setValueTemplates/env[1].name
