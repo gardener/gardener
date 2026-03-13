@@ -144,11 +144,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 		if metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSelfHostedShootCluster) {
 			shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: seed.Name, Namespace: v1beta1constants.GardenNamespace}}
-			if err := r.Client.Get(ctx, client.ObjectKeyFromObject(shoot), shoot); err != nil && !apierrors.IsNotFound(err) {
+			if err := r.Client.Get(ctx, client.ObjectKeyFromObject(shoot), shoot); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed getting Shoot for self-hosted seed: %w", err)
-			} else if err == nil {
-				selfHostedShoot = shoot
 			}
+			selfHostedShoot = shoot
 		}
 	}
 
