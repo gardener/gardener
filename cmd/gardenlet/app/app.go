@@ -809,6 +809,7 @@ func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 		fns = []func(context.Context, client.FieldIndexer) error{
 			// core API group
 			indexer.AddBackupEntryBucketName,
+			indexer.AddControllerInstallationRegistrationRefName,
 			indexer.AddControllerInstallationShootRefName,
 			indexer.AddControllerInstallationShootRefNamespace,
 		}
