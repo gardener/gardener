@@ -240,7 +240,7 @@ func validateShootCareControllerConfiguration(cfg *gardenletconfigv1alpha1.Shoot
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(cfg.SyncPeriod.Duration), fldPath.Child("syncPeriod"))...)
 	}
 
-	if cfg.StaleExtensionHealthChecks != nil {
+	if cfg.StaleExtensionHealthChecks != nil && cfg.StaleExtensionHealthChecks.Threshold != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(cfg.StaleExtensionHealthChecks.Threshold.Duration), fldPath.Child("staleExtensionHealthChecks", "threshold"))...)
 	}
 

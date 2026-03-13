@@ -396,6 +396,14 @@ var _ = Describe("GardenletConfiguration", func() {
 					})),
 				))
 			})
+
+			It("should not panic when staleExtensionHealthChecks is set but threshold is nil", func() {
+				cfg.Controllers.ShootCare.StaleExtensionHealthChecks = &gardenletconfigv1alpha1.StaleExtensionHealthChecks{Enabled: true}
+
+				errorList := ValidateGardenletConfiguration(cfg, nil)
+
+				Expect(errorList).To(BeEmpty())
+			})
 		})
 
 		Context("managed seed controller", func() {
