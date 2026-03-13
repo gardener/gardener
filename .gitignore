@@ -40,3 +40,14 @@ hack/tools/logcheck/pkg/logcheck/testdata/src/sigs.k8s.io/controller-runtime/pkg
 
 # gosec
 gosec-report.sarif
+
+# AI coding agents
+# Claude
+.claude/
+/skills-lock.json
+
+# Cursor
+.cursor/
+
+# GitHub Copilot
+.copilot/
