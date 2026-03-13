@@ -18,6 +18,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -169,6 +170,10 @@ func (r *Reconciler) DetermineSeed(
 	if err != nil {
 		return nil, err
 	}
+	filteredSeeds, err = filterSeedsForZoneSelection(filteredSeeds, shoot)
+	if err != nil {
+		return nil, err
+	}
 	filteredSeeds, err = filterSeedsForAccessRestrictions(filteredSeeds, shoot)
 	if err != nil {
 		return nil, err
@@ -296,6 +301,66 @@ func filterSeedsForZonalShootControlPlanes(seedList []gardencorev1beta1.Seed, sh
 		return seedsWithAtLeastThreeZones, nil
 	}
 	return seedList, nil
+}
+
+// filterSeedsForZoneSelection filters seeds based on zone selection mode.
+// Seeds with `Enforce` mode are excluded when they have no zone overlap with the shoot's worker pools.
+// Seeds with `Prefer` mode that have matching zones are preferred over those without, but all are kept as fallback.
+// Zone selection only applies to non-HA shoots and HA shoots with failure tolerance type `node`.
+// For shoots with failure tolerance type `zone`, the control plane is spread across all zones anyway.
+func filterSeedsForZoneSelection(seedList []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) ([]gardencorev1beta1.Seed, error) {
+	if v1beta1helper.IsMultiZonalShootControlPlane(shoot) {
+		return seedList, nil
+	}
+
+	var (
+		shootZones    = allShootZones(shoot.Spec.Provider.Workers)
+		matchingSeeds []gardencorev1beta1.Seed
+	)
+
+	// First pass: exclude `Enforce` seeds that have no zone overlap with the shoot's worker pools.
+	for _, seed := range seedList {
+		if v1beta1helper.SeedSettingZoneSelectionMode(seed.Spec.Settings) != gardencorev1beta1.ZoneSelectionModeEnforce {
+			matchingSeeds = append(matchingSeeds, seed)
+			continue
+		}
+		if len(shootZones) == 0 || sets.New(seed.Spec.Provider.Zones...).HasAny(shootZones...) {
+			matchingSeeds = append(matchingSeeds, seed)
+		}
+	}
+
+	if len(matchingSeeds) == 0 {
+		return nil, fmt.Errorf("none of the %d seeds has any zone overlap with the shoot's worker pool zones (zone selection mode: %s)", len(seedList), gardencorev1beta1.ZoneSelectionModeEnforce)
+	}
+
+	// Second pass: prefer `Prefer` seeds with matching zones. If any match, exclude `Prefer` seeds without overlap.
+	if len(shootZones) > 0 {
+		var preferredSeeds []gardencorev1beta1.Seed
+
+		for _, seed := range matchingSeeds {
+			if v1beta1helper.SeedSettingZoneSelectionMode(seed.Spec.Settings) != gardencorev1beta1.ZoneSelectionModePrefer {
+				preferredSeeds = append(preferredSeeds, seed)
+				continue
+			}
+			if sets.New(seed.Spec.Provider.Zones...).HasAny(shootZones...) {
+				preferredSeeds = append(preferredSeeds, seed)
+			}
+		}
+
+		if len(preferredSeeds) > 0 {
+			return preferredSeeds, nil
+		}
+	}
+
+	return matchingSeeds, nil
+}
+
+func allShootZones(workerPools []gardencorev1beta1.Worker) []string {
+	zones := sets.New[string]()
+	for _, pool := range workerPools {
+		zones.Insert(pool.Zones...)
+	}
+	return zones.UnsortedList()
 }
 
 // filterSeedsForAccessRestrictions filters seeds which do not support the access restrictions configured in the shoot.

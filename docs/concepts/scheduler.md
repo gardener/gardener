@@ -42,6 +42,7 @@ The following **sequence** describes the steps involved to determine a seed cand
    * whose access restrictions (`.spec.accessRestrictions`) are supporting those configured in the `Shoot` (`.spec.accessRestrictions`)
    * whose capacity for shoots would not be exceeded if the shoot is scheduled onto the seed, see [Ensuring seeds capacity for shoots is not exceeded](#ensuring-seeds-capacity-for-shoots-is-not-exceeded)
    * which have at least three zones in `.spec.provider.zones` if shoot requests a high available control plane with failure tolerance type `zone`.
+   * whose zone list has at least one overlap with the shoot's worker pool zones if the seed's zone selection mode is `Enforce`, or preferring seeds with matching zones in `Prefer` mode (see [Zone Selection](../operations/seed_settings.md#zone-selection))
 1. Apply active [strategy](#strategies) e.g., _Minimal Distance strategy_
 1. Choose least utilized seed, i.e., the one with the least number of shoot control planes, will be the winner and written to the `.spec.seedName` field of the `Shoot`.
 

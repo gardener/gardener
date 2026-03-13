@@ -246,6 +246,17 @@ var _ = Describe("Helper", func() {
 		),
 	)
 
+	DescribeTable("#SeedSettingZoneSelectionMode",
+		func(settings *gardencorev1beta1.SeedSettings, expected gardencorev1beta1.ZoneSelectionMode) {
+			Expect(SeedSettingZoneSelectionMode(settings)).To(Equal(expected))
+		},
+
+		Entry("no settings", nil, gardencorev1beta1.ZoneSelectionMode("")),
+		Entry("no zone selection setting", &gardencorev1beta1.SeedSettings{}, gardencorev1beta1.ZoneSelectionMode("")),
+		Entry("zone selection prefer", &gardencorev1beta1.SeedSettings{ZoneSelection: &gardencorev1beta1.SeedSettingZoneSelection{Mode: gardencorev1beta1.ZoneSelectionModePrefer}}, gardencorev1beta1.ZoneSelectionModePrefer),
+		Entry("zone selection enforce", &gardencorev1beta1.SeedSettings{ZoneSelection: &gardencorev1beta1.SeedSettingZoneSelection{Mode: gardencorev1beta1.ZoneSelectionModeEnforce}}, gardencorev1beta1.ZoneSelectionModeEnforce),
+	)
+
 	DescribeTable("#SeedBackupCredentialsRefEqual",
 		func(oldBackup, newBackup *gardencorev1beta1.Backup, matcher gomegatypes.GomegaMatcher) {
 			Expect(SeedBackupCredentialsRefEqual(oldBackup, newBackup)).To(matcher)

@@ -108,6 +108,8 @@ spec:
   #       allowed: true
   #   zonalIngress:
   #     enabled: true # istio ingress gateways will be created in every zone of the seed
+  # zoneSelection:
+  #   mode: Prefer|Enforce
     verticalPodAutoscaler:
       enabled: true # a Gardener-managed VPA deployment is enabled
     # featureGates:

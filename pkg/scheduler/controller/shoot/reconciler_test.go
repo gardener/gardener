@@ -1170,3 +1170,148 @@ var _ = DescribeTable("condition is false",
 	Entry("SeedExtensionsReady is missing", gardencorev1beta1.SeedExtensionsReady, true, true, BeTrue()),
 	Entry("SeedExtensionsReady is false", gardencorev1beta1.SeedExtensionsReady, false, true, BeTrue()),
 )
+
+var _ = Describe("filterSeedsForZoneSelection", func() {
+	makeSeed := func(name string, zones []string, mode gardencorev1beta1.ZoneSelectionMode) gardencorev1beta1.Seed {
+		s := gardencorev1beta1.Seed{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Spec: gardencorev1beta1.SeedSpec{
+				Provider: gardencorev1beta1.SeedProvider{Zones: zones},
+			},
+		}
+		if mode != "" {
+			s.Spec.Settings = &gardencorev1beta1.SeedSettings{
+				ZoneSelection: &gardencorev1beta1.SeedSettingZoneSelection{Mode: mode},
+			}
+		}
+		return s
+	}
+
+	makeShoot := func(workerZones []string) *gardencorev1beta1.Shoot {
+		s := &gardencorev1beta1.Shoot{}
+		if len(workerZones) > 0 {
+			s.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+				{Name: "worker", Minimum: 1, Maximum: 3, Zones: workerZones},
+			}
+		}
+		return s
+	}
+
+	makeZoneHAShoot := func(workerZones []string) *gardencorev1beta1.Shoot {
+		s := makeShoot(workerZones)
+		s.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+			HighAvailability: &gardencorev1beta1.HighAvailability{
+				FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone},
+			},
+		}
+		return s
+	}
+
+	DescribeTable("filterSeedsForZoneSelection",
+		func(seeds []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, expectError bool, expectedSeedNames []string) {
+			result, err := filterSeedsForZoneSelection(seeds, shoot)
+			if expectError {
+				Expect(err).To(HaveOccurred())
+			} else {
+				Expect(err).NotTo(HaveOccurred())
+				names := make([]string, len(result))
+				for i, s := range result {
+					names[i] = s.Name
+				}
+				Expect(names).To(ConsistOf(expectedSeedNames))
+			}
+		},
+
+		Entry("no zone selection — all seeds pass",
+			[]gardencorev1beta1.Seed{makeSeed("s1", []string{"a", "b"}, ""), makeSeed("s2", []string{"c"}, "")},
+			makeShoot([]string{"a"}),
+			false,
+			[]string{"s1", "s2"},
+		),
+		Entry("Prefer mode — single seed without zone match passes as fallback",
+			[]gardencorev1beta1.Seed{makeSeed("s1", []string{"x"}, gardencorev1beta1.ZoneSelectionModePrefer)},
+			makeShoot([]string{"a"}),
+			false,
+			[]string{"s1"},
+		),
+		Entry("Prefer mode — seed with matching zones preferred over seed without",
+			[]gardencorev1beta1.Seed{
+				makeSeed("match", []string{"a", "b"}, gardencorev1beta1.ZoneSelectionModePrefer),
+				makeSeed("nomatch", []string{"x", "y"}, gardencorev1beta1.ZoneSelectionModePrefer),
+			},
+			makeShoot([]string{"a"}),
+			false,
+			[]string{"match"},
+		),
+		Entry("Prefer mode — no worker zones → all seeds pass (no preference possible)",
+			[]gardencorev1beta1.Seed{
+				makeSeed("s1", []string{"a"}, gardencorev1beta1.ZoneSelectionModePrefer),
+				makeSeed("s2", []string{"x"}, gardencorev1beta1.ZoneSelectionModePrefer),
+			},
+			makeShoot(nil),
+			false,
+			[]string{"s1", "s2"},
+		),
+		Entry("Prefer mode — non-Prefer seeds always kept alongside preferred seeds",
+			[]gardencorev1beta1.Seed{
+				makeSeed("prefer-match", []string{"a"}, gardencorev1beta1.ZoneSelectionModePrefer),
+				makeSeed("prefer-nomatch", []string{"x"}, gardencorev1beta1.ZoneSelectionModePrefer),
+				makeSeed("nopinning", []string{"y"}, ""),
+			},
+			makeShoot([]string{"a"}),
+			false,
+			[]string{"prefer-match", "nopinning"},
+		),
+		Entry("Enforce mode — seed zones fully contain worker zones → included",
+			[]gardencorev1beta1.Seed{makeSeed("s1", []string{"a", "b"}, gardencorev1beta1.ZoneSelectionModeEnforce)},
+			makeShoot([]string{"a"}),
+			false,
+			[]string{"s1"},
+		),
+		Entry("Enforce mode — partial zone overlap → included",
+			[]gardencorev1beta1.Seed{makeSeed("s1", []string{"a", "b", "c"}, gardencorev1beta1.ZoneSelectionModeEnforce)},
+			makeShoot([]string{"b", "c", "d"}),
+			false,
+			[]string{"s1"},
+		),
+		Entry("Enforce mode — no zone overlap → excluded, error",
+			[]gardencorev1beta1.Seed{makeSeed("s1", []string{"x", "y"}, gardencorev1beta1.ZoneSelectionModeEnforce)},
+			makeShoot([]string{"a"}),
+			true,
+			nil,
+		),
+		Entry("Enforce mode — two seeds, only one matches → picks matching seed",
+			[]gardencorev1beta1.Seed{
+				makeSeed("s1", []string{"a"}, gardencorev1beta1.ZoneSelectionModeEnforce),
+				makeSeed("s2", []string{"b"}, gardencorev1beta1.ZoneSelectionModeEnforce),
+			},
+			makeShoot([]string{"a"}),
+			false,
+			[]string{"s1"},
+		),
+		Entry("Enforce mode — no worker zones → seed included (no constraint)",
+			[]gardencorev1beta1.Seed{makeSeed("s1", []string{"a"}, gardencorev1beta1.ZoneSelectionModeEnforce)},
+			makeShoot(nil),
+			false,
+			[]string{"s1"},
+		),
+		Entry("mixed: Enforce seed excluded + no-pinning seed included",
+			[]gardencorev1beta1.Seed{
+				makeSeed("enforce", []string{"x"}, gardencorev1beta1.ZoneSelectionModeEnforce),
+				makeSeed("nopinning", []string{"a"}, ""),
+			},
+			makeShoot([]string{"a"}),
+			false,
+			[]string{"nopinning"},
+		),
+		Entry("Enforce mode — zone-HA shoot → all seeds pass (zone selection not applicable)",
+			[]gardencorev1beta1.Seed{
+				makeSeed("s1", []string{"x"}, gardencorev1beta1.ZoneSelectionModeEnforce),
+				makeSeed("s2", []string{"a", "b", "c"}, gardencorev1beta1.ZoneSelectionModeEnforce),
+			},
+			makeZoneHAShoot([]string{"a"}),
+			false,
+			[]string{"s1", "s2"},
+		),
+	)
+})
