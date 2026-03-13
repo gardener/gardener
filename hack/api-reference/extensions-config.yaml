@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+
+processor:
+  ignoreFields:
+    - "TypeMeta"
+  ignoreTypes:
+    - "ParseError$"
+    - "List$"
+
+render:
+  kubernetesVersion: "1.33"
+  knownTypes:
+    - name: RawExtension
+      package: k8s.io/apimachinery/pkg/runtime
+      link: https://pkg.go.dev/k8s.io/apimachinery/pkg/runtime#RawExtension
+    - name: IntOrString
+      package: k8s.io/apimachinery/pkg/util/intstr
+      link: https://pkg.go.dev/k8s.io/apimachinery/pkg/util/intstr#IntOrString
