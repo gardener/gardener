@@ -29,12 +29,17 @@ func init() {
 type options struct {
 	configFile string
 	config     *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration
+
+	// extraTargetNamespaces specifies a list of additional target
+	// namespaces to be configured.
+	extraTargetNamespaces []string
 }
 
 var _ initrun.Options = &options{}
 
 func (o *options) addFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.configFile, "config", o.configFile, "Path to configuration file.")
+	fs.StringArrayVar(&o.extraTargetNamespaces, "extra-target-namespace", nil, "Extra target namespace.")
 }
 
 func (o *options) Complete() error {
@@ -50,6 +55,18 @@ func (o *options) Complete() error {
 	o.config = &resourcemanagerconfigv1alpha1.ResourceManagerConfiguration{}
 	if err = runtime.DecodeInto(configDecoder, data, o.config); err != nil {
 		return fmt.Errorf("error decoding config: %w", err)
+	}
+
+	// Configure additional target namespaces
+	if o.extraTargetNamespaces != nil {
+		if o.config.TargetClientConnection != nil {
+			o.config.TargetClientConnection.Namespaces = append(
+				o.config.TargetClientConnection.Namespaces,
+				o.extraTargetNamespaces...,
+			)
+		} else {
+			o.config.TargetClientConnection.Namespaces = o.extraTargetNamespaces
+		}
 	}
 
 	return nil
