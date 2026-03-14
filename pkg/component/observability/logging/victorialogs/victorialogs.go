@@ -128,6 +128,11 @@ func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *vmv1.VLSingle {
 			Labels:    getLabels(),
 		},
 		Spec: vmv1.VLSingleSpec{
+			PodMetadata: &vmv1beta1.EmbeddedObjectMetadata{
+				Labels: map[string]string{
+					v1beta1constants.LabelObservabilityApplication: constants.VLSingleResourceName,
+				},
+			},
 			CommonDefaultableParams: vmv1beta1.CommonDefaultableParams{
 				DisableSelfServiceScrape: ptr.To(true),
 				UseStrictSecurity:        ptr.To(true),
@@ -196,7 +201,7 @@ func getLabels() map[string]string {
 		gardenerutils.NetworkPolicyLabel(constants.ServiceName, constants.VictoriaLogsPort): v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToDNS:                                            v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                               v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelObservabilityApplication:                                      "victoria-logs",
+		v1beta1constants.LabelObservabilityApplication:                                      constants.VLSingleResourceName,
 	}
 }
 
