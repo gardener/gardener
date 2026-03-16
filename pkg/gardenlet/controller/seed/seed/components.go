@@ -568,7 +568,14 @@ func (r *Reconciler) newVali() (component.Deployer, error) {
 		return nil, err
 	}
 
+	// Destroy Vali if logging is disabled in config
 	if !gardenlethelper.IsLoggingEnabled(&r.Config) {
+		return component.OpDestroy(deployer), err
+	}
+
+	// Destroy Vali if RemoveVali feature gate is enabled (requires VictoriaLogsBackend as well)
+	if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) &&
+		features.DefaultFeatureGate.Enabled(features.RemoveVali) {
 		return component.OpDestroy(deployer), err
 	}
 
@@ -594,7 +601,7 @@ func (r *Reconciler) newVictoriaLogs() (component.DeployWaiter, error) {
 		return nil, err
 	}
 
-	if !gardenlethelper.IsLoggingEnabled(&r.Config) {
+	if !gardenlethelper.IsLoggingEnabled(&r.Config) || !features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
 		return component.OpDestroyAndWait(deployer), err
 	}
 

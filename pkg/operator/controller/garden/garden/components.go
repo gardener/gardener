@@ -1383,7 +1383,7 @@ func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) 
 }
 
 func (r *Reconciler) newVali() (component.Deployer, error) {
-	return sharedcomponent.NewVali(
+	deployer, err := sharedcomponent.NewVali(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		nil,
@@ -1395,10 +1395,21 @@ func (r *Reconciler) newVali() (component.Deployer, error) {
 		"",
 		true,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Destroy Vali if RemoveVali feature gate is enabled (requires VictoriaLogsBackend as well)
+	if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) &&
+		features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+		return component.OpDestroy(deployer), nil
+	}
+
+	return deployer, nil
 }
 
 func (r *Reconciler) newVictoriaLogs() (component.DeployWaiter, error) {
-	return sharedcomponent.NewVictoriaLogs(
+	deployer, err := sharedcomponent.NewVictoriaLogs(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		component.ClusterTypeSeed,
@@ -1407,6 +1418,15 @@ func (r *Reconciler) newVictoriaLogs() (component.DeployWaiter, error) {
 		nil,
 		true,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	if !features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
+		return component.OpDestroyAndWait(deployer), nil
+	}
+
+	return deployer, nil
 }
 
 func (r *Reconciler) newPrometheusOperator() (component.DeployWaiter, error) {

@@ -31,51 +31,85 @@ func (b *Botanist) DeployLogging(ctx context.Context) error {
 
 	grmIsPresent, err := b.IsGardenerResourceManagerReady(ctx)
 	if err != nil {
-		return fmt.Errorf("checking if Gardener Resource Manager is ready failed: %w", err)
-	}
-	b.Shoot.Components.ControlPlane.Vali.WithAuthenticationProxy(grmIsPresent && !features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector))
-
-	if b.isShootEventLoggerEnabled() && grmIsPresent {
-		if err := b.Shoot.Components.ControlPlane.EventLogger.Deploy(ctx); err != nil {
-			return fmt.Errorf("deploying Event Logger failed: %w", err)
-		}
-	} else if !b.isShootEventLoggerEnabled() {
-		if err := b.Shoot.Components.ControlPlane.EventLogger.Destroy(ctx); err != nil {
-			return fmt.Errorf("destroying Event Logger failed: %w", err)
-		}
+		return fmt.Errorf("checking if Gardener Resource Manager is ready: %w", err)
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
-		b.Shoot.Components.ControlPlane.OtelCollector.WithAuthenticationProxy(grmIsPresent)
-		if err := b.Shoot.Components.ControlPlane.OtelCollector.Deploy(ctx); err != nil {
-			return fmt.Errorf("deploying OpenTelemetry Collector failed: %w", err)
-		}
-	} else {
-		if err := b.Shoot.Components.ControlPlane.OtelCollector.Destroy(ctx); err != nil {
-			return fmt.Errorf("destroying OpenTelemetry Collector failed: %w", err)
-		}
+	if err := b.Shoot.Components.ControlPlane.VictoriaLogs.Deploy(ctx); err != nil {
+		return fmt.Errorf("deploying VictoriaLogs: %w", err)
+	}
+	if err := b.deployVali(ctx, grmIsPresent); err != nil {
+		return err
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) && gardenlethelper.IsVictoriaLogsEnabled(b.Config) {
-		if err := b.Shoot.Components.ControlPlane.VictoriaLogs.Deploy(ctx); err != nil {
-			return fmt.Errorf("deploying VictoriaLogs failed: %w", err)
-		}
-	} else {
-		if err := b.Shoot.Components.ControlPlane.VictoriaLogs.Destroy(ctx); err != nil {
-			return fmt.Errorf("destroying VictoriaLogs failed: %w", err)
-		}
+	if err := b.deployOtelCollector(ctx, grmIsPresent); err != nil {
+		return err
 	}
 
-	// check if vali is enabled in gardenlet config, default is true
-	if !gardenlethelper.IsValiEnabled(b.Config) {
-		if err = b.Shoot.Components.ControlPlane.Vali.Destroy(ctx); err != nil {
-			return fmt.Errorf("destroying Vali failed: %w", err)
-		}
-	} else if err = b.Shoot.Components.ControlPlane.Vali.Deploy(ctx); err != nil {
-		return fmt.Errorf("deploying Vali failed: %w", err)
+	if err := b.deployEventLogger(ctx, grmIsPresent); err != nil {
+		return err
 	}
 
 	return nil
+}
+
+func (b *Botanist) deployEventLogger(ctx context.Context, grmIsPresent bool) error {
+	if b.isShootEventLoggerEnabled() && grmIsPresent {
+		if err := b.Shoot.Components.ControlPlane.EventLogger.Deploy(ctx); err != nil {
+			return fmt.Errorf("deploying Event Logger: %w", err)
+		}
+		return nil
+	}
+	if !b.isShootEventLoggerEnabled() {
+		if err := b.Shoot.Components.ControlPlane.EventLogger.Destroy(ctx); err != nil {
+			return fmt.Errorf("destroying Event Logger: %w", err)
+		}
+	}
+	return nil
+}
+
+func (b *Botanist) deployOtelCollector(ctx context.Context, grmIsPresent bool) error {
+	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		b.Shoot.Components.ControlPlane.OtelCollector.WithAuthenticationProxy(grmIsPresent)
+		if err := b.Shoot.Components.ControlPlane.OtelCollector.Deploy(ctx); err != nil {
+			return fmt.Errorf("deploying OpenTelemetry Collector: %w", err)
+		}
+		return nil
+	}
+	if err := b.Shoot.Components.ControlPlane.OtelCollector.Destroy(ctx); err != nil {
+		return fmt.Errorf("destroying OpenTelemetry Collector: %w", err)
+	}
+	return nil
+}
+
+func (b *Botanist) deployVali(ctx context.Context, grmIsPresent bool) error {
+	b.Shoot.Components.ControlPlane.Vali.WithAuthenticationProxy(grmIsPresent && !features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector))
+
+	if b.shouldDestroyVali() {
+		if err := b.Shoot.Components.ControlPlane.Vali.Destroy(ctx); err != nil {
+			return fmt.Errorf("destroying Vali: %w", err)
+		}
+		return nil
+	}
+	if err := b.Shoot.Components.ControlPlane.Vali.Deploy(ctx); err != nil {
+		return fmt.Errorf("deploying Vali: %w", err)
+	}
+	return nil
+}
+
+func (b *Botanist) shouldDestroyVali() bool {
+	// Always destroy if Vali is explicitly disabled in config
+	if !gardenlethelper.IsValiEnabled(b.Config) {
+		return true
+	}
+
+	// Destroy if RemoveVali feature gate is enabled (requires VictoriaLogsBackend as well)
+	if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) &&
+		features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+		return true
+	}
+
+	// Otherwise, keep Vali running
+	return false
 }
 
 // DestroySeedLogging will uninstall the logging stack for the Shoot in the Seed clusters.
@@ -176,7 +210,7 @@ func (b *Botanist) DefaultOtelCollector() (collector.Interface, error) {
 
 // DefaultVictoriaLogs returns a deployer for VictoriaLogs.
 func (b *Botanist) DefaultVictoriaLogs() (component.DeployWaiter, error) {
-	return shared.NewVictoriaLogs(
+	deployer, err := shared.NewVictoriaLogs(
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		component.ClusterTypeShoot,
@@ -185,4 +219,19 @@ func (b *Botanist) DefaultVictoriaLogs() (component.DeployWaiter, error) {
 		nil,
 		false,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Destroy VictoriaLogs if:
+	// 1. VictoriaLogsBackend feature gate is disabled, OR
+	// 2. VictoriaLogs is disabled in gardenlet config, OR
+	// 3. Shoot control plane logging is disabled
+	if !features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) ||
+		!gardenlethelper.IsVictoriaLogsEnabled(b.Config) ||
+		!b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) {
+		return component.OpDestroyAndWait(deployer), nil
+	}
+
+	return deployer, nil
 }
