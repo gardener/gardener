@@ -268,6 +268,55 @@ selfUpgrade:
 in your `gardenlet-values.yaml` file.
 Please replace the `ref` placeholder with the URL to the OCI repository containing the gardenlet Helm chart you are installing.
 
+If the OCI repository requires authentication or uses a custom certificate, you can specify a pull secret and/or a CA bundle.
+
+```yaml
+helm:
+  ociRepository:
+    repository: registry.example.com
+    tag: 1.0.0
+    pullSecretRef:
+      name: my-pull-secret
+    caBundleSecretRef:
+      name: my-ca-bundle
+```
+
+Both secrets must be located in the `garden` namespace of the cluster where the `Gardenlet` resource is created.
+
+The pull secret must be of type `kubernetes.io/dockerconfigjson` and contain a `.dockerconfigjson` data key.
+
+```yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-pull-secret
+  namespace: garden
+  labels:
+    gardener.cloud/role: helm-pull-secret
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: <base64-encoded-docker-config-json>
+```
+
+The CA bundle secret must contain a `bundle.crt` data key with a PEM-encoded certificate bundle.
+
+```yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-ca-bundle
+  namespace: garden
+  labels:
+    gardener.cloud/role: oci-ca-bundle
+type: Opaque
+data:
+  bundle.crt: <base64-encoded-ca-bundle>
+```
+
+It is important to add the `gardener.cloud/role` label to both secrets. This allows the secret to get copied to the seed namespace, as `gardenlet` does not have permission to access all secrets in the `garden` namespace directly.
+
 > [!NOTE]
 > If you don't configure this `selfUpgrade` section in the initial deployment, you can also do it later, or you directly create the corresponding `seedmanagement.gardener.cloud/v1alpha1.Gardenlet` resource in the garden cluster.
 
@@ -430,6 +479,10 @@ spec:
     helm:
       ociRepository:
         ref: <url-to-gardenlet-chart-repository>:v1.97.0
+        caBundleSecretRef:
+          name: < my-ca-bundle-secret >
+        pullSecretRef:
+          name: < my-pull-secret >
   config:
     apiVersion: gardenlet.config.gardener.cloud/v1alpha1
     kind: GardenletConfiguration
