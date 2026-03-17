@@ -6,6 +6,8 @@
 
 set -e
 
+export GOWORK=off
+
 skaffold_file=""
 binary_name=""
 skaffold_config_name=""
