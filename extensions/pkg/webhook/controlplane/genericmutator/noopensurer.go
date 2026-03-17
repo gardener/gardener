@@ -118,7 +118,7 @@ func (e *NoopEnsurer) EnsureCRIConfig(_ context.Context, _ extensionscontextwebh
 	return nil
 }
 
-// EnsureGardenerResourceManager ensures the Gardener Resource Manager deployment.
+// EnsureGardenerResourceManagerDeployment ensures the Gardener Resource Manager deployment.
 func (e *NoopEnsurer) EnsureGardenerResourceManagerDeployment(_ context.Context, _ extensionscontextwebhook.GardenContext, _, _ *appsv1.Deployment) error {
 	return nil
 }
