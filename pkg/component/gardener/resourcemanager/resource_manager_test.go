@@ -588,6 +588,7 @@ var _ = Describe("ResourceManager", func() {
 								},
 							},
 							ServiceAccountName: "gardener-resource-manager",
+							NodeSelector:       map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"},
 							Containers: []corev1.Container{
 								{
 									Args:            []string{"--config=/etc/gardener-resource-manager-config/config.yaml"},

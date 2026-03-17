@@ -879,7 +879,7 @@ func (r *Reconciler) newEtcdDruid(secretsManager secretsmanager.Interface) (comp
 		secretsManager,
 		v1beta1constants.SecretNameCASeed,
 		v1beta1constants.PriorityClassNameSeedSystem800,
-		false,
+		etcd.ManagedBySeed,
 	)
 }
 

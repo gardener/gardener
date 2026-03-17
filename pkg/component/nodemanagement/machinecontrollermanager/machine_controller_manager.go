@@ -290,7 +290,9 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 			},
 		}
 
-		if !m.values.SelfHostedShoot {
+		if m.values.SelfHostedShoot {
+			deployment.Spec.Template.Spec.NodeSelector = map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}
+		} else {
 			genericTokenKubeconfigSecret, found := m.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
 			if !found {
 				return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)

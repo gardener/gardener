@@ -521,7 +521,7 @@ func (r *Reconciler) newEtcdDruid(secretsManager secretsmanager.Interface) (comp
 		secretsManager,
 		operatorv1alpha1.SecretNameCARuntime,
 		v1beta1constants.PriorityClassNameGardenSystem300,
-		true,
+		etcd.ManagedByOperator,
 	)
 }
 
