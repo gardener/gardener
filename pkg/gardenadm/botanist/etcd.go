@@ -25,6 +25,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	bootstrapetcd "github.com/gardener/gardener/pkg/component/etcd/bootstrap"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	corebackupbucket "github.com/gardener/gardener/pkg/component/garden/backupbucket"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
@@ -58,7 +59,7 @@ func (b *GardenadmBotanist) DeployEtcdDruid(ctx context.Context) error {
 		b.SecretsManager,
 		v1beta1constants.SecretNameCACluster,
 		v1beta1constants.PriorityClassNameSeedSystem800,
-		false,
+		etcd.ManagedBySelfHostedShoot,
 	)
 	if err != nil {
 		return fmt.Errorf("failed creating etcd-druid deployer: %w", err)

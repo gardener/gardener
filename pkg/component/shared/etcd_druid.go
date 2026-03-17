@@ -26,7 +26,7 @@ func NewEtcdDruid(
 	secretsManager secretsmanager.Interface,
 	secretNameServerCA string,
 	priorityClassName string,
-	managedbyGardenerOperator bool,
+	managedBy etcd.ManagedBy,
 ) (
 	component.DeployWaiter,
 	error,
@@ -50,6 +50,6 @@ func NewEtcdDruid(
 		secretsManager,
 		secretNameServerCA,
 		priorityClassName,
-		managedbyGardenerOperator,
+		managedBy,
 	), nil
 }
