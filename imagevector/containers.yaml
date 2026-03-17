@@ -73,8 +73,8 @@ images:
 
   - name: etcd-druid
     sourceRepository: github.com/gardener/etcd-druid
-    repository: shreyas14/druid
-    tag: "latest"
+    repository: europe-docker.pkg.dev/gardener-project/snapshots/gardener/etcd-druid
+    tag: "v0.37.0-e63de7b60a43a3674e4919c8930a3651ab99d4e4"
   - name: etcd
     sourceRepository: github.com/etcd-io/etcd
     repository: quay.io/coreos/etcd
