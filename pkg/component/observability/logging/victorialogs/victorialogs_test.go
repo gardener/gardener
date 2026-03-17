@@ -102,6 +102,11 @@ var _ = Describe("VictoriaLogs", func() {
 				Labels:    getLabels(),
 			},
 			Spec: vmv1.VLSingleSpec{
+				PodMetadata: &vmv1beta1.EmbeddedObjectMetadata{
+					Labels: map[string]string{
+						v1beta1constants.LabelObservabilityApplication: victorialogsconstants.VLSingleResourceName,
+					},
+				},
 				CommonDefaultableParams: vmv1beta1.CommonDefaultableParams{
 					DisableSelfServiceScrape: ptr.To(true),
 					UseStrictSecurity:        ptr.To(true),
