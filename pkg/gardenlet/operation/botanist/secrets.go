@@ -150,14 +150,13 @@ func restoreSecretFromPersistedData(ctx context.Context, seedClient client.Clien
 			return client.IgnoreAlreadyExists(seedClient.Create(ctx, secret))
 		}
 
-		secretData = secretData
 		immutable = nil
 		secretType = corev1.SecretTypeOpaque
 	} else {
 		secretData = newSecretInfo.Data
 		immutable = newSecretInfo.Immutable
 		if newSecretInfo.Type != "" {
-			secretType = corev1.SecretType(newSecretInfo.Type)
+			secretType = newSecretInfo.Type
 		} else {
 			secretType = corev1.SecretTypeOpaque
 		}
