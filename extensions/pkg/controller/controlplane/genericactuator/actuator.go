@@ -163,6 +163,9 @@ func (a *actuator) Reconcile(
 		if err := extensionsshootwebhook.ReconcileWebhookConfig(ctx, a.client, cp.Namespace, ShootWebhooksResourceName, *webhookConfig, cluster, true); err != nil {
 			return false, fmt.Errorf("could not reconcile shoot webhooks: %w", err)
 		}
+		if err := managedresources.WaitUntilHealthyAndNotProgressing(ctx, a.client, cp.Namespace, ShootWebhooksResourceName); err != nil {
+			return false, err
+		}
 	}
 
 	var secretConfigs []extensionssecretsmanager.SecretConfigWithOptions

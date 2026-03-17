@@ -715,10 +715,12 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, waitUntilOperatingSystemConfigReady, waitUntilShootNamespacesReady),
 		})
 		deployKubeProxy = g.Add(flow.Task{
-			Name:         "Deploying kube-proxy system component",
-			Fn:           flow.TaskFn(botanist.DeployKubeProxy).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled || !kubeProxyEnabled,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, initializeShootClients, ensureShootClusterIdentity, deployKubeScheduler, waitUntilShootNamespacesReady),
+			Name:   "Deploying kube-proxy system component",
+			Fn:     flow.TaskFn(botanist.DeployKubeProxy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf: o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled || !kubeProxyEnabled,
+			Dependencies: flow.NewTaskIDs(
+				waitUntilControlPlaneReady, // Extensions might deploy webhooks for system components
+				deployGardenerResourceManager, initializeShootClients, ensureShootClusterIdentity, deployKubeScheduler, waitUntilShootNamespacesReady),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deleting stale kube-proxy DaemonSets",
