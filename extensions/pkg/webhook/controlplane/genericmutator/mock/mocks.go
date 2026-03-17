@@ -146,6 +146,20 @@ func (mr *MockEnsurerMockRecorder) EnsureETCD(ctx, gctx, new, old any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureETCD", reflect.TypeOf((*MockEnsurer)(nil).EnsureETCD), ctx, gctx, new, old)
 }
 
+// EnsureGardenerResourceManagerDeployment mocks base method.
+func (m *MockEnsurer) EnsureGardenerResourceManagerDeployment(ctx context.Context, gctx context0.GardenContext, new, old *v1.Deployment) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureGardenerResourceManagerDeployment", ctx, gctx, new, old)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureGardenerResourceManagerDeployment indicates an expected call of EnsureGardenerResourceManagerDeployment.
+func (mr *MockEnsurerMockRecorder) EnsureGardenerResourceManagerDeployment(ctx, gctx, new, old any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureGardenerResourceManagerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureGardenerResourceManagerDeployment), ctx, gctx, new, old)
+}
+
 // EnsureKubeAPIServerDeployment mocks base method.
 func (m *MockEnsurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx context0.GardenContext, new, old *v1.Deployment) error {
 	m.ctrl.T.Helper()

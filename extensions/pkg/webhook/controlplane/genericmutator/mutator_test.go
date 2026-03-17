@@ -288,6 +288,28 @@ var _ = Describe("Mutator", func() {
 					ensurer.EXPECT().EnsureVPNSeedServerStatefulSet(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
+			Entry(
+				"EnsureGardenerResourceManagerDeployment with a gardener-resource-manager deployment",
+				func() {
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager"}}
+					ensurer.EXPECT().EnsureGardenerResourceManagerDeployment(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
+				},
+			),
+			Entry(
+				"EnsureGardenerResourceManagerDeployment with a virtual-garden-gardener-resource-manager deployment",
+				func() {
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-gardener-resource-manager"}}
+					ensurer.EXPECT().EnsureGardenerResourceManagerDeployment(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
+				},
+			),
+			Entry(
+				"EnsureGardenerResourceManagerDeployment with a gardener-resource-manager deployment and existing deployment",
+				func() {
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager"}}
+					oldObj = newObj.DeepCopyObject().(client.Object)
+					ensurer.EXPECT().EnsureGardenerResourceManagerDeployment(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
+				},
+			),
 		)
 
 		DescribeTable("EnsureETCD", func(newObj, oldObj *druidcorev1alpha1.Etcd) {
