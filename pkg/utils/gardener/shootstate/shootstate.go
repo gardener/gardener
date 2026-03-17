@@ -40,7 +40,7 @@ func Deploy(ctx context.Context, clock clock.Clock, gardenClient, seedClient cli
 		},
 	}
 
-	spec, err := computeSpec(ctx, seedClient, shoot.Status.TechnicalID)
+	spec, err := computeSpec(ctx, seedClient, v1beta1helper.ControlPlaneNamespaceForShoot(shoot))
 	if err != nil {
 		return fmt.Errorf("failed computing spec of ShootState for shoot %s: %w", client.ObjectKeyFromObject(shoot), err)
 	}
