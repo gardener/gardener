@@ -771,7 +771,6 @@ var _ = Describe("Project controller tests", func() {
 								"modify-spec-kubernetes",
 								"modify-spec-machineimages",
 								"modify-spec-providerconfig",
-								"raise-spec-limits",
 							},
 						},
 					},

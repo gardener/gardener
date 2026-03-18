@@ -20,11 +20,9 @@ import (
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/api/core/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
@@ -48,9 +46,6 @@ const (
 	// CustomVerbNamespacedCloudProfileModifyProviderConfig is a constant for the custom verb that allows modifying the
 	// `.spec.providerConfig` field in `NamespacedCloudProfile` resources.
 	CustomVerbNamespacedCloudProfileModifyProviderConfig = "modify-spec-providerconfig"
-	// CustomVerbNamespacedCloudProfileRaiseLimits is a constant for the custom verb that allows raising the
-	// `.spec.limits` limits in `NamespacedCloudProfile` resources above values defined in the parent `CloudProfile`.
-	CustomVerbNamespacedCloudProfileRaiseLimits = "raise-spec-limits"
 
 	// CustomVerbShootMarkSelfHosted is a constant for the custom verb that allows setting the
 	// `.spec.provider.workers[].controlPlane` field in the `Shoot` spec which marks it as 'self-hosted shoot cluster'.
@@ -194,7 +189,7 @@ func (c *CustomVerbAuthorizer) admitNamespacedCloudProfiles(ctx context.Context,
 	}
 
 	parentCloudProfileName := obj.Spec.Parent.Name
-	parentCloudProfile, err := c.cloudProfileLister.Get(parentCloudProfileName)
+	_, err := c.cloudProfileLister.Get(parentCloudProfileName)
 	if err != nil {
 		return apierrors.NewBadRequest("parent CloudProfile could not be found")
 	}
@@ -222,13 +217,6 @@ func (c *CustomVerbAuthorizer) admitNamespacedCloudProfiles(ctx context.Context,
 
 	if mustCheckProviderConfig(oldObj.Spec.ProviderConfig, obj.Spec.ProviderConfig) {
 		err := c.authorize(ctx, a, CustomVerbNamespacedCloudProfileModifyProviderConfig, "modify .spec.providerConfig")
-		if err != nil {
-			return err
-		}
-	}
-
-	if mustCheckLimits(oldObj.Spec.Limits, obj.Spec.Limits, parentCloudProfile) {
-		err := c.authorize(ctx, a, CustomVerbNamespacedCloudProfileRaiseLimits, "increase .spec.limits above parent CloudProfile limits")
 		if err != nil {
 			return err
 		}
@@ -413,12 +401,6 @@ func mustCheckMachineImages(oldMachineImages, machineImages []core.MachineImage)
 
 func mustCheckProviderConfig(oldProviderConfig, providerConfig *runtime.RawExtension) bool {
 	return !apiequality.Semantic.DeepEqual(oldProviderConfig, providerConfig)
-}
-
-func mustCheckLimits(oldLimits, limits *core.Limits, parentCloudProfile *v1beta1.CloudProfile) bool {
-	return !apiequality.Semantic.DeepEqual(oldLimits, limits) &&
-		parentCloudProfile.Spec.Limits != nil &&
-		ptr.Deref(limits.MaxNodesTotal, 0) > ptr.Deref(parentCloudProfile.Spec.Limits.MaxNodesTotal, 0)
 }
 
 func mustCheckIfShootIsSelfHosted(oldShoot, shoot *core.Shoot) bool {
