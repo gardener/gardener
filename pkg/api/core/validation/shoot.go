@@ -762,18 +762,14 @@ func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.EncryptionConfig,
 		for _, r := range oldConfig.Resources {
 			oldEncryptedResources.Insert(schema.ParseGroupResource(r))
 		}
-		if oldConfig.Provider.Type != nil && len(*oldConfig.Provider.Type) > 0 {
-			oldEncryptionProviderType = *oldConfig.Provider.Type
-		}
+		oldEncryptionProviderType = ptr.Deref(oldConfig.Provider.Type, "")
 	}
 
 	if newConfig != nil {
 		for _, r := range newConfig.Resources {
 			newEncryptedResources.Insert(schema.ParseGroupResource(r))
 		}
-		if newConfig.Provider.Type != nil && len(*newConfig.Provider.Type) > 0 {
-			newEncryptionProviderType = *newConfig.Provider.Type
-		}
+		newEncryptionProviderType = ptr.Deref(newConfig.Provider.Type, "")
 	}
 
 	if !newEncryptedResources.Equal(oldEncryptedResources) {
@@ -790,6 +786,7 @@ func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.EncryptionConfig,
 		}
 	}
 
+	// TODO(AleksandarSavchev): Remove this validation once we have added a gardenlet feature gate to allow changing the encryption provider type.
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newEncryptionProviderType, oldEncryptionProviderType, fldPath.Child("provider", "type"))...)
 
 	return allErrs
@@ -1494,13 +1491,13 @@ func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEn
 	}
 
 	if providerType := encryptionConfig.Provider.Type; providerType != nil {
-		providerTypeIdx := fldPath.Child("encryptionConfig", "provider", "type")
+		providerTypeFldPath := fldPath.Child("encryptionConfig", "provider", "type")
 
 		if !availableEncryptionAtRestProviders.Has(*providerType) {
-			allErrs = append(allErrs, field.NotSupported(providerTypeIdx, *providerType, sets.List(availableEncryptionAtRestProviders)))
+			allErrs = append(allErrs, field.NotSupported(providerTypeFldPath, *providerType, sets.List(availableEncryptionAtRestProviders)))
 		}
 		if *providerType == core.EncryptionProviderTypeAESGCM && !encryptionConfigOpts.SkipAESGCMAutoRotationValidation && !encryptionConfigOpts.AutoRotationEnabled {
-			allErrs = append(allErrs, field.Forbidden(providerTypeIdx, "etcdEncryptionKey auto rotation must be enabled when encryption at rest provider is AES-GCM"))
+			allErrs = append(allErrs, field.Forbidden(providerTypeFldPath, "etcdEncryptionKey auto rotation must be enabled when encryption at rest provider is AES-GCM"))
 		}
 	}
 
