@@ -26,6 +26,16 @@ env: []
 #   defaultNotReadyTolerationSeconds: 60
 #   defaultUnreachableTolerationSeconds: 60
 config:
+  gardenerDiscoveryServer:
+    tls:
+      crt: |
+        -----BEGIN CERTIFICATE-----
+        ...
+        -----END CERTIFICATE----- 
+      key: |
+        -----BEGIN CERTIFICATE-----
+        ...
+        -----END CERTIFICATE----- 
   runtimeClientConnection:
     qps: 100
     burst: 130

@@ -18,6 +18,8 @@ patches:
             containerPath: /etc/resolv.conf
           - hostPath: ${DOCKER_SOCKET}
             containerPath: /var/run/docker.sock
+          - hostPath: ./example/gardener-local/kube-apiserver
+            containerPath: /etc/gardener-local/kube-apiserver
         kubeadmConfigPatches:
           - |
             apiVersion: kubelet.config.k8s.io/v1beta1
@@ -37,6 +39,31 @@ patches:
     - op: replace
       path: /nodes/0/role
       value: control-plane
+    - op: replace
+      path: /nodes/0/kubeadmConfigPatches
+      value:
+        - |
+          apiVersion: kubelet.config.k8s.io/v1beta1
+          kind: KubeletConfiguration
+          maxPods: 500
+          serializeImagePulls: false
+          registryPullQPS: 10
+          registryBurst: 20
+          serverTLSBootstrap: true
+        - |
+          # TODO(ialidzhikov): Use the kubeadm.k8s.io/v1beta4 API when kind supports it (ref https://github.com/kubernetes-sigs/kind/pull/3675).
+          # Currently kind accepts kubeadm.k8s.io/v1beta3 only.
+          apiVersion: kubeadm.k8s.io/v1beta3
+          kind: ClusterConfiguration
+          apiServer:
+            extraArgs:
+              authentication-config: /etc/gardener-local/kube-apiserver/structured-authentication.yaml
+            extraVolumes:
+            - name: structured-authentication
+              mountPath: /etc/gardener-local/kube-apiserver/structured-authentication.yaml
+              hostPath: /etc/gardener-local/kube-apiserver/structured-authentication.yaml
+              readOnly: true
+              pathType: File
   target:
     group: kind.x-k8s.io
     kind: Cluster

@@ -918,6 +918,7 @@ build:
             - extensions/pkg/util/secret/manager
             - extensions/pkg/webhook
             - extensions/pkg/webhook/certificates
+            - extensions/pkg/webhook/cloudprovider
             - extensions/pkg/webhook/cmd
             - extensions/pkg/webhook/context
             - extensions/pkg/webhook/controlplane
@@ -1018,6 +1019,7 @@ build:
             - pkg/provider-local/machine-provider/api/validation
             - pkg/provider-local/machine-provider/local
             - pkg/provider-local/webhook/calicoselfhostedshoot
+            - pkg/provider-local/webhook/cloudprovider
             - pkg/provider-local/webhook/controlplane
             - pkg/provider-local/webhook/node
             - pkg/provider-local/webhook/prometheus
