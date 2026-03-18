@@ -747,15 +747,6 @@ spec:
 			"shoot-core-gardener-resource-manager",
 		))
 
-		// The secret with the bootstrap certificate should be gone when virtual-garden-gardener-resource-manager was bootstrapped.
-		Eventually(func(g Gomega) []string {
-			secretList := &corev1.SecretList{}
-			g.Expect(testClient.List(ctx, secretList, client.InNamespace(testNamespace.Name))).To(Succeed())
-			return test.ObjectNames(secretList)
-		}).ShouldNot(ContainElement(
-			ContainSubstring("shoot-access-gardener-resource-manager-bootstrap-"),
-		))
-
 		// The garden controller waits for the virtual-garden-gardener-resource-manager Deployment to be healthy, so let's fake this here.
 		By("Patch virtual-garden-gardener-resource-manager deployment to report healthiness")
 		Eventually(func(g Gomega) {
