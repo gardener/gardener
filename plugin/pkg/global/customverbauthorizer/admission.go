@@ -188,12 +188,6 @@ func (c *CustomVerbAuthorizer) admitNamespacedCloudProfiles(ctx context.Context,
 		return apierrors.NewBadRequest("could not convert resource into NamespacedCloudProfile object")
 	}
 
-	parentCloudProfileName := obj.Spec.Parent.Name
-	_, err := c.cloudProfileLister.Get(parentCloudProfileName)
-	if err != nil {
-		return apierrors.NewBadRequest("parent CloudProfile could not be found")
-	}
-
 	if a.GetOperation() == admission.Update {
 		oldObj, ok = a.GetOldObject().(*core.NamespacedCloudProfile)
 		if !ok {
