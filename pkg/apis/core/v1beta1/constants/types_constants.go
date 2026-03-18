@@ -44,6 +44,12 @@ const (
 	// SecretNameCASeed is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate generated for a seed cluster.
 	SecretNameCASeed = "ca-seed"
+	// SecretNameCAIstioBasicAuthServer is a constant for the name of a Kubernetes secret object that contains
+	// the CA certificate generated for the istio-basic-auth-server.
+	SecretNameCAIstioBasicAuthServer = "ca-istio-basic-auth-server"
+	// SecretNameCAVirtualGardenIstioBasicAuthServer is a constant for the name of a Kubernetes secret object
+	// that contains the CA certificate generated for the istio-basic-auth-server of the virtual garden.
+	SecretNameCAVirtualGardenIstioBasicAuthServer = "ca-virtual-garden-istio-basic-auth-server"
 
 	// SecretNameCloudProvider is a constant for the name of a Kubernetes secret object that contains the provider
 	// specific credentials that shall be used to create/delete the shoot.

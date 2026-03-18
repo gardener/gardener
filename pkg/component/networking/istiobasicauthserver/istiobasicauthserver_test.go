@@ -75,6 +75,14 @@ var _ = Describe("IstioBasicAuthServer", func() {
           subPath: ` + prefix + `
 `
 			}
+			if len(volumes) == 0 {
+				volumes += `      - emptyDir: {}
+        name: empty-secrets-folder
+`
+				volumeMounts += `        - mountPath: /secrets
+          name: empty-secrets-folder
+`
+			}
 			prefix := ""
 			if isGarden {
 				prefix = "virtual-garden-"
@@ -225,6 +233,7 @@ metadata:
   ownerReferences:
   - apiVersion: v1
     blockOwnerDeletion: true
+    controller: true
     kind: Namespace
     name: some-namespace
     uid: ""
@@ -295,6 +304,7 @@ status: {}
 				OwnerReferences: []metav1.OwnerReference{{
 					APIVersion:         "v1",
 					BlockOwnerDeletion: ptr.To(true),
+					Controller:         ptr.To(true),
 					Kind:               "Namespace",
 					Name:               "some-namespace",
 					UID:                "",
@@ -339,6 +349,8 @@ status: {}
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(c, namespace)
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-istio-basic-auth-server", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-virtual-garden-istio-basic-auth-server", Namespace: namespace}})).To(Succeed())
 
 		values = Values{
 			Image:             image,

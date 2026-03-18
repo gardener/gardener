@@ -1358,8 +1358,8 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 						return networkPolicyList.Items
 					}
 					expectation := ContainElements(
-						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port1Suffix + "-from-" + istioNamespace + "-virtual-service"), "Namespace": Equal(service.Namespace)})}),
-						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Namespace + "-" + service.Name + port1Suffix + "-from-virtual-service"), "Namespace": Equal(istioNamespace)})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port1Suffix + "-from-" + istioNamespace), "Namespace": Equal(service.Namespace)})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Namespace + "-" + service.Name + port1Suffix + "-from-istio"), "Namespace": Equal(istioNamespace)})}),
 					)
 
 					if should {
@@ -1495,7 +1495,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 		It("should create the expected network policies", func() {
 			By("Wait until virtualService policy was created")
 			Eventually(func(g Gomega) networkingv1.NetworkPolicySpec {
-				networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "ingress-to-" + service.Name + port1Suffix + "-from-" + istioNamespaceResource.Name + "-virtual-service", Namespace: service.Namespace}}
+				networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "ingress-to-" + service.Name + port1Suffix + "-from-" + istioNamespaceResource.Name, Namespace: service.Namespace}}
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).To(Succeed())
 				return networkPolicy.Spec
 			}).Should(Equal(networkingv1.NetworkPolicySpec{
@@ -1512,7 +1512,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 
 			By("Wait until egress policy was created")
 			Eventually(func(g Gomega) networkingv1.NetworkPolicySpec {
-				networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "egress-to-" + service.Namespace + "-" + service.Name + port1Suffix + "-from-virtual-service", Namespace: istioNamespaceResource.Name}}
+				networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "egress-to-" + service.Namespace + "-" + service.Name + port1Suffix + "-from-istio", Namespace: istioNamespaceResource.Name}}
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).To(Succeed())
 				return networkPolicy.Spec
 			}).Should(Equal(networkingv1.NetworkPolicySpec{
@@ -1545,12 +1545,12 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 				return networkPolicyList.Items
 			}).Should(And(
 				Not(ContainElements(
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port1Suffix + "-from-" + istioNamespaceResource.Name + "-virtual-service"), "Namespace": Equal(service.Namespace)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Namespace + "-" + service.Name + port1Suffix + "-from-virtual-service"), "Namespace": Equal(istioNamespace)})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port1Suffix + "-from-" + istioNamespaceResource.Name), "Namespace": Equal(service.Namespace)})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Namespace + "-" + service.Name + port1Suffix + "-from-istio"), "Namespace": Equal(istioNamespace)})}),
 				)),
 				ContainElements(
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + "-tcp-" + newTargetPort.String() + "-from-" + istioNamespaceResource.Name + "-virtual-service"), "Namespace": Equal(service.Namespace)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Namespace + "-" + service.Name + "-tcp-" + newTargetPort.String() + "-from-virtual-service"), "Namespace": Equal(istioNamespace)})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + "-tcp-" + newTargetPort.String() + "-from-" + istioNamespaceResource.Name), "Namespace": Equal(service.Namespace)})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Namespace + "-" + service.Name + "-tcp-" + newTargetPort.String() + "-from-istio"), "Namespace": Equal(istioNamespace)})}),
 				),
 			))
 		})

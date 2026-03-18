@@ -281,9 +281,8 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, log logr.Logg
 	}
 
 	for _, p := range portsExposedViaVirtualServices {
-		port := p.networkPolicyPort
-		policyID := policyIDFor(service.Name, port)
-		addTasksForPort(port, policyID, p.namespace, p.podSelector, ingressPolicyObjectMetaWhenExposedViaVirtualServiceFor, egressPolicyObjectMetaWhenExposedViaVirtualServiceFor)
+		policyID := policyIDFor(service.Name, p.networkPolicyPort)
+		addTasksForPort(p.networkPolicyPort, policyID, p.namespace, p.podSelector, ingressPolicyObjectMetaWhenExposedViaVirtualServiceFor, egressPolicyObjectMetaWhenExposedViaVirtualServiceFor)
 	}
 
 	return taskFns, desiredObjectMetaKeys, nil
@@ -514,7 +513,7 @@ func (r *Reconciler) portsExposedByVirtualServiceResources(ctx context.Context, 
 			for _, route := range httpRoute.Route {
 				res, err := r.calculateIstioResources(ctx, service, route.Destination, gateways)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("failed calculating istio resources for virtual service %q: %w", virtualService.Name, err)
 				}
 				resources = append(resources, res...)
 			}
@@ -524,7 +523,7 @@ func (r *Reconciler) portsExposedByVirtualServiceResources(ctx context.Context, 
 			for _, route := range tlsRoute.Route {
 				res, err := r.calculateIstioResources(ctx, service, route.Destination, gateways)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("failed calculating istio resources for virtual service %q: %w", virtualService.Name, err)
 				}
 				resources = append(resources, res...)
 			}
@@ -534,7 +533,7 @@ func (r *Reconciler) portsExposedByVirtualServiceResources(ctx context.Context, 
 			for _, route := range tcpRoute.Route {
 				res, err := r.calculateIstioResources(ctx, service, route.Destination, gateways)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("failed calculating istio resources for virtual service %q: %w", virtualService.Name, err)
 				}
 				resources = append(resources, res...)
 			}
@@ -549,7 +548,10 @@ func (r *Reconciler) calculateIstioResources(
 	service *corev1.Service,
 	destination *istioapinetworkingv1beta1.Destination,
 	gateways []*istionetworkingv1beta1.Gateway,
-) ([]istioResources, error) {
+) (
+	[]istioResources,
+	error,
+) {
 	var resources []istioResources
 
 	if destination != nil && destination.Host != "" && destination.Port != nil {
@@ -563,7 +565,7 @@ func (r *Reconciler) calculateIstioResources(
 
 					istioNamespaces, err := r.collectIstioNamespaces(ctx, gw)
 					if err != nil {
-						return nil, err
+						return nil, fmt.Errorf("failed collecting istio namespaces for gateway %q in namespace %q: %w", gw.Name, gw.Namespace, err)
 					}
 
 					networkPolicyPorts := serviceBackendPortsToNetworkPolicyPorts(service, []networkingv1.ServiceBackendPort{{Number: int32(destination.Port.Number)}}) // #nosec G115 -- Port number is already validated by istio admission webhook to be in range 1-65535, so it cannot cause overflow in int32 conversion.
@@ -590,26 +592,23 @@ func (r *Reconciler) calculateIstioResources(
 }
 
 func (r *Reconciler) collectIstioNamespaces(ctx context.Context, gateway *istionetworkingv1beta1.Gateway) ([]string, error) {
-	if gateway == nil {
-		return nil, fmt.Errorf("gateway cannot be nil")
-	}
-
-	// Ignore gateways with empty selector even though istio allows it.
+	// Istio allows gateways with empty selector, but we do not because in the Gardener context there is always a selector.
 	if len(gateway.Spec.Selector) == 0 {
 		return nil, fmt.Errorf("gateway %q in namespace %q has no selector, which is not supported by the network policy controller", gateway.Name, gateway.Namespace)
 	}
 
-	namespaceSet := sets.New[string]()
-	podList := &corev1.PodList{}
+	namespaces := sets.New[string]()
+	podList := &metav1.PartialObjectMetadataList{}
+	podList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("PodList"))
 	if err := r.TargetClient.List(ctx, podList, client.MatchingLabels(gateway.Spec.Selector)); err != nil {
 		return nil, fmt.Errorf("failed listing pods to determine gateway namespaces: %w", err)
 	}
 
 	for _, pod := range podList.Items {
-		namespaceSet.Insert(pod.Namespace)
+		namespaces.Insert(pod.Namespace)
 	}
 
-	return namespaceSet.UnsortedList(), nil
+	return namespaces.UnsortedList(), nil
 }
 
 func policyIDFor(serviceName string, port networkingv1.NetworkPolicyPort) string {
@@ -684,9 +683,9 @@ func egressPolicyObjectMetaWhenExposedViaIngressFor(policyID, serviceNamespace, 
 }
 
 func ingressPolicyObjectMetaWhenExposedViaVirtualServiceFor(policyID, serviceNamespace, backendServiceNamespace string) metav1.ObjectMeta {
-	name := "ingress-to-" + policyID + "-from-virtual-service"
+	name := "ingress-to-" + policyID + "-from-istio"
 	if serviceNamespace != backendServiceNamespace {
-		name = "ingress-to-" + policyID + "-from-" + backendServiceNamespace + "-virtual-service"
+		name = "ingress-to-" + policyID + "-from-" + backendServiceNamespace
 	}
 
 	return metav1.ObjectMeta{Name: name, Namespace: serviceNamespace}
@@ -698,7 +697,7 @@ func egressPolicyObjectMetaWhenExposedViaVirtualServiceFor(policyID, serviceName
 		name = "egress-to-" + serviceNamespace + "-" + policyID
 	}
 
-	return metav1.ObjectMeta{Name: name + "-from-virtual-service", Namespace: backendServiceNamespace}
+	return metav1.ObjectMeta{Name: name + "-from-istio", Namespace: backendServiceNamespace}
 }
 
 func ingressNamespaceSelectorFor(serviceNamespace, namespaceName string) *metav1.LabelSelector {

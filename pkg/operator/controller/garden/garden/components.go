@@ -1117,7 +1117,10 @@ func (r *Reconciler) newPlutono(
 	ingressDomain string,
 	wildcardCertSecretName *string,
 	ingressGatewayValues []istio.IngressGatewayValues,
-) (plutono.Interface, error) {
+) (
+	plutono.Interface,
+	error,
+) {
 	if len(ingressGatewayValues) != 1 {
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the plutono config")
 	}

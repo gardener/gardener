@@ -519,13 +519,7 @@ func (s *sni) reconcileIstioTLSSecrets(ctx context.Context, ownerNamespace *core
 	if err != nil {
 		return fmt.Errorf("failed to get GVK for namespace %q: %w", ownerNamespace.Name, err)
 	}
-	ownerReference := metav1.OwnerReference{
-		APIVersion:         ownerNamespaceGVK.GroupVersion().String(),
-		Kind:               ownerNamespaceGVK.Kind,
-		Name:               ownerNamespace.Name,
-		UID:                ownerNamespace.UID,
-		BlockOwnerDeletion: ptr.To(true),
-	}
+	ownerReference := metav1.NewControllerRef(ownerNamespace, ownerNamespaceGVK)
 
 	var serializeObjects []client.Object
 
@@ -535,7 +529,7 @@ func (s *sni) reconcileIstioTLSSecrets(ctx context.Context, ownerNamespace *core
 		"key":    secretServer.Data[secretsutils.DataKeyPrivateKey],
 		"cert":   secretServer.Data[secretsutils.DataKeyCertificate],
 	}
-	istioTLSSecret.OwnerReferences = []metav1.OwnerReference{ownerReference}
+	istioTLSSecret.OwnerReferences = []metav1.OwnerReference{*ownerReference}
 	serializeObjects = append(serializeObjects, istioTLSSecret)
 
 	istioMTLSSecret := s.emptyIstioMTLSSecret()
@@ -544,13 +538,13 @@ func (s *sni) reconcileIstioTLSSecrets(ctx context.Context, ownerNamespace *core
 		"key":    secretIstioClientCertificate.Data[secretsutils.DataKeyPrivateKey],
 		"cert":   secretIstioClientCertificate.Data[secretsutils.DataKeyCertificate],
 	}
-	istioMTLSSecret.OwnerReferences = []metav1.OwnerReference{ownerReference}
+	istioMTLSSecret.OwnerReferences = []metav1.OwnerReference{*ownerReference}
 	serializeObjects = append(serializeObjects, istioMTLSSecret)
 
 	if s.valuesFunc().WildcardConfiguration != nil && s.valuesFunc().WildcardConfiguration.IstioIngressGateway != nil {
 		istioWildcardMTLSSecret := istioMTLSSecret.DeepCopy()
 		istioWildcardMTLSSecret.Namespace = s.valuesFunc().WildcardConfiguration.IstioIngressGateway.Namespace
-		istioWildcardMTLSSecret.OwnerReferences = []metav1.OwnerReference{ownerReference}
+		istioWildcardMTLSSecret.OwnerReferences = []metav1.OwnerReference{*ownerReference}
 		serializeObjects = append(serializeObjects, istioWildcardMTLSSecret)
 	}
 
@@ -561,7 +555,7 @@ func (s *sni) reconcileIstioTLSSecrets(ctx context.Context, ownerNamespace *core
 			"key":    s.valuesFunc().WildcardConfiguration.TLSSecret.Data[secretsutils.DataKeyPrivateKey],
 			"cert":   s.valuesFunc().WildcardConfiguration.TLSSecret.Data[secretsutils.DataKeyCertificate],
 		}
-		istioWildcardTLSSecret.OwnerReferences = []metav1.OwnerReference{ownerReference}
+		istioWildcardTLSSecret.OwnerReferences = []metav1.OwnerReference{*ownerReference}
 		serializeObjects = append(serializeObjects, istioWildcardTLSSecret)
 	}
 

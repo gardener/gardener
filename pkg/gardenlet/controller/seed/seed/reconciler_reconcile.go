@@ -143,6 +143,15 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
+	if _, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
+		Name:       v1beta1constants.SecretNameCAIstioBasicAuthServer,
+		CommonName: "istio-basic-auth-server-ca",
+		CertType:   secretsutils.CACert,
+		Validity:   ptr.To(30 * 24 * time.Hour),
+	}, secretsmanager.Rotate(secretsmanager.KeepOld), secretsmanager.IgnoreOldSecretsAfter(24*time.Hour)); err != nil {
+		return err
+	}
+
 	secrets, err := gardenerutils.ReadGardenSecrets(
 		ctx,
 		log,

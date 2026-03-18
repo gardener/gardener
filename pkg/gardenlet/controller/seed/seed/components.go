@@ -633,7 +633,10 @@ func (r *Reconciler) newPlutono(
 	authSecret, wildcardCertSecret *corev1.Secret,
 	seedIsGarden bool,
 	istioIngressGatewayLabels map[string]string,
-) (plutono.Interface, error) {
+) (
+	plutono.Interface,
+	error,
+) {
 	var wildcardCertName *string
 	if wildcardCertSecret != nil {
 		wildcardCertName = ptr.To(wildcardCertSecret.GetName())

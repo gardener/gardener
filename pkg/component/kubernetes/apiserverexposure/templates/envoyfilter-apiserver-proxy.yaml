@@ -6,6 +6,7 @@ metadata:
   ownerReferences:
   - apiVersion: v1
     blockOwnerDeletion: true
+    controller: true
     kind: Namespace
     name: {{ .ControlPlaneNamespace }}
     uid: {{ .ControlPlaneNamespaceUID }}

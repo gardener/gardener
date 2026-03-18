@@ -82,23 +82,12 @@ func New(
 }
 
 func (i *istioBasicAuthServer) Deploy(ctx context.Context) error {
-	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-	destinationHost := kubernetesutils.FQDNForService(i.getPrefix()+svcName, i.namespace)
-	caName := fmt.Sprintf("ca-%s%s", i.getPrefix(), name)
-
-	caSecret, err := i.secretsManager.Generate(ctx,
-		&secretsutils.CertificateSecretConfig{
-			Name:       caName,
-			CommonName: "istio-basic-auth-server-ca",
-			CertType:   secretsutils.CACert,
-			Validity:   ptr.To(30 * 24 * time.Hour),
-		},
-		secretsmanager.Rotate(secretsmanager.InPlace),
-		secretsmanager.Namespace(i.namespace),
+	var (
+		registry        = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+		destinationHost = kubernetesutils.FQDNForService(i.getPrefix()+svcName, i.namespace)
+		caName          = "ca-" + i.getPrefix() + name
 	)
-	if err != nil {
-		return fmt.Errorf("failed to generate ca certificate: %w", err)
-	}
+
 	caBundle, found := i.secretsManager.Get(caName)
 	if !found {
 		return fmt.Errorf("failed to find ca certificate bundle %q", caName)
@@ -120,7 +109,7 @@ func (i *istioBasicAuthServer) Deploy(ctx context.Context) error {
 		return fmt.Errorf("failed to generate server certificate: %w", err)
 	}
 
-	secretNameInIstioNamespace := fmt.Sprintf("%s-%s", i.namespace, caSecret.Name)
+	secretNameInIstioNamespace := fmt.Sprintf("%s-%s", i.namespace, caBundle.Name)
 
 	ownerNamespace := &corev1.Namespace{}
 	if err := i.client.Get(ctx, client.ObjectKey{Name: i.namespace}, ownerNamespace); err != nil {
@@ -130,13 +119,7 @@ func (i *istioBasicAuthServer) Deploy(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to get GVK for namespace %q: %w", ownerNamespace.Name, err)
 	}
-	ownerReference := &metav1.OwnerReference{
-		APIVersion:         ownerNamespaceGVK.GroupVersion().String(),
-		Kind:               ownerNamespaceGVK.Kind,
-		Name:               ownerNamespace.Name,
-		UID:                ownerNamespace.UID,
-		BlockOwnerDeletion: ptr.To(true),
-	}
+	ownerReference := metav1.NewControllerRef(ownerNamespace, ownerNamespaceGVK)
 
 	volumes, volumeMounts, configPatches, err := i.calculateConfiguration(ctx, serverSecret)
 	if err != nil {
@@ -189,10 +172,14 @@ func (i *istioBasicAuthServer) WaitCleanup(ctx context.Context) error {
 func (i *istioBasicAuthServer) calculateConfiguration(
 	ctx context.Context,
 	tlsSecret *corev1.Secret,
-) ([]corev1.Volume, []corev1.VolumeMount, []*istioapinetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch, error) {
+) (
+	[]corev1.Volume,
+	[]corev1.VolumeMount,
+	[]*istioapinetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch,
+	error,
+) {
 	virtualServiceList := &istionetworkingv1beta1.VirtualServiceList{}
-	err := i.client.List(ctx, virtualServiceList, client.InNamespace(i.namespace), client.HasLabels{v1beta1constants.LabelBasicAuthSecretName})
-	if err != nil {
+	if err := i.client.List(ctx, virtualServiceList, client.InNamespace(i.namespace), client.HasLabels{v1beta1constants.LabelBasicAuthSecretName}); err != nil {
 		return nil, nil, nil, fmt.Errorf("unable to list virtual services: %w", err)
 	}
 
@@ -284,9 +271,24 @@ func (i *istioBasicAuthServer) calculateConfiguration(
 						},
 					},
 				},
-			},
-			)
+			})
 		}
+	}
+
+	// Allow the istio-basic-auth-server to start even if there are no virtual services referencing it.
+	if len(virtualServiceList.Items) == 0 {
+		dummyVolume := "empty-secrets-folder"
+		volumes = append(volumes, corev1.Volume{
+			Name: dummyVolume,
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		})
+
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      dummyVolume,
+			MountPath: rootMountPath,
+		})
 	}
 
 	return volumes, volumeMounts, configPatches, nil
