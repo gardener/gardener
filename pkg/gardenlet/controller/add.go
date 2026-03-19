@@ -159,6 +159,11 @@ func AddToManager(
 		return nil
 	}
 
+	seedIsSelfHostedShoot, err := gardenletutils.SeedIsSelfHostedShoot(ctx, seedCluster.GetAPIReader())
+	if err != nil {
+		return fmt.Errorf("failed checking whether the seed is a self-hosted shoot cluster: %w", err)
+	}
+
 	if err := (&backupbucket.Reconciler{
 		Config:   *cfg.Controllers.BackupBucket,
 		SeedName: cfg.SeedConfig.Name,
@@ -200,6 +205,18 @@ func AddToManager(
 		return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
 	}
 
+	if !seedIsSelfHostedShoot {
+		// When the seed is a self-hosted shoot cluster, the gardenlet responsible for the self-hosted shoot in the
+		// kube-system namespace runs this controller.
+		if err := (&tokenrequestor.Reconciler{
+			ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs, 0),
+			Class:           ptr.To(resourcesv1alpha1.ResourceManagerClassGarden),
+			TargetNamespace: gardenerutils.ComputeGardenNamespace(cfg.SeedConfig.Name),
+		}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
+			return fmt.Errorf("failed adding TokenRequestorServiceAccount controller: %w", err)
+		}
+	}
+
 	if err := seed.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, healthManager); err != nil {
 		return fmt.Errorf("failed adding Seed controller: %w", err)
 	}
@@ -210,14 +227,6 @@ func AddToManager(
 
 	if err := vpaevictionrequirements.AddToManager(ctx, mgr, gardenletCancel, *cfg.Controllers.VPAEvictionRequirements, seedCluster); err != nil {
 		return fmt.Errorf("failed adding VPAEvictionRequirements controller: %w", err)
-	}
-
-	if err := (&tokenrequestor.Reconciler{
-		ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs, 0),
-		Class:           ptr.To(resourcesv1alpha1.ResourceManagerClassGarden),
-		TargetNamespace: gardenerutils.ComputeGardenNamespace(cfg.SeedConfig.Name),
-	}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
-		return fmt.Errorf("failed adding TokenRequestorServiceAccount controller: %w", err)
 	}
 
 	if err := (&workloadidentity.Reconciler{
