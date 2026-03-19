@@ -12689,6 +12689,13 @@ func schema_pkg_apis_seedmanagement_v1alpha1_Image(ref common.ReferenceCallback)
 							Enum:        []interface{}{"Always", "IfNotPresent", "Never"},
 						},
 					},
+					"ref": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Ref is the full image reference.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},

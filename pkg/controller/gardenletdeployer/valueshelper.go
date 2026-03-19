@@ -278,6 +278,7 @@ func getParentGardenletDeployment() (*seedmanagementv1alpha1.GardenletDeployment
 
 	return &seedmanagementv1alpha1.GardenletDeployment{
 		Image: &seedmanagementv1alpha1.Image{
+			Ref:        gardenletImage.Ref,
 			Repository: gardenletImage.Repository,
 			Tag:        gardenletImage.Tag,
 		},
