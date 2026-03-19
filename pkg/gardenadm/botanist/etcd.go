@@ -47,6 +47,7 @@ func (b *GardenadmBotanist) DeployEtcdDruid(ctx context.Context) error {
 
 	gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{}
 	gardenletconfigv1alpha1.SetObjectDefaults_GardenletConfiguration(gardenletConfig)
+	gardenletConfig.ETCDConfig.FeatureGates = map[string]bool{"UpgradeEtcdVersion": true}
 
 	deployer, err := sharedcomponent.NewEtcdDruid(
 		b.SeedClientSet.Client(),
