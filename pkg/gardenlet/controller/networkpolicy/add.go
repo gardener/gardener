@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy/hostnameresolver"
 	"github.com/gardener/gardener/pkg/extensions"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
@@ -55,7 +56,7 @@ func AddToManager(
 	}
 
 	if !gardenletutils.IsResponsibleForSelfHostedShoot() {
-		seedIsSelfHostedShoot, err := gardenletutils.SeedIsSelfHostedShoot(ctx, seedCluster.GetAPIReader())
+		seedIsSelfHostedShoot, err := gardenerutils.ClusterIsSelfHostedShoot(ctx, seedCluster.GetAPIReader())
 		if err != nil {
 			return fmt.Errorf("failed checking whether the seed is a self-hosted shoot cluster: %w", err)
 		}
@@ -120,7 +121,7 @@ func AddToManager(
 			}
 
 			if !gardenletutils.IsResponsibleForSelfHostedShoot() {
-				seedIsSelfHostedShoot, err := gardenletutils.SeedIsSelfHostedShoot(ctx, seedCluster.GetAPIReader())
+				seedIsSelfHostedShoot, err := gardenerutils.ClusterIsSelfHostedShoot(ctx, seedCluster.GetAPIReader())
 				if err != nil {
 					mgr.GetLogger().Error(err, "Failed checking whether the seed cluster is a self-hosted shoot cluster")
 					return
