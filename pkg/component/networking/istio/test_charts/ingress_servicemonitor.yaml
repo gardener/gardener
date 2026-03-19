@@ -25,4 +25,4 @@ spec:
   selector:
     matchLabels:
       app: istio-ingressgateway
-status: {}
+      metrics-scrape-target: "true"

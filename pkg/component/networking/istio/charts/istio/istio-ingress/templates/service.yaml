@@ -13,6 +13,7 @@ metadata:
 {{- end }}
   labels:
     app.kubernetes.io/version: {{ .Values.ingressVersion }}
+    metrics-scrape-target: "true"
 {{ .Values.labels | toYaml | indent 4 }}
 spec:
   type: {{ .Values.serviceType }}

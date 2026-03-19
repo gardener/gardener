@@ -11,6 +11,7 @@ metadata:
     foo: bar
   labels:
     app.kubernetes.io/version: 1.27.1
+    metrics-scrape-target: "true"
     app: istio-ingressgateway
     foo: bar
 spec:
