@@ -119,8 +119,8 @@
         executionMode: 'branch',
       },
       matchPackageNames: [
-        '/.+/api/.+/',
-        '/.+/apis/.+/',
+        '/.+/api(/.+|$)/',
+        '/.+/apis(/.+|$)/',
         '/.*gardener/etcd-druid$/',
         '/.*gardener/machine-controller-manager$/',
         '/.*gardener/terminal-controller-manager$/',
