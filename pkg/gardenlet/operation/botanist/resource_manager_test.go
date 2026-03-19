@@ -169,6 +169,21 @@ var _ = Describe("ResourceManager", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(resourceManager.GetValues().MachineNamespace).To(HaveValue(Equal("kube-system")))
+					Expect(resourceManager.GetValues().SystemComponentTolerations).To(ContainElement(HaveField("Key", "node-role.kubernetes.io/control-plane")))
+				})
+
+				When("not running inside self hosted shoot (gardenadm bootstrap)", func() {
+					BeforeEach(func() {
+						botanist.Shoot.ControlPlaneNamespace = "shoot--foo--bar"
+					})
+
+					It("should not have `node-role.kubernetes.io/control-plane` toleration", func() {
+						resourceManager, err := botanist.DefaultResourceManager()
+						Expect(resourceManager).NotTo(BeNil())
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(resourceManager.GetValues().SystemComponentTolerations).ToNot(ContainElement(HaveField("Key", "node-role.kubernetes.io/control-plane")))
+					})
 				})
 			})
 
