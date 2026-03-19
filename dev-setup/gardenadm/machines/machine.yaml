@@ -17,6 +17,21 @@ spec:
       annotations:
         cni.projectcalico.org/ipv4pools: '["gardenadm-unmanaged-infra"]'
     spec:
+      initContainers:
+      - name: init-systemd-system
+        image: local-skaffold/gardener-extension-provider-local-node
+        command:
+        - sh
+        - -c
+        - |
+          # Only seed on first boot (empty subPath); subsequent boots preserve runtime state.
+          if [ -z "$(ls -A /mnt/systemd-system)" ]; then
+            cp -a /etc/systemd/system/. /mnt/systemd-system/
+          fi
+        volumeMounts:
+        - name: machine-state
+          mountPath: /mnt/systemd-system
+          subPath: systemd-system
       containers:
       - name: node
         image: local-skaffold/gardener-extension-provider-local-node
@@ -37,8 +52,45 @@ spec:
           readOnly: true
         - name: etcd-backup
           mountPath: /etc/gardener/local-backupbuckets
-        - name: gardenadm
+        - name: machine-state
           mountPath: /gardenadm
+          subPath: gardenadm
+        - name: machine-state
+          mountPath: /etc/kubernetes
+          subPath: kubernetes
+        - name: machine-state
+          mountPath: /etc/systemd/system
+          subPath: systemd-system
+        - name: machine-state
+          mountPath: /var/lib/etcd-main
+          subPath: etcd-main
+        - name: machine-state
+          mountPath: /var/lib/etcd-events
+          subPath: etcd-events
+        - name: machine-state
+          mountPath: /var/lib/kube-apiserver
+          subPath: kube-apiserver
+        - name: machine-state
+          mountPath: /var/lib/kube-controller-manager
+          subPath: kube-controller-manager
+        - name: machine-state
+          mountPath: /var/lib/kube-scheduler
+          subPath: kube-scheduler
+        - name: machine-state
+          mountPath: /var/lib/kubelet
+          subPath: kubelet
+        - name: machine-state
+          mountPath: /var/lib/gardenadm
+          subPath: gardenadm-state
+        - name: machine-state
+          mountPath: /var/lib/gardener-node-agent
+          subPath: gardener-node-agent
+        - name: machine-state
+          mountPath: /opt/bin
+          subPath: opt-bin
+        - name: machine-state
+          mountPath: /root
+          subPath: root-home
         - name: bashrc
           mountPath: /root/.bashrc
           subPath: bashrc
@@ -65,12 +117,12 @@ spec:
           name: machine-bashrc
   volumeClaimTemplates:
   - metadata:
-      name: gardenadm
+      name: machine-state
     spec:
       accessModes: ["ReadWriteOnce"]
       resources:
         requests:
-          storage: 1Gi
+          storage: 2Gi
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -81,5 +133,6 @@ metadata:
 data:
   bashrc: |
     export KUBECONFIG=/etc/kubernetes/admin.conf
+    export HISTFILE=/root/.bash_history
     alias k=kubectl
     alias kg='kubectl -n garden'
