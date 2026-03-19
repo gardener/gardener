@@ -188,7 +188,6 @@ func defaultOnRead(obj runtime.Object) {
 }
 
 func defaultOnReadShoot(s *core.Shoot) {
-	shoot.SyncEncryptedResourcesStatus(s) // TODO(AleksandarSavchev): Remove this function after v1.135 has been released.
 	shoot.SyncDNSProviderCredentials(s)
 }
 

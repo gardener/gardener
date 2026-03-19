@@ -533,9 +533,6 @@ func (r *Reconciler) reconcile(
 
 					patch := client.MergeFrom(garden.DeepCopy())
 
-					// TODO(AleksandarSavchev): Stop setting the shoot.Status.EncryptedResources after v1.135 has been released.
-					garden.Status.EncryptedResources = shared.StringifyGroupResources(encryptedResources)
-
 					if garden.Status.Credentials == nil {
 						garden.Status.Credentials = &operatorv1alpha1.Credentials{}
 					}
