@@ -58,6 +58,7 @@ rules:
   - update
 - apiGroups:
   - ""
+  - events.k8s.io
   resources:
   - events
   - namespaces
