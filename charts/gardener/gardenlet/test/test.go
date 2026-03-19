@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
@@ -174,7 +175,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 				Verbs:         []string{"delete"},
 			},
 			{
-				APIGroups: []string{""},
+				APIGroups: []string{"", eventsv1.GroupName},
 				Resources: []string{"events"},
 				Verbs:     []string{"get", "list", "create", "patch", "update"},
 			},
