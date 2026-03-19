@@ -269,7 +269,10 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		if err := registry.Add(&monitoringv1.ServiceMonitor{
 			ObjectMeta: monitoringutils.ConfigObjectMeta("istio-ingressgateway", istioIngressGateway.Namespace, prometheusName),
 			Spec: monitoringv1.ServiceMonitorSpec{
-				Selector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelApp: "istio-ingressgateway"}},
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+					v1beta1constants.LabelApp: "istio-ingressgateway",
+					"metrics-scrape-target":   "true",
+				}},
 				Endpoints: []monitoringv1.Endpoint{{
 					Path: "/stats/prometheus",
 					Port: "tcp",
