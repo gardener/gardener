@@ -654,7 +654,6 @@ subjects:
 
 			JustBeforeEach(func() {
 				shootAccessSecret = nil
-				deployment.Spec.Template.Spec.NodeSelector = map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}
 			})
 
 			When("running the control plane (gardenadm init)", func() {
@@ -663,6 +662,7 @@ subjects:
 				})
 
 				JustBeforeEach(func() {
+					deployment.Spec.Template.Spec.NodeSelector = map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}
 					for i, s := range deployment.Spec.Template.Spec.Containers[0].Command {
 						if strings.HasPrefix(s, "--target-kubeconfig=") {
 							deployment.Spec.Template.Spec.Containers[0].Command[i] = "--target-kubeconfig="

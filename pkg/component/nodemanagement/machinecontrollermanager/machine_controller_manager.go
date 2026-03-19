@@ -290,9 +290,12 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 			},
 		}
 
-		if m.values.SelfHostedShoot {
+		// If machine-controller-manager runs in the kube-system namespace, then it should be scheduled only on workers that support system components.
+		if m.namespace == metav1.NamespaceSystem {
 			deployment.Spec.Template.Spec.NodeSelector = map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}
-		} else {
+		}
+
+		if !m.values.SelfHostedShoot {
 			genericTokenKubeconfigSecret, found := m.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
 			if !found {
 				return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
