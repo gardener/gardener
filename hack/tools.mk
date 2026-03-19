@@ -25,7 +25,7 @@ SYSTEM_ARCH                := $(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/
 TOOLS_BIN_DIR              := $(TOOLS_DIR)/bin/$(SYSTEM_NAME)-$(SYSTEM_ARCH)
 CONTROLLER_GEN             := $(TOOLS_BIN_DIR)/controller-gen
 EXTENSION_GEN              := $(TOOLS_BIN_DIR)/extension-generator
-GEN_CRD_API_REFERENCE_DOCS := $(TOOLS_BIN_DIR)/gen-crd-api-reference-docs
+CRD_REF_DOCS               := $(TOOLS_BIN_DIR)/crd-ref-docs
 GINKGO                     := $(TOOLS_BIN_DIR)/ginkgo
 GOIMPORTS                  := $(TOOLS_BIN_DIR)/goimports
 GOIMPORTSREVISER           := $(TOOLS_BIN_DIR)/goimports-reviser
@@ -87,7 +87,7 @@ GOBUILDCACHE_VERSION ?= 83bfeb837b93a786ff37b33d0be108bcc74b089f
 # tool versions from go.mod
 CONTROLLER_GEN_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-tools)
 GINKGO_VERSION ?= $(call version_gomod,github.com/onsi/ginkgo/v2)
-GEN_CRD_API_REFERENCE_DOCS_VERSION ?= $(call version_gomod,github.com/ahmetb/gen-crd-api-reference-docs)
+CRD_REF_DOCS_VERSION ?= $(call version_gomod,github.com/elastic/crd-ref-docs)
 GOIMPORTS_VERSION ?= $(call version_gomod,golang.org/x/tools)
 CODE_GENERATOR_VERSION ?= $(call version_gomod,k8s.io/code-generator)
 MOCKGEN_VERSION ?= $(call version_gomod,go.uber.org/mock)
@@ -137,7 +137,7 @@ ifeq ($(shell if [ -d $(TOOLS_BIN_SOURCE_DIR) ]; then echo "found"; fi),found)
 endif
 
 .PHONY: create-tools-bin
-create-tools-bin: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GINKGO) $(GOIMPORTS) $(GOIMPORTSREVISER) $(GOSEC) $(GO_ADD_LICENSE) $(GO_TO_PROTOBUF) $(HELM) $(IMPORT_BOSS) $(KIND) $(KUBECTL) $(MOCKGEN) $(OPENAPI_GEN) $(PROMTOOL) $(PROTOC) $(PROTOC_GEN_GOGO) $(SETUP_ENVTEST) $(SKAFFOLD) $(YQ) $(KUSTOMIZE) $(TYPOS) $(GOBUILDCACHE)
+create-tools-bin: $(CONTROLLER_GEN) $(CRD_REF_DOCS) $(GINKGO) $(GOIMPORTS) $(GOIMPORTSREVISER) $(GOSEC) $(GO_ADD_LICENSE) $(GO_TO_PROTOBUF) $(HELM) $(IMPORT_BOSS) $(KIND) $(KUBECTL) $(MOCKGEN) $(OPENAPI_GEN) $(PROMTOOL) $(PROTOC) $(PROTOC_GEN_GOGO) $(SETUP_ENVTEST) $(SKAFFOLD) $(YQ) $(KUSTOMIZE) $(TYPOS) $(GOBUILDCACHE)
 
 #########################################
 # Tools                                 #
@@ -146,8 +146,8 @@ create-tools-bin: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GINKGO) $(GO
 $(CONTROLLER_GEN): $(call tool_version_file,$(CONTROLLER_GEN),$(CONTROLLER_GEN_VERSION))
 	go build -o $(CONTROLLER_GEN) sigs.k8s.io/controller-tools/cmd/controller-gen
 
-$(GEN_CRD_API_REFERENCE_DOCS): $(call tool_version_file,$(GEN_CRD_API_REFERENCE_DOCS),$(GEN_CRD_API_REFERENCE_DOCS_VERSION))
-	go build -o $(GEN_CRD_API_REFERENCE_DOCS) github.com/ahmetb/gen-crd-api-reference-docs
+$(CRD_REF_DOCS): $(call tool_version_file,$(CRD_REF_DOCS),$(CRD_REF_DOCS_VERSION))
+	go build -o $(CRD_REF_DOCS) github.com/elastic/crd-ref-docs
 
 $(GINKGO): $(call tool_version_file,$(GINKGO),$(GINKGO_VERSION))
 	go build -o $(GINKGO) github.com/onsi/ginkgo/v2/ginkgo

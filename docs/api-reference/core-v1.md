@@ -4,19 +4,26 @@
 <a href="#core.gardener.cloud%2fv1">core.gardener.cloud/v1</a>
 </li>
 </ul>
+
 <h2 id="core.gardener.cloud/v1">core.gardener.cloud/v1</h2>
 <p>
-<p>Package v1 is a version of the API.</p>
+
 </p>
 Resource Types:
-<ul><li>
-<a href="#core.gardener.cloud/v1.ControllerDeployment">ControllerDeployment</a>
-</li></ul>
-<h3 id="core.gardener.cloud/v1.ControllerDeployment">ControllerDeployment
+<ul>
+<li>
+<a href="#controllerdeployment">ControllerDeployment</a>
+</li>
+</ul>
+
+<h3 id="controllerdeployment">ControllerDeployment
 </h3>
+
+
 <p>
-<p>ControllerDeployment contains information about how this controller is deployed.</p>
+ControllerDeployment contains information about how this controller is deployed.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -25,45 +32,23 @@ Resource Types:
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>
-<code>apiVersion</code></br>
-string</td>
-<td>
-<code>
-core.gardener.cloud/v1
-</code>
-</td>
-</tr>
-<tr>
-<td>
-<code>kind</code></br>
-string
-</td>
-<td><code>ControllerDeployment</code></td>
-</tr>
+
 <tr>
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta">
-Kubernetes meta/v1.ObjectMeta
-</a>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta">ObjectMeta</a>
 </em>
 </td>
 <td>
-<p>Standard object metadata.</p>
-Refer to the Kubernetes API documentation for the fields of the
-<code>metadata</code> field.
+Refer to the Kubernetes API documentation for the fields of the <code>metadata</code> field.
 </td>
 </tr>
 <tr>
 <td>
 <code>helm</code></br>
 <em>
-<a href="#core.gardener.cloud/v1.HelmControllerDeployment">
-HelmControllerDeployment
-</a>
+<a href="#helmcontrollerdeployment">HelmControllerDeployment</a>
 </em>
 </td>
 <td>
@@ -75,26 +60,31 @@ HelmControllerDeployment
 <td>
 <code>injectGardenKubeconfig</code></br>
 <em>
-bool
+boolean
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
-resources.</p>
+<p>InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload<br />resources.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1.HelmControllerDeployment">HelmControllerDeployment
+
+
+<h3 id="helmcontrollerdeployment">HelmControllerDeployment
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1.ControllerDeployment">ControllerDeployment</a>)
+(<em>Appears on:</em><a href="#controllerdeployment">ControllerDeployment</a>)
 </p>
+
 <p>
-<p>HelmControllerDeployment configures how an extension controller is deployed using helm.</p>
+HelmControllerDeployment configures how an extension controller is deployed using helm.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -103,25 +93,24 @@ resources.</p>
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>rawChart</code></br>
 <em>
-[]byte
+integer array
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>RawChart is the base64-encoded, gzip&rsquo;ed, tar&rsquo;ed extension controller chart.</p>
+<p>RawChart is the base64-encoded, gzip'ed, tar'ed extension controller chart.</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>values</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#json-v1-apiextensions-k8s-io">
-Kubernetes apiextensions/v1.JSON
-</a>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#json-v1-apiextensions-k8s-io">JSON</a>
 </em>
 </td>
 <td>
@@ -133,9 +122,7 @@ Kubernetes apiextensions/v1.JSON
 <td>
 <code>ociRepository</code></br>
 <em>
-<a href="#core.gardener.cloud/v1.OCIRepository">
-OCIRepository
-</a>
+<a href="#ocirepository">OCIRepository</a>
 </em>
 </td>
 <td>
@@ -143,17 +130,23 @@ OCIRepository
 <p>OCIRepository defines where to pull the chart.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1.OCIRepository">OCIRepository
+
+
+<h3 id="ocirepository">OCIRepository
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1.HelmControllerDeployment">HelmControllerDeployment</a>)
+(<em>Appears on:</em><a href="#helmcontrollerdeployment">HelmControllerDeployment</a>)
 </p>
+
 <p>
-<p>OCIRepository configures where to pull an OCI Artifact, that could contain for example a Helm Chart.</p>
+OCIRepository configures where to pull an OCI Artifact, that could contain for example a Helm Chart.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -162,6 +155,7 @@ OCIRepository
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>ref</code></br>
@@ -207,47 +201,35 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Digest of the image to pull, takes precedence over tag.
-The value should be in the format &lsquo;sha256:<HASH>&rsquo;.</p>
+<p>Digest of the image to pull, takes precedence over tag.<br />The value should be in the format 'sha256:<HASH>'.</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>pullSecretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core">
-Kubernetes core/v1.LocalObjectReference
-</a>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core">LocalObjectReference</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>PullSecretRef is a reference to a secret containing the pull secret.
-The secret must be of type <code>kubernetes.io/dockerconfigjson</code> and must be located in the <code>garden</code> namespace.
-For usage in the gardenlet, the secret must have the label <code>gardener.cloud/role=helm-pull-secret</code>.</p>
+<p>PullSecretRef is a reference to a secret containing the pull secret.<br />The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace.<br />For usage in the gardenlet, the secret must have the label `gardener.cloud/role=helm-pull-secret`.</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>caBundleSecretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core">
-Kubernetes core/v1.LocalObjectReference
-</a>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core">LocalObjectReference</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>CABundleSecretRef is a reference to a secret containing a PEM-encoded certificate authority bundle.
-The CA bundle is used to verify the TLS certificate of the OCI registry.
-The secret must have a data key <code>bundle.crt</code> and must be located in the <code>garden</code> namespace.
-For usage in the gardenlet, the secret must have the label <code>gardener.cloud/role=oci-ca-bundle</code>.
-If not provided, the system&rsquo;s default certificate pool is used.</p>
+<p>CABundleSecretRef is a reference to a secret containing a PEM-encoded certificate authority bundle.<br />The CA bundle is used to verify the TLS certificate of the OCI registry.<br />The secret must have a data key `bundle.crt` and must be located in the `garden` namespace.<br />For usage in the gardenlet, the secret must have the label `gardener.cloud/role=oci-ca-bundle`.<br />If not provided, the system's default certificate pool is used.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<hr/>
-<p><em>
-Generated with <a href="https://github.com/ahmetb/gen-crd-api-reference-docs">gen-crd-api-reference-docs</a>
-</em></p>
+
+
