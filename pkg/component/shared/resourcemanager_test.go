@@ -78,6 +78,34 @@ var _ = Describe("ResourceManager", func() {
 			}))
 		})
 
+		It("should set ForSelfHostedShoot in the values for runtime resource managers deployed to a self-hosted shoot cluster", func() {
+			resourceManager, err := NewRuntimeGardenerResourceManager(fakeClient, namespace, sm, resourcemanager.Values{
+				ClusterIdentity:    ptr.To("foo"),
+				ForSelfHostedShoot: true,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resourceManager.GetValues()).To(Equal(resourcemanager.Values{
+				ClusterIdentity:                   ptr.To("foo"),
+				ConcurrentSyncs:                   ptr.To(20),
+				ForSelfHostedShoot:                true,
+				HealthSyncPeriod:                  &metav1.Duration{Duration: time.Minute},
+				Image:                             "europe-docker.pkg.dev/gardener-project/releases/gardener/resource-manager:v0.0.0-master+$Format:%H$",
+				MaxConcurrentNetworkPolicyWorkers: ptr.To(20),
+				NetworkPolicyControllerIngressControllerSelector: &resourcemanagerconfigv1alpha1.IngressControllerSelector{
+					Namespace: "garden",
+					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{
+						"app":       "nginx-ingress",
+						"component": "controller",
+					}},
+				},
+				PodTopologySpreadConstraintsEnabled: false,
+				VPAInPlaceUpdatesEnabled:            false,
+				Replicas:                            ptr.To[int32](2),
+				ResourceClass:                       ptr.To("seed"),
+				ResponsibilityMode:                  resourcemanager.ForRuntime,
+			}))
+		})
+
 		It("should apply the defaults for new target resource managers", func() {
 			resourceManager, err := NewTargetGardenerResourceManager(fakeClient, namespace, sm, resourcemanager.Values{
 				ClusterIdentity:  ptr.To("foo"),

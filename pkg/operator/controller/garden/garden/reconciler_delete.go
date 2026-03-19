@@ -53,6 +53,7 @@ func (r *Reconciler) delete(
 	garden *operatorv1alpha1.Garden,
 	secretsManager secretsmanager.Interface,
 	targetVersion *semver.Version,
+	isRuntimeSelfHostedShoot bool,
 ) (
 	reconcile.Result,
 	error,
@@ -72,6 +73,7 @@ func (r *Reconciler) delete(
 		nil,
 		false,
 		extensionList,
+		isRuntimeSelfHostedShoot,
 	)
 	if err != nil {
 		return reconcile.Result{}, err

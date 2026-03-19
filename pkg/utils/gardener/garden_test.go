@@ -1021,4 +1021,58 @@ var _ = Describe("Garden", func() {
 			})
 		})
 	})
+
+	Describe("#RuntimeIsSelfHostedShoot", func() {
+		var (
+			ctx        context.Context
+			fakeClient client.Client
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		})
+
+		It("should return false when kube-system namespace has no garden-role label", func() {
+			Expect(fakeClient.Create(ctx, &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: metav1.NamespaceSystem},
+			})).To(Succeed())
+
+			result, err := ClusterIsSelfHostedShoot(ctx, fakeClient)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeFalse())
+		})
+
+		It("should return true when kube-system namespace has garden-role=shoot label", func() {
+			Expect(fakeClient.Create(ctx, &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   metav1.NamespaceSystem,
+					Labels: map[string]string{constants.GardenRole: constants.GardenRoleShoot},
+				},
+			})).To(Succeed())
+
+			result, err := ClusterIsSelfHostedShoot(ctx, fakeClient)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeTrue())
+		})
+
+		It("should return false when kube-system namespace has a different garden-role label", func() {
+			Expect(fakeClient.Create(ctx, &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   metav1.NamespaceSystem,
+					Labels: map[string]string{constants.GardenRole: constants.GardenRoleSeed},
+				},
+			})).To(Succeed())
+
+			result, err := ClusterIsSelfHostedShoot(ctx, fakeClient)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeFalse())
+		})
+
+		It("should return an error when the kube-system namespace does not exist", func() {
+			result, err := ClusterIsSelfHostedShoot(ctx, fakeClient)
+			Expect(err).To(MatchError(ContainSubstring(`failed reading "kube-system" namespace`)))
+			Expect(result).To(BeFalse())
+		})
+	})
 })
