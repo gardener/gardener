@@ -466,7 +466,7 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	if !gardenlet.IsResponsibleForSelfHostedShoot() {
-		isSelfHostedShoot, err := gardenlet.SeedIsSelfHostedShoot(ctx, g.mgr.GetClient())
+		isSelfHostedShoot, err := gardenerutils.ClusterIsSelfHostedShoot(ctx, g.mgr.GetClient())
 		if err != nil {
 			return fmt.Errorf("failed checking if seed cluster is a self-hosted shoot: %w", err)
 		}

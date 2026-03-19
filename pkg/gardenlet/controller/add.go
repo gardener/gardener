@@ -66,7 +66,7 @@ func AddToManager(
 		return fmt.Errorf("cluster-identity ConfigMap data does not have %q key", v1beta1constants.ClusterIdentity)
 	}
 
-	seedIsSelfHostedShoot, err := gardenletutils.SeedIsSelfHostedShoot(ctx, seedCluster.GetAPIReader())
+	seedIsSelfHostedShoot, err := gardenerutils.ClusterIsSelfHostedShoot(ctx, seedCluster.GetAPIReader())
 	if err != nil {
 		return fmt.Errorf("failed checking whether the seed is a self-hosted shoot cluster: %w", err)
 	}
