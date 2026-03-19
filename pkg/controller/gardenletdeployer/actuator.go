@@ -624,7 +624,7 @@ func (a *Actuator) prepareGardenletChartValues(
 		a.ValuesHelper,
 		bootstrap,
 		a.BootstrapToken,
-		ensureGardenletEnvironment(deployment, a.GetTargetDomain()),
+		a.ensureGardenletEnvironment(deployment),
 		componentConfig,
 		a.GardenletNamespaceTarget,
 	)
@@ -748,7 +748,11 @@ func PrepareGardenletChartValues(
 // ensureGardenletEnvironment sets the KUBERNETES_SERVICE_HOST to the provided domain.
 // This may be needed so that the deployed gardenlet can properly set the network policies allowing access of control
 // plane components of the hosted shoots to the API server of the seed.
-func ensureGardenletEnvironment(deployment *seedmanagementv1alpha1.GardenletDeployment, domain string) *seedmanagementv1alpha1.GardenletDeployment {
+func (a *Actuator) ensureGardenletEnvironment(deployment *seedmanagementv1alpha1.GardenletDeployment) *seedmanagementv1alpha1.GardenletDeployment {
+	if a.SkipGardenNamespaceDeletion {
+		return deployment
+	}
+
 	const kubernetesServiceHost = "KUBERNETES_SERVICE_HOST"
 	var serviceHost = ""
 
@@ -762,6 +766,7 @@ func ensureGardenletEnvironment(deployment *seedmanagementv1alpha1.GardenletDepl
 		}
 	}
 
+	domain := a.GetTargetDomain()
 	if len(domain) != 0 {
 		serviceHost = v1beta1helper.GetAPIServerDomain(domain)
 	}
