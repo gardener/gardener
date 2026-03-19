@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
@@ -38,15 +37,6 @@ func ClusterIsGarden(ctx context.Context, seedClient client.Reader) (bool, error
 		seedIsGarden = false
 	}
 	return seedIsGarden, nil
-}
-
-// SeedIsSelfHostedShoot returns 'true' if the cluster is a self-hosted shoot cluster.
-func SeedIsSelfHostedShoot(ctx context.Context, seedClient client.Reader) (bool, error) {
-	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: metav1.NamespaceSystem}}
-	if err := seedClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
-		return false, fmt.Errorf("failed reading %q namespace: %w", namespace.Name, err)
-	}
-	return namespace.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleShoot, nil
 }
 
 // SetDefaultGardenClusterAddress sets the default garden cluster address in the given gardenlet configuration if it is not already set.

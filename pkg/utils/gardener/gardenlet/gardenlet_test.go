@@ -24,7 +24,6 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	. "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
@@ -66,38 +65,6 @@ var _ = Describe("Gardenlet", func() {
 					return &meta.NoResourceMatchError{}
 				})
 			Expect(ClusterIsGarden(ctx, mockReader)).To(BeFalse())
-		})
-	})
-
-	Describe("#SeedIsSelfHostedShoot", func() {
-		var (
-			ctx        = context.Background()
-			fakeClient client.Client
-		)
-
-		BeforeEach(func() {
-			fakeClient = fake.NewClientBuilder().Build()
-		})
-
-		It("should return that the seed is a self-hosted shoot", func() {
-			Expect(fakeClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kube-system", Labels: map[string]string{"gardener.cloud/role": "shoot"}}})).To(Succeed())
-			Expect(SeedIsSelfHostedShoot(ctx, fakeClient)).To(BeTrue())
-		})
-
-		It("should return that the seed is not a self-hosted shoot because kube-system namespace is not labeled correctly", func() {
-			Expect(fakeClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kube-system", Labels: map[string]string{"gardener.cloud/role": "kube-system"}}})).To(Succeed())
-			Expect(SeedIsSelfHostedShoot(ctx, fakeClient)).To(BeFalse())
-		})
-
-		It("should return that the seed is not a self-hosted shoot because kube-system namespace is not labeled at all", func() {
-			Expect(fakeClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kube-system"}})).To(Succeed())
-			Expect(SeedIsSelfHostedShoot(ctx, fakeClient)).To(BeFalse())
-		})
-
-		It("should return an error no kube-system namespace is found", func() {
-			result, err := SeedIsSelfHostedShoot(ctx, fakeClient)
-			Expect(err).To(BeNotFoundError())
-			Expect(result).To(BeFalse())
 		})
 	})
 
