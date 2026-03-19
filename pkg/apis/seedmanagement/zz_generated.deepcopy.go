@@ -304,6 +304,11 @@ func (in *Image) DeepCopyInto(out *Image) {
 		*out = new(v1.PullPolicy)
 		**out = **in
 	}
+	if in.Ref != nil {
+		in, out := &in.Ref, &out.Ref
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
