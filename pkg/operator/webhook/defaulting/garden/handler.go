@@ -66,11 +66,5 @@ func (h *Handler) Default(_ context.Context, obj runtime.Object) error {
 		garden.Status.Credentials.EncryptionAtRest.Provider.Type = operatorv1alpha1helper.GetKubeAPIServerEncryptionProviderType(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer)
 	}
 
-	// Defaulting used for migration from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
-	// TODO(AleksandarSavchev): Remove this block after v1.135 has been released.
-	if len(garden.Status.EncryptedResources) > 0 && len(garden.Status.Credentials.EncryptionAtRest.Resources) == 0 {
-		garden.Status.Credentials.EncryptionAtRest.Resources = garden.Status.EncryptedResources
-	}
-
 	return nil
 }
