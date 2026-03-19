@@ -1,5 +1,6 @@
 replicaCount: 2
 revisionHistoryLimit: 2
+isolateClusterResources: false
 serviceAccountName: gardenlet
 invalidateServiceAccountToken: true
 image:

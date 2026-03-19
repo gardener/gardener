@@ -2,7 +2,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: gardener.cloud:system:gardenlet:apiserver-sni
+  name: gardener.cloud:system:gardenlet:apiserver-sni{{ if .Values.isolateClusterResources }}:{{ .Release.Namespace }}{{ end }}
   labels:
     app: gardener
     role: gardenlet

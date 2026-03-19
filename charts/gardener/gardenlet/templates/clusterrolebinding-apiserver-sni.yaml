@@ -2,7 +2,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: gardener.cloud:system:gardenlet:apiserver-sni
+  name: gardener.cloud:system:gardenlet:apiserver-sni{{ if .Values.isolateClusterResources }}:{{ .Release.Namespace }}{{ end }}
   labels:
     app: gardener
     role: gardenlet
@@ -12,7 +12,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: gardener.cloud:system:gardenlet:apiserver-sni
+  name: gardener.cloud:system:gardenlet:apiserver-sni{{ if .Values.isolateClusterResources }}:{{ .Release.Namespace }}{{ end }}
 subjects:
 - kind: ServiceAccount
   name: "{{ required ".Values.serviceAccountName is required" .Values.serviceAccountName }}"
