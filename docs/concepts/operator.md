@@ -151,6 +151,10 @@ gardener:
     namespace: <Extension Namespace name in the virtual cluster (format "extension-<extension-name>")>
 ```
 
+> [!NOTE]
+> Extension admission components must set the `--webhook-config-owner-namespace` flag using the injected `gardener.virtualCluster.namespace` value (i.e. `--webhook-config-owner-namespace={{ .Values.gardener.virtualCluster.namespace }}`).
+> Without this flag, the `ValidatingWebhookConfiguration` owner reference defaults to the `garden` namespace in the runtime cluster instead of the extension's namespace in the virtual cluster. As a result, the webhook configuration is not cleaned up when the extension is uninstalled, which can block operations on resources.
+
 ##### Virtual
 
 The `virtual` part includes the webhook registration ([MutatingWebhookConfiguration`/`Validatingwebhookconfiguration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/)) and RBAC configuration.
