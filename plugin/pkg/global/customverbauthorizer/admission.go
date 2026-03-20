@@ -25,7 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
@@ -66,9 +65,8 @@ func NewFactory(_ io.Reader) (admission.Interface, error) {
 type CustomVerbAuthorizer struct {
 	*admission.Handler
 
-	cloudProfileLister gardencorev1beta1listers.CloudProfileLister
-	authorizer         authorizer.Authorizer
-	readyFunc          admission.ReadyFunc
+	authorizer authorizer.Authorizer
+	readyFunc  admission.ReadyFunc
 }
 
 var (
@@ -93,7 +91,6 @@ func (c *CustomVerbAuthorizer) AssignReadyFunc(f admission.ReadyFunc) {
 // SetCoreInformerFactory gets Lister from SharedInformerFactory.
 func (c *CustomVerbAuthorizer) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
-	c.cloudProfileLister = cloudProfileInformer.Lister()
 
 	readyFuncs = append(readyFuncs, cloudProfileInformer.Informer().HasSynced)
 }
@@ -105,9 +102,6 @@ func (c *CustomVerbAuthorizer) SetAuthorizer(authorizer authorizer.Authorizer) {
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (c *CustomVerbAuthorizer) ValidateInitialization() error {
-	if c.cloudProfileLister == nil {
-		return errors.New("missing cloudProfile lister")
-	}
 	return nil
 }
 
