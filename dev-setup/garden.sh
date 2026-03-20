@@ -34,7 +34,7 @@ case "$COMMAND" in
       TIMEOUT=60 SKIP_LAST_OPERATION_CHECK=true "$(dirname "$0")"/../hack/usage/wait-for.sh extop provider-local AdmissionHealthy
     fi
     # Export kubeconfig for the virtual garden cluster
-    "$(dirname "$0")"/../hack/usage/generate-virtual-garden-admin-kubeconf.sh "$KUBECONFIG" "$garden_name"  > "$VIRTUAL_GARDEN_KUBECONFIG"
+    RUNTIME_CLUSTER_KUBECONFIG="$KUBECONFIG" GARDEN_NAME="$garden_name" "$(dirname "$0")"/../hack/usage/generate-admin-kubeconfig-local.sh virtual-garden > "$VIRTUAL_GARDEN_KUBECONFIG"
     ;;
 
   down)
