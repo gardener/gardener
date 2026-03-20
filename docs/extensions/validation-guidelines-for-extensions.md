@@ -53,9 +53,6 @@ With https://github.com/gardener/gardener/issues/12582, we want to adapt Gardene
     - ensures no duplicate fields
     - ensures no unknown fields when decoding into typed structs
   - See [example](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/pkg/provider-local/controller/worker/actuator.go#L53).
-- Extension admission components deployed via `gardener-operator` should explicitly set the `--webhook-config-owner-namespace` flag using the value injected by the operator into the Helm chart (i.e. `--webhook-config-owner-namespace={{ .Values.gardener.virtualCluster.namespace }}`).
-  - The `gardener-operator` automatically injects `gardener.virtualCluster.namespace` into the Helm values during deployment of the admission runtime cluster resources.
-  - Without this flag, the `ValidatingWebhookConfiguration` owner reference defaults to the `garden` namespace in the runtime cluster instead of the extension's namespace in the virtual cluster. Therefore, the webhook configuration is not cleaned up when the extension is uninstalled, which can block operations on resources.
 - Webhooks of extension admission components should use `objectSelector` to filter only requests for resources that use the extension.
   - The extension admission components should use the extension-specific labels maintained on the API resources by the [`ExtensionLabels` admission plugin](../concepts/apiserver-admission-plugins.md#extensionlabels).
 - See the [General Guidelines for Gardener core components](../development/validation-guidelines.md#general-guidelines).
