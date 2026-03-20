@@ -10,14 +10,13 @@ set -o errexit
 
 # Temp dirs
 WORKDIR=$(mktemp -d)
-ETCD_DRUID_IMAGES_URL="https://raw.githubusercontent.com/gardener/etcd-druid/master/internal/images/images.yaml"
-ETCD_REPO="https://github.com/etcd-io/etcd.git"
-
+ETCD_DRUID_VERSION=$(yq '.images[] | select(.name == "etcd-druid") | .tag' "$1")
+ETCD_DRUID_IMAGES_URL="https://raw.githubusercontent.com/gardener/etcd-druid/${ETCD_DRUID_VERSION}/internal/images/images.yaml"
 echo "Fetching etcd-druid images.yaml..."
 curl -fsSL "$ETCD_DRUID_IMAGES_URL" -o "$WORKDIR/images.yaml"
 
 # Extract etcd-wrapper tag from images.yaml
-WRAPPER_TAG=$(yq '.images[] | select(.name == "etcd-wrapper") | .tag' "$WORKDIR/images.yaml")
+WRAPPER_TAG=$(yq '.images[] | select(.name == "etcd-wrapper-next") | .tag' "$WORKDIR/images.yaml")
 echo "Found etcd-wrapper tag: $WRAPPER_TAG"
 
 echo "Fetching go.mod from etcd-wrapper at tag $WRAPPER_TAG..."
@@ -29,43 +28,6 @@ ETCD_LINE=$(grep 'go.etcd.io/etcd' "$WORKDIR/go.mod" | head -n1)
 ETCD_VERSION=$(echo "$ETCD_LINE" | awk '{print $2}')
 echo "Found etcd version string: $ETCD_VERSION"
 
-# Check if it's a real tag (vX.Y.Z) or a pseudo-version
-# TODO: This if-else handling can be removed after https://github.com/gardener/etcd-druid/issues/445 is resolved (with
-#  v3.5, the etcd-io/etcd repo supports proper usage of the direct tag, i.e., no commit hash is needed anymore).
-if [[ "$ETCD_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "Resolved etcd tag directly: $ETCD_VERSION"
-else
-  # Extract commit hash from pseudo-version
-  COMMIT_HASH=$(echo "$ETCD_VERSION" | sed -E 's/.*-([a-f0-9]{12})$/\1/')
-
-  if [ -z "$COMMIT_HASH" ]; then
-    echo "Could not parse commit hash from version string: $ETCD_VERSION"
-    exit 1
-  fi
-
-  echo "Extracted commit hash: $COMMIT_HASH"
-
-  echo "Fetching etcd tags and commit info..."
-  git clone -q --filter=blob:none --no-checkout "$ETCD_REPO" "$WORKDIR/etcd"
-  pushd "$WORKDIR/etcd" > /dev/null
-
-  # Find tag that contains the commit
-  FULL_COMMIT=$(git rev-parse "$COMMIT_HASH") || {
-    echo "Commit $COMMIT_HASH not found in etcd repo"
-    exit 1
-  }
-
-  ETCD_TAG=$(git tag --contains "$FULL_COMMIT" | grep '^v' | sort -V | head -n 1)
-  popd > /dev/null
-fi
-
-if [ -n "$ETCD_TAG" ]; then
-  echo "Resolved etcd tag: $ETCD_TAG"
-else
-  echo "No tag found containing commit $FULL_COMMIT"
-  exit 1
-fi
-
 # Update images.yaml with the resolved etcd tag
-echo "Updating $1 with etcd $ETCD_TAG tag"
-yq -i "(.images[] | select(.name == \"etcd\") ).tag = \"$ETCD_TAG\"" "$1"
+echo "Updating $1 with etcd $ETCD_VERSION tag"
+yq -i "(.images[] | select(.name == \"etcd\") ).tag = \"$ETCD_VERSION\"" "$1"
