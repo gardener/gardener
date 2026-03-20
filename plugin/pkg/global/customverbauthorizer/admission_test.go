@@ -738,6 +738,12 @@ var _ = Describe("customverbauthorizer", func() {
 					})
 				})
 			})
+			It("should allow creating a NamespacedCloudProfile with limits above parent CloudProfile limits", func() {
+				namespacedCloudProfile.Spec.Limits = &core.Limits{MaxNodesTotal: ptr.To(int32(15))}
+
+				attrs = admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
 		})
 
 		Context("Shoots", func() {
