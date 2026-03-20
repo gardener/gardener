@@ -7,6 +7,8 @@ gardener:
       - 172.18.255.2
     bastion:
       listenAddresses: []
+  selfHostedShoot:
+    deployed: false
 
 workers:
 - zone: "0"
