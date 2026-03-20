@@ -235,6 +235,7 @@ trap "
   ( rm -rf "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases" )
   ( export_artifacts_host_services; export_artifacts_infra )
   ( export_artifacts "$CLUSTER_NAME" )
+  ( export KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG; export cluster_name='virtual-garden'; export_resource_yamls_for gardenlet seeds shoots; export_events_for_shoots )
   ( kind_down )
 " EXIT
 

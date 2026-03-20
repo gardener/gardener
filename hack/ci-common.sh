@@ -34,9 +34,6 @@ export_artifacts() {
   echo "> Exporting events of kind cluster '$cluster_name' > '$ARTIFACTS/$cluster_name'"
   export_events_for_cluster "$ARTIFACTS/$cluster_name"
 
-  export_resource_yamls_for seeds shoots bastions.operations.gardener.cloud etcds leases
-  export_events_for_shoots
-
   # dump logs from shoot machine pods (similar to `kind export logs`)
   while IFS= read -r namespace; do
     while IFS= read -r node; do

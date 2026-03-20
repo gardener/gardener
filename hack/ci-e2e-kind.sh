@@ -37,6 +37,7 @@ make kind-up
 trap "
   ( export_artifacts_host_services; export_artifacts_infra )
   ( export_artifacts "gardener-local" )
+  ( export KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG; export cluster_name='virtual-garden'; export_resource_yamls_for gardenlet seeds shoots; export_events_for_shoots)
   ( make kind-down )
 " EXIT
 

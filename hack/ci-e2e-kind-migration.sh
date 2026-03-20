@@ -20,6 +20,7 @@ make kind2-up
 trap "
   ( export_artifacts_host_services; export_artifacts_infra )
   ( export KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG; export_artifacts "gardener-local" )
+  ( export KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG; export cluster_name='virtual-garden'; export_resource_yamls_for seeds shoots bastions.operations.gardener.cloud etcds leases; export_events_for_shoots )
   ( export KUBECONFIG=$GARDENER_LOCAL2_KUBECONFIG; export_artifacts "gardener-local2" )
   ( make kind-down )
   ( make kind2-down )
