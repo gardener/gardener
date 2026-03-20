@@ -12322,17 +12322,6 @@ func (m *ShootStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x9a
 	}
-	if len(m.EncryptedResources) > 0 {
-		for iNdEx := len(m.EncryptedResources) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.EncryptedResources[iNdEx])
-			copy(dAtA[i:], m.EncryptedResources[iNdEx])
-			i = encodeVarintGenerated(dAtA, i, uint64(len(m.EncryptedResources[iNdEx])))
-			i--
-			dAtA[i] = 0x1
-			i--
-			dAtA[i] = 0x92
-		}
-	}
 	if m.LastMaintenance != nil {
 		{
 			size, err := m.LastMaintenance.MarshalToSizedBuffer(dAtA[:i])
@@ -18072,12 +18061,6 @@ func (m *ShootStatus) Size() (n int) {
 		l = m.LastMaintenance.Size()
 		n += 2 + l + sovGenerated(uint64(l))
 	}
-	if len(m.EncryptedResources) > 0 {
-		for _, s := range m.EncryptedResources {
-			l = len(s)
-			n += 2 + l + sovGenerated(uint64(l))
-		}
-	}
 	if m.Networking != nil {
 		l = m.Networking.Size()
 		n += 2 + l + sovGenerated(uint64(l))
@@ -21605,7 +21588,6 @@ func (this *ShootStatus) String() string {
 		`Credentials:` + strings.Replace(this.Credentials.String(), "ShootCredentials", "ShootCredentials", 1) + `,`,
 		`LastHibernationTriggerTime:` + strings.Replace(fmt.Sprintf("%v", this.LastHibernationTriggerTime), "Time", "v11.Time", 1) + `,`,
 		`LastMaintenance:` + strings.Replace(this.LastMaintenance.String(), "LastMaintenance", "LastMaintenance", 1) + `,`,
-		`EncryptedResources:` + fmt.Sprintf("%v", this.EncryptedResources) + `,`,
 		`Networking:` + strings.Replace(this.Networking.String(), "NetworkingStatus", "NetworkingStatus", 1) + `,`,
 		`InPlaceUpdates:` + strings.Replace(this.InPlaceUpdates.String(), "InPlaceUpdatesStatus", "InPlaceUpdatesStatus", 1) + `,`,
 		`ManualWorkerPoolRollout:` + strings.Replace(this.ManualWorkerPoolRollout.String(), "ManualWorkerPoolRollout", "ManualWorkerPoolRollout", 1) + `,`,
@@ -57073,38 +57055,6 @@ func (m *ShootStatus) Unmarshal(dAtA []byte) error {
 			if err := m.LastMaintenance.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			iNdEx = postIndex
-		case 18:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field EncryptedResources", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.EncryptedResources = append(m.EncryptedResources, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		case 19:
 			if wireType != 2 {

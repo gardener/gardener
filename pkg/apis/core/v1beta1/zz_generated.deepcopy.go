@@ -6351,11 +6351,6 @@ func (in *ShootStatus) DeepCopyInto(out *ShootStatus) {
 		*out = new(LastMaintenance)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.EncryptedResources != nil {
-		in, out := &in.EncryptedResources, &out.EncryptedResources
-		*out = make([]string, len(*in))
-		copy(*out, *in)
-	}
 	if in.Networking != nil {
 		in, out := &in.Networking, &out.Networking
 		*out = new(NetworkingStatus)
