@@ -248,6 +248,11 @@ func (w *workerDelegate) PreReconcileHook(ctx context.Context) error {
 				Resources: []string{"services"},
 				Verbs:     []string{"create", "patch", "delete"},
 			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"pods"},
+				Verbs:     []string{"get", "create", "patch", "delete"},
+			},
 		},
 	}
 

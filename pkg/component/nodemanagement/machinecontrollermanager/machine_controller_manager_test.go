@@ -134,7 +134,7 @@ var _ = Describe("MachineControllerManager", func() {
 				},
 				{
 					APIGroups: []string{corev1.GroupName},
-					Resources: []string{"configmaps", "secrets", "endpoints", "events", "pods"},
+					Resources: []string{"configmaps", "secrets", "events"},
 					Verbs:     []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
 				},
 				{

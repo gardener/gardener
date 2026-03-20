@@ -136,7 +136,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 			},
 			{
 				APIGroups: []string{corev1.GroupName},
-				Resources: []string{"configmaps", "secrets", "endpoints", "events", "pods"},
+				Resources: []string{"configmaps", "secrets", "events"},
 				Verbs:     []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
 			},
 			{
