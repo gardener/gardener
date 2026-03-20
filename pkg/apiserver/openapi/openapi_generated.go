@@ -10572,24 +10572,9 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 							Ref:         ref(v1beta1.LastMaintenance{}.OpenAPIModelName()),
 						},
 					},
-					"encryptedResources": {
-						SchemaProps: spec.SchemaProps{
-							Description: "EncryptedResources is the list of resources in the Shoot which are currently encrypted. Secrets are encrypted by default and are not part of the list. See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.\n\nDeprecated: This field is deprecated and will be removed with release v1.138. This field will be removed in favor of `status.credentials.encryptionAtRest.resources`.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: "",
-										Type:    []string{"string"},
-										Format:  "",
-									},
-								},
-							},
-						},
-					},
 					"networking": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Networking contains information about cluster networking such as CIDRs.",
+							Description: "EncryptedResources is tombstoned to show why 18 is reserved protobuf tag. EncryptedResources []string `json:\"encryptedResources,omitempty\" protobuf:\"bytes,18,rep,name=encryptedResources\"` Networking contains information about cluster networking such as CIDRs.",
 							Ref:         ref(v1beta1.NetworkingStatus{}.OpenAPIModelName()),
 						},
 					},
