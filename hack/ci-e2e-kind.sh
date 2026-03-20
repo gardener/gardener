@@ -20,13 +20,13 @@ if [[ -n "$IPFAMILY" ]] && [[ "$IPFAMILY" == "ipv6" ]]; then
     ( export_artifacts_host_services; export_artifacts_infra )
     ( export KUBECONFIG=$PWD/dev-setup/kubeconfigs/runtime/kubeconfig; export_artifacts 'gardener-operator-local'; export_resource_yamls_for garden extop)
     ( export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig; export cluster_name='virtual-garden'; export_resource_yamls_for gardenlet seeds shoots; export_events_for_shoots)
+    ( make operator-seed-down )
     ( make kind-single-node-down )
   " EXIT
 
   make operator-seed-up
   # TODO(rfranzke): Remove this KUBECONFIG environment variable once the ci-e2e-kind setup is switched to gardener-operator.
   make test-e2e-local KUBECONFIG="$(git rev-parse --show-toplevel)/dev-setup/kubeconfigs/virtual-garden/kubeconfig"
-  make operator-seed-down
   exit 0
 fi
 
@@ -38,9 +38,9 @@ trap "
   ( export_artifacts_host_services; export_artifacts_infra )
   ( export_artifacts "gardener-local" )
   ( export KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG; export cluster_name='virtual-garden'; export_resource_yamls_for gardenlet seeds shoots; export_events_for_shoots)
+  ( make gardener-down )
   ( make kind-down )
 " EXIT
 
 make gardener-up
 make test-e2e-local
-make gardener-down

@@ -19,9 +19,9 @@ make kind-multi-zone-up
 trap "
   ( export_artifacts_host_services; export_artifacts_infra )
   ( export KUBECONFIG=$PWD/dev-setup/kubeconfigs/runtime/kubeconfig; export_artifacts 'gardener-operator-local'; export_resource_yamls_for garden)
+  ( make operator-down )
   ( make kind-multi-zone-down )
 " EXIT
 
 make operator-up
 make test-e2e-local-operator
-make operator-down
