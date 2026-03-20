@@ -9,6 +9,8 @@ gardener:
     bastion:
       listenAddresses:
       - fd00:ff::22
+  selfHostedShoot:
+    listenAddress: fd00:ff::4
 
 networking:
   ipFamily: ipv6
