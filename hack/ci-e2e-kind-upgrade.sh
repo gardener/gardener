@@ -234,7 +234,7 @@ kind_up
 trap "
   ( rm -rf "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases" )
   ( export_artifacts_host_services; export_artifacts_infra )
-  ( export_artifacts "$CLUSTER_NAME" )
+  ( export_artifacts "$CLUSTER_NAME"; export_resource_yamls_for seeds shoots bastions.operations.gardener.cloud etcds leases; export_events_for_shoots )
   ( kind_down )
 " EXIT
 

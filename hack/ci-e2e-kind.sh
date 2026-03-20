@@ -36,7 +36,7 @@ make kind-up
 # export all container logs and events after test execution
 trap "
   ( export_artifacts_host_services; export_artifacts_infra )
-  ( export_artifacts "gardener-local" )
+  ( export_artifacts "gardener-local"; export_resource_yamls_for seeds shoots bastions.operations.gardener.cloud etcds leases; export_events_for_shoots )
   ( make kind-down )
 " EXIT
 
