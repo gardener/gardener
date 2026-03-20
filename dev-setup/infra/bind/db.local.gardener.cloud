@@ -35,3 +35,7 @@ docker-dns      IN      A       127.0.0.11
 ; IP.
 ; TODO(rfranzke): Remove this after legacy helm-based dev setup has been dropped.
 garden          IN  CNAME       gardener-local-control-plane.
+
+; The self-hosted shoot API server is accessible from the host machine via a port mapping through the kind cluster
+; node. The loopback device for this IP is set up in hack/kind-setup-loopback-devices.sh.
+api.root.garden.external    IN  A       172.18.255.4

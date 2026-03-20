@@ -35,9 +35,9 @@ parse_flags() {
 
 parse_flags "$@"
 
-LOOPBACK_IP_ADDRESSES=(172.18.255.1 172.18.255.53 fd00:ff::53)
+LOOPBACK_IP_ADDRESSES=(172.18.255.1 172.18.255.4 172.18.255.53 fd00:ff::53)
 if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-  LOOPBACK_IP_ADDRESSES+=(fd00:ff::1)
+  LOOPBACK_IP_ADDRESSES+=(fd00:ff::1 fd00:ff::4)
 fi
 
 if [[ "$MULTI_ZONAL" == "true" ]]; then
