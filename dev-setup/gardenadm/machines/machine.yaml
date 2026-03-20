@@ -44,10 +44,6 @@ spec:
           subPath: bashrc
       # we don't want components of the self-hosted shoot cluster to communicate with the kind API server
       automountServiceAccountToken: false
-      hostAliases:
-        - hostnames:
-          - api.root.garden.external.local.gardener.cloud
-          ip: 10.2.0.99
       securityContext:
         seccompProfile:
           type: RuntimeDefault
