@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"path/filepath"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -16,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,6 +28,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/resourcemanager/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/utils"
@@ -59,6 +60,9 @@ var (
 
 	ingressControllerNamespace   = "ingress-ctrl-ns"
 	ingressControllerPodSelector = metav1.LabelSelector{MatchLabels: map[string]string{"app": "ingress-controller"}}
+
+	istioNamespace   = "istio-ingress-ns"
+	istioPodSelector = metav1.LabelSelector{MatchLabels: map[string]string{"istio": "ingressgateway"}}
 )
 
 var _ = BeforeSuite(func() {
@@ -66,7 +70,12 @@ var _ = BeforeSuite(func() {
 	log = logf.Log.WithName(testID)
 
 	By("Start test environment")
-	testEnv = &envtest.Environment{}
+	testEnv = &envtest.Environment{
+		CRDInstallOptions: envtest.CRDInstallOptions{
+			Paths: []string{filepath.Join("..", "..", "..", "..", "pkg", "component", "networking", "istio", "charts", "istio", "istio-crds", "crd-all.gen.yaml")},
+		},
+		ErrorIfCRDPathMissing: true,
+	}
 
 	var err error
 	restConfig, err = testEnv.Start()
@@ -82,12 +91,12 @@ var _ = BeforeSuite(func() {
 	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:16]
 	log.Info("Using test run ID for test", "testRunID", testRunID)
 
-	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetesscheme.Scheme})
+	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.SeedScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:  kubernetesscheme.Scheme,
+		Scheme:  kubernetes.SeedScheme,
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Controller: controllerconfig.Controller{
 			SkipNameValidation: ptr.To(true),
@@ -106,7 +115,7 @@ var _ = BeforeSuite(func() {
 				PodSelector: ingressControllerPodSelector,
 			},
 		},
-	}).AddToManager(mgr, mgr)).To(Succeed())
+	}).AddToManager(ctx, mgr, mgr)).To(Succeed())
 
 	// We create and delete namespace in every test, so let's ensure they get finalized.
 	Expect((&namespacefinalizer.Reconciler{Exceptions: sets.New(finalizer)}).AddToManager(mgr)).To(Succeed())
