@@ -11,6 +11,8 @@ gardener:
       listenAddresses:
       - "fd00:ff::22"
       - "172.18.255.22"
+  selfHostedShoot:
+    listenAddress: fd00:ff::4
 
 networking:
   ipFamily: dual

@@ -1,15 +1,20 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: machine-0
+  name: control-plane-machine
 spec:
   ports:
-  - port: 443
-    protocol: TCP
+  # Used to talk to the self-hosted shoot API server from the host machine.
+  - name: self-hosted-shoot-apiserver
+    port: 4431
     targetPort: 443
+    nodePort: 30003
+  # Used to talk to the virtual garden API server from the host machine.
+  - name: virtual-garden-apiserver
+    port: 4432
+    targetPort: 31443
+    nodePort: 31443
   selector:
     app: machine
     apps.kubernetes.io/pod-index: "0"
-  sessionAffinity: None
-  type: ClusterIP
-  clusterIP: 10.2.0.99
+  type: NodePort
