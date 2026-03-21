@@ -78,9 +78,16 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			}
 		}
 
+		vpaUpdateMode := "InPlaceOrRecreate"
+		if !features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates) {
+			vpaUpdateMode = "Recreate"
+		}
+
 		cpuRequests := "300m"
+		hpaCPUAverageValue := "2"
 		if enableAPIServerTLSTermination {
-			cpuRequests = "450m"
+			cpuRequests = "1"
+			hpaCPUAverageValue = "4"
 		}
 
 		httpProxy := map[string]any{
@@ -115,8 +122,10 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			"apiServerRequestHeaderUserName":     kubeapiserverconstants.RequestHeaderUserName,
 			"apiServerRequestHeaderGroup":        kubeapiserverconstants.RequestHeaderGroup,
 			"apiServerAuthenticationDynamicMetadataKey": apiserverexposure.AuthenticationDynamicMetadataKey,
-			"cpuRequests":       cpuRequests,
-			"kubernetesVersion": istioIngressGateway.KubernetesVersion,
+			"cpuRequests":        cpuRequests,
+			"hpaCPUAverageValue": hpaCPUAverageValue,
+			"vpaUpdateMode":      vpaUpdateMode,
+			"kubernetesVersion":  istioIngressGateway.KubernetesVersion,
 		}
 
 		if istioIngressGateway.MinReplicas != nil {

@@ -13,7 +13,7 @@ spec:
     kind: Deployment
     name: istio-ingressgateway
   updatePolicy:
-    updateMode: InPlaceOrRecreate
+    updateMode: Recreate
   resourcePolicy:
     containerPolicies:
     - containerName: istio-proxy
