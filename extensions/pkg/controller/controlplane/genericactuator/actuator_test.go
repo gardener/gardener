@@ -358,6 +358,18 @@ webhooks:
 				createdMRForShootWebhooks.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForShootWebhooks.Name}}
 				utilruntime.Must(references.InjectAnnotations(createdMRForShootWebhooks))
 				c.EXPECT().Create(ctx, createdMRForShootWebhooks).Return(nil)
+				c.EXPECT().Get(ctx, resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
+					func(_ context.Context, _ client.ObjectKey, obj *resourcesv1alpha1.ManagedResource, _ ...client.GetOption) error {
+						obj.Status = resourcesv1alpha1.ManagedResourceStatus{
+							ObservedGeneration: obj.Generation,
+							Conditions: []gardencorev1beta1.Condition{
+								{Type: resourcesv1alpha1.ResourcesApplied, Status: gardencorev1beta1.ConditionTrue},
+								{Type: resourcesv1alpha1.ResourcesHealthy, Status: gardencorev1beta1.ConditionTrue},
+								{Type: resourcesv1alpha1.ResourcesProgressing, Status: gardencorev1beta1.ConditionFalse},
+							},
+						}
+						return nil
+					})
 			}
 
 			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
