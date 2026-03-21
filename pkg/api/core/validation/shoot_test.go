@@ -2298,7 +2298,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			Context("#validateDNSCredentialsRef", func() {
-				It("should forbid to unset credentialsRef when secretName is set (kubernetes version <1.35)", func() {
+				It("should forbid to unset credentialsRef when secretName is set for Kubernetes version < 1.35", func() {
 					shoot.Spec.Kubernetes.Version = "1.34.0"
 					shoot.Spec.DNS.Providers[0].CredentialsRef = nil
 					shoot.Spec.DNS.Providers[0].SecretName = &dnsSecretName

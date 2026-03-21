@@ -275,7 +275,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	{
 		oldK8sLess135 := versionutils.ConstraintK8sLess135.Check(oldShootKubernetesVersion)
 		newK8sGreaterEqual135 := versionutils.ConstraintK8sGreaterEqual135.Check(shootKubernetesVersion)
-		if oldK8sLess135 && newK8sGreaterEqual135 {
+		if oldK8sLess135 && newK8sGreaterEqual135 && maintainedShoot.Spec.DNS != nil {
 			for i := range maintainedShoot.Spec.DNS.Providers {
 				if maintainedShoot.Spec.DNS.Providers[i].SecretName != nil {
 					maintainedShoot.Spec.DNS.Providers[i].SecretName = nil

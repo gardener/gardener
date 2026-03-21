@@ -2011,6 +2011,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 					g.Expect(shoot134.Status.LastMaintenance.Description).To(ContainSubstring(".spec.kubernetes.kubeAPIServer.watchCacheSizes.default was removed"))
 					g.Expect(shoot134.Status.LastMaintenance.Description).To(ContainSubstring(".spec.kubernetes.kubeScheduler.kubeMaxPDVols was removed"))
 					g.Expect(shoot134.Status.LastMaintenance.Description).To(ContainSubstring(".spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication was removed"))
+					g.Expect(shoot134.Status.LastMaintenance.Description).To(ContainSubstring(".spec.dns.providers[0].secretName was removed"))
 					g.Expect(shoot134.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 					g.Expect(shoot134.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 				}).Should(Succeed())
