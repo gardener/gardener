@@ -103,6 +103,29 @@ var _ = Describe("Generate", func() {
 				})
 			})
 
+			It("should add custom labels to the generated secret", func() {
+				customLabels := map[string]string{
+					"app":         "test-app",
+					"environment": "test",
+					"custom-key":  "custom-value",
+				}
+
+				By("Generate new secret with custom labels")
+				secret, err := m.Generate(ctx, config, WithLabels(customLabels))
+				Expect(err).NotTo(HaveOccurred())
+				expectSecretWasCreated(ctx, fakeClient, secret)
+
+				By("Verify custom labels are present")
+				for key, value := range customLabels {
+					Expect(secret.Labels).To(HaveKeyWithValue(key, value))
+				}
+
+				By("Verify standard labels are still present")
+				Expect(secret.Labels).To(HaveKeyWithValue(LabelKeyName, name))
+				Expect(secret.Labels).To(HaveKeyWithValue(LabelKeyManagedBy, LabelValueSecretsManager))
+				Expect(secret.Labels).To(HaveKeyWithValue(LabelKeyManagerIdentity, identity))
+			})
+
 			It("should maintain the lifetime labels (w/o validity)", func() {
 				By("Generate new secret")
 				secret, err := m.Generate(ctx, config)

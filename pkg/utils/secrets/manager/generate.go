@@ -44,6 +44,7 @@ func (m *manager) Generate(ctx context.Context, config secretsutils.ConfigInterf
 
 	objectMeta, err := ObjectMeta(
 		namespace,
+		options.Labels,
 		m.identity,
 		config,
 		options.IgnoreConfigChecksumForCASecretName,
@@ -391,6 +392,8 @@ type GenerateOptions struct {
 	IgnoreConfigChecksumForCASecretName bool
 	// Namespace overwrites the namespace in which the secret should be created.
 	Namespace string
+	// Labels are additional labels that should be added to the secret.
+	Labels map[string]string
 
 	signingCAChecksum *string
 	isBundleSecret    bool
@@ -622,6 +625,14 @@ func isBundleSecret() GenerateOption {
 func Namespace(namespace string) GenerateOption {
 	return func(_ Interface, _ secretsutils.ConfigInterface, options *GenerateOptions) error {
 		options.Namespace = namespace
+		return nil
+	}
+}
+
+// WithLabels returns a function which sets the 'Labels' field.
+func WithLabels(labels map[string]string) GenerateOption {
+	return func(_ Interface, _ secretsutils.ConfigInterface, options *GenerateOptions) error {
+		options.Labels = labels
 		return nil
 	}
 }
