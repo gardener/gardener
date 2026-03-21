@@ -1895,22 +1895,6 @@ Credentials
 <p>Credentials contains information about the virtual garden cluster credentials.</p>
 </td>
 </tr>
-<tr>
-<td>
-<code>encryptedResources</code></br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>EncryptedResources is the list of resources which are currently encrypted in the virtual garden by the virtual kube-apiserver.
-Resources which are encrypted by default will not appear here.
-See <a href="https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config">https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config</a> for more details.</p>
-<p>Deprecated: This field is deprecated and will be removed with release v1.138.
-This field will be removed in favor of <code>status.credentials.encryptionAtRest.resources</code>.</p>
-</td>
-</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.Gardener">Gardener
