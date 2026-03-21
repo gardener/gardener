@@ -402,7 +402,7 @@ func defaultKubernetesVersion(constraints []gardencorev1beta1.ExpirableVersion, 
 func findLatestSupportedVersion(constraints []gardencorev1beta1.ExpirableVersion, major, minor *uint64) *semver.Version {
 	var latestVersion *semver.Version
 	for _, versionConstraint := range constraints {
-		if v1beta1helper.CurrentLifecycleClassification(versionConstraint) != gardencorev1beta1.ClassificationSupported {
+		if !v1beta1helper.VersionIsSupported(versionConstraint) {
 			continue
 		}
 
