@@ -36,6 +36,10 @@ DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT   ?= false
 TARGET_PLATFORMS                           ?= linux/$(shell go env GOARCH)
 PRINT_HELP ?=
 
+# Disable globally go workspaces until https://github.com/gardener/gardener/issues/8811 is resolved.
+# This resolves issues presented with error like 'pattern ./...: directory prefix . does not contain modules listed in go.work or their selected dependencies'
+export GOWORK=off
+
 ifndef ARTIFACTS
 	export ARTIFACTS=/tmp/artifacts
 endif
