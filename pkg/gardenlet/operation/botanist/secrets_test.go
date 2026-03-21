@@ -6,6 +6,7 @@ package botanist_test
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -16,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -483,6 +485,43 @@ var _ = Describe("Secrets", func() {
 								Data: runtime.RawExtension{Raw: rawData("secret-without-labels")},
 							},
 							{
+								Name:   "new-format-secret",
+								Type:   "secret",
+								Labels: map[string]string{"managed-by": "test"},
+								Data: runtime.RawExtension{
+									Raw: rawData("new-format-secret", struct {
+										Immutable *bool
+										Type      corev1.SecretType
+									}{
+										Immutable: ptr.To(true),
+										Type:      corev1.SecretTypeOpaque,
+									})},
+							},
+							{
+								Name: "new-format-mutable-secret",
+								Type: "secret",
+								Data: runtime.RawExtension{
+									Raw: rawData("new-format-mutable-secret", struct {
+										Immutable *bool
+										Type      corev1.SecretType
+									}{
+										Immutable: ptr.To(false),
+										Type:      corev1.SecretTypeOpaque,
+									})},
+							},
+							{
+								Name: "new-format-tls-secret",
+								Type: "secret",
+								Data: runtime.RawExtension{
+									Raw: rawData("new-format-tls-secret", struct {
+										Immutable *bool
+										Type      corev1.SecretType
+									}{
+										Immutable: ptr.To(true),
+										Type:      corev1.SecretTypeTLS,
+									})},
+							},
+							{
 								Name: "some-other-data",
 								Type: "not-a-secret",
 							},
@@ -528,6 +567,25 @@ var _ = Describe("Secrets", func() {
 				Expect(secret.Labels).To(BeEmpty())
 				Expect(secret.Data).To(Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
 
+				By("Verify new format secret got restored")
+				Expect(seedClient.Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: "new-format-secret"}, secret)).To(Succeed())
+				Expect(secret.Immutable).To(PointTo(BeTrue()))
+				Expect(secret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(secret.Labels).To(Equal(map[string]string{"managed-by": "test"}))
+				Expect(secret.Data).To(Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
+
+				By("Verify new format mutable secret got restored")
+				Expect(seedClient.Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: "new-format-mutable-secret"}, secret)).To(Succeed())
+				Expect(secret.Immutable).To(PointTo(BeFalse()))
+				Expect(secret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(secret.Data).To(Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
+
+				By("Verify new format TLS secret got restored")
+				Expect(seedClient.Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: "new-format-tls-secret"}, secret)).To(Succeed())
+				Expect(secret.Immutable).To(PointTo(BeTrue()))
+				Expect(secret.Type).To(Equal(corev1.SecretType("kubernetes.io/tls")))
+				Expect(secret.Data).To(Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
+
 				By("Verify unrelated data not to be restored")
 				Expect(seedClient.Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: "some-other-data"}, &corev1.Secret{})).To(BeNotFoundError())
 			})
@@ -553,6 +611,27 @@ func verifyCASecret(name string, secret *corev1.Secret, dataMatcher gomegatypes.
 	}
 }
 
-func rawData(value string) []byte {
-	return []byte(`{"data-for":"` + utils.EncodeBase64([]byte(value)) + `"}`)
+func rawData(value string, opts ...struct {
+	Immutable *bool
+	Type      corev1.SecretType
+}) []byte {
+	if len(opts) == 0 {
+		return []byte(`{"data-for":"` + utils.EncodeBase64([]byte(value)) + `"}`)
+	}
+
+	o := opts[0]
+
+	type newFormat struct {
+		Data      map[string][]byte `json:"data"`
+		Immutable *bool             `json:"immutable,omitempty"`
+		Type      corev1.SecretType `json:"type,omitempty"`
+	}
+
+	b, _ := json.Marshal(newFormat{
+		Data:      map[string][]byte{"data-for": []byte(value)},
+		Immutable: o.Immutable,
+		Type:      o.Type,
+	})
+
+	return b
 }
