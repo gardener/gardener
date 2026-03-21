@@ -187,6 +187,10 @@ message Image {
   // Defaults to Always if latest tag is specified, or IfNotPresent otherwise.
   // +optional
   optional string pullPolicy = 3;
+
+  // Ref is the full image reference.
+  // +optional
+  optional string ref = 4;
 }
 
 // ManagedSeed represents a Shoot that is registered as Seed.

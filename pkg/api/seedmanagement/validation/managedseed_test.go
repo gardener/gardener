@@ -310,6 +310,42 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				))
 			})
 
+			It("should forbid empty ref in image", func() {
+				managedSeed.Spec.Gardenlet.Deployment = &seedmanagement.GardenletDeployment{
+					Image: &seedmanagement.Image{
+						Ref: ptr.To(""),
+					},
+				}
+
+				errorList := ValidateManagedSeed(managedSeed)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.gardenlet.deployment.image.ref"),
+					})),
+				))
+			})
+
+			It("should forbid specifying both ref and repository/tag in image", func() {
+				managedSeed.Spec.Gardenlet.Deployment = &seedmanagement.GardenletDeployment{
+					Image: &seedmanagement.Image{
+						Ref:        ptr.To("registry.example.com/gardenlet:v1.0.0"),
+						Repository: ptr.To("registry.example.com/gardenlet"),
+						Tag:        ptr.To("v1.0.0"),
+					},
+				}
+
+				errorList := ValidateManagedSeed(managedSeed)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.gardenlet.deployment.image"),
+					})),
+				))
+			})
+
 			It("should forbid garden client connection kubeconfig if bootstrap is specified", func() {
 				managedSeed.Spec.Gardenlet.Config = gardenletConfiguration(seedx,
 					&gardenletconfigv1alpha1.GardenClientConnection{

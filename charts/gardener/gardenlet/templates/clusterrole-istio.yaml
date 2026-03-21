@@ -2,7 +2,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: gardener.cloud:system:gardenlet:managed-istio
+  name: gardener.cloud:system:gardenlet:managed-istio{{ if .Values.isolateClusterResources }}:{{ .Release.Namespace }}{{ end }}
   labels:
     app: gardener
     role: gardenlet

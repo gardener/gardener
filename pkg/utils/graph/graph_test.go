@@ -39,6 +39,7 @@ import (
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
 
 var _ = Describe("graph for seeds", func() {
@@ -2520,6 +2521,7 @@ var _ = Describe("graph for shoots", func() {
 		fakeInformerBastion                   *controllertest.FakeInformer
 		fakeInformerCertificateSigningRequest *controllertest.FakeInformer
 		fakeInformerGardenlet                 *controllertest.FakeInformer
+		fakeInformerManagedSeed               *controllertest.FakeInformer
 		fakeInformerServiceAccount            *controllertest.FakeInformer
 		fakeInformerShoot                     *controllertest.FakeInformer
 		fakeInformers                         *informertest.FakeInformers
@@ -2529,6 +2531,8 @@ var _ = Describe("graph for shoots", func() {
 
 		shootNamespace = "shoot-namespace"
 		shootName      = "shoot-name"
+
+		managedSeed1 *seedmanagementv1alpha1.ManagedSeed
 
 		serviceAccount1 *corev1.ServiceAccount
 
@@ -2581,6 +2585,7 @@ var _ = Describe("graph for shoots", func() {
 		fakeInformerBastion = &controllertest.FakeInformer{}
 		fakeInformerCertificateSigningRequest = &controllertest.FakeInformer{}
 		fakeInformerGardenlet = &controllertest.FakeInformer{}
+		fakeInformerManagedSeed = &controllertest.FakeInformer{}
 		fakeInformerServiceAccount = &controllertest.FakeInformer{}
 		fakeInformerShoot = &controllertest.FakeInformer{}
 
@@ -2592,6 +2597,7 @@ var _ = Describe("graph for shoots", func() {
 				operationsv1alpha1.SchemeGroupVersion.WithKind("Bastion"):               fakeInformerBastion,
 				certificatesv1.SchemeGroupVersion.WithKind("CertificateSigningRequest"): fakeInformerCertificateSigningRequest,
 				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("Gardenlet"):         fakeInformerGardenlet,
+				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed"):       fakeInformerManagedSeed,
 				corev1.SchemeGroupVersion.WithKind("ServiceAccount"):                    fakeInformerServiceAccount,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"):                  fakeInformerShoot,
 			},
@@ -2631,6 +2637,16 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 
 		gardenlet1 = &seedmanagementv1alpha1.Gardenlet{
 			ObjectMeta: metav1.ObjectMeta{Name: "self-hosted-shoot-" + shootName, Namespace: shootNamespace},
+		}
+
+		managedSeed1 = &seedmanagementv1alpha1.ManagedSeed{
+			ObjectMeta: metav1.ObjectMeta{Name: "managedseed1", Namespace: shootNamespace},
+			Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+				Shoot: &seedmanagementv1alpha1.Shoot{Name: shootName},
+				Gardenlet: seedmanagementv1alpha1.GardenletConfig{
+					Bootstrap: ptr.To(seedmanagementv1alpha1.BootstrapToken),
+				},
+			},
 		}
 
 		serviceAccount1 = &corev1.ServiceAccount{
@@ -2917,6 +2933,24 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 		Expect(graph.graph.Nodes().Len()).To(BeZero())
 		Expect(graph.graph.Edges().Len()).To(BeZero())
 		Expect(graph.HasPathFrom(VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeFalse())
+	})
+
+	It("should behave as expected for seedmanagementv1alpha1.ManagedSeed", func() {
+		By("Add")
+		fakeInformerManagedSeed.Add(managedSeed1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(4))
+		Expect(graph.graph.Edges().Len()).To(Equal(3))
+		Expect(graph.HasPathFrom(VertexTypeSeed, "", managedSeed1.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, "kube-system", "bootstrap-token-"+bootstraptoken.TokenID(managedSeed1.ObjectMeta), VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+
+		By("Delete")
+		fakeInformerManagedSeed.Delete(managedSeed1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeSeed, "", managedSeed1.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, "kube-system", "bootstrap-token-"+bootstraptoken.TokenID(managedSeed1.ObjectMeta), VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeFalse())
 	})
 
 	It("should behave as expected for corev1.ServiceAccount", func() {

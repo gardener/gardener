@@ -936,6 +936,18 @@ Kubernetes core/v1.PullPolicy
 Defaults to Always if latest tag is specified, or IfNotPresent otherwise.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>ref</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Ref is the full image reference.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="seedmanagement.gardener.cloud/v1alpha1.ManagedSeedSetSpec">ManagedSeedSetSpec
