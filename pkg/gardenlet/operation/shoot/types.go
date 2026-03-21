@@ -61,6 +61,7 @@ type Builder struct {
 	projectName                  string
 	internalDomain               *gardenerutils.Domain
 	defaultDomains               []*gardenerutils.Domain
+	shootDNSDomain               **gardencorev1beta1.DNS
 }
 
 // Shoot is an object containing information about a Shoot cluster.

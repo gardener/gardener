@@ -106,6 +106,12 @@ func (b *Builder) WithSeedObject(seed *gardencorev1beta1.Seed) *Builder {
 	return b
 }
 
+// WithShootDNSDomain can be used to overwrite the `spec.DNS` configuration of a shoot resource.
+func (b *Builder) WithShootDNSDomain(dnsDomain *gardencorev1beta1.DNS) *Builder {
+	b.shootDNSDomain = &dnsDomain
+	return b
+}
+
 // WithExposureClassObject sets the exposureClass attribute at the Builder.
 func (b *Builder) WithExposureClassObject(exposureClass *gardencorev1beta1.ExposureClass) *Builder {
 	b.exposureClass = exposureClass
@@ -206,6 +212,11 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if b.shootDNSDomain != nil {
+		shootObject.Spec.DNS = *b.shootDNSDomain
+	}
+
 	shoot.SetInfo(shootObject)
 
 	cloudProfile, err := b.cloudProfileFunc(ctx, shootObject)
