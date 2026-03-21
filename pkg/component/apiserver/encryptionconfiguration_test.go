@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/apiserver"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -173,6 +174,105 @@ resources:
 			Expect(secretList.Items).To(HaveLen(1))
 			Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
 		})
+
+		It("should error when unknown encryption provider is used", func() {
+			config.EncryptionProvider = "unknown"
+
+			secretETCDEncryptionConfiguration := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "apiserver-encryption-config", Namespace: namespace}}
+			err := ReconcileSecretETCDEncryptionConfiguration(ctx, fakeClient, fakeSecretManager, config, secretETCDEncryptionConfiguration, secretNameETCDEncryptionKey, encryptionRoleLabel)
+			Expect(err).To(MatchError("unknown encryption provider 'unknown'"))
+		})
+
+		DescribeTable("successfully deploy the ETCD encryption configuration w/ different providers",
+			func(currentProvider, oldProvider gardencorev1beta1.EncryptionProviderType) {
+				config.EncryptWithCurrentKey = true
+				config.EncryptionProvider = currentProvider
+
+				oldKeyName, oldKeySecret := "key-old", "old-secret"
+				Expect(fakeClient.Create(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      secretNameETCDEncryptionKey + "-old",
+						Namespace: namespace,
+					},
+					Data: map[string][]byte{
+						"key":      []byte(oldKeyName),
+						"secret":   []byte(oldKeySecret),
+						"provider": []byte(oldProvider),
+					},
+				})).To(Succeed())
+
+				normalizedCurrentProvider := currentProvider
+				if len(normalizedCurrentProvider) == 0 {
+					normalizedCurrentProvider = gardencorev1beta1.EncryptionProviderTypeAESCBC
+				}
+				normalizedOldProvider := oldProvider
+				if len(normalizedOldProvider) == 0 {
+					normalizedOldProvider = gardencorev1beta1.EncryptionProviderTypeAESCBC
+				}
+
+				etcdEncryptionConfiguration := `apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+- providers:
+  - ` + string(normalizedCurrentProvider) + `:
+      keys:
+      - name: key-62135596800
+        secret: X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18=`
+				if normalizedOldProvider != normalizedCurrentProvider {
+					etcdEncryptionConfiguration += `
+  - ` + string(normalizedOldProvider) + `:
+      keys:`
+				}
+				etcdEncryptionConfiguration += `
+      - name: ` + oldKeyName + `
+        secret: ` + oldKeySecret + `
+  - identity: {}
+  resources:
+  - foo
+`
+
+				expectedSecretETCDEncryptionConfiguration := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "apiserver-encryption-config", Namespace: namespace},
+					Data:       map[string][]byte{"encryption-configuration.yaml": []byte(etcdEncryptionConfiguration)},
+				}
+				Expect(kubernetesutils.MakeUnique(expectedSecretETCDEncryptionConfiguration)).To(Succeed())
+
+				actualSecretETCDEncryptionConfiguration := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "apiserver-encryption-config", Namespace: namespace}}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(BeNotFoundError())
+
+				Expect(ReconcileSecretETCDEncryptionConfiguration(ctx, fakeClient, fakeSecretManager, config, actualSecretETCDEncryptionConfiguration, secretNameETCDEncryptionKey, encryptionRoleLabel)).To(Succeed())
+
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
+				Expect(actualSecretETCDEncryptionConfiguration).To(Equal(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      expectedSecretETCDEncryptionConfiguration.Name,
+						Namespace: expectedSecretETCDEncryptionConfiguration.Namespace,
+						Labels: map[string]string{
+							"resources.gardener.cloud/garbage-collectable-reference": "true",
+							"role": encryptionRoleLabel,
+						},
+						ResourceVersion: "1",
+					},
+					Immutable: ptr.To(true),
+					Data:      expectedSecretETCDEncryptionConfiguration.Data,
+				}))
+
+				secretList := &corev1.SecretList{}
+				Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+					"name":       secretNameETCDEncryptionKey,
+					"managed-by": "secrets-manager",
+				})).To(Succeed())
+				Expect(secretList.Items).To(HaveLen(1))
+				Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
+			},
+
+			Entry("encrypting same provider 1", gardencorev1beta1.EncryptionProviderTypeAESCBC, gardencorev1beta1.EncryptionProviderTypeAESCBC),
+			Entry("encrypting same provider 2", gardencorev1beta1.EncryptionProviderTypeSecretbox, gardencorev1beta1.EncryptionProviderTypeSecretbox),
+			Entry("encrypting same provider 2", gardencorev1beta1.EncryptionProviderTypeAESCBC, gardencorev1beta1.EncryptionProviderType("")),
+			Entry("encrypting different provider 1", gardencorev1beta1.EncryptionProviderTypeAESCBC, gardencorev1beta1.EncryptionProviderTypeAESGCM),
+			Entry("encrypting different provider 2", gardencorev1beta1.EncryptionProviderTypeSecretbox, gardencorev1beta1.EncryptionProviderTypeAESGCM),
+			Entry("encrypting different provider 3", gardencorev1beta1.EncryptionProviderType(""), gardencorev1beta1.EncryptionProviderTypeAESGCM),
+		)
 
 		DescribeTable("successfully deploy the ETCD encryption configuration secret resource w/ old key",
 			func(encryptWithCurrentKey bool) {

@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
+	"github.com/gardener/gardener/pkg/api/core/helper"
 	gardencorevalidation "github.com/gardener/gardener/pkg/api/core/validation"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -30,6 +31,9 @@ func ValidateManagedSeedSet(managedSeedSet *seedmanagement.ManagedSeedSet) field
 	opts := gardencorevalidation.KubeAPIServerValidationOptions{
 		AllowInvalidAcceptedIssuers: false,
 		AllowInvalidEventTTL:        false,
+		ETCDEncryptionConfigValidationOptions: gardencorevalidation.ETCDEncryptionConfigValidationOptions{
+			AutoRotationEnabled: helper.IsETCDEncryptionKeyAutoRotationEnabled(managedSeedSet.Spec.ShootTemplate.Spec.Maintenance),
+		},
 	}
 
 	return ValidateManagedSeedSetWithOps(managedSeedSet, opts)
@@ -59,6 +63,9 @@ func ValidateManagedSeedSetUpdate(newManagedSeedSet, oldManagedSeedSet *seedmana
 			apiequality.Semantic.DeepEqual(oldManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers, newManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers),
 		AllowInvalidEventTTL: oldManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer != nil && newManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer != nil &&
 			apiequality.Semantic.DeepEqual(oldManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer.EventTTL, newManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer.EventTTL),
+		ETCDEncryptionConfigValidationOptions: gardencorevalidation.ETCDEncryptionConfigValidationOptions{
+			AutoRotationEnabled: helper.IsETCDEncryptionKeyAutoRotationEnabled(newManagedSeedSet.Spec.ShootTemplate.Spec.Maintenance),
+		},
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newManagedSeedSet.ObjectMeta, &oldManagedSeedSet.ObjectMeta, field.NewPath("metadata"))...)

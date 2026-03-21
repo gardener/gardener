@@ -5,6 +5,8 @@
 package managedseed_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -145,6 +147,15 @@ var _ = Describe("ManagedSeed controller test", func() {
 					},
 				},
 				Region: "some-region",
+				Maintenance: &gardencorev1beta1.Maintenance{
+					AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+						Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+								RotationPeriod: &metav1.Duration{Duration: 7 * 24 * time.Hour},
+							},
+						},
+					},
+				},
 			},
 		}
 	})

@@ -5,6 +5,8 @@
 package conditions_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -36,6 +38,15 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				SecretBindingName: ptr.To("my-provider-account"),
 				CloudProfileName:  ptr.To("cloudprofile1"),
 				Region:            "europe-central-1",
+				Maintenance: &gardencorev1beta1.Maintenance{
+					AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+						Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+								RotationPeriod: &metav1.Duration{Duration: 7 * 24 * time.Hour},
+							},
+						},
+					},
+				},
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo-provider",
 					Workers: []gardencorev1beta1.Worker{
