@@ -1219,6 +1219,29 @@ func (r *Reconciler) deployGardenerDashboard(ctx context.Context, dashboard gard
 			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 		}
 		dashboard.SetAPIServerCABundle(ptr.To(utils.EncodeBase64(caSecret.Data[secretsutils.DataKeyCertificateBundle])))
+	} else {
+		// Best-effort: try to populate CA bundle from SNI TLS secret for private CA setups.
+		// If neither an explicit secret name nor a wildcard cert is available, skip gracefully
+		// (same behavior as before this change).
+		var tlsSecret *corev1.Secret
+
+		if secretName := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI.SecretName; secretName != nil {
+			s := &corev1.Secret{}
+			if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: *secretName, Namespace: r.GardenNamespace}, s); err == nil {
+				tlsSecret = s
+			}
+		} else {
+			// Fallback: try wildcard cert (non-default/exceptional case)
+			if s, err := gardenerutils.GetRequiredGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace); err == nil {
+				tlsSecret = s
+			}
+		}
+
+		if tlsSecret != nil {
+			if caData, ok := tlsSecret.Data[secretsutils.DataKeyCertificateCA]; ok {
+				dashboard.SetAPIServerCABundle(ptr.To(utils.EncodeBase64(caData)))
+			}
+		}
 	}
 
 	return component.OpWait(dashboard).Deploy(ctx)
