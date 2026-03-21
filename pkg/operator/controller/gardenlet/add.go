@@ -60,7 +60,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virt
 		r.Recorder = mgr.GetEventRecorder(ControllerName + "-controller")
 	}
 	if r.HelmRegistry == nil {
-		r.HelmRegistry = oci.NewHelmRegistry(r.RuntimeCluster.GetClient())
+		r.HelmRegistry = oci.NewHelmRegistry(virtualCluster.GetClient())
 	}
 
 	return builder.
