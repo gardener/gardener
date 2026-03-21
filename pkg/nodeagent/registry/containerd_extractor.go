@@ -18,12 +18,14 @@ import (
 	"github.com/containerd/containerd/v2/defaults"
 	"github.com/containerd/containerd/v2/pkg/namespaces"
 	"github.com/containerd/errdefs"
+	"github.com/docker/cli/cli/config/configfile"
 	"github.com/opencontainers/image-spec/identity"
 	"github.com/spf13/afero"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/files"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 type containerdExtractor struct{}
@@ -34,7 +36,7 @@ func NewExtractor() Extractor {
 }
 
 // CopyFromImage copies a file from a given image reference to the destination file.
-func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string, filePathInImage string, destination string, permissions os.FileMode) error {
+func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string, filePathInImage string, destination string, permissions os.FileMode, configFile *configfile.ConfigFile) error {
 	fs := afero.Afero{Fs: afero.NewOsFs()}
 
 	address := os.Getenv("CONTAINERD_ADDRESS")
@@ -57,8 +59,22 @@ func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string
 
 	defer func() { utilruntime.HandleError(done(ctx)) }()
 
+	var hostOptions = config.HostOptions{
+		HostDir: config.HostDirFromRoot("/etc/containerd/certs.d"),
+	}
+
+	if configFile != nil {
+		if userName, password, err := imagevectorutils.CredentialsFromDockerConfigFile(configFile, imageRef); err != nil {
+			return fmt.Errorf("error reading image pull credentials from config file: %w", err)
+		} else if userName != "" && password != "" {
+			hostOptions.Credentials = func(_ string) (string, string, error) {
+				return userName, password, nil
+			}
+		}
+	}
+
 	resolver := docker.NewResolver(docker.ResolverOptions{
-		Hosts: config.ConfigureHosts(ctx, config.HostOptions{HostDir: config.HostDirFromRoot("/etc/containerd/certs.d")}),
+		Hosts: config.ConfigureHosts(ctx, hostOptions),
 	})
 
 	image, err := client.Pull(ctx, imageRef, containerd.WithPullSnapshotter(defaults.DefaultSnapshotter), containerd.WithResolver(resolver), containerd.WithPullUnpack)
