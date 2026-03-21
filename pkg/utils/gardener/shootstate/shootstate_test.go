@@ -34,227 +34,281 @@ import (
 
 var _ = Describe("ShootState", func() {
 	var (
-		ctx           = context.TODO()
-		seedNamespace = "shoot--my-project--my-shoot"
+		ctx = context.TODO()
 
 		fakeGardenClient client.Client
-		fakeSeedClient   client.Client
-		fakeClock        clock.Clock
-
-		shoot      *gardencorev1beta1.Shoot
-		shootState *gardencorev1beta1.ShootState
 	)
 
 	BeforeEach(func() {
 		fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-		// Starting with controller-runtime v0.22.0, the default object tracker does not work with resources which include
-		// structs directly as pointer, e.g. *MachineConfiguration in Machine resource. Hence, use the old one instead.
-		objectTracker := testing.NewObjectTracker(kubernetes.SeedScheme, scheme.Codecs.UniversalDecoder())
-		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjectTracker(objectTracker).Build()
-		fakeClock = testclock.NewFakeClock(time.Now())
-
-		shoot = &gardencorev1beta1.Shoot{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "my-shoot",
-				Namespace: "garden-my-project",
-			},
-			Status: gardencorev1beta1.ShootStatus{
-				TechnicalID: seedNamespace,
-			},
-		}
-		shootState = &gardencorev1beta1.ShootState{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "my-shoot",
-				Namespace: "garden-my-project",
-			},
-		}
 	})
 
-	Describe("#Deploy", func() {
-		It("should deploy an empty ShootState when there is nothing to persist", func() {
-			Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, true)).To(Succeed())
-			Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
-			Expect(shootState.Spec).To(Equal(gardencorev1beta1.ShootStateSpec{}))
-			Expect(shootState.Annotations).To(HaveKeyWithValue("gardener.cloud/timestamp", fakeClock.Now().UTC().Format(time.RFC3339)))
-		})
-
-		Context("with data to backup", func() {
+	DescribeTableSubtree("#Deploy",
+		func(shoot *gardencorev1beta1.Shoot, controlPlaneNamespace string, expectedMachineState []byte) {
 			var (
-				existingGardenerData      = []gardencorev1beta1.GardenerResourceData{{Name: "some-data"}}
-				existingExtensionsData    = []gardencorev1beta1.ExtensionResourceState{{Name: ptr.To("some-data")}}
-				existingResourcesData     = []gardencorev1beta1.ResourceData{{Data: runtime.RawExtension{Raw: []byte("{}")}}}
-				expectedSpec              gardencorev1beta1.ShootStateSpec
-				cleanupMachineObjectsFunc func(ctx context.Context)
+				fakeSeedClient client.Client
+				fakeClock      clock.Clock
+
+				shootState *gardencorev1beta1.ShootState
 			)
 
 			BeforeEach(func() {
-				By("Create ShootState with some data")
-				shootState.Spec.Gardener = append(shootState.Spec.Gardener, existingGardenerData...)
-				shootState.Spec.Extensions = append(shootState.Spec.Extensions, existingExtensionsData...)
-				shootState.Spec.Resources = append(shootState.Spec.Resources, existingResourcesData...)
-				Expect(fakeGardenClient.Create(ctx, shootState)).To(Succeed())
+				// Starting with controller-runtime v0.22.0, the default object tracker does not work with resources which include
+				// structs directly as pointer, e.g. *MachineConfiguration in Machine resource. Hence, use the old one instead.
+				objectTracker := testing.NewObjectTracker(kubernetes.SeedScheme, scheme.Codecs.UniversalDecoder())
+				fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjectTracker(objectTracker).Build()
+				fakeClock = testclock.NewFakeClock(time.Now())
 
-				By("Creating Gardener data")
-				Expect(fakeSeedClient.Create(ctx, newSecret("secret1", seedNamespace, true, true))).To(Succeed())
-				Expect(fakeSeedClient.Create(ctx, newSecret("secret2", seedNamespace, false, true))).To(Succeed())
-				Expect(fakeSeedClient.Create(ctx, newSecret("secret3", seedNamespace, true, false))).To(Succeed())
-
-				By("Creating extensions data")
-				createExtensionObject(ctx, fakeSeedClient, "backupentry", seedNamespace, &extensionsv1alpha1.BackupEntry{}, &runtime.RawExtension{Raw: []byte(`{"name":"backupentry"}`)})
-				createExtensionObject(ctx, fakeSeedClient, "containerruntime", seedNamespace, &extensionsv1alpha1.ContainerRuntime{}, &runtime.RawExtension{Raw: []byte(`{"name":"containerruntime"}`)})
-				createExtensionObject(ctx, fakeSeedClient, "controlplane", seedNamespace, &extensionsv1alpha1.ControlPlane{Spec: extensionsv1alpha1.ControlPlaneSpec{}}, &runtime.RawExtension{Raw: []byte(`{"name":"controlplane"}`)})
-				createExtensionObject(ctx, fakeSeedClient, "dnsrecord", seedNamespace, &extensionsv1alpha1.DNSRecord{}, &runtime.RawExtension{Raw: []byte(`{"name":"dnsrecord"}`)})
-				createExtensionObject(ctx, fakeSeedClient, "extension", seedNamespace, &extensionsv1alpha1.Extension{}, &runtime.RawExtension{Raw: []byte(`{"name":"extension"}`)}, gardencorev1beta1.NamedResourceReference{Name: "resource-ref1", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", APIVersion: "v1", Name: "extension-configmap"}})
-				Expect(fakeSeedClient.Create(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "extension-configmap", Namespace: seedNamespace}, Data: map[string]string{"some-data": "for-extension"}})).To(Succeed())
-				createExtensionObject(ctx, fakeSeedClient, "infrastructure", seedNamespace, &extensionsv1alpha1.Infrastructure{}, &runtime.RawExtension{Raw: []byte(`{"name":"infrastructure"}`)})
-				createExtensionObject(ctx, fakeSeedClient, "network", seedNamespace, &extensionsv1alpha1.Network{}, &runtime.RawExtension{Raw: []byte(`{"name":"network"}`)})
-				createExtensionObject(ctx, fakeSeedClient, "osc", seedNamespace, &extensionsv1alpha1.OperatingSystemConfig{}, &runtime.RawExtension{Raw: []byte(`{"name":"osc"}`)})
-				createExtensionObject(ctx, fakeSeedClient, "selfhostedshootexposure", seedNamespace, &extensionsv1alpha1.SelfHostedShootExposure{}, &runtime.RawExtension{Raw: []byte(`{"name":"selfhostedshootexposure"}`)})
-				createExtensionObject(ctx, fakeSeedClient, "worker", seedNamespace, &extensionsv1alpha1.Worker{}, &runtime.RawExtension{Raw: []byte(`{"name":"worker"}`)})
-				// this extension object has no state, hence it should not be persisted in the ShootState
-				createExtensionObject(ctx, fakeSeedClient, "osc2", seedNamespace, &extensionsv1alpha1.OperatingSystemConfig{}, nil)
-
-				By("Creating machine data")
-				cleanupMachineObjectsFunc = createMachineObjects(ctx, fakeSeedClient, seedNamespace)
-
-				expectedSpec = gardencorev1beta1.ShootStateSpec{
-					Gardener: []gardencorev1beta1.GardenerResourceData{
-						{
-							Name:   "secret1",
-							Type:   "secret",
-							Data:   runtime.RawExtension{Raw: []byte(`{"secret1":"c29tZS1kYXRh"}`)},
-							Labels: map[string]string{"managed-by": "secrets-manager", "persist": "true"},
-						},
-						{
-							Name:   "secret3",
-							Type:   "secret",
-							Data:   runtime.RawExtension{Raw: []byte(`{"secret3":"c29tZS1kYXRh"}`)},
-							Labels: map[string]string{"persist": "true"},
-						},
-						{
-							Name: "machine-state",
-							Type: "machine-state",
-							Data: runtime.RawExtension{Raw: []byte(`{"state":"H4sIAAAAAAAC/+yUPWv7MBDGv8vN8mAn/8XrP0unDkmnkuEqHcRFb0iXQgj67kWynaS0kJcWUtJ4sXR6Tjz80D1bMChXnaUZee02hixHaLegyrbOy0BedxIjtBMxqueUZc9bMMSokDELLRqCdmytInENolSjR5mP4so5riqzqXxwryT7damCALTWMXLnbLEQXbluX4WUBERPMp8ORv5rjFmdBDAZr5GpnO5tHfTIvdg6RYtjDSl/AiIjr4sljZEfPYXezlB48gqZFl12a9da555jYJqzwGh8IR0/3wTplqAtd6/rlKfVVIP4SigPsPjg3jpF4WEG7W5TdQpOJ3Y+LwFyHQJZnn9ovOQx1iPK+lKUTmV5/pXbv8HyNwBbJjHgaS7PvyaTndzz72sw058Y2uaP5l9PcBzaf9dBeRv510/piHJ6z78+/1J6DwAA//+Ak3pfGAoAAA=="}`)},
-						},
+				shootState = &gardencorev1beta1.ShootState{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      shoot.Name,
+						Namespace: shoot.Namespace,
 					},
-					Extensions: []gardencorev1beta1.ExtensionResourceState{
-						{
-							Kind:  "BackupEntry",
-							Name:  ptr.To("backupentry"),
-							State: &runtime.RawExtension{Raw: []byte(`{"name":"backupentry"}`)},
-						},
-						{
-							Kind:  "ContainerRuntime",
-							Name:  ptr.To("containerruntime"),
-							State: &runtime.RawExtension{Raw: []byte(`{"name":"containerruntime"}`)},
-						},
-						{
-							Kind:  "ControlPlane",
-							Name:  ptr.To("controlplane"),
-							State: &runtime.RawExtension{Raw: []byte(`{"name":"controlplane"}`)},
-						},
-						{
-							Kind:  "DNSRecord",
-							Name:  ptr.To("dnsrecord"),
-							State: &runtime.RawExtension{Raw: []byte(`{"name":"dnsrecord"}`)},
-						},
-						{
-							Kind:  "Extension",
-							Name:  ptr.To("extension"),
-							State: &runtime.RawExtension{Raw: []byte(`{"name":"extension"}`)},
-							Resources: []gardencorev1beta1.NamedResourceReference{{
-								Name: "resource-ref1",
-								ResourceRef: autoscalingv1.CrossVersionObjectReference{
-									APIVersion: "v1",
-									Kind:       "ConfigMap",
-									Name:       "extension-configmap",
-								},
-							}},
-						},
-						{
-							Kind:  "Infrastructure",
-							Name:  ptr.To("infrastructure"),
-							State: &runtime.RawExtension{Raw: []byte(`{"name":"infrastructure"}`)},
-						},
-						{
-							Kind:  "Network",
-							Name:  ptr.To("network"),
-							State: &runtime.RawExtension{Raw: []byte(`{"name":"network"}`)},
-						},
-						{
-							Kind:    "OperatingSystemConfig",
-							Name:    ptr.To("osc"),
-							Purpose: ptr.To(""),
-							State:   &runtime.RawExtension{Raw: []byte(`{"name":"osc"}`)},
-						},
-						{
-							Kind:  "SelfHostedShootExposure",
-							Name:  ptr.To("selfhostedshootexposure"),
-							State: &runtime.RawExtension{Raw: []byte(`{"name":"selfhostedshootexposure"}`)},
-						},
-						{
-							Kind:  "Worker",
-							Name:  ptr.To("worker"),
-							State: &runtime.RawExtension{Raw: []byte(`{"name":"worker"}`)},
-						},
-					},
-					Resources: []gardencorev1beta1.ResourceData{{
-						CrossVersionObjectReference: autoscalingv1.CrossVersionObjectReference{
-							APIVersion: "v1",
-							Kind:       "ConfigMap",
-							Name:       "extension-configmap",
-						},
-						Data: runtime.RawExtension{Raw: []byte(`{"apiVersion":"v1","data":{"some-data":"for-extension"},"kind":"ConfigMap","metadata":{"name":"extension-configmap","namespace":"shoot--my-project--my-shoot"}}`)},
-					}},
 				}
 			})
 
-			It("should compute the expected spec for both gardener and extensions data and overwrite the spec", func() {
+			It("should deploy an empty ShootState when there is nothing to persist", func() {
 				Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, true)).To(Succeed())
 				Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
-				Expect(shootState.Spec).To(Equal(expectedSpec))
+				Expect(shootState.Spec).To(Equal(gardencorev1beta1.ShootStateSpec{}))
+				Expect(shootState.Annotations).To(HaveKeyWithValue("gardener.cloud/timestamp", fakeClock.Now().UTC().Format(time.RFC3339)))
 			})
 
-			It("should compute expected spec for both gardener and extension data and overwrite the spec with no longer existing machine resources", func() {
-				Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, true)).To(Succeed())
+			Context("with data to backup", func() {
+				var (
+					existingGardenerData      = []gardencorev1beta1.GardenerResourceData{{Name: "some-data"}}
+					existingExtensionsData    = []gardencorev1beta1.ExtensionResourceState{{Name: ptr.To("some-data")}}
+					existingResourcesData     = []gardencorev1beta1.ResourceData{{Data: runtime.RawExtension{Raw: []byte("{}")}}}
+					expectedSpec              gardencorev1beta1.ShootStateSpec
+					cleanupMachineObjectsFunc func(ctx context.Context)
+				)
 
-				cleanupMachineObjectsFunc(ctx)
-				Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, true)).To(Succeed())
-				Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+				BeforeEach(func() {
+					By("Create ShootState with some data")
+					shootState.Spec.Gardener = append(shootState.Spec.Gardener, existingGardenerData...)
+					shootState.Spec.Extensions = append(shootState.Spec.Extensions, existingExtensionsData...)
+					shootState.Spec.Resources = append(shootState.Spec.Resources, existingResourcesData...)
+					Expect(fakeGardenClient.Create(ctx, shootState)).To(Succeed())
 
-				gardenerResourceData := v1beta1helper.GardenerResourceDataList(shootState.Spec.Gardener)
-				gardenerResourceData.Delete("machine-state")
-				expectedSpec.Gardener = gardenerResourceData
+					By("Creating Gardener data")
+					Expect(fakeSeedClient.Create(ctx, newSecret("secret1", controlPlaneNamespace, true, true))).To(Succeed())
+					Expect(fakeSeedClient.Create(ctx, newSecret("secret2", controlPlaneNamespace, false, true))).To(Succeed())
+					Expect(fakeSeedClient.Create(ctx, newSecret("secret3", controlPlaneNamespace, true, false))).To(Succeed())
 
-				Expect(shootState.Spec).To(Equal(expectedSpec))
+					By("Creating extensions data")
+					createExtensionObject(ctx, fakeSeedClient, "backupentry", controlPlaneNamespace, &extensionsv1alpha1.BackupEntry{}, &runtime.RawExtension{Raw: []byte(`{"name":"backupentry"}`)})
+					createExtensionObject(ctx, fakeSeedClient, "containerruntime", controlPlaneNamespace, &extensionsv1alpha1.ContainerRuntime{}, &runtime.RawExtension{Raw: []byte(`{"name":"containerruntime"}`)})
+					createExtensionObject(ctx, fakeSeedClient, "controlplane", controlPlaneNamespace, &extensionsv1alpha1.ControlPlane{Spec: extensionsv1alpha1.ControlPlaneSpec{}}, &runtime.RawExtension{Raw: []byte(`{"name":"controlplane"}`)})
+					createExtensionObject(ctx, fakeSeedClient, "dnsrecord", controlPlaneNamespace, &extensionsv1alpha1.DNSRecord{}, &runtime.RawExtension{Raw: []byte(`{"name":"dnsrecord"}`)})
+					createExtensionObject(ctx, fakeSeedClient, "extension", controlPlaneNamespace, &extensionsv1alpha1.Extension{}, &runtime.RawExtension{Raw: []byte(`{"name":"extension"}`)}, gardencorev1beta1.NamedResourceReference{Name: "resource-ref1", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", APIVersion: "v1", Name: "extension-configmap"}})
+					Expect(fakeSeedClient.Create(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "extension-configmap", Namespace: controlPlaneNamespace}, Data: map[string]string{"some-data": "for-extension"}})).To(Succeed())
+					createExtensionObject(ctx, fakeSeedClient, "infrastructure", controlPlaneNamespace, &extensionsv1alpha1.Infrastructure{}, &runtime.RawExtension{Raw: []byte(`{"name":"infrastructure"}`)})
+					createExtensionObject(ctx, fakeSeedClient, "network", controlPlaneNamespace, &extensionsv1alpha1.Network{}, &runtime.RawExtension{Raw: []byte(`{"name":"network"}`)})
+					createExtensionObject(ctx, fakeSeedClient, "osc", controlPlaneNamespace, &extensionsv1alpha1.OperatingSystemConfig{}, &runtime.RawExtension{Raw: []byte(`{"name":"osc"}`)})
+					createExtensionObject(ctx, fakeSeedClient, "selfhostedshootexposure", controlPlaneNamespace, &extensionsv1alpha1.SelfHostedShootExposure{}, &runtime.RawExtension{Raw: []byte(`{"name":"selfhostedshootexposure"}`)})
+					createExtensionObject(ctx, fakeSeedClient, "worker", controlPlaneNamespace, &extensionsv1alpha1.Worker{}, &runtime.RawExtension{Raw: []byte(`{"name":"worker"}`)})
+					// this extension object has no state, hence it should not be persisted in the ShootState
+					createExtensionObject(ctx, fakeSeedClient, "osc2", controlPlaneNamespace, &extensionsv1alpha1.OperatingSystemConfig{}, nil)
+
+					By("Creating machine data")
+					cleanupMachineObjectsFunc = createMachineObjects(ctx, fakeSeedClient, controlPlaneNamespace)
+
+					expectedSpec = gardencorev1beta1.ShootStateSpec{
+						Gardener: []gardencorev1beta1.GardenerResourceData{
+							{
+								Name:   "secret1",
+								Type:   "secret",
+								Data:   runtime.RawExtension{Raw: []byte(`{"secret1":"c29tZS1kYXRh"}`)},
+								Labels: map[string]string{"managed-by": "secrets-manager", "persist": "true"},
+							},
+							{
+								Name:   "secret3",
+								Type:   "secret",
+								Data:   runtime.RawExtension{Raw: []byte(`{"secret3":"c29tZS1kYXRh"}`)},
+								Labels: map[string]string{"persist": "true"},
+							},
+							{
+								Name: "machine-state",
+								Type: "machine-state",
+								Data: runtime.RawExtension{Raw: expectedMachineState},
+							},
+						},
+						Extensions: []gardencorev1beta1.ExtensionResourceState{
+							{
+								Kind:  "BackupEntry",
+								Name:  ptr.To("backupentry"),
+								State: &runtime.RawExtension{Raw: []byte(`{"name":"backupentry"}`)},
+							},
+							{
+								Kind:  "ContainerRuntime",
+								Name:  ptr.To("containerruntime"),
+								State: &runtime.RawExtension{Raw: []byte(`{"name":"containerruntime"}`)},
+							},
+							{
+								Kind:  "ControlPlane",
+								Name:  ptr.To("controlplane"),
+								State: &runtime.RawExtension{Raw: []byte(`{"name":"controlplane"}`)},
+							},
+							{
+								Kind:  "DNSRecord",
+								Name:  ptr.To("dnsrecord"),
+								State: &runtime.RawExtension{Raw: []byte(`{"name":"dnsrecord"}`)},
+							},
+							{
+								Kind:  "Extension",
+								Name:  ptr.To("extension"),
+								State: &runtime.RawExtension{Raw: []byte(`{"name":"extension"}`)},
+								Resources: []gardencorev1beta1.NamedResourceReference{{
+									Name: "resource-ref1",
+									ResourceRef: autoscalingv1.CrossVersionObjectReference{
+										APIVersion: "v1",
+										Kind:       "ConfigMap",
+										Name:       "extension-configmap",
+									},
+								}},
+							},
+							{
+								Kind:  "Infrastructure",
+								Name:  ptr.To("infrastructure"),
+								State: &runtime.RawExtension{Raw: []byte(`{"name":"infrastructure"}`)},
+							},
+							{
+								Kind:  "Network",
+								Name:  ptr.To("network"),
+								State: &runtime.RawExtension{Raw: []byte(`{"name":"network"}`)},
+							},
+							{
+								Kind:    "OperatingSystemConfig",
+								Name:    ptr.To("osc"),
+								Purpose: ptr.To(""),
+								State:   &runtime.RawExtension{Raw: []byte(`{"name":"osc"}`)},
+							},
+							{
+								Kind:  "SelfHostedShootExposure",
+								Name:  ptr.To("selfhostedshootexposure"),
+								State: &runtime.RawExtension{Raw: []byte(`{"name":"selfhostedshootexposure"}`)},
+							},
+							{
+								Kind:  "Worker",
+								Name:  ptr.To("worker"),
+								State: &runtime.RawExtension{Raw: []byte(`{"name":"worker"}`)},
+							},
+						},
+						Resources: []gardencorev1beta1.ResourceData{{
+							CrossVersionObjectReference: autoscalingv1.CrossVersionObjectReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Name:       "extension-configmap",
+							},
+							Data: runtime.RawExtension{Raw: []byte(`{"apiVersion":"v1","data":{"some-data":"for-extension"},"kind":"ConfigMap","metadata":{"name":"extension-configmap","namespace":"` + controlPlaneNamespace + `"}}`)},
+						}},
+					}
+				})
+
+				It("should compute the expected spec for both gardener and extensions data and overwrite the spec", func() {
+					Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, true)).To(Succeed())
+					Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+					Expect(shootState.Spec).To(Equal(expectedSpec))
+				})
+
+				It("should compute expected spec for both gardener and extension data and overwrite the spec with no longer existing machine resources", func() {
+					Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, true)).To(Succeed())
+
+					cleanupMachineObjectsFunc(ctx)
+					Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, true)).To(Succeed())
+					Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+
+					gardenerResourceData := v1beta1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+					gardenerResourceData.Delete("machine-state")
+					expectedSpec.Gardener = gardenerResourceData
+
+					Expect(shootState.Spec).To(Equal(expectedSpec))
+				})
+
+				It("should compute the expected spec for both gardener and extensions data and keep existing data in the spec", func() {
+					Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, false)).To(Succeed())
+					Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+
+					expectedSpec.Gardener = append(existingGardenerData, expectedSpec.Gardener...)
+					expectedSpec.Extensions = append(existingExtensionsData, expectedSpec.Extensions...)
+					expectedSpec.Resources = append(existingResourcesData, expectedSpec.Resources...)
+					Expect(shootState.Spec).To(Equal(expectedSpec))
+				})
+
+				It("should compute the expected spec for both gardener and extension data and keep existing data in the spec if machine resources were deleted", func() {
+					Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, false)).To(Succeed())
+
+					cleanupMachineObjectsFunc(ctx)
+					Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, false)).To(Succeed())
+					Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+
+					expectedSpec.Gardener = append(existingGardenerData, expectedSpec.Gardener...)
+					expectedSpec.Extensions = append(existingExtensionsData, expectedSpec.Extensions...)
+					expectedSpec.Resources = append(existingResourcesData, expectedSpec.Resources...)
+					Expect(shootState.Spec).To(Equal(expectedSpec))
+				})
 			})
-
-			It("should compute the expected spec for both gardener and extensions data and keep existing data in the spec", func() {
-				Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, false)).To(Succeed())
-				Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
-
-				expectedSpec.Gardener = append(existingGardenerData, expectedSpec.Gardener...)
-				expectedSpec.Extensions = append(existingExtensionsData, expectedSpec.Extensions...)
-				expectedSpec.Resources = append(existingResourcesData, expectedSpec.Resources...)
-				Expect(shootState.Spec).To(Equal(expectedSpec))
-			})
-
-			It("should compute the expected spec for both gardener and extension data and keep existing data in the spec if machine resources were deleted", func() {
-				Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, false)).To(Succeed())
-
-				cleanupMachineObjectsFunc(ctx)
-				Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, false)).To(Succeed())
-				Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
-
-				expectedSpec.Gardener = append(existingGardenerData, expectedSpec.Gardener...)
-				expectedSpec.Extensions = append(existingExtensionsData, expectedSpec.Extensions...)
-				expectedSpec.Resources = append(existingResourcesData, expectedSpec.Resources...)
-				Expect(shootState.Spec).To(Equal(expectedSpec))
-			})
-		})
-	})
+		},
+		Entry("for ordinary Shoot",
+			&gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-shoot",
+					Namespace: "garden-my-project",
+				},
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{},
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					TechnicalID: "shoot--my-project--my-shoot",
+				},
+			},
+			"shoot--my-project--my-shoot",
+			[]byte(`{"state":"H4sIAAAAAAAC/+yUPWv7MBDGv8vN8mAn/8XrP0unDkmnkuEqHcRFb0iXQgj67kWynaS0kJcWUtJ4sXR6Tjz80D1bMChXnaUZee02hixHaLegyrbOy0BedxIjtBMxqueUZc9bMMSokDELLRqCdmytInENolSjR5mP4so5riqzqXxwryT7damCALTWMXLnbLEQXbluX4WUBERPMp8ORv5rjFmdBDAZr5GpnO5tHfTIvdg6RYtjDSl/AiIjr4sljZEfPYXezlB48gqZFl12a9da555jYJqzwGh8IR0/3wTplqAtd6/rlKfVVIP4SigPsPjg3jpF4WEG7W5TdQpOJ3Y+LwFyHQJZnn9ovOQx1iPK+lKUTmV5/pXbv8HyNwBbJjHgaS7PvyaTndzz72sw058Y2uaP5l9PcBzaf9dBeRv510/piHJ6z78+/1J6DwAA//+Ak3pfGAoAAA=="}`),
+		),
+		Entry("for self-hosted Shoot",
+			&gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "root",
+					Namespace: "garden",
+				},
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{
+							{
+								ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+							},
+						},
+					},
+				},
+			},
+			"kube-system",
+			[]byte(`{"state":"H4sIAAAAAAAC/+yUQWvzMAyG/4vOziFpv0uuXy877dDuNHpQY8HCHNvYyqAU//chJ2k7BmvXQRntckksvW8sHiTtoMPmpbW0IG/ctiPLEeod6Hws5TOQN22DEeqZmtRLEtnzDjpi1MgoQosdQT1Zi0hcgsrR6LGR1Gu/oSJuI1MHCtBax8its/nK6LL9EIWUFERPjWTHi/8bjKJOCpg6b5ApZw9lHHmag9g6TatThiSPgsjIfS7JYORHT2EoZww8eY1Mq1aqtb0x4jkFovoShMENmfjZCemWIK333XNO61TFKL4SuiMMPri3VlN4WEC9PxSthvMJfZ+PgqYPgSwvPxgvabZyQleei85pScsr/+0H7H4DoHVSI47q8v1VCcnZ3/4aQMwvGcLqTvfXQGwawn/XQXcb+2uYugnd/F73V0rvAQAA//8UANaVmAkAAA=="}`),
+		),
+	)
 
 	Describe("#Delete", func() {
+		var (
+			shoot      *gardencorev1beta1.Shoot
+			shootState *gardencorev1beta1.ShootState
+		)
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-shoot",
+					Namespace: "garden-my-project",
+				},
+			}
+			shootState = &gardencorev1beta1.ShootState{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      shoot.Name,
+					Namespace: shoot.Namespace,
+				},
+			}
+		})
+
 		It("should do nothing when the shoot state does not exist", func() {
 			Expect(Delete(ctx, fakeGardenClient, shoot)).To(Succeed())
 		})
