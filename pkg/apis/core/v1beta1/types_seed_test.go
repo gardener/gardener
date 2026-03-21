@@ -67,6 +67,8 @@ var _ = Describe("Seed", func() {
 
 				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
 				switch protobufNum {
+				case "2":
+					Fail("protobuf 2 in SeedDNSProvider is reserved for removed secretRef field")
 				case "3":
 					Fail("protobuf 3 in SeedDNSProvider is reserved for removed domains field")
 				case "4":

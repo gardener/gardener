@@ -9736,16 +9736,6 @@ func (m *SeedDNSProvider) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x2a
 	}
-	{
-		size, err := m.SecretRef.MarshalToSizedBuffer(dAtA[:i])
-		if err != nil {
-			return 0, err
-		}
-		i -= size
-		i = encodeVarintGenerated(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x12
 	i -= len(m.Type)
 	copy(dAtA[i:], m.Type)
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Type)))
@@ -17067,8 +17057,6 @@ func (m *SeedDNSProvider) Size() (n int) {
 	_ = l
 	l = len(m.Type)
 	n += 1 + l + sovGenerated(uint64(l))
-	l = m.SecretRef.Size()
-	n += 1 + l + sovGenerated(uint64(l))
 	if m.CredentialsRef != nil {
 		l = m.CredentialsRef.Size()
 		n += 1 + l + sovGenerated(uint64(l))
@@ -20882,7 +20870,6 @@ func (this *SeedDNSProvider) String() string {
 	}
 	s := strings.Join([]string{`&SeedDNSProvider{`,
 		`Type:` + fmt.Sprintf("%v", this.Type) + `,`,
-		`SecretRef:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.SecretRef), "SecretReference", "v1.SecretReference", 1), `&`, ``, 1) + `,`,
 		`CredentialsRef:` + strings.Replace(fmt.Sprintf("%v", this.CredentialsRef), "ObjectReference", "v1.ObjectReference", 1) + `,`,
 		`}`,
 	}, "")
@@ -48919,39 +48906,6 @@ func (m *SeedDNSProvider) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Type = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SecretRef", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.SecretRef.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
 			iNdEx = postIndex
 		case 5:
 			if wireType != 2 {
