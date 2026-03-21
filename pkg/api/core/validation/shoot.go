@@ -381,9 +381,18 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), *spec.SeedName, "cannot set seedName for self-hosted shoots"))
 		}
 
+		controlPlaneWorkersZonesSet := sets.New[string]()
+		for _, worker := range spec.Provider.Workers {
+			if worker.ControlPlane != nil {
+				controlPlaneWorkersZonesSet.Insert(worker.Zones...)
+			}
+		}
+
 		for i, worker := range spec.Provider.Workers {
 			if worker.ControlPlane == nil && helper.SystemComponentsAllowed(&worker) {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "workers").Index(i).Child("systemComponents"), *worker.SystemComponents, "systemComponents is only allowed for the control plane worker pool for self-hosted shoots"))
+				if !controlPlaneWorkersZonesSet.HasAll(worker.Zones...) {
+					allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "workers").Index(i).Child("systemComponents"), *worker.SystemComponents, "workers that enable systemComponents must have the same zones as control plane workers"))
+				}
 			}
 		}
 	}

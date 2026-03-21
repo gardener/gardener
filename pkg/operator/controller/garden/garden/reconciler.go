@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -111,14 +112,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, r.updateStatusOperationError(ctx, garden, err, operationType)
 	}
 
+	isRuntimeSelfHostedShoot, err := gardenerutils.ClusterIsSelfHostedShoot(ctx, r.RuntimeClientSet.Client())
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("could not determine if runtime cluster is also a self hosted shoot cluster")
+	}
+
 	if garden.DeletionTimestamp != nil {
-		if result, err := r.delete(ctx, log, garden, secretsManager, targetVersion); err != nil {
+		if result, err := r.delete(ctx, log, garden, secretsManager, targetVersion, isRuntimeSelfHostedShoot); err != nil {
 			return result, r.updateStatusOperationError(ctx, garden, err, operationType)
 		}
 		return reconcile.Result{}, nil
 	}
 
-	if result, err := r.reconcile(ctx, log, garden, secretsManager, targetVersion); err != nil {
+	if result, err := r.reconcile(ctx, log, garden, secretsManager, targetVersion, isRuntimeSelfHostedShoot); err != nil {
 		return result, r.updateStatusOperationError(ctx, garden, err, operationType)
 	} else if result.RequeueAfter > 0 {
 		return result, nil

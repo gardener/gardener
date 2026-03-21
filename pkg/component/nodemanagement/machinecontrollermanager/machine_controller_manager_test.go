@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
@@ -661,6 +662,7 @@ subjects:
 				})
 
 				JustBeforeEach(func() {
+					deployment.Spec.Template.Spec.NodeSelector = map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}
 					for i, s := range deployment.Spec.Template.Spec.Containers[0].Command {
 						if strings.HasPrefix(s, "--target-kubeconfig=") {
 							deployment.Spec.Template.Spec.Containers[0].Command[i] = "--target-kubeconfig="
