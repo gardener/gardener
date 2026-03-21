@@ -468,7 +468,7 @@ type TokenRequestorWorkloadIdentityControllerConfiguration struct {
 	// The Gardener API Server may still issue tokens with a shorter or longer duration based on its configuration.
 	// Defaults to 6h.
 	// +optional
-	TokenExpirationDuration *time.Duration `json:"tokenExpirationDuration,omitempty"`
+	TokenExpirationDuration *metav1.Duration `json:"tokenExpirationDuration,omitempty"`
 }
 
 // VPAEvictionRequirementsControllerConfiguration defines the configuration of the VPAEvictionRequirements controller.
