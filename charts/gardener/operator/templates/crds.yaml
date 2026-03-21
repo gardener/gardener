@@ -1,0 +1,3 @@
+{{ include "operator.inject-protected-label" (.Files.Get "files/crd-extensions.yaml") }}
+---
+{{ include "operator.inject-protected-label" (.Files.Get "files/crd-gardens.yaml") }}
