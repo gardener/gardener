@@ -34,6 +34,8 @@ export_artifacts() {
   echo "> Exporting events of kind cluster '$cluster_name' > '$ARTIFACTS/$cluster_name'"
   export_events_for_cluster "$ARTIFACTS/$cluster_name"
 
+  export_skaffold_events
+
   export_resource_yamls_for seeds shoots bastions.operations.gardener.cloud etcds leases
   export_events_for_shoots
 
@@ -58,6 +60,11 @@ export_artifacts() {
       kubectl cp "$namespace/$node":/var/log "$node_dir" || true
     done < <(kubectl -n "$namespace" get po -l 'app in (machine,bastion)' -oname | cut -d/ -f2)
   done < <(kubectl get ns -l gardener.cloud/role=shoot -oname | cut -d/ -f2; kubectl get ns -l export-artifacts=true -oname | cut -d/ -f2)
+}
+
+export_skaffold_events() {
+  echo "> Exporting skaffold events > $ARTIFACTS/skaffold"
+  cp -r "$(dirname "$0")/../tmp/skaffold/." "$ARTIFACTS/skaffold/" || true
 }
 
 export_resource_yamls_for() {
