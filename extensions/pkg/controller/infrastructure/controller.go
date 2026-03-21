@@ -6,6 +6,7 @@ package infrastructure
 
 import (
 	"context"
+	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -70,6 +71,10 @@ func Add(mgr manager.Manager, args AddArgs) error {
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, args AddArgs) error {
 	predicates := predicateutils.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClasses, args.Type)
+
+	if args.ControllerOptions.ReconciliationTimeout == 0 {
+		args.ControllerOptions.ReconciliationTimeout = 20 * time.Minute
+	}
 
 	c, err := builder.
 		ControllerManagedBy(mgr).
