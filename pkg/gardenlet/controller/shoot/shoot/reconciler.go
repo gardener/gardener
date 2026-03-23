@@ -482,9 +482,13 @@ func (r *Reconciler) checkSeed(ctx context.Context, seed *gardencorev1beta1.Seed
 
 	var seedError error
 
+	// Check if the seed is up to date and has the expected gardener version.
+	if err := health.CheckSeedIsUpToDate(seed, r.Identity); err != nil {
+		seedError = fmt.Errorf("seed is not up to date: %w", err)
+	}
+
 	// Check if the seed is healthy and has all required conditions for hosting the shoot cluster.
-	falseConditions, err := health.CheckRequiredSeedConditions(seed)
-	if err != nil {
+	if falseConditions, err := health.CheckRequiredSeedConditions(seed); err != nil && seedError == nil {
 		seedError = fmt.Errorf("error in seed conditions: %w", err)
 	} else if len(falseConditions) > 0 {
 		seedError = fmt.Errorf("seed has failing conditions: %v", slices.Collect(apisutils.TransformElements(
@@ -493,11 +497,6 @@ func (r *Reconciler) checkSeed(ctx context.Context, seed *gardencorev1beta1.Seed
 				return string(condition.Type)
 			},
 		)))
-	}
-
-	// Check if the seed is up to date and has the expected gardener version.
-	if err := health.CheckSeedIsUpToDate(seed, r.Identity); err != nil {
-		seedError = fmt.Errorf("seed is not up to date: %w", err)
 	}
 
 	// Seed errors are usually intermediate but affect all shoots that are scheduled on the seed.
@@ -1020,7 +1019,7 @@ func (r *Reconciler) patchShootStatusOperationError(
 	shoot *gardencorev1beta1.Shoot,
 	description string,
 	operationType gardencorev1beta1.LastOperationType,
-	alwaysRetry bool,
+	forceRetry bool,
 	lastErrors ...gardencorev1beta1.LastError,
 ) error {
 	var (
@@ -1031,7 +1030,7 @@ func (r *Reconciler) patchShootStatusOperationError(
 
 	statusPatch := client.StrategicMergeFrom(shoot.DeepCopy())
 
-	if willNotRetry && !alwaysRetry {
+	if willNotRetry && !forceRetry {
 		state = gardencorev1beta1.LastOperationStateFailed
 		shoot.Status.RetryCycleStartTime = nil
 	} else {
