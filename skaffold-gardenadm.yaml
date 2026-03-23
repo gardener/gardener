@@ -834,7 +834,22 @@ build:
               - bash
               - -c
               - >
-                kubectl --kubeconfig="$VIRTUAL_GARDEN_KUBECONFIG" -n garden patch gardenlet self-hosted-shoot-root --type=merge -p "{\"spec\":{\"deployment\":{\"helm\":{\"ociRepository\":{\"ref\":\"$SKAFFOLD_IMAGE\"}}}}}" || true
+                kubectl --kubeconfig="$VIRTUAL_GARDEN_KUBECONFIG" -n garden patch gardenlet self-hosted-shoot-root --type=merge -p "$(jq -n \
+                  --arg image "$SKAFFOLD_IMAGE" \
+                  --arg imagevector_overwrite "$(cat ./dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml)" \
+                  '{
+                    spec: {
+                      deployment: {
+                        helm: {
+                          ociRepository: {
+                            ref: $image
+                          }
+                        },
+                        imageVectorOverwrite: $imagevector_overwrite,
+                      }
+                    }
+                  }'
+                )" || true
 
   insecureRegistries:
     - registry.local.gardener.cloud:5001
