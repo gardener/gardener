@@ -3012,6 +3012,18 @@ string
 <p>FilePathInImage contains the path in the image to the file that should be extracted.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>pullSecretRef</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PullSecretRef is the name of the pull secret.<br />The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `kube-system` namespace.</p>
+</td>
+</tr>
 
 </tbody>
 </table>
