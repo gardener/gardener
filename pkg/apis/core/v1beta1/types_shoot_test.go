@@ -95,4 +95,18 @@ var _ = Describe("Shoot", func() {
 			}
 		})
 	})
+
+	Describe("EncryptedResource", func() {
+		It("should not allow to reuse protobuf numbers of already removed fields", func() {
+			obj := reflect.ValueOf(ShootStatus{}).Type()
+			for i := 0; i < obj.NumField(); i++ {
+				f := obj.Field(i)
+
+				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
+				if protobufNum == "18" {
+					Fail("protobuf 18 in ShootStatus is reserved for removed encryptedResources field")
+				}
+			}
+		})
+	})
 })
