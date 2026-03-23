@@ -428,7 +428,7 @@
       ],
       enabled: false,
       matchPackageNames: [
-        '/quay.io/coreos/etcd/',
+        '/gcr.io/etcd-development/etcd/',
       ],
     },
     {
