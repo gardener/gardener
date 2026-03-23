@@ -433,7 +433,7 @@ func SetDefaults_TokenRequestorWorkloadIdentityControllerConfiguration(obj *Toke
 	}
 
 	if obj.TokenExpirationDuration == nil {
-		obj.TokenExpirationDuration = ptr.To(DefaultWorkloadIdentityTokenExpirationDuration)
+		obj.TokenExpirationDuration = &metav1.Duration{Duration: DefaultWorkloadIdentityTokenExpirationDuration}
 	}
 }
 

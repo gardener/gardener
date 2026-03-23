@@ -10,8 +10,6 @@
 package v1alpha1
 
 import (
-	time "time"
-
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1419,7 +1417,7 @@ func (in *TokenRequestorWorkloadIdentityControllerConfiguration) DeepCopyInto(ou
 	}
 	if in.TokenExpirationDuration != nil {
 		in, out := &in.TokenExpirationDuration, &out.TokenExpirationDuration
-		*out = new(time.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	return

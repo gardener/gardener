@@ -327,7 +327,7 @@ func validateTokenRequestorWorkloadIdentityControllerConfiguration(cfg *gardenle
 	allErrs := field.ErrorList{}
 
 	if cfg.TokenExpirationDuration != nil {
-		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*cfg.TokenExpirationDuration), fldPath.Child("tokenExpirationDuration"))...)
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(cfg.TokenExpirationDuration.Duration), fldPath.Child("tokenExpirationDuration"))...)
 	}
 
 	return allErrs

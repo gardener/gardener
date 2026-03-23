@@ -102,7 +102,7 @@ var _ = Describe("Reconciler", func() {
 				Clock:                fakeClock,
 				JitterFunc:           fakeJitter,
 				Config: &gardenletconfigv1alpha1.TokenRequestorWorkloadIdentityControllerConfiguration{
-					TokenExpirationDuration: ptr.To(6 * time.Hour),
+					TokenExpirationDuration: &metav1.Duration{Duration: 6 * time.Hour},
 				},
 			}
 

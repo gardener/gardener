@@ -523,7 +523,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should allow valid configuration", func() {
-				cfg.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration = ptr.To(6 * time.Hour)
+				cfg.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration = &metav1.Duration{Duration: 6 * time.Hour}
 
 				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 			})
@@ -535,7 +535,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should forbid negative tokenExpirationDuration", func() {
-				cfg.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration = ptr.To(-1 * time.Hour)
+				cfg.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration = &metav1.Duration{Duration: -1 * time.Hour}
 
 				errorList := ValidateGardenletConfiguration(cfg, nil)
 
