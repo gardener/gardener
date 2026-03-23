@@ -879,6 +879,10 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		deployment.Spec.Replicas = replicas
 		deployment.Spec.RevisionHistoryLimit = ptr.To[int32](2)
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: r.appLabel()}
+		deployment.Spec.Strategy = appsv1.DeploymentStrategy{
+			Type:          appsv1.RollingUpdateDeploymentStrategyType,
+			RollingUpdate: &appsv1.RollingUpdateDeployment{},
+		}
 
 		if r.values.BootstrapControlPlaneNode {
 			deployment.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType

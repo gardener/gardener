@@ -564,6 +564,10 @@ var _ = Describe("ResourceManager", func() {
 							"app": "gardener-resource-manager",
 						},
 					},
+					Strategy: appsv1.DeploymentStrategy{
+						Type:          appsv1.RollingUpdateDeploymentStrategyType,
+						RollingUpdate: &appsv1.RollingUpdateDeployment{},
+					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
