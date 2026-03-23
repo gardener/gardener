@@ -2283,9 +2283,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(
+				Expect(ValidateShoot(shoot)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeRequired),
 						"Field":  Equal("spec.dns.providers[0].credentialsRef"),
@@ -2300,26 +2298,23 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			Context("#validateDNSCredentialsRef", func() {
-				It("should forbid unset credentialsRef when secretName is set", func() {
+				It("should forbid to unset credentialsRef when secretName is set for Kubernetes version < 1.35", func() {
+					shoot.Spec.Kubernetes.Version = "1.34.0"
 					shoot.Spec.DNS.Providers[0].CredentialsRef = nil
 					shoot.Spec.DNS.Providers[0].SecretName = &dnsSecretName
 
-					errorList := ValidateShoot(shoot)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateShoot(shoot)).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.dns.providers[0].secretName"),
 						"Detail": ContainSubstring("must not be set when `credentialsRef` is not set"),
 					}))))
 				})
 
-				It("should allow both credentialsRef when secretName to be unset", func() {
+				It("should allow both credentialsRef and secretName to be unset", func() {
 					shoot.Spec.DNS.Providers[0].CredentialsRef = nil
 					shoot.Spec.DNS.Providers[0].SecretName = nil
 
-					errorList := ValidateShoot(shoot)
-
-					Expect(errorList).To(BeEmpty())
+					Expect(ValidateShoot(shoot)).To(BeEmpty())
 				})
 
 				DescribeTable("forbid invalid credentialsRef fields", func(ref autoscalingv1.CrossVersionObjectReference, matcher gomegatypes.GomegaMatcher) {
@@ -2328,9 +2323,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						shoot.Spec.DNS.Providers[0].SecretName = &ref.Name
 					}
 
-					errorList := ValidateShoot(shoot)
-					Expect(errorList).To(matcher)
-
+					Expect(ValidateShoot(shoot)).To(matcher)
 				},
 					Entry("empty APIVersion",
 						autoscalingv1.CrossVersionObjectReference{APIVersion: "", Kind: "Secret", Name: dnsSecretName},
@@ -2378,9 +2371,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.DNS.Providers[0].CredentialsRef = &dnsSecretRef
 					shoot.Spec.DNS.Providers[0].SecretName = ptr.To("other")
 
-					errorList := ValidateShoot(shoot)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.dns.providers[0].secretName"),
 						"Detail": ContainSubstring("must refer to the same secret as `credentialsRef`"),
@@ -2391,15 +2382,48 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.DNS.Providers[0].CredentialsRef = &dnsWorkloadIdentityRef
 					shoot.Spec.DNS.Providers[0].SecretName = &dnsSecretName
 
-					errorList := ValidateShoot(shoot)
-
-					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.dns.providers[0].secretName"),
 						"Detail": ContainSubstring("must not be set when `credentialsRef` does not refer to secret resource"),
 					}))))
 				})
+
+				It("should allow secretName to be unset for Kubernetes >= 1.35", func() {
+					shoot.Spec.Kubernetes.Version = "1.35.0"
+					shoot.Spec.DNS.Providers[0].SecretName = nil
+					shoot.Spec.DNS.Providers[0].CredentialsRef = &dnsSecretRef
+
+					Expect(ValidateShoot(shoot)).ToNot(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.dns.providers[0].secretName"),
+						"Detail": Equal("for Kubernetes versions >= 1.35, secretName field is no longer supported"),
+					}))))
+				})
 			})
+
+			DescribeTable("secretName validation for Kubernetes >= 1.35",
+				func(kubernetesVersion string, expectForbidden bool) {
+					shoot.Spec.Kubernetes.Version = kubernetesVersion
+					shoot.Spec.DNS.Providers[0].SecretName = &dnsSecretName
+					shoot.Spec.DNS.Providers[0].CredentialsRef = &dnsSecretRef
+
+					matcher := ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.dns.providers[0].secretName"),
+						"Detail": Equal("for Kubernetes versions >= 1.35, secretName field is no longer supported"),
+					})))
+
+					if !expectForbidden {
+						matcher = Not(matcher)
+					}
+
+					Expect(ValidateShoot(shoot)).To(matcher)
+				},
+				Entry("should allow secretName for Kubernetes < 1.35", "1.34.0", false),
+				Entry("should forbid secretName for Kubernetes = 1.35", "1.35.0", true),
+				Entry("should forbid secretName for Kubernetes > 1.35", "1.36.0", true),
+			)
 		})
 
 		Context("ETCD validation", func() {

@@ -33,6 +33,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 type shootStrategy struct {
@@ -467,6 +468,10 @@ func cleanUpOperation(operation string) string {
 // TODO(vpnachev): Remove this function once support for Kubernetes 1.34 is dropped.
 func SyncDNSProviderCredentials(shoot *core.Shoot) {
 	if shoot.Spec.DNS == nil {
+		return
+	}
+
+	if versionutils.ConstraintK8sGreaterEqual135.CheckVersion(shoot.Spec.Kubernetes.Version) {
 		return
 	}
 

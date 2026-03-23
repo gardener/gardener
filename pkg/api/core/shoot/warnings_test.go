@@ -421,6 +421,29 @@ var _ = Describe("Warnings", func() {
 				ContainElement(Equal("you are setting the spec.kubernetes.kubeAPIServer.eventTTL field to an invalid value. Invalid value: '240h0m0s', valid values: [0, 24h]. Invalid values for existing resources will be no longer allowed in Gardener v1.142.0. See: https://github.com/gardener/gardener/issues/13825")),
 			),
 		)
+
+		DescribeTable("spec.dns.providers[].secretName",
+			func(dns *core.DNS, matcher gomegatypes.GomegaMatcher) {
+				shoot.Spec.DNS = dns
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(matcher)
+			},
+			Entry("should not return a warning when dns is nil",
+				nil,
+				BeEmpty(),
+			),
+			Entry("should not return a warning when dns.providers is nil",
+				&core.DNS{Providers: nil},
+				BeEmpty(),
+			),
+			Entry("should not return a warning when secretName is not set",
+				&core.DNS{Providers: []core.DNSProvider{{SecretName: nil}}},
+				BeEmpty(),
+			),
+			Entry("should return a warning when secretName is set",
+				&core.DNS{Providers: []core.DNSProvider{{SecretName: ptr.To("secret")}}},
+				ContainElement(Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead.")),
+			),
+		)
 	})
 
 	Describe("#GetKubeAPIServerWarnings", func() {
@@ -486,6 +509,62 @@ var _ = Describe("Warnings", func() {
 			Entry("should return a warning for invalid eventTTL duration",
 				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: time.Hour * 24 * 10}},
 				ContainElement(Equal("you are setting the kubeAPIServer.eventTTL field to an invalid value. Invalid value: '240h0m0s', valid values: [0, 24h]. Invalid values for existing resources will be no longer allowed in Gardener v1.142.0. See: https://github.com/gardener/gardener/issues/13825")),
+			),
+		)
+	})
+
+	Describe("#GetDNSProviderWarnings", func() {
+		DescribeTable("providers[].secretName",
+			func(dns *core.DNS, fldPath *field.Path, matcher gomegatypes.GomegaMatcher) {
+				Expect(GetDNSProviderWarnings(dns, fldPath)).To(matcher)
+			},
+
+			Entry("should not return a warning when dns.providers is nil",
+				&core.DNS{Providers: nil},
+				field.NewPath("spec", "dns"),
+				BeEmpty(),
+			),
+			Entry("should not return a warning when dns.providers is empty",
+				&core.DNS{Providers: []core.DNSProvider{}},
+				field.NewPath("spec", "dns"),
+				BeEmpty(),
+			),
+			Entry("should not return a warning when secretName is not set",
+				&core.DNS{Providers: []core.DNSProvider{{SecretName: nil}}},
+				field.NewPath("spec", "dns"),
+				BeEmpty(),
+			),
+			Entry("should return a warning when secretName is set for a single provider",
+				&core.DNS{Providers: []core.DNSProvider{{SecretName: ptr.To("secret")}}},
+				field.NewPath("spec", "dns"),
+				ContainElement(Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead.")),
+			),
+			Entry("should return warnings when secretName is set for multiple providers",
+				&core.DNS{Providers: []core.DNSProvider{
+					{SecretName: ptr.To("secret1")},
+					{SecretName: ptr.To("secret2")},
+				}},
+				field.NewPath("spec", "dns"),
+				And(
+					ContainElement(Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead.")),
+					ContainElement(Equal("you are setting the spec.dns.providers[1].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[1].credentialsRef instead.")),
+				),
+			),
+			Entry("should return warning only for provider with secretName set",
+				&core.DNS{Providers: []core.DNSProvider{
+					{SecretName: nil},
+					{SecretName: ptr.To("secret")},
+				}},
+				field.NewPath("spec", "dns"),
+				And(
+					ContainElement(Equal("you are setting the spec.dns.providers[1].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[1].credentialsRef instead.")),
+					Not(ContainElement(ContainSubstring("spec.dns.providers[0].secretName"))),
+				),
+			),
+			Entry("should use custom field path in warning message",
+				&core.DNS{Providers: []core.DNSProvider{{SecretName: ptr.To("secret")}}},
+				field.NewPath("custom", "path"),
+				ContainElement(Equal("you are setting the custom.path.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use custom.path.providers[0].credentialsRef instead.")),
 			),
 		)
 	})
