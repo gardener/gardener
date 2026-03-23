@@ -46,37 +46,6 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 		controlPlaneNamespace = "kube-system"
 	)
 
-	BeforeEach(OncePerOrdered, func(ctx SpecContext) {
-		testRunID := utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
-
-		By("Ensuring fresh machine pods for test execution")
-		statefulSet := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: statefulSetName, Namespace: namespace}}
-		Expect(RuntimeClient.Client().Get(ctx, client.ObjectKeyFromObject(statefulSet), statefulSet)).To(Succeed())
-
-		By("Deleting machine state PVCs to ensure clean state")
-		pvcList := &corev1.PersistentVolumeClaimList{}
-		Expect(RuntimeClient.Client().List(ctx, pvcList, client.InNamespace(namespace), client.MatchingLabels{"app": statefulSetName})).To(Succeed())
-		for _, pvc := range pvcList.Items {
-			// Only delete machine-state PVCs (shoot cluster state). The gardenadm PVCs hold the
-			// gardenadm binary and imagevectors populated by skaffold and must not be wiped.
-			if !strings.HasPrefix(pvc.Name, "machine-state-") {
-				continue
-			}
-			Expect(client.IgnoreNotFound(RuntimeClient.Client().Delete(ctx, &pvc))).To(Succeed())
-		}
-
-		patch := client.MergeFrom(statefulSet.DeepCopy())
-		metav1.SetMetaDataAnnotation(&statefulSet.Spec.Template.ObjectMeta, "test-run-id", testRunID)
-		Expect(RuntimeClient.Client().Patch(ctx, statefulSet, patch)).To(Succeed())
-
-		Eventually(ctx, func(g Gomega) {
-			g.Expect(RuntimeClient.Client().Get(ctx, client.ObjectKeyFromObject(statefulSet), statefulSet)).To(Succeed())
-			progressing, _ := health.IsStatefulSetProgressing(statefulSet)
-			g.Expect(progressing).To(BeFalse())
-			g.Expect(health.CheckStatefulSet(statefulSet)).To(Succeed())
-		}).Should(Succeed())
-	}, NodeTimeout(2*time.Minute))
-
 	Describe("Single-node control plane", Ordered, Label("single"), func() {
 		var (
 			portForwardCtx    context.Context
@@ -84,11 +53,6 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			shootClientSet    kubernetes.Interface
 
 			configDirectory = "/gardenadm/resources"
-
-			gardenClientSet                      kubernetes.Interface
-			gardenKomega                         Komega
-			gardenClusterKubeconfigPathOnHost    = filepath.Join("..", "..", "..", "dev-setup", "kubeconfigs", "virtual-garden", "kubeconfig")
-			gardenClusterKubeconfigPathOnMachine = "/tmp/virtual-garden-kubeconfig"
 		)
 
 		BeforeAll(func() {
@@ -96,273 +60,315 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			DeferCleanup(func() { cancelPortForward() })
 		})
 
-		It("should initialize as control plane node", func(ctx SpecContext) {
-			stdOut, _, err := execute(ctx, 0, "gardenadm", "--log-level=debug", "init", "-d", configDirectory)
-			Expect(err).NotTo(HaveOccurred())
+		Context("gardenadm init + join", Ordered, Label("initjoin"), func() {
+			BeforeAll(func(ctx SpecContext) {
+				testRunID := utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 
-			Eventually(ctx, stdOut).Should(gbytes.Say("Your Shoot cluster control-plane has initialized successfully!"))
-		}, SpecTimeout(10*time.Minute))
+				By("Ensuring fresh machine pods for test execution")
+				statefulSet := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: statefulSetName, Namespace: namespace}}
+				Expect(RuntimeClient.Client().Get(ctx, client.ObjectKeyFromObject(statefulSet), statefulSet)).To(Succeed())
 
-		It("copy admin kubeconfig and create client", func(ctx SpecContext) {
-			tempDir, err := os.MkdirTemp("", "tmp")
-			Expect(err).NotTo(HaveOccurred())
-			DeferCleanup(func() { Expect(os.RemoveAll(tempDir)).To(Succeed()) })
-			adminKubeconfigFile := filepath.Join(tempDir, "admin.conf")
-
-			By("Copy admin kubeconfig to local file")
-			localPort := 6443
-			Eventually(ctx, func(g Gomega) error {
-				stdOut, _, err := execute(ctx, 0, "cat", "/etc/kubernetes/admin.conf")
-				g.Expect(err).NotTo(HaveOccurred())
-
-				kubeconfig := strings.ReplaceAll(string(stdOut.Contents()), fmt.Sprintf("api.%s.%s.external.local.gardener.cloud", shootName, shootNamespace), fmt.Sprintf("localhost:%d", localPort))
-				return os.WriteFile(adminKubeconfigFile, []byte(kubeconfig), 0600)
-			}).Should(Succeed())
-
-			By("Forward port to control plane machine pod")
-			fw, err := kubernetes.SetupPortForwarder(portForwardCtx, RuntimeClient.RESTConfig(), namespace, machinePodName(0), localPort, 443)
-			Expect(err).NotTo(HaveOccurred())
-
-			go func() {
-				if err := fw.ForwardPorts(); err != nil {
-					Fail("Error forwarding ports: " + err.Error())
+				By("Deleting machine state PVCs to ensure clean state")
+				pvcList := &corev1.PersistentVolumeClaimList{}
+				Expect(RuntimeClient.Client().List(ctx, pvcList, client.InNamespace(namespace), client.MatchingLabels{"app": statefulSetName})).To(Succeed())
+				for _, pvc := range pvcList.Items {
+					// Only delete machine-state PVCs (shoot cluster state). The gardenadm PVCs hold the
+					// gardenadm binary and imagevectors populated by skaffold and must not be wiped.
+					if !strings.HasPrefix(pvc.Name, "machine-state-") {
+						continue
+					}
+					Expect(client.IgnoreNotFound(RuntimeClient.Client().Delete(ctx, &pvc))).To(Succeed())
 				}
-			}()
 
-			Eventually(func() chan struct{} { return fw.Ready() }).Should(BeClosed())
+				patch := client.MergeFrom(statefulSet.DeepCopy())
+				metav1.SetMetaDataAnnotation(&statefulSet.Spec.Template.ObjectMeta, "test-run-id", testRunID)
+				Expect(RuntimeClient.Client().Patch(ctx, statefulSet, patch)).To(Succeed())
 
-			By("Create client set")
-			Eventually(func() error {
-				shootClientSet, err = kubernetes.NewClientFromFile("", adminKubeconfigFile,
-					kubernetes.WithDisabledCachedClient(),
-					kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
-				)
-				return err
-			}).Should(Succeed())
-		})
+				Eventually(ctx, func(g Gomega) {
+					g.Expect(RuntimeClient.Client().Get(ctx, client.ObjectKeyFromObject(statefulSet), statefulSet)).To(Succeed())
+					progressing, _ := health.IsStatefulSetProgressing(statefulSet)
+					g.Expect(progressing).To(BeFalse())
+					g.Expect(health.CheckStatefulSet(statefulSet)).To(Succeed())
+				}).Should(Succeed())
+			}, NodeTimeout(2*time.Minute))
 
-		It("should be able to communicate with the API server and see the node and the control plane pods", func(ctx SpecContext) {
-			Eventually(ctx, func(g Gomega) []corev1.Node {
-				nodeList := &corev1.NodeList{}
-				g.Expect(shootClientSet.Client().List(ctx, nodeList)).To(Succeed())
-				return nodeList.Items
-			}).Should(HaveLen(1))
+			It("should initialize as control plane node", func(ctx SpecContext) {
+				stdOut, _, err := execute(ctx, 0, "gardenadm", "--log-level=debug", "init", "-d", configDirectory)
+				Expect(err).NotTo(HaveOccurred())
 
-			Eventually(ctx, func(g Gomega) []corev1.Pod {
-				podList := &corev1.PodList{}
-				g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace(controlPlaneNamespace))).To(Succeed())
-				return podList.Items
-			}).Should(ContainElements(
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-events-machine-0")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-main-machine-0")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-machine-0")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-controller-manager-machine-0")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-scheduler-machine-0")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("kube-proxy")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("gardener-resource-manager")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("calico")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("coredns")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("local-path-provisioner")})}),
-			))
-		}, SpecTimeout(time.Minute))
+				Eventually(ctx, stdOut).Should(gbytes.Say("Your Shoot cluster control-plane has initialized successfully!"))
+			}, SpecTimeout(10*time.Minute))
 
-		It("should ensure the control plane namespace is properly labeled", func(ctx SpecContext) {
-			Eventually(ctx, func(g Gomega) map[string]string {
-				namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: controlPlaneNamespace}}
-				g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(namespace), namespace)).To(Succeed())
-				return namespace.Labels
-			}).Should(HaveKeyWithValue("gardener.cloud/role", "shoot"))
-		}, SpecTimeout(time.Minute))
+			It("copy admin kubeconfig and create client", func(ctx SpecContext) {
+				tempDir, err := os.MkdirTemp("", "tmp")
+				Expect(err).NotTo(HaveOccurred())
+				DeferCleanup(func() { Expect(os.RemoveAll(tempDir)).To(Succeed()) })
+				adminKubeconfigFile := filepath.Join(tempDir, "admin.conf")
 
-		It("should ensure extensions and gardener-resource-manager run in pod network", func(ctx SpecContext) {
-			By("Check extensions")
-			Eventually(ctx, func(g Gomega) {
-				namespaceList := &corev1.NamespaceList{}
-				g.Expect(shootClientSet.Client().List(ctx, namespaceList, client.MatchingLabels{"gardener.cloud/role": "extension"})).To(Succeed())
+				By("Copy admin kubeconfig to local file")
+				localPort := 6443
+				Eventually(ctx, func(g Gomega) error {
+					stdOut, _, err := execute(ctx, 0, "cat", "/etc/kubernetes/admin.conf")
+					g.Expect(err).NotTo(HaveOccurred())
 
-				for _, namespace := range namespaceList.Items {
+					kubeconfig := strings.ReplaceAll(string(stdOut.Contents()), fmt.Sprintf("api.%s.%s.external.local.gardener.cloud", shootName, shootNamespace), fmt.Sprintf("localhost:%d", localPort))
+					return os.WriteFile(adminKubeconfigFile, []byte(kubeconfig), 0600)
+				}).Should(Succeed())
+
+				By("Forward port to control plane machine pod")
+				fw, err := kubernetes.SetupPortForwarder(portForwardCtx, RuntimeClient.RESTConfig(), namespace, machinePodName(0), localPort, 443)
+				Expect(err).NotTo(HaveOccurred())
+
+				go func() {
+					if err := fw.ForwardPorts(); err != nil {
+						Fail("Error forwarding ports: " + err.Error())
+					}
+				}()
+
+				Eventually(func() chan struct{} { return fw.Ready() }).Should(BeClosed())
+
+				By("Create client set")
+				Eventually(func() error {
+					shootClientSet, err = kubernetes.NewClientFromFile("", adminKubeconfigFile,
+						kubernetes.WithDisabledCachedClient(),
+						kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
+					)
+					return err
+				}).Should(Succeed())
+			})
+
+			It("should be able to communicate with the API server and see the node and the control plane pods", func(ctx SpecContext) {
+				Eventually(ctx, func(g Gomega) []corev1.Node {
+					nodeList := &corev1.NodeList{}
+					g.Expect(shootClientSet.Client().List(ctx, nodeList)).To(Succeed())
+					return nodeList.Items
+				}).Should(HaveLen(1))
+
+				Eventually(ctx, func(g Gomega) []corev1.Pod {
 					podList := &corev1.PodList{}
-					g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace(namespace.Name))).To(Succeed())
+					g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace(controlPlaneNamespace))).To(Succeed())
+					return podList.Items
+				}).Should(ContainElements(
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-events-machine-0")})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-main-machine-0")})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-machine-0")})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-controller-manager-machine-0")})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-scheduler-machine-0")})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("kube-proxy")})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("gardener-resource-manager")})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("calico")})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("coredns")})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("local-path-provisioner")})}),
+				))
+			}, SpecTimeout(time.Minute))
+
+			It("should ensure the control plane namespace is properly labeled", func(ctx SpecContext) {
+				Eventually(ctx, func(g Gomega) map[string]string {
+					namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: controlPlaneNamespace}}
+					g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(namespace), namespace)).To(Succeed())
+					return namespace.Labels
+				}).Should(HaveKeyWithValue("gardener.cloud/role", "shoot"))
+			}, SpecTimeout(time.Minute))
+
+			It("should ensure extensions and gardener-resource-manager run in pod network", func(ctx SpecContext) {
+				By("Check extensions")
+				Eventually(ctx, func(g Gomega) {
+					namespaceList := &corev1.NamespaceList{}
+					g.Expect(shootClientSet.Client().List(ctx, namespaceList, client.MatchingLabels{"gardener.cloud/role": "extension"})).To(Succeed())
+
+					for _, namespace := range namespaceList.Items {
+						podList := &corev1.PodList{}
+						g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace(namespace.Name))).To(Succeed())
+
+						for _, pod := range podList.Items {
+							g.Expect(pod.Spec.HostNetwork).To(BeFalse(), "pod %s", client.ObjectKeyFromObject(&pod))
+						}
+					}
+				}).Should(Succeed())
+
+				By("Check gardener-resource-manager")
+				Eventually(ctx, func(g Gomega) {
+					podList := &corev1.PodList{}
+					g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace(controlPlaneNamespace), client.MatchingLabels{"app": "gardener-resource-manager"})).To(Succeed())
 
 					for _, pod := range podList.Items {
 						g.Expect(pod.Spec.HostNetwork).To(BeFalse(), "pod %s", client.ObjectKeyFromObject(&pod))
 					}
-				}
-			}).Should(Succeed())
+				}).Should(Succeed())
+			}, SpecTimeout(time.Minute))
 
-			By("Check gardener-resource-manager")
-			Eventually(ctx, func(g Gomega) {
-				podList := &corev1.PodList{}
-				g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace(controlPlaneNamespace), client.MatchingLabels{"app": "gardener-resource-manager"})).To(Succeed())
+			It("should ensure gardener-node-agent is running", func(ctx SpecContext) {
+				Eventually(ctx, func(g Gomega) *gbytes.Buffer {
+					stdOut, _, err := execute(ctx, 0, "systemctl", "status", "gardener-node-agent")
+					g.Expect(err).NotTo(HaveOccurred())
+					return stdOut
+				}).Should(gbytes.Say(`Active: active \(running\)`))
+			}, SpecTimeout(time.Minute))
 
-				for _, pod := range podList.Items {
-					g.Expect(pod.Spec.HostNetwork).To(BeFalse(), "pod %s", client.ObjectKeyFromObject(&pod))
-				}
-			}).Should(Succeed())
-		}, SpecTimeout(time.Minute))
+			It("should ensure that extension webhooks on control plane components are functioning", func(ctx SpecContext) {
+				Eventually(ctx, func(g Gomega) map[string]string {
+					pod := &corev1.Pod{}
+					g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKey{Name: "kube-scheduler-machine-0", Namespace: controlPlaneNamespace}, pod)).To(Succeed())
+					return pod.Labels
+				}).Should(HaveKeyWithValue("injected-by", "provider-local"))
+			}, SpecTimeout(time.Minute))
 
-		It("should ensure gardener-node-agent is running", func(ctx SpecContext) {
-			Eventually(ctx, func(g Gomega) *gbytes.Buffer {
-				stdOut, _, err := execute(ctx, 0, "systemctl", "status", "gardener-node-agent")
-				g.Expect(err).NotTo(HaveOccurred())
-				return stdOut
-			}).Should(gbytes.Say(`Active: active \(running\)`))
-		}, SpecTimeout(time.Minute))
+			It("should ensure that the config dir location has been stored in the well-known location", func(ctx SpecContext) {
+				Eventually(ctx, func(g Gomega) string {
+					stdOut, _, err := execute(ctx, 0, "cat", "/var/lib/gardenadm/config-directory")
+					g.Expect(err).NotTo(HaveOccurred())
+					return string(stdOut.Contents())
+				}).Should(Equal(configDirectory))
+			}, SpecTimeout(time.Minute))
 
-		It("should ensure that extension webhooks on control plane components are functioning", func(ctx SpecContext) {
-			Eventually(ctx, func(g Gomega) map[string]string {
-				pod := &corev1.Pod{}
-				g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKey{Name: "kube-scheduler-machine-0", Namespace: controlPlaneNamespace}, pod)).To(Succeed())
-				return pod.Labels
-			}).Should(HaveKeyWithValue("injected-by", "provider-local"))
-		}, SpecTimeout(time.Minute))
+			It("should generate a bootstrap token and join the worker node", func(ctx SpecContext) {
+				stdOut, _, err := execute(ctx, 0, "gardenadm", "token", "create", "--print-join-command")
+				Expect(err).NotTo(HaveOccurred())
+				joinCommand := strings.Split(strings.ReplaceAll(string(stdOut.Contents()), `"`, ``), " ")
 
-		It("should ensure that the config dir location has been stored in the well-known location", func(ctx SpecContext) {
-			Eventually(ctx, func(g Gomega) string {
-				stdOut, _, err := execute(ctx, 0, "cat", "/var/lib/gardenadm/config-directory")
-				g.Expect(err).NotTo(HaveOccurred())
-				return string(stdOut.Contents())
-			}).Should(Equal(configDirectory))
-		}, SpecTimeout(time.Minute))
+				stdOut, _, err = execute(ctx, 1, append(joinCommand, "--log-level=debug")...)
+				Expect(err).NotTo(HaveOccurred())
 
-		It("should generate a bootstrap token and join the worker node", func(ctx SpecContext) {
-			stdOut, _, err := execute(ctx, 0, "gardenadm", "token", "create", "--print-join-command")
-			Expect(err).NotTo(HaveOccurred())
-			joinCommand := strings.Split(strings.ReplaceAll(string(stdOut.Contents()), `"`, ``), " ")
+				Eventually(ctx, stdOut).Should(gbytes.Say("Your node has successfully joined the cluster as a worker!"))
+			}, SpecTimeout(time.Minute))
 
-			stdOut, _, err = execute(ctx, 1, append(joinCommand, "--log-level=debug")...)
-			Expect(err).NotTo(HaveOccurred())
+			It("should see the joined node and observe its readiness", func(ctx SpecContext) {
+				Eventually(ctx, func(g Gomega) {
+					node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machinePodName(1)}}
+					g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 
-			Eventually(ctx, stdOut).Should(gbytes.Say("Your node has successfully joined the cluster as a worker!"))
-		}, SpecTimeout(time.Minute))
+					g.Expect(node.Status.Conditions).To(ContainCondition(
+						MatchFields(IgnoreExtras, Fields{"Type": Equal(corev1.NodeReady)}),
+						MatchFields(IgnoreExtras, Fields{"Status": Equal(corev1.ConditionTrue)}),
+					))
+					g.Expect(node.Spec.Taints).NotTo(ContainElement(corev1.Taint{
+						Key:    v1beta1constants.TaintNodeCriticalComponentsNotReady,
+						Effect: corev1.TaintEffectNoSchedule,
+					}))
+				}).Should(Succeed())
+			}, SpecTimeout(2*time.Minute))
+		})
 
-		It("should see the joined node and observe its readiness", func(ctx SpecContext) {
-			Eventually(ctx, func(g Gomega) {
-				node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machinePodName(1)}}
-				g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+		Context("gardenadm init + join", Ordered, Label("connect"), func() {
+			var (
+				gardenClientSet                      kubernetes.Interface
+				gardenKomega                         Komega
+				gardenClusterKubeconfigPathOnHost    = filepath.Join("..", "..", "..", "dev-setup", "kubeconfigs", "virtual-garden", "kubeconfig")
+				gardenClusterKubeconfigPathOnMachine = "/tmp/virtual-garden-kubeconfig"
+			)
 
-				g.Expect(node.Status.Conditions).To(ContainCondition(
-					MatchFields(IgnoreExtras, Fields{"Type": Equal(corev1.NodeReady)}),
-					MatchFields(IgnoreExtras, Fields{"Status": Equal(corev1.ConditionTrue)}),
-				))
-				g.Expect(node.Spec.Taints).NotTo(ContainElement(corev1.Taint{
-					Key:    v1beta1constants.TaintNodeCriticalComponentsNotReady,
-					Effect: corev1.TaintEffectNoSchedule,
-				}))
-			}).Should(Succeed())
-		}, SpecTimeout(2*time.Minute))
+			It("should create a client for garden cluster", func(ctx SpecContext) {
+				By("Create client set")
+				Eventually(ctx, func() error {
+					var err error
+					gardenClientSet, err = kubernetes.NewClientFromFile("", gardenClusterKubeconfigPathOnHost,
+						kubernetes.WithDisabledCachedClient(),
+						kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}),
+					)
+					return err
+				}).Should(Succeed())
 
-		It("should create a client for garden cluster", func(ctx SpecContext) {
-			By("Create client set")
-			Eventually(ctx, func() error {
-				var err error
-				gardenClientSet, err = kubernetes.NewClientFromFile("", gardenClusterKubeconfigPathOnHost,
-					kubernetes.WithDisabledCachedClient(),
-					kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}),
-				)
-				return err
-			}).Should(Succeed())
+				gardenKomega = New(gardenClientSet.Client())
+			}, SpecTimeout(time.Minute))
 
-			gardenKomega = New(gardenClientSet.Client())
-		}, SpecTimeout(time.Minute))
+			It("should copy the garden cluster kubeconfig to the machine pod", func(ctx SpecContext) {
+				// In the test setup via Skaffold, we build the 'gardenadm' binary and copy it to the machine pods. Hence,
+				// the binary is not available on the host without further ado. For simplicity, we copy the garden cluster
+				// kubeconfig from the host into the machine pod here. This enables us to execute
+				// 'gardenadm token create --print-connect-command' from the machine pod.
+				By("Copy local garden cluster kubeconfig to file in machine pod")
+				gardenClusterKubeconfig, err := os.ReadFile(gardenClusterKubeconfigPathOnHost) // #nosec: G304 -- variable points to a static file path
+				Expect(err).NotTo(HaveOccurred())
 
-		It("should copy the garden cluster kubeconfig to the machine pod", func(ctx SpecContext) {
-			// In the test setup via Skaffold, we build the 'gardenadm' binary and copy it to the machine pods. Hence,
-			// the binary is not available on the host without further ado. For simplicity, we copy the garden cluster
-			// kubeconfig from the host into the machine pod here. This enables us to execute
-			// 'gardenadm token create --print-connect-command' from the machine pod.
-			By("Copy local garden cluster kubeconfig to file in machine pod")
-			gardenClusterKubeconfig, err := os.ReadFile(gardenClusterKubeconfigPathOnHost) // #nosec: G304 -- variable points to a static file path
-			Expect(err).NotTo(HaveOccurred())
+				Eventually(ctx, func() error {
+					_, _, err := execute(ctx, 0, "sh", "-c", fmt.Sprintf("echo '%s' > %s", string(gardenClusterKubeconfig), gardenClusterKubeconfigPathOnMachine))
+					return err
+				}).Should(Succeed())
+			}, SpecTimeout(time.Minute))
 
-			Eventually(ctx, func() error {
-				_, _, err := execute(ctx, 0, "sh", "-c", fmt.Sprintf("echo '%s' > %s", string(gardenClusterKubeconfig), gardenClusterKubeconfigPathOnMachine))
-				return err
-			}).Should(Succeed())
-		}, SpecTimeout(time.Minute))
+			It("should generate a bootstrap token and connect the self-hosted shoot to Gardener", func(ctx SpecContext) {
+				stdOut, _, err := execute(ctx, 0, "sh", "-c", fmt.Sprintf("KUBECONFIG=%s gardenadm token create --print-connect-command --shoot-namespace=%s --shoot-name=%s", gardenClusterKubeconfigPathOnMachine, shootNamespace, shootName))
+				Expect(err).NotTo(HaveOccurred())
+				connectCommand := strings.Split(strings.ReplaceAll(string(stdOut.Contents()), `"`, ``), " ")
 
-		It("should generate a bootstrap token and connect the self-hosted shoot to Gardener", func(ctx SpecContext) {
-			stdOut, _, err := execute(ctx, 0, "sh", "-c", fmt.Sprintf("KUBECONFIG=%s gardenadm token create --print-connect-command --shoot-namespace=%s --shoot-name=%s", gardenClusterKubeconfigPathOnMachine, shootNamespace, shootName))
-			Expect(err).NotTo(HaveOccurred())
-			connectCommand := strings.Split(strings.ReplaceAll(string(stdOut.Contents()), `"`, ``), " ")
+				stdOut, _, err = execute(ctx, 0, append(connectCommand, "--log-level=debug")...)
+				Expect(err).NotTo(HaveOccurred())
 
-			stdOut, _, err = execute(ctx, 0, append(connectCommand, "--log-level=debug")...)
-			Expect(err).NotTo(HaveOccurred())
+				Eventually(ctx, stdOut).Should(gbytes.Say("Your self-hosted shoot cluster has successfully been connected to Gardener!"))
 
-			Eventually(ctx, stdOut).Should(gbytes.Say("Your self-hosted shoot cluster has successfully been connected to Gardener!"))
+				Eventually(ctx, func(g Gomega) {
+					csrList := &certificatesv1.CertificateSigningRequestList{}
+					g.Expect(gardenClientSet.Client().List(ctx, csrList)).To(Succeed())
 
-			Eventually(ctx, func(g Gomega) {
-				csrList := &certificatesv1.CertificateSigningRequestList{}
-				g.Expect(gardenClientSet.Client().List(ctx, csrList)).To(Succeed())
-
-				var gardenletCSR *certificatesv1.CertificateSigningRequest
-				for i := range csrList.Items {
-					if strings.HasPrefix(csrList.Items[i].Name, "shoot-csr") {
-						gardenletCSR = &csrList.Items[i]
-						break
+					var gardenletCSR *certificatesv1.CertificateSigningRequest
+					for i := range csrList.Items {
+						if strings.HasPrefix(csrList.Items[i].Name, "shoot-csr") {
+							gardenletCSR = &csrList.Items[i]
+							break
+						}
 					}
+
+					g.Expect(gardenletCSR).NotTo(BeNil())
+					g.Expect(gardenletCSR.Status.Conditions).To(ContainCondition(
+						MatchFields(IgnoreExtras, Fields{"Type": Equal(certificatesv1.CertificateApproved)}),
+						MatchFields(IgnoreExtras, Fields{"Status": Equal(corev1.ConditionTrue)}),
+						MatchFields(IgnoreExtras, Fields{"Message": Equal("Auto approving gardenlet client certificate after SubjectAccessReview.")}),
+						MatchFields(IgnoreExtras, Fields{"Reason": Equal("AutoApproved")}),
+					))
+				}).Should(Succeed())
+			}, SpecTimeout(time.Minute))
+
+			It("should see the Shoot resource in the Gardener API with the correct UID", func(ctx SpecContext) {
+				stdOut, _, err := execute(ctx, 0, "cat", "/var/lib/gardenadm/shoot-uid")
+				Expect(err).NotTo(HaveOccurred())
+				expectedShootStatusUID := types.UID(stdOut.Contents())
+
+				Eventually(ctx, func(g Gomega) types.UID {
+					g.Expect(gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					return shoot.Status.UID
+				}).Should(Equal(expectedShootStatusUID))
+			}, SpecTimeout(time.Minute))
+
+			It("should deploy and reconcile the BackupBucket resource", func(ctx SpecContext) {
+				backupBucket := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: string(shoot.Status.UID)}}
+				Eventually(ctx, gardenKomega.Object(backupBucket)).Should(BeHealthy(health.CheckBackupBucket))
+			}, SpecTimeout(time.Minute))
+
+			It("should deploy and reconcile the BackupEntry resource", func(ctx SpecContext) {
+				backupEntryName, err := gardenerutils.GenerateBackupEntryName(controlPlaneNamespace, shoot.Status.UID, shoot.UID)
+				Expect(err).NotTo(HaveOccurred())
+
+				backupEntry := &gardencorev1beta1.BackupEntry{ObjectMeta: metav1.ObjectMeta{Name: backupEntryName, Namespace: shootNamespace}}
+				Eventually(ctx, gardenKomega.Object(backupEntry)).Should(BeHealthy(health.CheckBackupEntry))
+			}, SpecTimeout(time.Minute))
+
+			It("should deploy and reconcile the ControllerInstallations for the self-hosted Shoot", func(ctx SpecContext) {
+				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+				Eventually(ctx, func(g Gomega) []gardencorev1beta1.ControllerInstallation {
+					g.Expect(gardenClientSet.Client().List(ctx, controllerInstallationList, client.MatchingFields{
+						core.ShootRefName:      shoot.Name,
+						core.ShootRefNamespace: shoot.Namespace,
+					})).To(Succeed())
+					return controllerInstallationList.Items
+				}).Should(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{"Spec": MatchFields(IgnoreExtras, Fields{"RegistrationRef": MatchFields(IgnoreExtras, Fields{"Name": Equal("provider-local")})})}),
+					MatchFields(IgnoreExtras, Fields{"Spec": MatchFields(IgnoreExtras, Fields{"RegistrationRef": MatchFields(IgnoreExtras, Fields{"Name": Equal("networking-calico")})})}),
+				))
+
+				for _, controllerInstallation := range controllerInstallationList.Items {
+					By("Waiting for ControllerInstallation " + controllerInstallation.Name + " to become healthy")
+					Eventually(ctx, func(g Gomega) []gardencorev1beta1.Condition {
+						g.Expect(gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(&controllerInstallation), &controllerInstallation)).To(Succeed())
+						return controllerInstallation.Status.Conditions
+					}).Should(And(
+						ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionTrue)),
+						ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionTrue)),
+						ContainCondition(OfType(gardencorev1beta1.ControllerInstallationHealthy), WithStatus(gardencorev1beta1.ConditionTrue)),
+						ContainCondition(OfType(gardencorev1beta1.ControllerInstallationProgressing), WithStatus(gardencorev1beta1.ConditionFalse)),
+					))
 				}
-
-				g.Expect(gardenletCSR).NotTo(BeNil())
-				g.Expect(gardenletCSR.Status.Conditions).To(ContainCondition(
-					MatchFields(IgnoreExtras, Fields{"Type": Equal(certificatesv1.CertificateApproved)}),
-					MatchFields(IgnoreExtras, Fields{"Status": Equal(corev1.ConditionTrue)}),
-					MatchFields(IgnoreExtras, Fields{"Message": Equal("Auto approving gardenlet client certificate after SubjectAccessReview.")}),
-					MatchFields(IgnoreExtras, Fields{"Reason": Equal("AutoApproved")}),
-				))
-			}).Should(Succeed())
-		}, SpecTimeout(time.Minute))
-
-		It("should see the Shoot resource in the Gardener API with the correct UID", func(ctx SpecContext) {
-			stdOut, _, err := execute(ctx, 0, "cat", "/var/lib/gardenadm/shoot-uid")
-			Expect(err).NotTo(HaveOccurred())
-			expectedShootStatusUID := types.UID(stdOut.Contents())
-
-			Eventually(ctx, func(g Gomega) types.UID {
-				g.Expect(gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-				return shoot.Status.UID
-			}).Should(Equal(expectedShootStatusUID))
-		}, SpecTimeout(time.Minute))
-
-		It("should deploy and reconcile the BackupBucket resource", func(ctx SpecContext) {
-			backupBucket := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: string(shoot.Status.UID)}}
-			Eventually(ctx, gardenKomega.Object(backupBucket)).Should(BeHealthy(health.CheckBackupBucket))
-		}, SpecTimeout(time.Minute))
-
-		It("should deploy and reconcile the BackupEntry resource", func(ctx SpecContext) {
-			backupEntryName, err := gardenerutils.GenerateBackupEntryName(controlPlaneNamespace, shoot.Status.UID, shoot.UID)
-			Expect(err).NotTo(HaveOccurred())
-
-			backupEntry := &gardencorev1beta1.BackupEntry{ObjectMeta: metav1.ObjectMeta{Name: backupEntryName, Namespace: shootNamespace}}
-			Eventually(ctx, gardenKomega.Object(backupEntry)).Should(BeHealthy(health.CheckBackupEntry))
-		}, SpecTimeout(time.Minute))
-
-		It("should deploy and reconcile the ControllerInstallations for the self-hosted Shoot", func(ctx SpecContext) {
-			controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-			Eventually(ctx, func(g Gomega) []gardencorev1beta1.ControllerInstallation {
-				g.Expect(gardenClientSet.Client().List(ctx, controllerInstallationList, client.MatchingFields{
-					core.ShootRefName:      shoot.Name,
-					core.ShootRefNamespace: shoot.Namespace,
-				})).To(Succeed())
-				return controllerInstallationList.Items
-			}).Should(ConsistOf(
-				MatchFields(IgnoreExtras, Fields{"Spec": MatchFields(IgnoreExtras, Fields{"RegistrationRef": MatchFields(IgnoreExtras, Fields{"Name": Equal("provider-local")})})}),
-				MatchFields(IgnoreExtras, Fields{"Spec": MatchFields(IgnoreExtras, Fields{"RegistrationRef": MatchFields(IgnoreExtras, Fields{"Name": Equal("networking-calico")})})}),
-			))
-
-			for _, controllerInstallation := range controllerInstallationList.Items {
-				By("Waiting for ControllerInstallation " + controllerInstallation.Name + " to become healthy")
-				Eventually(ctx, func(g Gomega) []gardencorev1beta1.Condition {
-					g.Expect(gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(&controllerInstallation), &controllerInstallation)).To(Succeed())
-					return controllerInstallation.Status.Conditions
-				}).Should(And(
-					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionTrue)),
-					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionTrue)),
-					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationHealthy), WithStatus(gardencorev1beta1.ConditionTrue)),
-					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationProgressing), WithStatus(gardencorev1beta1.ConditionFalse)),
-				))
-			}
-		}, SpecTimeout(5*time.Minute))
+			}, SpecTimeout(5*time.Minute))
+		})
 	})
 })
 
