@@ -438,9 +438,17 @@ func (r *Reconciler) applyChangedImageRefFiles(ctx context.Context, log logr.Log
 			permissions     = getFilePermissions(file)
 			filePathInImage = file.Content.ImageRef.FilePathInImage
 			fileLog         = log.WithValues("path", file.Path, "image", file.Content.ImageRef.Image)
+			imagePullSecret *corev1.Secret
 		)
 
-		err := r.Extractor.CopyFromImage(ctx, file.Content.ImageRef.Image, filePathInImage, file.Path, permissions)
+		if file.Content.ImageRef.PullSecretRef != nil {
+			imagePullSecret = &corev1.Secret{}
+			if err := r.APIReader.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: *file.Content.ImageRef.PullSecretRef}, imagePullSecret); err != nil {
+				return fmt.Errorf("error fetching image pull secret %q: %w", *file.Content.ImageRef.PullSecretRef, err)
+			}
+		}
+
+		err := r.Extractor.CopyFromImage(ctx, file.Content.ImageRef.Image, imagePullSecret, filePathInImage, file.Path, permissions)
 
 		// Fall back to /ko-app/gardener-node-agent if /gardener-node-agent doesn't exist in image to support images built
 		// with ko.
@@ -449,7 +457,7 @@ func (r *Reconciler) applyChangedImageRefFiles(ctx context.Context, log logr.Log
 		if errors.Is(err, fs.ErrNotExist) && filePathInImage == "/gardener-node-agent" {
 			filePathInImage = "/ko-app/gardener-node-agent"
 			fileLog.Info("Could not find gardener-node-agent in root directory of image, falling back to ko binary path")
-			err = r.Extractor.CopyFromImage(ctx, file.Content.ImageRef.Image, filePathInImage, file.Path, permissions)
+			err = r.Extractor.CopyFromImage(ctx, file.Content.ImageRef.Image, imagePullSecret, filePathInImage, file.Path, permissions)
 		}
 
 		if err != nil {
