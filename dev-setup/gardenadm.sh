@@ -10,7 +10,7 @@ COMMAND="${1:-up}"
 VALID_COMMANDS=("up" "down")
 
 SCENARIO="${SCENARIO:-unmanaged-infra}"
-VALID_SCENARIOS=("unmanaged-infra" "managed-infra" "connect")
+VALID_SCENARIOS=("unmanaged-infra" "managed-infra" "connect" "connect-kind")
 
 valid_scenario=false
 for scenario in "${VALID_SCENARIOS[@]}"; do
@@ -24,9 +24,15 @@ if ! $valid_scenario; then
   exit 1
 fi
 
+garden_runtime_cluster_kubeconfig="$KUBECONFIG"
+if [[ "$SCENARIO" == "connect" ]]; then
+  garden_runtime_cluster_kubeconfig="$(dirname "$0")/kubeconfigs/self-hosted-shoot/kubeconfig"
+  ./hack/usage/generate-admin-kubeconfig-local.sh self-hosted-shoot > "$garden_runtime_cluster_kubeconfig"
+fi
+
 case "$COMMAND" in
   up)
-    if [[ "$SCENARIO" != "connect" ]]; then
+    if [[ "$SCENARIO" != connect* ]]; then
       # Prepare resources and generate manifests.
       # The manifests are copied to the unmanaged-infra machine pods or can be passed to the `--config-dir` flag of `gardenadm bootstrap`.
       skaffold build \
@@ -61,9 +67,23 @@ case "$COMMAND" in
         exit 1
       fi
 
+      if [[ "$SCENARIO" == "connect" ]]; then
+        # Used to talk to the virtual-garden API server from the host machine via the following network path:
+        # Host:172.18.255.3:443
+        #   → Docker (hostPort 443 → containerPort 31443)
+        #     → KinD node, NodePort 31443
+        #       → machine-0 pod IP 10.0.212.0:31443
+        #         → istio-ingressgateway pod exposed via NodePort 31443 in the machine-0 node
+        # In the 'connect-kind' scenario, the istio-ingressgateway runs directly in the KinD node and gets exposed via
+        # node port 31443 directly, hence, no need to patch this Service in this scenario.
+        kubectl --kubeconfig "$KUBECONFIG" -n gardenadm-unmanaged-infra patch service control-plane-machine \
+          --type=json \
+          -p '[{"op":"add","path":"/spec/ports/-","value":{"name":"virtual-garden-apiserver","port":4432,"targetPort":31443,"nodePort":31443}}]'
+      fi
+
       make operator-up garden-up \
         -f "$(dirname "$0")/../Makefile" \
-        KUBECONFIG="$KUBECONFIG"
+        KUBECONFIG="$garden_runtime_cluster_kubeconfig"
 
       echo "Creating global resources in the virtual garden cluster as preparation for running 'gardenadm connect'..."
       kubectl --kubeconfig="$VIRTUAL_GARDEN_KUBECONFIG" apply -f "$(dirname "$0")/gardenadm/resources/generated/connect/manifests.yaml"
@@ -77,7 +97,7 @@ case "$COMMAND" in
     else
       make garden-down operator-down \
         -f "$(dirname "$0")/../Makefile" \
-        KUBECONFIG="$KUBECONFIG"
+        KUBECONFIG="$garden_runtime_cluster_kubeconfig"
     fi
     ;;
 

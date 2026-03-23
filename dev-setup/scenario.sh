@@ -11,8 +11,8 @@ function detect_scenario() {
   zones=$(kubectl get nodes -o jsonpath='{.items[*].metadata.labels.topology\.kubernetes\.io/zone}' | tr ' ' '\n' | sort -u)
   provider_ids=$(kubectl get nodes -o jsonpath='{.items[*].spec.providerID}' | tr ' ' '\n')
 
-  # Check if all providerIDs do NOT start with kind://
-  if [[ -n "$provider_ids" && $(echo "$provider_ids" | grep -cv '^kind://') -eq $(echo "$provider_ids" | wc -l) ]]; then
+  # Check if all providerIDs have a scheme (contain "://") but none start with kind://
+  if [[ -n "$provider_ids" && $(echo "$provider_ids" | grep -c '://') -eq $(echo "$provider_ids" | wc -l) && $(echo "$provider_ids" | grep -cv '^kind://') -eq $(echo "$provider_ids" | wc -l) ]]; then
     export SCENARIO="remote"
   elif [[ $(echo "$nodes" | wc -l) -eq 1 ]]; then
     export SCENARIO="single-node"
@@ -31,6 +31,10 @@ function detect_scenario() {
     export SCENARIO="${SCENARIO}-ipv6"
   elif [[ "$IPFAMILY" == "dual" ]]; then
     export SCENARIO="${SCENARIO}-dual"
+  fi
+
+  if [[ "$(kubectl get namespace kube-system -o jsonpath='{.metadata.labels.gardener\.cloud/role}')" == "shoot" ]]; then
+    export SCENARIO="${SCENARIO}-gardenadm"
   fi
 
   echo "DETECTED SCENARIO: $SCENARIO"
