@@ -741,7 +741,7 @@ images:
   - name: kube-rbac-proxy
     sourceRepository: github.com/brancz/kube-rbac-proxy
     repository: quay.io/brancz/kube-rbac-proxy
-    tag: v0.21.1
+    tag: v0.21.2
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
