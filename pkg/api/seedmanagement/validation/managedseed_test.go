@@ -56,10 +56,6 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 							Name:       "secret",
 							Namespace:  "namespace",
 						},
-						SecretRef: corev1.SecretReference{
-							Name:      "secret",
-							Namespace: "namespace",
-						},
 					},
 					Internal: &core.SeedDNSProviderConfig{
 						Type:   "foo",

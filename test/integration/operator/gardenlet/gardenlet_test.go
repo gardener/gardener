@@ -58,10 +58,6 @@ var _ = Describe("Gardenlet controller test", func() {
 							Name:       "some-secret",
 							Namespace:  "some-namespace",
 						},
-						SecretRef: corev1.SecretReference{
-							Name:      "some-secret",
-							Namespace: "some-namespace",
-						},
 					},
 					Internal: &gardencorev1beta1.SeedDNSProviderConfig{
 						Type:   "provider",

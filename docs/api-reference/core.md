@@ -11710,22 +11710,6 @@ string
 </tr>
 <tr>
 <td>
-<code>secretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#secretreference-v1-core">
-Kubernetes core/v1.SecretReference
-</a>
-</em>
-</td>
-<td>
-<p>SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.</p>
-<p>Deprecated: This field is deprecated and will be removed after v1.138.0 is released.
-Please use <code>CredentialsRef</code> instead.
-Until removed, this field is synced with the <code>CredentialsRef</code> field when it refers to a secret.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>credentialsRef</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectreference-v1-core">

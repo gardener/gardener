@@ -19,10 +19,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/api/seedmanagement/validation"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	"github.com/gardener/gardener/pkg/apiserver/registry/seedmanagement/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -48,8 +46,6 @@ func (s Strategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 
 	managedSeed.Generation = 1
 	managedSeed.Status = seedmanagement.ManagedSeedStatus{}
-
-	SyncSeedDNSProviderCredentials(managedSeed)
 }
 
 // PrepareForUpdate is invoked on update before validation to normalize
@@ -60,8 +56,6 @@ func (s Strategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newManagedSeed := obj.(*seedmanagement.ManagedSeed)
 	oldManagedSeed := old.(*seedmanagement.ManagedSeed)
 	newManagedSeed.Status = oldManagedSeed.Status
-
-	SyncSeedDNSProviderCredentials(newManagedSeed)
 
 	if mustIncreaseGeneration(oldManagedSeed, newManagedSeed) {
 		newManagedSeed.Generation = oldManagedSeed.Generation + 1
@@ -153,11 +147,6 @@ func (s StatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Obj
 	newManagedSeed := obj.(*seedmanagement.ManagedSeed)
 	oldManagedSeed := old.(*seedmanagement.ManagedSeed)
 	newManagedSeed.Spec = oldManagedSeed.Spec
-
-	// Ensure credentialsRef is synced even on /status subresource requests.
-	// Some clients are patching just the status which still results in update events
-	// for those watching the resource.
-	SyncSeedDNSProviderCredentials(newManagedSeed)
 }
 
 // ValidateUpdate validates the update on the given old and new object.
@@ -211,25 +200,4 @@ func GetShootName(managedSeed *seedmanagement.ManagedSeed) string {
 		return ""
 	}
 	return managedSeed.Spec.Shoot.Name
-}
-
-// SyncSeedDNSProviderCredentials ensures spec.dns.provider.secretRef and spec.dns.provider.credentialsRef
-// are in sync when possible.
-//
-// TODO(vpnachev): Remove this function after v1.138.0 has been released.
-func SyncSeedDNSProviderCredentials(managedSeed *seedmanagement.ManagedSeed) {
-	if managedSeed.Spec.Gardenlet.Config == nil {
-		return
-	}
-
-	gardenletConfig, ok := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
-	if !ok {
-		return
-	}
-
-	if gardenletConfig.SeedConfig == nil {
-		return
-	}
-
-	utils.SyncSeedDNSProviderCredentials(gardenletConfig.SeedConfig.Spec.DNS.Provider)
 }

@@ -591,7 +591,6 @@ build:
             - pkg/apis/settings/v1alpha1
             - pkg/apis/utils
             - pkg/apis/utils/timewindow
-            - pkg/apiserver/registry/seedmanagement/utils
             - pkg/chartrenderer
             - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes

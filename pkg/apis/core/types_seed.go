@@ -132,12 +132,6 @@ type SeedDNS struct {
 type SeedDNSProvider struct {
 	// Type describes the type of the dns-provider, for example `aws-route53`
 	Type string
-	// SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.
-	//
-	// Deprecated: This field is deprecated and will be removed after Gardener v1.138.0 is released.
-	// Please use `CredentialsRef` instead.
-	// Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.
-	SecretRef corev1.SecretReference // TODO(vpnachev): Remove this field after v1.138.0 has been released.
 
 	// CredentialsRef is a reference to a resource holding the credentials used for
 	// authentication with the DNS provider.

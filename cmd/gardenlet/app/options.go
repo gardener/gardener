@@ -18,7 +18,6 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apiserver/registry/seedmanagement/utils"
 	"github.com/gardener/gardener/pkg/features"
 )
 
@@ -67,10 +66,6 @@ func (o *options) Complete() error {
 }
 
 func (o *options) Validate() error {
-	if o.config != nil && o.config.SeedConfig != nil {
-		utils.SyncSeedDNSProviderCredentials(o.config.SeedConfig.Spec.DNS.Provider) // TODO(vpnachev): Remove this function after v1.138.0 has been released.
-	}
-
 	if errs := gardenletvalidation.ValidateGardenletConfiguration(o.config, nil); len(errs) > 0 {
 		return errs.ToAggregate()
 	}
