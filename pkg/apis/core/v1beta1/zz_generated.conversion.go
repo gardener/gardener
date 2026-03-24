@@ -6141,6 +6141,7 @@ func autoConvert_v1beta1_ProjectStatus_To_core_ProjectStatus(in *ProjectStatus, 
 	out.StaleSinceTimestamp = (*metav1.Time)(unsafe.Pointer(in.StaleSinceTimestamp))
 	out.StaleAutoDeleteTimestamp = (*metav1.Time)(unsafe.Pointer(in.StaleAutoDeleteTimestamp))
 	out.LastActivityTimestamp = (*metav1.Time)(unsafe.Pointer(in.LastActivityTimestamp))
+	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
 	return nil
 }
 
@@ -6155,6 +6156,7 @@ func autoConvert_core_ProjectStatus_To_v1beta1_ProjectStatus(in *core.ProjectSta
 	out.StaleSinceTimestamp = (*metav1.Time)(unsafe.Pointer(in.StaleSinceTimestamp))
 	out.StaleAutoDeleteTimestamp = (*metav1.Time)(unsafe.Pointer(in.StaleAutoDeleteTimestamp))
 	out.LastActivityTimestamp = (*metav1.Time)(unsafe.Pointer(in.LastActivityTimestamp))
+	out.Conditions = *(*[]Condition)(unsafe.Pointer(&in.Conditions))
 	return nil
 }
 

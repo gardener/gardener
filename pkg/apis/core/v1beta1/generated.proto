@@ -2687,6 +2687,12 @@ message ProjectStatus {
   // LastActivityTimestamp contains the timestamp from the last activity performed in this project.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastActivityTimestamp = 5;
+
+  // Conditions represents the latest available observations of a Project's current state.
+  // +patchMergeKey=type
+  // +patchStrategy=merge
+  // +optional
+  repeated Condition conditions = 6;
 }
 
 // ProjectTolerations contains the tolerations for taints on seed clusters.

@@ -98,6 +98,11 @@ type ProjectStatus struct {
 	// LastActivityTimestamp contains the timestamp from the last activity performed in this project.
 	// +optional
 	LastActivityTimestamp *metav1.Time `json:"lastActivityTimestamp,omitempty" protobuf:"bytes,5,opt,name=lastActivityTimestamp"`
+	// Conditions represents the latest available observations of a Project's current state.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +optional
+	Conditions []Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,6,rep,name=conditions"`
 }
 
 // ProjectMember is a member of a project.

@@ -8921,6 +8921,20 @@ func (m *ProjectStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.Conditions) > 0 {
+		for iNdEx := len(m.Conditions) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Conditions[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x32
+		}
+	}
 	if m.LastActivityTimestamp != nil {
 		{
 			size, err := m.LastActivityTimestamp.MarshalToSizedBuffer(dAtA[:i])
@@ -16784,6 +16798,12 @@ func (m *ProjectStatus) Size() (n int) {
 		l = m.LastActivityTimestamp.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
+	if len(m.Conditions) > 0 {
+		for _, e := range m.Conditions {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
 	return n
 }
 
@@ -20626,12 +20646,18 @@ func (this *ProjectStatus) String() string {
 	if this == nil {
 		return "nil"
 	}
+	repeatedStringForConditions := "[]Condition{"
+	for _, f := range this.Conditions {
+		repeatedStringForConditions += strings.Replace(strings.Replace(f.String(), "Condition", "Condition", 1), `&`, ``, 1) + ","
+	}
+	repeatedStringForConditions += "}"
 	s := strings.Join([]string{`&ProjectStatus{`,
 		`ObservedGeneration:` + fmt.Sprintf("%v", this.ObservedGeneration) + `,`,
 		`Phase:` + fmt.Sprintf("%v", this.Phase) + `,`,
 		`StaleSinceTimestamp:` + strings.Replace(fmt.Sprintf("%v", this.StaleSinceTimestamp), "Time", "v11.Time", 1) + `,`,
 		`StaleAutoDeleteTimestamp:` + strings.Replace(fmt.Sprintf("%v", this.StaleAutoDeleteTimestamp), "Time", "v11.Time", 1) + `,`,
 		`LastActivityTimestamp:` + strings.Replace(fmt.Sprintf("%v", this.LastActivityTimestamp), "Time", "v11.Time", 1) + `,`,
+		`Conditions:` + repeatedStringForConditions + `,`,
 		`}`,
 	}, "")
 	return s
@@ -46728,6 +46754,40 @@ func (m *ProjectStatus) Unmarshal(dAtA []byte) error {
 				m.LastActivityTimestamp = &v11.Time{}
 			}
 			if err := m.LastActivityTimestamp.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Conditions", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Conditions = append(m.Conditions, Condition{})
+			if err := m.Conditions[len(m.Conditions)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

@@ -78,6 +78,8 @@ type ProjectStatus struct {
 	StaleAutoDeleteTimestamp *metav1.Time
 	// LastActivityTimestamp contains the timestamp from the last activity performed in this project.
 	LastActivityTimestamp *metav1.Time
+	// Conditions represents the latest available observations of a Project's current state.
+	Conditions []Condition
 }
 
 // ProjectMember is a member of a project.
