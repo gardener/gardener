@@ -253,7 +253,7 @@ spec:
           Port-forward to `prometheus-garden-0` in the `garden` namespace and open:
           http://localhost:9090/targets?search={{$labels.instance}}
 
-    - alert: EtcdDbSizeLimitApproaching
+    - alert: SeedKubeEtcd3MainDbSizeLimitApproaching
       expr: |
         ALERTS{alertname="KubeEtcd3MainDbSizeLimitApproaching",alertstate="firing",namespace=~"shoot--garden--.+"}
       for: 5m
