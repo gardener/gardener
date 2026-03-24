@@ -28,7 +28,6 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
@@ -121,7 +120,7 @@ func (r *Reconciler) deployGardenlet(
 
 	secretNamespace := metav1.NamespaceSystem
 	if seed != nil {
-		secretNamespace = gardenerutils.ComputeGardenNamespace(seed.Name)
+		secretNamespace = gardenlet.Namespace
 	}
 
 	subCtx := context.WithValue(ctx, oci.ContextKeySecretNamespace, secretNamespace)
