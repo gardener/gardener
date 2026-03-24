@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
@@ -30,6 +31,9 @@ type Reconciler struct {
 	Config       gardenletconfigv1alpha1.ControllerInstallationRequiredControllerConfiguration
 	Clock        clock.Clock
 	SeedName     string
+	// SelfHostedShootMeta is set when running in self-hosted shoot mode. It is used to filter
+	// ControllerInstallations by their .spec.shootRef instead of .spec.seedRef.
+	SelfHostedShootMeta *types.NamespacedName
 
 	Lock                *sync.RWMutex
 	KindToRequiredTypes map[string]sets.Set[string]
