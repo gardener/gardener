@@ -18,13 +18,17 @@ spec:
         cni.projectcalico.org/ipv4pools: '["gardenadm-unmanaged-infra"]'
     spec:
       initContainers:
+      # The main container mounts /etc/systemd/system from the persistent volume so that systemd
+      # unit files written by gardenadm survive pod restarts. On the very first boot the volume
+      # subPath is empty, so this init container seeds it from the image's default unit files.
+      # On subsequent boots the directory is already populated and the copy is skipped, preserving
+      # any changes made at runtime.
       - name: init-systemd-system
         image: local-skaffold/gardener-extension-provider-local-node
         command:
         - sh
         - -c
         - |
-          # Only seed on first boot (empty subPath); subsequent boots preserve runtime state.
           if [ -z "$(ls -A /mnt/systemd-system)" ]; then
             cp -a /etc/systemd/system/. /mnt/systemd-system/
           fi
@@ -62,20 +66,8 @@ spec:
           mountPath: /etc/systemd/system
           subPath: systemd-system
         - name: machine-state
-          mountPath: /var/lib/etcd-main
-          subPath: etcd-main
-        - name: machine-state
-          mountPath: /var/lib/etcd-events
-          subPath: etcd-events
-        - name: machine-state
-          mountPath: /var/lib/kube-apiserver
-          subPath: kube-apiserver
-        - name: machine-state
-          mountPath: /var/lib/kube-controller-manager
-          subPath: kube-controller-manager
-        - name: machine-state
-          mountPath: /var/lib/kube-scheduler
-          subPath: kube-scheduler
+          mountPath: /var/lib/static-pods
+          subPath: static-pods
         - name: machine-state
           mountPath: /var/lib/kubelet
           subPath: kubelet
