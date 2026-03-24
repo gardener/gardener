@@ -36,16 +36,6 @@ func AddToManager(
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}
-
-	if err := (&controllerinstallation.Reconciler{
-		SeedClientSet:         seedClientSet,
-		Config:                cfg,
-		Identity:              identity,
-		GardenClusterIdentity: gardenClusterIdentity,
-	}).AddToManager(ctx, mgr, gardenCluster); err != nil {
-		return fmt.Errorf("failed adding main reconciler: %w", err)
-	}
-
 	// When the seed is a self-hosted shoot, all ControllerInstallations have .spec.shootRef instead of .spec.seedRef.
 	// The self-hosted gardenlet already runs the required controller with ShootRef-based filtering, so the SeedRef-based
 	// instance here would find no ControllerInstallations.
@@ -55,6 +45,15 @@ func AddToManager(
 	}
 
 	if !seedIsSelfHostedShoot {
+		if err := (&controllerinstallation.Reconciler{
+			SeedClientSet:         seedClientSet,
+			Config:                cfg,
+			Identity:              identity,
+			GardenClusterIdentity: gardenClusterIdentity,
+		}).AddToManager(ctx, mgr, gardenCluster); err != nil {
+			return fmt.Errorf("failed adding main reconciler: %w", err)
+		}
+
 		if err := (&required.Reconciler{
 			Config:   *cfg.Controllers.ControllerInstallationRequired,
 			SeedName: cfg.SeedConfig.SeedTemplate.Name,
