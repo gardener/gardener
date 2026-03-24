@@ -154,7 +154,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			// for some reason this error is not of type "Invalid"
 			strings.Contains(err.Error(), "duplicate nodePort") {
 			log.Info("Patching nodePort failed because it is already allocated, enabling auto-remediation", "err", err.Error())
-			return reconcile.Result{RequeueAfter: 2 * time.Second}, r.remediateAllocatedNodePorts(ctx, log, key, nodePort, nodePortTunnel)
+			return reconcile.Result{RequeueAfter: 2 * time.Second}, r.remediateAllocatedNodePorts(ctx, log, key, nodePort, nodePortTunnel, nodePortHTTPProxy)
 		}
 		return reconcile.Result{}, err
 	}
@@ -191,7 +191,7 @@ func (r *Reconciler) remediateAllocatedNodePorts(ctx context.Context, log logr.L
 				log.Info("Found service with nodePort", "serviceCheckedForAllocation", client.ObjectKeyFromObject(&service), "nodePort", port.NodePort)
 			}
 
-			if requiredPorts.Has(port.NodePort) {
+			if port.NodePort != 0 && requiredPorts.Has(port.NodePort) {
 				var (
 					min, max    = 30000, 32767
 					newNodePort = int32(rand.N(max-min) + min) // #nosec: G115 G404 -- Value range limited in previous line, no cryptographic context.
