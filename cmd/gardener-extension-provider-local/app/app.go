@@ -50,6 +50,7 @@ import (
 	localworker "github.com/gardener/gardener/pkg/provider-local/controller/worker"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	prometheuswebhook "github.com/gardener/gardener/pkg/provider-local/webhook/prometheus"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var hostIP string
@@ -187,8 +188,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 		Use: fmt.Sprintf("%s-controller-manager", local.Name),
 
 		RunE: func(_ *cobra.Command, _ []string) error {
-			seedName := os.Getenv("SEED_NAME")
-
 			if err := aggOption.Complete(); err != nil {
 				return fmt.Errorf("error completing options: %w", err)
 			}
@@ -250,13 +249,17 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 					return err
 				}
 
+				seedName, shootName, shootNamespace := os.Getenv("SEED_NAME"), os.Getenv("SHOOT_NAME"), os.Getenv("SHOOT_NAMESPACE")
+
 				log.Info("Adding garden cluster to manager")
 				if err := mgr.Add(gardenCluster); err != nil {
 					return fmt.Errorf("failed adding garden cluster to manager: %w", err)
 				}
 
 				if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
-					return verifyGardenAccess(ctx, log, gardenCluster.GetClient(), seedName)
+					// Use the API reader to avoid triggering a cluster-scoped list/watch for Shoots in the cache.
+					// The shoot authorizer only allows name-scoped reads for the gardenlet's own Shoot.
+					return verifyGardenAccess(ctx, log, gardenCluster.GetAPIReader(), gardenCluster.GetClient(), seedName, shootName, shootNamespace)
 				})); err != nil {
 					return fmt.Errorf("could not add garden runnable to manager: %w", err)
 				}
@@ -333,21 +336,29 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 // verifyGardenAccess uses the extension's access to the garden cluster to request objects related to the seed it is
 // running on, but doesn't do anything useful with the objects. We do this for verifying the extension's garden access
 // in e2e tests. If something fails in this runnable, the extension will crash loop.
-func verifyGardenAccess(ctx context.Context, log logr.Logger, c client.Client, seedName string) error {
-	log = log.WithName("garden-access").WithValues("seedName", seedName)
+func verifyGardenAccess(ctx context.Context, log logr.Logger, reader client.Reader, writer client.Writer, seedName, shootName, shootNamespace string) error {
+	log = log.WithName("garden-access")
 
-	log.Info("Reading Seed")
-	// NB: reading seeds is allowed by gardener.cloud:system:read-global-resources (bound to all authenticated users)
-	seed := &gardencorev1beta1.Seed{}
-	if err := c.Get(ctx, client.ObjectKey{Name: seedName}, seed); err != nil {
-		return fmt.Errorf("failed reading seed %s: %w", seedName, err)
+	var objects []client.Object
+	if seedName != "" {
+		objects = append(objects, &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: seedName}})
+	}
+	if shootName != "" {
+		objects = append(objects, &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}})
 	}
 
-	log.Info("Annotating Seed")
-	patch := client.MergeFrom(seed.DeepCopy())
-	metav1.SetMetaDataAnnotation(&seed.ObjectMeta, "provider-local-e2e-test-garden-access", time.Now().UTC().Format(time.RFC3339))
-	if err := c.Patch(ctx, seed, patch); err != nil {
-		return fmt.Errorf("failed annotating seed %s: %w", seedName, err)
+	for _, obj := range objects {
+		objectKey := client.ObjectKeyFromObject(obj)
+		log.Info("Reading and annotating object", "objectKey", objectKey, "kind", fmt.Sprintf("%T", obj))
+		if err := reader.Get(ctx, objectKey, obj); err != nil {
+			return fmt.Errorf("failed reading %T %s: %w", obj, objectKey, err)
+		}
+
+		patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
+		kubernetesutils.SetMetaDataAnnotation(obj, "provider-local-e2e-test-garden-access", time.Now().UTC().Format(time.RFC3339))
+		if err := writer.Patch(ctx, obj, patch); err != nil {
+			return fmt.Errorf("failed annotating %T %s: %w", obj, objectKey, err)
+		}
 	}
 
 	log.Info("Garden access successfully verified")
