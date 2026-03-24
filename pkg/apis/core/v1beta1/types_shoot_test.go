@@ -96,7 +96,7 @@ var _ = Describe("Shoot", func() {
 		})
 	})
 
-	Describe("EncryptedResource", func() {
+	Describe("ShootStatus", func() {
 		It("should not allow to reuse protobuf numbers of already removed fields", func() {
 			obj := reflect.ValueOf(ShootStatus{}).Type()
 			for i := 0; i < obj.NumField(); i++ {
