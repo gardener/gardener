@@ -187,11 +187,13 @@ func (r *Reconciler) remediateAllocatedNodePorts(ctx context.Context, log logr.L
 		)
 
 		for i, port := range service.Spec.Ports {
-			if port.NodePort != 0 {
-				log.Info("Found service with nodePort", "serviceCheckedForAllocation", client.ObjectKeyFromObject(&service), "nodePort", port.NodePort)
+			if port.NodePort == 0 {
+				continue
 			}
 
-			if port.NodePort != 0 && requiredPorts.Has(port.NodePort) {
+			log.Info("Found service with nodePort", "serviceCheckedForAllocation", client.ObjectKeyFromObject(&service), "nodePort", port.NodePort)
+
+			if requiredPorts.Has(port.NodePort) {
 				var (
 					min, max    = 30000, 32767
 					newNodePort = int32(rand.N(max-min) + min) // #nosec: G115 G404 -- Value range limited in previous line, no cryptographic context.
