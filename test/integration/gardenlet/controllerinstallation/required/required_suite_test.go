@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -56,6 +57,10 @@ var (
 	testNamespace *corev1.Namespace
 	testRunID     string
 	seedName      string
+
+	selfHostedShootName      string
+	selfHostedShootNamespace string
+	selfHostedMgrClient      client.Client
 )
 
 var _ = BeforeSuite(func() {
@@ -164,5 +169,48 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(func() {
 		By("Stop manager")
 		mgrCancel()
+	})
+
+	By("Setup self-hosted shoot manager")
+	selfHostedShootName = "my-shoot"
+	selfHostedShootNamespace = testRunID
+
+	selfHostedMgr, err := manager.New(restConfig, manager.Options{
+		Scheme:  testScheme,
+		Metrics: metricsserver.Options{BindAddress: "0"},
+		Cache: cache.Options{
+			DefaultNamespaces:    map[string]cache.Config{testNamespace.Name: {}},
+			DefaultLabelSelector: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+		},
+		Controller: controllerconfig.Controller{
+			SkipNameValidation: ptr.To(true),
+		},
+	})
+	Expect(err).NotTo(HaveOccurred())
+	selfHostedMgrClient = selfHostedMgr.GetClient()
+
+	By("Setup self-hosted field indexes")
+	Expect(indexer.AddControllerInstallationShootRefName(ctx, selfHostedMgr.GetFieldIndexer())).To(Succeed())
+	Expect(indexer.AddControllerInstallationShootRefNamespace(ctx, selfHostedMgr.GetFieldIndexer())).To(Succeed())
+
+	By("Register self-hosted controller")
+	Expect((&required.Reconciler{
+		Config: gardenletconfigv1alpha1.ControllerInstallationRequiredControllerConfiguration{
+			ConcurrentSyncs: ptr.To(5),
+		},
+		SelfHostedShootMeta: &types.NamespacedName{Name: selfHostedShootName, Namespace: selfHostedShootNamespace},
+	}).AddToManager(selfHostedMgr, selfHostedMgr, selfHostedMgr)).To(Succeed())
+
+	By("Start self-hosted manager")
+	selfHostedMgrContext, selfHostedMgrCancel := context.WithCancel(ctx)
+
+	go func() {
+		defer GinkgoRecover()
+		Expect(selfHostedMgr.Start(selfHostedMgrContext)).To(Succeed())
+	}()
+
+	DeferCleanup(func() {
+		By("Stop self-hosted manager")
+		selfHostedMgrCancel()
 	})
 })
