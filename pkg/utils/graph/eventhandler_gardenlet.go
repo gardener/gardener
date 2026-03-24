@@ -138,6 +138,16 @@ func (g *graph) handleGardenletCreateOrUpdateForSeeds(ctx context.Context, garde
 		secretVertex := g.getOrCreateVertex(VertexTypeSecret, metav1.NamespaceSystem, bootstraptokenapi.BootstrapTokenSecretPrefix+bootstraptoken.TokenID(gardenlet.ObjectMeta))
 		g.addEdge(secretVertex, gardenletVertex)
 	}
+
+	if gardenlet.Spec.Deployment.Helm.OCIRepository.CABundleSecretRef != nil {
+		caBundleSecretVertex := g.getOrCreateVertex(VertexTypeSecret, gardenlet.Namespace, gardenlet.Spec.Deployment.Helm.OCIRepository.CABundleSecretRef.Name)
+		g.addEdge(caBundleSecretVertex, gardenletVertex)
+	}
+
+	if gardenlet.Spec.Deployment.Helm.OCIRepository.PullSecretRef != nil {
+		pullSecretVertex := g.getOrCreateVertex(VertexTypeSecret, gardenlet.Namespace, gardenlet.Spec.Deployment.Helm.OCIRepository.PullSecretRef.Name)
+		g.addEdge(pullSecretVertex, gardenletVertex)
+	}
 }
 
 func (g *graph) handleGardenletCreateOrUpdateForShoots(gardenlet *seedmanagementv1alpha1.Gardenlet) {
