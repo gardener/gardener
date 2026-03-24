@@ -215,8 +215,10 @@ type ShootStatus struct {
 	// LastMaintenance holds information about the last maintenance operations on the Shoot.
 	// +optional
 	LastMaintenance *LastMaintenance `json:"lastMaintenance,omitempty" protobuf:"bytes,17,opt,name=lastMaintenance"`
+
 	// EncryptedResources is tombstoned to show why 18 is reserved protobuf tag.
 	// EncryptedResources []string `json:"encryptedResources,omitempty" protobuf:"bytes,18,rep,name=encryptedResources"`
+
 	// Networking contains information about cluster networking such as CIDRs.
 	// +optional
 	Networking *NetworkingStatus `json:"networking,omitempty" protobuf:"bytes,19,opt,name=networking"`
