@@ -406,9 +406,12 @@ func (g *garden) Start(ctx context.Context) error {
 						// Gardenlet does not have the required RBAC permissions for listing/watching the following
 						// resources on cluster level. Hence, we need to watch them individually with the help of a
 						// SingleObject cache.
-						&corev1.ConfigMap{}:      kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ConfigMap{}),
-						&corev1.Secret{}:         kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.Secret{}),
-						&corev1.ServiceAccount{}: kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ServiceAccount{}),
+						&corev1.ConfigMap{}:                         kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ConfigMap{}),
+						&corev1.Secret{}:                            kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.Secret{}),
+						&corev1.ServiceAccount{}:                    kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ServiceAccount{}),
+						&gardencorev1.ControllerDeployment{}:        kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1.ControllerDeployment{}),
+						&gardencorev1beta1.ControllerRegistration{}: kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.ControllerRegistration{}),
+						&gardencorev1beta1.Seed{}:                   kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.Seed{}),
 					},
 					kubernetes.GardenScheme,
 				)(config, opts)
