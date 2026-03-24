@@ -104,3 +104,25 @@ However, in the case of newly spun-up clusters requiring immediate heavy usage, 
 
 > [!NOTE]
 > To use this feature effectively, users should thoroughly analyze their cluster usage patterns in advance to identify appropriate resource values.
+
+## Istio Ingress Gateway
+
+The Istio ingress gateway is scaled simultaneously by VPA and HPA.
+
+Scaling with VPA and HPA on the same metric can lead to a pod-trashing cycle. This is avoided here by configuring the HPA to scale on average value (not on average utilization).
+This makes it possible for VPA to first scale vertically on CPU/memory usage.
+Once all pods' average CPU usage exceeds the HPA's target average value, HPA scales horizontally (by adding a new replica).
+
+The HPA's target average CPU value depends on whether the `IstioTLSTermination` feature gate is enabled because with the feature gate enabled more CPU-intensive TLS encryption/decryption takes place:
+- When `IstioTLSTermination` is disabled: HPA's target average value is `2` CPU, initial CPU request is `300m`.
+- When `IstioTLSTermination` is enabled: HPA's target average value is `4` CPU, initial CPU request is `1` CPU.
+
+The VPA is configured with `updateMode: InPlaceOrRecreate` and controls both CPU and memory requests for the `istio-proxy` container.
+
+The HPA replica count is calculated based on the number of availability zones:
+- Min replicas: `2 * number of zones`
+- Max replicas: `16 * number of zones`
+
+For zonal istio-ingressgateways, i.e. istio-ingressgateways covering a single availability zone, the HPA replica count is fixed:
+- Min replicas: `2`
+- Max replicas: `16`
