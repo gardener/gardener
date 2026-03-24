@@ -342,7 +342,7 @@ var _ = Describe("Manager", func() {
 			func(ignoreChecksum bool, expectedName string, lastRotationInitiationTime string) {
 				config := &secretsutils.CertificateSecretConfig{Name: configName}
 
-				meta, err := ObjectMeta(namespace, "test", config, ignoreChecksum, lastRotationInitiationTime, nil, nil, nil)
+				meta, err := ObjectMeta(namespace, map[string]string{"custom-1": "true", "managed-by": "invalid-manager"}, "test", config, ignoreChecksum, lastRotationInitiationTime, nil, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(meta).To(Equal(metav1.ObjectMeta{
@@ -354,6 +354,7 @@ var _ = Describe("Manager", func() {
 						"manager-identity":              "test",
 						"checksum-of-config":            "1645436262831067767",
 						"last-rotation-initiation-time": lastRotationInitiationTime,
+						"custom-1":                      "true",
 					},
 				}))
 			},
@@ -371,7 +372,7 @@ var _ = Describe("Manager", func() {
 					SigningCA: &secretsutils.Certificate{},
 				}
 
-				meta, err := ObjectMeta(namespace, "test", config, false, lastRotationInitiationTime, signingCAChecksum, persist, bundleFor)
+				meta, err := ObjectMeta(namespace, nil, "test", config, false, lastRotationInitiationTime, signingCAChecksum, persist, bundleFor)
 				Expect(err).NotTo(HaveOccurred())
 
 				labels := map[string]string{

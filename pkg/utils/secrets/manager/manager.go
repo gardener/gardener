@@ -347,6 +347,7 @@ func computeSecretInfo(obj *corev1.Secret) (secretInfo, error) {
 // ObjectMeta returns the object meta based on the given settings.
 func ObjectMeta(
 	namespace string,
+	labels map[string]string,
 	managerIdentity string,
 	config secretsutils.ConfigInterface,
 	ignoreConfigChecksumForCASecretName bool,
@@ -363,7 +364,7 @@ func ObjectMeta(
 		return metav1.ObjectMeta{}, err
 	}
 
-	labels := map[string]string{
+	secretLabels := map[string]string{
 		LabelKeyName:                       config.GetName(),
 		LabelKeyManagedBy:                  LabelValueSecretsManager,
 		LabelKeyManagerIdentity:            managerIdentity,
@@ -372,21 +373,29 @@ func ObjectMeta(
 	}
 
 	if signingCAChecksum != nil {
-		labels[LabelKeyChecksumSigningCA] = *signingCAChecksum
+		secretLabels[LabelKeyChecksumSigningCA] = *signingCAChecksum
 	}
 
 	if persist != nil && *persist {
-		labels[LabelKeyPersist] = LabelValueTrue
+		secretLabels[LabelKeyPersist] = LabelValueTrue
 	}
 
 	if bundleFor != nil {
-		labels[LabelKeyBundleFor] = *bundleFor
+		secretLabels[LabelKeyBundleFor] = *bundleFor
+	}
+
+	for k, v := range labels {
+		if _, exists := secretLabels[k]; exists {
+			// don't allow overriding of labels which are set by the secrets manager itself, as they are crucial for the correct functioning of the manager
+			continue
+		}
+		secretLabels[k] = v
 	}
 
 	return metav1.ObjectMeta{
-		Name:      computeSecretName(config, labels, ignoreConfigChecksumForCASecretName),
+		Name:      computeSecretName(config, secretLabels, ignoreConfigChecksumForCASecretName),
 		Namespace: namespace,
-		Labels:    labels,
+		Labels:    secretLabels,
 	}, nil
 }
 

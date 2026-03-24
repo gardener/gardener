@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
@@ -177,10 +178,6 @@ func DeployGardenerResourceManager(
 		if err := waitUntilGardenerResourceManagerBootstrapped(timeoutCtx, c, namespace); err != nil {
 			return err
 		}
-
-		if err := c.Delete(ctx, bootstrapKubeconfigSecret); client.IgnoreNotFound(err) != nil {
-			return err
-		}
 	}
 
 	secrets.BootstrapKubeconfig = nil
@@ -259,7 +256,10 @@ func reconcileGardenerResourceManagerBootstrapKubeconfigSecret(ctx context.Conte
 			APIServerHost: getAPIServerAddress(),
 			CAData:        caBundleSecret.Data[secretsutils.DataKeyCertificateBundle],
 		}},
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAClient))
+	},
+		secretsmanager.SignedByCA(v1beta1constants.SecretNameCAClient),
+		secretsmanager.WithLabels(map[string]string{references.LabelKeyGarbageCollectable: references.LabelValueGarbageCollectable}),
+	)
 }
 
 func waitUntilGardenerResourceManagerBootstrapped(ctx context.Context, c client.Client, namespace string) error {

@@ -402,7 +402,7 @@ func createOldCASecrets(c client.Client, name string, caConfigs []SecretConfigWi
 	for _, caConfig := range caConfigs {
 		secretData, err := caConfig.Config.Generate()
 		Expect(err).NotTo(HaveOccurred(), caConfig.Config.GetName())
-		secretMeta, err := secretsmanager.ObjectMeta(name, testIdentity, caConfig.Config, false, "", nil, nil, nil)
+		secretMeta, err := secretsmanager.ObjectMeta(name, nil, testIdentity, caConfig.Config, false, "", nil, nil, nil)
 		Expect(err).NotTo(HaveOccurred(), caConfig.Config.GetName())
 
 		dataMap := secretData.SecretData()
