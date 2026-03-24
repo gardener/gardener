@@ -212,5 +212,66 @@ var _ = Describe("Add", func() {
 			Expect(mapFn(ctx, nil)).To(ConsistOf(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation1.Name}})))
 			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New(type1)))
 		})
+
+		When("running in self-hosted shoot mode", func() {
+			var (
+				shootName      = "my-shoot"
+				shootNamespace = "garden-my-project"
+			)
+
+			BeforeEach(func() {
+				fakeGardenClient = fakeclient.NewClientBuilder().
+					WithScheme(kubernetes.GardenScheme).
+					WithIndex(&gardencorev1beta1.ControllerInstallation{}, core.ShootRefName, indexer.ControllerInstallationShootRefNameIndexerFunc).
+					WithIndex(&gardencorev1beta1.ControllerInstallation{}, core.ShootRefNamespace, indexer.ControllerInstallationShootRefNamespaceIndexerFunc).
+					Build()
+				reconciler.GardenClient = fakeGardenClient
+				reconciler.SelfHostedShootMeta = &types.NamespacedName{Name: shootName, Namespace: shootNamespace}
+				mapFn = reconciler.MapObjectKindToControllerInstallations(log, extensionsv1alpha1.InfrastructureResource, func() client.ObjectList { return &extensionsv1alpha1.InfrastructureList{} })
+
+				controllerInstallation1.Spec.SeedRef = nil
+				controllerInstallation1.Spec.ShootRef = &corev1.ObjectReference{Name: shootName, Namespace: shootNamespace}
+				controllerInstallation2.Spec.SeedRef = nil
+				controllerInstallation2.Spec.ShootRef = &corev1.ObjectReference{Name: shootName, Namespace: shootNamespace}
+				controllerInstallation3.Spec.SeedRef = nil
+				controllerInstallation3.Spec.ShootRef = &corev1.ObjectReference{Name: shootName, Namespace: shootNamespace}
+			})
+
+			It("should return the expected names of controllerinstallations", func() {
+				Expect(fakeGardenClient.Create(ctx, controllerRegistration1)).To(Succeed())
+				Expect(fakeGardenClient.Create(ctx, controllerRegistration2)).To(Succeed())
+				Expect(fakeGardenClient.Create(ctx, controllerRegistration3)).To(Succeed())
+
+				Expect(fakeGardenClient.Create(ctx, controllerInstallation1)).To(Succeed())
+				Expect(fakeGardenClient.Create(ctx, controllerInstallation2)).To(Succeed())
+				Expect(fakeGardenClient.Create(ctx, controllerInstallation3)).To(Succeed())
+
+				Expect(fakeSeedClient.Create(ctx, infrastructure)).To(Succeed())
+				Expect(fakeSeedClient.Create(ctx, infrastructure2)).To(Succeed())
+
+				Expect(mapFn(ctx, nil)).To(ConsistOf(
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation1.Name}},
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation2.Name}},
+				))
+				Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New(type1, type2)))
+			})
+
+			It("should not return controllerinstallations for other shoots", func() {
+				controllerInstallation2.Spec.ShootRef = &corev1.ObjectReference{Name: "other-shoot", Namespace: shootNamespace}
+
+				Expect(fakeGardenClient.Create(ctx, controllerRegistration1)).To(Succeed())
+				Expect(fakeGardenClient.Create(ctx, controllerRegistration2)).To(Succeed())
+
+				Expect(fakeGardenClient.Create(ctx, controllerInstallation1)).To(Succeed())
+				Expect(fakeGardenClient.Create(ctx, controllerInstallation2)).To(Succeed())
+
+				Expect(fakeSeedClient.Create(ctx, infrastructure)).To(Succeed())
+				Expect(fakeSeedClient.Create(ctx, infrastructure2)).To(Succeed())
+
+				Expect(mapFn(ctx, nil)).To(ConsistOf(
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation1.Name}},
+				))
+			})
+		})
 	})
 })

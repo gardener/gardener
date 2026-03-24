@@ -188,7 +188,15 @@ func (r *Reconciler) MapObjectKindToControllerInstallations(log logr.Logger, obj
 		// the other reconciler to decide whether it is required or not.
 
 		controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-		if err := r.GardenClient.List(ctx, controllerInstallationList, client.MatchingFields{core.SeedRefName: r.SeedName}); err != nil {
+
+		var listOptions client.MatchingFields
+		if r.SelfHostedShootMeta != nil {
+			listOptions = client.MatchingFields{core.ShootRefName: r.SelfHostedShootMeta.Name, core.ShootRefNamespace: r.SelfHostedShootMeta.Namespace}
+		} else {
+			listOptions = client.MatchingFields{core.SeedRefName: r.SeedName}
+		}
+
+		if err := r.GardenClient.List(ctx, controllerInstallationList, listOptions); err != nil {
 			log.Error(err, "Failed to list ControllerInstallations")
 			return nil
 		}
