@@ -337,9 +337,9 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			Eventually(ctx, gardenKomega.Object(backupEntry)).Should(BeHealthy(health.CheckBackupEntry))
 		}, SpecTimeout(time.Minute))
 
-		It("should observe created ControllerInstallations for the self-hosted Shoot", func(ctx SpecContext) {
+		It("should deploy and reconcile the ControllerInstallations for the self-hosted Shoot", func(ctx SpecContext) {
+			controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 			Eventually(ctx, func(g Gomega) []gardencorev1beta1.ControllerInstallation {
-				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 				g.Expect(gardenClientSet.Client().List(ctx, controllerInstallationList, client.MatchingFields{
 					core.ShootRefName:      shoot.Name,
 					core.ShootRefNamespace: shoot.Namespace,
@@ -349,7 +349,20 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 				MatchFields(IgnoreExtras, Fields{"Spec": MatchFields(IgnoreExtras, Fields{"RegistrationRef": MatchFields(IgnoreExtras, Fields{"Name": Equal("provider-local")})})}),
 				MatchFields(IgnoreExtras, Fields{"Spec": MatchFields(IgnoreExtras, Fields{"RegistrationRef": MatchFields(IgnoreExtras, Fields{"Name": Equal("networking-calico")})})}),
 			))
-		}, SpecTimeout(time.Minute))
+
+			for _, controllerInstallation := range controllerInstallationList.Items {
+				By("Waiting for ControllerInstallation " + controllerInstallation.Name + " to become healthy")
+				Eventually(ctx, func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(&controllerInstallation), &controllerInstallation)).To(Succeed())
+					return controllerInstallation.Status.Conditions
+				}).Should(And(
+					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionTrue)),
+					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionTrue)),
+					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationHealthy), WithStatus(gardencorev1beta1.ConditionTrue)),
+					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationProgressing), WithStatus(gardencorev1beta1.ConditionFalse)),
+				))
+			}
+		}, SpecTimeout(5*time.Minute))
 	})
 })
 
