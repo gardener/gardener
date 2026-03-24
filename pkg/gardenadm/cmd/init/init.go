@@ -84,7 +84,7 @@ func run(ctx context.Context, opts *Options) error {
 
 	// If the self-hosted shoot is also the garden runtime cluster, then gardener-operator is taking over
 	// responsibility of some components (e.g., etcd-druid). Detect this by checking whether a Garden resource exists.
-	shootIsGarden, err := gardenletutils.SeedIsGarden(ctx, b.SeedClientSet.Client())
+	shootIsGarden, err := gardenletutils.ClusterIsGarden(ctx, b.SeedClientSet.Client())
 	if err != nil {
 		return fmt.Errorf("failed checking whether shoot is garden: %w", err)
 	}

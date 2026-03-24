@@ -177,7 +177,7 @@ func (r *Reconciler) reconcile(
 		}
 	}
 
-	seedIsGarden, err := gardenletutils.SeedIsGarden(seedCtx, r.SeedClientSet.Client())
+	seedIsGarden, err := gardenletutils.ClusterIsGarden(seedCtx, r.SeedClientSet.Client())
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed checking whether the seed is the garden cluster at the same time: %w", err)
 	}

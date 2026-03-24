@@ -104,7 +104,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
-	seedIsGarden, err := gardenletutils.SeedIsGarden(ctx, r.SeedClientSet.Client())
+	seedIsGarden, err := gardenletutils.ClusterIsGarden(ctx, r.SeedClientSet.Client())
 	if err != nil {
 		return reconcile.Result{}, r.updateStatusOperationError(ctx, seed, err, operationType)
 	}
