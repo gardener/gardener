@@ -256,17 +256,28 @@ spec:
     - alert: SeedKubeEtcd3MainDbSizeLimitApproaching
       expr: |
         ALERTS{alertname="KubeEtcd3MainDbSizeLimitApproaching",alertstate="firing",namespace=~"shoot--garden--.+"}
-      for: 5m
       labels:
         severity: warning
         topology: garden
       annotations:
         summary: >-
-          Seed {{$labels.name}} etcd {{$labels.role}} DB size is approaching its current
-          practical limit in landscape {{$externalLabels.landscape}}. Current DB size: {{ $value }}.
+          A seed etcd-main in landscape {{$externalLabels.landscape}} is approaching its current DB size limit.
         description: >-
-          Seed {{$labels.name}} etcd {{$labels.role}} DB size is approaching its current
-          practical limit of 8GB. Current DB size: {{ $value }}. Etcd quota might need to be increased.
+          Seed {{$labels.name}} etcd-main DB size is approaching its current limit in landscape {{$externalLabels.landscape}}. 
+          Current DB size: {{ $value }}. Etcd quota might need to be increased.
+
+    - alert: SeedKubeEtcd3MainDbSizeLimitCrossed
+      expr: |
+        ALERTS{alertname="KubeEtcd3MainDbSizeLimitCrossed",alertstate="firing",namespace=~"shoot--garden--.+"}
+      labels:
+        severity: warning
+        topology: garden
+      annotations:
+        summary: >-
+          A seed etcd-main in landscape {{$externalLabels.landscape}} has crossed its current DB size limit.
+        description: >-
+          Seed {{$labels.name}} etcd-main DB size has crossed its current practical limit in landscape {{$externalLabels.landscape}}. 
+          Current DB size: {{ $value }}. Etcd quota must be increased to allow updates. 
     
     - alert: SeedPodStuckInPending
       expr: |
