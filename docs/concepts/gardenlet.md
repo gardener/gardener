@@ -259,6 +259,7 @@ The `ControllerInstallation` controller in the `gardenlet` reconciles `Controlle
 This reconciler is responsible for `ControllerInstallation`s referencing a `ControllerDeployment` whose `type=helm`.
 
 For each `ControllerInstallation`, it creates a namespace on the seed cluster named `extension-<controller-installation-name>`.
+For [self-hosted shoot clusters](https://github.com/gardener/enhancements/tree/main/geps/0028-self-hosted-shoot-clusters), the namespace is named `extension-<controller-registration-name>` instead (matching the `ManagedResource` name created during bootstrapping).
 Then, it creates a generic garden kubeconfig and garden access secret for the extension for [accessing the garden cluster](../extensions/garden-api-access.md).
 
 After that, it unpacks the Helm chart tarball in the `ControllerDeployment`s `.providerConfig.chart` field and deploys the rendered resources to the seed cluster.
@@ -285,10 +286,19 @@ gardener:
 
 As of today, there are a few more fields in `.gardener.seed`, but it is recommended to use the `.gardener.seed.spec` if the Helm chart needs more information about the seed configuration.
 
+> [!NOTE]
+> For self-hosted shoot clusters that have not yet been promoted to a `Seed`, the `.gardener.seed` section is omitted entirely because no `Seed` object exists.
+> Instead, a `.gardener.shoot` section is populated with `name`, `namespace`, `labels`, `annotations`, `spec`, and (if available) `clusterIdentity`.
+> Extension charts deployed in such clusters must handle the absence of `.gardener.seed` gracefully (e.g., `{{ if .Values.gardener.seed }}`).
+
 The rendered chart will be deployed via a `ManagedResource` created in the `garden` namespace of the seed cluster.
 It is labeled with `controllerinstallation-name=<name>` so that one can easily find the owning `ControllerInstallation` for an existing `ManagedResource`.
 
 The reconciler maintains the `Installed` condition of the `ControllerInstallation` and sets it to `False` if the rendering or deployment fails.
+
+> [!NOTE]
+> When the seed cluster is a self-hosted shoot, the main and required reconcilers are not registered in the seed `gardenlet`.
+> In this case, all `ControllerInstallation`s use `.spec.shootRef` (not `.spec.seedRef`), and the shoot `gardenlet` handles them instead.
 
 #### ["Care" Reconciler](../../pkg/gardenlet/controller/controllerinstallation/care)
 
