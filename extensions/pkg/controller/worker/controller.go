@@ -7,6 +7,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
@@ -66,6 +67,10 @@ func DefaultPredicates(ctx context.Context, mgr manager.Manager, ignoreOperation
 // and Start it when the Manager is Started.
 func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	predicates := predicateutils.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClasses, args.Type)
+
+	if args.ControllerOptions.ReconciliationTimeout == 0 {
+		args.ControllerOptions.ReconciliationTimeout = 20 * time.Minute
+	}
 
 	c, err := builder.
 		ControllerManagedBy(mgr).
