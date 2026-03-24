@@ -264,7 +264,7 @@ spec:
           A seed etcd-main in landscape {{$externalLabels.landscape}} is approaching its current DB size limit.
         description: >-
           Seed {{$labels.name}} etcd-main DB size is approaching its current limit in landscape {{$externalLabels.landscape}}. 
-          Current DB size: {{ $value }}. Etcd quota might need to be increased.
+          Etcd quota might need to be increased.
 
     - alert: SeedKubeEtcd3MainDbSizeLimitCrossed
       expr: |
