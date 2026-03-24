@@ -14612,9 +14612,7 @@ NetworkingStatus
 </td>
 <td>
 <em>(Optional)</em>
-<p>EncryptedResources is tombstoned to show why 18 is reserved protobuf tag.
-EncryptedResources []string <code>json:&quot;encryptedResources,omitempty&quot; protobuf:&quot;bytes,18,rep,name=encryptedResources&quot;</code>
-Networking contains information about cluster networking such as CIDRs.</p>
+<p>Networking contains information about cluster networking such as CIDRs.</p>
 </td>
 </tr>
 <tr>

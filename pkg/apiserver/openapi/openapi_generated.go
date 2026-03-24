@@ -10574,7 +10574,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 					},
 					"networking": {
 						SchemaProps: spec.SchemaProps{
-							Description: "EncryptedResources is tombstoned to show why 18 is reserved protobuf tag. EncryptedResources []string `json:\"encryptedResources,omitempty\" protobuf:\"bytes,18,rep,name=encryptedResources\"` Networking contains information about cluster networking such as CIDRs.",
+							Description: "Networking contains information about cluster networking such as CIDRs.",
 							Ref:         ref(v1beta1.NetworkingStatus{}.OpenAPIModelName()),
 						},
 					},
