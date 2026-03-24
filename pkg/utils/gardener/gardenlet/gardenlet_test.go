@@ -29,7 +29,7 @@ import (
 )
 
 var _ = Describe("Gardenlet", func() {
-	Describe("#SeedIsGarden", func() {
+	Describe("#ClusterIsGarden", func() {
 		var (
 			ctx        context.Context
 			mockReader *mockclient.MockReader
@@ -52,12 +52,12 @@ var _ = Describe("Gardenlet", func() {
 					list.Items = []metav1.PartialObjectMetadata{{}}
 					return nil
 				})
-			Expect(SeedIsGarden(ctx, mockReader)).To(BeTrue())
+			Expect(ClusterIsGarden(ctx, mockReader)).To(BeTrue())
 		})
 
 		It("should return that seed is a not a garden cluster because no garden object found", func() {
 			mockReader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.Limit(1))
-			Expect(SeedIsGarden(ctx, mockReader)).To(BeFalse())
+			Expect(ClusterIsGarden(ctx, mockReader)).To(BeFalse())
 		})
 
 		It("should return that seed is a not a garden cluster because of a no match error", func() {
@@ -65,7 +65,7 @@ var _ = Describe("Gardenlet", func() {
 				func(_ context.Context, _ *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
 					return &meta.NoResourceMatchError{}
 				})
-			Expect(SeedIsGarden(ctx, mockReader)).To(BeFalse())
+			Expect(ClusterIsGarden(ctx, mockReader)).To(BeFalse())
 		})
 	})
 

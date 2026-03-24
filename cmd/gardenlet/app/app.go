@@ -799,7 +799,7 @@ const virtualGardenService = operatorv1alpha1.DeploymentNameVirtualGardenKubeAPI
 // overwriteGardenHostWhenDeployedInRuntimeCluster overwrites the garden REST config host to the internal service host
 // if the gardenlet is deployed in the runtime cluster of the garden and L7 load balancing is not active.
 func (g *garden) overwriteGardenHostWhenDeployedInRuntimeCluster(ctx context.Context, log logr.Logger, gardenRESTConfig *rest.Config) error {
-	seedIsGarden, err := gardenlet.SeedIsGarden(ctx, g.mgr.GetClient())
+	seedIsGarden, err := gardenlet.ClusterIsGarden(ctx, g.mgr.GetClient())
 	if err != nil {
 		return fmt.Errorf("failed to check whether seed is garden: %w", err)
 	}
