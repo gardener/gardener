@@ -102,7 +102,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	if controllerInstallation.Spec.SeedRef == nil {
+	if controllerInstallation.Spec.SeedRef == nil && r.SelfHostedShootMeta == nil {
 		return reconcile.Result{}, nil
 	}
 
@@ -149,14 +149,34 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
-	seed := &gardencorev1beta1.Seed{}
-	if err := r.GardenClient.Get(gardenCtx, client.ObjectKey{Name: controllerInstallation.Spec.SeedRef.Name}, seed); err != nil {
-		if apierrors.IsNotFound(err) {
-			conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionFalse, "SeedNotFound", fmt.Sprintf("Referenced Seed does not exist: %+v", err))
-		} else {
-			conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionUnknown, "SeedReadError", fmt.Sprintf("Referenced Seed cannot be read: %+v", err))
+	var seed *gardencorev1beta1.Seed
+	if controllerInstallation.Spec.SeedRef != nil {
+		seed = &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: controllerInstallation.Spec.SeedRef.Name}}
+		if err := r.GardenClient.Get(gardenCtx, client.ObjectKeyFromObject(seed), seed); err != nil {
+			if apierrors.IsNotFound(err) {
+				conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionFalse, "SeedNotFound", fmt.Sprintf("Referenced Seed does not exist: %+v", err))
+			} else {
+				conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionUnknown, "SeedReadError", fmt.Sprintf("Referenced Seed cannot be read: %+v", err))
+			}
+			return reconcile.Result{}, err
 		}
-		return reconcile.Result{}, err
+	} else if r.SelfHostedShootMeta != nil {
+		// The self-hosted shoot might be a Seed as well - we don't know and have to check.
+		seed = &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: r.SelfHostedShootMeta.Name}}
+		if err := r.GardenClient.Get(gardenCtx, client.ObjectKeyFromObject(seed), seed); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return reconcile.Result{}, fmt.Errorf("failed while checking if self-hosted shoot is a seed: %w", err)
+			}
+			seed = nil
+		}
+	}
+
+	var shoot *gardencorev1beta1.Shoot
+	if r.SelfHostedShootMeta != nil {
+		shoot = &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: r.SelfHostedShootMeta.Name, Namespace: r.SelfHostedShootMeta.Namespace}}
+		if err := r.GardenClient.Get(gardenCtx, client.ObjectKeyFromObject(shoot), shoot); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed reading self-hosted Shoot: %w", err)
+		}
 	}
 
 	controllerDeployment := &gardencorev1.ControllerDeployment{}
@@ -187,7 +207,13 @@ func (r *Reconciler) reconcile(
 		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleExtension)
 		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelControllerRegistrationName, controllerRegistration.Name)
 		metav1.SetMetaDataLabel(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
-		metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(seed.Spec.Provider.Zones, ","))
+		if seed != nil {
+			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(seed.Spec.Provider.Zones, ","))
+		} else if shoot != nil {
+			if controlPlanePool := v1beta1helper.ControlPlaneWorkerPoolForShoot(shoot.Spec.Provider.Workers); controlPlanePool != nil && len(controlPlanePool.Zones) > 0 {
+				metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(controlPlanePool.Zones, ","))
+			}
+		}
 
 		if seedIsGarden {
 			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelNetworkPolicyAccessTargetAPIServer, "allowed")
@@ -204,8 +230,8 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
-	if seed.Status.ClusterIdentity == nil {
-		return reconcile.Result{}, fmt.Errorf("cluster-identity of seed '%s' not set", seed.Name)
+	if seed != nil && seed.Status.ClusterIdentity == nil {
+		return reconcile.Result{}, fmt.Errorf("cluster-identity of seed %q not set", seed.Name)
 	}
 
 	var (
@@ -232,63 +258,82 @@ func (r *Reconciler) reconcile(
 			WithServiceAccountLabels(map[string]string{v1beta1constants.LabelControllerRegistrationName: controllerRegistration.Name})
 	}
 
-	var (
-		volumeProvider  string
-		volumeProviders []gardencorev1beta1.SeedVolumeProvider
-	)
-
-	if seed.Spec.Volume != nil {
-		volumeProviders = seed.Spec.Volume.Providers
-		if len(seed.Spec.Volume.Providers) > 0 {
-			volumeProvider = seed.Spec.Volume.Providers[0].Name
-		}
-	}
-
 	featureToEnabled := make(map[featuregate.Feature]bool)
 	for feature := range features.DefaultFeatureGate.GetAll() {
 		featureToEnabled[feature] = features.DefaultFeatureGate.Enabled(feature)
 	}
 
 	// Mix-in some standard values for garden and seed.
-	gardenerValues := map[string]any{
-		"gardener": map[string]any{
-			"version": r.Identity.Version,
-			"garden": map[string]any{
-				"clusterIdentity": r.GardenClusterIdentity,
-			},
-			"seed": map[string]any{
-				"name":            seed.Name,
-				"clusterIdentity": *seed.Status.ClusterIdentity,
-				"annotations":     seed.Annotations,
-				"labels":          seed.Labels,
-				"provider":        seed.Spec.Provider.Type,
-				"region":          seed.Spec.Provider.Region,
-				"volumeProvider":  volumeProvider,
-				"volumeProviders": volumeProviders,
-				"protected":       v1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintProtected),
-				"visible":         seed.Spec.Settings.Scheduling.Visible,
-				"taints":          seed.Spec.Taints,
-				"networks":        seed.Spec.Networks,
-				"blockCIDRs":      seed.Spec.Networks.BlockCIDRs,
-				"spec":            seed.Spec,
-			},
-			"gardenlet": map[string]any{
-				"featureGates": featureToEnabled,
-			},
+	gardenerMap := map[string]any{
+		"version": r.Identity.Version,
+		"garden": map[string]any{
+			"clusterIdentity": r.GardenClusterIdentity,
+		},
+		"gardenlet": map[string]any{
+			"featureGates": featureToEnabled,
 		},
 	}
 
-	if metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSelfHostedShootCluster) {
-		gardenerValues["gardener"].(map[string]any)["selfHostedShootCluster"] = true
+	if seed != nil {
+		var (
+			volumeProvider  string
+			volumeProviders []gardencorev1beta1.SeedVolumeProvider
+		)
+
+		if seed.Spec.Volume != nil {
+			volumeProviders = seed.Spec.Volume.Providers
+			if len(seed.Spec.Volume.Providers) > 0 {
+				volumeProvider = seed.Spec.Volume.Providers[0].Name
+			}
+		}
+
+		seedValues := map[string]any{
+			"name":            seed.Name,
+			"clusterIdentity": *seed.Status.ClusterIdentity,
+			"annotations":     seed.Annotations,
+			"labels":          seed.Labels,
+			"provider":        seed.Spec.Provider.Type,
+			"region":          seed.Spec.Provider.Region,
+			"volumeProvider":  volumeProvider,
+			"volumeProviders": volumeProviders,
+			"protected":       v1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintProtected),
+			"visible":         seed.Spec.Settings.Scheduling.Visible,
+			"taints":          seed.Spec.Taints,
+			"networks":        seed.Spec.Networks,
+			"blockCIDRs":      seed.Spec.Networks.BlockCIDRs,
+			"spec":            seed.Spec,
+		}
+
+		if seed.Spec.Ingress != nil {
+			seedValues["ingressDomain"] = &seed.Spec.Ingress.Domain
+		}
+
+		gardenerMap["seed"] = seedValues
+	}
+
+	if r.SelfHostedShootMeta != nil {
+		gardenerMap["selfHostedShootCluster"] = true
+
+		shootValues := map[string]any{
+			"name":        shoot.Name,
+			"namespace":   shoot.Namespace,
+			"labels":      shoot.Labels,
+			"annotations": shoot.Annotations,
+			"spec":        shoot.Spec,
+		}
+
+		if shoot.Status.ClusterIdentity != nil {
+			shootValues["clusterIdentity"] = *shoot.Status.ClusterIdentity
+		}
+
+		gardenerMap["shoot"] = shootValues
 	}
 
 	if genericGardenKubeconfigSecretName != "" {
-		gardenerValues["gardener"].(map[string]any)["garden"].(map[string]any)["genericKubeconfigSecretName"] = genericGardenKubeconfigSecretName
+		gardenerMap["garden"].(map[string]any)["genericKubeconfigSecretName"] = genericGardenKubeconfigSecretName
 	}
 
-	if seed.Spec.Ingress != nil {
-		gardenerValues["gardener"].(map[string]any)["seed"].(map[string]any)["ingressDomain"] = &seed.Spec.Ingress.Domain
-	}
+	gardenerValues := map[string]any{"gardener": gardenerMap}
 
 	if r.BootstrapControlPlaneNode {
 		ports, err := r.CalculateUsablePorts()
@@ -348,12 +393,9 @@ func (r *Reconciler) reconcile(
 		}
 	}
 
-	if err := gardenerutils.MutateObjectsInSecretData(
-		secretData,
-		namespace.Name,
-		[]string{appsv1.GroupName, batchv1.GroupName},
-		// Set seed name
-		func(obj runtime.Object) error {
+	mutators := []func(runtime.Object) error{r.MutateSpecForSelfHostedShootExtensions}
+	if seed != nil {
+		mutators = append([]func(runtime.Object) error{func(obj runtime.Object) error {
 			return kubernetesutils.VisitPodSpec(obj, func(podSpec *corev1.PodSpec) {
 				kubernetesutils.VisitContainers(podSpec, func(container *corev1.Container) {
 					kubernetesutils.AddEnvVar(container, corev1.EnvVar{
@@ -362,8 +404,30 @@ func (r *Reconciler) reconcile(
 					}, true)
 				})
 			})
-		},
-		r.MutateSpecForSelfHostedShootExtensions,
+		}}, mutators...)
+	}
+	if shoot != nil {
+		mutators = append([]func(runtime.Object) error{func(obj runtime.Object) error {
+			return kubernetesutils.VisitPodSpec(obj, func(podSpec *corev1.PodSpec) {
+				kubernetesutils.VisitContainers(podSpec, func(container *corev1.Container) {
+					kubernetesutils.AddEnvVar(container, corev1.EnvVar{
+						Name:  v1beta1constants.EnvShootName,
+						Value: shoot.Name,
+					}, true)
+					kubernetesutils.AddEnvVar(container, corev1.EnvVar{
+						Name:  v1beta1constants.EnvShootNamespace,
+						Value: shoot.Namespace,
+					}, true)
+				})
+			})
+		}}, mutators...)
+	}
+
+	if err := gardenerutils.MutateObjectsInSecretData(
+		secretData,
+		namespace.Name,
+		[]string{appsv1.GroupName, batchv1.GroupName},
+		mutators...,
 	); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to inject garden access secrets: %w", err)
 	}
@@ -420,14 +484,17 @@ func (r *Reconciler) delete(
 		}
 	}()
 
-	seed := &gardencorev1beta1.Seed{}
-	if err := r.GardenClient.Get(gardenCtx, client.ObjectKey{Name: controllerInstallation.Spec.SeedRef.Name}, seed); err != nil {
-		if apierrors.IsNotFound(err) {
-			conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionFalse, "SeedNotFound", fmt.Sprintf("Referenced Seed does not exist: %+v", err))
-		} else {
-			conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionUnknown, "SeedReadError", fmt.Sprintf("Referenced Seed cannot be read: %+v", err))
+	var seed *gardencorev1beta1.Seed
+	if controllerInstallation.Spec.SeedRef != nil {
+		seed = &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: controllerInstallation.Spec.SeedRef.Name}}
+		if err := r.GardenClient.Get(gardenCtx, client.ObjectKeyFromObject(seed), seed); err != nil {
+			if apierrors.IsNotFound(err) {
+				conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionFalse, "SeedNotFound", fmt.Sprintf("Referenced Seed does not exist: %+v", err))
+			} else {
+				conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionUnknown, "SeedReadError", fmt.Sprintf("Referenced Seed cannot be read: %+v", err))
+			}
+			return reconcile.Result{}, err
 		}
-		return reconcile.Result{}, err
 	}
 
 	managedResourceName := gardenerutils.ManagedResourceNameForControllerInstallation(controllerInstallation)

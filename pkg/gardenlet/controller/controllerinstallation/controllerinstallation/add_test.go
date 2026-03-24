@@ -88,6 +88,23 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectNew: controllerInstallation, ObjectOld: oldControllerInstallation})).To(BeTrue())
 			})
 
+			It("should return true if shoot ref changed from nil to non-nil", func() {
+				oldControllerInstallation := controllerInstallation.DeepCopy()
+				controllerInstallation.ResourceVersion = "2"
+				controllerInstallation.Spec.ShootRef = &corev1.ObjectReference{Name: "my-shoot", Namespace: "garden-my-project"}
+
+				Expect(p.Update(event.UpdateEvent{ObjectNew: controllerInstallation, ObjectOld: oldControllerInstallation})).To(BeTrue())
+			})
+
+			It("should return true if shoot ref's resourceVersion changed", func() {
+				controllerInstallation.Spec.ShootRef = &corev1.ObjectReference{Name: "my-shoot", Namespace: "garden-my-project"}
+				oldControllerInstallation := controllerInstallation.DeepCopy()
+				controllerInstallation.ResourceVersion = "2"
+				controllerInstallation.Spec.ShootRef = &corev1.ObjectReference{Name: "my-shoot", Namespace: "garden-my-project", ResourceVersion: "foo"}
+
+				Expect(p.Update(event.UpdateEvent{ObjectNew: controllerInstallation, ObjectOld: oldControllerInstallation})).To(BeTrue())
+			})
+
 			It("should return false if something else changed", func() {
 				oldControllerInstallation := controllerInstallation.DeepCopy()
 				controllerInstallation.ResourceVersion = "2"

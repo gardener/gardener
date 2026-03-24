@@ -89,7 +89,9 @@ func (r *Reconciler) ControllerInstallationPredicate() predicate.Predicate {
 				!reflect.DeepEqual(oldControllerInstallation.Spec.DeploymentRef, controllerInstallation.Spec.DeploymentRef) ||
 				oldControllerInstallation.Spec.RegistrationRef.ResourceVersion != controllerInstallation.Spec.RegistrationRef.ResourceVersion ||
 				(oldControllerInstallation.Spec.SeedRef == nil) != (controllerInstallation.Spec.SeedRef == nil) ||
-				(oldControllerInstallation.Spec.SeedRef != nil && controllerInstallation.Spec.SeedRef != nil && oldControllerInstallation.Spec.SeedRef.ResourceVersion != controllerInstallation.Spec.SeedRef.ResourceVersion)
+				(oldControllerInstallation.Spec.SeedRef != nil && controllerInstallation.Spec.SeedRef != nil && oldControllerInstallation.Spec.SeedRef.ResourceVersion != controllerInstallation.Spec.SeedRef.ResourceVersion) ||
+				(oldControllerInstallation.Spec.ShootRef == nil) != (controllerInstallation.Spec.ShootRef == nil) ||
+				(oldControllerInstallation.Spec.ShootRef != nil && controllerInstallation.Spec.ShootRef != nil && oldControllerInstallation.Spec.ShootRef.ResourceVersion != controllerInstallation.Spec.ShootRef.ResourceVersion)
 		},
 	}
 }
