@@ -429,7 +429,7 @@ func ensureNoControllerInstallations(c client.Client, seedName string) func(ctx 
 
 func ensureNoManagedResources(c client.Client) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
-		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, c, ptr.To(v1beta1constants.SeedResourceManagerClass))
+		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, c, ptr.To(v1beta1constants.SeedResourceManagerClass), nil, nil)
 		if err != nil {
 			return err
 		}
