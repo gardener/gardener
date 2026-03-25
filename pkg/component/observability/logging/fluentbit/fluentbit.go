@@ -48,6 +48,8 @@ var (
 	add_tag_to_record_lua string
 	//go:embed lua/add_time_and_systemd_attr.lua
 	add_time_and_systemd_attr_lua string
+	//go:embed lua/stringify_record_nest_log.lua
+	stringify_record_nest_log_lua string
 )
 
 // Values is the values for fluent-bit configurations
@@ -94,6 +96,7 @@ func (f *fluentBit) Deploy(ctx context.Context) error {
 				"modify_severity.lua":           modify_severity_lua,
 				"add_tag_to_record.lua":         add_tag_to_record_lua,
 				"add_time_and_systemd_attr.lua": add_time_and_systemd_attr_lua,
+				"stringify_record_nest_log.lua": stringify_record_nest_log_lua,
 			},
 		}
 		serviceMonitor = &monitoringv1.ServiceMonitor{
