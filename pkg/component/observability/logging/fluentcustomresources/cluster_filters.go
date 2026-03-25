@@ -84,5 +84,27 @@ func GetClusterFilters(configName string, labels map[string]string) []*fluentbit
 				},
 			},
 		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "zz-stringify-record-nest-log",
+				Labels: labels,
+			},
+			Spec: fluentbitv1alpha2.FilterSpec{
+				Match: "kubernetes.*event-logger*event-logger*",
+				FilterItems: []fluentbitv1alpha2.FilterItem{
+					{
+						Lua: &fluentbitv1alpha2filter.Lua{
+							Script: corev1.ConfigMapKeySelector{
+								Key: "stringify_records_nest_log.lua",
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: configName,
+								},
+							},
+							Call: "stringify_records_nest_log",
+						},
+					},
+				},
+			},
+		},
 	}
 }
