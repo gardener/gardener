@@ -167,7 +167,17 @@ func computeSecretsToPersist(
 	dataList := make([]gardencorev1beta1.GardenerResourceData, 0, len(secretList.Items))
 
 	for _, secret := range secretList.Items {
-		dataJSON, err := json.Marshal(secret.Data)
+		secretInfo := struct {
+			Data      map[string][]byte `json:"data"`
+			Immutable *bool             `json:"immutable,omitempty"`
+			Type      corev1.SecretType `json:"type,omitempty"`
+		}{
+			Data:      secret.Data,
+			Immutable: secret.Immutable,
+			Type:      secret.Type,
+		}
+
+		dataJSON, err := json.Marshal(secretInfo)
 		if err != nil {
 			return nil, fmt.Errorf("failed marshalling secret data to JSON for secret %s: %w", client.ObjectKeyFromObject(&secret), err)
 		}
