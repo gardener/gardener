@@ -18,11 +18,10 @@ spec:
         cni.projectcalico.org/ipv4pools: '["gardenadm-unmanaged-infra"]'
     spec:
       initContainers:
-      # The main container mounts /etc/systemd/system from the persistent volume so that systemd
-      # unit files written by gardenadm survive pod restarts. On the very first boot the volume
-      # subPath is empty, so this init container seeds it from the image's default unit files.
-      # On subsequent boots the directory is already populated and the copy is skipped, preserving
-      # any changes made at runtime.
+      # The main container mounts /etc/systemd/system and /etc/containerd from the persistent volume so that state written by gardenadm survives pod restarts.
+      # On the very first boot the volume subPaths are empty, so this init container seeds them from the image's default files.
+      # For /etc/containerd, it also patches config_path so containerd finds the registry mirror configuration in /etc/containerd/certs.d from the start.
+      # On subsequent boots the directories are already populated and the copy is skipped, preserving any changes made at runtime.
       - name: init-systemd-system
         image: local-skaffold/gardener-extension-provider-local-node
         command:
@@ -34,6 +33,11 @@ spec:
           fi
           if [ -z "$(ls -A /mnt/containerd)" ]; then
             cp -a /etc/containerd/. /mnt/containerd/
+            # Ensure containerd finds registry mirror configs in /etc/containerd/certs.d.
+            # The base image ships without config_path, so we inject it here.
+            if ! grep -q 'config_path' /mnt/containerd/config.toml; then
+              sed -i '/^\[plugins\."io\.containerd\.grpc\.v1\.cri"\.containerd\]$/a\  config_path = "/etc/containerd/certs.d"' /mnt/containerd/config.toml
+            fi
           fi
         volumeMounts:
         - name: machine-state
