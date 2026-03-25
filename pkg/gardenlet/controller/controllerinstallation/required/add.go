@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
@@ -38,14 +37,25 @@ import (
 const ControllerName = "controllerinstallation-required"
 
 type eventHandlerRegistration struct {
-	once       sync.Once
+	lock       sync.Mutex
+	registered bool
 	registerFn func() error
 }
 
-func (e *eventHandlerRegistration) registerOnce() {
-	e.once.Do(func() {
-		utilruntime.Must(e.registerFn())
-	})
+func (e *eventHandlerRegistration) registerOnce() error {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+
+	if e.registered {
+		return nil
+	}
+
+	if err := e.registerFn(); err != nil {
+		return err
+	}
+
+	e.registered = true
+	return nil
 }
 
 // AddToManager adds Reconciler to the given manager.
