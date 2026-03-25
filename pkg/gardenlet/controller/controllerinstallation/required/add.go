@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
@@ -35,6 +36,17 @@ import (
 
 // ControllerName is the name of this controller.
 const ControllerName = "controllerinstallation-required"
+
+type eventHandlerRegistration struct {
+	once       sync.Once
+	registerFn func() error
+}
+
+func (e *eventHandlerRegistration) registerOnce() {
+	e.once.Do(func() {
+		utilruntime.Must(e.registerFn())
+	})
+}
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluster cluster.Cluster) error {
@@ -98,17 +110,22 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 			return err
 		}
 
-		if err := c.Watch(
-			source.Kind[client.Object](
-				seedCluster.GetCache(),
-				extension.object,
-				eventHandler,
-				extensions.ObjectPredicate(),
-				predicateutils.HasClass(extensionsv1alpha1.ExtensionClassShoot, extensionsv1alpha1.ExtensionClassSeed),
-			),
-		); err != nil {
-			return err
-		}
+		// Since the EnqueueRequestsFromMapFunc is costly, actual watches need to be registered after the manager was started.
+		// Registering them here might otherwise cause cache sync timeouts, esp. in large seed clusters.
+		// See https://github.com/kubernetes-sigs/controller-runtime/issues/3466 and https://github.com/gardener/gardener/issues/14391 for more information.
+		r.deferredEventHandlerRegistrations = append(r.deferredEventHandlerRegistrations, &eventHandlerRegistration{
+			registerFn: func() error {
+				return c.Watch(
+					source.Kind[client.Object](
+						seedCluster.GetCache(),
+						extension.object,
+						eventHandler,
+						extensions.ObjectPredicate(),
+						predicateutils.HasClass(extensionsv1alpha1.ExtensionClassShoot, extensionsv1alpha1.ExtensionClassSeed),
+					),
+				)
+			},
+		})
 	}
 
 	return nil
