@@ -750,7 +750,6 @@ build:
             - pkg/component/observability/monitoring/alertmanager
             - pkg/component/observability/monitoring/prometheus/shoot
             - pkg/component/observability/monitoring/utils
-            - pkg/controller/service
             - pkg/controllerutils
             - pkg/controllerutils/mapper
             - pkg/controllerutils/predicate
@@ -777,7 +776,6 @@ build:
             - pkg/provider-local/controller/infrastructure
             - pkg/provider-local/controller/networkpolicy
             - pkg/provider-local/controller/operatingsystemconfig
-            - pkg/provider-local/controller/service
             - pkg/provider-local/controller/worker
             - pkg/provider-local/imagevector
             - pkg/provider-local/local

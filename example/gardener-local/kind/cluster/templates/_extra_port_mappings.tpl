@@ -5,40 +5,6 @@
 {{- end -}}
 {{- end -}}
 
-{{- define "extraPortMappings.gardener.seed.istio" -}}
-{{- if .Values.gardener.seed.deployed -}}
-{{- range $i, $listenAddress := (required ".Values.gardener.seed.istio.listenAddresses is required" .Values.gardener.seed.istio.listenAddresses) }}
-- containerPort: {{ add 30443 $i }}
-  hostPort: 443
-  listenAddress: {{ $listenAddress }}
-- containerPort: {{ add 32132 $i }}
-  hostPort: 8132
-  listenAddress: {{ $listenAddress }}
-- containerPort: {{ add 32443 $i }}
-  hostPort: 8443
-  listenAddress: {{ $listenAddress }}
-{{- end }}
-{{- end }}
-{{- end }}
-
-{{- define "extraPortMappings.gardener.seed.bastion" -}}
-{{- if .Values.gardener.seed.deployed -}}
-{{- range $i, $listenAddress := (required ".Values.gardener.seed.bastion.listenAddresses is required" .Values.gardener.seed.bastion.listenAddresses) }}
-- containerPort: {{ add 30022 $i }}
-  hostPort: 22
-  listenAddress: {{ $listenAddress }}
-{{- end }}
-{{- end }}
-{{- end }}
-
-{{- define "extraPortMappings.gardener.operator.virtualGarden" -}}
-{{- if .Values.gardener.garden.deployed -}}
-- containerPort: 31443
-  hostPort: 443
-  listenAddress: {{ .Values.gardener.garden.virtualGarden.listenAddress }}
-{{- end -}}
-{{- end -}}
-
 {{- define "extraPortMappings.gardener.selfHostedShoot" -}}
 {{- if .Values.gardener.selfHostedShoot.deployed -}}
 - containerPort: 30003

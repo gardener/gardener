@@ -12,9 +12,6 @@
 {{- if .Values.gardener.controlPlane.kindIsGardenCluster }}
     - garden.local.gardener.cloud
 {{- end }}
-{{- if .Values.gardener.apiserverRelay.deployed }}
-    - gardener-apiserver.relay.svc.cluster.local
-{{- end }}
     extraArgs:
       authorization-config: /etc/gardener-local/kube-apiserver/authz-config.yaml
       feature-gates: "MutatingAdmissionPolicy=true"

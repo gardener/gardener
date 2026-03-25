@@ -1,27 +1,11 @@
 image: kindest/node:v1.35.1@sha256:05d7bcdefbda08b4e038f644c4df690cdac3fba8b06f8289f30e10026720a1ab
 
 gardener:
-  apiserverRelay:
-    deployed: false
   controlPlane:
     deployed: true
     kindIsGardenCluster: true
     customEtcdStatefulSet: true
-  nginxIngress:
-    deployed: true
-  seed:
-    deployed: true
-    istio:
-      listenAddresses:
-      - 172.18.255.1
-    bastion:
-      listenAddresses:
-      - 172.18.255.22
   repositoryRoot: "."
-  garden:
-    deployed: false
-    virtualGarden:
-      listenAddress: 172.18.255.3
   selfHostedShoot:
     deployed: true
     listenAddress: 172.18.255.4
