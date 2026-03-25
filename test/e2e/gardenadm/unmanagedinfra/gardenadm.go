@@ -53,10 +53,15 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 		statefulSet := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: statefulSetName, Namespace: namespace}}
 		Expect(RuntimeClient.Client().Get(ctx, client.ObjectKeyFromObject(statefulSet), statefulSet)).To(Succeed())
 
-		By("Deleting machine PVCs to ensure clean state")
+		By("Deleting machine state PVCs to ensure clean state")
 		pvcList := &corev1.PersistentVolumeClaimList{}
 		Expect(RuntimeClient.Client().List(ctx, pvcList, client.InNamespace(namespace), client.MatchingLabels{"app": statefulSetName})).To(Succeed())
 		for _, pvc := range pvcList.Items {
+			// Only delete machine-state PVCs (shoot cluster state). The gardenadm PVCs hold the
+			// gardenadm binary and imagevectors populated by skaffold and must not be wiped.
+			if !strings.HasPrefix(pvc.Name, "machine-state-") {
+				continue
+			}
 			Expect(client.IgnoreNotFound(RuntimeClient.Client().Delete(ctx, &pvc))).To(Succeed())
 		}
 
