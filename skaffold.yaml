@@ -1045,7 +1045,9 @@ build:
     - image: local-skaffold/gardener-extension-provider-local/loadbalancer
       context: pkg/provider-local/cloud-provider/loadbalancer/image
       docker: {}
+    # TODO: consider renaming this image to gardener-extension-provider-local/node for consistency with gardener-extension-provider-local/loadbalancer
     - image: local-skaffold/gardener-extension-provider-local-node
+      # TODO: consider moving this to pkg/provider-local/machine-provider/image for consistency with pkg/provider-local/cloud-provider/loadbalancer/image
       context: pkg/provider-local/node
       docker: {}
     - image: local-skaffold/machine-controller-manager-provider-local
