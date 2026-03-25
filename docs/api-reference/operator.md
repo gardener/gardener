@@ -2842,6 +2842,40 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.LoadBalancerServicesProxyProtocol">LoadBalancerServicesProxyProtocol
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.SettingLoadBalancerServices">SettingLoadBalancerServices</a>)
+</p>
+<p>
+<p>LoadBalancerServicesProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>allowed</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Allowed controls whether the ProxyProtocol is optionally allowed for the load balancer services.
+This should only be enabled if the load balancer services are already using ProxyProtocol or will be reconfigured to use it soon.
+Until the load balancers are configured with ProxyProtocol, enabling this setting may allow clients to spoof their source IP addresses.
+The option allows a migration from non-ProxyProtocol to ProxyProtocol without downtime (depending on the infrastructure).
+Defaults to false.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.Maintenance">Maintenance
 </h3>
 <p>
@@ -3379,6 +3413,21 @@ map[string]string
 <td>
 <em>(Optional)</em>
 <p>Annotations is a map of annotations that will be injected/merged into every load balancer service object.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>proxyProtocol</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.LoadBalancerServicesProxyProtocol">
+LoadBalancerServicesProxyProtocol
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
+Defaults to nil, which is equivalent to not allowing ProxyProtocol.</p>
 </td>
 </tr>
 </tbody>
