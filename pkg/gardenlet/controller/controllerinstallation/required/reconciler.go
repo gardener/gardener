@@ -33,11 +33,17 @@ type Reconciler struct {
 
 	Lock                *sync.RWMutex
 	KindToRequiredTypes map[string]sets.Set[string]
+
+	deferredEventHandlerRegistrations []*eventHandlerRegistration
 }
 
 // Reconcile performs the main reconciliation logic.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
+
+	for _, handler := range r.deferredEventHandlerRegistrations {
+		handler.registerOnce()
+	}
 
 	controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
 	if err := r.GardenClient.Get(ctx, request.NamespacedName, controllerInstallation); err != nil {
