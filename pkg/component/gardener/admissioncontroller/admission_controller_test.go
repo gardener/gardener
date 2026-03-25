@@ -866,6 +866,7 @@ func clusterRole() *rbacv1.ClusterRole {
 				Resources: []string{
 					"backupbuckets",
 					"backupentries",
+					"controllerdeployments",
 					"controllerinstallations",
 					"secretbindings",
 					"seeds",

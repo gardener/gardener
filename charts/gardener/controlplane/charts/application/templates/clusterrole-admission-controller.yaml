@@ -16,6 +16,7 @@ rules:
   resources:
   - backupbuckets
   - backupentries
+  - controllerdeployments
   - controllerinstallations
   - secretbindings
   - seeds
