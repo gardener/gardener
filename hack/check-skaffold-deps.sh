@@ -25,11 +25,12 @@ run "skaffold.yaml" "gardener-apiserver"                        "controlplane"
 run "skaffold.yaml" "gardener-controller-manager"               "controlplane"
 run "skaffold.yaml" "gardener-extension-admission-local"        "admission-local"
 run "skaffold.yaml" "gardener-extension-provider-local"         "provider-local"
+run "skaffold.yaml" "cloud-controller-manager-local"            "provider-local"
+run "skaffold.yaml" "machine-controller-manager-provider-local" "provider-local"
 run "skaffold.yaml" "gardener-node-agent"                       "gardenlet"
 run "skaffold.yaml" "gardener-resource-manager"                 "gardenlet"
 run "skaffold.yaml" "gardener-scheduler"                        "controlplane"
 run "skaffold.yaml" "gardenlet"                                 "gardenlet"
-run "skaffold.yaml" "machine-controller-manager-provider-local" "provider-local"
 
 # skaffold-operator.yaml
 run "skaffold-operator.yaml" "gardener-admission-controller"             "gardener-operator"
@@ -39,13 +40,15 @@ run "skaffold-operator.yaml" "gardener-operator"                         "garden
 run "skaffold-operator.yaml" "gardener-resource-manager"                 "gardener-operator"
 run "skaffold-operator.yaml" "gardener-scheduler"                        "gardener-operator"
 run "skaffold-operator.yaml" "gardener-extension-provider-local"         "provider-local"
-run "skaffold-operator.yaml" "machine-controller-manager-provider-local" "provider-local"
 run "skaffold-operator.yaml" "gardener-extension-admission-local"        "provider-local"
+run "skaffold-operator.yaml" "cloud-controller-manager-local"            "provider-local"
+run "skaffold-operator.yaml" "machine-controller-manager-provider-local" "provider-local"
 
 # skaffold-seed.yaml
-run "skaffold-seed.yaml" "gardener-node-agent"       "gardenlet"
-run "skaffold-seed.yaml" "gardener-resource-manager" "gardenlet"
-run "skaffold-seed.yaml" "gardenlet"                 "gardenlet"
+run "skaffold-seed.yaml" "gardener-node-agent"            "gardenlet"
+run "skaffold-seed.yaml" "gardener-resource-manager"      "gardenlet"
+run "skaffold-seed.yaml" "gardenlet"                      "gardenlet"
+run "skaffold-seed.yaml" "cloud-controller-manager-local" "garden-config"
 
 # skaffold-gardenadm.yaml
 run "skaffold-gardenadm.yaml" "gardenadm"                                 "gardenadm"
@@ -53,6 +56,7 @@ run "skaffold-gardenadm.yaml" "gardener-node-agent"                       "garde
 run "skaffold-gardenadm.yaml" "gardener-resource-manager"                 "gardenadm"
 run "skaffold-gardenadm.yaml" "gardenlet"                                 "gardenadm"
 run "skaffold-gardenadm.yaml" "gardener-extension-provider-local"         "provider-local"
+run "skaffold-gardenadm.yaml" "cloud-controller-manager-local"            "provider-local"
 run "skaffold-gardenadm.yaml" "machine-controller-manager-provider-local" "provider-local"
 
 if ! $success ; then
