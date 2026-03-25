@@ -32,7 +32,7 @@ spec:
                     - name: {{ .Values.httpProxy.legacyPort.header }}
                       string_match:
                         safe_regex:
-                          regex: '^(outbound\|(1194\|\|vpn-seed-server(-[0-4])?|443\|\|kube-apiserver)\..*\.svc\.cluster\.local|shoot--.*--.*--kube-apiserver-socket)$'
+                          regex: '^(outbound\|(1194\|\|vpn-seed-server(-[0-4])?|443\|\|kube-apiserver)\..*\.svc\.cluster\.local|(shoot-[a-z0-9]+(-[a-z0-9]+)*|shoot--[a-z0-9]+(-[a-z0-9]+)*--[a-z0-9]+(-[a-z0-9]+)*)--kube-apiserver-socket)$'
                 route:
                   cluster_header: {{ .Values.httpProxy.legacyPort.header }}
                   upgrade_configs:
