@@ -389,7 +389,7 @@ fi
 
 kind create cluster \
   --name "$CLUSTER_NAME" \
-  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "gardener.repositoryRoot"=$(dirname "$0")/..)
+  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "gardener.repositoryRoot"=$(dirname "$0")/.. --set "containerRuntimeSocket=$(docker context inspect $(docker context show) -f json | jq -r '.[].Endpoints.docker.Host' | sed 's|unix://||')")
 
 nodes=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}')
 
