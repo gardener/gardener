@@ -53,6 +53,13 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 		statefulSet := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: statefulSetName, Namespace: namespace}}
 		Expect(RuntimeClient.Client().Get(ctx, client.ObjectKeyFromObject(statefulSet), statefulSet)).To(Succeed())
 
+		By("Deleting machine PVCs to ensure clean state")
+		pvcList := &corev1.PersistentVolumeClaimList{}
+		Expect(RuntimeClient.Client().List(ctx, pvcList, client.InNamespace(namespace), client.MatchingLabels{"app": statefulSetName})).To(Succeed())
+		for _, pvc := range pvcList.Items {
+			Expect(client.IgnoreNotFound(RuntimeClient.Client().Delete(ctx, &pvc))).To(Succeed())
+		}
+
 		patch := client.MergeFrom(statefulSet.DeepCopy())
 		metav1.SetMetaDataAnnotation(&statefulSet.Spec.Template.ObjectMeta, "test-run-id", testRunID)
 		Expect(RuntimeClient.Client().Patch(ctx, statefulSet, patch)).To(Succeed())
