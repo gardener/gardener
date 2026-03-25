@@ -88,9 +88,6 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 
 	gardenerutils.SyncCloudProfileFields(oldShoot, newShoot)
 
-	// Ensure that encrypted resources are synced from `status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
-	SyncEncryptedResourcesStatus(newShoot)
-
 	// Ensure that encrypted provider type is set in `status.credentials.encryptionAtRest.providerType`.
 	SyncEncryptedProviderStatus(newShoot)
 }
@@ -314,9 +311,6 @@ func (shootStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.
 		newShoot.Generation = oldShoot.Generation + 1
 	}
 
-	// Ensure that encrypted resources are synced from `status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
-	SyncEncryptedResourcesStatus(newShoot)
-
 	// Ensure that encrypted provider type is set in `status.credentials.encryptionAtRest.providerType`.
 	SyncEncryptedProviderStatus(newShoot)
 
@@ -437,24 +431,6 @@ func getStatusSeedName(shoot *core.Shoot) string {
 		return ""
 	}
 	return *shoot.Status.SeedName
-}
-
-// SyncEncryptedResourcesStatus ensures the status fields shoot.status.encryptedResources and
-// shoot.status.credentials.encryptionAtRest.resources are in sync.
-// TODO(AleksandarSavchev): Remove this function after v1.135 has been released.
-func SyncEncryptedResourcesStatus(shoot *core.Shoot) {
-	if len(shoot.Status.EncryptedResources) > 0 {
-		if shoot.Status.Credentials == nil {
-			shoot.Status.Credentials = &core.ShootCredentials{}
-		}
-		if shoot.Status.Credentials.EncryptionAtRest == nil {
-			shoot.Status.Credentials.EncryptionAtRest = &core.EncryptionAtRest{}
-		}
-
-		shoot.Status.Credentials.EncryptionAtRest.Resources = shoot.Status.EncryptedResources
-	} else if shoot.Status.Credentials != nil && shoot.Status.Credentials.EncryptionAtRest != nil {
-		shoot.Status.Credentials.EncryptionAtRest.Resources = nil
-	}
 }
 
 func cleanUpOperation(operation string) string {

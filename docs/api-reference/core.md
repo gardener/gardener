@@ -14603,22 +14603,6 @@ LastMaintenance
 </tr>
 <tr>
 <td>
-<code>encryptedResources</code></br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>EncryptedResources is the list of resources in the Shoot which are currently encrypted.
-Secrets are encrypted by default and are not part of the list.
-See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md">https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md</a> for more details.</p>
-<p>Deprecated: This field is deprecated and will be removed with release v1.138.
-This field will be removed in favor of <code>status.credentials.encryptionAtRest.resources</code>.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>networking</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.NetworkingStatus">

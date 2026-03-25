@@ -39,7 +39,7 @@ Reference:
 The `Garden` resource should be backed up in its entirety including the `status` subresource.
 The `status` contains critical information like the current state of credentials rotation.
 
-Failure to capture changes in the `status`, specifically for `.status.encryptedResources` and `.status.credentials` will lead to data loss.
+Failure to capture changes in the `status`, specifically for `.status.credentials` will lead to data loss.
 Finding a reasonable backup frequency depends on the frequency of changes applied to the `Garden` and operations triggered.
 
 ### Runtime Data
@@ -181,7 +181,7 @@ If the `Garden` specifies **additional resources for encryption** in the spec, t
 Failure to do so will make the `gardener-operator` assume that these resources were not yet encrypted.
 As the consequence, it will attempt to encrypt them but the process will never finish, which will block the restore procedure.
 
-Take the `.status.encryptedResources` section from the backed-up `Garden` resource and apply it.
+Take the `.status.credentials.encryptionAtRest.resources` section from the backed-up `Garden` resource and apply it.
 
 In case the information is not present, it can be derived from the following fields in the spec:
     * `garden.spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources`

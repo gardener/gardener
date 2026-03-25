@@ -790,14 +790,6 @@ type GardenStatus struct {
 	// Credentials contains information about the virtual garden cluster credentials.
 	// +optional
 	Credentials *Credentials `json:"credentials,omitempty"`
-	// EncryptedResources is the list of resources which are currently encrypted in the virtual garden by the virtual kube-apiserver.
-	// Resources which are encrypted by default will not appear here.
-	// See https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config for more details.
-	//
-	// Deprecated: This field is deprecated and will be removed with release v1.138.
-	// This field will be removed in favor of `status.credentials.encryptionAtRest.resources`.
-	// +optional
-	EncryptedResources []string `json:"encryptedResources,omitempty"`
 }
 
 // Credentials contains information about the virtual garden cluster credentials.

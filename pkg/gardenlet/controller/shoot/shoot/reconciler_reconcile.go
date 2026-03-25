@@ -499,9 +499,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 							encryptionProviderType = v1beta1helper.GetEncryptionProviderType(o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer)
 						}
 
-						// TODO(AleksandarSavchev): Stop setting the shoot.Status.EncryptedResources after v1.135 has been released.
-						shoot.Status.EncryptedResources = encryptedResources
-
 						if shoot.Status.Credentials == nil {
 							shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{}
 						}

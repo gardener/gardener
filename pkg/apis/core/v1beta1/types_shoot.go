@@ -215,14 +215,10 @@ type ShootStatus struct {
 	// LastMaintenance holds information about the last maintenance operations on the Shoot.
 	// +optional
 	LastMaintenance *LastMaintenance `json:"lastMaintenance,omitempty" protobuf:"bytes,17,opt,name=lastMaintenance"`
-	// EncryptedResources is the list of resources in the Shoot which are currently encrypted.
-	// Secrets are encrypted by default and are not part of the list.
-	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
-	//
-	// Deprecated: This field is deprecated and will be removed with release v1.138.
-	// This field will be removed in favor of `status.credentials.encryptionAtRest.resources`.
-	// +optional
-	EncryptedResources []string `json:"encryptedResources,omitempty" protobuf:"bytes,18,rep,name=encryptedResources"`
+
+	// EncryptedResources is tombstoned to show why 18 is reserved protobuf tag.
+	// EncryptedResources []string `json:"encryptedResources,omitempty" protobuf:"bytes,18,rep,name=encryptedResources"`
+
 	// Networking contains information about cluster networking such as CIDRs.
 	// +optional
 	Networking *NetworkingStatus `json:"networking,omitempty" protobuf:"bytes,19,opt,name=networking"`
