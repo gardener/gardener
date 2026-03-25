@@ -11,17 +11,9 @@ gardener:
     deployed: true
   seed:
     deployed: true
-    istio:
-      listenAddresses:
-      - 172.18.255.1
-    bastion:
-      listenAddresses:
-      - 172.18.255.22
   repositoryRoot: "."
   garden:
     deployed: false
-    virtualGarden:
-      listenAddress: 172.18.255.3
 
 backupBucket:
   deployed: true
