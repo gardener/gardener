@@ -79,7 +79,7 @@ Once a new Go version is released, please consider the guidance below for updati
    Check the registry to see when the new image variant is available:  
    [europe-docker.pkg.dev/gardener-project/releases/ci-infra/golang-test](https://console.cloud.google.com/artifacts/docker/gardener-project/europe/releases/ci-infra%2Fgolang-test)
 
-3. Maintain the image variants of the [`krte`](https://github.com/gardener/ci-infra/tree/master/images/krte) image used for end-to-end testing in [KinD](https://kind.sigs.k8s.io/) in the [`ci-infra:hack/tools/image/variants.yaml`](https://github.com/gardener/ci-infra/blob/master/images/krte/variants.yaml) file.
+3. Maintain the image variants of the [`krte`](https://github.com/gardener/ci-infra/tree/master/images/krte) image used for end-to-end testing in [KinD](https://kind.sigs.k8s.io/) in the [GitHub workflow](https://github.com/gardener/ci-infra/blob/master/.github/workflows/krte-images.yaml) used to build it.
    Remove older Go versions [if they are no longer supported](https://endoflife.date/go) and add the new version ([example](https://github.com/gardener/ci-infra/pull/4332)).  
    Check the registry to see when the new image variant is available:  
    [europe-docker.pkg.dev/gardener-project/releases/ci-infra/krte](https://console.cloud.google.com/artifacts/docker/gardener-project/europe/releases/ci-infra%2Fkrte)
