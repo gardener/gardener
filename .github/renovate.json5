@@ -545,7 +545,7 @@
     {
       // Enable specific paths which have been disabled by the previous rule.
       matchFileNames: [
-        'pkg/provider-local/node/*',
+        'pkg/provider-local/machine-provider/image/*',
       ],
       enabled: true,
     },

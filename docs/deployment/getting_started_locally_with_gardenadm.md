@@ -52,7 +52,7 @@ Use the following command to prepare the `gardenadm` unmanaged infrastructure sc
 make gardenadm-up
 ```
 
-This will first build the needed images, deploy 2 machine pods using the [`gardener-extension-provider-local-node` image](../../pkg/provider-local/node), install the `gardenadm` binary on both of them, and copy the needed manifests to the `/gardenadm/resources` directory.
+This will first build the needed images, deploy 2 machine pods using the [`gardener-extension-provider-local/node` image](../../pkg/provider-local/machine-provider/image), install the `gardenadm` binary on both of them, and copy the needed manifests to the `/gardenadm/resources` directory.
 
 Afterward, you can use `kubectl exec` to execute `gardenadm` commands on the machines.
 
