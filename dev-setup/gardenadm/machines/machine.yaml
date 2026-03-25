@@ -32,10 +32,16 @@ spec:
           if [ -z "$(ls -A /mnt/systemd-system)" ]; then
             cp -a /etc/systemd/system/. /mnt/systemd-system/
           fi
+          if [ -z "$(ls -A /mnt/containerd)" ]; then
+            cp -a /etc/containerd/. /mnt/containerd/
+          fi
         volumeMounts:
         - name: machine-state
           mountPath: /mnt/systemd-system
           subPath: systemd-system
+        - name: machine-state
+          mountPath: /mnt/containerd
+          subPath: containerd
       containers:
       - name: node
         image: local-skaffold/gardener-extension-provider-local-node
@@ -59,6 +65,12 @@ spec:
         - name: machine-state
           mountPath: /gardenadm
           subPath: gardenadm
+        - name: machine-state
+          mountPath: /etc/containerd
+          subPath: containerd
+        - name: machine-state
+          mountPath: /etc/cni/net.d
+          subPath: cni-net-d
         - name: machine-state
           mountPath: /etc/kubernetes
           subPath: kubernetes
