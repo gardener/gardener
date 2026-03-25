@@ -37,6 +37,12 @@ parse_flags "$@"
 
 LOOPBACK_IP_ADDRESSES=(172.18.255.53 fd00:ff::53)
 
+# load balancer range (172.18.255.240/28)
+LOOPBACK_IP_ADDRESSES+=( $(printf "172.18.255.%d\n" {240..255}) )
+if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
+  LOOPBACK_IP_ADDRESSES+=( $(printf "fd00:ff::f%x\n" {0..15}) )
+fi
+
 if ! command -v ip &>/dev/null; then
   if [[ "$OSTYPE" == "darwin"* ]]; then
     echo "'ip' command not found. Please install 'ip' command, refer https://github.com/gardener/gardener/blob/master/docs/development/local_setup.md#installing-iproute2" 1>&2
