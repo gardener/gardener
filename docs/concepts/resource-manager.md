@@ -535,7 +535,9 @@ Otherwise, once approved, the `kube-controller-manager`'s `csrsigner` controller
 ### [`NetworkPolicy` Controller](../../pkg/resourcemanager/controller/networkpolicy)
 
 This controller reconciles `Service`s with a non-empty `.spec.podSelector`.
-It creates two `NetworkPolicy`s for each port in the `.spec.ports[]` list.
+It creates two `NetworkPolicy`s for each port in the `.spec.ports[]` list, but only if there are pods in the target namespace carrying the corresponding `networking.resources.gardener.cloud/to-*` label.
+When no matching pods exist, the policies are not created (or are deleted if they existed before).
+Pods appearing or disappearing with these labels trigger re-reconciliation of the affected services.
 For example:
 
 ```yaml

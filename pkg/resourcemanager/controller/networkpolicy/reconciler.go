@@ -17,6 +17,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,6 +39,7 @@ var fromPolicyRegexp = regexp.MustCompile(resourcesv1alpha1.NetworkPolicyFromPol
 // Reconciler reconciles Service objects and creates NetworkPolicy objects.
 type Reconciler struct {
 	TargetClient client.Client
+	TargetScheme *runtime.Scheme
 	Config       resourcemanagerconfigv1alpha1.NetworkPolicyControllerConfig
 	Recorder     events.EventRecorder
 
@@ -175,17 +177,16 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, log logr.Logg
 				{objectMetaFunc: ingressObjectMetaFunc, reconcileFunc: r.reconcileIngressPolicy},
 				{objectMetaFunc: egressObjectMetaFunc, reconcileFunc: r.reconcileEgressPolicy},
 			} {
-				reconcileFn := fns.reconcileFunc
 				objectMeta := fns.objectMetaFunc(policyID, service.Namespace, namespaceName)
 				desiredObjectMetaKeys = append(desiredObjectMetaKeys, key(objectMeta))
 
 				taskFns = append(taskFns, func(ctx context.Context) error {
-					return reconcileFn(ctx, log, service, port, objectMeta, namespaceName, podLabelSelector)
+					return fns.reconcileFunc(ctx, log, service, port, objectMeta, namespaceName, podLabelSelector)
 				})
 			}
 		}
 
-		addTasksForRelevantNamespacesAndPort = func(port networkingv1.NetworkPolicyPort, customPodLabelSelector string) {
+		addTasksForRelevantNamespacesAndPort = func(port networkingv1.NetworkPolicyPort, customPodLabelSelector string) error {
 			policyID := policyIDFor(service.Name, port)
 			podLabelSelector := policyID
 
@@ -194,11 +195,22 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, log logr.Logg
 				podLabelSelector = customPodLabelSelector
 			}
 
-			for _, n := range namespaceNames.UnsortedList() {
-				namespaceName := n
+			for _, namespaceName := range namespaceNames.UnsortedList() {
 				matchLabels := matchLabelsForServiceAndNamespace(podLabelSelector, service, namespaceName)
+				effectiveLabels, _ := shortenPodSelectorKeysIfTooLong(metav1.LabelSelector{MatchLabels: matchLabels})
+
+				podsExist, err := kubernetesutils.ResourcesExist(ctx, r.TargetClient, &corev1.PodList{}, r.TargetScheme, client.InNamespace(namespaceName), client.MatchingLabels(effectiveLabels.MatchLabels))
+				if err != nil {
+					return fmt.Errorf("failed checking if pods exist with labels %v in namespace %s: %w", effectiveLabels.MatchLabels, namespaceName, err)
+				}
+				if !podsExist {
+					continue
+				}
+
 				addTasksForPort(port, policyID, namespaceName, metav1.LabelSelector{MatchLabels: matchLabels}, ingressPolicyObjectMetaFor, egressPolicyObjectMetaFor)
 			}
+
+			return nil
 		}
 	)
 
@@ -209,9 +221,10 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, log logr.Logg
 		return nil, nil, nil
 	}
 
-	for _, p := range service.Spec.Ports {
-		port := p
-		addTasksForRelevantNamespacesAndPort(networkingv1.NetworkPolicyPort{Protocol: &port.Protocol, Port: &port.TargetPort}, "")
+	for _, port := range service.Spec.Ports {
+		if err := addTasksForRelevantNamespacesAndPort(networkingv1.NetworkPolicyPort{Protocol: &port.Protocol, Port: &port.TargetPort}, ""); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	for k, allowedPorts := range service.Annotations {
@@ -230,7 +243,9 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, log logr.Logg
 		}
 
 		for _, port := range ports {
-			addTasksForRelevantNamespacesAndPort(port, customPodLabelSelector)
+			if err := addTasksForRelevantNamespacesAndPort(port, customPodLabelSelector); err != nil {
+				return nil, nil, err
+			}
 		}
 	}
 
@@ -247,8 +262,7 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, log logr.Logg
 		return nil, nil, err
 	}
 
-	for _, p := range portsExposedViaIngresses {
-		port := p
+	for _, port := range portsExposedViaIngresses {
 		policyID := policyIDFor(service.Name, port)
 		addTasksForPort(port, policyID, r.Config.IngressControllerSelector.Namespace, r.Config.IngressControllerSelector.PodSelector, ingressPolicyObjectMetaWhenExposedViaIngressFor, egressPolicyObjectMetaWhenExposedViaIngressFor)
 	}
@@ -260,9 +274,7 @@ func (r *Reconciler) deleteStalePolicies(networkPolicyList *metav1.PartialObject
 	objectMetaKeysForDesiredPolicies := sets.New(desiredObjectMetaKeys...)
 	var taskFns []flow.TaskFn
 
-	for _, n := range networkPolicyList.Items {
-		networkPolicy := n
-
+	for _, networkPolicy := range networkPolicyList.Items {
 		if !objectMetaKeysForDesiredPolicies.Has(key(networkPolicy.ObjectMeta)) {
 			taskFns = append(taskFns, func(ctx context.Context) error {
 				return kubernetesutils.DeleteObject(ctx, r.TargetClient, &networkPolicy)
