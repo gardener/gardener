@@ -25,6 +25,7 @@ func (in *CloudProfileConfig) DeepCopyInto(out *CloudProfileConfig) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	out.LoadBalancer = in.LoadBalancer
 	return
 }
 

@@ -661,8 +661,8 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						},
 					}},
 				))
-				Expect(namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig.Raw).To(Equal(
-					[]byte(`{"machineImages":[{"name":"machine-image-1","versions":[{"image":"local-dev:1.0.0","version":"1.0.0"}]}]}`)))
+				Expect(namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig.Raw).To(ContainSubstring(
+					`"machineImages":[{"name":"machine-image-1","versions":[{"image":"local-dev:1.0.0","version":"1.0.0"}]}]`))
 
 				// Simulate a status update by the provider extension.
 				namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig = &runtime.RawExtension{Object: &v1alpha1.CloudProfileConfig{MachineImages: []v1alpha1.MachineImages{
@@ -679,10 +679,10 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				}}))
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
 				Expect(namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig.Raw).To(SatisfyAll(
-					ContainSubstring(`{"machineImages":[{"`),
+					ContainSubstring(`"machineImages":[{"`),
 					ContainSubstring(`{"name":"machine-image-1","versions":[`),
 					ContainSubstring(`{"name":"machine-image-2","versions":[`),
-					ContainSubstring(`"}]}]}`),
+					ContainSubstring(`"}]}]`),
 				))
 
 				// Update NamespacedCloudProfile spec.
@@ -716,8 +716,8 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					}},
 				))
 				// Make sure that status providerConfig is set to cloudProfile providerConfig again.
-				Expect(namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig.Raw).To(Equal(
-					[]byte(`{"machineImages":[{"name":"machine-image-1","versions":[{"image":"local-dev:1.0.0","version":"1.0.0"}]}]}`)))
+				Expect(namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig.Raw).To(ContainSubstring(
+					`"machineImages":[{"name":"machine-image-1","versions":[{"image":"local-dev:1.0.0","version":"1.0.0"}]}]`))
 			})
 		})
 
