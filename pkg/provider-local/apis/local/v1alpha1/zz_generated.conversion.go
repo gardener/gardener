@@ -120,6 +120,9 @@ func RegisterConversions(s *runtime.Scheme) error {
 
 func autoConvert_v1alpha1_CloudProfileConfig_To_local_CloudProfileConfig(in *CloudProfileConfig, out *local.CloudProfileConfig, s conversion.Scope) error {
 	out.MachineImages = *(*[]local.MachineImages)(unsafe.Pointer(&in.MachineImages))
+	if err := Convert_v1alpha1_LoadBalancer_To_local_LoadBalancer(&in.LoadBalancer, &out.LoadBalancer, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -130,6 +133,9 @@ func Convert_v1alpha1_CloudProfileConfig_To_local_CloudProfileConfig(in *CloudPr
 
 func autoConvert_local_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(in *local.CloudProfileConfig, out *CloudProfileConfig, s conversion.Scope) error {
 	out.MachineImages = *(*[]MachineImages)(unsafe.Pointer(&in.MachineImages))
+	if err := Convert_local_LoadBalancer_To_v1alpha1_LoadBalancer(&in.LoadBalancer, &out.LoadBalancer, s); err != nil {
+		return err
+	}
 	return nil
 }
 

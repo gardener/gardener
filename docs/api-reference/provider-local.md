@@ -59,6 +59,19 @@ string
 logical names and versions to provider-specific identifiers.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>loadBalancer</code></br>
+<em>
+<a href="#local.provider.extensions.gardener.cloud/v1alpha1.LoadBalancer">
+LoadBalancer
+</a>
+</em>
+</td>
+<td>
+<p>LoadBalancer contains the configuration for the service controller of cloud-controller-manager-local.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="local.provider.extensions.gardener.cloud/v1alpha1.WorkerStatus">WorkerStatus
