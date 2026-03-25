@@ -61,11 +61,6 @@ func (r *Registry) AddArtifact(oci *gardencorev1.OCIRepository, data []byte) {
 	r.artifacts[artifactKey(oci)] = data
 }
 
-// SetExpectedSecretNamespace sets the expected secret namespace.
-func (r *Registry) SetExpectedSecretNamespace(namespace string) {
-	r.expectedSecretNamespace = namespace
-}
-
 func artifactKey(oci *gardencorev1.OCIRepository) string {
 	if oci.Ref != nil {
 		return *oci.Ref
