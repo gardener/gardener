@@ -313,6 +313,7 @@ func (r *Reconciler) delete(
 		destroyEtcdDruid = g.Add(flow.Task{
 			Name:         "Destroying ETCD Druid",
 			Fn:           component.OpDestroyAndWait(c.etcdDruid).Destroy,
+			SkipIf:       runtimeClusterIsSelfHostedShoot,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
 		destroyIstio = g.Add(flow.Task{
@@ -414,26 +415,31 @@ func (r *Reconciler) delete(
 		destroyGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Destroying and waiting for gardener-resource-manager to be deleted",
 			Fn:           component.OpWait(c.gardenerResourceManager).Destroy,
+			SkipIf:       runtimeClusterIsSelfHostedShoot,
 			Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExistAnymore),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for extensions",
 			Fn:           component.OpWait(c.extensionCRD).Destroy,
+			SkipIf:       runtimeClusterIsSelfHostedShoot,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for prometheus-operator",
 			Fn:           component.OpWait(c.prometheusCRD).Destroy,
+			SkipIf:       runtimeClusterIsSelfHostedShoot,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for opentelemetry-operator",
 			Fn:           component.OpWait(c.openTelemetryCRD).Destroy,
+			SkipIf:       runtimeClusterIsSelfHostedShoot,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for fluent-operator",
 			Fn:           component.OpWait(c.fluentCRD).Destroy,
+			SkipIf:       runtimeClusterIsSelfHostedShoot,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
@@ -444,22 +450,25 @@ func (r *Reconciler) delete(
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for VPA",
 			Fn:           component.OpWait(c.vpaCRD).Destroy,
-			SkipIf:       !vpaEnabled(garden.Spec.RuntimeCluster.Settings),
+			SkipIf:       !vpaEnabled(garden.Spec.RuntimeCluster.Settings) || runtimeClusterIsSelfHostedShoot,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying ETCD-related custom resource definitions",
 			Fn:           component.OpWait(c.etcdCRD).Destroy,
+			SkipIf:       runtimeClusterIsSelfHostedShoot,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for perses-operator",
 			Fn:           component.OpWait(c.persesCRD).Destroy,
+			SkipIf:       runtimeClusterIsSelfHostedShoot,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for victoria-operator",
 			Fn:           component.OpWait(c.victoriaCRD).Destroy,
+			SkipIf:       runtimeClusterIsSelfHostedShoot,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
