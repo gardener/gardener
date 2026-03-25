@@ -7,6 +7,8 @@
 package imagevector
 
 const (
+	// ImageNameCloudControllerManagerLocal is a constant for an image in the image vector with name 'cloud-controller-manager-local'.
+	ImageNameCloudControllerManagerLocal = "cloud-controller-manager-local"
 	// ImageNameLocalPathHelper is a constant for an image in the image vector with name 'local-path-helper'.
 	ImageNameLocalPathHelper = "local-path-helper"
 	// ImageNameLocalPathProvisioner is a constant for an image in the image vector with name 'local-path-provisioner'.

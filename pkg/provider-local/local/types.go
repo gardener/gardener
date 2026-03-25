@@ -18,14 +18,11 @@ const (
 	// FieldOwner is a constant for the owner name in `.metadata.managedFields`.
 	FieldOwner = client.FieldOwner("gardener-extension-provider-local")
 
-	// MachineControllerManagerName is a constant for the name of the machine-controller-manager.
-	MachineControllerManagerName = "machine-controller-manager"
-	// MachineControllerManagerVpaName is the name of the VerticalPodAutoscaler of the machine-controller-manager
-	// deployment.
-	MachineControllerManagerVpaName = "machine-controller-manager-vpa"
-	// MachineControllerManagerMonitoringConfigName is the name of the ConfigMap containing monitoring stack
-	// configurations for machine-controller-manager.
-	MachineControllerManagerMonitoringConfigName = "machine-controller-manager-monitoring-config"
+	// CloudProviderConfigName is the name of the configmap containing the cloud provider config.
+	CloudProviderConfigName = "cloud-provider-config"
+
+	// CloudControllerManagerName is a constant for the name of the cloud-controller-manager deployed by the controlplane controller.
+	CloudControllerManagerName = "cloud-controller-manager"
 
 	// LabelNetworkPolicyToIstioIngressGateway allows Egress from pods labeled with
 	// 'networking.gardener.cloud/to-istio-ingressgateway=allowed' to istio-ingressgateway pods running in

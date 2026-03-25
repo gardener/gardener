@@ -2,6 +2,4 @@ dependencies:
 - name: cloud-controller-manager
   repository: http://localhost:10191
   version: 0.1.0
-- name: local-path-provisioner
-  repository: http://localhost:10191
-  version: 0.1.0
+  condition: cloud-controller-manager.enabled
