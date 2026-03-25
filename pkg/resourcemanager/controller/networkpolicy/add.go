@@ -44,9 +44,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 	if r.TargetClient == nil {
 		r.TargetClient = targetCluster.GetClient()
 	}
-	if r.TargetScheme == nil {
-		r.TargetScheme = targetCluster.GetScheme()
-	}
 	if r.Recorder == nil {
 		r.Recorder = mgr.GetEventRecorder(ControllerName + "-controller")
 	}

@@ -17,7 +17,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,7 +38,6 @@ var fromPolicyRegexp = regexp.MustCompile(resourcesv1alpha1.NetworkPolicyFromPol
 // Reconciler reconciles Service objects and creates NetworkPolicy objects.
 type Reconciler struct {
 	TargetClient client.Client
-	TargetScheme *runtime.Scheme
 	Config       resourcemanagerconfigv1alpha1.NetworkPolicyControllerConfig
 	Recorder     events.EventRecorder
 
@@ -158,6 +156,18 @@ func (r *Reconciler) fetchRelevantNamespaceNames(ctx context.Context, service *c
 }
 
 func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, log logr.Logger, service *corev1.Service, namespaceNames sets.Set[string]) ([]flow.TaskFn, []string, error) {
+	// If the namespace of the Service is terminating, we don't want to create or maintain any policies. The Service
+	// itself is expected to disappear soon (namespace controller cleans up all resources on namespace deletion), so
+	// whatever we would do here will become obsolete very soon.
+	if !namespaceNames.Has(service.Namespace) {
+		return nil, nil, nil
+	}
+
+	podLabelKeysByNamespace, err := r.podNetworkPolicyLabelKeysByNamespace(ctx, namespaceNames)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	var (
 		taskFns               []flow.TaskFn
 		desiredObjectMetaKeys []string
@@ -186,7 +196,7 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, log logr.Logg
 			}
 		}
 
-		addTasksForRelevantNamespacesAndPort = func(port networkingv1.NetworkPolicyPort, customPodLabelSelector string) error {
+		addTasksForRelevantNamespacesAndPort = func(port networkingv1.NetworkPolicyPort, customPodLabelSelector string) {
 			policyID := policyIDFor(service.Name, port)
 			podLabelSelector := policyID
 
@@ -199,32 +209,29 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, log logr.Logg
 				matchLabels := matchLabelsForServiceAndNamespace(podLabelSelector, service, namespaceName)
 				effectiveLabels, _ := shortenPodSelectorKeysIfTooLong(metav1.LabelSelector{MatchLabels: matchLabels})
 
-				podsExist, err := kubernetesutils.ResourcesExist(ctx, r.TargetClient, &corev1.PodList{}, r.TargetScheme, client.InNamespace(namespaceName), client.MatchingLabels(effectiveLabels.MatchLabels))
-				if err != nil {
-					return fmt.Errorf("failed checking if pods exist with labels %v in namespace %s: %w", effectiveLabels.MatchLabels, namespaceName, err)
+				// Check whether any pod in this namespace carries the effective label key — using the
+				// pre-fetched per-namespace label key set instead of listing pods again for every
+				// (namespace, port) combination.
+				labelKeys := podLabelKeysByNamespace[namespaceName]
+				hasPods := false
+				for k := range effectiveLabels.MatchLabels {
+					if labelKeys.Has(k) {
+						hasPods = true
+						break
+					}
 				}
-				if !podsExist {
+
+				if !hasPods {
 					continue
 				}
 
 				addTasksForPort(port, policyID, namespaceName, metav1.LabelSelector{MatchLabels: matchLabels}, ingressPolicyObjectMetaFor, egressPolicyObjectMetaFor)
 			}
-
-			return nil
 		}
 	)
 
-	// If the namespace of the Service is terminating, we don't want to create or maintain any policies. The Service
-	// itself is expected to disappear soon (namespace controller cleans up all resources on namespace deletion), so
-	// whatever we would do here will become obsolete very soon.
-	if !namespaceNames.Has(service.Namespace) {
-		return nil, nil, nil
-	}
-
 	for _, port := range service.Spec.Ports {
-		if err := addTasksForRelevantNamespacesAndPort(networkingv1.NetworkPolicyPort{Protocol: &port.Protocol, Port: &port.TargetPort}, ""); err != nil {
-			return nil, nil, err
-		}
+		addTasksForRelevantNamespacesAndPort(networkingv1.NetworkPolicyPort{Protocol: &port.Protocol, Port: &port.TargetPort}, "")
 	}
 
 	for k, allowedPorts := range service.Annotations {
@@ -243,9 +250,7 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, log logr.Logg
 		}
 
 		for _, port := range ports {
-			if err := addTasksForRelevantNamespacesAndPort(port, customPodLabelSelector); err != nil {
-				return nil, nil, err
-			}
+			addTasksForRelevantNamespacesAndPort(port, customPodLabelSelector)
 		}
 	}
 
@@ -544,4 +549,32 @@ func egressNamespaceSelectorFor(serviceNamespace, namespaceName string) *metav1.
 
 func key(meta metav1.ObjectMeta) string {
 	return meta.Namespace + "/" + meta.Name
+}
+
+// podNetworkPolicyLabelKeysByNamespace lists pods in each namespace once and collects the network policy label keys
+// (prefix "networking.resources.gardener.cloud/to-" with value "allowed") into a set per namespace. This avoids
+// repeated informer scans when checking multiple ports per namespace.
+func (r *Reconciler) podNetworkPolicyLabelKeysByNamespace(ctx context.Context, namespaceNames sets.Set[string]) (map[string]sets.Set[string], error) {
+	result := make(map[string]sets.Set[string], namespaceNames.Len())
+
+	for _, ns := range namespaceNames.UnsortedList() {
+		podList := &metav1.PartialObjectMetadataList{}
+		podList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("PodList"))
+		if err := r.TargetClient.List(ctx, podList, client.InNamespace(ns)); err != nil {
+			return nil, fmt.Errorf("failed listing pods in namespace %s: %w", ns, err)
+		}
+
+		labelKeys := sets.New[string]()
+		for _, pod := range podList.Items {
+			for k, v := range pod.Labels {
+				if v == v1beta1constants.LabelNetworkPolicyAllowed && strings.HasPrefix(k, resourcesv1alpha1.NetworkPolicyLabelKeyPrefix+"to-") {
+					labelKeys.Insert(k)
+				}
+			}
+		}
+
+		result[ns] = labelKeys
+	}
+
+	return result, nil
 }
