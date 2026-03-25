@@ -59,6 +59,9 @@ run "skaffold-gardenadm.yaml" "gardener-extension-provider-local"         "provi
 run "skaffold-gardenadm.yaml" "cloud-controller-manager-local"            "provider-local"
 run "skaffold-gardenadm.yaml" "machine-controller-manager-provider-local" "provider-local"
 
+# skaffold-cloud-provider-local.yaml
+run "skaffold-cloud-provider-local.yaml" "cloud-controller-manager-local" "cloud-provider-local"
+
 if ! $success ; then
   exit 1
 fi
