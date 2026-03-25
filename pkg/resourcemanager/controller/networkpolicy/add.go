@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -43,6 +44,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 	if r.TargetClient == nil {
 		r.TargetClient = targetCluster.GetClient()
 	}
+	if r.TargetScheme == nil {
+		r.TargetScheme = targetCluster.GetScheme()
+	}
 	if r.Recorder == nil {
 		r.Recorder = mgr.GetEventRecorder(ControllerName + "-controller")
 	}
@@ -71,6 +75,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 	namespace := &metav1.PartialObjectMetadata{}
 	namespace.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace"))
 
+	pod := &metav1.PartialObjectMetadata{}
+	pod.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
+
 	c, err := builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -94,6 +101,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 			targetCluster.GetCache(),
 			namespace,
 			r.EventHandlerForNamespace(mgr.GetLogger().WithValues("controller", ControllerName)),
+		)).
+		WatchesRawSource(source.Kind[client.Object](
+			targetCluster.GetCache(),
+			pod,
+			handler.EnqueueRequestsFromMapFunc(r.MapPodToServices(mgr.GetLogger().WithValues("controller", ControllerName))),
+			r.PodPredicate(),
 		)).
 		Build(r)
 	if err != nil {
@@ -293,4 +306,55 @@ func (r *Reconciler) MapIngressToServices(_ context.Context, obj client.Object) 
 	}
 
 	return requests
+}
+
+// PodPredicate returns a predicate which filters for pods with `networking.resources.gardener.cloud/to-*` labels.
+func (r *Reconciler) PodPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return hasNetworkPolicyToLabels(e.Object.GetLabels())
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return !maps.Equal(getNetworkPolicyToLabels(e.ObjectOld.GetLabels()), getNetworkPolicyToLabels(e.ObjectNew.GetLabels()))
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return hasNetworkPolicyToLabels(e.Object.GetLabels())
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return hasNetworkPolicyToLabels(e.Object.GetLabels())
+		},
+	}
+}
+
+// MapPodToServices returns a handler.MapFunc for mapping a pod to the services that create policies in its namespace.
+func (r *Reconciler) MapPodToServices(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		namespace := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Name: obj.GetNamespace()}}
+		namespace.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace"))
+		if err := r.TargetClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
+			log.Error(err, "Failed to get namespace for pod", "pod", client.ObjectKeyFromObject(obj))
+			return nil
+		}
+
+		return r.getRelevantServiceForNamespace(ctx, namespace, log)
+	}
+}
+
+func hasNetworkPolicyToLabels(labels map[string]string) bool {
+	for k := range labels {
+		if strings.HasPrefix(k, resourcesv1alpha1.NetworkPolicyLabelKeyPrefix+"to-") {
+			return true
+		}
+	}
+	return false
+}
+
+func getNetworkPolicyToLabels(labels map[string]string) map[string]string {
+	result := make(map[string]string)
+	for k, v := range labels {
+		if strings.HasPrefix(k, resourcesv1alpha1.NetworkPolicyLabelKeyPrefix+"to-") {
+			result[k] = v
+		}
+	}
+	return result
 }
