@@ -261,7 +261,7 @@ func run(ctx context.Context, opts *Options) error {
 		compileShootState = g.Add(flow.Task{
 			Name: "Compiling ShootState",
 			Fn: func(ctx context.Context) error {
-				return shootstate.Deploy(ctx, b.Clock, b.GardenClient, b.SeedClientSet.Client(), b.Shoot.GetInfo(), false)
+				return shootstate.Deploy(ctx, b.Clock, b.GardenClient, b.SeedClientSet.Client(), b.Shoot.GetInfo(), b.Shoot.ControlPlaneNamespace, false)
 			},
 			Dependencies: flow.NewTaskIDs(migrateExtensionResources),
 		})

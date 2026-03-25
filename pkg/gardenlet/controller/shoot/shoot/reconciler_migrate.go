@@ -243,7 +243,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		persistShootState = g.Add(flow.Task{
 			Name: "Persisting ShootState in garden cluster",
 			Fn: func(ctx context.Context) error {
-				return shootstate.Deploy(ctx, r.Clock, botanist.GardenClient, botanist.SeedClientSet.Client(), botanist.Shoot.GetInfo(), false)
+				return shootstate.Deploy(ctx, r.Clock, botanist.GardenClient, botanist.SeedClientSet.Client(), botanist.Shoot.GetInfo(), botanist.Shoot.ControlPlaneNamespace, false)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilExtensionResourcesMigrated),
 		})
