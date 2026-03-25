@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
@@ -240,19 +241,27 @@ func (r *Reconciler) requeueServicesForNamespace(ctx context.Context, namespace 
 }
 
 func (r *Reconciler) getRelevantServiceForNamespace(ctx context.Context, namespace client.Object, log logr.Logger) []reconcile.Request {
-	serviceList := &metav1.PartialObjectMetadataList{}
-	serviceList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ServiceList"))
-	if err := r.TargetClient.List(ctx, serviceList); err != nil {
-		log.Error(err, "Failed to list services")
-		return nil
-	}
-
 	var requests []reconcile.Request
 
-	for _, service := range serviceList.Items {
-		// enqueue all the services in the same namespace
+	// Enqueue all services in the same namespace (uses the informer's built-in namespace index).
+	sameNsServiceList := &corev1.ServiceList{}
+	if err := r.TargetClient.List(ctx, sameNsServiceList, client.InNamespace(namespace.GetName())); err != nil {
+		log.Error(err, "Failed to list services in namespace", "namespace", namespace.GetName())
+		return nil
+	}
+	for _, service := range sameNsServiceList.Items {
+		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: service.Name, Namespace: service.Namespace}})
+	}
+
+	// Enqueue cross-namespace services that have namespace-selectors matching this namespace (uses the field index).
+	crossNsServiceList := &corev1.ServiceList{}
+	if err := r.TargetClient.List(ctx, crossNsServiceList, client.MatchingFields{indexer.ServiceNamespaceSelectors: "true"}); err != nil {
+		log.Error(err, "Failed to list services with namespace-selectors")
+		return requests
+	}
+
+	for _, service := range crossNsServiceList.Items {
 		if service.Namespace == namespace.GetName() {
-			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: service.Name, Namespace: service.Namespace}})
 			continue
 		}
 
@@ -273,7 +282,7 @@ func (r *Reconciler) getRelevantServiceForNamespace(ctx context.Context, namespa
 
 			if selector.Matches(labels.Set(namespace.GetLabels())) {
 				requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: service.Name, Namespace: service.Namespace}})
-				break // no need to check other selectors
+				break
 			}
 		}
 	}
