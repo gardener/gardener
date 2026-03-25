@@ -507,3 +507,6 @@ for node in $nodes; do
   done
 done
 echo "Kubelet Serving Certificate Signing Requests approved."
+
+# Automatically start cloud-provider-local on kind cluster
+make -C "$(dirname "$0")/.." cloud-provider-local-up

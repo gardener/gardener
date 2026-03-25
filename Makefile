@@ -350,6 +350,18 @@ export SKAFFOLD_LABEL = "skaffold.dev/run-id=gardener-local"
 %debug: export SKAFFOLD_CACHE_ARTIFACTS = false
 
 
+# cloud-provider-local-{up,dev,debug,down}
+cloud-provider-local-%: export SKAFFOLD_FILENAME = skaffold-cloud-provider-local.yaml
+cloud-provider-local-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	./dev-setup/cloud-provider-local.sh up
+cloud-provider-local-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	./dev-setup/cloud-provider-local.sh dev
+cloud-provider-local-debug: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	./dev-setup/cloud-provider-local.sh debug
+cloud-provider-local-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	./dev-setup/cloud-provider-local.sh down
+
+# gardener-{up,dev,debug,down}
 gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	$(SKAFFOLD) run
 gardener-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
@@ -359,6 +371,7 @@ gardener-debug: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh
 
+# gardenlet-kind2-{up,dev,debug,down}
 gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down: export SKAFFOLD_PREFIX_NAME = kind2
 gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down: export SKAFFOLD_COMMAND_KUBECONFIG := $(GARDENER_LOCAL_KUBECONFIG)
 gardenlet-kind2-up: $(SKAFFOLD) $(HELM) $(KUBECTL)

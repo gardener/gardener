@@ -1,0 +1,98 @@
+apiVersion: skaffold/v4beta12
+kind: Config
+metadata:
+  name: cloud-provider-local
+build:
+  artifacts:
+    - image: local-skaffold/cloud-controller-manager-local
+      ko:
+        dependencies:
+          paths:
+            - cmd/cloud-controller-manager-local
+            - pkg/apis/config
+            - pkg/apis/config/gardenlet/v1alpha1
+            - pkg/apis/core
+            - pkg/apis/core/install
+            - pkg/apis/core/v1
+            - pkg/apis/core/v1beta1
+            - pkg/apis/core/v1beta1/constants
+            - pkg/apis/extensions
+            - pkg/apis/extensions/v1alpha1
+            - pkg/apis/operations
+            - pkg/apis/operations/install
+            - pkg/apis/operations/v1alpha1
+            - pkg/apis/operator
+            - pkg/apis/operator/v1alpha1
+            - pkg/apis/resources
+            - pkg/apis/resources/v1alpha1
+            - pkg/apis/security
+            - pkg/apis/security/install
+            - pkg/apis/security/v1alpha1
+            - pkg/apis/seedmanagement
+            - pkg/apis/seedmanagement/encoding
+            - pkg/apis/seedmanagement/install
+            - pkg/apis/seedmanagement/v1alpha1
+            - pkg/apis/settings
+            - pkg/apis/settings/install
+            - pkg/apis/settings/v1alpha1
+            - pkg/apis/utils
+            - pkg/apis/utils/timewindow
+            - pkg/chartrenderer
+            - pkg/client/kubernetes
+            - pkg/client/kubernetes/cache
+            - pkg/provider-local/apis/local
+            - pkg/provider-local/apis/local/install
+            - pkg/provider-local/apis/local/v1alpha1
+            - pkg/provider-local/cloud-provider/loadbalancer
+            - pkg/provider-local/cloud-provider/provider
+            - pkg/utils
+            - pkg/utils/errors
+            - pkg/utils/validation/kubernetesversion
+            - pkg/utils/version
+            - third_party/open-telemetry/opentelemetry-operator/apis/v1alpha1
+            - third_party/open-telemetry/opentelemetry-operator/apis/v1beta1
+            - VERSION
+        ldflags:
+          - '{{.LD_FLAGS}}'
+        main: ./cmd/cloud-controller-manager-local
+    - image: local-skaffold/gardener-extension-provider-local/loadbalancer
+      context: pkg/provider-local/cloud-provider/loadbalancer/image
+      docker: {}
+  insecureRegistries:
+    - registry.local.gardener.cloud:5001
+  tagPolicy:
+    customTemplate:
+      template: '{{.version}}-{{.sha}}'
+      components:
+        - name: version
+          envTemplate:
+            template: '{{.GARDENER_VERSION}}'
+        - name: sha
+          gitCommit:
+            variant: AbbrevCommitSha
+deploy:
+  helm:
+    releases:
+      # This release deploys the RBAC resources for the cloud-controller-manager
+      - name: cloud-controller-manager-application
+        chartPath: pkg/provider-local/charts/shoot-system-components/charts/cloud-controller-manager
+        namespace: kube-system
+        valuesFiles:
+          - pkg/provider-local/charts/shoot-system-components/charts/cloud-controller-manager/values.yaml
+      # This release deploys the ConfigMap with the cloud provider configuration for the cloud-controller-manager
+      - name: cloud-provider-config
+        chartPath: pkg/provider-local/charts/cloud-provider-config
+        namespace: kube-system
+        valuesFiles:
+          - pkg/provider-local/charts/cloud-provider-config/values.yaml
+        setValueTemplates:
+          loadBalancer.image: '{{.IMAGE_REPO_local_skaffold_gardener_extension_provider_local_loadbalancer}}:{{.IMAGE_TAG_local_skaffold_gardener_extension_provider_local_loadbalancer}}@{{.IMAGE_DIGEST_local_skaffold_gardener_extension_provider_local_loadbalancer}}'
+      # This release deploys the cloud-controller-manager itself along with its ServiceAccount
+      - name: cloud-controller-manager-runtime
+        chartPath: pkg/provider-local/charts/seed-controlplane/charts/cloud-controller-manager
+        namespace: kube-system
+        valuesFiles:
+          - pkg/provider-local/charts/seed-controlplane/charts/cloud-controller-manager/values.yaml
+        setValueTemplates:
+          images.cloud-controller-manager-local: '{{.IMAGE_REPO_local_skaffold_cloud_controller_manager_local}}:{{.IMAGE_TAG_local_skaffold_cloud_controller_manager_local}}@{{.IMAGE_DIGEST_local_skaffold_cloud_controller_manager_local}}'
+          clusterName: '{{.CLUSTER_NAME}}'
