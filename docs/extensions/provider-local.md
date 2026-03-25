@@ -130,6 +130,7 @@ Note that this controller does not respect the `Bastion.spec.ingress` configurat
 
 #### `Service`
 
+TODO: update
 This controller reconciles `Services` of type `LoadBalancer` in the local `Seed` cluster.
 Since the local Kubernetes clusters used as Seed clusters typically don't support such services, this controller sets the `.status.ingress.loadBalancer.ip[0]` to magic `172.18.255.*` or `fd00:ff::*` IP addresses that are added to the loopback interface of the host machine running the kind cluster.
 It makes LoadBalancer Services (e.g. `istio-ingressgateway` and `shoot--*--*/bastion-*`) available to the host by setting `spec.ports[].nodePort` to well-known ports that are mapped to `hostPorts` in the kind cluster configuration.
