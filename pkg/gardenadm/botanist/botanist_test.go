@@ -68,6 +68,21 @@ var _ = Describe("GardenadmBotanist", func() {
 					))
 					Expect(b.Seed.GetInfo()).To(HaveField("ObjectMeta.Labels", HaveKeyWithValue("seed.gardener.cloud/self-hosted-shoot-cluster", "true")))
 				})
+
+				It("should set the LastOperation to Restore when a bootstrap ShootState exists", func() {
+					fsys[configDir+"/bootstrap-shootstate.yaml"] = &fstest.MapFile{Data: []byte(`apiVersion: core.gardener.cloud/v1beta1
+kind: ShootState
+metadata:
+  name: gardenadm
+`)}
+
+					b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(b.Shoot.GetInfo().Status.LastOperation).NotTo(BeNil())
+					Expect(b.Shoot.GetInfo().Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeRestore))
+					Expect(b.IsRestorePhase()).To(BeTrue())
+				})
 			})
 
 			Context("with managed infrastructure", func() {
