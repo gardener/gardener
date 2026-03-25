@@ -181,6 +181,20 @@ type SettingLoadBalancerServices struct {
 	// Annotations is a map of annotations that will be injected/merged into every load balancer service object.
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
+	// ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
+	// Defaults to nil, which is equivalent to not allowing ProxyProtocol.
+	// +optional
+	ProxyProtocol *LoadBalancerServicesProxyProtocol `json:"proxyProtocol,omitempty"`
+}
+
+// LoadBalancerServicesProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
+type LoadBalancerServicesProxyProtocol struct {
+	// Allowed controls whether the ProxyProtocol is optionally allowed for the load balancer services.
+	// This should only be enabled if the load balancer services are already using ProxyProtocol or will be reconfigured to use it soon.
+	// Until the load balancers are configured with ProxyProtocol, enabling this setting may allow clients to spoof their source IP addresses.
+	// The option allows a migration from non-ProxyProtocol to ProxyProtocol without downtime (depending on the infrastructure).
+	// Defaults to false.
+	Allowed bool `json:"allowed"`
 }
 
 // SettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
