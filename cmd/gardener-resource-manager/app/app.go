@@ -249,6 +249,7 @@ func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 	for _, fn := range []func(context.Context, client.FieldIndexer) error{
 		// core/v1 API group
 		indexer.AddPodNodeName,
+		indexer.AddServiceNamespaceSelectors,
 	} {
 		if err := fn(ctx, i); err != nil {
 			return err

@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	. "github.com/gardener/gardener/pkg/resourcemanager/controller/networkpolicy"
 )
@@ -37,7 +38,10 @@ var _ = Describe("Add", func() {
 
 	BeforeEach(func() {
 		log = logr.Discard()
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(resourcemanagerclient.TargetScheme).Build()
+		fakeClient = fakeclient.NewClientBuilder().
+			WithScheme(resourcemanagerclient.TargetScheme).
+			WithIndex(&corev1.Service{}, indexer.ServiceNamespaceSelectors, indexer.ServiceNamespaceSelectorsIndexerFunc).
+			Build()
 		reconciler = &Reconciler{
 			TargetClient: fakeClient,
 		}
