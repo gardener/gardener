@@ -1,0 +1,146 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-controller-manager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: kubernetes
+    role: cloud-controller-manager
+    high-availability-config.resources.gardener.cloud/type: controller
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: kubernetes
+      role: cloud-controller-manager
+  template:
+    metadata:
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        # For shoot's, the checksum/configmap-cloud-provider-config annotation is injected by provider-local's
+        # controlplane controller based on the previously deployed cloud-provider-config chart.
+        # When deploying cloud-controller-manager-local to the kind cluster, we deploy both charts separately and thus
+        # need to calculate the checksum by looking up the ConfigMap and calculating the checksum here.
+        {{- if not ( hasKey .Values.podAnnotations "checksum/configmap-cloud-provider-config" ) }}
+        {{- $cm := lookup "v1" "ConfigMap" .Release.Namespace "cloud-provider-config" }}
+        checksum/configmap-cloud-provider-config: {{ toYaml ( required "cloud-provider-config ConfigMap not found and no checksum annotation given" $cm ).data | sha256sum }}
+        {{- end }}
+      labels:
+        gardener.cloud/role: controlplane
+        app: kubernetes
+        role: cloud-controller-manager
+        networking.gardener.cloud/to-dns: allowed
+        {{- if (include "is-shoot" .) }}
+        networking.resources.gardener.cloud/to-kube-apiserver-tcp-443: allowed
+        # Needed for looking up where machine pods are running for setting up routes on the load balancer containers.
+        networking.gardener.cloud/to-runtime-apiserver: allowed
+        {{- end }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      priorityClassName: {{ .Values.priorityClassName }}
+      serviceAccountName: cloud-controller-manager
+      containers:
+      - name: cloud-controller-manager
+        image: {{ index .Values.images "cloud-controller-manager-local" }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - --cloud-provider=local
+        - --cloud-config=/etc/kubernetes/cloudprovider/config.yaml
+        - --cluster-name={{ required "clusterName is required" .Values.clusterName }}
+        {{- if (include "is-shoot" .) }}
+        - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
+        - --authentication-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
+        - --authorization-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
+        {{- end }}
+        - --leader-elect=true
+        - --secure-port={{ .Values.server.port }}
+        {{- if .Values.server.tlsSecret }}
+        - --tls-cert-file=/var/lib/cloud-controller-manager-server/tls.crt
+        - --tls-private-key-file=/var/lib/cloud-controller-manager-server/tls.key
+        {{- end }}
+        {{- with .Values.server.tlsCipherSuites }}
+        - --tls-cipher-suites={{ . | join "," }}
+        {{- end }}
+        - --controllers=service
+        - --concurrent-service-syncs=10
+        - --use-service-account-credentials
+        - --v=2
+        ports:
+        - containerPort: {{ .Values.server.port }}
+          name: metrics
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTPS
+            port: {{ .Values.server.port }}
+          successThreshold: 1
+          failureThreshold: 2
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 15
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          # In CI, the docker socket mounted into the kind nodes can only be accessed as root user.
+          runAsNonRoot: false
+          runAsUser: 0
+          runAsGroup: 0
+        volumeMounts:
+        {{- if (include "is-shoot" .) }}
+        - name: kubeconfig
+          mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
+          readOnly: true
+        - name: cloudprovider
+          mountPath: /var/run/secrets/gardener.cloud/cloudprovider
+          readOnly: true
+        {{- end }}
+        - name: cloud-provider-config
+          mountPath: /etc/kubernetes/cloudprovider
+        {{- if .Values.server.tlsSecret }}
+        - name: cloud-controller-manager-server
+          mountPath: /var/lib/cloud-controller-manager-server
+        {{- end }}
+        - name: docker
+          mountPath: /var/run/docker.sock
+      volumes:
+      {{- if (include "is-shoot" .) }}
+      - name: kubeconfig
+        projected:
+          defaultMode: 420
+          sources:
+          - secret:
+              name: {{ .Values.global.genericTokenKubeconfigSecretName }}
+              items:
+              - key: kubeconfig
+                path: kubeconfig
+              optional: false
+          - secret:
+              name: shoot-access-cloud-controller-manager
+              items:
+              - key: token
+                path: token
+              optional: false
+      - name: cloudprovider
+        secret:
+          secretName: cloudprovider
+      {{- end }}
+      - name: cloud-provider-config
+        configMap:
+          name: cloud-provider-config
+      {{- if .Values.server.tlsSecret }}
+      - name: cloud-controller-manager-server
+        secret:
+          secretName: {{ .Values.server.tlsSecret }}
+      {{- end }}
+      - name: docker
+        hostPath:
+          path: /var/run/docker.sock

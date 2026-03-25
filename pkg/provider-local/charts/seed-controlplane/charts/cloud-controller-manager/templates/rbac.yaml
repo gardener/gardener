@@ -1,0 +1,55 @@
+# Deploy a ServiceAccount for cloud-controller-manager for the runtime cluster:
+# - In the kind cluster, this is the "main" ServiceAccount for running the cloud-controller-manager's controllers.
+#   No other ServiceAccount is created/needed in this case.
+# - In the shoot cluster, this is a "secondary" ServiceAccount for looking up shoot machine pods in the runtime cluster.
+#   The "main" ServiceAccount for running the cloud-controller-manager's controllers is created through a shoot access
+#   secret.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cloud-controller-manager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: kubernetes
+    role: cloud-controller-manager
+---
+{{- if (include "is-shoot" .) }}
+# For running the cloud-controller-manager for a shoot cluster, we need permissions to look up where shoot machine pods
+# are running in the runtime cluster. This is needed for the cloud-controller-manager to program routes in the load
+# balancer containers, as shoot nodes (machine pods) are not directly reachable by load balancer containers in the kind
+# network.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cloud-controller-manager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: kubernetes
+    role: cloud-controller-manager
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cloud-controller-manager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: kubernetes
+    role: cloud-controller-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cloud-controller-manager
+subjects:
+- kind: ServiceAccount
+  name: cloud-controller-manager
+  namespace: {{ .Release.Namespace }}
+{{- end }}

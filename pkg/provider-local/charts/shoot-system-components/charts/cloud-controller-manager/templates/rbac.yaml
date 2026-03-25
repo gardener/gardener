@@ -1,0 +1,103 @@
+# The cloud-controller-manager ServiceAccount is used for
+# - leader election
+# - reading the extension-apiserver-authentication ConfigMap (for verifying incoming requests)
+# - starting shared informers (watches) for all controllers
+# - requesting tokens for the controller-specific ServiceAccounts (like in kube-controller-manager), e.g., kube-system/cloud-service-controller (used for write requests)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: system:cloud-controller-manager
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    resources.gardener.cloud/keep-object: "true"
+rules:
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+  - list
+  - watch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  resourceNames:
+  - cloud-controller-manager
+  verbs:
+  - update
+  - get
+- apiGroups:
+  - ""
+  - events.k8s.io
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts/token
+  resourceNames:
+  - service-controller
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: system:cloud-controller-manager
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    resources.gardener.cloud/keep-object: "true"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: system:cloud-controller-manager
+subjects:
+- kind: ServiceAccount
+  name: cloud-controller-manager
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: system:cloud-controller-manager:auth-reader
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    resources.gardener.cloud/keep-object: "true"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+- kind: ServiceAccount
+  name: cloud-controller-manager
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:cloud-controller-manager:service-controller
+  annotations:
+    resources.gardener.cloud/keep-object: "true"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:controller:service-controller
+subjects:
+- kind: ServiceAccount
+  name: cloud-controller-manager
+  namespace: {{ .Release.Namespace }}
