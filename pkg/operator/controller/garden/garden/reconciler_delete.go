@@ -13,6 +13,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -23,6 +24,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/component/garden/system/virtual"
 	gardeneraccess "github.com/gardener/gardener/pkg/component/gardener/access"
@@ -37,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -68,6 +71,14 @@ func (r *Reconciler) delete(
 		false,
 		extensionList,
 	)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// When the runtime cluster is a self-hosted shoot, etcd-druid and the runtime gardener-resource-manager are also
+	// serving the shoot's control plane. They must not be destroyed during Garden deletion — the gardenlet will continue
+	// managing them.
+	runtimeClusterIsSelfHostedShoot, err := gardenletutils.SeedIsSelfHostedShoot(ctx, r.RuntimeClientSet.Client())
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -389,7 +400,7 @@ func (r *Reconciler) delete(
 		})
 		ensureNoManagedResourcesExistAnymore = g.Add(flow.Task{
 			Name:         "Ensuring no ManagedResources exist anymore",
-			Fn:           r.checkIfManagedResourcesExist(),
+			Fn:           r.checkIfManagedResourcesExist(runtimeClusterIsSelfHostedShoot),
 			Dependencies: flow.NewTaskIDs(destroyRuntimeSystemResources),
 		})
 		destroyGardenerResourceManager = g.Add(flow.Task{
@@ -484,7 +495,11 @@ func (r *Reconciler) checkIfVirtualGardenManagedResourcesAreGone(excludedNames .
 			ctx,
 			r.RuntimeClientSet.Client(),
 			nil,
-			append(excludedNames, resourcemanager.ManagedResourceName)...,
+			append(excludedNames, resourcemanager.ManagedResourceName),
+			// When the runtime cluster is a self-hosted shoot, kube-system contains classless ManagedResources for the
+			// shoot's control plane components (managed by gardenlet). These must be excluded to prevent blocking the
+			// Garden deletion flow.
+			[]string{metav1.NamespaceSystem},
 		)
 		if err != nil {
 			return err
@@ -501,12 +516,26 @@ func (r *Reconciler) checkIfVirtualGardenManagedResourcesAreGone(excludedNames .
 	}
 }
 
-func (r *Reconciler) checkIfManagedResourcesExist() func(context.Context) error {
+func (r *Reconciler) checkIfManagedResourcesExist(runtimeClusterIsSelfHostedShoot bool) func(context.Context) error {
 	return func(ctx context.Context) error {
+		var excludeNames, excludeNamespaces []string
+		if runtimeClusterIsSelfHostedShoot {
+			// When the runtime cluster is a self-hosted shoot, kube-system contains seed-class ManagedResources for the
+			// shoot's control plane components (managed by gardenlet). These must be excluded to prevent blocking the
+			// Garden deletion flow.
+			excludeNamespaces = append(excludeNamespaces, metav1.NamespaceSystem)
+			// Additionally, the garden namespace may contain ManagedResource of components which are part of the
+			// self-hosted shoot's control plane. These muss be excluded as well to prevent blocking to the Garden
+			// deletion flow.
+			excludeNames = append(excludeNames, etcd.Druid)
+		}
+
 		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(
 			ctx,
 			r.RuntimeClientSet.Client(),
 			ptr.To(v1beta1constants.SeedResourceManagerClass),
+			excludeNames,
+			excludeNamespaces,
 		)
 		if err != nil {
 			return err
@@ -518,7 +547,7 @@ func (r *Reconciler) checkIfManagedResourcesExist() func(context.Context) error 
 
 		return &reconcilerutils.RequeueAfterError{
 			RequeueAfter: 5 * time.Second,
-			Cause:        errors.New("at least one ManagedResource still exists"),
+			Cause:        fmt.Errorf("at least one ManagedResource with class %q still exists", v1beta1constants.SeedResourceManagerClass),
 		}
 	}
 }

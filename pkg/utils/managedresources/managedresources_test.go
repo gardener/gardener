@@ -749,7 +749,7 @@ var _ = Describe("managedresources", func() {
 
 		Context("w/o class", func() {
 			It("should return false because no resources exist", func() {
-				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, nil)
+				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, nil, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resourcesExist).To(BeFalse())
 			})
@@ -759,7 +759,7 @@ var _ = Describe("managedresources", func() {
 				obj.Spec.Class = &class
 				Expect(fakeClient.Create(ctx, obj)).To(Succeed())
 
-				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, nil)
+				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, nil, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resourcesExist).To(BeFalse())
 			})
@@ -767,7 +767,7 @@ var _ = Describe("managedresources", func() {
 			It("should return true because resources exist", func() {
 				Expect(fakeClient.Create(ctx, managedResource(false))).To(Succeed())
 
-				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, nil)
+				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, nil, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resourcesExist).To(BeTrue())
 			})
@@ -775,7 +775,7 @@ var _ = Describe("managedresources", func() {
 
 		Context("w/ class", func() {
 			It("should return false because no resources exist", func() {
-				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, &class)
+				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, &class, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resourcesExist).To(BeFalse())
 			})
@@ -785,7 +785,7 @@ var _ = Describe("managedresources", func() {
 				obj.Spec.Class = ptr.To("bar")
 				Expect(fakeClient.Create(ctx, obj)).To(Succeed())
 
-				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, &class)
+				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, &class, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resourcesExist).To(BeFalse())
 			})
@@ -795,7 +795,25 @@ var _ = Describe("managedresources", func() {
 				obj.Spec.Class = &class
 				Expect(fakeClient.Create(ctx, obj)).To(Succeed())
 
-				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, &class)
+				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, &class, nil, nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resourcesExist).To(BeTrue())
+			})
+		})
+
+		Context("w/ excluded namespaces", func() {
+			It("should return false because the matching resource is in an excluded namespace", func() {
+				Expect(fakeClient.Create(ctx, managedResource(false))).To(Succeed())
+
+				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, nil, nil, []string{namespace})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resourcesExist).To(BeFalse())
+			})
+
+			It("should return true because the matching resource is not in an excluded namespace", func() {
+				Expect(fakeClient.Create(ctx, managedResource(false))).To(Succeed())
+
+				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, nil, nil, []string{"other-namespace"})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resourcesExist).To(BeTrue())
 			})
