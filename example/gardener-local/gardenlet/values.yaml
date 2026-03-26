@@ -39,7 +39,6 @@ config:
     DefaultSeccompProfile: true
     NewWorkerPoolHash: true
     IstioTLSTermination: true
-    UseUnifiedHTTPProxyPort: true
     VictoriaLogsBackend: true
     VPNBondingModeRoundRobin: true
     PrometheusHealthChecks: true

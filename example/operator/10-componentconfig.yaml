@@ -29,7 +29,6 @@ debugging:
   enableContentionProfiling: false
 featureGates:
   DefaultSeccompProfile: true
-  UseUnifiedHTTPProxyPort: true
 controllers:
   garden:
     concurrentSyncs: 1
