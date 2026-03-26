@@ -99,6 +99,7 @@ function install_previous_release() {
   copy_kubeconfig_from_kubeconfig_env_var
   configure_node_mirror_new_local_registry
   patch_helmregistry_registry_url_port
+  remove_provider_local_service_controller
   gardener_up
   popd >/dev/null
 }
@@ -122,6 +123,15 @@ function configure_node_mirror_new_local_registry() {
 # see: https://prow.gardener.cloud/view/gs/gardener-prow/pr-logs/pull/gardener_gardener/13661/pull-gardener-e2e-kind-upgrade/2000837721429381120
 function patch_helmregistry_registry_url_port() {
   sed -i 's|registry.local.gardener.cloud:5000|registry.local.gardener.cloud:5001|g' "$PWD/pkg/utils/oci/helmregistry.go"
+}
+
+# TODO(timebertt): remove this after v1.140 has been released.
+# In the upgrade tests, `make kind-up` is executed with the new version of Gardener, which includes deploying cloud-controller-manager-local to the kind cluster.
+# However, `make gardener-up` is executed with the old version of Gardener, which still includes the service controller in gardener-extension-provider-local.
+# This leads to a conflict between cloud-controller-manager-local and service controller, as they both try to reconcile LoadBalancer services.
+# This function removes the service controller from the previous version of Gardener to rely on cloud-controller-manager-local throughout the upgrade test.
+function remove_provider_local_service_controller() {
+  sed -i '/servicecontroller/d' cmd/gardener-extension-provider-local/app/options.go
 }
 
 function upgrade_to_next_release() {
