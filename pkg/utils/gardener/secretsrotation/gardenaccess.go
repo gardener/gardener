@@ -14,6 +14,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -27,8 +28,8 @@ func RenewGardenSecretsInAllSeeds(ctx context.Context, log logr.Logger, c client
 
 	log.Info("Seeds requiring renewal of their secrets", v1beta1constants.GardenerOperation, operationAnnotation, "number", len(seedList.Items))
 
+	var tasks []flow.TaskFn
 	for _, seed := range seedList.Items {
-		log := log.WithValues("seed", seed.Name)
 		if seed.Annotations[v1beta1constants.GardenerOperation] == operationAnnotation {
 			continue
 		}
@@ -37,16 +38,22 @@ func RenewGardenSecretsInAllSeeds(ctx context.Context, log logr.Logger, c client
 			return fmt.Errorf("error annotating seed %s: already annotated with \"%s: %s\"", seed.Name, v1beta1constants.GardenerOperation, seed.Annotations[v1beta1constants.GardenerOperation])
 		}
 
-		seed.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))
-		patch := client.MergeFrom(seed.DeepCopy())
-		kubernetesutils.SetMetaDataAnnotation(&seed.ObjectMeta, v1beta1constants.GardenerOperation, operationAnnotation)
-		if err := c.Patch(ctx, &seed, patch); err != nil {
-			return fmt.Errorf("error annotating seed %s: %w", seed.Name, err)
-		}
-		log.Info("Successfully annotated seed to renew its secrets", v1beta1constants.GardenerOperation, operationAnnotation)
+		seed := seed
+		tasks = append(tasks, func(ctx context.Context) error {
+			log := log.WithValues("seed", seed.Name)
+
+			seed.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))
+			patch := client.MergeFrom(seed.DeepCopy())
+			kubernetesutils.SetMetaDataAnnotation(&seed.ObjectMeta, v1beta1constants.GardenerOperation, operationAnnotation)
+			if err := c.Patch(ctx, &seed, patch); err != nil {
+				return fmt.Errorf("error annotating seed %s: %w", seed.Name, err)
+			}
+			log.Info("Successfully annotated seed to renew its secrets", v1beta1constants.GardenerOperation, operationAnnotation)
+			return nil
+		})
 	}
 
-	return nil
+	return flow.ParallelN(5, tasks...)(ctx)
 }
 
 // CheckIfGardenSecretsRenewalCompletedInAllSeeds checks if renewal of garden secrets is completed for all seeds.
