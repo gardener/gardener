@@ -36,6 +36,28 @@ import (
 // ControllerName is the name of this controller.
 const ControllerName = "controllerinstallation-required"
 
+type eventHandlerRegistration struct {
+	lock       sync.Mutex
+	registered bool
+	registerFn func() error
+}
+
+func (e *eventHandlerRegistration) registerOnce() error {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+
+	if e.registered {
+		return nil
+	}
+
+	if err := e.registerFn(); err != nil {
+		return err
+	}
+
+	e.registered = true
+	return nil
+}
+
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluster cluster.Cluster) error {
 	if r.GardenClient == nil {
@@ -99,17 +121,22 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 			return err
 		}
 
-		if err := c.Watch(
-			source.Kind[client.Object](
-				seedCluster.GetCache(),
-				extension.object,
-				eventHandler,
-				extensions.ObjectPredicate(),
-				predicateutils.HasClass(extensionsv1alpha1.ExtensionClassShoot, extensionsv1alpha1.ExtensionClassSeed),
-			),
-		); err != nil {
-			return err
-		}
+		// Since the EnqueueRequestsFromMapFunc is costly, actual watches need to be registered after the manager was started.
+		// Registering them here might otherwise cause cache sync timeouts, esp. in large seed clusters.
+		// See https://github.com/kubernetes-sigs/controller-runtime/issues/3466 and https://github.com/gardener/gardener/issues/14391 for more information.
+		r.deferredEventHandlerRegistrations = append(r.deferredEventHandlerRegistrations, &eventHandlerRegistration{
+			registerFn: func() error {
+				return c.Watch(
+					source.Kind[client.Object](
+						seedCluster.GetCache(),
+						extension.object,
+						eventHandler,
+						extensions.ObjectPredicate(),
+						predicateutils.HasClass(extensionsv1alpha1.ExtensionClassShoot, extensionsv1alpha1.ExtensionClassSeed),
+					),
+				)
+			},
+		})
 	}
 
 	return nil
