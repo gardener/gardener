@@ -106,9 +106,9 @@ func (b *Builder) WithSeedObject(seed *gardencorev1beta1.Seed) *Builder {
 	return b
 }
 
-// WithShootDNSDomain can be used to overwrite the `spec.DNS` configuration of a shoot resource.
-func (b *Builder) WithShootDNSDomain(dnsDomain *gardencorev1beta1.DNS) *Builder {
-	b.shootDNSDomain = &dnsDomain
+// WithShootDNS can be used to overwrite the `spec.DNS` configuration of a shoot resource.
+func (b *Builder) WithShootDNS(dns *gardencorev1beta1.DNS) *Builder {
+	b.shootDNS = &dns
 	return b
 }
 
@@ -213,8 +213,8 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		return nil, err
 	}
 
-	if b.shootDNSDomain != nil {
-		shootObject.Spec.DNS = *b.shootDNSDomain
+	if b.shootDNS != nil {
+		shootObject.Spec.DNS = *b.shootDNS
 	}
 
 	shoot.SetInfo(shootObject)
