@@ -71,6 +71,16 @@ var _ = Describe("Add", func() {
 				Expect(f(secret)).To(BeFalse())
 			})
 
+			It("should return false because object has helm-pull-secret role", func() {
+				secret.Labels["gardener.cloud/role"] = "helm-pull-secret"
+				Expect(f(secret)).To(BeFalse())
+			})
+
+			It("should return false because object has oci-ca-bundle role", func() {
+				secret.Labels["gardener.cloud/role"] = "oci-ca-bundle"
+				Expect(f(secret)).To(BeFalse())
+			})
+
 			It("should return true because object matches all conditions", func() {
 				Expect(f(secret)).To(BeTrue())
 			})

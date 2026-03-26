@@ -119,11 +119,11 @@ var _ = Describe("Reconciler", func() {
 				Expect(fakeClient.Create(ctx, ns)).To(Succeed())
 
 				// Garden secret to sync
-				gardenSecret := createSecret("garden-secret", v1beta1constants.GardenNamespace, []byte("data"), "foo")
+				gardenSecret := createSecret("garden-secret", v1beta1constants.GardenNamespace, "key", []byte("data"), "foo")
 				Expect(fakeClient.Create(ctx, gardenSecret)).To(Succeed())
 
 				// Stale secret in seed namespace that should be deleted
-				staleSecret := createSecret("stale-secret", namespaceName, []byte("old"), "foo")
+				staleSecret := createSecret("stale-secret", namespaceName, "key", []byte("old"), "foo")
 				Expect(fakeClient.Create(ctx, staleSecret)).To(Succeed())
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
@@ -154,6 +154,63 @@ var _ = Describe("Reconciler", func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespaceName}, updatedNs)).To(Succeed())
 				Expect(updatedNs.Labels).To(HaveKeyWithValue(v1beta1constants.GardenRole, v1beta1constants.GardenRoleSeed))
 			})
+
+			It("should not sync secrets with helm-pull-secret or oci-ca-bundle role", func() {
+				ns := &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            namespaceName,
+						OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))},
+						Labels:          map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed},
+					},
+				}
+				Expect(fakeClient.Create(ctx, ns)).To(Succeed())
+
+				// Pull secret in garden namespace — should NOT be synced
+				pullSecret := createSecret("my-pull-secret", v1beta1constants.GardenNamespace, ".dockerconfigjson", []byte("pull"), v1beta1constants.GardenRoleHelmPullSecret)
+				Expect(fakeClient.Create(ctx, pullSecret)).To(Succeed())
+
+				// CA bundle secret in garden namespace — should NOT be synced
+				caBundleSecret := createSecret("my-ca-bundle", v1beta1constants.GardenNamespace, "bundle.crt", []byte("ca"), v1beta1constants.GardenRoleOCICABundle)
+				Expect(fakeClient.Create(ctx, caBundleSecret)).To(Succeed())
+
+				// Regular garden secret — should be synced
+				regularSecret := createSecret("regular-secret", v1beta1constants.GardenNamespace, "key", []byte("data"), "foo")
+				Expect(fakeClient.Create(ctx, regularSecret)).To(Succeed())
+
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
+
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespaceName, Name: regularSecret.Name}, &corev1.Secret{})).To(Succeed())
+
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespaceName, Name: pullSecret.Name}, &corev1.Secret{})).To(BeNotFoundError())
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespaceName, Name: caBundleSecret.Name}, &corev1.Secret{})).To(BeNotFoundError())
+			})
+
+			It("should delete stale helm-pull-secret and oci-ca-bundle secrets from seed namespace", func() {
+				ns := &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            namespaceName,
+						OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))},
+						Labels:          map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed},
+					},
+				}
+				Expect(fakeClient.Create(ctx, ns)).To(Succeed())
+
+				// Old pull secret and CA bundle secret already copied to seed namespace — should be cleaned up
+				stalePullSecret := createSecret("old-pull-secret", namespaceName, ".dockerconfigjson", []byte("pull"), v1beta1constants.GardenRoleHelmPullSecret)
+				staleCaBundleSecret := createSecret("old-ca-bundle", namespaceName, "bundle.crt", []byte("ca"), v1beta1constants.GardenRoleOCICABundle)
+				Expect(fakeClient.Create(ctx, stalePullSecret)).To(Succeed())
+				Expect(fakeClient.Create(ctx, staleCaBundleSecret)).To(Succeed())
+
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
+
+				// Verify stale pull secret and CA bundle secret were deleted
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespaceName, Name: stalePullSecret.Name}, &corev1.Secret{})).To(BeNotFoundError())
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespaceName, Name: staleCaBundleSecret.Name}, &corev1.Secret{})).To(BeNotFoundError())
+			})
 		})
 
 		Context("when seed is new", func() {
@@ -163,10 +220,10 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			It("should create namespace and sync secrets if namespace does not exist", func() {
-				gardenSecret1 := createSecret("my-secret-1", v1beta1constants.GardenNamespace, []byte("data"), "foo")
+				gardenSecret1 := createSecret("my-secret-1", v1beta1constants.GardenNamespace, "key", []byte("data"), "foo")
 				Expect(fakeClient.Create(ctx, gardenSecret1)).To(Succeed())
 
-				gardenSecret2 := createSecret("my-secret-2", v1beta1constants.GardenNamespace, []byte("data"), "bar")
+				gardenSecret2 := createSecret("my-secret-2", v1beta1constants.GardenNamespace, "key", []byte("data"), "bar")
 				Expect(fakeClient.Create(ctx, gardenSecret2)).To(Succeed())
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
@@ -190,7 +247,7 @@ var _ = Describe("Reconciler", func() {
 	})
 })
 
-func createSecret(name, namespace string, data []byte, role string) *corev1.Secret {
+func createSecret(name, namespace string, key string, data []byte, role string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
@@ -200,7 +257,7 @@ func createSecret(name, namespace string, data []byte, role string) *corev1.Secr
 			Namespace: namespace,
 		},
 		Data: map[string][]byte{
-			"key": data,
+			key: data,
 		},
 	}
 }
