@@ -33,11 +33,20 @@ type Reconciler struct {
 
 	Lock                *sync.RWMutex
 	KindToRequiredTypes map[string]sets.Set[string]
+
+	deferredEventHandlerRegistrations []*eventHandlerRegistration
 }
 
 // Reconcile performs the main reconciliation logic.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
+
+	// Some event handlers are too expensive to be registered during the manager startup. Register them once during the first reconciliation.
+	for _, handler := range r.deferredEventHandlerRegistrations {
+		if err := handler.registerOnce(); err != nil {
+			return reconcile.Result{}, fmt.Errorf("error registering event handler: %w", err)
+		}
+	}
 
 	controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
 	if err := r.GardenClient.Get(ctx, request.NamespacedName, controllerInstallation); err != nil {
