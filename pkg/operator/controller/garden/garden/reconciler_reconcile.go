@@ -455,7 +455,7 @@ func (r *Reconciler) reconcile(
 		// read all seeds with single call and check if an annotation with specific value is not present.
 		// However, the time needed for the annotation to be removed may vary and it depends on how fast
 		// gardenlets will succeed to execute the requested operation.
-		// Therefore the `defaultTimeout` (30s) is not sufficient in some cases and longer timeout is needed.
+		// Therefore the 30s timeout is not sufficient in some cases and longer timeout is needed.
 		renewGardenAccessSecretsInAllSeeds = g.Add(flow.Task{
 			Name: "Annotate seeds to trigger renewal of their garden access secrets",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
