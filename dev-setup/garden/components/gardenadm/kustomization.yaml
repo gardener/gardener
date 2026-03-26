@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+patches:
+  - patch: |
+      # The spec here must match the respective fields in the Shoot object for the self-hosted cluster:
+      # /dev-setup/gardenadm/resources/base/shoot.yaml
+      - op: replace
+        path: /spec/runtimeCluster/networking/nodes
+        value:
+        - 10.0.0.0/16
+      - op: replace
+        path: /spec/runtimeCluster/networking/pods
+        value:
+        - 10.3.0.0/16
+      - op: replace
+        path: /spec/runtimeCluster/networking/services
+        value:
+        - 10.4.0.0/16
+      - op: remove
+        path: /spec/runtimeCluster/provider/zones
+    target:
+      group: operator.gardener.cloud
+      kind: Garden
+      name: local

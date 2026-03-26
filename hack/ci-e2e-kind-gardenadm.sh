@@ -24,7 +24,7 @@ trap "
 # separately). Hence, let's run the managed-infra tests first, then clean them up, and then run the unmanaged-infra/connect
 # tests.
 
-# managed infrastructure
+echo "> Running gardenadm tests for managed infrastructure"
 make kind-single-node-up
 make gardenadm-up SCENARIO=managed-infra
 
@@ -33,13 +33,25 @@ make test-e2e-local-gardenadm-managed-infra
 make gardenadm-down SCENARIO=managed-infra
 make kind-single-node-down
 
-# unmanaged infrastructure
+echo "> Running gardenadm tests for unmanaged infrastructure with Gardener being deployed into the self-hosted shoot (fully self-contained Gardener setup)"
 make kind-single-node-up
 make gardenadm-up SCENARIO=unmanaged-infra
+
+make test-e2e-local-gardenadm-unmanaged-infra-initjoin
 make gardenadm-up SCENARIO=connect
+make test-e2e-local-gardenadm-unmanaged-infra-connect
+make gardenadm-down SCENARIO=connect
+
+make gardenadm-down SCENARIO=unmanaged-infra
+make kind-single-node-down
+
+echo "> Running gardenadm tests for unmanaged infrastructure with Gardener running outside the self-hosted shoot"
+make kind-single-node-up
+make gardenadm-up SCENARIO=unmanaged-infra
+make gardenadm-up SCENARIO=connect-kind
 
 make test-e2e-local-gardenadm-unmanaged-infra
 
-make gardenadm-down SCENARIO=connect
+make gardenadm-down SCENARIO=connect-kind
 make gardenadm-down SCENARIO=unmanaged-infra
 make kind-single-node-down

@@ -95,14 +95,11 @@ NAME        STATUS   ROLES    AGE     VERSION
 machine-0   Ready    <none>   4m11s   v1.32.0
 ```
 
-You can also copy the kubeconfig to your local machine and use a port-forward to connect to the cluster's API server:
+You can also access the cluster's API server directly from your host machine after obtaining a kubeconfig for it:
 
 ```shell
-$ kubectl -n gardenadm-unmanaged-infra exec -it machine-0 -- cat /etc/kubernetes/admin.conf | sed 's/api.root.garden.external.local.gardener.cloud/localhost:6443/' > /tmp/shoot--garden--root.conf
-$ kubectl -n gardenadm-unmanaged-infra port-forward pod/machine-0 6443:443
-
-# in a new terminal
-$ export KUBECONFIG=/tmp/shoot--garden--root.conf
+$ ./hack/usage/generate-admin-kubeconfig-local.sh self-hosted-shoot > dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
+$ export KUBECONFIG=dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
 $ kubectl get no
 NAME        STATUS   ROLES    AGE   VERSION
 machine-0   Ready    <none>   10m   v1.32.0
@@ -170,32 +167,27 @@ NAME                                                    STATUS   ROLES    AGE   
 machine-shoot--garden--root-control-plane-58ffc-2l6s7   Ready    <none>   4m11s   v1.33.0
 ```
 
-`gardenadm bootstrap` copies the kubeconfig from the control plane machine to the bootstrap cluster.
-You can also copy the kubeconfig to your local machine and use a port-forward to connect to the cluster's API server:
+You can also access the cluster's API server directly from your host machine after obtaining a kubeconfig for it:
 
 ```shell
-$ kubectl get secret -n shoot--garden--root kubeconfig -o jsonpath='{.data.kubeconfig}' | base64 --decode | sed 's/api.root.garden.external.local.gardener.cloud/localhost:6443/' > /tmp/shoot--garden--root.conf
-$ machine="$(kubectl -n shoot--garden--root get po -l app=machine -oname | head -1 | cut -d/ -f2)"
-$ kubectl -n shoot--garden--root port-forward pod/$machine 6443:443
-
-# in a new terminal
-$ export KUBECONFIG=/tmp/shoot--garden--root.conf
+$ ./hack/usage/generate-admin-kubeconfig-local.sh self-hosted-shoot > dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
+$ export KUBECONFIG=dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
 $ kubectl get no
-NAME                                                    STATUS   ROLES    AGE     VERSION
-machine-shoot--garden--root-control-plane-58ffc-2l6s7   Ready    <none>   4m11s   v1.33.0
+NAME        STATUS   ROLES    AGE   VERSION
+machine-0   Ready    <none>   10m   v1.32.0
 ```
 
 ## Connecting the Self-Hosted Shoot Cluster to Gardener
 
 After you have successfully bootstrapped a self-hosted shoot cluster (either via the [unmanaged infrastructure](#unmanaged-infrastructure-scenario) or the [managed infrastructure](#managed-infrastructure-scenario) scenario), you can connect it to an existing Gardener system.
-For this, you need to have a Gardener running locally in your KinD cluster.
+For this, you need to deploy Gardener to your self-hosted shoot cluster.
 In order to deploy it, you can run
 
 ```shell
 make gardenadm-up SCENARIO=connect
 ```
 
-This will deploy [`gardener-operator`](../concepts/operator.md) and create a `Garden` resource (which will then be reconciled and results in a full Gardener deployment).
+This will deploy [`gardener-operator`](../concepts/operator.md) and create a `Garden` resource (which will then be reconciled and results in a full Gardener deployment) inside the self-hosted shoot cluster.
 Find all information about it [here](getting_started_locally.md#alternative-way-to-set-up-garden-and-seed-leveraging-gardener-operator).
 Note, that in this setup, no `Seed` will be registered in the Gardener - it's just a plain garden cluster without the ability to create regular shoot clusters.
 
@@ -208,13 +200,10 @@ make gardenadm
 
 This will install it to `./bin/gardenadm`, from where you can call it.
 
-After you have completed this, you need to get a kubeconfig for [the Gardener instance](../concepts/operator.md#accessing-the-virtual-garden-cluster) you want to connect the self-hosted shoot to.
-We will refer to the path of this kubeconfig as `<path-to-garden-kubeconfig>` in the following.
-
 Now you can generate the bootstrap token and the full `gardenadm connect` command like this:
 
 ```shell
-$ KUBECONFIG=<path-to-garden-kubeconfig> ./bin/gardenadm token create --print-connect-command --shoot-namespace=garden --shoot-name=root
+$ KUBECONFIG=./dev-setup/kubeconfigs/virtual-garden/kubeconfig ./bin/gardenadm token create --print-connect-command --shoot-namespace=garden --shoot-name=root
 # This will output a command similar to:
 gardenadm connect --bootstrap-token ... --ca-certificate ... https://api.virtual-garden.local.gardener.cloud
 ```
@@ -234,7 +223,7 @@ root@machine-0:/# gardenadm connect --bootstrap-token ... --ca-certificate ... h
 Once this is done, you can observe that there is now a `gardenlet` running in the self-hosted shoot cluster, which connects it to the Gardener instance:
 
 ```shell
-root@machine-0:/# kubectl get pods -n kube-system | grep gardenlet
+root@machine-0:/# kubectl get pods -n kube-system -l app=gardener,role=gardenlet
 gardenlet-6cbcb676f5-prh8f                           1/1     Running   0             40m
 gardenlet-6cbcb676f5-wwn8w                           1/1     Running   0             40m
 ````
@@ -242,10 +231,18 @@ gardenlet-6cbcb676f5-wwn8w                           1/1     Running   0        
 You can also observe that the self-hosted shoot cluster is now registered as a shoot cluster in Gardener:
 
 ```shell
-kubectl --kubeconfig=<path-to-garden-kubeconfig> get Shoots -A
+kubectl --kubeconfig=./dev-setup/kubeconfigs/virtual-garden/kubeconfig get shoots -A
 NAMESPACE   NAME   CLOUDPROFILE   PROVIDER   REGION   K8S VERSION   HIBERNATION   LAST OPERATION   STATUS    AGE
 garden      root   local          local      local    1.33.0        Awake         <pending>        healthy   42m
 ```
+
+> [!NOTE]
+> There is an alternative way of deploying Gardener outside the self-hosted shoot but inside the KinD cluster in the
+> `garden` namespace.
+>
+> `make gardenadm-up SCENARIO=connect-kind`
+>
+> The following steps from above are the same.
 
 ## Running E2E Tests for `gardenadm`
 

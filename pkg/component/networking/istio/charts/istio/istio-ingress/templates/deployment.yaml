@@ -38,6 +38,10 @@ spec:
             "overload.premature_reset_total_stream_count": "100"
             "overload.premature_reset_min_stream_lifetime_seconds": "1"
     spec:
+      # TODO(rfranzke): Remove the tolerations part once https://github.com/gardener/gardener/pull/14367 has been merged.
+      tolerations:
+      - key: "node-role.kubernetes.io/control-plane"
+        operator: "Exists"
       serviceAccountName: istio-ingressgateway-service-account
       securityContext:
         fsGroup: 1337
