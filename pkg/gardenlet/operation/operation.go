@@ -177,7 +177,7 @@ func (b *Builder) WithShootFromCluster(seedClientSet kubernetes.Interface, s *ga
 			WithShootObjectFromCluster(seedClientSet, controlPlaneNamespace).
 			WithCloudProfileObjectFromCluster(seedClientSet, controlPlaneNamespace).
 			WithoutShootCredentials().
-			WithShootDNS(s.Spec.DNS).
+			WithShootDNS(nil).
 			WithSeedObject(seedObj.GetInfo()).
 			WithProjectName(gardenObj.Project.Name).
 			WithInternalDomain(gardenObj.InternalDomain).
