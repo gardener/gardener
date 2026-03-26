@@ -94,8 +94,9 @@ func (r *Reconciler) cleanupStaleSecrets(ctx context.Context, existingSecrets []
 	var fns []flow.TaskFn
 	exclude := sets.New(existingSecrets...)
 
+	// TODO(shafeeqes): Use gardenRoleSelector after gardener v1.142
 	secretList := &corev1.SecretList{}
-	if err := r.Client.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: gardenRoleSelector}); err != nil {
+	if err := r.Client.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: deprecatedGardenRoleSelector}); err != nil {
 		return err
 	}
 
