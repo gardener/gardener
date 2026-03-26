@@ -451,7 +451,7 @@ func (r *Reconciler) reconcile(
 
 		// Renew seed secrets tasks must run sequentially. They all use "gardener.cloud/operation" annotation of the seeds and there can be only one annotation at the same time.
 		renewGardenAccessSecretsInAllSeeds = g.Add(flow.Task{
-			Name: "Label seeds to trigger renewal of their garden access secrets",
+			Name: "Annotate seeds to trigger renewal of their garden access secrets",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.RenewGardenSecretsInAllSeeds(ctx, log.WithValues(secretsTypeKey, secretsTypeGardenAccess), virtualClusterClient, v1beta1constants.SeedOperationRenewGardenAccessSecrets)
 			}).RetryUntilTimeout(defaultInterval, 3*time.Minute),
@@ -483,7 +483,7 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(renewWorkloadIdentityTokensInAllSeeds),
 		})
 		renewGardenletKubeconfigInAllSeeds = g.Add(flow.Task{
-			Name: "Label seeds to trigger renewal of their gardenlet kubeconfig",
+			Name: "Annotate seeds to trigger renewal of their gardenlet kubeconfig",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.RenewGardenSecretsInAllSeeds(ctx, log.WithValues(secretsTypeKey, secretsTypeGardenletKubeconfig), virtualClusterClient, v1beta1constants.GardenerOperationRenewKubeconfig)
 			}).RetryUntilTimeout(defaultInterval, 3*time.Minute),
