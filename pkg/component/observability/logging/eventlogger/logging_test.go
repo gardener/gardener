@@ -32,11 +32,6 @@ var _ = Describe("Logging", func() {
 							Match: "kubernetes.*event-logger*event-logger*",
 							FilterItems: []fluentbitv1alpha2.FilterItem{
 								{
-									Nest: &fluentbitv1alpha2filter.Nest{
-										Operation:   "lift",
-										NestedUnder: "log",
-									},
-
 									Lua: &fluentbitv1alpha2filter.Lua{
 										Script: corev1.ConfigMapKeySelector{
 											Key: "stringify_records_nest_log.lua",
