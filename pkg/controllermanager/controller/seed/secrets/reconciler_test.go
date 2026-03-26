@@ -10,254 +10,191 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed/secrets"
-	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	mockcorev1 "github.com/gardener/gardener/third_party/mock/client-go/core/v1"
-	mockclientgo "github.com/gardener/gardener/third_party/mock/client-go/kubernetes"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Reconciler", func() {
 	var (
-		ctrl *gomock.Controller
+		ctx = context.Background()
 
-		gardenRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
-		labelSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(gardenRoleReq).Add(gardenerutils.NoControlPlaneSecretsReq)}
+		reconciler *Reconciler
+
+		fakeClient    client.Client
+		seed          *gardencorev1beta1.Seed
+		namespaceName string
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
+		seed = &gardencorev1beta1.Seed{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "seed",
+				UID:  "abcdef",
+			},
+		}
+		namespaceName = gardenerutils.ComputeGardenNamespace(seed.Name)
 	})
 
 	Describe("#Reconcile", func() {
-		var (
-			cl          *mockclient.MockClient
-			k           *mockclientgo.MockInterface
-			corev1If    *mockcorev1.MockCoreV1Interface
-			namespaceIf *mockcorev1.MockNamespaceInterface
-			secretIf    *mockcorev1.MockSecretInterface
+		It("should not return an error if seed cannot be found", func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			reconciler = &Reconciler{Client: fakeClient, GardenNamespace: v1beta1constants.GardenNamespace}
 
-			control reconcile.Reconciler
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(reconcile.Result{}))
+		})
 
-			seed      *gardencorev1beta1.Seed
-			namespace *corev1.Namespace
-		)
-
-		BeforeEach(func() {
-			cl = mockclient.NewMockClient(ctrl)
-			seed = &gardencorev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "seed",
-					UID:  "abcdef",
+		It("should return an error if getting the seed fails", func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					if _, ok := obj.(*gardencorev1beta1.Seed); ok {
+						return errors.New("fake")
+					}
+					return nil
 				},
-			}
-			namespace = &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: gardenerutils.ComputeGardenNamespace(seed.Name),
-					OwnerReferences: []metav1.OwnerReference{
-						*metav1.NewControllerRef(seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed")),
-					},
-					Labels: map[string]string{"gardener.cloud/role": "seed"},
-				},
-			}
-		})
+			}).Build()
+			reconciler = &Reconciler{Client: fakeClient, GardenNamespace: v1beta1constants.GardenNamespace}
 
-		JustBeforeEach(func() {
-			control = &Reconciler{
-				Client:          cl,
-				GardenNamespace: "garden",
-			}
-		})
-
-		It("should fail if get namespace fails", func() {
-			cl.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: seed.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(errors.New("fake"))
-
-			_, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
-			Expect(err).To(MatchError(ContainSubstring("fake")))
-		})
-
-		It("should fail if get namespace fails", func() {
-			cl.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: seed.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
-				*obj = *seed
-				return nil
-			})
-
-			cl.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespace.Name}, gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(errors.New("fake"))
-
-			_, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
+			_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
 			Expect(err).To(MatchError(ContainSubstring("fake")))
 		})
 
 		Context("when seed exists", func() {
-			var (
-				addedSecret, oldSecret, deletedSecret *corev1.Secret
-			)
-
 			BeforeEach(func() {
-				cl = mockclient.NewMockClient(ctrl)
-				k = mockclientgo.NewMockInterface(ctrl)
-				corev1If = mockcorev1.NewMockCoreV1Interface(ctrl)
-				namespaceIf = mockcorev1.NewMockNamespaceInterface(ctrl)
-				secretIf = mockcorev1.NewMockSecretInterface(ctrl)
-
-				k.EXPECT().CoreV1().Return(corev1If).AnyTimes()
-				corev1If.EXPECT().Secrets(gomock.Any()).Return(secretIf).AnyTimes()
-				corev1If.EXPECT().Namespaces().Return(namespaceIf).AnyTimes()
-
-				oldSecret = createSecret("existing", namespace.Name, "old", []byte("data"))
-				addedSecret = createSecret("new", v1beta1constants.GardenNamespace, "foo", []byte("bar"))
-				deletedSecret = createSecret("stale", namespace.Name, "foo", []byte("bar"))
-
-				cl.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: seed.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
-					*obj = *seed
-					return nil
-				})
+				fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(seed).Build()
+				reconciler = &Reconciler{Client: fakeClient, GardenNamespace: v1beta1constants.GardenNamespace}
 			})
 
 			It("should fail if namespace exists and has no ownerReference", func() {
-				namespace.SetOwnerReferences(nil)
-				cl.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: gardenerutils.ComputeGardenNamespace(seed.Name)}, gomock.AssignableToTypeOf(&corev1.Namespace{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, ns *corev1.Namespace, _ ...client.GetOption) error {
-						namespace.DeepCopyInto(ns)
-						return nil
-					})
+				ns := &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: namespaceName,
+					},
+				}
+				Expect(fakeClient.Create(ctx, ns)).To(Succeed())
 
-				_, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
+				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
 				Expect(err).To(MatchError(ContainSubstring("not controlled by")))
 			})
 
 			It("should fail if namespace exists and is not controlled by seed", func() {
-				owner := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "boss", UID: "12345"}}
-				namespace.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(owner, corev1.SchemeGroupVersion.WithKind("ConfigMap"))})
-				cl.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: gardenerutils.ComputeGardenNamespace(seed.Name)}, gomock.AssignableToTypeOf(&corev1.Namespace{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, ns *corev1.Namespace, _ ...client.GetOption) error {
-						namespace.DeepCopyInto(ns)
-						return nil
-					})
+				ns := &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: namespaceName,
+						OwnerReferences: []metav1.OwnerReference{
+							*metav1.NewControllerRef(
+								&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "boss", UID: "12345"}},
+								corev1.SchemeGroupVersion.WithKind("ConfigMap"),
+							),
+						},
+					},
+				}
+				Expect(fakeClient.Create(ctx, ns)).To(Succeed())
 
-				_, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
+				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
 				Expect(err).To(MatchError(ContainSubstring("not controlled by")))
 			})
 
-			It("should sync secrets if namespace exists and is controlled by seed", func() {
-				cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), labelSelector).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
-					(&corev1.SecretList{Items: []corev1.Secret{*oldSecret, *addedSecret}}).DeepCopyInto(list)
-					return nil
-				})
+			It("should sync secrets and clean up stale secrets in seed namespace", func() {
+				// Create the seed namespace controlled by the seed
+				ns := &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            namespaceName,
+						OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))},
+						Labels:          map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed},
+					},
+				}
+				Expect(fakeClient.Create(ctx, ns)).To(Succeed())
 
-				cl.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: gardenerutils.ComputeGardenNamespace(seed.Name)}, gomock.AssignableToTypeOf(&corev1.Namespace{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, ns *corev1.Namespace, _ ...client.GetOption) error {
-						namespace.DeepCopyInto(ns)
-						return nil
-					})
+				// Garden secret to sync
+				gardenSecret := createSecret("garden-secret", v1beta1constants.GardenNamespace, "key", []byte("data"), "foo")
+				Expect(fakeClient.Create(ctx, gardenSecret)).To(Succeed())
 
-				// expect update for existing secret
-				cl.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace.Name, Name: oldSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{}))
-				cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any())
+				// Stale secret in seed namespace that should be deleted
+				staleSecret := createSecret("stale-secret", namespaceName, "key", []byte("old"), "foo")
+				Expect(fakeClient.Create(ctx, staleSecret)).To(Succeed())
 
-				// expect create for non existing secret
-				cl.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace.Name, Name: addedSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-				cl.EXPECT().Create(gomock.Any(), copySecretWithNamespace(addedSecret, namespace.Name))
-
-				// expect deletion for deleted secret in Garden namespace
-				cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespace.Name), labelSelector).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
-					(&corev1.SecretList{Items: []corev1.Secret{*deletedSecret}}).DeepCopyInto(list)
-					return nil
-				})
-				cl.EXPECT().Delete(gomock.Any(), deletedSecret)
-
-				result, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
-				Expect(err).To(Not(HaveOccurred()))
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(reconcile.Result{}))
+
+				syncedSecret := &corev1.Secret{}
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespaceName, Name: gardenSecret.Name}, syncedSecret)).To(Succeed())
+				Expect(syncedSecret.Data).To(Equal(gardenSecret.Data))
+
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespaceName, Name: staleSecret.Name}, &corev1.Secret{})).To(BeNotFoundError())
+			})
+
+			It("should add garden role label to namespace if missing", func() {
+				ns := &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            namespaceName,
+						OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))},
+					},
+				}
+				Expect(fakeClient.Create(ctx, ns)).To(Succeed())
+
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
+
+				updatedNs := &corev1.Namespace{}
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespaceName}, updatedNs)).To(Succeed())
+				Expect(updatedNs.Labels).To(HaveKeyWithValue(v1beta1constants.GardenRole, v1beta1constants.GardenRoleSeed))
 			})
 		})
 
 		Context("when seed is new", func() {
-			It("should fail if namespace exists but not in the cache", func() {
-				cl.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: seed.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
-					*obj = *seed
-					return nil
-				})
-
-				cl.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespace.Name}, gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-				cl.EXPECT().Create(gomock.Any(), namespace).Return(errors.New("fake"))
-
-				_, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
-				Expect(err).To(MatchError(ContainSubstring("fake")))
+			BeforeEach(func() {
+				fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(seed).Build()
+				reconciler = &Reconciler{Client: fakeClient, GardenNamespace: v1beta1constants.GardenNamespace}
 			})
 
-			It("should create namespace and sync secrets if namespace does not exists", func() {
-				cl.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: seed.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
-					*obj = *seed
-					return nil
-				})
+			It("should create namespace and sync secrets if namespace does not exist", func() {
+				gardenSecret1 := createSecret("my-secret-1", v1beta1constants.GardenNamespace, "key", []byte("data"), "foo")
+				Expect(fakeClient.Create(ctx, gardenSecret1)).To(Succeed())
 
-				var (
-					secret1 = createSecret("1", v1beta1constants.GardenNamespace, "foo", []byte("bar"))
-					secret2 = createSecret("2", v1beta1constants.GardenNamespace, "foo", []byte("bar"))
-				)
+				gardenSecret2 := createSecret("my-secret-2", v1beta1constants.GardenNamespace, "key", []byte("data"), "bar")
+				Expect(fakeClient.Create(ctx, gardenSecret2)).To(Succeed())
 
-				cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), labelSelector).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
-					(&corev1.SecretList{Items: []corev1.Secret{*secret1, *secret2}}).DeepCopyInto(list)
-					return nil
-				})
-
-				cl.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespace.Name}, gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-				cl.EXPECT().Create(gomock.Any(), namespace)
-				cl.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace.Name, Name: secret1.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-				cl.EXPECT().Create(gomock.Any(), copySecretWithNamespace(secret1, namespace.Name))
-				cl.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace.Name, Name: secret2.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-				cl.EXPECT().Create(gomock.Any(), copySecretWithNamespace(secret2, namespace.Name))
-
-				cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespace.Name), labelSelector).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
-					(&corev1.SecretList{}).DeepCopyInto(list)
-					return nil
-				})
-
-				result, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
-				Expect(err).To(Not(HaveOccurred()))
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(reconcile.Result{}))
-			})
 
-			It("should not create and copy assets if seed cannot be found", func() {
-				cl.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: seed.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+				// Verify namespace was created
+				ns := &corev1.Namespace{}
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespaceName}, ns)).To(Succeed())
+				Expect(ns.Labels).To(HaveKeyWithValue(v1beta1constants.GardenRole, v1beta1constants.GardenRoleSeed))
+				Expect(metav1.IsControlledBy(ns, seed)).To(BeTrue())
 
-				result, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
-				Expect(err).To(Not(HaveOccurred()))
-				Expect(result).To(Equal(reconcile.Result{}))
+				// Verify secret was synced to seed namespace
+				secretList := &corev1.SecretList{}
+				Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespaceName))).To(Succeed())
+				Expect(secretList.Items).To(HaveLen(2))
+				Expect(secretList.Items[0].Data).To(Equal(gardenSecret1.Data))
+				Expect(secretList.Items[1].Data).To(Equal(gardenSecret2.Data))
 			})
 		})
 	})
 })
 
-func copySecretWithNamespace(secret *corev1.Secret, namespace string) *corev1.Secret {
-	s := secret.DeepCopy()
-	s.SetNamespace(namespace)
-	return s
-}
-
-func createSecret(name, namespace, key string, data []byte) *corev1.Secret {
+func createSecret(name, namespace, key string, data []byte, role string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				v1beta1constants.GardenRole: "role",
+				v1beta1constants.GardenRole: role,
 			},
 			Name:      name,
 			Namespace: namespace,
