@@ -4,22 +4,21 @@
 <a href="#local.provider.extensions.gardener.cloud%2fv1alpha1">local.provider.extensions.gardener.cloud/v1alpha1</a>
 </li>
 </ul>
+
 <h2 id="local.provider.extensions.gardener.cloud/v1alpha1">local.provider.extensions.gardener.cloud/v1alpha1</h2>
 <p>
-<p>Package v1alpha1 contains the local provider API resources.</p>
+
 </p>
-Resource Types:
-<ul><li>
-<a href="#local.provider.extensions.gardener.cloud/v1alpha1.CloudProfileConfig">CloudProfileConfig</a>
-</li><li>
-<a href="#local.provider.extensions.gardener.cloud/v1alpha1.WorkerStatus">WorkerStatus</a>
-</li></ul>
-<h3 id="local.provider.extensions.gardener.cloud/v1alpha1.CloudProfileConfig">CloudProfileConfig
+
+<h3 id="cloudprofileconfig">CloudProfileConfig
 </h3>
+
+
 <p>
-<p>CloudProfileConfig contains provider-specific configuration that is embedded into Gardener&rsquo;s <code>CloudProfile</code>
-resource.</p>
+CloudProfileConfig contains provider-specific configuration that is embedded into Gardener's `CloudProfile`
+resource.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -28,44 +27,35 @@ resource.</p>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>
-<code>apiVersion</code></br>
-string</td>
-<td>
-<code>
-local.provider.extensions.gardener.cloud/v1alpha1
-</code>
-</td>
-</tr>
-<tr>
-<td>
-<code>kind</code></br>
-string
-</td>
-<td><code>CloudProfileConfig</code></td>
-</tr>
+
 <tr>
 <td>
 <code>machineImages</code></br>
 <em>
-<a href="#local.provider.extensions.gardener.cloud/v1alpha1.MachineImages">
-[]MachineImages
-</a>
+<a href="#machineimages">MachineImages</a> array
 </em>
 </td>
 <td>
-<p>MachineImages is the list of machine images that are understood by the controller. It maps
-logical names and versions to provider-specific identifiers.</p>
+<p>MachineImages is the list of machine images that are understood by the controller. It maps<br />logical names and versions to provider-specific identifiers.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="local.provider.extensions.gardener.cloud/v1alpha1.WorkerStatus">WorkerStatus
+
+
+<h3 id="machineimage">MachineImage
 </h3>
+
+
 <p>
-<p>WorkerStatus contains information about created worker resources.</p>
+(<em>Appears on:</em><a href="#workerstatus">WorkerStatus</a>)
 </p>
+
+<p>
+MachineImage is a mapping from logical names and versions to provider-specific machine image data.
+</p>
+
 <table>
 <thead>
 <tr>
@@ -74,60 +64,7 @@ logical names and versions to provider-specific identifiers.</p>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>
-<code>apiVersion</code></br>
-string</td>
-<td>
-<code>
-local.provider.extensions.gardener.cloud/v1alpha1
-</code>
-</td>
-</tr>
-<tr>
-<td>
-<code>kind</code></br>
-string
-</td>
-<td><code>WorkerStatus</code></td>
-</tr>
-<tr>
-<td>
-<code>machineImages</code></br>
-<em>
-<a href="#local.provider.extensions.gardener.cloud/v1alpha1.MachineImage">
-[]MachineImage
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>MachineImages is a list of machine images that have been used in this worker. Usually, the extension controller
-gets the mapping from name/version to the provider-specific machine image data from the CloudProfile. However, if
-a version that is still in use gets removed from this componentconfig it cannot reconcile anymore existing <code>Worker</code>
-resources that are still using this version. Hence, it stores the used versions in the provider status to ensure
-reconciliation is possible.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="local.provider.extensions.gardener.cloud/v1alpha1.MachineImage">MachineImage
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#local.provider.extensions.gardener.cloud/v1alpha1.WorkerStatus">WorkerStatus</a>)
-</p>
-<p>
-<p>MachineImage is a mapping from logical names and versions to provider-specific machine image data.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
+
 <tr>
 <td>
 <code>name</code></br>
@@ -165,24 +102,30 @@ string
 <td>
 <code>capabilities</code></br>
 <em>
-github.com/gardener/gardener/pkg/apis/core/v1beta1.Capabilities
+<a href="#capabilities">Capabilities</a>
 </em>
 </td>
 <td>
 <p>Capabilities of the machine image.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="local.provider.extensions.gardener.cloud/v1alpha1.MachineImageFlavor">MachineImageFlavor
+
+
+<h3 id="machineimageflavor">MachineImageFlavor
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#local.provider.extensions.gardener.cloud/v1alpha1.MachineImageVersion">MachineImageVersion</a>)
+(<em>Appears on:</em><a href="#machineimageversion">MachineImageVersion</a>)
 </p>
+
 <p>
-<p>MachineImageFlavor is a provider-specific image identifier with its supported capabilities.</p>
+MachineImageFlavor is a provider-specific image identifier with its supported capabilities.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -191,6 +134,7 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.Capabilities
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>image</code></br>
@@ -206,24 +150,30 @@ string
 <td>
 <code>capabilities</code></br>
 <em>
-github.com/gardener/gardener/pkg/apis/core/v1beta1.Capabilities
+<a href="#capabilities">Capabilities</a>
 </em>
 </td>
 <td>
 <p>Capabilities that are supported by the identifier in this set.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="local.provider.extensions.gardener.cloud/v1alpha1.MachineImageVersion">MachineImageVersion
+
+
+<h3 id="machineimageversion">MachineImageVersion
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#local.provider.extensions.gardener.cloud/v1alpha1.MachineImages">MachineImages</a>)
+(<em>Appears on:</em><a href="#machineimages">MachineImages</a>)
 </p>
+
 <p>
-<p>MachineImageVersion contains a version and a provider-specific identifier.</p>
+MachineImageVersion contains a version and a provider-specific identifier.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -232,6 +182,7 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.Capabilities
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>version</code></br>
@@ -259,26 +210,30 @@ string
 <td>
 <code>capabilityFlavors</code></br>
 <em>
-<a href="#local.provider.extensions.gardener.cloud/v1alpha1.MachineImageFlavor">
-[]MachineImageFlavor
-</a>
+<a href="#machineimageflavor">MachineImageFlavor</a> array
 </em>
 </td>
 <td>
 <p>CapabilityFlavors contains provider-specific image identifiers of this version with their capabilities.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="local.provider.extensions.gardener.cloud/v1alpha1.MachineImages">MachineImages
+
+
+<h3 id="machineimages">MachineImages
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#local.provider.extensions.gardener.cloud/v1alpha1.CloudProfileConfig">CloudProfileConfig</a>)
+(<em>Appears on:</em><a href="#cloudprofileconfig">CloudProfileConfig</a>)
 </p>
+
 <p>
-<p>MachineImages is a mapping from logical names and versions to provider-specific identifiers.</p>
+MachineImages is a mapping from logical names and versions to provider-specific identifiers.
 </p>
+
 <table>
 <thead>
 <tr>
@@ -287,6 +242,7 @@ string
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>name</code></br>
@@ -302,18 +258,49 @@ string
 <td>
 <code>versions</code></br>
 <em>
-<a href="#local.provider.extensions.gardener.cloud/v1alpha1.MachineImageVersion">
-[]MachineImageVersion
-</a>
+<a href="#machineimageversion">MachineImageVersion</a> array
 </em>
 </td>
 <td>
 <p>Versions contains versions and a provider-specific identifier.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<hr/>
-<p><em>
-Generated with <a href="https://github.com/ahmetb/gen-crd-api-reference-docs">gen-crd-api-reference-docs</a>
-</em></p>
+
+
+<h3 id="workerstatus">WorkerStatus
+</h3>
+
+
+<p>
+WorkerStatus contains information about created worker resources.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>machineImages</code></br>
+<em>
+<a href="#machineimage">MachineImage</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineImages is a list of machine images that have been used in this worker. Usually, the extension controller<br />gets the mapping from name/version to the provider-specific machine image data from the CloudProfile. However, if<br />a version that is still in use gets removed from this componentconfig it cannot reconcile anymore existing `Worker`<br />resources that are still using this version. Hence, it stores the used versions in the provider status to ensure<br />reconciliation is possible.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
