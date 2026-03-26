@@ -109,7 +109,7 @@ const (
 	// for a sufficient period. Requires VictoriaLogsBackend to be enabled. When both feature gates are enabled,
 	// Vali will be destroyed after VictoriaLogs has been running for 2 weeks.
 	// owner: @rrhubenov
-	// alpha: v1.138.0
+	// alpha: v1.140.0
 	RemoveVali featuregate.Feature = "RemoveVali"
 )
 
