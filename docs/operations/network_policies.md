@@ -178,6 +178,7 @@ gardener.cloud--allow-to-dns               networking.gardener.cloud/to-dns=allo
 gardener.cloud--allow-to-apiserver         networking.gardener.cloud/to-apiserver=allowed
 gardener.cloud--allow-to-from-nginx        app=nginx-ingress
 gardener.cloud--allow-to-kubelet           networking.gardener.cloud/to-kubelet=allowed
+gardener.cloud--allow-to-node-exporter     networking.gardener.cloud/to-node-exporter=allowed
 gardener.cloud--allow-to-public-networks   networking.gardener.cloud/to-public-networks=allowed
 gardener.cloud--allow-vpn                  app=vpn-shoot
 ```

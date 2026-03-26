@@ -80,7 +80,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 				}},
 				SampleLimit: ptr.To(uint64(500)),
 				RelabelConfigs: []monitoringv1.RelabelConfig{
-					//TODO(bobi-wan): use JobName here as well?
+					// TODO(bobi-wan): use JobName here as well?
 					{
 						Action:      "replace",
 						Replacement: ptr.To("annotated-seed-service-endpoints"),
@@ -115,7 +115,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						Regex:  `__meta_kubernetes_service_label_(.+)`,
 					},
 					{
-						//TODO(bobi-wan): aren't service_name labels populated 
+						// TODO(bobi-wan): aren't service_name labels populated
 						// only with role="service" in service discovery? This
 						// one uses role="endpoint" discovery.
 						// Also, why relabel the "job" label a second time?
@@ -124,7 +124,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						TargetLabel:  "job",
 					},
 					{
-						//TODO(bobi-wan): why relabel the "job" label a third time?
+						// TODO(bobi-wan): why relabel the "job" label a third time?
 						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_annotation_prometheus_io_name"},
 						Action:       "replace",
 						Regex:        `(.+)`,
@@ -188,7 +188,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 					Key:                  secretsutils.DataKeyCertificateBundle,
 				}}},
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-					//TODO(bobi-wan): why do we have a "node" role + a namespace configured?
+					// TODO(bobi-wan): why do we have a "node" role + a namespace configured?
 					Role:            monitoringv1alpha1.KubernetesRoleNode,
 					APIServer:       ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
 					Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
@@ -203,25 +203,31 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 					}}},
 				}},
 				RelabelConfigs: []monitoringv1.RelabelConfig{
+					// OK
+					// Set in job_name already
 					{
 						Action:      "replace",
 						Replacement: ptr.To("cadvisor"),
 						TargetLabel: "job",
 					},
+					// OK
 					{
 						Action: "labelmap",
 						Regex:  `__meta_kubernetes_node_label_(.+)`,
 					},
+					// OK - leaving default <host>:<ip>
 					{
 						TargetLabel: "__address__",
 						Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
 					},
+					// OK - leaving to /metrics/cadvisor
 					{
 						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
 						Regex:        `(.+)`,
 						Replacement:  ptr.To(`/api/v1/nodes/${1}/proxy/metrics/cadvisor`),
 						TargetLabel:  "__metrics_path__",
 					},
+					// OK, added
 					{
 						TargetLabel: "type",
 						Replacement: ptr.To("shoot"),
@@ -229,6 +235,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 				},
 				MetricRelabelConfigs: []monitoringv1.RelabelConfig{
 					// get system services
+					// NOT OK, id still there, missing systemd_service_name
 					{
 						SourceLabels: []monitoringv1.LabelName{"id"},
 						Action:       "replace",
@@ -264,22 +271,26 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						// systemd containers don't have namespaces
 						Regex: `(^$|^kube-system$)`,
 					},
+					// copied as is
 					{
 						SourceLabels: []monitoringv1.LabelName{"container", "__name__"},
 						Action:       "drop",
 						// The system container POD is used for networking
 						Regex: `POD;(container_cpu_cfs_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_cfs_throttled_periods_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_last_seen|container_memory_working_set_bytes)`,
 					},
+					// copied as is
 					{
 						SourceLabels: []monitoringv1.LabelName{"__name__", "container", "interface", "id"},
 						Action:       "keep",
 						Regex:        `container_network.+;;(eth0;/.+|(en.+|tunl0|eth0);/)|.+;.+;.*;.*`,
 					},
+					// copied as is
 					{
 						SourceLabels: []monitoringv1.LabelName{"__name__", "container", "interface"},
 						Action:       "drop",
 						Regex:        `container_network.+;POD;(.{5,}|tun0|en.+)`,
 					},
+					// copied as is
 					{
 						SourceLabels: []monitoringv1.LabelName{"__name__", "id"},
 						Regex:        `container_network.+;/`,
@@ -373,6 +384,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 
 		// Only add cadvisor and kube-kubelet scrape configs if OTEL dataplane collector is not enabled.
 		// Otherwise, it scrapes these targets already.
+		// TODO(bobi-wan): merge with other flag occurence in an if/else statement
 		if !features.DefaultFeatureGate.Enabled(features.OpenTelemetryDataplaneCollector) {
 			out = append(out, cadvisorConfig, kubeletConfig)
 		}
@@ -399,8 +411,8 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 							Role:            monitoringv1alpha1.KubernetesRoleNode,
 							APIServer:       ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
 							FollowRedirects: ptr.To(true),
-							//TODO(bobi-wan): role="node" + namespace filter again
-							Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
+							// TODO(bobi-wan): role="node" + namespace filter again
+							Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
 							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
 								Key:                  resourcesv1alpha1.DataKeyToken,
@@ -412,7 +424,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						}},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
-								//TODO(bobi-wan): again - static job name
+								// TODO(bobi-wan): again - static job name
 								Action:      "replace",
 								Replacement: ptr.To("opentelemetry-collector-nodes"),
 								TargetLabel: "job",
@@ -455,14 +467,16 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 		}
 
 		if features.DefaultFeatureGate.Enabled(features.OpenTelemetryDataplaneCollector) {
+			podMetricsURL := "/api/v1/namespaces/kube-system/pods/${1}/proxy/metrics"
 			out = append(out,
 				&monitoringv1alpha1.ScrapeConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "otel-collector-dataplane",
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
+						JobName:     ptr.To("otel-collector-dataplane"),
 						HonorLabels: ptr.To(true),
-						Scheme:      ptr.To(monitoringv1.SchemeHTTP),
+						Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
 						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
 							Key:                  resourcesv1alpha1.DataKeyToken,
@@ -497,9 +511,14 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 								Regex:        "metrics",
 							},
 							{
-								Action:      "replace",
-								Replacement: ptr.To("otel-collector-dataplane"),
-								TargetLabel: "job",
+								TargetLabel: "__address__",
+								Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name"},
+								Regex:        `(.+)`,
+								TargetLabel:  "__metrics_path__",
+								Replacement:  ptr.To(podMetricsURL),
 							},
 							{
 								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name"},

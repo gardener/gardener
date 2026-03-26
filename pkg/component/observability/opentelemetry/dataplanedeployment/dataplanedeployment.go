@@ -6,10 +6,10 @@ package dataplanedeployment
 
 import (
 	"context"
-	"strconv"
+	// "strconv"
 	"time"
 
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	// monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -20,21 +20,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	// resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
+	// kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	prometheusshoot "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
-	"github.com/gardener/gardener/pkg/controllerutils"
+	// "github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 const (
-	// TODO: fix inconsistent naming
-	managedResourceName = "opentelemetry-collector-deployment"
+	managedResourceName = "shoot-core-otel-collector-dataplane"
 	componentName       = "otel-collector-dataplane-deployment"
 
 	labelKeyComponent = "component"
@@ -46,12 +45,21 @@ const (
 	TimeoutWaitForManagedResource = 2 * time.Minute
 )
 
+// KubernetesScrapeConfig defines a Kubernetes service discovery scrape job.
+type KubernetesScrapeConfig struct {
+	JobName    string
+	Role       string
+	Namespaces []string
+}
+
 // Config is the configuration for the OTEL collector dataplane deployment component.
 type Config struct {
 	// Image is the container image used for the OTEL collector.
 	Image string
 	// Replicas is the number of replicas for the deployment.
 	Replicas int32
+	// KubernetesScrapeConfigs defines the Kubernetes service discovery scrape jobs.
+	KubernetesScrapeConfigs []KubernetesScrapeConfig
 }
 
 type dataplaneDeployment struct {
@@ -74,10 +82,6 @@ func New(
 }
 
 func (d *dataplaneDeployment) Deploy(ctx context.Context) error {
-	if err := d.deployCollectorScrapeConfig(ctx); err != nil {
-		return err
-	}
-
 	data, err := d.computeResourcesData()
 	if err != nil {
 		return err
@@ -113,57 +117,6 @@ func (d *dataplaneDeployment) emptyScrapeConfig() *monitoringv1alpha1.ScrapeConf
 	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta(componentName, d.namespace, prometheusshoot.Label)}
 }
 
-// deployCollectorScrapeConfig creates a ScrapeConfig for the shoot Prometheus to scrape the OTEL collector.
-func (d *dataplaneDeployment) deployCollectorScrapeConfig(ctx context.Context) error {
-	scrapeConfig := d.emptyScrapeConfig()
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, d.client, scrapeConfig, func() error {
-		metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", prometheusshoot.Label)
-
-		scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
-			// HonorLabels ensures we preserve the job/instance labels set by the collector
-			HonorLabels: ptr.To(true),
-			Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
-			// This is needed because we do not fetch the correct cluster CA bundle right now
-			// TODO: copied this - help!
-			TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
-			Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{Name: prometheusshoot.AccessSecretName},
-				Key:                  resourcesv1alpha1.DataKeyToken,
-			}},
-			KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-				Role:       monitoringv1alpha1.KubernetesRoleEndpoint,
-				APIServer:  ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
-				Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{targetNamespace}},
-				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{Name: prometheusshoot.AccessSecretName},
-					Key:                  resourcesv1alpha1.DataKeyToken,
-				}},
-				TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
-			}},
-			RelabelConfigs: []monitoringv1.RelabelConfig{
-				{
-					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name", "__meta_kubernetes_endpoint_port_name"},
-					Action:       "keep",
-					Regex:        componentName + ";" + metricsPortName,
-				},
-				{
-					TargetLabel: "__address__",
-					Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
-				},
-				{
-					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_port_number"},
-					Regex:        `(.+);(.+)`,
-					TargetLabel:  "__metrics_path__",
-					Replacement:  ptr.To("/api/v1/namespaces/" + targetNamespace + "/pods/${1}:${2}/proxy/metrics"),
-				},
-			},
-			// TODO: no MetricRelabelConfigs - the collector already filters metrics
-		}
-		return nil
-	})
-	return err
-}
-
 func (d *dataplaneDeployment) computeResourcesData() (map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
@@ -174,6 +127,7 @@ func (d *dataplaneDeployment) computeResourcesData() (map[string][]byte, error) 
 				Namespace: targetNamespace,
 				Labels:    getLabels(),
 			},
+			AutomountServiceAccountToken: ptr.To(true),
 		}
 
 		clusterRole = &rbacv1.ClusterRole{
@@ -188,7 +142,6 @@ func (d *dataplaneDeployment) computeResourcesData() (map[string][]byte, error) 
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
-					// Required for scraping kubelet metrics via the kubelet's HTTPS endpoint
 					APIGroups: []string{""},
 					Resources: []string{"nodes/metrics"},
 					Verbs:     []string{"get"},
@@ -222,7 +175,7 @@ func (d *dataplaneDeployment) computeResourcesData() (map[string][]byte, error) 
 				Labels:    getLabels(),
 			},
 			Spec: corev1.ServiceSpec{
-				Type: corev1.ServiceTypeClusterIP,
+				// ClusterIP: "None",
 				Ports: []corev1.ServicePort{
 					{
 						Name:     metricsPortName,
@@ -269,12 +222,8 @@ func (d *dataplaneDeployment) computeResourcesData() (map[string][]byte, error) 
 							v1beta1constants.LabelNetworkPolicyShootFromSeed:                                           v1beta1constants.LabelNetworkPolicyAllowed,
 							v1beta1constants.LabelNetworkPolicyShootToAPIServer:                                        v1beta1constants.LabelNetworkPolicyAllowed,
 							v1beta1constants.LabelNetworkPolicyShootToKubelet:                                          v1beta1constants.LabelNetworkPolicyAllowed,
-							v1beta1constants.LabelNetworkPolicyToDNS:                                                   v1beta1constants.LabelNetworkPolicyAllowed,
-							// v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                                      v1beta1constants.LabelNetworkPolicyAllowed,
-							"networking.gardener.cloud/to-kind-network":                                                v1beta1constants.LabelNetworkPolicyAllowed,
-							// "networking.resources.gardener.cloud/to-all-istio-ingresses-istio-ingressgateway-tcp-9443": v1beta1constants.LabelNetworkPolicyAllowed,
-							// "networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443":                 v1beta1constants.LabelNetworkPolicyAllowed,
-							// "networking.resources.gardener.cloud/to-garden-virtual-garden-kube-apiserver-tcp-443":      v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToDNS:               v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyShootToNodeExporter: v1beta1constants.LabelNetworkPolicyAllowed,
 						}),
 					},
 					Spec: corev1.PodSpec{
@@ -344,48 +293,6 @@ func (d *dataplaneDeployment) computeResourcesData() (map[string][]byte, error) 
 									},
 								},
 							},
-							// {
-							// 	Name: "serviceaccount-token",
-							// 	VolumeSource: corev1.VolumeSource{
-							// 		Projected: &corev1.ProjectedVolumeSource{
-							// 			DefaultMode: ptr.To[int32](420),
-							// 			Sources: []corev1.VolumeProjection{
-							// 				// {
-							// 				// 	ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
-							// 				// 		ExpirationSeconds: ptr.To[int64](3600),
-							// 				// 		Path:              "token",
-							// 				// 	},
-							// 				// },
-							// 				// {
-							// 				// 	ConfigMap: &corev1.ConfigMapProjection{
-							// 				// 		LocalObjectReference: corev1.LocalObjectReference{
-							// 				// 			Name: "kube-root-ca.crt",
-							// 				// 		},
-							// 				// 		Items: []corev1.KeyToPath{
-							// 				// 			{
-							// 				// 				Key:  "ca.crt",
-							// 				// 				Path: "ca.crt",
-							// 				// 			},
-							// 				// 		},
-							// 				// 	},
-							// 				// },
-							// 				// {
-							// 				// 	DownwardAPI: &corev1.DownwardAPIProjection{
-							// 				// 		Items: []corev1.DownwardAPIVolumeFile{
-							// 				// 			{
-							// 				// 				Path: "namespace",
-							// 				// 				FieldRef: &corev1.ObjectFieldSelector{
-							// 				// 					APIVersion: "v1",
-							// 				// 					FieldPath:  "metadata.namespace",
-							// 				// 				},
-							// 				// 			},
-							// 				// 		},
-							// 				// 	},
-							// 				// },
-							// 			},
-							// 		},
-							// 	},
-							// },
 						},
 					},
 				},
@@ -407,7 +314,6 @@ func (d *dataplaneDeployment) getOTELConfig() string {
 	return otelConfig
 }
 
-// TODO: what else is required?
 func getLabels() map[string]string {
 	return map[string]string{
 		labelKeyComponent: componentName,

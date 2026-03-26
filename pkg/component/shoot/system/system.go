@@ -181,6 +181,7 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 			port443     = intstr.FromInt32(kubeapiserverconstants.Port)
 			port8053    = intstr.FromInt32(corednsconstants.PortServer)
 			port10250   = intstr.FromInt32(10250)
+			port16909   = intstr.FromInt32(16909)
 			protocolUDP = corev1.ProtocolUDP
 			protocolTCP = corev1.ProtocolTCP
 
@@ -272,6 +273,22 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 				},
 			}
+			networkPolicyAllowToNodeExporter = &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener.cloud--allow-to-node-exporter",
+					Namespace: metav1.NamespaceSystem,
+					Annotations: map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows egress traffic to node exporter in TCP "+
+							"port 16909 for pods labeled with '%s=%s'.", v1beta1constants.LabelNetworkPolicyShootToNodeExporter,
+							v1beta1constants.LabelNetworkPolicyAllowed),
+					},
+				},
+				Spec: networkingv1.NetworkPolicySpec{
+					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyShootToNodeExporter: v1beta1constants.LabelNetworkPolicyAllowed}},
+					Egress:      []networkingv1.NetworkPolicyEgressRule{{Ports: []networkingv1.NetworkPolicyPort{{Port: &port16909, Protocol: &protocolTCP}}}},
+					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+				},
+			}
 			networkPolicyAllowToPublicNetworks = &networkingv1.NetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gardener.cloud--allow-to-public-networks",
@@ -297,6 +314,7 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 			networkPolicyAllowToShootAPIServer,
 			networkPolicyAllowToDNS,
 			networkPolicyAllowToKubelet,
+			networkPolicyAllowToNodeExporter,
 			networkPolicyAllowToPublicNetworks,
 		); err != nil {
 			return nil, err

@@ -575,6 +575,8 @@ const (
 	LabelNetworkPolicyShootToAPIServer = "networking.gardener.cloud/to-apiserver"
 	// LabelNetworkPolicyShootToKubelet allows Egress traffic to the kubelets.
 	LabelNetworkPolicyShootToKubelet = "networking.gardener.cloud/to-kubelet"
+	// LabelNetworkPolicyShootToNodeExporter allows Egress traffic to the node exporter.
+	LabelNetworkPolicyShootToNodeExporter = "networking.gardener.cloud/to-node-exporter"
 	// LabelNetworkPolicyAllowed is a constant for allowing a network policy.
 	LabelNetworkPolicyAllowed = "allowed"
 	// LabelNetworkPolicyScrapeTargets is a constant for pod selector label which can be used on Services for components
