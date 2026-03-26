@@ -292,7 +292,6 @@ kind: Secret
 metadata:
   name: my-pull-secret
   namespace: <gardenlet-namespace>
-  labels:
 type: kubernetes.io/dockerconfigjson
 data:
   .dockerconfigjson: <base64-encoded-docker-config-json>
