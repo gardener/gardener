@@ -45,13 +45,13 @@ Refer to the `gardenlet` component configuration [manifest](../../../example/20-
 
 > When deployed in a `Shoot` cluster, the _mutating_ webhook targets `vertical pod autoscaler` resources __inside__ the `kube-system` and `kubernetes-dashboard` namespaces.
 
-To make use of the _mutating_ resource manager webhook, the `Shoot`'s [Vertical Pod Autoscaler](https://github.com/kubernetes/autoscaler) deployment must __not have__  the `InPlaceOrRecreate` feature gate __disabled__. Follow the [in-place resource updates](../usage/autoscaling/in-place-resource-updates.md#shoot) guide for more details about the Vertical Pod Autoscaler components setup.
+With the adoption of `Vertical Pod Autoscaler` [1.6.0](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.6.0), the `InPlaceOrRecreate` feature gate got promoted to _GA_ and __cannot__ be disabled. Follow the [in-place resource updates](../usage/autoscaling/in-place-resource-updates.md#shoot) guide for more details about the Vertical Pod Autoscaler components setup.
 
 #### Seed
 
 >  When deployed in a `Seed` cluster, the _mutating_ webhook targets `vertical pod autoscaler` resources __outside__ the `kube-system` and `kubernetes-dashboard` namespaces.
 
-To make use of the _mutating_ resource manager webhook, the `Seed`'s [Vertical Pod Autoscaler](https://github.com/kubernetes/autoscaler) deployment must __not have__ the `InPlaceOrRecreate` feature gate __disabled__. Follow the [in-place resource updates](../usage/autoscaling/in-place-resource-updates.md#seed) guide for more details about the Vertical Pod Autoscaler components setup.
+With the adoption of `Vertical Pod Autoscaler` [1.6.0](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.6.0), the `InPlaceOrRecreate` feature gate got promoted to _GA_ and __cannot__ be disabled. Follow the [in-place resource updates](../usage/autoscaling/in-place-resource-updates.md#seed) guide for more details about the Vertical Pod Autoscaler components setup.
 
 ### Gardener Operator
 
