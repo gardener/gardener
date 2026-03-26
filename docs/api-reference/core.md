@@ -4383,6 +4383,7 @@ Kubernetes meta/v1.Duration
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.ControllerInstallationStatus">ControllerInstallationStatus</a>, 
+<a href="#core.gardener.cloud/v1beta1.ProjectStatus">ProjectStatus</a>, 
 <a href="#core.gardener.cloud/v1beta1.SeedStatus">SeedStatus</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
 </p>
@@ -11160,6 +11161,20 @@ Kubernetes meta/v1.Time
 <td>
 <em>(Optional)</em>
 <p>LastActivityTimestamp contains the timestamp from the last activity performed in this project.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>conditions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Condition">
+[]Condition
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Conditions represents the latest available observations of a Project&rsquo;s current state.</p>
 </td>
 </tr>
 </tbody>
