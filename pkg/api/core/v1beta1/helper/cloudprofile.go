@@ -49,8 +49,10 @@ func CurrentLifecycleClassification(version gardencorev1beta1.ExpirableVersion) 
 		return gardencorev1beta1.ClassificationSupported
 	}
 
-	currentTime := time.Now()
-	currentClassification := gardencorev1beta1.ClassificationUnavailable
+	var (
+		currentTime           = time.Now()
+		currentClassification = gardencorev1beta1.ClassificationUnavailable
+	)
 
 	for _, stage := range version.Lifecycle {
 		startTime := time.Time{}

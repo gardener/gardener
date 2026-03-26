@@ -44,8 +44,10 @@ func CurrentLifecycleClassification(version core.ExpirableVersion) core.VersionC
 		return core.ClassificationSupported
 	}
 
-	currentTime := time.Now()
-	currentClassification := core.ClassificationUnavailable
+	var (
+		currentTime           = time.Now()
+		currentClassification = core.ClassificationUnavailable
+	)
 
 	for _, stage := range version.Lifecycle {
 		startTime := time.Time{}
