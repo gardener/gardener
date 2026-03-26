@@ -321,11 +321,8 @@ func GetMachineImageDiff(old, new []core.MachineImage) MachineImageDiff {
 func FilterVersionsWithClassification(versions []core.ExpirableVersion, classification core.VersionClassification) []core.ExpirableVersion {
 	var result []core.ExpirableVersion
 	for _, version := range versions {
-		// TODO:(rapsnx) This function gets all supported versions, so if a lifecycle stage has a supported stage
-		// which is not active, it is also collected.
-		// FIXME:(rapnx) If in old classifications classification is nil, check got skipped, therefore it was possible to have
-		// multiple patch versions supported within the same minor.
-		// For now we keep this behavior for both new & old lifecycle, until issue <issue> is resolved.
+		// TODO(rapsnx): There is a regression in old classifications, which allowed to bypass validations.
+		// Update this when issue: https://github.com/gardener/gardener/issues/14328 is resolved.
 		if (version.Classification == nil || *version.Classification != classification) &&
 			!slices.ContainsFunc(version.Lifecycle, func(s core.LifecycleStage) bool {
 				return s.Classification == classification

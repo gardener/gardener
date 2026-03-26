@@ -707,39 +707,6 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						}))))
 					})
 
-					// FIXME:(rapnx) If in old classifications classification is nil, check got skipped, therefore it was possible to have
-					// multiple patch versions supported within the same minor.
-					// For now we keep this behavior for both new & old lifecycle, until issue <issue> is resolved.
-
-					// It("only allow one supported version per minor version using Lifecycle", func() {
-					// 	time1 := metav1.Now()
-					// 	time2 := metav1.Time{Time: metav1.Now().Add(time.Hour)}
-					// 	time3 := metav1.Time{Time: metav1.Now().Add(2 * time.Hour)}
-					// 	cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
-					// 		{
-					// 			Version: "1.1.0",
-					// 			Lifecycle: []core.LifecycleStage{
-					// 				{Classification: previewClassification},
-					// 				{Classification: supportedClassification, StartTime: &time1},
-					// 				{Classification: deprecatedClassification, StartTime: &time3},
-					// 			},
-					// 		},
-					// 		{
-					// 			Version: "1.1.1",
-					// 			Lifecycle: []core.LifecycleStage{
-					// 				{Classification: supportedClassification, StartTime: &time2},
-					// 			},
-					// 		},
-					// 	}
-					// 	errorList := ValidateCloudProfile(cloudProfile)
-					//
-					// 	Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					// 		"Type":   Equal(field.ErrorTypeForbidden),
-					// 		"Field":  Equal("spec.kubernetes.versions[0]"),
-					// 		"Detail": ContainSubstring("\"supported\" lifecycle stages must not overlap per minor version"),
-					// 	}))))
-					// })
-
 					It("allow multiple supported version per minor version if their lifecycle start times do not overlap", func() {
 						time1 := metav1.Now()
 						time3 := metav1.Time{Time: metav1.Now().Add(2 * time.Hour)}
@@ -763,11 +730,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 						Expect(errorList).To(BeEmpty())
 					})
-
-					// NOTE:(rapsn) End of GEP-0032 featuregate
 				})
-
-				// NOTE:(rapsn) K8S
 			})
 
 			It("should forbid duplicated kubernetes versions", func() {
