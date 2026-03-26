@@ -33,7 +33,6 @@ import (
 	mockresourcemanager "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/mock"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
 	"github.com/gardener/gardener/pkg/component/shared"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -186,75 +185,6 @@ var _ = Describe("ResourceManager", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(resourceManager.GetValues().MachineNamespace).To(BeNil())
-				})
-			})
-		})
-
-		When("VPAInPlaceUpdates feature gate is enabled", func() {
-			BeforeEach(func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VPAInPlaceUpdates, true))
-			})
-
-			Context("without feature gates", func() {
-				BeforeEach(func() {
-					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-						Spec: gardencorev1beta1.ShootSpec{
-							Kubernetes: gardencorev1beta1.Kubernetes{
-								VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
-									FeatureGates: nil,
-								},
-							},
-						},
-					})
-				})
-
-				It("should set VPAInPlaceUpdatesEnabled=true", func() {
-					resourceManager, err := botanist.DefaultResourceManager()
-					Expect(resourceManager).NotTo(BeNil())
-					Expect(err).NotTo(HaveOccurred())
-					Expect(resourceManager.GetValues().VPAInPlaceUpdatesEnabled).To(BeTrue())
-				})
-			})
-
-			Context("with Shoot Vertical Pod Autoscaler InPlaceOrRecreate feature gate enabled", func() {
-				BeforeEach(func() {
-					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-						Spec: gardencorev1beta1.ShootSpec{
-							Kubernetes: gardencorev1beta1.Kubernetes{
-								VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
-									FeatureGates: map[string]bool{"InPlaceOrRecreate": true},
-								},
-							},
-						},
-					})
-				})
-
-				It("should set VPAInPlaceUpdatesEnabled=true", func() {
-					resourceManager, err := botanist.DefaultResourceManager()
-					Expect(resourceManager).NotTo(BeNil())
-					Expect(err).NotTo(HaveOccurred())
-					Expect(resourceManager.GetValues().VPAInPlaceUpdatesEnabled).To(BeTrue())
-				})
-			})
-
-			Context("with Shoot Vertical Pod Autoscaler InPlaceOrRecreate feature gate disabled", func() {
-				BeforeEach(func() {
-					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-						Spec: gardencorev1beta1.ShootSpec{
-							Kubernetes: gardencorev1beta1.Kubernetes{
-								VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
-									FeatureGates: map[string]bool{"InPlaceOrRecreate": false},
-								},
-							},
-						},
-					})
-				})
-
-				It("should set VPAInPlaceUpdatesEnabled=false", func() {
-					resourceManager, err := botanist.DefaultResourceManager()
-					Expect(resourceManager).NotTo(BeNil())
-					Expect(err).NotTo(HaveOccurred())
-					Expect(resourceManager.GetValues().VPAInPlaceUpdatesEnabled).To(BeFalse())
 				})
 			})
 		})
