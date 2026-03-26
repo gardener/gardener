@@ -1,6 +1,6 @@
 # Logging and Monitoring for Extensions
 
-Gardener provides an integrated logging and monitoring stack for alerting, monitoring, and troubleshooting of its managed components by operators or end users. For further information how to make use of it in these roles, refer to the corresponding guides for [exploring logs](https://github.com/gardener/logging/tree/master/docs/usage/README.md) and for [monitoring with Plutono](https://github.com/credativ/plutono).
+Gardener provides an integrated logging and monitoring stack for alerting, monitoring, and troubleshooting of its managed components by operators or end users. For further information how to make use of it in these roles, refer to the corresponding guides for [exploring logs](https://github.com/gardener/logging/blob/master/docs/usage.md) and for [monitoring with Plutono](https://github.com/credativ/plutono).
 
 The components that constitute the logging and monitoring stack are managed by Gardener. By default, it deploys [Prometheus](https://prometheus.io/) and [Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/) (managed via [`prometheus-operator`](https://github.com/prometheus-operator/prometheus-operator), and [Plutono](https://github.com/credativ/plutono) into the `garden` namespace of all seed clusters. If the logging is enabled in the `gardenlet` configuration (`logging.enabled`), it will deploy [fluent-operator](https://github.com/fluent/fluent-operator) and [Vali](https://github.com/credativ/plutono) in the `garden` namespace too.
 
