@@ -52,6 +52,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/component/observability/logging"
+	"github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 	victoriaoperator "github.com/gardener/gardener/pkg/component/observability/logging/victoria/operator"
@@ -787,9 +788,9 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 	if !seedIsGarden {
 		centralLoggingConfigurations = append(centralLoggingConfigurations, logging.GardenCentralLoggingConfigurations...)
 	}
-	// if gardenlethelper.IsEventLoggingEnabled(&r.Config) {
-	// 	centralLoggingConfigurations = append(centralLoggingConfigurations, eventlogger.CentralLoggingConfiguration)
-	// }
+	if gardenlethelper.IsEventLoggingEnabled(&r.Config) {
+		centralLoggingConfigurations = append(centralLoggingConfigurations, eventlogger.CentralLoggingConfiguration)
+	}
 
 	var output *fluentbitv1alpha2.ClusterOutput
 	if gardenlethelper.IsValiEnabled(&r.Config) {
