@@ -23,7 +23,12 @@ tests:
   - series: 'kube_pod_status_ready{condition="true", type="seed", pod="cpPodNotReady"}'
     values: '0+0x60'
   - series: 'kube_pod_status_phase{phase="Running", type="seed", pod="cpPodNotReady"}'
-    values: '1+0x60'    
+    values: '1+0x60'
+  # cpPodCompleted should NOT trigger KubePodNotReadyControlPlane
+  - series: 'kube_pod_status_ready{condition="true", type="seed", pod="cpPodCompleted"}'
+    values: '0+0x60'
+  - series: 'kube_pod_status_phase{phase="Succeeded", type="seed", pod="cpPodCompleted"}'
+    values: '1+0x60'
   alert_rule_test:
   - eval_time: 1h
     alertname: KubePodPendingShoot
