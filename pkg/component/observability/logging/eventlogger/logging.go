@@ -5,6 +5,8 @@
 package eventlogger
 
 import (
+	"fmt"
+
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
 	fluentbitv1alpha2filter "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2/plugins/filter"
 	corev1 "k8s.io/api/core/v1"
@@ -23,11 +25,11 @@ func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 	return []*fluentbitv1alpha2.ClusterFilter{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   "zz-stringify-record-nest-log",
+				Name:   v1beta1constants.DeploymentNameEventLogger,
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.FilterSpec{
-				Match: "kubernetes.*event-logger*event-logger*",
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", v1beta1constants.DeploymentNameEventLogger, name),
 				FilterItems: []fluentbitv1alpha2.FilterItem{
 					{
 						Lua: &fluentbitv1alpha2filter.Lua{
@@ -38,6 +40,11 @@ func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 								},
 							},
 							Call: "stringify_records_nest_log",
+						},
+					},
+					{
+						RecordModifier: &fluentbitv1alpha2filter.RecordModifier{
+							Records: []string{"job event-logging"},
 						},
 					},
 				},
