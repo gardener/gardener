@@ -401,17 +401,17 @@ func initializeShootResource(resources gardenadm.Resources, fs afero.Afero, runs
 		}
 		shoot.Status.UID = uid
 
-		if v1beta1helper.HasManagedInfrastructure(resources.Shoot) {
-			// When running `gardenadm init` for a shoot with managed infrastructure, we need to restore state (secrets,
-			// extensions, etc.) from the ShootState exported by `gardenadm bootstrap`.
-			if resources.ShootState == nil {
-				return fmt.Errorf("shoot has managed infrastructure, but ShootState is missing " +
-					"(the ShootState is usually exported by `gardenadm bootstrap` and read by `gardenadm init`): " +
-					"you should either use `gardenadm bootstrap` to create the self-hosted shoot cluster with managed infrastructure or " +
-					"remove the `Shoot.spec.{secret,credentials}BindingName` field to mark the shoot as having unmanaged infrastructure")
-			}
+		if v1beta1helper.HasManagedInfrastructure(resources.Shoot) && resources.ShootState == nil {
+			return fmt.Errorf("shoot has managed infrastructure, but ShootState is missing " +
+				"(the ShootState is usually exported by `gardenadm bootstrap` and read by `gardenadm init`): " +
+				"you should either use `gardenadm bootstrap` to create the self-hosted shoot cluster with managed infrastructure or " +
+				"remove the `Shoot.spec.{secret,credentials}BindingName` field to mark the shoot as having unmanaged infrastructure")
+		}
 
+		if resources.ShootState != nil {
 			// Instruct the botanist and shoot package to read the ShootState and restore the state of extensions, secrets, etc.
+			// For managed infrastructure, this restores the state exported by `gardenadm bootstrap`.
+			// For unmanaged infrastructure on retry, this restores the bootstrap secrets persisted by `gardenadm init`.
 			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				Type: gardencorev1beta1.LastOperationTypeRestore,
 			}

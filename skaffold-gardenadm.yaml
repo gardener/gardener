@@ -1178,7 +1178,7 @@ deploy:
               - |
                 for i in 0 1 2 3; do
                   pod="machine-$i"
-                  kubectl -n "$SKAFFOLD_NAMESPACES" exec "$pod" -- sh -c 'rm -rf /gardenadm/resources && mkdir -p /gardenadm/resources'
+                  kubectl -n "$SKAFFOLD_NAMESPACES" exec "$pod" -- sh -c 'rm -f /gardenadm/imagevector-overwrite.yaml /gardenadm/imagevector-overwrite-charts.yaml /gardenadm/resources/manifests.yaml && mkdir -p /gardenadm/resources'
                   kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/.skaffold-image                    "$pod:/tmp/.skaffold-image"
                   kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml        "$pod:/gardenadm/imagevector-overwrite.yaml"
                   kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/.imagevector-overwrite-charts.yaml "$pod:/gardenadm/imagevector-overwrite-charts.yaml"

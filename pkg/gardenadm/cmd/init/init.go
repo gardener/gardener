@@ -483,7 +483,7 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Garden
 		initializeSecretsManagement = g.Add(flow.Task{
 			Name:   "Initializing secrets management",
 			Fn:     b.InitializeSecretsManagement,
-			SkipIf: kubeconfigFileExists,
+			SkipIf: kubeconfigFileExists && !b.IsRestorePhase(),
 		})
 		writeKubeletBootstrapKubeconfig = g.Add(flow.Task{
 			Name:         "Writing kubelet bootstrap kubeconfig with a fake token to disk to make kubelet start",
@@ -497,11 +497,19 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Garden
 			SkipIf:       kubeconfigFileExists,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
+		persistBootstrapSecrets = g.Add(flow.Task{
+			Name: "Persisting bootstrap secrets as ShootState for retry resilience",
+			Fn: func(ctx context.Context) error {
+				return b.PersistBootstrapSecrets(ctx, opts.ConfigDir)
+			},
+			SkipIf:       b.IsRestorePhase(),
+			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfigSecretForNodeAgent),
+		})
 		applyOperatingSystemConfig = g.Add(flow.Task{
 			Name:         "Applying OperatingSystemConfig using gardener-node-agent's reconciliation logic",
 			Fn:           b.ApplyOperatingSystemConfig,
 			SkipIf:       kubeconfigFileExists,
-			Dependencies: flow.NewTaskIDs(writeKubeletBootstrapKubeconfig, deployOperatingSystemConfigSecretForNodeAgent),
+			Dependencies: flow.NewTaskIDs(writeKubeletBootstrapKubeconfig, persistBootstrapSecrets),
 		})
 		initializeClientSet = g.Add(flow.Task{
 			Name: "Initializing connection to Kubernetes control plane",
@@ -514,10 +522,13 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Garden
 		_ = g.Add(flow.Task{
 			Name: "Importing secrets into control plane",
 			Fn: func(ctx context.Context) error {
-				return b.MigrateSecrets(ctx, b.SeedClientSet.Client(), clientSet.Client())
+				if err := b.MigrateSecrets(ctx, b.SeedClientSet.Client(), clientSet.Client()); err != nil {
+					return err
+				}
+				return b.CleanupBootstrapSecrets(opts.ConfigDir)
 			},
-			SkipIf:       kubeconfigFileExists,
-			Dependencies: flow.NewTaskIDs(initializeClientSet),
+			SkipIf:       kubeconfigFileExists && !b.IsRestorePhase(),
+			Dependencies: flow.NewTaskIDs(persistBootstrapSecrets, initializeClientSet),
 		})
 	)
 
