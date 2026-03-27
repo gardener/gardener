@@ -107,7 +107,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	return reconcile.Result{
-		RequeueAfter: v1beta1helper.DurationUntilNextVersionLifecycleStage(&cloudProfile.Spec, r.Clock),
+		RequeueAfter: v1beta1helper.DurationUntilNextVersionTransition(&cloudProfile.Spec, r.Clock),
 	}, nil
 }
 

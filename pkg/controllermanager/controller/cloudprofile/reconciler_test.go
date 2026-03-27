@@ -112,7 +112,6 @@ var _ = Describe("Reconciler", func() {
 			c.EXPECT().Status().Return(status)
 			status.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{}), gomock.Any()).
 				DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					fmt.Println(patch.Data(o))
 					Expect(patch.Data(o)).To(BeEquivalentTo(`{}`))
 					return nil
 				})
@@ -230,7 +229,7 @@ var _ = Describe("Reconciler", func() {
 
 	Context("status reconciliation", func() {
 		var (
-			now    = time.Time{}
+			now    time.Time
 			future *metav1.Time
 			past   *metav1.Time
 
@@ -293,6 +292,46 @@ var _ = Describe("Reconciler", func() {
 							{
 								Version:        "1.28.2",
 								Classification: gardencorev1beta1.ClassificationPreview,
+							},
+						},
+					},
+				}
+			)
+
+			result := testStatus(spec, wantStatus)
+			Expect(result.RequeueAfter).To(BeNumerically("~", future.Sub(now), time.Second))
+		})
+
+		It("should reconcile status of old classifications and requeue due expiration date", func() {
+			var (
+				supported = gardencorev1beta1.ClassificationSupported
+				spec      = gardencorev1beta1.CloudProfileSpec{
+					Kubernetes: gardencorev1beta1.KubernetesSettings{
+						Versions: []gardencorev1beta1.ExpirableVersion{
+							{
+								Version:        "1.28.2",
+								ExpirationDate: past,
+								Classification: &supported,
+							},
+							{
+								Version:        "1.30.2",
+								ExpirationDate: future,
+								Classification: &supported,
+							},
+						},
+					},
+				}
+
+				wantStatus = gardencorev1beta1.CloudProfileStatus{
+					Kubernetes: &gardencorev1beta1.KubernetesStatus{
+						Versions: []gardencorev1beta1.ExpirableVersionStatus{
+							{
+								Version:        "1.28.2",
+								Classification: gardencorev1beta1.ClassificationExpired,
+							},
+							{
+								Version:        "1.30.2",
+								Classification: gardencorev1beta1.ClassificationSupported,
 							},
 						},
 					},
