@@ -9,6 +9,7 @@ import (
 	fluentbitv1alpha2filter "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2/plugins/filter"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
@@ -31,9 +32,14 @@ var _ = Describe("Logging", func() {
 							Match: "kubernetes.*event-logger*event-logger*",
 							FilterItems: []fluentbitv1alpha2.FilterItem{
 								{
-									Nest: &fluentbitv1alpha2filter.Nest{
-										Operation:   "lift",
-										NestedUnder: "log",
+									Lua: &fluentbitv1alpha2filter.Lua{
+										Script: corev1.ConfigMapKeySelector{
+											Key: "stringify_records_nest_log.lua",
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: "fluent-bit-lua-config",
+											},
+										},
+										Call: "stringify_records_nest_log",
 									},
 								},
 								{
