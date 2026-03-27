@@ -53,8 +53,10 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -392,6 +394,13 @@ func (g *garden) Start(ctx context.Context) error {
 						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: gardenlet.ResourcePrefixSelfHostedShoot + g.selfHostedShootInfo.Meta.Name}),
 						Namespaces: map[string]cache.Config{g.selfHostedShootInfo.Meta.Namespace: {}},
 					},
+					&seedmanagementv1alpha1.ManagedSeed{}: {
+						Field: fields.SelectorFromSet(fields.Set{
+							seedmanagement.ManagedSeedShootName: g.selfHostedShootInfo.Meta.Name,
+						}),
+						Namespaces: map[string]cache.Config{g.selfHostedShootInfo.Meta.Namespace: {}},
+					},
+					&gardencorev1beta1.Seed{}: {},
 				}
 
 				return kubernetes.AggregatorCacheFunc(
@@ -466,15 +475,31 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
-	log.Info("Setting up shoot client map")
-	shootClientMap, err := clientmapbuilder.
-		NewShootClientMapBuilder().
-		WithGardenClient(gardenCluster.GetClient()).
-		WithSeedClient(g.mgr.GetClient()).
-		WithClientConnectionConfig(&g.config.ShootClientConnection.ClientConnectionConfiguration).
-		Build(log)
+	seedClientSet, err := kubernetes.NewWithConfig(
+		kubernetes.WithRESTConfig(g.mgr.GetConfig()),
+		kubernetes.WithRuntimeAPIReader(g.mgr.GetAPIReader()),
+		kubernetes.WithRuntimeClient(g.mgr.GetClient()),
+		kubernetes.WithRuntimeCache(g.mgr.GetCache()),
+	)
 	if err != nil {
-		return fmt.Errorf("failed to build shoot ClientMap: %w", err)
+		return fmt.Errorf("failed creating seed clientset: %w", err)
+	}
+
+	log.Info("Setting up shoot client map")
+	var shootClientMap clientmap.ClientMap
+	if g.selfHostedShootInfo != nil {
+		shootClientMap = clientmap.NewSelfHostedShootClientMap(seedClientSet)
+	} else {
+		var err error
+		shootClientMap, err = clientmapbuilder.
+			NewShootClientMapBuilder().
+			WithGardenClient(gardenCluster.GetClient()).
+			WithSeedClient(g.mgr.GetClient()).
+			WithClientConnectionConfig(&g.config.ShootClientConnection.ClientConnectionConfiguration).
+			Build(log)
+		if err != nil {
+			return fmt.Errorf("failed to build shoot ClientMap: %w", err)
+		}
 	}
 
 	log.Info("Adding runnables now that bootstrapping is finished")
@@ -523,6 +548,7 @@ func (g *garden) Start(ctx context.Context) error {
 		g.cancel,
 		gardenCluster,
 		g.mgr,
+		seedClientSet,
 		shootClientMap,
 		g.config,
 		g.healthManager,
@@ -803,6 +829,8 @@ func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 		fns = []func(context.Context, client.FieldIndexer) error{
 			// core API group
 			indexer.AddBackupEntryBucketName,
+			// seedmanagement API group
+			indexer.AddManagedSeedShootName,
 		}
 	}
 

@@ -35,6 +35,7 @@ func (r *Reconciler) delete(
 	seedObj *seedpkg.Seed,
 	seedIsGarden bool,
 	seedIsShoot bool,
+	seedIsSelfHostedShoot bool,
 ) (
 	reconcile.Result,
 	error,
@@ -80,7 +81,7 @@ func (r *Reconciler) delete(
 	}
 
 	log.Info("No Shoots or BackupBuckets are referencing the Seed, deletion accepted")
-	if err := r.runDeleteSeedFlow(ctx, log, seedObj, seedIsGarden, seedIsShoot); err != nil {
+	if err := r.runDeleteSeedFlow(ctx, log, seedObj, seedIsGarden, seedIsShoot, seedIsSelfHostedShoot); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -101,9 +102,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 	seed *seedpkg.Seed,
 	seedIsGarden bool,
 	seedIsShoot bool,
+	seedIsSelfHostedShoot bool,
 ) error {
 	log.Info("Instantiating component deployers")
-	c, err := r.instantiateComponents(ctx, log, seed, nil, seedIsGarden, nil, nil, nil, seedIsShoot)
+	c, err := r.instantiateComponents(ctx, log, seed, nil, seedIsGarden, nil, nil, nil, seedIsShoot, seedIsSelfHostedShoot)
 	if err != nil {
 		return err
 	}
@@ -185,7 +187,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 		destroyEtcdDruid = g.Add(flow.Task{
 			Name:   "Destroying etcd druid",
 			Fn:     component.OpDestroyAndWait(c.etcdDruid).Destroy,
-			SkipIf: seedIsGarden,
+			SkipIf: seedIsGarden || seedIsSelfHostedShoot,
 		})
 		destroyVPA = g.Add(flow.Task{
 			Name:   "Destroy Kubernetes vertical pod autoscaler",
@@ -323,7 +325,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name:         "Destroying ETCD-related custom resource definitions",
 			Fn:           component.OpDestroyAndWait(c.etcdCRD).Destroy,
 			Dependencies: flow.NewTaskIDs(ensureNoControllerInstallationsExist),
-			SkipIf:       seedIsGarden,
+			SkipIf:       seedIsGarden || seedIsSelfHostedShoot,
 		})
 		destroyIstioCRDs = g.Add(flow.Task{
 			Name:         "Destroying Istio custom resource definitions",
@@ -396,7 +398,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name:         "Destroying gardener-resource-manager",
 			Fn:           c.gardenerResourceManager.Destroy,
 			Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExist),
-			SkipIf:       seedIsGarden,
+			SkipIf:       seedIsGarden || seedIsSelfHostedShoot,
 		})
 	)
 

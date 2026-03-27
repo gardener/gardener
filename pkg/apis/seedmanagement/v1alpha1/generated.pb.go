@@ -602,6 +602,13 @@ func (m *Image) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.Ref != nil {
+		i -= len(*m.Ref)
+		copy(dAtA[i:], *m.Ref)
+		i = encodeVarintGenerated(dAtA, i, uint64(len(*m.Ref)))
+		i--
+		dAtA[i] = 0x22
+	}
 	if m.PullPolicy != nil {
 		i -= len(*m.PullPolicy)
 		copy(dAtA[i:], *m.PullPolicy)
@@ -1472,6 +1479,10 @@ func (m *Image) Size() (n int) {
 		l = len(*m.PullPolicy)
 		n += 1 + l + sovGenerated(uint64(l))
 	}
+	if m.Ref != nil {
+		l = len(*m.Ref)
+		n += 1 + l + sovGenerated(uint64(l))
+	}
 	return n
 }
 
@@ -1864,6 +1875,7 @@ func (this *Image) String() string {
 		`Repository:` + valueToStringGenerated(this.Repository) + `,`,
 		`Tag:` + valueToStringGenerated(this.Tag) + `,`,
 		`PullPolicy:` + valueToStringGenerated(this.PullPolicy) + `,`,
+		`Ref:` + valueToStringGenerated(this.Ref) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -3725,6 +3737,39 @@ func (m *Image) Unmarshal(dAtA []byte) error {
 			}
 			s := k8s_io_api_core_v1.PullPolicy(dAtA[iNdEx:postIndex])
 			m.PullPolicy = &s
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Ref", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			s := string(dAtA[iNdEx:postIndex])
+			m.Ref = &s
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

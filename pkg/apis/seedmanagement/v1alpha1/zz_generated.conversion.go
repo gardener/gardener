@@ -521,6 +521,7 @@ func autoConvert_v1alpha1_Image_To_seedmanagement_Image(in *Image, out *seedmana
 	out.Repository = (*string)(unsafe.Pointer(in.Repository))
 	out.Tag = (*string)(unsafe.Pointer(in.Tag))
 	out.PullPolicy = (*corev1.PullPolicy)(unsafe.Pointer(in.PullPolicy))
+	out.Ref = (*string)(unsafe.Pointer(in.Ref))
 	return nil
 }
 
@@ -533,6 +534,7 @@ func autoConvert_seedmanagement_Image_To_v1alpha1_Image(in *seedmanagement.Image
 	out.Repository = (*string)(unsafe.Pointer(in.Repository))
 	out.Tag = (*string)(unsafe.Pointer(in.Tag))
 	out.PullPolicy = (*corev1.PullPolicy)(unsafe.Pointer(in.PullPolicy))
+	out.Ref = (*string)(unsafe.Pointer(in.Ref))
 	return nil
 }
 

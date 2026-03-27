@@ -62,18 +62,19 @@ type Interface interface {
 
 // Actuator is a concrete implementation of Interface.
 type Actuator struct {
-	GardenConfig             *rest.Config
-	GardenClient             client.Client
-	GetTargetClientFunc      func(ctx context.Context) (kubernetes.Interface, error)
-	CheckIfVPAAlreadyExists  func(ctx context.Context) (bool, error)
-	GetTargetDomain          func() string
-	ApplyGardenletChart      func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]any) error
-	DeleteGardenletChart     func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]any) error
-	Clock                    clock.Clock
-	ValuesHelper             ValuesHelper
-	Recorder                 events.EventRecorder
-	GardenletNamespaceTarget string
-	BootstrapToken           string
+	GardenConfig                *rest.Config
+	GardenClient                client.Client
+	GetTargetClientFunc         func(ctx context.Context) (kubernetes.Interface, error)
+	CheckIfVPAAlreadyExists     func(ctx context.Context) (bool, error)
+	GetTargetDomain             func() string
+	ApplyGardenletChart         func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]any) error
+	DeleteGardenletChart        func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]any) error
+	Clock                       clock.Clock
+	ValuesHelper                ValuesHelper
+	Recorder                    events.EventRecorder
+	GardenletNamespaceTarget    string
+	BootstrapToken              string
+	SkipGardenNamespaceDeletion bool
 }
 
 // Reconcile deploys or updates gardenlets.
@@ -261,26 +262,28 @@ func (a *Actuator) Delete(
 	}
 
 	// Delete garden namespace from the target cluster if it still exists and is not already deleting
-	gardenNamespace, err := a.getGardenNamespace(ctx, targetClient)
-	if err != nil {
-		a.Recorder.Eventf(obj, nil, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, gardencorev1beta1.EventActionDelete, err.Error())
-		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleteError, err.Error()), false, false, fmt.Errorf("could not check if garden namespace exists in target cluster: %w", err)
-	}
-
-	if gardenNamespace != nil {
-		if gardenNamespace.DeletionTimestamp == nil {
-			log.Info("Deleting garden namespace from target cluster")
-			a.Recorder.Eventf(obj, nil, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, gardencorev1beta1.EventActionDelete, "Deleting garden namespace from target cluster")
-			if err := a.deleteGardenNamespace(ctx, targetClient); err != nil {
-				a.Recorder.Eventf(obj, nil, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, gardencorev1beta1.EventActionDelete, err.Error())
-				return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleteError, err.Error()), false, false, fmt.Errorf("could not delete garden namespace from target cluster: %w", err)
-			}
-		} else {
-			log.Info("Waiting for garden namespace to be deleted from target cluster")
-			a.Recorder.Eventf(obj, nil, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, gardencorev1beta1.EventActionDelete, "Waiting for garden namespace to be deleted from target cluster")
+	if !a.SkipGardenNamespaceDeletion {
+		gardenNamespace, err := a.getGardenNamespace(ctx, targetClient)
+		if err != nil {
+			a.Recorder.Eventf(obj, nil, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, gardencorev1beta1.EventActionDelete, err.Error())
+			return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleteError, err.Error()), false, false, fmt.Errorf("could not check if garden namespace exists in target cluster: %w", err)
 		}
 
-		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleting, "Waiting for garden namespace to be deleted from target cluster"), true, false, nil
+		if gardenNamespace != nil {
+			if gardenNamespace.DeletionTimestamp == nil {
+				log.Info("Deleting garden namespace from target cluster")
+				a.Recorder.Eventf(obj, nil, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, gardencorev1beta1.EventActionDelete, "Deleting garden namespace from target cluster")
+				if err := a.deleteGardenNamespace(ctx, targetClient); err != nil {
+					a.Recorder.Eventf(obj, nil, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, gardencorev1beta1.EventActionDelete, err.Error())
+					return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleteError, err.Error()), false, false, fmt.Errorf("could not delete garden namespace from target cluster: %w", err)
+				}
+			} else {
+				log.Info("Waiting for garden namespace to be deleted from target cluster")
+				a.Recorder.Eventf(obj, nil, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, gardencorev1beta1.EventActionDelete, "Waiting for garden namespace to be deleted from target cluster")
+			}
+
+			return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleting, "Waiting for garden namespace to be deleted from target cluster"), true, false, nil
+		}
 	}
 
 	return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleted, fmt.Sprintf("Seed %s has been unregistered", obj.GetName())), false, true, nil
@@ -621,7 +624,7 @@ func (a *Actuator) prepareGardenletChartValues(
 		a.ValuesHelper,
 		bootstrap,
 		a.BootstrapToken,
-		ensureGardenletEnvironment(deployment, a.GetTargetDomain()),
+		a.ensureGardenletEnvironment(deployment),
 		componentConfig,
 		a.GardenletNamespaceTarget,
 	)
@@ -745,7 +748,11 @@ func PrepareGardenletChartValues(
 // ensureGardenletEnvironment sets the KUBERNETES_SERVICE_HOST to the provided domain.
 // This may be needed so that the deployed gardenlet can properly set the network policies allowing access of control
 // plane components of the hosted shoots to the API server of the seed.
-func ensureGardenletEnvironment(deployment *seedmanagementv1alpha1.GardenletDeployment, domain string) *seedmanagementv1alpha1.GardenletDeployment {
+func (a *Actuator) ensureGardenletEnvironment(deployment *seedmanagementv1alpha1.GardenletDeployment) *seedmanagementv1alpha1.GardenletDeployment {
+	if a.SkipGardenNamespaceDeletion {
+		return deployment
+	}
+
 	const kubernetesServiceHost = "KUBERNETES_SERVICE_HOST"
 	var serviceHost = ""
 
@@ -759,6 +766,7 @@ func ensureGardenletEnvironment(deployment *seedmanagementv1alpha1.GardenletDepl
 		}
 	}
 
+	domain := a.GetTargetDomain()
 	if len(domain) != 0 {
 		serviceHost = v1beta1helper.GetAPIServerDomain(domain)
 	}

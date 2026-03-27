@@ -119,15 +119,22 @@ func (r *Reconciler) newActuator(ctx context.Context, shoot *gardencorev1beta1.S
 			return ptr.Deref(shoot.Spec.DNS.Domain, "")
 		},
 		ApplyGardenletChart: func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]any) error {
+			if r.GardenNamespaceSeed == metav1.NamespaceSystem {
+				values["isolateClusterResources"] = true
+			}
 			return targetChartApplier.ApplyFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, r.GardenNamespaceShoot, "gardenlet", kubernetes.Values(values))
 		},
 		DeleteGardenletChart: func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]any) error {
+			if r.GardenNamespaceSeed == metav1.NamespaceSystem {
+				values["isolateClusterResources"] = true
+			}
 			return targetChartApplier.DeleteFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, r.GardenNamespaceShoot, "gardenlet", kubernetes.Values(values))
 		},
-		Clock:                    r.Clock,
-		ValuesHelper:             gardenletdeployer.NewValuesHelper(&r.Config),
-		Recorder:                 r.Recorder,
-		GardenletNamespaceTarget: r.GardenNamespaceShoot,
+		Clock:                       r.Clock,
+		ValuesHelper:                gardenletdeployer.NewValuesHelper(&r.Config),
+		Recorder:                    r.Recorder,
+		GardenletNamespaceTarget:    r.GardenNamespaceShoot,
+		SkipGardenNamespaceDeletion: r.GardenNamespaceSeed == metav1.NamespaceSystem,
 	}, nil
 }
 
