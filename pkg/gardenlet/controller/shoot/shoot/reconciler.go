@@ -448,7 +448,7 @@ func (r *Reconciler) initializeOperation(
 		WithGarden(gardenObj).
 		WithSeed(seedObj).
 		WithShoot(shootObj).
-		Build(ctx, r.GardenClient, r.SeedClientSet, r.ShootClientMap)
+		Build(ctx, r.GardenClient, r.SeedClientSet, r.ShootClientMap, shoot)
 	if err != nil {
 		return nil, err
 	}
