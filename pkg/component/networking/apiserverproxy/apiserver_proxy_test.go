@@ -50,6 +50,7 @@ var _ = Describe("APIServerProxy", func() {
 		values                 Values
 		component              Interface
 		advertiseIPAddress     string
+		advertiseIPScope       string
 		reversedVPNHeaderValue string
 
 		managedResourceName = "shoot-core-apiserver-proxy"
@@ -187,6 +188,7 @@ var _ = Describe("APIServerProxy", func() {
 
 	BeforeEach(func() {
 		advertiseIPAddress = "10.2.170.21"
+		advertiseIPScope = "host"
 		reversedVPNHeaderValue = "outbound|443||kube-apiserver.shoot--internal--internal.svc.cluster.local"
 		values = Values{
 			Image:               image,
@@ -230,6 +232,7 @@ var _ = Describe("APIServerProxy", func() {
 			By("Deploy the managed resource successfully")
 			component = New(c, namespace, sm, values)
 			component.SetAdvertiseIPAddress(advertiseIPAddress)
+			component.SetAdvertiseIPScope(advertiseIPScope)
 			Expect(component.Deploy(ctx)).To(Succeed())
 
 			By("Verify that managed resource is consistent")
@@ -253,7 +256,7 @@ var _ = Describe("APIServerProxy", func() {
 			Expect(managedResource).To(DeepEqual(expectedMr))
 			Expect(managedResource).To(consistOf(
 				getConfigYAML(hash, values.DNSLookupFamily, advertiseIPAddress, reversedVPNHeaderValue),
-				getDaemonSet(hash, advertiseIPAddress),
+				getDaemonSet(hash, advertiseIPAddress, advertiseIPScope),
 				service,
 				serviceAccount,
 			))
@@ -585,7 +588,7 @@ static_resources:
 	}
 }
 
-func getDaemonSet(hash string, advertiseIPAddress string) *appsv1.DaemonSet {
+func getDaemonSet(hash string, advertiseIPAddress string, advertiseIPScope string) *appsv1.DaemonSet {
 	return &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
@@ -629,7 +632,7 @@ func getDaemonSet(hash string, advertiseIPAddress string) *appsv1.DaemonSet {
 					AutomountServiceAccountToken: func(b bool) *bool { return &b }(false),
 					Containers: []corev1.Container{
 						{
-							Args:            []string{"--ip-address=" + advertiseIPAddress, "--interface=lo"},
+							Args:            []string{"--ip-address=" + advertiseIPAddress, "--ip-address-scope=" + advertiseIPScope, "--interface=lo"},
 							Image:           "sidecar-image:some-tag",
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Name:            "sidecar",
@@ -711,7 +714,7 @@ func getDaemonSet(hash string, advertiseIPAddress string) *appsv1.DaemonSet {
 					HostNetwork: true,
 					InitContainers: []corev1.Container{
 						{
-							Args:            []string{"--ip-address=" + advertiseIPAddress, "--daemon=false", "--interface=lo"},
+							Args:            []string{"--ip-address=" + advertiseIPAddress, "--ip-address-scope=" + advertiseIPScope, "--daemon=false", "--interface=lo"},
 							Image:           "sidecar-image:some-tag",
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Name:            "setup",
