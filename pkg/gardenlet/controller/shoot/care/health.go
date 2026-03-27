@@ -157,6 +157,14 @@ func (h *Health) Check(
 		},
 	}
 
+	if h.shoot.IsSelfHosted() {
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			newBackupBucketsReady, err := h.checkBackupBucketsReady(ctx, *conditions.backupBucketsReady)
+			*conditions.backupBucketsReady = v1beta1helper.NewConditionOrError(h.clock, *conditions.backupBucketsReady, newBackupBucketsReady, err)
+			return nil
+		})
+	}
+
 	prometheusList := &monitoringv1.PrometheusList{}
 	if err := h.seedClient.Client().List(ctx, prometheusList, client.InNamespace(h.shoot.ControlPlaneNamespace)); err != nil {
 		conditions.observabilityComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.observabilityComponentsHealthy, nil, err)
@@ -221,7 +229,13 @@ func (h *Health) getAllExtensionConditions(ctx context.Context) ([]healthchecker
 	}
 
 	controllerInstallations := &gardencorev1beta1.ControllerInstallationList{}
-	if err := h.gardenClient.List(ctx, controllerInstallations, client.MatchingFields{core.SeedRefName: h.gardenletConfiguration.SeedConfig.Name}); err != nil {
+	var listOpts []client.ListOption
+	if h.gardenletConfiguration.SeedConfig != nil {
+		listOpts = append(listOpts, client.MatchingFields{core.SeedRefName: h.gardenletConfiguration.SeedConfig.Name})
+	} else {
+		listOpts = append(listOpts, client.MatchingFields{core.ShootRefName: h.shoot.GetInfo().Name})
+	}
+	if err := h.gardenClient.List(ctx, controllerInstallations, listOpts...); err != nil {
 		return nil, nil, nil, nil, err
 	}
 
@@ -444,6 +458,27 @@ func (h *Health) checkControlPlane(
 	}
 
 	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ControlPlaneRunning", "All control plane components are healthy.")
+	return &c, nil
+}
+
+// checkBackupBucketsReady checks the health of the BackupBucket associated with the shoot's BackupEntry.
+// Used for self-hosted shoots.
+func (h *Health) checkBackupBucketsReady(ctx context.Context, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+	be := &gardencorev1beta1.BackupEntry{}
+	if err := h.gardenClient.Get(ctx, client.ObjectKey{Name: h.shoot.BackupEntryName, Namespace: h.shoot.GetInfo().Namespace}, be); err != nil {
+		if apierrors.IsNotFound(err) {
+			c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "BackupBucketsAvailable", "No BackupEntry found.")
+			return &c, nil
+		}
+		return nil, fmt.Errorf("failed getting BackupEntry %s: %w", h.shoot.BackupEntryName, err)
+	}
+
+	bb := &gardencorev1beta1.BackupBucket{}
+	if err := h.gardenClient.Get(ctx, client.ObjectKey{Name: be.Spec.BucketName}, bb); err != nil {
+		return nil, fmt.Errorf("failed getting BackupBucket %s: %w", be.Spec.BucketName, err)
+	}
+
+	c := v1beta1helper.ComputeBackupBucketsCondition(h.clock, condition, []gardencorev1beta1.BackupBucket{*bb})
 	return &c, nil
 }
 
@@ -1009,6 +1044,7 @@ type ShootConditions struct {
 	observabilityComponentsHealthy gardencorev1beta1.Condition
 	systemComponentsHealthy        gardencorev1beta1.Condition
 	everyNodeReady                 *gardencorev1beta1.Condition
+	backupBucketsReady             *gardencorev1beta1.Condition
 }
 
 // ConvertToSlice returns the shoot conditions as a slice.
@@ -1023,7 +1059,13 @@ func (s ShootConditions) ConvertToSlice() []gardencorev1beta1.Condition {
 		conditions = append(conditions, *s.everyNodeReady)
 	}
 
-	return append(conditions, s.systemComponentsHealthy)
+	conditions = append(conditions, s.systemComponentsHealthy)
+
+	if s.backupBucketsReady != nil {
+		conditions = append(conditions, *s.backupBucketsReady)
+	}
+
+	return conditions
 }
 
 // ConditionTypes returns all shoot condition types.
@@ -1038,7 +1080,13 @@ func (s ShootConditions) ConditionTypes() []gardencorev1beta1.ConditionType {
 		types = append(types, gardencorev1beta1.ShootEveryNodeReady)
 	}
 
-	return append(types, s.systemComponentsHealthy.Type)
+	types = append(types, s.systemComponentsHealthy.Type)
+
+	if s.backupBucketsReady != nil {
+		types = append(types, gardencorev1beta1.SeedBackupBucketsReady)
+	}
+
+	return types
 }
 
 // NewShootConditions returns a new instance of ShootConditions.
@@ -1054,6 +1102,11 @@ func NewShootConditions(clock clock.Clock, shoot *gardencorev1beta1.Shoot) Shoot
 	if !v1beta1helper.IsWorkerless(shoot) {
 		nodeCondition := v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.ShootEveryNodeReady)
 		shootConditions.everyNodeReady = &nodeCondition
+	}
+
+	if v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
+		backupBucketsCondition := v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady)
+		shootConditions.backupBucketsReady = &backupBucketsCondition
 	}
 
 	return shootConditions
