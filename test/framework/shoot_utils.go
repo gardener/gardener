@@ -152,7 +152,7 @@ func CreateShootTestArtifacts(cfg *ShootCreationConfig, projectNamespace string,
 
 	setShootGeneralSettings(shoot, cfg, clearExtensions)
 
-	setKubernetesVersionDependentSetting(shoot)
+	setKubernetesVersionDependentSettings(shoot)
 
 	setShootNetworkingSettings(shoot, cfg, clearDNS)
 
@@ -223,8 +223,8 @@ func setConfiguredShootAnnotations(shoot *gardencorev1beta1.Shoot, cfg *ShootCre
 	return nil
 }
 
-// setShootGeneralSettings sets the Shoot's settings depending on the used Kubernetes version.
-func setKubernetesVersionDependentSetting(shoot *gardencorev1beta1.Shoot) {
+// setKubernetesVersionDependentSettings sets the Shoot's settings depending on the used Kubernetes version.
+func setKubernetesVersionDependentSettings(shoot *gardencorev1beta1.Shoot) {
 	// TODO(timuthy): Drop this handling when support for Kubernetes 1.34 is dropped.
 	if versionutils.ConstraintK8sLess135.CheckVersion(shoot.Spec.Kubernetes.Version) {
 		if shoot.Spec.Addons == nil {
