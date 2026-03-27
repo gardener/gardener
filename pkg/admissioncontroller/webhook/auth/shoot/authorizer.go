@@ -75,6 +75,7 @@ var (
 	gardenletResource                 = seedmanagementv1alpha1.Resource("gardenlets")
 	leaseResource                     = coordinationv1.Resource("leases")
 	managedSeedResource               = seedmanagementv1alpha1.Resource("managedseeds")
+	namespaceResource                 = corev1.Resource("namespaces")
 	projectResource                   = gardencorev1beta1.Resource("projects")
 	secretResource                    = corev1.Resource("secrets")
 	secretBindingResource             = gardencorev1beta1.Resource("secretbindings")
@@ -168,6 +169,10 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 					core.ShootRefNamespace: shootNamespace,
 				}),
 			)
+		case controllerRegistrationResource:
+			return requestAuthorizer.Check(graph.VertexTypeControllerRegistration, attrs,
+				authwebhook.WithAlwaysAllowedVerbs("get", "list", "watch"),
+			)
 
 		case controllerRegistrationResource:
 			return requestAuthorizer.CheckRead(graph.VertexTypeControllerRegistration, attrs)
@@ -211,6 +216,12 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 				authwebhook.WithAllowedVerbs("get", "delete"),
 				authwebhook.WithAlwaysAllowedVerbs("list", "watch"),
 			)
+
+		case namespaceResource:
+			return requestAuthorizer.CheckRead(graph.VertexTypeNamespace, attrs)
+
+		case projectResource:
+			return requestAuthorizer.CheckRead(graph.VertexTypeProject, attrs)
 
 		case serviceAccountResource:
 			if userType == gardenletidentity.UserTypeExtension {
