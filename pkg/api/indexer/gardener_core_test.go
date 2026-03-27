@@ -234,4 +234,33 @@ var _ = Describe("Core", func() {
 		Entry("InternalSecret w/o type", &gardencorev1beta1.InternalSecret{}, ConsistOf("")),
 		Entry("InternalSecret w/ type", &gardencorev1beta1.InternalSecret{Type: corev1.SecretTypeBootstrapToken}, ConsistOf("bootstrap.kubernetes.io/token")),
 	)
+
+	DescribeTable("#AddControllerInstallationShootRefNamespace",
+		func(obj client.Object, matcher gomegatypes.GomegaMatcher) {
+			Expect(AddControllerInstallationShootRefNamespace(context.TODO(), indexer)).To(Succeed())
+
+			Expect(indexer.obj).To(Equal(&gardencorev1beta1.ControllerInstallation{}))
+			Expect(indexer.field).To(Equal("spec.shootRef.namespace"))
+			Expect(indexer.extractValue).NotTo(BeNil())
+			Expect(indexer.extractValue(obj)).To(matcher)
+		},
+
+		Entry("no ControllerInstallation", &corev1.Secret{}, ConsistOf("")),
+		Entry("ControllerInstallation w/o shootRef", &gardencorev1beta1.ControllerInstallation{}, ConsistOf("")),
+		Entry("ControllerInstallation w/ shootRef", &gardencorev1beta1.ControllerInstallation{Spec: gardencorev1beta1.ControllerInstallationSpec{ShootRef: &corev1.ObjectReference{Name: "shoot", Namespace: "shoot-ns"}}}, ConsistOf("shoot-ns")),
+	)
+
+	DescribeTable("#AddNamespacedCloudProfileParentRefName",
+		func(obj client.Object, matcher gomegatypes.GomegaMatcher) {
+			Expect(AddNamespacedCloudProfileParentRefName(context.TODO(), indexer)).To(Succeed())
+
+			Expect(indexer.obj).To(Equal(&gardencorev1beta1.NamespacedCloudProfile{}))
+			Expect(indexer.field).To(Equal("spec.parent.name"))
+			Expect(indexer.extractValue).NotTo(BeNil())
+			Expect(indexer.extractValue(obj)).To(matcher)
+		},
+
+		Entry("no NamespacedCloudProfile", &corev1.Secret{}, ConsistOf("")),
+		Entry("NamespacedCloudProfile w/ parent", &gardencorev1beta1.NamespacedCloudProfile{Spec: gardencorev1beta1.NamespacedCloudProfileSpec{Parent: gardencorev1beta1.CloudProfileReference{Name: "parent-profile"}}}, ConsistOf("parent-profile")),
+	)
 })
