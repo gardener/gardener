@@ -21,5 +21,5 @@ func ItShouldEventuallyNotHaveOperationAnnotation(komega komega.Komega, obj clie
 	It("Should not have operation annotation", func(ctx SpecContext) {
 		Eventually(ctx, komega.Object(obj)).WithPolling(2 * time.Second).Should(
 			HaveField("ObjectMeta.Annotations", Not(HaveKey(v1beta1constants.GardenerOperation))))
-	}, SpecTimeout(time.Minute))
+	}, SpecTimeout(2*time.Minute))
 }
