@@ -172,7 +172,7 @@ func restoreMachineSetsAndMachines(ctx context.Context, log logr.Logger, cl clie
 		}
 	}
 
-	return flow.ParallelN(maxConcurrentMachineTasks, taskFns...)(ctx)
+	return flow.ParallelN(MaxConcurrentMachineTasks, taskFns...)(ctx)
 }
 
 func removeWantedDeploymentWithoutState(wantedMachineDeployments extensionsworkercontroller.MachineDeployments) extensionsworkercontroller.MachineDeployments {
