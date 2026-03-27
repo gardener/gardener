@@ -56,12 +56,12 @@ type Builder struct {
 	cloudProfileFunc             func(context.Context, *gardencorev1beta1.Shoot) (*gardencorev1beta1.CloudProfile, error)
 	shootCredentialsFunc         func(context.Context, string, string, bool) (client.Object, error)
 	serviceAccountIssuerHostname func() (*string, error)
+	shootDNSFunc                 func() *gardencorev1beta1.DNS
 	seed                         *gardencorev1beta1.Seed
 	exposureClass                *gardencorev1beta1.ExposureClass
 	projectName                  string
 	internalDomain               *gardenerutils.Domain
 	defaultDomains               []*gardenerutils.Domain
-	shootDNS                     **gardencorev1beta1.DNS
 }
 
 // Shoot is an object containing information about a Shoot cluster.
