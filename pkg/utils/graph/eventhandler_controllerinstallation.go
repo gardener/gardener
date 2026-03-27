@@ -87,6 +87,11 @@ func (g *graph) handleControllerInstallationCreateOrUpdate(controllerInstallatio
 		g.addEdge(controllerInstallationVertex, seedVertex)
 	}
 
+	if controllerInstallation.Spec.ShootRef != nil {
+		shootVertex := g.getOrCreateVertex(VertexTypeShoot, controllerInstallation.Spec.ShootRef.Namespace, controllerInstallation.Spec.ShootRef.Name)
+		g.addEdge(controllerInstallationVertex, shootVertex)
+	}
+
 	if controllerInstallation.Spec.DeploymentRef != nil {
 		controllerDeploymentVertex := g.getOrCreateVertex(VertexTypeControllerDeployment, "", controllerInstallation.Spec.DeploymentRef.Name)
 		g.addEdge(controllerDeploymentVertex, controllerInstallationVertex)
