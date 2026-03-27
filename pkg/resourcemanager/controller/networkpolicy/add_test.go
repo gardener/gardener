@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	. "github.com/gardener/gardener/pkg/resourcemanager/controller/networkpolicy"
 )
@@ -37,7 +38,10 @@ var _ = Describe("Add", func() {
 
 	BeforeEach(func() {
 		log = logr.Discard()
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(resourcemanagerclient.TargetScheme).Build()
+		fakeClient = fakeclient.NewClientBuilder().
+			WithScheme(resourcemanagerclient.TargetScheme).
+			WithIndex(&corev1.Service{}, indexer.ServiceNamespaceSelectors, indexer.ServiceNamespaceSelectorsIndexerFunc).
+			Build()
 		reconciler = &Reconciler{
 			TargetClient: fakeClient,
 		}
@@ -324,6 +328,107 @@ var _ = Describe("Add", func() {
 			newNs := ns2.DeepCopy()
 			handler.Update(context.TODO(), event.UpdateEvent{ObjectOld: oldNs, ObjectNew: newNs}, queue)
 			verifyRequests(queue, 0, "", "")
+		})
+	})
+
+	Describe("#PodPredicate", func() {
+		var (
+			p   predicate.Predicate
+			pod *corev1.Pod
+		)
+
+		BeforeEach(func() {
+			p = reconciler.PodPredicate()
+			pod = &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "pod", Namespace: "ns"}}
+		})
+
+		Describe("#Create", func() {
+			It("should return false for pod without netpol labels", func() {
+				pod.Labels = map[string]string{"app": "foo"}
+				Expect(p.Create(event.CreateEvent{Object: pod})).To(BeFalse())
+			})
+
+			It("should return true for pod with netpol to-label", func() {
+				pod.Labels = map[string]string{"networking.resources.gardener.cloud/to-foo-tcp-8080": "allowed"}
+				Expect(p.Create(event.CreateEvent{Object: pod})).To(BeTrue())
+			})
+		})
+
+		Describe("#Update", func() {
+			It("should return false when netpol labels did not change", func() {
+				pod.Labels = map[string]string{"networking.resources.gardener.cloud/to-foo-tcp-8080": "allowed", "app": "old"}
+				newPod := pod.DeepCopy()
+				newPod.Labels["app"] = "new"
+				Expect(p.Update(event.UpdateEvent{ObjectOld: pod, ObjectNew: newPod})).To(BeFalse())
+			})
+
+			It("should return true when netpol label is added", func() {
+				newPod := pod.DeepCopy()
+				newPod.Labels = map[string]string{"networking.resources.gardener.cloud/to-foo-tcp-8080": "allowed"}
+				Expect(p.Update(event.UpdateEvent{ObjectOld: pod, ObjectNew: newPod})).To(BeTrue())
+			})
+
+			It("should return true when netpol label is removed", func() {
+				pod.Labels = map[string]string{"networking.resources.gardener.cloud/to-foo-tcp-8080": "allowed"}
+				newPod := pod.DeepCopy()
+				newPod.Labels = nil
+				Expect(p.Update(event.UpdateEvent{ObjectOld: pod, ObjectNew: newPod})).To(BeTrue())
+			})
+		})
+
+		Describe("#Delete", func() {
+			It("should return false for pod without netpol labels", func() {
+				Expect(p.Delete(event.DeleteEvent{Object: pod})).To(BeFalse())
+			})
+
+			It("should return true for pod with netpol to-label", func() {
+				pod.Labels = map[string]string{"networking.resources.gardener.cloud/to-foo-tcp-8080": "allowed"}
+				Expect(p.Delete(event.DeleteEvent{Object: pod})).To(BeTrue())
+			})
+		})
+
+		Describe("#Generic", func() {
+			It("should return false for pod without netpol labels", func() {
+				Expect(p.Generic(event.GenericEvent{Object: pod})).To(BeFalse())
+			})
+
+			It("should return true for pod with netpol to-label", func() {
+				pod.Labels = map[string]string{"networking.resources.gardener.cloud/to-foo-tcp-8080": "allowed"}
+				Expect(p.Generic(event.GenericEvent{Object: pod})).To(BeTrue())
+			})
+		})
+	})
+
+	Describe("#MapPodToServices", func() {
+		var (
+			nsName  = "test-ns"
+			svcName = "test-svc"
+		)
+
+		It("should return services relevant for the pod's namespace", func() {
+			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: nsName, Labels: map[string]string{"foo": "bar"}}}
+			Expect(fakeClient.Create(ctx, ns)).To(Succeed())
+
+			namespaceSelectors := []metav1.LabelSelector{{MatchLabels: map[string]string{"foo": "bar"}}}
+			encoded, _ := json.Marshal(namespaceSelectors)
+
+			service := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      svcName,
+					Namespace: "other-ns",
+					Annotations: map[string]string{
+						"networking.resources.gardener.cloud/namespace-selectors": string(encoded),
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, service)).To(Succeed())
+
+			pod := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Name: "pod", Namespace: nsName}}
+			pod.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
+
+			mapFn := reconciler.MapPodToServices(log)
+			requests := mapFn(ctx, pod)
+			Expect(requests).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: svcName, Namespace: "other-ns"}}))
 		})
 	})
 
