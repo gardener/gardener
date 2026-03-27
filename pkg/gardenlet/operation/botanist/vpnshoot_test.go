@@ -132,11 +132,6 @@ var _ = Describe("VPNShoot", func() {
 		It("should set the network ranges and deploy", func() {
 			vpnShoot.EXPECT().Deploy(ctx)
 			Expect(botanist.DeployVPNShoot(ctx)).To(Succeed())
-
-			Expect(botanist.GardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-			Expect(shoot.Status.Constraints).NotTo(ContainCondition(
-				OfType(gardencorev1beta1.ShootUsesUnifiedHTTPProxyPort),
-			))
 		})
 
 		It("should report a constraint if feature gate UseUnifiedHTTPProxyPort is enabled and remove it if disabled", func() {

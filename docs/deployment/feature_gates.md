@@ -28,7 +28,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | CloudProfileCapabilities       | `false` | `Alpha` | `1.117` |         |
 | OpenTelemetryCollector         | `false` | `Alpha` | `1.124` | `1.135` |
 | OpenTelemetryCollector         | `true`  | `Beta`  | `1.136` |         |
-| UseUnifiedHTTPProxyPort        | `false` | `Alpha` | `1.130` |         |
+| UseUnifiedHTTPProxyPort        | `false` | `Alpha` | `1.130` | `1.139` |
+| UseUnifiedHTTPProxyPort        | `true`  | `Beta`  | `1.140` |         |
 | VPAInPlaceUpdates              | `false` | `Alpha` | `1.133` | `1.137` |
 | VPAInPlaceUpdates              | `true`  | `Beta`  | `1.138` |         |
 | VictoriaLogsBackend            | `false` | `Alpha` | `1.137` |         |
