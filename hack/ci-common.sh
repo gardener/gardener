@@ -26,6 +26,18 @@ export_artifacts_infra() {
   done
 }
 
+export_artifacts_load_balancers() {
+  mkdir -p "${ARTIFACTS:-}"
+
+  echo "> Exporting state and logs of local load balancers"
+  mkdir -p "${ARTIFACTS:-}/load-balancers"
+
+  for container in $(docker container ls -a --format '{{.Names}}' --filter network=kind --filter label=gardener.cloud/role=loadbalancer); do
+    docker container inspect "$container" > "${ARTIFACTS:-}/load-balancers/$container.json" || true
+    docker container logs "$container" > "${ARTIFACTS:-}/load-balancers/$container.log" 2>&1 || true
+  done
+}
+
 export_artifacts() {
   cluster_name="${1}"
   echo "> Exporting logs of kind cluster '$cluster_name'"
