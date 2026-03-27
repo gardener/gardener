@@ -371,7 +371,7 @@ var _ = Describe("shoot", func() {
 			})
 		})
 
-		Describe("#WithShootDNS", func() {
+		Describe("#WithoutShootDNS", func() {
 			var (
 				ctx          context.Context
 				c            client.Client
@@ -413,22 +413,9 @@ var _ = Describe("shoot", func() {
 					})
 			})
 
-			It("should overwrite the shoot DNS domain in the builder", func() {
-				dns := &gardencorev1beta1.DNS{
-					Domain: ptr.To("overwrite.example.com"),
-				}
-
-				shoot, err := shootBuilder.
-					WithShootDNS(dns).
-					Build(ctx, c)
-
-				Expect(err).ToNot(HaveOccurred())
-				Expect(shoot.GetInfo().Spec.DNS).To(Equal(dns))
-			})
-
 			It("should unset the shoot DNS domain in the builder", func() {
 				shoot, err := shootBuilder.
-					WithShootDNS(nil).
+					WithoutShootDNS().
 					Build(ctx, c)
 
 				Expect(err).ToNot(HaveOccurred())
