@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/graph"
@@ -65,12 +66,15 @@ var (
 	cloudProfileResource              = gardencorev1beta1.Resource("cloudprofiles")
 	configMapResource                 = corev1.Resource("configmaps")
 	controllerDeploymentResource      = gardencorev1beta1.Resource("controllerdeployments")
+	controllerInstallationResource    = gardencorev1beta1.Resource("controllerinstallations")
 	controllerRegistrationResource    = gardencorev1beta1.Resource("controllerregistrations")
 	credentialsBindingResource        = securityv1alpha1.Resource("credentialsbindings")
 	eventCoreResource                 = corev1.Resource("events")
 	eventResource                     = eventsv1.Resource("events")
 	gardenletResource                 = seedmanagementv1alpha1.Resource("gardenlets")
 	leaseResource                     = coordinationv1.Resource("leases")
+	managedSeedResource               = seedmanagementv1alpha1.Resource("managedseeds")
+	namespaceResource                 = corev1.Resource("namespaces")
 	projectResource                   = gardencorev1beta1.Resource("projects")
 	secretResource                    = corev1.Resource("secrets")
 	secretBindingResource             = gardencorev1beta1.Resource("secretbindings")
@@ -151,6 +155,18 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 		case configMapResource:
 			return requestAuthorizer.CheckRead(graph.VertexTypeConfigMap, attrs)
 
+		case controllerInstallationResource:
+			return requestAuthorizer.Check(graph.VertexTypeControllerInstallation, attrs,
+				authwebhook.WithAlwaysAllowedVerbs("get", "list", "watch"),
+				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithFieldSelectors(map[string]string{core.ShootRefName: requestAuthorizer.ToName}),
+			)
+
+		case controllerRegistrationResource:
+			return requestAuthorizer.Check(graph.VertexTypeControllerRegistration, attrs,
+				authwebhook.WithAlwaysAllowedVerbs("get", "list", "watch"),
+			)
+
 		case eventCoreResource, eventResource:
 			return a.authorizeEvent(log, attrs)
 
@@ -165,6 +181,20 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 
 		case leaseResource:
 			return a.authorizeLease(requestAuthorizer, userType, shootNamespace, shootName, attrs)
+
+		case managedSeedResource:
+			return requestAuthorizer.Check(graph.VertexTypeManagedSeed, attrs,
+				authwebhook.WithAllowedVerbs("get", "list", "watch"),
+				authwebhook.WithFieldSelectors(map[string]string{
+					seedmanagement.ManagedSeedShootName: requestAuthorizer.ToName,
+				}),
+			)
+
+		case namespaceResource:
+			return requestAuthorizer.CheckRead(graph.VertexTypeNamespace, attrs)
+
+		case projectResource:
+			return requestAuthorizer.CheckRead(graph.VertexTypeProject, attrs)
 
 		case secretResource:
 			return a.authorizeSecret(ctx, requestAuthorizer, attrs)
