@@ -53,6 +53,7 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
@@ -365,6 +366,9 @@ func (g *garden) Start(ctx context.Context) error {
 							gardencore.BackupBucketShootRefNamespace: g.selfHostedShootInfo.Meta.Namespace,
 						}),
 					},
+					&gardencorev1beta1.ControllerInstallation{}: {
+						Field: fields.SelectorFromSet(fields.Set{gardencore.ShootRefName: g.selfHostedShootInfo.Meta.Name}),
+					},
 					&gardencorev1beta1.BackupEntry{}: {
 						Field: fields.SelectorFromSet(fields.Set{
 							gardencore.BackupEntryShootRefName:      g.selfHostedShootInfo.Meta.Name,
@@ -392,6 +396,10 @@ func (g *garden) Start(ctx context.Context) error {
 						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: gardenlet.ResourcePrefixSelfHostedShoot + g.selfHostedShootInfo.Meta.Name}),
 						Namespaces: map[string]cache.Config{g.selfHostedShootInfo.Meta.Namespace: {}},
 					},
+					&seedmanagementv1alpha1.ManagedSeed{}: {
+						Field:      fields.SelectorFromSet(fields.Set{seedmanagement.ManagedSeedShootName: g.selfHostedShootInfo.Meta.Name}),
+						Namespaces: map[string]cache.Config{g.selfHostedShootInfo.Meta.Namespace: {}},
+					},
 				}
 
 				return kubernetes.AggregatorCacheFunc(
@@ -400,9 +408,11 @@ func (g *garden) Start(ctx context.Context) error {
 						// Gardenlet does not have the required RBAC permissions for listing/watching the following
 						// resources on cluster level. Hence, we need to watch them individually with the help of a
 						// SingleObject cache.
-						&corev1.ConfigMap{}:      kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ConfigMap{}),
-						&corev1.Secret{}:         kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.Secret{}),
-						&corev1.ServiceAccount{}: kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ServiceAccount{}),
+						&corev1.ConfigMap{}:          kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ConfigMap{}),
+						&corev1.Namespace{}:          kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.Namespace{}),
+						&corev1.Secret{}:             kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.Secret{}),
+						&corev1.ServiceAccount{}:     kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ServiceAccount{}),
+						&gardencorev1beta1.Project{}: kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.Project{}),
 					},
 					kubernetes.GardenScheme,
 				)(config, opts)
@@ -803,6 +813,9 @@ func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 		fns = []func(context.Context, client.FieldIndexer) error{
 			// core API group
 			indexer.AddBackupEntryBucketName,
+			indexer.AddControllerInstallationShootRefName,
+			// seedmanagement API group
+			indexer.AddManagedSeedShootName,
 		}
 	}
 

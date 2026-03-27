@@ -649,6 +649,308 @@ var _ = Describe("Shoot", func() {
 				})
 			})
 
+			Context("when requested for ControllerInstallations", func() {
+				var attrs *auth.AttributesRecord
+
+				BeforeEach(func() {
+					attrs = &auth.AttributesRecord{
+						User:            gardenletUser,
+						Name:            "foo",
+						APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+						Resource:        "controllerinstallations",
+						ResourceRequest: true,
+						Verb:            "get",
+					}
+				})
+
+				DescribeTable("should allow without consulting the graph because verb is always allowed",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+				)
+
+				DescribeTable("should have no opinion because verb is not allowed",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch]"))
+					},
+
+					Entry("create", "create"),
+					Entry("update", "update"),
+					Entry("patch", "patch"),
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
+				)
+			})
+
+			Context("when requested for ControllerRegistrations", func() {
+				var attrs *auth.AttributesRecord
+
+				BeforeEach(func() {
+					attrs = &auth.AttributesRecord{
+						User:            gardenletUser,
+						Name:            "foo",
+						APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+						Resource:        "controllerregistrations",
+						ResourceRequest: true,
+						Verb:            "get",
+					}
+				})
+
+				DescribeTable("should allow without consulting the graph because verb is always allowed",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+				)
+
+				DescribeTable("should have no opinion because verb is not allowed",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch]"))
+					},
+
+					Entry("create", "create"),
+					Entry("update", "update"),
+					Entry("patch", "patch"),
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
+				)
+			})
+
+			Context("when requested for ManagedSeeds", func() {
+				var (
+					name, namespace string
+					attrs           *auth.AttributesRecord
+				)
+
+				BeforeEach(func() {
+					name, namespace = "foo", shootNamespace
+					attrs = &auth.AttributesRecord{
+						User:            gardenletUser,
+						Name:            name,
+						Namespace:       namespace,
+						APIGroup:        seedmanagementv1alpha1.SchemeGroupVersion.Group,
+						Resource:        "managedseeds",
+						ResourceRequest: true,
+						Verb:            "get",
+					}
+				})
+
+				It("should return correct result if path exists",
+					func() {
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeManagedSeed, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(true)
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+				)
+
+				DescribeTable("should have no opinion because verb is not allowed",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch]"))
+					},
+
+					Entry("create", "create"),
+					Entry("update", "update"),
+					Entry("patch", "patch"),
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
+				)
+
+				It("should have no opinion because path to shoot does not exist", func() {
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeManagedSeed, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(false)
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("no relationship found"))
+				})
+
+				DescribeTable("should allow list/watch requests if field selector is provided",
+					func(verb string, withSelector bool) {
+						attrs.Name = ""
+						attrs.Verb = verb
+
+						if withSelector {
+							selector, err := fields.ParseSelector("spec.shoot.name=" + shootName)
+							Expect(err).NotTo(HaveOccurred())
+							attrs.FieldSelectorRequirements = selector.Requirements()
+						}
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+
+						if withSelector {
+							Expect(decision).To(Equal(auth.DecisionAllow))
+							Expect(reason).To(BeEmpty())
+						} else {
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("must specify field or label selector"))
+						}
+					},
+
+					Entry("list w/ needed selector", "list", true),
+					Entry("list w/o needed selector", "list", false),
+				)
+			})
+
+			Context("when requested for Namespaces", func() {
+				var (
+					name  string
+					attrs *auth.AttributesRecord
+				)
+
+				BeforeEach(func() {
+					name = shootNamespace
+					attrs = &auth.AttributesRecord{
+						User:            gardenletUser,
+						Name:            name,
+						APIGroup:        corev1.SchemeGroupVersion.Group,
+						Resource:        "namespaces",
+						ResourceRequest: true,
+						Verb:            "get",
+					}
+				})
+
+				DescribeTable("should return correct result if path exists",
+					func(verb string) {
+						attrs.Verb = verb
+
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeNamespace, "", name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(true)
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+				)
+
+				DescribeTable("should have no opinion because verb is not allowed",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch]"))
+					},
+
+					Entry("create", "create"),
+					Entry("update", "update"),
+					Entry("patch", "patch"),
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
+				)
+
+				It("should have no opinion because path to shoot does not exist", func() {
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeNamespace, "", name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(false)
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("no relationship found"))
+				})
+			})
+
+			Context("when requested for Projects", func() {
+				var (
+					name  string
+					attrs *auth.AttributesRecord
+				)
+
+				BeforeEach(func() {
+					name = "foo"
+					attrs = &auth.AttributesRecord{
+						User:            gardenletUser,
+						Name:            name,
+						APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+						Resource:        "projects",
+						ResourceRequest: true,
+						Verb:            "get",
+					}
+				})
+
+				DescribeTable("should return correct result if path exists",
+					func(verb string) {
+						attrs.Verb = verb
+
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeProject, "", name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(true)
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+				)
+
+				DescribeTable("should have no opinion because verb is not allowed",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch]"))
+					},
+
+					Entry("create", "create"),
+					Entry("update", "update"),
+					Entry("patch", "patch"),
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
+				)
+
+				It("should have no opinion because path to shoot does not exist", func() {
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeProject, "", name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(false)
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("no relationship found"))
+				})
+			})
+
 			Context("when requested for corev1.Events", func() {
 				var (
 					name, namespace string
