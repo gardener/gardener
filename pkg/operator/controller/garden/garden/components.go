@@ -161,6 +161,7 @@ func (r *Reconciler) instantiateComponents(
 	wildcardCertSecret *corev1.Secret,
 	enableAdmissionControllerAuthorizers bool,
 	extensionList *operatorv1alpha1.ExtensionList,
+	isRuntimeSelfHostedShoot bool,
 ) (
 	c components,
 	err error,
@@ -209,7 +210,7 @@ func (r *Reconciler) instantiateComponents(
 	}
 
 	// garden system components
-	c.gardenerResourceManager, err = r.newGardenerResourceManager(garden, secretsManager)
+	c.gardenerResourceManager, err = r.newGardenerResourceManager(garden, secretsManager, isRuntimeSelfHostedShoot)
 	if err != nil {
 		return
 	}
@@ -218,7 +219,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.etcdDruid, err = r.newEtcdDruid(secretsManager)
+	c.etcdDruid, err = r.newEtcdDruid(secretsManager, isRuntimeSelfHostedShoot)
 	if err != nil {
 		return
 	}
@@ -405,7 +406,7 @@ func (r *Reconciler) enableAdmissionControllerAuthorizers(ctx context.Context, v
 	return true, nil
 }
 
-func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, isRuntimeSelfHostedShoot bool) (component.DeployWaiter, error) {
 	var defaultNotReadyTolerationSeconds, defaultUnreachableTolerationSeconds *int64
 	if nodeToleration := r.Config.NodeToleration; nodeToleration != nil {
 		defaultNotReadyTolerationSeconds = nodeToleration.DefaultNotReadyTolerationSeconds
@@ -449,6 +450,7 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 			},
 		},
 		VPAInPlaceUpdatesEnabled: features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates),
+		ForSelfHostedShoot:       isRuntimeSelfHostedShoot,
 	})
 }
 
@@ -505,7 +507,12 @@ func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, s
 	return verticalPodAutoscaler, nil
 }
 
-func (r *Reconciler) newEtcdDruid(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+func (r *Reconciler) newEtcdDruid(secretsManager secretsmanager.Interface, isRuntimeSelfHostedShoot bool) (component.DeployWaiter, error) {
+	var managedBy = etcd.ManagedByOperator
+	if isRuntimeSelfHostedShoot {
+		managedBy = etcd.ManagedBySelfHostedShoot
+	}
+
 	return sharedcomponent.NewEtcdDruid(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -515,7 +522,7 @@ func (r *Reconciler) newEtcdDruid(secretsManager secretsmanager.Interface) (comp
 		secretsManager,
 		operatorv1alpha1.SecretNameCARuntime,
 		v1beta1constants.PriorityClassNameGardenSystem300,
-		true,
+		managedBy,
 	)
 }
 

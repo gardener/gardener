@@ -495,3 +495,12 @@ func ReconcileGardenNamespace(ctx context.Context, client client.Client, namespa
 	})
 	return err
 }
+
+// ClusterIsSelfHostedShoot returns 'true' if the cluster is a self-hosted shoot cluster.
+func ClusterIsSelfHostedShoot(ctx context.Context, c client.Reader) (bool, error) {
+	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: metav1.NamespaceSystem}}
+	if err := c.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
+		return false, fmt.Errorf("failed reading %q namespace: %w", namespace.Name, err)
+	}
+	return namespace.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleShoot, nil
+}

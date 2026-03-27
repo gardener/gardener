@@ -17,6 +17,7 @@ import (
 func (b *GardenadmBotanist) NewRuntimeGardenerResourceManager() (resourcemanager.Interface, error) {
 	return sharedcomponent.NewRuntimeGardenerResourceManager(b.SeedClientSet.Client(), v1beta1constants.GardenNamespace, b.SecretsManager, resourcemanager.Values{
 		DefaultSeccompProfileEnabled:         features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
+		ForSelfHostedShoot:                   true,
 		HighAvailabilityConfigWebhookEnabled: true,
 		PriorityClassName:                    v1beta1constants.PriorityClassNameShootControlPlane400,
 		SecretNameServerCA:                   v1beta1constants.SecretNameCACluster,
