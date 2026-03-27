@@ -53,6 +53,13 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, infrastructur
 				{
 					PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}},
 				},
+				// Allow traffic from load balancer containers in the Docker kind network.
+				{
+					IPBlock: &networkingv1.IPBlock{CIDR: "172.18.0.240/28"},
+				},
+				{
+					IPBlock: &networkingv1.IPBlock{CIDR: "fd00:10::f0/124"},
+				},
 			}},
 		},
 		Egress: []networkingv1.NetworkPolicyEgressRule{{
