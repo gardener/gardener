@@ -94,11 +94,11 @@ func VersionIsDeprecated(version gardencorev1beta1.ExpirableVersion) bool {
 	return CurrentLifecycleClassification(version) == gardencorev1beta1.ClassificationDeprecated
 }
 
-// DurationUntilNextVersionLifecycleStage returns the duration until the earliest upcoming lifecycle start time
-// of any Kubernetes version or MachineImageVersion in the given <cloudProfile>.
+// DurationUntilNextVersionTransition returns the duration until the earliest upcoming lifecycle start time
+// or expiration date of any Kubernetes version or MachineImageVersion in the given <cloudProfile>.
 // If no future lifecycle start is found, it returns 0.
-func DurationUntilNextVersionLifecycleStage(cloudProfile *gardencorev1beta1.CloudProfileSpec, clock clock.Clock) time.Duration {
-	if cloudProfile == nil {
+func DurationUntilNextVersionTransition(cloudProfile *gardencorev1beta1.CloudProfileSpec, clock clock.Clock) time.Duration {
+	if cloudProfile == nil || clock == nil {
 		return 0
 	}
 
@@ -114,17 +114,24 @@ func DurationUntilNextVersionLifecycleStage(cloudProfile *gardencorev1beta1.Clou
 		}
 	}
 
-	for _, version := range cloudProfile.Kubernetes.Versions {
-		for _, stage := range version.Lifecycle {
+	evaluateVersion := func(v gardencorev1beta1.ExpirableVersion) {
+		if v.ExpirationDate != nil {
+			evaluate(v.ExpirationDate)
+			return
+		}
+
+		for _, stage := range v.Lifecycle {
 			evaluate(stage.StartTime)
 		}
 	}
 
+	for _, version := range cloudProfile.Kubernetes.Versions {
+		evaluateVersion(version)
+	}
+
 	for _, image := range cloudProfile.MachineImages {
 		for _, version := range image.Versions {
-			for _, stage := range version.Lifecycle {
-				evaluate(stage.StartTime)
-			}
+			evaluateVersion(version.ExpirableVersion)
 		}
 	}
 

@@ -194,7 +194,7 @@ var _ = Describe("CloudProfile Helper", func() {
 			}
 			cloudProfileSpec.Kubernetes.Versions[0].Lifecycle = Lifecycles
 
-			Expect(DurationUntilNextVersionLifecycleStage(&cloudProfileSpec, fakeClock)).To(BeNumerically("~", 3*time.Hour, 100*time.Millisecond))
+			Expect(DurationUntilNextVersionTransition(&cloudProfileSpec, fakeClock)).To(BeNumerically("~", 3*time.Hour, 100*time.Millisecond))
 		})
 
 		It("should return the duration of the next version lifecycle without a chronological order", func() {
@@ -208,7 +208,7 @@ var _ = Describe("CloudProfile Helper", func() {
 			}
 			cloudProfileSpec.Kubernetes.Versions[0].Lifecycle = Lifecycles
 
-			Expect(DurationUntilNextVersionLifecycleStage(&cloudProfileSpec, fakeClock)).To(BeNumerically("~", 1*time.Hour, 100*time.Millisecond))
+			Expect(DurationUntilNextVersionTransition(&cloudProfileSpec, fakeClock)).To(BeNumerically("~", 1*time.Hour, 100*time.Millisecond))
 		})
 
 		It("should return the duration of the next version lifecycle with start time in the past", func() {
@@ -222,7 +222,7 @@ var _ = Describe("CloudProfile Helper", func() {
 			}
 			cloudProfileSpec.Kubernetes.Versions[0].Lifecycle = Lifecycles
 
-			Expect(DurationUntilNextVersionLifecycleStage(&cloudProfileSpec, fakeClock)).To(BeNumerically("~", 3*time.Hour, 100*time.Millisecond))
+			Expect(DurationUntilNextVersionTransition(&cloudProfileSpec, fakeClock)).To(BeNumerically("~", 3*time.Hour, 100*time.Millisecond))
 		})
 	})
 
