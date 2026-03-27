@@ -75,14 +75,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	// if shoot has not been picked up by gardenlet yet, requeue
-	if shoot.Status.SeedName == nil {
+	// skip this check for self-hosted shoots, as they do not have a seedName in the status.
+	if shoot.Status.SeedName == nil && !v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
 		requeueAfter := 30 * time.Second
 		log.V(1).Info("Shoot has not been picked up by gardenlet yet, requeue", "requeueAfter", requeueAfter)
 		return reconcile.Result{RequeueAfter: requeueAfter}, nil
 	}
 
 	// if shoot is no longer managed by this gardenlet (e.g., due to migration to another seed) then don't requeue.
-	if ptr.Deref(shoot.Status.SeedName, "") != r.SeedName {
+	// skip this check for self-hosted shoots, as they do not have a seedName in the status.
+	if ptr.Deref(shoot.Status.SeedName, "") != r.SeedName && !v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
 		return reconcile.Result{}, nil
 	}
 
@@ -96,7 +98,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	shootConstraints := NewShootConstraints(r.Clock, shoot)
 
 	// Only read Garden secrets once because we don't rely on up-to-date secrets for health checks.
-	if r.gardenSecrets == nil {
+	if r.gardenSecrets == nil && !v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
 		seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{
 			Name: r.SeedName,
 		}}
