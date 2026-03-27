@@ -81,7 +81,8 @@ type Values struct {
 	DNSLookupFamily     string
 	IstioTLSTermination bool
 
-	advertiseIPAddress string
+	advertiseIPAddress      string
+	advertiseIPAddressScope string
 }
 
 // New creates a new instance of DeployWaiter for apiserver-proxy
@@ -98,6 +99,7 @@ func New(client client.Client, namespace string, secretsManager secretsmanager.I
 type Interface interface {
 	component.DeployWaiter
 	SetAdvertiseIPAddress(string)
+	SetAdvertiseIPScope(string)
 }
 
 type apiserverProxy struct {
@@ -110,6 +112,9 @@ type apiserverProxy struct {
 func (a *apiserverProxy) Deploy(ctx context.Context) error {
 	if a.values.advertiseIPAddress == "" {
 		return fmt.Errorf("run SetAdvertiseIPAddress before deploying")
+	}
+	if a.values.advertiseIPAddressScope == "" {
+		return fmt.Errorf("run SetAdvertiseIPScope before deploying")
 	}
 
 	scrapeConfig := a.emptyScrapeConfig()
@@ -198,6 +203,10 @@ func (a *apiserverProxy) WaitCleanup(ctx context.Context) error {
 
 func (a *apiserverProxy) SetAdvertiseIPAddress(advertiseIPAddress string) {
 	a.values.advertiseIPAddress = advertiseIPAddress
+}
+
+func (a *apiserverProxy) SetAdvertiseIPScope(advertiseIPScope string) {
+	a.values.advertiseIPAddressScope = advertiseIPScope
 }
 
 func (a *apiserverProxy) emptyScrapeConfig() *monitoringv1alpha1.ScrapeConfig {
@@ -322,6 +331,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Args: []string{
 									fmt.Sprintf("--ip-address=%s", a.values.advertiseIPAddress),
+									fmt.Sprintf("--ip-address-scope=%s", a.values.advertiseIPAddressScope),
 									"--daemon=false",
 									"--interface=lo",
 								},
@@ -348,6 +358,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Args: []string{
 									fmt.Sprintf("--ip-address=%s", a.values.advertiseIPAddress),
+									fmt.Sprintf("--ip-address-scope=%s", a.values.advertiseIPAddressScope),
 									"--interface=lo",
 								},
 								Resources: corev1.ResourceRequirements{

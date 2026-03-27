@@ -6,11 +6,13 @@ package botanist
 
 import (
 	"context"
+	"strings"
 
 	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/component/networking/apiserverproxy"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
+	"k8s.io/utils/ptr"
 )
 
 // DefaultAPIServerProxy returns a deployer for the apiserver-proxy.
@@ -52,5 +54,12 @@ func (b *Botanist) DeployAPIServerProxy(ctx context.Context) error {
 		return b.Shoot.Components.SystemComponents.APIServerProxy.Destroy(ctx)
 	}
 	b.Shoot.Components.SystemComponents.APIServerProxy.SetAdvertiseIPAddress(b.APIServerClusterIP)
+	// We use global scope only for Cilium, otherwise host scope. Cilium needs this for bpf masquerading.
+	if strings.EqualFold(ptr.Deref(b.Shoot.GetInfo().Spec.Networking.Type, ""), "cilium") {
+		b.Shoot.Components.SystemComponents.APIServerProxy.SetAdvertiseIPScope("global")
+	} else {
+		b.Shoot.Components.SystemComponents.APIServerProxy.SetAdvertiseIPScope("host")
+	}
+
 	return b.Shoot.Components.SystemComponents.APIServerProxy.Deploy(ctx)
 }
