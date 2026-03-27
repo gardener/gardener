@@ -176,7 +176,11 @@ func (b *Builder) WithShootFromCluster(seedClientSet kubernetes.Interface, s *ga
 			NewBuilder().
 			WithShootObjectFromCluster(seedClientSet, controlPlaneNamespace).
 			WithCloudProfileObjectFromCluster(seedClientSet, controlPlaneNamespace).
+			// For Shoots with `spec.maintenance.confineSpecUpdateRollout=true` there could be potentially long time window when the Shoot resource in the Cluster significantly differ from the Shoot resource in the Gardener API, i.e. changed credentials references.
+			// When this shoot operation tries to read the referred infrastructure or DNS credentials as per the Shoot spec from the Cluster, the Seed Authorizer might not allow the request as it is using the Gardener API to build the authorization decision graph.
+			// To avoid potential authorization problems, we always set the infrastructure and DNS credentials to `nil`.
 			WithoutShootCredentials().
+			WithoutShootDNS().
 			WithSeedObject(seedObj.GetInfo()).
 			WithProjectName(gardenObj.Project.Name).
 			WithInternalDomain(gardenObj.InternalDomain).
