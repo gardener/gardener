@@ -188,7 +188,6 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 
 		if err := kubernetesutils.DeleteObjects(ctx, o.client,
 			loggingAgentShootAccessSecret.Secret,
-			kubeRBACProxyShootAccessSecret.Secret,
 		); err != nil {
 			return err
 		}
