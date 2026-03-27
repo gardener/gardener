@@ -530,9 +530,211 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			})
 		})
 
+		When("reconciler is configured for a self-hosted shoot with `ShootRef`-based `ControllerInstallation`", func() {
+			var (
+				projectNamespace               *corev1.Namespace
+				selfHostedShoot                *gardencorev1beta1.Shoot
+				selfHostedControllerDeployment *gardencorev1.ControllerDeployment
+				selfHostedControllerInstall    *gardencorev1beta1.ControllerInstallation
+				selfHostedShootName            = "my-shoot"
+				r                              *controllerinstallation.Reconciler
+			)
+
+			BeforeEach(func() {
+				projectNamespace = &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "garden-",
+					},
+				}
+				Expect(testClient.Create(ctx, projectNamespace)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, projectNamespace))).To(Succeed())
+				})
+
+				selfHostedShoot = &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      selfHostedShootName,
+						Namespace: projectNamespace.Name,
+					},
+					Spec: gardencorev1beta1.ShootSpec{
+						SecretBindingName: ptr.To("my-provider-account"),
+						CloudProfileName:  ptr.To("test-cloudprofile"),
+						Region:            "foo-region",
+						Provider: gardencorev1beta1.Provider{
+							Type: "foo-provider",
+							Workers: []gardencorev1beta1.Worker{{
+								Name:         "control-plane",
+								Minimum:      1,
+								Maximum:      1,
+								Machine:      gardencorev1beta1.Machine{Type: "large"},
+								Zones:        []string{"zone-a", "zone-b"},
+								ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+							}},
+						},
+						Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.31.1"},
+						Networking: &gardencorev1beta1.Networking{Type: ptr.To("foo-networking")},
+					},
+				}
+				Expect(testClient.Create(ctx, selfHostedShoot)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, selfHostedShoot))).To(Succeed())
+				})
+
+				selfHostedControllerDeployment = &gardencorev1.ControllerDeployment{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "deploy-sh-",
+					},
+					Helm: &gardencorev1.HelmControllerDeployment{
+						RawChart: chartWithGardenKubeconfig,
+					},
+					InjectGardenKubeconfig: ptr.To(true),
+				}
+				Expect(testClient.Create(ctx, selfHostedControllerDeployment)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, selfHostedControllerDeployment))).To(Succeed())
+				})
+
+				selfHostedControllerInstall = &gardencorev1beta1.ControllerInstallation{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "install-sh-",
+					},
+				}
+
+				r = &controllerinstallation.Reconciler{
+					GardenClient:          testClient,
+					GardenConfig:          restConfig,
+					SeedClientSet:         testClientSet,
+					HelmRegistry:          fakeRegistry,
+					Clock:                 clock.RealClock{},
+					Config:                gardenletconfigv1alpha1.GardenletConfiguration{Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{ControllerInstallation: &gardenletconfigv1alpha1.ControllerInstallationControllerConfiguration{ConcurrentSyncs: ptr.To(5)}}},
+					Identity:              identity,
+					GardenClusterIdentity: gardenClusterIdentity,
+					GardenNamespace:       "garden",
+					SelfHostedShootMeta: &types.NamespacedName{
+						Name:      selfHostedShootName,
+						Namespace: projectNamespace.Name,
+					},
+				}
+			})
+
+			JustBeforeEach(func() {
+				selfHostedControllerInstall.Spec.ShootRef = &corev1.ObjectReference{Name: selfHostedShootName, Namespace: projectNamespace.Name}
+				selfHostedControllerInstall.Spec.RegistrationRef = corev1.ObjectReference{Name: controllerRegistration.Name}
+				selfHostedControllerInstall.Spec.DeploymentRef = &corev1.ObjectReference{Name: selfHostedControllerDeployment.Name}
+				Expect(testClient.Create(ctx, selfHostedControllerInstall)).To(Succeed())
+				log.Info("Created self-hosted ControllerInstallation with ShootRef", "controllerInstallation", client.ObjectKeyFromObject(selfHostedControllerInstall))
+
+				DeferCleanup(func() {
+					By("Remove finalizer from self-hosted ControllerInstallation to allow deletion")
+					patch := client.MergeFrom(selfHostedControllerInstall.DeepCopy())
+					selfHostedControllerInstall.Finalizers = nil
+					Expect(client.IgnoreNotFound(testClient.Patch(ctx, selfHostedControllerInstall, patch))).To(Succeed())
+
+					By("Delete self-hosted ControllerInstallation")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, selfHostedControllerInstall))).To(Succeed())
+				})
+			})
+
+			It("should deploy with correct namespace, ManagedResource name, Helm values, and garden access secret", func() {
+				By("Reconcile the self-hosted ControllerInstallation")
+				_, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: selfHostedControllerInstall.Name}})
+				Expect(err).NotTo(HaveOccurred())
+
+				extensionNamespace := "extension-" + controllerRegistration.Name
+
+				By("Ensure namespace uses the registration name")
+				namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: extensionNamespace}}
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace)).To(Succeed())
+				Expect(namespace.Labels).To(And(
+					HaveKeyWithValue("gardener.cloud/role", "extension"),
+					HaveKeyWithValue("controllerregistration.core.gardener.cloud/name", controllerRegistration.Name),
+					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
+				))
+				Expect(namespace.Annotations).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "zone-a,zone-b"))
+
+				By("Ensure garden access secret has self-hosted shoot SA name and namespace annotation")
+				secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "garden-access-extension", Namespace: extensionNamespace}}
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+				Expect(secret.Annotations).To(And(
+					HaveKeyWithValue("serviceaccount.resources.gardener.cloud/name", v1beta1constants.ExtensionShootServiceAccountPrefix+selfHostedShootName+"--"+selfHostedControllerInstall.Name),
+					HaveKeyWithValue("serviceaccount.resources.gardener.cloud/namespace", projectNamespace.Name),
+				))
+
+				By("Ensure ManagedResource uses the registration name")
+				managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: controllerRegistration.Name, Namespace: "garden"}}
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+
+				By("Ensure chart was deployed with correct Helm values")
+				mrSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResource.Spec.SecretRefs[0].Name, Namespace: managedResource.Namespace}}
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mrSecret), mrSecret)).To(Succeed())
+
+				values := make(map[string]any)
+				configMap := &corev1.ConfigMap{}
+				Expect(runtime.DecodeInto(newCodec(), mrSecret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
+				Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
+
+				gardenerValues := values["gardener"].(map[string]any)
+				Expect(gardenerValues).To(HaveKeyWithValue("selfHostedShootCluster", true))
+				Expect(gardenerValues).To(HaveKeyWithValue("version", "1.2.3"))
+				Expect(gardenerValues).NotTo(HaveKey("seed"))
+				Expect(gardenerValues).To(HaveKey("shoot"))
+
+				By("Ensure deployment has SHOOT_NAME and SHOOT_NAMESPACE env vars but no SEED_NAME")
+				deployment := &appsv1.Deployment{}
+				Expect(runtime.DecodeInto(newCodec(), mrSecret.Data["test_templates_deployment.yaml"], deployment)).To(Succeed())
+				Expect(deployment.Spec.Template.Spec.Containers[0].Env).To(HaveExactElements(
+					corev1.EnvVar{Name: "GARDEN_KUBECONFIG", Value: "/var/run/secrets/gardener.cloud/garden/generic-kubeconfig/kubeconfig"},
+					corev1.EnvVar{Name: "SHOOT_NAME", Value: selfHostedShootName},
+					corev1.EnvVar{Name: "SHOOT_NAMESPACE", Value: projectNamespace.Name},
+				))
+
+				By("Ensure conditions are maintained correctly")
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(selfHostedControllerInstall), selfHostedControllerInstall)).To(Succeed())
+				Expect(selfHostedControllerInstall.Status.Conditions).To(And(
+					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("RegistrationValid")),
+					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("InstallationPending")),
+				))
+			})
+
+			It("should properly clean up on deletion", func() {
+				By("Reconcile the self-hosted ControllerInstallation")
+				_, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: selfHostedControllerInstall.Name}})
+				Expect(err).NotTo(HaveOccurred())
+
+				extensionNamespace := "extension-" + controllerRegistration.Name
+
+				By("Ensure resources were created")
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: extensionNamespace}}), &corev1.Namespace{})).To(Succeed())
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(&resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: controllerRegistration.Name, Namespace: "garden"}}), &resourcesv1alpha1.ManagedResource{})).To(Succeed())
+
+				By("Create ServiceAccount for garden access secret")
+				gardenClusterServiceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+					Name:      v1beta1constants.ExtensionShootServiceAccountPrefix + selfHostedShootName + "--" + selfHostedControllerInstall.Name,
+					Namespace: projectNamespace.Name,
+				}}
+				Expect(testClient.Create(ctx, gardenClusterServiceAccount)).To(Succeed())
+
+				By("Delete the self-hosted ControllerInstallation")
+				Expect(testClient.Delete(ctx, selfHostedControllerInstall)).To(Succeed())
+
+				By("Reconcile the deletion")
+				Eventually(func(g Gomega) {
+					result, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: selfHostedControllerInstall.Name}})
+					g.Expect(err).NotTo(HaveOccurred())
+					g.Expect(result).To(Equal(reconcile.Result{}))
+				}).Should(Succeed())
+
+				By("Verify controller artefacts were removed")
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: extensionNamespace}}), &corev1.Namespace{})).To(BeNotFoundError())
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(&resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: controllerRegistration.Name, Namespace: "garden"}}), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenClusterServiceAccount), gardenClusterServiceAccount)).To(BeNotFoundError())
+			})
+		})
+
 		When("reconciler is configured for a self-hosted shoot", func() {
 			var (
 				projectNamespace               *corev1.Namespace
+				selfHostedShoot                *gardencorev1beta1.Shoot
 				selfHostedControllerDeployment *gardencorev1.ControllerDeployment
 				selfHostedControllerInstall    *gardencorev1beta1.ControllerInstallation
 			)
@@ -546,6 +748,24 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				Expect(testClient.Create(ctx, projectNamespace)).To(Succeed())
 				DeferCleanup(func() {
 					Expect(client.IgnoreNotFound(testClient.Delete(ctx, projectNamespace))).To(Succeed())
+				})
+
+				selfHostedShoot = &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-shoot",
+						Namespace: projectNamespace.Name,
+					},
+					Spec: gardencorev1beta1.ShootSpec{
+						SecretBindingName: ptr.To("my-provider-account"),
+						CloudProfileName:  ptr.To("test-cloudprofile"),
+						Region:            "foo-region",
+						Provider:          gardencorev1beta1.Provider{Type: "foo-provider"},
+						Kubernetes:        gardencorev1beta1.Kubernetes{Version: "1.31.1"},
+					},
+				}
+				Expect(testClient.Create(ctx, selfHostedShoot)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, selfHostedShoot))).To(Succeed())
 				})
 
 				selfHostedControllerDeployment = &gardencorev1.ControllerDeployment{
@@ -601,8 +821,8 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 					GardenClusterIdentity: gardenClusterIdentity,
 					GardenNamespace:       v1beta1constants.GardenNamespace,
 					SelfHostedShootMeta: &types.NamespacedName{
-						Namespace: projectNamespace.Name,
 						Name:      "my-shoot",
+						Namespace: projectNamespace.Name,
 					},
 				}
 
@@ -618,41 +838,6 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 					HaveKeyWithValue("serviceaccount.resources.gardener.cloud/name", v1beta1constants.ExtensionShootServiceAccountPrefix+"my-shoot--"+selfHostedControllerInstall.Name),
 					HaveKeyWithValue("serviceaccount.resources.gardener.cloud/namespace", projectNamespace.Name),
 				))
-			})
-		})
-
-		When("seed is marked as self-hosted shoot clusters", func() {
-			BeforeEach(func() {
-				By("Mark Seed as self-hosted shoot cluster")
-				patch := client.MergeFrom(seed.DeepCopy())
-				metav1.SetMetaDataLabel(&seed.ObjectMeta, "seed.gardener.cloud/self-hosted-shoot-cluster", "true")
-				Expect(testClient.Patch(ctx, seed, patch)).To(Succeed())
-
-				DeferCleanup(func() {
-					patch := client.MergeFrom(seed.DeepCopy())
-					delete(seed.Labels, "seed.gardener.cloud/self-hosted-shoot-cluster")
-					Expect(testClient.Patch(ctx, seed, patch)).To(Succeed())
-				})
-			})
-
-			It("should set the selfHostedShootCluster value in the chart", func() {
-				values := make(map[string]any)
-				Eventually(func(g Gomega) {
-					managedResource := &resourcesv1alpha1.ManagedResource{}
-					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: controllerInstallation.Name}, managedResource)).To(Succeed())
-
-					secret := &corev1.Secret{}
-					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: managedResource.Namespace, Name: managedResource.Spec.SecretRefs[0].Name}, secret)).To(Succeed())
-
-					configMap := &corev1.ConfigMap{}
-					g.Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
-					g.Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
-				}).Should(Succeed())
-
-				valuesBytes, err := yaml.Marshal(values)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(string(valuesBytes)).To(ContainSubstring("selfHostedShootCluster: true"))
 			})
 		})
 

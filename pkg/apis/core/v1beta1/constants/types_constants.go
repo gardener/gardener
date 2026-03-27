@@ -952,6 +952,12 @@ const (
 	// EnvSeedName is a constant for the environment variable which holds the name of the Seed that the extension
 	// controller is running on.
 	EnvSeedName = "SEED_NAME"
+	// EnvShootName is a constant for the environment variable which holds the name of the self-hosted Shoot that the
+	// extension controller is running for.
+	EnvShootName = "SHOOT_NAME"
+	// EnvShootNamespace is a constant for the environment variable which holds the namespace of the self-hosted Shoot
+	// that the extension controller is running for.
+	EnvShootNamespace = "SHOOT_NAMESPACE"
 
 	// IngressTLSCertificateValidity is the default validity for ingress TLS certificates.
 	IngressTLSCertificateValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176

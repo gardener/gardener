@@ -65,6 +65,7 @@ var (
 	cloudProfileResource              = gardencorev1beta1.Resource("cloudprofiles")
 	configMapResource                 = corev1.Resource("configmaps")
 	controllerDeploymentResource      = gardencorev1beta1.Resource("controllerdeployments")
+	controllerInstallationResource    = gardencorev1beta1.Resource("controllerinstallations")
 	controllerRegistrationResource    = gardencorev1beta1.Resource("controllerregistrations")
 	credentialsBindingResource        = securityv1alpha1.Resource("credentialsbindings")
 	eventCoreResource                 = corev1.Resource("events")
@@ -74,6 +75,7 @@ var (
 	projectResource                   = gardencorev1beta1.Resource("projects")
 	secretResource                    = corev1.Resource("secrets")
 	secretBindingResource             = gardencorev1beta1.Resource("secretbindings")
+	seedResource                      = gardencorev1beta1.Resource("seeds")
 	serviceAccountResource            = corev1.Resource("serviceaccounts")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
 	shootStateResource                = gardencorev1beta1.Resource("shootstates")
@@ -151,6 +153,22 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 		case configMapResource:
 			return requestAuthorizer.CheckRead(graph.VertexTypeConfigMap, attrs)
 
+		case controllerDeploymentResource:
+			return requestAuthorizer.CheckRead(graph.VertexTypeControllerDeployment, attrs)
+
+		case controllerInstallationResource:
+			return requestAuthorizer.Check(graph.VertexTypeControllerInstallation, attrs,
+				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
+				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithFieldSelectors(map[string]string{
+					core.ShootRefName:      shootName,
+					core.ShootRefNamespace: shootNamespace,
+				}),
+			)
+
+		case controllerRegistrationResource:
+			return requestAuthorizer.CheckRead(graph.VertexTypeControllerRegistration, attrs)
+
 		case eventCoreResource, eventResource:
 			return a.authorizeEvent(log, attrs)
 
@@ -168,6 +186,14 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 
 		case secretResource:
 			return a.authorizeSecret(ctx, requestAuthorizer, attrs)
+
+		case seedResource:
+			// The self-hosted shoot gardenlet needs read access for the Seed whose name matches its shoot name.
+			if slices.Contains([]string{"get", "list", "watch"}, attrs.GetVerb()) &&
+				(attrs.GetName() == "" || attrs.GetName() == shootName) {
+				return auth.DecisionAllow, "", nil
+			}
+			return auth.DecisionNoOpinion, "", nil
 
 		case serviceAccountResource:
 			if userType == gardenletidentity.UserTypeExtension {

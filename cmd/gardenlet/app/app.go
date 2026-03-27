@@ -376,6 +376,12 @@ func (g *garden) Start(ctx context.Context) error {
 						Field:      fields.SelectorFromSet(fields.Set{operations.BastionShootName: g.selfHostedShootInfo.Meta.Name}),
 						Namespaces: map[string]cache.Config{g.selfHostedShootInfo.Meta.Namespace: {}},
 					},
+					&gardencorev1beta1.ControllerInstallation{}: {
+						Field: fields.SelectorFromSet(fields.Set{
+							gardencore.ShootRefName:      g.selfHostedShootInfo.Meta.Name,
+							gardencore.ShootRefNamespace: g.selfHostedShootInfo.Meta.Namespace,
+						}),
+					},
 					&gardencorev1beta1.Shoot{}: {
 						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: g.selfHostedShootInfo.Meta.Name}),
 						Namespaces: map[string]cache.Config{g.selfHostedShootInfo.Meta.Namespace: {}},
@@ -400,9 +406,12 @@ func (g *garden) Start(ctx context.Context) error {
 						// Gardenlet does not have the required RBAC permissions for listing/watching the following
 						// resources on cluster level. Hence, we need to watch them individually with the help of a
 						// SingleObject cache.
-						&corev1.ConfigMap{}:      kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ConfigMap{}),
-						&corev1.Secret{}:         kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.Secret{}),
-						&corev1.ServiceAccount{}: kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ServiceAccount{}),
+						&corev1.ConfigMap{}:                         kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ConfigMap{}),
+						&corev1.Secret{}:                            kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.Secret{}),
+						&corev1.ServiceAccount{}:                    kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ServiceAccount{}),
+						&gardencorev1.ControllerDeployment{}:        kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1.ControllerDeployment{}),
+						&gardencorev1beta1.ControllerRegistration{}: kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.ControllerRegistration{}),
+						&gardencorev1beta1.Seed{}:                   kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.Seed{}),
 					},
 					kubernetes.GardenScheme,
 				)(config, opts)
@@ -803,6 +812,9 @@ func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 		fns = []func(context.Context, client.FieldIndexer) error{
 			// core API group
 			indexer.AddBackupEntryBucketName,
+			indexer.AddControllerInstallationRegistrationRefName,
+			indexer.AddControllerInstallationShootRefName,
+			indexer.AddControllerInstallationShootRefNamespace,
 		}
 	}
 
