@@ -682,6 +682,20 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			// Verify that the component created the managed resource
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
 		})
+
+		It("should still create ingress and secrets when ShootNodeLoggingEnabled is false", func() {
+			values.ShootNodeLoggingEnabled = false
+			component = New(c, namespace, values, fakeSecretManager)
+
+			Expect(component.Deploy(ctx)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
+			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
+
+			Expect(customResourcesManagedResource).To(consistOf(openTelemetryCollector, getIngress(), serviceMonitor, serviceAccount))
+			Expect(c.Get(ctx, client.ObjectKey{Name: "logging-tls", Namespace: namespace}, &corev1.Secret{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: kubeRBACProxyShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(Succeed())
+		})
 	})
 
 	Describe("#Destroy", func() {
