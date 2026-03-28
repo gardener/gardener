@@ -15,6 +15,7 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -136,8 +137,13 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 			},
 			{
 				APIGroups: []string{corev1.GroupName},
-				Resources: []string{"configmaps", "secrets", "endpoints", "events", "pods"},
+				Resources: []string{"secrets"},
 				Verbs:     []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
+			},
+			{
+				APIGroups: []string{corev1.GroupName, eventsv1.GroupName},
+				Resources: []string{"events"},
+				Verbs:     []string{"get", "list", "create", "patch", "update"},
 			},
 			{
 				APIGroups: []string{coordinationv1.GroupName},
