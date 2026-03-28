@@ -29,6 +29,8 @@ case "$COMMAND" in
     if [[ "$SCENARIO" != "connect" ]]; then
       # Prepare resources and generate manifests.
       # The manifests are copied to the unmanaged-infra machine pods or can be passed to the `--config-dir` flag of `gardenadm bootstrap`.
+      exec 3>&1
+
       skaffold build \
         -p "$SCENARIO" \
         -m gardenadm,provider-local-node,provider-local \
