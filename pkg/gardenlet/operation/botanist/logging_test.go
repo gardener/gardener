@@ -182,10 +182,10 @@ var _ = Describe("Logging", func() {
 						*obj.(*appsv1.Deployment) = *deployment
 						return nil
 					}),
+					victoriaLogsDeployer.EXPECT().Deploy(ctx),
 					valiDeployer.EXPECT().WithAuthenticationProxy(false),
-					otelCollectorDeployer.EXPECT().Destroy(ctx),
-					victoriaLogsDeployer.EXPECT().Destroy(ctx),
 					valiDeployer.EXPECT().Deploy(ctx),
+					otelCollectorDeployer.EXPECT().Destroy(ctx),
 				)
 
 				Expect(botanist.DeployLogging(ctx)).To(Succeed())
@@ -219,12 +219,11 @@ var _ = Describe("Logging", func() {
 						*obj.(*appsv1.Deployment) = *deployment
 						return nil
 					}),
+					victoriaLogsDeployer.EXPECT().Deploy(ctx),
 					valiDeployer.EXPECT().WithAuthenticationProxy(true),
-
-					eventLoggerDeployer.EXPECT().Deploy(ctx),
-					otelCollectorDeployer.EXPECT().Destroy(ctx),
-					victoriaLogsDeployer.EXPECT().Destroy(ctx),
 					valiDeployer.EXPECT().Deploy(ctx),
+					otelCollectorDeployer.EXPECT().Destroy(ctx),
+					eventLoggerDeployer.EXPECT().Deploy(ctx),
 				)
 
 				Expect(botanist.DeployLogging(ctx)).To(Succeed())
@@ -252,13 +251,12 @@ var _ = Describe("Logging", func() {
 							*obj.(*appsv1.Deployment) = *deployment
 							return nil
 						}),
+						victoriaLogsDeployer.EXPECT().Deploy(ctx),
 						valiDeployer.EXPECT().WithAuthenticationProxy(false),
-
-						eventLoggerDeployer.EXPECT().Deploy(ctx),
+						valiDeployer.EXPECT().Deploy(ctx),
 						otelCollectorDeployer.EXPECT().WithAuthenticationProxy(true),
 						otelCollectorDeployer.EXPECT().Deploy(ctx),
-						victoriaLogsDeployer.EXPECT().Destroy(ctx),
-						valiDeployer.EXPECT().Deploy(ctx),
+						eventLoggerDeployer.EXPECT().Deploy(ctx),
 					)
 
 					Expect(botanist.DeployLogging(ctx)).To(Succeed())
@@ -287,12 +285,11 @@ var _ = Describe("Logging", func() {
 							*obj.(*appsv1.Deployment) = *deployment
 							return nil
 						}),
-						valiDeployer.EXPECT().WithAuthenticationProxy(true),
-
-						eventLoggerDeployer.EXPECT().Deploy(ctx),
-						otelCollectorDeployer.EXPECT().Destroy(ctx),
 						victoriaLogsDeployer.EXPECT().Deploy(ctx),
+						valiDeployer.EXPECT().WithAuthenticationProxy(true),
 						valiDeployer.EXPECT().Deploy(ctx),
+						otelCollectorDeployer.EXPECT().Destroy(ctx),
+						eventLoggerDeployer.EXPECT().Deploy(ctx),
 					)
 
 					Expect(botanist.DeployLogging(ctx)).To(Succeed())
@@ -315,10 +312,6 @@ var _ = Describe("Logging", func() {
 							*obj.(*appsv1.Deployment) = *deployment
 							return nil
 						}),
-						valiDeployer.EXPECT().WithAuthenticationProxy(true),
-
-						eventLoggerDeployer.EXPECT().Deploy(ctx),
-						otelCollectorDeployer.EXPECT().Destroy(ctx),
 						victoriaLogsDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
 					)
 
@@ -349,13 +342,12 @@ var _ = Describe("Logging", func() {
 							*obj.(*appsv1.Deployment) = *deployment
 							return nil
 						}),
+						victoriaLogsDeployer.EXPECT().Deploy(ctx),
 						valiDeployer.EXPECT().WithAuthenticationProxy(false),
-
-						eventLoggerDeployer.EXPECT().Deploy(ctx),
+						valiDeployer.EXPECT().Deploy(ctx),
 						otelCollectorDeployer.EXPECT().WithAuthenticationProxy(true),
 						otelCollectorDeployer.EXPECT().Deploy(ctx),
-						victoriaLogsDeployer.EXPECT().Deploy(ctx),
-						valiDeployer.EXPECT().Deploy(ctx),
+						eventLoggerDeployer.EXPECT().Deploy(ctx),
 					)
 
 					Expect(botanist.DeployLogging(ctx)).To(Succeed())
@@ -379,12 +371,11 @@ var _ = Describe("Logging", func() {
 						*obj.(*appsv1.Deployment) = *deployment
 						return nil
 					}),
+					victoriaLogsDeployer.EXPECT().Deploy(ctx),
 					valiDeployer.EXPECT().WithAuthenticationProxy(true),
-
-					eventLoggerDeployer.EXPECT().Destroy(ctx),
-					otelCollectorDeployer.EXPECT().Destroy(ctx),
-					victoriaLogsDeployer.EXPECT().Destroy(ctx),
 					valiDeployer.EXPECT().Deploy(ctx),
+					otelCollectorDeployer.EXPECT().Destroy(ctx),
+					eventLoggerDeployer.EXPECT().Destroy(ctx),
 				)
 
 				Expect(botanist.DeployLogging(ctx)).To(Succeed())
@@ -407,12 +398,11 @@ var _ = Describe("Logging", func() {
 						*obj.(*appsv1.Deployment) = *deployment
 						return nil
 					}),
+					victoriaLogsDeployer.EXPECT().Deploy(ctx),
 					valiDeployer.EXPECT().WithAuthenticationProxy(true),
-
-					eventLoggerDeployer.EXPECT().Deploy(ctx),
-					otelCollectorDeployer.EXPECT().Destroy(ctx),
-					victoriaLogsDeployer.EXPECT().Destroy(ctx),
 					valiDeployer.EXPECT().Deploy(ctx),
+					otelCollectorDeployer.EXPECT().Destroy(ctx),
+					eventLoggerDeployer.EXPECT().Deploy(ctx),
 				)
 
 				Expect(botanist.DeployLogging(ctx)).To(Succeed())
@@ -435,12 +425,11 @@ var _ = Describe("Logging", func() {
 						*obj.(*appsv1.Deployment) = *deployment
 						return nil
 					}),
+					victoriaLogsDeployer.EXPECT().Deploy(ctx),
 					valiDeployer.EXPECT().WithAuthenticationProxy(true),
-
-					eventLoggerDeployer.EXPECT().Deploy(ctx),
-					otelCollectorDeployer.EXPECT().Destroy(ctx),
-					victoriaLogsDeployer.EXPECT().Destroy(ctx),
 					valiDeployer.EXPECT().Deploy(ctx),
+					otelCollectorDeployer.EXPECT().Destroy(ctx),
+					eventLoggerDeployer.EXPECT().Deploy(ctx),
 				)
 
 				Expect(botanist.DeployLogging(ctx)).To(Succeed())
@@ -463,12 +452,11 @@ var _ = Describe("Logging", func() {
 						*obj.(*appsv1.Deployment) = *deployment
 						return nil
 					}),
+					victoriaLogsDeployer.EXPECT().Deploy(ctx),
 					valiDeployer.EXPECT().WithAuthenticationProxy(true),
-
-					eventLoggerDeployer.EXPECT().Deploy(ctx),
-					otelCollectorDeployer.EXPECT().Destroy(ctx),
-					victoriaLogsDeployer.EXPECT().Destroy(ctx),
 					valiDeployer.EXPECT().Destroy(ctx),
+					otelCollectorDeployer.EXPECT().Destroy(ctx),
+					eventLoggerDeployer.EXPECT().Deploy(ctx),
 				)
 
 				Expect(botanist.DeployLogging(ctx)).To(Succeed())
@@ -509,8 +497,10 @@ var _ = Describe("Logging", func() {
 							*obj.(*appsv1.Deployment) = *deployment
 							return nil
 						}),
+						victoriaLogsDeployer.EXPECT().Deploy(ctx),
 						valiDeployer.EXPECT().WithAuthenticationProxy(true),
-
+						valiDeployer.EXPECT().Deploy(ctx),
+						otelCollectorDeployer.EXPECT().Destroy(ctx),
 						eventLoggerDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
 					)
 
@@ -533,8 +523,10 @@ var _ = Describe("Logging", func() {
 							*obj.(*appsv1.Deployment) = *deployment
 							return nil
 						}),
+						victoriaLogsDeployer.EXPECT().Deploy(ctx),
 						valiDeployer.EXPECT().WithAuthenticationProxy(true),
-
+						valiDeployer.EXPECT().Deploy(ctx),
+						otelCollectorDeployer.EXPECT().Destroy(ctx),
 						eventLoggerDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
 					)
 
@@ -558,11 +550,8 @@ var _ = Describe("Logging", func() {
 							*obj.(*appsv1.Deployment) = *deployment
 							return nil
 						}),
+						victoriaLogsDeployer.EXPECT().Deploy(ctx),
 						valiDeployer.EXPECT().WithAuthenticationProxy(true),
-
-						eventLoggerDeployer.EXPECT().Deploy(ctx),
-						otelCollectorDeployer.EXPECT().Destroy(ctx),
-						victoriaLogsDeployer.EXPECT().Destroy(ctx),
 						valiDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
 					)
 

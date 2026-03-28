@@ -465,3 +465,11 @@ rules:
   - patch
   - update
   - delete
+- apiGroups:
+  - operator.victoriametrics.com
+  resources:
+  - vlsingles
+  verbs:
+  - get
+  - list
+  - watch
