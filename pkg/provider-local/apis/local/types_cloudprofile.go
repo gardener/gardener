@@ -20,6 +20,8 @@ type CloudProfileConfig struct {
 	// MachineImages is the list of machine images that are understood by the controller. It maps
 	// logical names and versions to provider-specific identifiers.
 	MachineImages []MachineImages
+	// LoadBalancer contains the configuration for the service controller of cloud-controller-manager-local.
+	LoadBalancer LoadBalancer
 }
 
 // MachineImages is a mapping from logical names and versions to provider-specific identifiers.

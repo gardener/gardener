@@ -10,6 +10,18 @@ import (
 )
 
 var (
+	// ChartConfig is the Helm chart for the control plane config chart.
+	//go:embed cloud-provider-config
+	ChartConfig embed.FS
+	// ChartPathConfig is the path to the control plane config chart.
+	ChartPathConfig = filepath.Join("cloud-provider-config")
+
+	// ChartControlPlane is the Helm chart for the control plane chart.
+	//go:embed seed-controlplane
+	ChartControlPlane embed.FS
+	// ChartPathControlPlane is the path to the control plane chart.
+	ChartPathControlPlane = filepath.Join("seed-controlplane")
+
 	// ChartShootStorageClasses is the Helm chart for the shoot-storageclasses chart.
 	//go:embed shoot-storageclasses
 	ChartShootStorageClasses embed.FS

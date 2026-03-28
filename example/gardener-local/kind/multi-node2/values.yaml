@@ -1,12 +1,6 @@
 gardener:
   controlPlane:
     deployed: false
-  seed:
-    istio:
-      listenAddresses:
-      - 172.18.255.2
-    bastion:
-      listenAddresses: []
 
 workers:
 - zone: "0"

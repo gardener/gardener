@@ -35,11 +35,23 @@ parse_flags "$@"
 kind delete cluster \
   --name "$CLUSTER_NAME"
 
-# Only stop the infra containers if deleting the "main" kind cluster.
-# When deleting the secondary cluster, we might still need DNS/registry for the other cluster.
 if [[ "$CLUSTER_NAME" != "gardener-local2" ]]; then
+  # Only stop the infra containers if deleting the "main" kind cluster.
+  # When deleting the secondary cluster, we might still need DNS/registry for the other cluster.
   # Reset dynamic updates to the DNS zones by removing the volumes.
   docker compose -f "$(dirname "$0")/../dev-setup/infra/docker-compose.yaml" down --volumes
+
+  # When deleting the "main" kind cluster, remove all load balancer containers (including the ones of shoot clusters)
+  # to remove any orphaned containers.
+  echo "Removing load balancer containers of all clusters"
+  for container in $(docker container ls -aq --filter network=kind --filter label=gardener.cloud/role=loadbalancer); do
+    docker container rm -f "$container"
+  done
+else
+  echo "Removing load balancer containers of cluster $CLUSTER_NAME"
+  for container in $(docker container ls -aq --filter network=kind --filter label=gardener.cloud/role=loadbalancer --filter label=kubernetes.io/cluster="$CLUSTER_NAME"); do
+    docker container rm -f "$container"
+  done
 fi
 
 rm -f "$PATH_KUBECONFIG"

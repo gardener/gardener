@@ -1,0 +1,13 @@
+images:
+  cloud-controller-manager-local: image-repository:image-tag
+
+replicas: 1
+clusterName: ""
+podAnnotations: {}
+podLabels: {}
+priorityClassName: system-cluster-critical
+
+server:
+  port: 10258
+  tlsSecret: ""
+  tlsCipherSuites: []

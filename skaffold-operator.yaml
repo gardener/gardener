@@ -155,7 +155,6 @@ build:
             - pkg/controller/networkpolicy/helper
             - pkg/controller/networkpolicy/hostnameresolver
             - pkg/controller/reference
-            - pkg/controller/service
             - pkg/controller/vpaevictionrequirements
             - pkg/controllerutils
             - pkg/controllerutils/mapper
@@ -954,8 +953,6 @@ deploy:
         chartPath: charts/gardener/operator
         namespace: garden
         setValueTemplates:
-          env[0].name: GARDENER_OPERATOR_LOCAL
-          env[0].value: "true"
           image.repository: '{{.IMAGE_REPO_local_skaffold_gardener_operator}}'
           image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_operator}}@{{.IMAGE_DIGEST_local_skaffold_gardener_operator}}'
           imageVectorOverwrite: |
@@ -984,17 +981,6 @@ deploy:
         createNamespace: true
         wait: true
 profiles:
-  - name: ipv6
-    activation:
-      - env: IPFAMILY=ipv6
-      - env: IPFAMILY=dual
-    patches:
-      - op: add
-        path: /deploy/helm/releases/0/setValueTemplates/env[1].name
-        value: GARDENER_OPERATOR_VIRTUAL_GARDEN_IP
-      - op: add
-        path: /deploy/helm/releases/0/setValueTemplates/env[1].value
-        value: fd00:ff::3
   - name: single-node
     activation:
       - env: SCENARIO=single-node
@@ -1133,7 +1119,6 @@ build:
             - pkg/component/observability/monitoring/alertmanager
             - pkg/component/observability/monitoring/prometheus/shoot
             - pkg/component/observability/monitoring/utils
-            - pkg/controller/service
             - pkg/controllerutils
             - pkg/controllerutils/mapper
             - pkg/controllerutils/predicate
@@ -1160,7 +1145,6 @@ build:
             - pkg/provider-local/controller/infrastructure
             - pkg/provider-local/controller/networkpolicy
             - pkg/provider-local/controller/operatingsystemconfig
-            - pkg/provider-local/controller/service
             - pkg/provider-local/controller/worker
             - pkg/provider-local/imagevector
             - pkg/provider-local/local
@@ -1306,6 +1290,57 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-extension-admission-local
+    - image: local-skaffold/cloud-controller-manager-local
+      ko:
+        dependencies:
+          paths:
+            - cmd/cloud-controller-manager-local
+            - pkg/apis/config
+            - pkg/apis/config/gardenlet/v1alpha1
+            - pkg/apis/core
+            - pkg/apis/core/install
+            - pkg/apis/core/v1
+            - pkg/apis/core/v1beta1
+            - pkg/apis/core/v1beta1/constants
+            - pkg/apis/extensions
+            - pkg/apis/extensions/v1alpha1
+            - pkg/apis/operations
+            - pkg/apis/operations/install
+            - pkg/apis/operations/v1alpha1
+            - pkg/apis/operator
+            - pkg/apis/operator/v1alpha1
+            - pkg/apis/resources
+            - pkg/apis/resources/v1alpha1
+            - pkg/apis/security
+            - pkg/apis/security/install
+            - pkg/apis/security/v1alpha1
+            - pkg/apis/seedmanagement
+            - pkg/apis/seedmanagement/encoding
+            - pkg/apis/seedmanagement/install
+            - pkg/apis/seedmanagement/v1alpha1
+            - pkg/apis/settings
+            - pkg/apis/settings/install
+            - pkg/apis/settings/v1alpha1
+            - pkg/apis/utils
+            - pkg/apis/utils/timewindow
+            - pkg/chartrenderer
+            - pkg/client/kubernetes
+            - pkg/client/kubernetes/cache
+            - pkg/provider-local/apis/local
+            - pkg/provider-local/apis/local/install
+            - pkg/provider-local/apis/local/v1alpha1
+            - pkg/provider-local/cloud-provider/loadbalancer
+            - pkg/provider-local/cloud-provider/provider
+            - pkg/utils
+            - pkg/utils/errors
+            - pkg/utils/validation/kubernetesversion
+            - pkg/utils/version
+            - third_party/open-telemetry/opentelemetry-operator/apis/v1alpha1
+            - third_party/open-telemetry/opentelemetry-operator/apis/v1beta1
+            - VERSION
+        ldflags:
+          - '{{.LD_FLAGS}}'
+        main: ./cmd/cloud-controller-manager-local
     - image: local-skaffold/machine-controller-manager-provider-local
       ko:
         dependencies:

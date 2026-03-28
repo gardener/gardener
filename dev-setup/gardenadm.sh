@@ -31,13 +31,13 @@ case "$COMMAND" in
       # The manifests are copied to the unmanaged-infra machine pods or can be passed to the `--config-dir` flag of `gardenadm bootstrap`.
       skaffold build \
         -p "$SCENARIO" \
-        -m gardenadm,provider-local-node,provider-local \
+        -m gardenadm,provider-local \
         -q \
         --cache-artifacts="$($(dirname "$0")/get-skaffold-cache-artifacts.sh gardenadm)" \
         |\
       skaffold render \
         -p "$SCENARIO" \
-        -m provider-local-node,provider-local \
+        -m provider-local \
         -o "$(dirname "$0")/gardenadm/resources/generated/$SCENARIO/manifests.yaml" \
         --build-artifacts \
         -
@@ -45,7 +45,7 @@ case "$COMMAND" in
       if [[ "$SCENARIO" == "unmanaged-infra" ]]; then
         skaffold run \
           -n gardenadm-unmanaged-infra \
-          -m provider-local-node,machine
+          -m provider-local,machine
       fi
 
       # Export global resources for `gardenadm connect` scenario in case they will be needed later
