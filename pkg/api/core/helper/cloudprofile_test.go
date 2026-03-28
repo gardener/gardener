@@ -434,7 +434,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 			Expect(diff.RemovedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.RemovedVersions).To(BeEmpty())
-			// TODO(LucaBernstein, vknabel): Add RemovedVersionClassifications case
+			Expect(diff.RemovedVersionClassifications).To(BeEmpty())
 			Expect(diff.AddedImages.UnsortedList()).To(ConsistOf("image-2", "image-3"))
 			Expect(diff.AddedVersions).To(BeEquivalentTo(
 				map[string]sets.Set[string]{
@@ -470,7 +470,55 @@ var _ = Describe("CloudProfile Helper", func() {
 					"image-3": sets.New("version-1", "version-2"),
 				},
 			))
-			// TODO(LucaBernstein, vknabel): Add RemovedVersionClassifications case
+			Expect(diff.RemovedVersionClassifications).To(BeEmpty())
+			Expect(diff.AddedImages.UnsortedList()).To(BeEmpty())
+			Expect(diff.AddedVersions).To(BeEmpty())
+		})
+
+		It("should return the diff of a removed classification lifecycle", func() {
+			versions1 := []core.MachineImage{
+				{
+					Name: "image-1",
+					Versions: []core.MachineImageVersion{
+						{ExpirableVersion: core.ExpirableVersion{
+							Version: "version-1",
+							Lifecycle: []core.LifecycleStage{
+								{
+									Classification: classificationPreview,
+								},
+								{
+									Classification: classificationSupported,
+								},
+							},
+						}},
+					},
+				},
+			}
+
+			versions2 := []core.MachineImage{
+				{
+					Name: "image-1",
+					Versions: []core.MachineImageVersion{
+						{ExpirableVersion: core.ExpirableVersion{
+							Version: "version-1",
+							Lifecycle: []core.LifecycleStage{
+								{
+									Classification: classificationPreview,
+								},
+							},
+						}},
+					},
+				},
+			}
+			diff := GetMachineImageDiff(versions1, versions2)
+
+			Expect(diff.RemovedImages.UnsortedList()).To(BeEmpty())
+			Expect(diff.RemovedVersions).To(BeEmpty())
+			Expect(diff.RemovedVersionClassifications["image-1"]["version-1"]).To(Equal(
+				sets.Set[core.VersionClassification]{
+					classificationSupported: {},
+				},
+			))
 			Expect(diff.AddedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.AddedVersions).To(BeEmpty())
 		})
@@ -480,7 +528,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 			Expect(diff.RemovedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.RemovedVersions).To(BeEmpty())
-			// TODO(LucaBernstein, vknabel): Add RemovedVersionClassifications case
+			Expect(diff.RemovedVersionClassifications).To(BeEmpty())
 			Expect(diff.AddedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.AddedVersions).To(BeEmpty())
 		})

@@ -22,11 +22,6 @@ import (
 // CurrentLifecycleClassification returns the current lifecycle classification of the given version.
 // An empty classification is interpreted as supported. If the version is expired, it returns ClassificationExpired.
 func CurrentLifecycleClassification(version core.ExpirableVersion) core.VersionClassification {
-	var (
-		currentClassification = core.ClassificationUnavailable
-		currentTime           = time.Now()
-	)
-
 	if len(version.Lifecycle) == 0 && (version.Classification != nil || version.ExpirationDate != nil) {
 		// Deprecated: legacy classification/expiration fields are used, converting them to lifecycle stages.
 		// Remove once the legacy fields are removed.
@@ -49,6 +44,11 @@ func CurrentLifecycleClassification(version core.ExpirableVersion) core.VersionC
 		return core.ClassificationSupported
 	}
 
+	var (
+		currentTime           = time.Now()
+		currentClassification = core.ClassificationUnavailable
+	)
+
 	for _, stage := range version.Lifecycle {
 		startTime := time.Time{}
 		if stage.StartTime != nil {
@@ -63,9 +63,30 @@ func CurrentLifecycleClassification(version core.ExpirableVersion) core.VersionC
 	return currentClassification
 }
 
+// VersionIsExpired reports whether the given version is expired.
+func VersionIsExpired(version core.ExpirableVersion) bool {
+	return CurrentLifecycleClassification(version) == core.ClassificationExpired
+}
+
+// VersionIsActive reports whether the given version is active.
+func VersionIsActive(version core.ExpirableVersion) bool {
+	curr := CurrentLifecycleClassification(version)
+	return curr != core.ClassificationExpired && curr != core.ClassificationUnavailable
+}
+
 // VersionIsSupported reports whether the given version is supported.
 func VersionIsSupported(version core.ExpirableVersion) bool {
 	return CurrentLifecycleClassification(version) == core.ClassificationSupported
+}
+
+// VersionIsPreview reports whether the given version is in preview.
+func VersionIsPreview(version core.ExpirableVersion) bool {
+	return CurrentLifecycleClassification(version) == core.ClassificationPreview
+}
+
+// VersionIsDeprecated reports whether the given version is deprecated.
+func VersionIsDeprecated(version core.ExpirableVersion) bool {
+	return CurrentLifecycleClassification(version) == core.ClassificationDeprecated
 }
 
 // SupportedLifecycleClassification returns the lifecycle stage in which the version is classified as supported.
@@ -155,7 +176,7 @@ func DetermineLatestExpirableVersion(versions []core.ExpirableVersion, filterPre
 			return core.ExpirableVersion{}, core.ExpirableVersion{}, fmt.Errorf("error while parsing expirable version '%s': %s", version.Version, err.Error())
 		}
 
-		if filterPreviewVersions && CurrentLifecycleClassification(version) == core.ClassificationPreview {
+		if filterPreviewVersions && VersionIsPreview(version) {
 			continue
 		}
 
@@ -164,7 +185,7 @@ func DetermineLatestExpirableVersion(versions []core.ExpirableVersion, filterPre
 			latestExpirableVersion = version
 		}
 
-		if CurrentLifecycleClassification(version) != core.ClassificationDeprecated {
+		if !VersionIsDeprecated(version) {
 			if latestNonDeprecatedSemVerVersion == nil || v.GreaterThan(latestNonDeprecatedSemVerVersion) {
 				latestNonDeprecatedSemVerVersion = v
 				latestNonDeprecatedExpirableVersion = version
@@ -302,8 +323,8 @@ func GetMachineImageDiff(old, new []core.MachineImage) MachineImageDiff {
 func FilterVersionsWithClassification(versions []core.ExpirableVersion, classification core.VersionClassification) []core.ExpirableVersion {
 	var result []core.ExpirableVersion
 	for _, version := range versions {
-		// TODO(LucaBernstein): Check whether this behavior should be corrected (i.e. changed) in a later GEP-0032-PR.
-		//  The current behavior for nil classifications is treated differently across the codebase.
+		// TODO(rapsnx): There is a regression in old classifications, which allowed to bypass validations.
+		// Update this when issue: https://github.com/gardener/gardener/issues/14328 is resolved.
 		if (version.Classification == nil || *version.Classification != classification) &&
 			!slices.ContainsFunc(version.Lifecycle, func(s core.LifecycleStage) bool {
 				return s.Classification == classification
