@@ -5,16 +5,22 @@
 package shoot_test
 
 import (
+	"context"
 	"net"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 var _ = Describe("shoot", func() {
@@ -362,6 +368,68 @@ var _ = Describe("shoot", func() {
 				result := SortByIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}, cidrs)
 				expected := []net.IPNet{ipv4CIDR1, ipv6CIDR1}
 				Expect(result).To(Equal(expected))
+			})
+		})
+
+		Describe("#WithoutShootDNS", func() {
+			var (
+				ctx          context.Context
+				c            client.Client
+				shootBuilder *Builder
+			)
+
+			BeforeEach(func() {
+				ctx = context.Background()
+				c = fake.NewFakeClient()
+
+				uid := "057cf3ec-1b86-40b3-abc2-47ac71abbe85"
+				s := &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo",
+						Namespace: "garden-bar",
+						UID:       types.UID(uid),
+					},
+					Spec: gardencorev1beta1.ShootSpec{
+						DNS: &gardencorev1beta1.DNS{
+							Domain: ptr.To("shoot.example.com"),
+						},
+						Kubernetes: gardencorev1beta1.Kubernetes{
+							Version: "v1.35.0",
+						},
+					},
+					Status: gardencorev1beta1.ShootStatus{
+						TechnicalID: "shoot--bar--foo-" + uid,
+					},
+				}
+
+				shootBuilder = NewBuilder().
+					WithShootObject(s).
+					WithCloudProfileObject(nil).
+					WithoutShootCredentials().
+					WithDefaultDomains([]*gardener.Domain{
+						{
+							Domain: "example.com",
+						},
+					})
+			})
+
+			It("should unset the shoot DNS domain in the builder", func() {
+				shoot, err := shootBuilder.
+					WithoutShootDNS().
+					Build(ctx, c)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(shoot.GetInfo().Spec.DNS).To(BeNil())
+			})
+
+			It("should not overwrite the shoot DNS domain in the builder", func() {
+				shoot, err := shootBuilder.
+					Build(ctx, c)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(shoot.GetInfo().Spec.DNS).To(Equal(&gardencorev1beta1.DNS{
+					Domain: ptr.To("shoot.example.com"),
+				}))
 			})
 		})
 	})
