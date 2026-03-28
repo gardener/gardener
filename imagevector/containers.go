@@ -73,6 +73,8 @@ const (
 	ContainerImageNameHyperkube = "hyperkube"
 	// ContainerImageNameIngressDefaultBackend is a constant for an image in the image vector with name 'ingress-default-backend'.
 	ContainerImageNameIngressDefaultBackend = "ingress-default-backend"
+	// ContainerImageNameIstioBasicAuthServer is a constant for an image in the image vector with name 'istio-basic-auth-server'.
+	ContainerImageNameIstioBasicAuthServer = "istio-basic-auth-server"
 	// ContainerImageNameIstioIstiod is a constant for an image in the image vector with name 'istio-istiod'.
 	ContainerImageNameIstioIstiod = "istio-istiod"
 	// ContainerImageNameIstioProxy is a constant for an image in the image vector with name 'istio-proxy'.

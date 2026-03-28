@@ -259,10 +259,16 @@ func (r *Reconciler) runReconcileSeedFlow(
 			},
 			Dependencies: flow.NewTaskIDs(syncPointCRDs),
 		})
+		waitForIstioCRDs = g.Add(flow.Task{
+			Name:         "Waiting for custom resource definitions for Istio",
+			Fn:           c.istioCRD.Wait,
+			Dependencies: flow.NewTaskIDs(deployIstioCRDs),
+			SkipIf:       seedIsGarden,
+		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
 			Fn:           component.OpWait(c.gardenerResourceManager).Deploy,
-			Dependencies: flow.NewTaskIDs(syncPointCRDs),
+			Dependencies: flow.NewTaskIDs(syncPointCRDs, waitForIstioCRDs),
 			SkipIf:       seedIsGarden,
 		})
 		deploySystemResources = g.Add(flow.Task{
@@ -456,10 +462,15 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents, deployFluentOperator),
 			SkipIf:       seedIsGarden,
 		})
-		_ = g.Add(flow.Task{
+		deployPlutono = g.Add(flow.Task{
 			Name:         "Deploying Plutono",
 			Fn:           c.plutono.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+		})
+		waitUntilPlutonoReady = g.Add(flow.Task{
+			Name:         "Waiting until Plutono is ready",
+			Fn:           c.plutono.Wait,
+			Dependencies: flow.NewTaskIDs(deployPlutono),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying VictoriaLogs",
@@ -472,6 +483,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn:           c.vali.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 			SkipIf:       seedIsGarden,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying istio-basic-auth-server",
+			Fn:           c.istioBasicAuthServer.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents, waitUntilPlutonoReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Prometheus Operator",

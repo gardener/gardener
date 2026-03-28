@@ -44,25 +44,6 @@ func VirtualServiceForTLSTermination(virtualService *istionetworkingv1beta1.Virt
 			Gateways: []string{gatewayName},
 			Http: []*istioapinetworkingv1beta1.HTTPRoute{
 				{
-					Name: connectionUpgradeRouteName,
-					Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{
-						{
-							Headers: map[string]*istioapinetworkingv1beta1.StringMatch{
-								"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Exact{Exact: "Upgrade"}},
-								"Upgrade":    {},
-							},
-						},
-					},
-					Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
-						{
-							Destination: &istioapinetworkingv1beta1.Destination{
-								Host: destinationUpgradeHost,
-								Port: &istioapinetworkingv1beta1.PortSelector{Number: port},
-							},
-						},
-					},
-				},
-				{
 					Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 						{
 							Destination: &istioapinetworkingv1beta1.Destination{
@@ -74,6 +55,29 @@ func VirtualServiceForTLSTermination(virtualService *istionetworkingv1beta1.Virt
 				},
 			},
 		}
+
+		if destinationUpgradeHost != "" && connectionUpgradeRouteName != "" {
+			virtualService.Spec.Http = append([]*istioapinetworkingv1beta1.HTTPRoute{{
+				Name: connectionUpgradeRouteName,
+				Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{
+					{
+						Headers: map[string]*istioapinetworkingv1beta1.StringMatch{
+							"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Exact{Exact: "Upgrade"}},
+							"Upgrade":    {},
+						},
+					},
+				},
+				Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
+					{
+						Destination: &istioapinetworkingv1beta1.Destination{
+							Host: destinationUpgradeHost,
+							Port: &istioapinetworkingv1beta1.PortSelector{Number: port},
+						},
+					},
+				},
+			}}, virtualService.Spec.Http...)
+		}
+
 		return nil
 	}
 }

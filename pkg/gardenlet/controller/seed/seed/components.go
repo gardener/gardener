@@ -39,13 +39,13 @@ import (
 	corebackupbucket "github.com/gardener/gardener/pkg/component/garden/backupbucket"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
-	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	kubernetesdashboard "github.com/gardener/gardener/pkg/component/kubernetes/dashboard"
 	kubeproxy "github.com/gardener/gardener/pkg/component/kubernetes/proxy"
 	kubescheduler "github.com/gardener/gardener/pkg/component/kubernetes/scheduler"
 	"github.com/gardener/gardener/pkg/component/networking/coredns"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
+	"github.com/gardener/gardener/pkg/component/networking/istiobasicauthserver"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/dependencywatchdog"
@@ -106,6 +106,7 @@ type components struct {
 	clusterAutoscaler       component.DeployWaiter
 	dwdWeeder               component.DeployWaiter
 	dwdProber               component.DeployWaiter
+	istioBasicAuthServer    component.DeployWaiter
 
 	kubeAPIServerService component.Deployer
 	kubeAPIServerIngress component.Deployer
@@ -221,6 +222,10 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
+	c.istioBasicAuthServer, err = r.newIstioBasicAuthServer(secretsManager)
+	if err != nil {
+		return
+	}
 
 	c.kubeAPIServerService = r.newKubeAPIServerService(wildCardCertSecret)
 	c.kubeAPIServerIngress = r.newKubeAPIServerIngress(seed, wildCardCertSecret, c.istioDefaultLabels, c.istioDefaultNamespace)
@@ -255,7 +260,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.plutono, err = r.newPlutono(seed, secretsManager, globalMonitoringSecretSeed, wildCardCertSecret, seedIsGarden)
+	c.plutono, err = r.newPlutono(seed, secretsManager, globalMonitoringSecretSeed, wildCardCertSecret, seedIsGarden, c.istioDefaultLabels)
 	if err != nil {
 		return
 	}
@@ -358,7 +363,9 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, seedIsGar
 		v1beta1constants.PriorityClassNameSeedSystemCritical,
 		!seedIsGarden,
 		labels,
-		gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port),
+		[]string{
+			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+v1beta1constants.DeploymentNameIstioBasicAuthServer, istiobasicauthserver.Port),
+		},
 		seed.GetLoadBalancerServiceAnnotations(),
 		seed.GetLoadBalancerServiceClass(),
 		seed.GetLoadBalancerServiceExternalTrafficPolicy(),
@@ -521,6 +528,18 @@ func (r *Reconciler) newDependencyWatchdogs(seedSettings *gardencorev1beta1.Seed
 	return
 }
 
+func (r *Reconciler) newIstioBasicAuthServer(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	return sharedcomponent.NewIstioBasicAuthServer(
+		r.SeedClientSet.Client(),
+		r.GardenNamespace,
+		secretsManager,
+		gardenlethelper.IsMonitoringEnabled(&r.Config),
+		1,
+		v1beta1constants.PriorityClassNameSeedSystem600,
+		false,
+	)
+}
+
 func (r *Reconciler) newSystem(seed *gardencorev1beta1.Seed) (component.DeployWaiter, error) {
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNamePauseContainer)
 	if err != nil {
@@ -608,7 +627,13 @@ func (r *Reconciler) newVictoriaLogs() (component.DeployWaiter, error) {
 	return deployer, err
 }
 
-func (r *Reconciler) newPlutono(seed *seedpkg.Seed, secretsManager secretsmanager.Interface, authSecret, wildcardCertSecret *corev1.Secret, seedIsGarden bool) (plutono.Interface, error) {
+func (r *Reconciler) newPlutono(
+	seed *seedpkg.Seed,
+	secretsManager secretsmanager.Interface,
+	authSecret, wildcardCertSecret *corev1.Secret,
+	seedIsGarden bool,
+	istioIngressGatewayLabels map[string]string,
+) (plutono.Interface, error) {
 	var wildcardCertName *string
 	if wildcardCertSecret != nil {
 		wildcardCertName = ptr.To(wildcardCertSecret.GetName())
@@ -635,6 +660,7 @@ func (r *Reconciler) newPlutono(seed *seedpkg.Seed, secretsManager secretsmanage
 		v1beta1helper.SeedSettingVerticalPodAutoscalerEnabled(seed.GetInfo().Spec.Settings),
 		wildcardCertName,
 		seedIsGarden,
+		istioIngressGatewayLabels,
 	)
 }
 
@@ -768,6 +794,7 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 		vpnseedserver.CentralLoggingConfiguration,
 		kubescheduler.CentralLoggingConfiguration,
 		machinecontrollermanager.CentralLoggingConfiguration,
+		istiobasicauthserver.CentralLoggingConfiguration,
 		// shoot worker components
 		nodeagent.CentralLoggingConfiguration,
 		// shoot system components

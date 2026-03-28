@@ -80,9 +80,14 @@ func (r *Reconciler) delete(
 	var (
 		g = flow.NewGraph("Garden deletion")
 
-		_ = g.Add(flow.Task{
+		deletePlutono = g.Add(flow.Task{
 			Name: "Destroying Plutono",
 			Fn:   component.OpDestroyAndWait(c.plutono).Destroy,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying istio-basic-auth-server",
+			Fn:           component.OpDestroyAndWait(c.istioBasicAuthServer).Destroy,
+			Dependencies: flow.NewTaskIDs(deletePlutono),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Destroying Gardener Metrics Exporter",
