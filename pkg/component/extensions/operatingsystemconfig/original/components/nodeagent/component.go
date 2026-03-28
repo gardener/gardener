@@ -74,7 +74,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		})
 	}
 
-	files, err := Files(ComponentConfig(ctx.Key, ctx.KubernetesVersion, ctx.APIServerURL, caBundle, additionalTokenSyncConfigs))
+	files, err := Files(ComponentConfig(ctx.Key, ctx.KubernetesVersion, ctx.APIServerURL, caBundle, additionalTokenSyncConfigs, ctx.ImagePullSecretName))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed generating files: %w", err)
 	}
@@ -123,6 +123,7 @@ func ComponentConfig(
 	apiServerURL string,
 	caBundle []byte,
 	additionalTokenSyncConfigs []nodeagentconfigv1alpha1.TokenSecretSyncConfig,
+	imagePullSecretName *string,
 ) *nodeagentconfigv1alpha1.NodeAgentConfiguration {
 	return &nodeagentconfigv1alpha1.NodeAgentConfiguration{
 		APIServer: nodeagentconfigv1alpha1.APIServer{
@@ -131,8 +132,9 @@ func ComponentConfig(
 		},
 		Controllers: nodeagentconfigv1alpha1.ControllerConfiguration{
 			OperatingSystemConfig: nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig{
-				SecretName:        oscSecretName,
-				KubernetesVersion: kubernetesVersion,
+				SecretName:          oscSecretName,
+				KubernetesVersion:   kubernetesVersion,
+				ImagePullSecretName: imagePullSecretName,
 			},
 			Token: nodeagentconfigv1alpha1.TokenControllerConfig{
 				SyncConfigs: additionalTokenSyncConfigs[:],

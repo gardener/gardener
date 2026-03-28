@@ -6,10 +6,12 @@ package operatingsystemconfig
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -36,6 +38,7 @@ import (
 	kubeletcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	healthcheckcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
+	fakeregistry "github.com/gardener/gardener/pkg/nodeagent/registry/fake"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -908,7 +911,119 @@ kind: NodeAgentConfiguration
 			test.AssertFileOnDisk(fs, nodeagentconfigv1alpha1.KubeconfigFilePath, expectedNodeAgentKubeConfig, 0600)
 		})
 	})
+
+	Context("#applyChangedImageRefFiles", func() {
+		const (
+			registryHost = "private.registry.io"
+			registryUser = "myuser"
+			registryPass = "s3cr3t"
+			secretName   = "pull-secret"
+			imageRef     = "private.registry.io/repo/gardener-node-agent:latest"
+		)
+
+		var (
+			fakeExtractor       *fakeregistry.FakeRegistryExtractor
+			client              client.Client
+			oscChanges          *operatingSystemConfigChanges
+			imageMountDirectory string
+		)
+
+		BeforeEach(func() {
+			var err error
+			imageMountDirectory, err = fs.TempDir("", "fake-node-agent-")
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() {
+				Expect(fs.RemoveAll(imageMountDirectory)).To(Succeed())
+			})
+
+			fakeExtractor = fakeregistry.NewExtractor(fs, imageMountDirectory)
+			reconciler.Extractor = fakeExtractor
+			client = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			reconciler.APIReader = client
+
+			// Write a dummy binary into the fake image mount directory so CopyFromImage succeeds.
+			Expect(fs.WriteFile(path.Join(imageMountDirectory, "gardener-node-agent"), []byte("binary"), 0755)).To(Succeed())
+			Expect(fs.MkdirAll("/opt/bin", 0755)).To(Succeed())
+
+			oscChanges = &operatingSystemConfigChanges{
+				skipPersist: true,
+				Files: files{
+					Changed: []extensionsv1alpha1.File{
+						{
+							Path: "/opt/bin/gardener-node-agent",
+							Content: extensionsv1alpha1.FileContent{
+								ImageRef: &extensionsv1alpha1.FileContentImageRef{
+									Image:           imageRef,
+									FilePathInImage: "/gardener-node-agent",
+								},
+							},
+						},
+					},
+				},
+			}
+		})
+
+		It("should pass nil configFile when ImagePullSecretName is not configured", func() {
+			reconciler.Config.ImagePullSecretName = nil
+
+			Expect(reconciler.applyChangedImageRefFiles(ctx, log, oscChanges)).To(Succeed())
+
+			Expect(fakeExtractor.GetConfigFile()).To(BeNil())
+		})
+
+		It("should pass the parsed configFile when ImagePullSecretName is configured", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: metav1.NamespaceSystem},
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: makeDockerConfigJSON(registryHost, registryUser, registryPass),
+				},
+			}
+			Expect(client.Create(ctx, secret)).To(Succeed())
+
+			reconciler.Config.ImagePullSecretName = ptr.To(secretName)
+
+			Expect(reconciler.applyChangedImageRefFiles(ctx, log, oscChanges)).To(Succeed())
+
+			Expect(fakeExtractor.GetConfigFile()).NotTo(BeNil())
+			authConfig, err := fakeExtractor.GetConfigFile().GetAuthConfig(registryHost)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(authConfig.Username).To(Equal(registryUser))
+			Expect(authConfig.Password).To(Equal(registryPass))
+		})
+
+		It("should return an error when the image pull secret cannot be fetched", func() {
+			reconciler.Config.ImagePullSecretName = ptr.To("nonexistent-secret")
+
+			err := reconciler.applyChangedImageRefFiles(ctx, log, oscChanges)
+
+			Expect(err).To(MatchError(ContainSubstring(`error fetching image pull secret "nonexistent-secret"`)))
+		})
+
+		It("should return an error when the image pull secret is malformed", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: metav1.NamespaceSystem},
+				Data:       map[string][]byte{}, // missing DockerConfigJsonKey
+			}
+			Expect(client.Create(ctx, secret)).To(Succeed())
+
+			reconciler.Config.ImagePullSecretName = ptr.To(secretName)
+
+			err := reconciler.applyChangedImageRefFiles(ctx, log, oscChanges)
+
+			Expect(err).To(MatchError(ContainSubstring(`error parsing image pull secret`)))
+		})
+	})
 })
+
+func makeDockerConfigJSON(registry, username, password string) []byte {
+	raw, err := json.Marshal(map[string]any{
+		"auths": map[string]any{
+			registry: map[string]any{"username": username, "password": password},
+		},
+	})
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	return raw
+}
 
 func getNodeAgentKubeConfig(caBundle []byte, server, clientCertificate string) string {
 	return `apiVersion: v1

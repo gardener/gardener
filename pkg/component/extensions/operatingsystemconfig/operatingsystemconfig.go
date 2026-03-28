@@ -120,6 +120,8 @@ type InitValues struct {
 	// APIServerURL is the address (including https:// protocol prefix) to the kube-apiserver (from which the original
 	// cloud-config user data will be downloaded).
 	APIServerURL string
+	// ImagePullSecret is a secret containing credentials (type kubernetes.io/dockerconfigjson) for pulling images.
+	ImagePullSecret *corev1.Secret
 }
 
 // OriginalValues are configuration values required for the 'reconcile' OperatingSystemConfigPurpose.
@@ -801,7 +803,8 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 		taints:                                  taints,
 		caRotationLastInitiationTime:            caRotationLastInitiationTime,
 		serviceAccountKeyRotationLastInitiationTime: serviceAccountKeyRotationLastInitiationTime,
-		region: o.values.Region,
+		region:          o.values.Region,
+		imagePullSecret: o.values.ImagePullSecret,
 	}, nil
 }
 
@@ -844,7 +847,8 @@ type deployer struct {
 	purpose extensionsv1alpha1.OperatingSystemConfigPurpose
 
 	// init values
-	apiServerURL string
+	apiServerURL    string
+	imagePullSecret *corev1.Secret
 
 	// original values
 	caBundle                                    string
@@ -886,10 +890,15 @@ var (
 
 func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
 	var (
-		units []extensionsv1alpha1.Unit
-		files []extensionsv1alpha1.File
-		err   error
+		units               []extensionsv1alpha1.Unit
+		files               []extensionsv1alpha1.File
+		err                 error
+		imagePullSecretName *string
 	)
+
+	if d.imagePullSecret != nil {
+		imagePullSecretName = ptr.To(d.imagePullSecret.Name)
+	}
 
 	componentsContext := components.Context{
 		Key:                                     d.key,
@@ -916,6 +925,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		Sysctls:                                 d.worker.Sysctls,
 		PreferIPv6:                              d.primaryIPFamily == gardencorev1beta1.IPFamilyIPv6,
 		Taints:                                  d.taints,
+		ImagePullSecretName:                     imagePullSecretName,
 	}
 
 	switch d.purpose {
@@ -923,7 +933,8 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		units, files, err = InitConfigFn(
 			d.worker,
 			d.images[imagevector.ContainerImageNameGardenerNodeAgent].String(),
-			nodeagent.ComponentConfig(d.key, d.kubernetesVersion, d.apiServerURL, d.clusterCABundle, nil),
+			nodeagent.ComponentConfig(d.key, d.kubernetesVersion, d.apiServerURL, d.clusterCABundle, nil, imagePullSecretName),
+			d.imagePullSecret,
 		)
 		if err != nil {
 			return nil, err

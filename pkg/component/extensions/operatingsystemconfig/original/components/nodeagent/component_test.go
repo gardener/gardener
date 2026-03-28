@@ -45,7 +45,7 @@ var _ = Describe("Component", func() {
 		It("should return the expected units and files", func() {
 			key := "key"
 
-			expectedFiles, err := Files(ComponentConfig(key, kubernetesVersion, apiServerURL, caBundle, nil))
+			expectedFiles, err := Files(ComponentConfig(key, kubernetesVersion, apiServerURL, caBundle, nil, nil))
 			Expect(err).NotTo(HaveOccurred())
 
 			units, files, err := component.Config(components.Context{
@@ -108,7 +108,7 @@ WantedBy=multi-user.target`))
 
 	Describe("#ComponentConfig", func() {
 		It("should return the expected result", func() {
-			Expect(ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, additionalTokenSyncConfigs)).To(Equal(&nodeagentconfigv1alpha1.NodeAgentConfiguration{
+			Expect(ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, additionalTokenSyncConfigs, nil)).To(Equal(&nodeagentconfigv1alpha1.NodeAgentConfiguration{
 				APIServer: nodeagentconfigv1alpha1.APIServer{
 					Server:   apiServerURL,
 					CABundle: caBundle,
@@ -134,7 +134,7 @@ WantedBy=multi-user.target`))
 
 	Describe("#Files", func() {
 		It("should return the expected files", func() {
-			config := ComponentConfig(oscSecretName, nil, apiServerURL, caBundle, additionalTokenSyncConfigs)
+			config := ComponentConfig(oscSecretName, nil, apiServerURL, caBundle, additionalTokenSyncConfigs, nil)
 
 			Expect(Files(config)).To(ConsistOf(extensionsv1alpha1.File{
 				Path:        fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion),

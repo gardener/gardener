@@ -135,6 +135,11 @@ func (in *OperatingSystemConfigControllerConfig) DeepCopyInto(out *OperatingSyst
 		*out = new(v3.Version)
 		**out = **in
 	}
+	if in.ImagePullSecretName != nil {
+		in, out := &in.ImagePullSecretName, &out.ImagePullSecretName
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
