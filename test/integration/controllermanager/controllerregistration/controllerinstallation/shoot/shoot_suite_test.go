@@ -29,6 +29,7 @@ import (
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
@@ -188,10 +189,19 @@ var _ = BeforeSuite(func() {
 		}).Should(BeNotFoundError())
 	})
 
+	By("Create garden Namespace")
+	gardenNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.GardenNamespace}}
+	Expect(testClient.Create(ctx, gardenNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+
+	DeferCleanup(func() {
+		By("Delete garden Namespace")
+		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
 	shoot = &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: testID + "-",
-			Namespace:    testNamespace.Name,
+			Namespace:    v1beta1constants.GardenNamespace,
 			Labels:       map[string]string{testID: testRunID},
 		},
 		Spec: gardencorev1beta1.ShootSpec{

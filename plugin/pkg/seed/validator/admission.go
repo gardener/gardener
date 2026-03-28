@@ -11,12 +11,14 @@ import (
 	"io"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -149,6 +151,11 @@ func (v *ValidateSeed) validateSeedUpdate(a admission.Attributes) error {
 	oldSeed, newSeed, err := getOldAndNewSeeds(a)
 	if err != nil {
 		return err
+	}
+
+	if metav1.HasLabel(oldSeed.ObjectMeta, v1beta1constants.LabelSelfHostedShootCluster) &&
+		!metav1.HasLabel(newSeed.ObjectMeta, v1beta1constants.LabelSelfHostedShootCluster) {
+		return admission.NewForbidden(a, fmt.Errorf("label %q cannot be removed from a Seed", v1beta1constants.LabelSelfHostedShootCluster))
 	}
 
 	if err := admissionutils.ValidateZoneRemovalFromSeeds(&oldSeed.Spec, &newSeed.Spec, newSeed.Name, v.shootLister, "Seed"); err != nil {

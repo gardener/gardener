@@ -19,6 +19,7 @@ import (
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerinstallation"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerinstallation/seed"
@@ -114,16 +115,52 @@ var _ = Describe("Add", func() {
 			)
 
 			BeforeEach(func() {
-				shoot = &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &seedName}}
+				shoot = &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "some-shoot",
+						Namespace: "some-namespace",
+					},
+					Spec: gardencorev1beta1.ShootSpec{SeedName: &seedName},
+				}
 			})
 
-			It("should return nil when seed name is not set", func() {
+			It("should return nil when seed name is not set and shoot is not in garden namespace", func() {
 				shoot.Spec.SeedName = nil
-				Expect(MapShootToSeed(ctx, shoot)).To(BeEmpty())
+				Expect(MapShootToSeed(log, reconciler)(ctx, shoot)).To(BeEmpty())
 			})
 
 			It("should map to the seed", func() {
-				Expect(MapShootToSeed(ctx, shoot)).To(ConsistOf(
+				Expect(MapShootToSeed(log, reconciler)(ctx, shoot)).To(ConsistOf(
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}},
+				))
+			})
+
+			It("should also map to the self-hosted seed when shoot is in garden namespace", func() {
+				selfHostedSeed := &gardencorev1beta1.Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "self-hosted",
+						Labels: map[string]string{v1beta1constants.LabelSelfHostedShootCluster: "true"},
+					},
+				}
+				Expect(fakeClient.Create(ctx, selfHostedSeed)).To(Succeed())
+
+				shoot.Name = "self-hosted"
+				shoot.Namespace = v1beta1constants.GardenNamespace
+				Expect(MapShootToSeed(log, reconciler)(ctx, shoot)).To(ConsistOf(
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}},
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: "self-hosted"}},
+				))
+			})
+
+			It("should not map to a seed without the self-hosted label when shoot is in garden namespace", func() {
+				regularSeed := &gardencorev1beta1.Seed{
+					ObjectMeta: metav1.ObjectMeta{Name: "regular-seed"},
+				}
+				Expect(fakeClient.Create(ctx, regularSeed)).To(Succeed())
+
+				shoot.Name = "regular-seed"
+				shoot.Namespace = v1beta1constants.GardenNamespace
+				Expect(MapShootToSeed(log, reconciler)(ctx, shoot)).To(ConsistOf(
 					reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}},
 				))
 			})

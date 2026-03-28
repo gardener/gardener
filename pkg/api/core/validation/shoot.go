@@ -381,6 +381,12 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), *spec.SeedName, "cannot set seedName for self-hosted shoots"))
 		}
 
+		// Self-hosted shoots must reside in the garden namespace so that the corresponding Seed object (if the cluster
+		// is also registered as a seed) can be unambiguously identified by name alone.
+		if meta.Namespace != v1beta1constants.GardenNamespace {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("metadata", "namespace"), meta.Namespace, fmt.Sprintf("self-hosted shoots must be in the %q namespace", v1beta1constants.GardenNamespace)))
+		}
+
 		for i, worker := range spec.Provider.Workers {
 			if worker.ControlPlane == nil && helper.SystemComponentsAllowed(&worker) {
 				allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "workers").Index(i).Child("systemComponents"), *worker.SystemComponents, "systemComponents is only allowed for the control plane worker pool for self-hosted shoots"))

@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-logr/logr"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -24,6 +25,7 @@ import (
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerinstallation"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
@@ -80,7 +82,7 @@ func AddToManager(mgr manager.Manager, config controllermanagerconfigv1alpha1.Co
 		).
 		Watches(
 			&gardencorev1beta1.Shoot{},
-			handler.EnqueueRequestsFromMapFunc(MapShootToSeed),
+			handler.EnqueueRequestsFromMapFunc(MapShootToSeed(log, r)),
 			builder.WithPredicates(controllerinstallation.ShootPredicate(controllerinstallation.SeedKind)),
 		).
 		Complete(r)
@@ -152,17 +154,37 @@ func MapBackupEntryToSeed(_ context.Context, obj client.Object) []reconcile.Requ
 }
 
 // MapShootToSeed returns a reconcile.Request object for the seed specified in the .spec.seedName field.
-func MapShootToSeed(_ context.Context, obj client.Object) []reconcile.Request {
-	shoot, ok := obj.(*gardencorev1beta1.Shoot)
-	if !ok {
-		return nil
-	}
+// For self-hosted shoot clusters in the garden namespace, it additionally enqueues the corresponding Seed
+// (which has the same name as the Shoot) so that the seed reconciler can re-evaluate its ControllerInstallations.
+func MapShootToSeed(log logr.Logger, r *controllerinstallation.Reconciler) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		shoot, ok := obj.(*gardencorev1beta1.Shoot)
+		if !ok {
+			return nil
+		}
 
-	if shoot.Spec.SeedName == nil {
-		return nil
-	}
+		var requests []reconcile.Request
 
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: *shoot.Spec.SeedName}}}
+		if shoot.Spec.SeedName != nil {
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: *shoot.Spec.SeedName}})
+		}
+
+		if shoot.Namespace == v1beta1constants.GardenNamespace {
+			seed := &gardencorev1beta1.Seed{}
+			if err := r.Client.Get(ctx, types.NamespacedName{Name: shoot.Name}, seed); err != nil {
+				if !apierrors.IsNotFound(err) {
+					log.Error(err, "Failed to get Seed for self-hosted shoot mapping", "shootName", shoot.Name)
+				}
+				return requests
+			}
+
+			if metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSelfHostedShootCluster) {
+				requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: shoot.Name}})
+			}
+		}
+
+		return requests
+	}
 }
 
 // MapControllerInstallationToSeed returns a reconcile.Request object for the seed specified in the .spec.seedRef.name field.

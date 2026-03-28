@@ -289,7 +289,7 @@ var _ = Describe("ControllerInstallation-Shoot controller test", func() {
 			backupEntry := &gardencorev1beta1.BackupEntry{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: testID + "-",
-					Namespace:    testNamespace.Name,
+					Namespace:    shoot.Namespace,
 					Labels:       map[string]string{testID: testRunID},
 				},
 				Spec: gardencorev1beta1.BackupEntrySpec{
