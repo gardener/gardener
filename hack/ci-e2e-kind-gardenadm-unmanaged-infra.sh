@@ -22,23 +22,8 @@ trap "
   ( make kind-single-node-down )
 " EXIT
 
-# managed-infra tests cannot run when there is a gardener-operator deployment (i.e., unmanaged-infra/connect tests must run
-# separately). Hence, let's run the managed-infra tests first, then clean them up, and then run the unmanaged-infra/connect
-# tests.
-
-# managed infrastructure
-make kind-single-node-up
-make gardenadm-up SCENARIO=managed-infra
-
-make test-e2e-local-gardenadm-managed-infra
-
-make gardenadm-down SCENARIO=managed-infra
-make kind-single-node-down
-
-# unmanaged infrastructure
 make kind-single-node-up
 make gardenadm-up SCENARIO=unmanaged-infra
 make gardenadm-up SCENARIO=connect
 
 make test-e2e-local-gardenadm-unmanaged-infra
-
