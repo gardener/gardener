@@ -9,13 +9,15 @@ set -euo pipefail
 MODE="${1:-}"
 
 usage() {
-  echo "Usage: $0 {virtual-garden|self-hosted-shoot}"
+  echo "Usage: $0 {virtual-garden|vg|self-hosted-shoot|shs}"
   exit 1
 }
 
-if [[ "$MODE" != "virtual-garden" && "$MODE" != "self-hosted-shoot" ]]; then
-  usage
-fi
+case "$MODE" in
+  virtual-garden|vg)    MODE="virtual-garden" ;;
+  self-hosted-shoot|shs) MODE="self-hosted-shoot" ;;
+  *) usage ;;
+esac
 
 USER_NAME="admin-user"
 
@@ -47,9 +49,9 @@ elif [[ "$MODE" == "self-hosted-shoot" ]]; then
   SHOOT_NAME="${SHOOT_NAME:-root}"
   CLUSTER_NAME="self-hosted-shoot--${SHOOT_NAMESPACE}--${SHOOT_NAME}"
 
-  MACHINE_POD="$(kubectl get pod -A -l app=machine -o jsonpath='{.items[0].metadata.namespace}/{.items[0].metadata.name}')"
-  MACHINE_NAMESPACE="${MACHINE_POD%%/*}"
-  MACHINE_POD="${MACHINE_POD##*/}"
+  MACHINE_POD_REF="$(kubectl get pod -A -l app=machine -o jsonpath='{.items[0].metadata.namespace}/{.items[0].metadata.name}')"
+  MACHINE_NAMESPACE="${MACHINE_POD_REF%%/*}"
+  MACHINE_POD="${MACHINE_POD_REF##*/}"
 
   remote_kubectl() {
     kubectl -n "${MACHINE_NAMESPACE}" exec "${MACHINE_POD}" -- kubectl --kubeconfig /etc/kubernetes/admin.conf "$@"
