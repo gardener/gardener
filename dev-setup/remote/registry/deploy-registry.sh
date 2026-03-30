@@ -126,6 +126,9 @@ kubectl create secret docker-registry -n garden gardener-images --docker-server=
   kubectl --kubeconfig "$kubeconfig" --server-side=true apply  -f -
 
 if [[ -n "$virtual_garden_kubeconfig" ]]; then
+  echo "Creating pull secret in garden namespace of virtual garden"
+  kubectl create secret docker-registry -n garden gardener-images --docker-server="$registry" --docker-username=gardener --docker-password="$password" --docker-email=gardener@localhost --dry-run=client -o yaml | \
+    kubectl --kubeconfig "$virtual_garden_kubeconfig" --server-side=true apply  -f -
   if kubectl --kubeconfig "$virtual_garden_kubeconfig" get namespace seed-remote >/dev/null 2>&1; then
     echo "Creating pull secret in seed-remote namespace of virtual garden"
     kubectl create secret docker-registry -n seed-remote gardener-images --docker-server="$registry" --docker-username=gardener --docker-password="$password" --docker-email=gardener@localhost --dry-run=client -o yaml | \
