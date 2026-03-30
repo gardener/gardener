@@ -207,8 +207,6 @@ spec:
         - containerPort: 20257
           name: exporter
         resources:
-          limits:
-            memory: 500Mi
           requests:
             cpu: 20m
             memory: 20Mi
