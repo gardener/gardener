@@ -31,16 +31,32 @@ const (
 
 // Webhook is the specification of a webhook.
 type Webhook struct {
-	Action            string
-	Name              string
-	Path              string
-	Target            string
-	Types             []Type
-	Webhook           *admission.Webhook
+	// Action defines whether this is a mutating or validating webhook (ActionMutating or ActionValidating).
+	Action string
+	// Name is the name of the webhook.
+	Name string
+	// Path is the endpoint webhook path.
+	Path string
+	// Target specifies where the webhook is to be installed (TargetSeed or TargetShoot).
+	// For the garden use case, TargetSeed corresponds to a webhook in the runtime garden, whereas TargetShoot
+	// is a webhook configured in the virtual garden cluster.
+	Target string
+	// Types contains the Kubernetes object types and subresources the webhook acts upon.
+	Types []Type
+	// Webhook is the controller-runtime webhook handler with panic recovery enabled.
+	Webhook *admission.Webhook
+	// NamespaceSelector selects namespaces for which the webhook is active.
+	// If nil, the webhook is active for all namespaces.
 	NamespaceSelector *metav1.LabelSelector
-	ObjectSelector    *metav1.LabelSelector
-	FailurePolicy     *admissionregistrationv1.FailurePolicyType
-	TimeoutSeconds    *int32
+	// ObjectSelector selects objects for which the webhook is active based on labels.
+	// If nil, the webhook is active for all objects matching the type.
+	ObjectSelector *metav1.LabelSelector
+	// FailurePolicy defines how unrecognized errors and timeout errors are handled.
+	// If nil, defaults to the Kubernetes default failure policy.
+	FailurePolicy *admissionregistrationv1.FailurePolicyType
+	// TimeoutSeconds specifies the timeout for the webhook call.
+	// If nil, defaults to the Kubernetes default timeout.
+	TimeoutSeconds *int32
 }
 
 // Validator validates objects.
@@ -63,14 +79,28 @@ type Type struct {
 
 // Args contains Webhook creation arguments.
 type Args struct {
-	Name              string
-	Path              string
-	Target            string
+	// Name is the name of the webhook.
+	Name string
+	// Path is the endpoint webhook path.
+	Path string
+	// Target specifies where the webhook is to be installed (TargetSeed or TargetShoot).
+	// For the garden use case, TargetSeed corresponds to a webhook in the runtime garden, whereas TargetShoot
+	// is a webhook configured in the virtual garden cluster.
+	Target string
+	// NamespaceSelector selects namespaces for which the webhook is active.
+	// If nil, the webhook is active for all namespaces.
 	NamespaceSelector *metav1.LabelSelector
-	ObjectSelector    *metav1.LabelSelector
-	Predicates        []predicate.Predicate
-	Validators        map[Validator][]Type
-	Mutators          map[Mutator][]Type
+	// ObjectSelector selects objects for which the webhook is active based on labels.
+	// If nil, the webhook is active for all objects matching the type.
+	ObjectSelector *metav1.LabelSelector
+	// Predicates are additional filters for objects the webhook should process.
+	Predicates []predicate.Predicate
+	// Validators maps Validator implementations to the object types they validate.
+	// Validators cannot be mixed with Mutators in the same webhook.
+	Validators map[Validator][]Type
+	// Mutators maps Mutator implementations to the object types they mutate.
+	// Mutators cannot be mixed with Validators in the same webhook.
+	Mutators map[Mutator][]Type
 }
 
 // New creates a new Webhook with the given args.
