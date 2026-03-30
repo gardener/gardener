@@ -19,9 +19,3 @@ spec:
     alerting:
       emailReceivers:
       - john.doe@example.com
-  addons:
-    nginxIngress:
-      enabled: true
-    kubernetesDashboard:
-      enabled: true
-      authenticationMode: token
