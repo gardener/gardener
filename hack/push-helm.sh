@@ -36,4 +36,14 @@ if echo $registry | grep -q -F "registry.local.gardener.cloud:5001"; then
     push_http="--plain-http"
 fi 
 
-helm push $push_http "$chart_dir/$name-$tag.tgz" "oci://$registry"
+deadline=$(( $(date +%s) + 30 ))
+attempt=0
+until helm push $push_http "$chart_dir/$name-$tag.tgz" "oci://$registry"; do
+    attempt=$(( attempt + 1 ))
+    if [[ $(date +%s) -ge $deadline ]]; then
+        echo "helm push failed after $attempt attempt(s), giving up" >&2
+        exit 1
+    fi
+    echo "helm push failed (attempt $attempt), retrying..." >&2
+    sleep 3
+done
