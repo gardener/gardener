@@ -96,13 +96,13 @@ var _ = Describe("ShootState", func() {
 				Expect(fakeSeedClient.Create(ctx, newSecret("secret1", controlPlaneNamespace, true, true))).To(Succeed())
 				Expect(fakeSeedClient.Create(ctx, newSecret("secret2", controlPlaneNamespace, false, true))).To(Succeed())
 				Expect(fakeSeedClient.Create(ctx, newSecret("secret3", controlPlaneNamespace, true, false))).To(Succeed())
-				Expect(fakeSeedClient.Create(ctx, newSecret("secret4", seedNamespace, true, false, func(s *corev1.Secret) {
+				Expect(fakeSeedClient.Create(ctx, newSecret("secret4", controlPlaneNamespace, true, false, func(s *corev1.Secret) {
 					s.Immutable = ptr.To(true)
 				}))).To(Succeed())
-				Expect(fakeSeedClient.Create(ctx, newSecret("secret5", seedNamespace, true, false, func(s *corev1.Secret) {
+				Expect(fakeSeedClient.Create(ctx, newSecret("secret5", controlPlaneNamespace, true, false, func(s *corev1.Secret) {
 					s.Type = corev1.SecretTypeTLS
 				}))).To(Succeed())
-				Expect(fakeSeedClient.Create(ctx, newSecret("secret6", seedNamespace, true, false, func(s *corev1.Secret) {
+				Expect(fakeSeedClient.Create(ctx, newSecret("secret6", controlPlaneNamespace, true, false, func(s *corev1.Secret) {
 					s.Immutable = ptr.To(true)
 					s.Type = corev1.SecretTypeTLS
 				}))).To(Succeed())

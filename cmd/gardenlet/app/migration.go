@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -19,7 +20,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	shootstate "github.com/gardener/gardener/pkg/utils/gardener/shootstate"
-	corev1 "k8s.io/api/core/v1"
 )
 
 func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClient client.Client) error {
