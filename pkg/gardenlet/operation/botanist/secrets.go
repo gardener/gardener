@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	shootstate "github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -126,11 +127,7 @@ func (b *Botanist) restoreSecretsFromShootState(ctx context.Context) error {
 // restoreSecretFromPersistedData restores a Kubernetes Secret from persisted GardenerResourceData.
 // It handles both formats (with Immutable and Type fields) and (plain map[string][]byte)
 func restoreSecretFromPersistedData(ctx context.Context, seedClient client.Client, objectMeta metav1.ObjectMeta, rawData []byte) error {
-	newSecretInfo := struct {
-		Data      map[string][]byte `json:"data"`
-		Immutable *bool             `json:"immutable,omitempty"`
-		Type      corev1.SecretType `json:"type,omitempty"`
-	}{}
+	var newSecretInfo shootstate.SecretState
 
 	var (
 		secretData map[string][]byte
@@ -139,7 +136,7 @@ func restoreSecretFromPersistedData(ctx context.Context, seedClient client.Clien
 	)
 
 	if err := json.Unmarshal(rawData, &newSecretInfo); err != nil || newSecretInfo.Data == nil {
-		// TODO: Remove this fallback in a future release after all ShootStates have been reconciled and use the new format.
+		// TODO(tobschli): Remove this fallback after v1.140 has been released, as ShootStates will be reconciled and use the new format.
 		// plain map[string][]byte
 		if err := json.Unmarshal(rawData, &secretData); err != nil {
 			return fmt.Errorf("failed unmarshalling secret data for secret %s: neither new nor old format matched: %w", objectMeta.Name, err)
