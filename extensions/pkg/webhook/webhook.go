@@ -7,8 +7,10 @@ package webhook
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,6 +18,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 const (
@@ -155,4 +160,29 @@ func New(mgr manager.Manager, args Args) (*Webhook, error) {
 		Webhook:           &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)},
 		Types:             objTypes,
 	}, nil
+}
+
+// BuildExtensionTypeNamespaceSelector returns a label selector which matches the 'extensions.gardener.cloud/<extension-type>' label.
+// If the webhook is responsible for the 'garden' or 'seed' extension class, the 'garden' namespace is selected.
+func BuildExtensionTypeNamespaceSelector(extensionType string, extensionClasses []extensionsv1alpha1.ExtensionClass) *metav1.LabelSelector {
+	labelSelector := &metav1.LabelSelector{}
+
+	if slices.Contains(extensionClasses, extensionsv1alpha1.ExtensionClassGarden) ||
+		slices.Contains(extensionClasses, extensionsv1alpha1.ExtensionClassSeed) {
+		labelSelector.MatchExpressions = append(labelSelector.MatchExpressions, metav1.LabelSelectorRequirement{
+			Key:      corev1.LabelMetadataName,
+			Operator: metav1.LabelSelectorOpIn,
+			Values:   []string{v1beta1constants.GardenNamespace},
+		})
+	}
+
+	if len(extensionClasses) == 0 || slices.Contains(extensionClasses, extensionsv1alpha1.ExtensionClassShoot) {
+		labelSelector.MatchExpressions = append(labelSelector.MatchExpressions, metav1.LabelSelectorRequirement{
+			Key:      v1beta1constants.LabelExtensionPrefix + extensionType,
+			Operator: metav1.LabelSelectorOpIn,
+			Values:   []string{"true"},
+		})
+	}
+
+	return labelSelector
 }

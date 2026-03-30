@@ -16,6 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	. "github.com/gardener/gardener/extensions/pkg/webhook"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -68,6 +70,153 @@ var _ = Describe("Webhook", func() {
 
 			Expect(webhook).To(BeNil())
 			Expect(err).To(MatchError("failed to create webhook because a mixture of mutating and validating functions is not permitted"))
+		})
+	})
+
+	Describe("#BuildExtensionTypeNamespaceSelector", func() {
+		const extensionType = "local"
+
+		It("should return a namespace selector for garden extension class", func() {
+			selector := BuildExtensionTypeNamespaceSelector(extensionType, []extensionsv1alpha1.ExtensionClass{
+				extensionsv1alpha1.ExtensionClassGarden,
+			})
+
+			Expect(selector).To(Equal(&metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      corev1.LabelMetadataName,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{v1beta1constants.GardenNamespace},
+					},
+				},
+			}))
+		})
+
+		It("should return a namespace selector for seed extension class", func() {
+			selector := BuildExtensionTypeNamespaceSelector(extensionType, []extensionsv1alpha1.ExtensionClass{
+				extensionsv1alpha1.ExtensionClassSeed,
+			})
+
+			Expect(selector).To(Equal(&metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      corev1.LabelMetadataName,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{v1beta1constants.GardenNamespace},
+					},
+				},
+			}))
+		})
+
+		It("should return a namespace selector for shoot extension class", func() {
+			selector := BuildExtensionTypeNamespaceSelector(extensionType, []extensionsv1alpha1.ExtensionClass{
+				extensionsv1alpha1.ExtensionClassShoot,
+			})
+
+			Expect(selector).To(Equal(&metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      v1beta1constants.LabelExtensionPrefix + extensionType,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"true"},
+					},
+				},
+			}))
+		})
+
+		It("should return a namespace selector for garden and shoot extension classes", func() {
+			selector := BuildExtensionTypeNamespaceSelector(extensionType, []extensionsv1alpha1.ExtensionClass{
+				extensionsv1alpha1.ExtensionClassGarden,
+				extensionsv1alpha1.ExtensionClassShoot,
+			})
+
+			Expect(selector).To(Equal(&metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      corev1.LabelMetadataName,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{v1beta1constants.GardenNamespace},
+					},
+					{
+						Key:      v1beta1constants.LabelExtensionPrefix + extensionType,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"true"},
+					},
+				},
+			}))
+		})
+
+		It("should return a namespace selector for seed and shoot extension classes", func() {
+			selector := BuildExtensionTypeNamespaceSelector(extensionType, []extensionsv1alpha1.ExtensionClass{
+				extensionsv1alpha1.ExtensionClassSeed,
+				extensionsv1alpha1.ExtensionClassShoot,
+			})
+
+			Expect(selector).To(Equal(&metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      corev1.LabelMetadataName,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{v1beta1constants.GardenNamespace},
+					},
+					{
+						Key:      v1beta1constants.LabelExtensionPrefix + extensionType,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"true"},
+					},
+				},
+			}))
+		})
+
+		It("should return a namespace selector for all extension classes", func() {
+			selector := BuildExtensionTypeNamespaceSelector(extensionType, []extensionsv1alpha1.ExtensionClass{
+				extensionsv1alpha1.ExtensionClassGarden,
+				extensionsv1alpha1.ExtensionClassSeed,
+				extensionsv1alpha1.ExtensionClassShoot,
+			})
+
+			Expect(selector).To(Equal(&metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      corev1.LabelMetadataName,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{v1beta1constants.GardenNamespace},
+					},
+					{
+						Key:      v1beta1constants.LabelExtensionPrefix + extensionType,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"true"},
+					},
+				},
+			}))
+		})
+
+		It("should return a namespace selector for empty extension classes", func() {
+			selector := BuildExtensionTypeNamespaceSelector(extensionType, []extensionsv1alpha1.ExtensionClass{})
+
+			Expect(selector).To(Equal(&metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      v1beta1constants.LabelExtensionPrefix + extensionType,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"true"},
+					},
+				},
+			}))
+		})
+
+		It("should return a namespace selector for nil extension classes", func() {
+			selector := BuildExtensionTypeNamespaceSelector(extensionType, nil)
+
+			Expect(selector).To(Equal(&metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      v1beta1constants.LabelExtensionPrefix + extensionType,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"true"},
+					},
+				},
+			}))
 		})
 	})
 })
