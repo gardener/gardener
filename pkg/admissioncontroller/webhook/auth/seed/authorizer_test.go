@@ -18,6 +18,8 @@ import (
 	eventsv1 "k8s.io/api/events/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
@@ -34,6 +36,7 @@ import (
 	graphutils "github.com/gardener/gardener/pkg/utils/graph"
 	mockgraph "github.com/gardener/gardener/pkg/utils/graph/mock"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
+	fakeauthorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer/fake"
 )
 
 var _ = Describe("Seed", func() {
@@ -57,7 +60,7 @@ var _ = Describe("Seed", func() {
 
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		graph = mockgraph.NewMockInterface(ctrl)
-		authorizer = NewAuthorizer(log, graph, nil)
+		authorizer = NewAuthorizer(log, graph, fakeauthorizerwebhook.NewWithSelectorsChecker(true))
 
 		seedName = "seed"
 		gardenletUser = &user.DefaultInfo{
@@ -1228,21 +1231,14 @@ var _ = Describe("Seed", func() {
 					}
 				})
 
-				DescribeTable("should allow with consulting the graph because verb is get, list, watch, create",
-					func(verb string) {
-						attrs.Verb = verb
+				It("should allow without consulting the graph because verb is create", func() {
+					attrs.Verb = "create"
 
-						decision, reason, err := authorizer.Authorize(ctx, attrs)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(decision).To(Equal(auth.DecisionAllow))
-						Expect(reason).To(BeEmpty())
-					},
-
-					Entry("get", "get"),
-					Entry("list", "list"),
-					Entry("watch", "watch"),
-					Entry("create", "create"),
-				)
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
 
 				DescribeTable("should not have an opinion because verb is not allowed",
 					func(verb string) {
@@ -1286,10 +1282,41 @@ var _ = Describe("Seed", func() {
 						Expect(reason).To(ContainSubstring("no relationship found"))
 					},
 
+					Entry("get w/o subresource", "get", ""),
+					Entry("get w/ subresource", "get", "status"),
 					Entry("patch w/o subresource", "patch", ""),
 					Entry("patch w/ subresource", "patch", "status"),
 					Entry("update w/o subresource", "update", ""),
 					Entry("update w/ subresource", "update", "status"),
+				)
+
+				DescribeTable("should allow list/watch requests if field selector is provided",
+					func(verb string, withSelector bool) {
+						attrs.Name = ""
+						attrs.Verb = verb
+
+						if withSelector {
+							selector, err := fields.ParseSelector("spec.seedName=" + seedName)
+							Expect(err).NotTo(HaveOccurred())
+							attrs.FieldSelectorRequirements = selector.Requirements()
+						}
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+
+						if withSelector {
+							Expect(decision).To(Equal(auth.DecisionAllow))
+							Expect(reason).To(BeEmpty())
+						} else {
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("must specify field or label selector"))
+						}
+					},
+
+					Entry("list w/ needed selector", "list", true),
+					Entry("list w/o needed selector", "list", false),
+					Entry("watch w/ needed selector", "watch", true),
+					Entry("watch w/o needed selector", "watch", false),
 				)
 			})
 
@@ -1311,21 +1338,6 @@ var _ = Describe("Seed", func() {
 						Verb:            "list",
 					}
 				})
-
-				DescribeTable("should allow without consulting the graph because verb is get, list, or watch",
-					func(verb string) {
-						attrs.Verb = verb
-
-						decision, reason, err := authorizer.Authorize(ctx, attrs)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(decision).To(Equal(auth.DecisionAllow))
-						Expect(reason).To(BeEmpty())
-					},
-
-					Entry("get", "get"),
-					Entry("list", "list"),
-					Entry("watch", "watch"),
-				)
 
 				DescribeTable("should have no opinion because verb is not allowed",
 					func(verb string) {
@@ -1370,10 +1382,43 @@ var _ = Describe("Seed", func() {
 						Expect(reason).To(ContainSubstring("no relationship found"))
 					},
 
+					Entry("get w/o subresource", "get", ""),
+					Entry("get w/ subresource", "get", "status"),
 					Entry("patch w/o subresource", "patch", ""),
 					Entry("patch w/ subresource", "patch", "status"),
 					Entry("update w/o subresource", "update", ""),
 					Entry("update w/ subresource", "update", "status"),
+				)
+
+				DescribeTable("should allow list/watch requests if label selector is provided",
+					func(verb string, withSelector bool) {
+						attrs.Name = ""
+						attrs.Verb = verb
+
+						if withSelector {
+							selector, err := labels.Parse("name.seed.gardener.cloud/" + seedName + "=true")
+							Expect(err).NotTo(HaveOccurred())
+							reqs, selectable := selector.Requirements()
+							Expect(selectable).To(BeTrue())
+							attrs.LabelSelectorRequirements = reqs
+						}
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+
+						if withSelector {
+							Expect(decision).To(Equal(auth.DecisionAllow))
+							Expect(reason).To(BeEmpty())
+						} else {
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("must specify field or label selector"))
+						}
+					},
+
+					Entry("list w/ needed selector", "list", true),
+					Entry("list w/o needed selector", "list", false),
+					Entry("watch w/ needed selector", "watch", true),
+					Entry("watch w/o needed selector", "watch", false),
 				)
 			})
 
@@ -1384,7 +1429,7 @@ var _ = Describe("Seed", func() {
 				)
 
 				BeforeEach(func() {
-					name, namespace = "foo", "bar"
+					name, namespace = "foo", "garden"
 					attrs = &auth.AttributesRecord{
 						User:            seedUser,
 						Name:            name,
@@ -1396,21 +1441,23 @@ var _ = Describe("Seed", func() {
 					}
 				})
 
-				DescribeTable("should allow without consulting the graph because verb is get, list, watch, or create",
-					func(verb string) {
-						attrs.Verb = verb
+				It("should have no opinion because namespace is not allowed", func() {
+					attrs.Namespace = "other"
 
-						decision, reason, err := authorizer.Authorize(ctx, attrs)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(decision).To(Equal(auth.DecisionAllow))
-						Expect(reason).To(BeEmpty())
-					},
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following namespaces are allowed for this resource type: [garden]"))
+				})
 
-					Entry("get", "get"),
-					Entry("list", "list"),
-					Entry("watch", "watch"),
-					Entry("create", "create"),
-				)
+				It("should allow without consulting the graph because verb is create", func() {
+					attrs.Verb = "create"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
 
 				DescribeTable("should have no opinion because verb is not allowed",
 					func(verb string) {
@@ -1454,10 +1501,41 @@ var _ = Describe("Seed", func() {
 						Expect(reason).To(ContainSubstring("no relationship found"))
 					},
 
+					Entry("get w/o subresource", "get", ""),
+					Entry("get w/ subresource", "get", "status"),
 					Entry("patch w/o subresource", "patch", ""),
 					Entry("patch w/ subresource", "patch", "status"),
 					Entry("update w/o subresource", "update", ""),
 					Entry("update w/ subresource", "update", "status"),
+				)
+
+				DescribeTable("should allow list/watch requests if field selector is provided",
+					func(verb string, withSelector bool) {
+						attrs.Name = ""
+						attrs.Verb = verb
+
+						if withSelector {
+							selector, err := fields.ParseSelector("metadata.name=" + seedName)
+							Expect(err).NotTo(HaveOccurred())
+							attrs.FieldSelectorRequirements = selector.Requirements()
+						}
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+
+						if withSelector {
+							Expect(decision).To(Equal(auth.DecisionAllow))
+							Expect(reason).To(BeEmpty())
+						} else {
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("must specify field or label selector"))
+						}
+					},
+
+					Entry("list w/ needed selector", "list", true),
+					Entry("list w/o needed selector", "list", false),
+					Entry("watch w/ needed selector", "watch", true),
+					Entry("watch w/o needed selector", "watch", false),
 				)
 			})
 
@@ -1478,21 +1556,6 @@ var _ = Describe("Seed", func() {
 						Verb:            "list",
 					}
 				})
-
-				DescribeTable("should allow without consulting the graph because verb is get, list, or watch",
-					func(verb string) {
-						attrs.Verb = verb
-
-						decision, reason, err := authorizer.Authorize(ctx, attrs)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(decision).To(Equal(auth.DecisionAllow))
-						Expect(reason).To(BeEmpty())
-					},
-
-					Entry("get", "get"),
-					Entry("list", "list"),
-					Entry("watch", "watch"),
-				)
 
 				DescribeTable("should have no opinion because verb is not allowed",
 					func(verb string) {
@@ -1537,10 +1600,41 @@ var _ = Describe("Seed", func() {
 						Expect(reason).To(ContainSubstring("no relationship found"))
 					},
 
+					Entry("get w/o subresource", "get", ""),
+					Entry("get w/ subresource", "get", "status"),
 					Entry("patch w/o subresource", "patch", ""),
 					Entry("patch w/ subresource", "patch", "status"),
 					Entry("update w/o subresource", "update", ""),
 					Entry("update w/ subresource", "update", "status"),
+				)
+
+				DescribeTable("should allow list/watch requests if field selector is provided",
+					func(verb string, withSelector bool) {
+						attrs.Name = ""
+						attrs.Verb = verb
+
+						if withSelector {
+							selector, err := fields.ParseSelector("spec.seedRef.name=" + seedName)
+							Expect(err).NotTo(HaveOccurred())
+							attrs.FieldSelectorRequirements = selector.Requirements()
+						}
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+
+						if withSelector {
+							Expect(decision).To(Equal(auth.DecisionAllow))
+							Expect(reason).To(BeEmpty())
+						} else {
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("must specify field or label selector"))
+						}
+					},
+
+					Entry("list w/ needed selector", "list", true),
+					Entry("list w/o needed selector", "list", false),
+					Entry("watch w/ needed selector", "watch", true),
+					Entry("watch w/o needed selector", "watch", false),
 				)
 			})
 
@@ -1689,21 +1783,6 @@ var _ = Describe("Seed", func() {
 					}
 				})
 
-				DescribeTable("should allow without consulting the graph because verb is get, list, or watch",
-					func(verb string) {
-						attrs.Verb = verb
-
-						decision, reason, err := authorizer.Authorize(ctx, attrs)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(decision).To(Equal(auth.DecisionAllow))
-						Expect(reason).To(BeEmpty())
-					},
-
-					Entry("get", "get"),
-					Entry("list", "list"),
-					Entry("watch", "watch"),
-				)
-
 				DescribeTable("should not have an opinion because verb is not allowed",
 					func(verb string) {
 						attrs.Verb = verb
@@ -1747,12 +1826,46 @@ var _ = Describe("Seed", func() {
 						Expect(reason).To(ContainSubstring("no relationship found"))
 					},
 
+					Entry("get w/o subresource", "get", ""),
+					Entry("get w/ status subresource", "get", "status"),
+					Entry("get w/ finalizers subresource", "get", "finalizers"),
 					Entry("patch w/o subresource", "patch", ""),
 					Entry("patch w/ status subresource", "patch", "status"),
 					Entry("patch w/ finalizers subresource", "patch", "finalizers"),
 					Entry("update w/o subresource", "update", ""),
 					Entry("update w/ status subresource", "update", "status"),
 					Entry("update w/ finalizers subresource", "update", "finalizers"),
+				)
+
+				DescribeTable("should allow list/watch requests if label selector is provided",
+					func(verb string, withSelector bool) {
+						attrs.Name = ""
+						attrs.Verb = verb
+
+						if withSelector {
+							selector, err := labels.Parse("name.seed.gardener.cloud/" + seedName + "=true")
+							Expect(err).NotTo(HaveOccurred())
+							reqs, selectable := selector.Requirements()
+							Expect(selectable).To(BeTrue())
+							attrs.LabelSelectorRequirements = reqs
+						}
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+
+						if withSelector {
+							Expect(decision).To(Equal(auth.DecisionAllow))
+							Expect(reason).To(BeEmpty())
+						} else {
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("must specify field or label selector"))
+						}
+					},
+
+					Entry("list w/ needed selector", "list", true),
+					Entry("list w/o needed selector", "list", false),
+					Entry("watch w/ needed selector", "watch", true),
+					Entry("watch w/o needed selector", "watch", false),
 				)
 			})
 
@@ -1774,21 +1887,14 @@ var _ = Describe("Seed", func() {
 					}
 				})
 
-				DescribeTable("should allow without consulting the graph because verb is get, list, watch, create",
-					func(verb string) {
-						attrs.Verb = verb
+				It("should allow without consulting the graph because verb is create", func() {
+					attrs.Verb = "create"
 
-						decision, reason, err := authorizer.Authorize(ctx, attrs)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(decision).To(Equal(auth.DecisionAllow))
-						Expect(reason).To(BeEmpty())
-					},
-
-					Entry("get", "get"),
-					Entry("list", "list"),
-					Entry("watch", "watch"),
-					Entry("create", "create"),
-				)
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
 
 				It("should allow when verb is delete and resource does not exist", func() {
 					attrs.Verb = "delete"
@@ -1822,6 +1928,8 @@ var _ = Describe("Seed", func() {
 						Expect(reason).To(ContainSubstring("no relationship found"))
 					},
 
+					Entry("get w/o subresource", "get", ""),
+					Entry("get w/ subresource", "get", "status"),
 					Entry("patch w/o subresource", "patch", ""),
 					Entry("patch w/ subresource", "patch", "status"),
 					Entry("update w/o subresource", "update", ""),
@@ -1846,6 +1954,37 @@ var _ = Describe("Seed", func() {
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
 					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [status]"))
 				})
+
+				DescribeTable("should allow list/watch requests if label selector is provided",
+					func(verb string, withSelector bool) {
+						attrs.Name = ""
+						attrs.Verb = verb
+
+						if withSelector {
+							selector, err := labels.Parse("name.seed.gardener.cloud/" + seedName + "=true")
+							Expect(err).NotTo(HaveOccurred())
+							reqs, selectable := selector.Requirements()
+							Expect(selectable).To(BeTrue())
+							attrs.LabelSelectorRequirements = reqs
+						}
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+
+						if withSelector {
+							Expect(decision).To(Equal(auth.DecisionAllow))
+							Expect(reason).To(BeEmpty())
+						} else {
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("must specify field or label selector"))
+						}
+					},
+
+					Entry("list w/ needed selector", "list", true),
+					Entry("list w/o needed selector", "list", false),
+					Entry("watch w/ needed selector", "watch", true),
+					Entry("watch w/o needed selector", "watch", false),
+				)
 			})
 
 			Context("when requested for ControllerRegistrations", func() {
