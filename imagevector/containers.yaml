@@ -800,7 +800,7 @@ images:
   - name: event-logger
     sourceRepository: github.com/gardener/logging
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/event-logger
-    tag: "v1.4.0"
+    tag: "v0.71.0"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
