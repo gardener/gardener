@@ -130,11 +130,11 @@ func (r *Reconciler) newActuator(ctx context.Context, shoot *gardencorev1beta1.S
 			}
 			return targetChartApplier.DeleteFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, r.GardenNamespaceShoot, "gardenlet", kubernetes.Values(values))
 		},
-		Clock:                       r.Clock,
-		ValuesHelper:                gardenletdeployer.NewValuesHelper(&r.Config),
-		Recorder:                    r.Recorder,
-		GardenletNamespaceTarget:    r.GardenNamespaceShoot,
-		SkipGardenNamespaceDeletion: r.GardenNamespaceSeed == metav1.NamespaceSystem,
+		Clock:                    r.Clock,
+		ValuesHelper:             gardenletdeployer.NewValuesHelper(&r.Config),
+		Recorder:                 r.Recorder,
+		GardenletNamespaceTarget: r.GardenNamespaceShoot,
+		SeedIsSelfHostedShoot:    r.GardenNamespaceSeed == metav1.NamespaceSystem,
 	}, nil
 }
 

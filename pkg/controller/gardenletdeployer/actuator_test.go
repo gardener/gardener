@@ -1158,10 +1158,10 @@ var _ = Describe("Utils", func() {
 			Expect(ensuredDeploymentWithoutDomain.Env[1].Value).To(Equal(v1beta1helper.GetAPIServerDomain(domain)))
 		})
 
-		It("should skip when SkipGardenNamespaceDeletion is set", func() {
+		It("should skip when SeedIsSelfHostedShoot is set", func() {
 			a := &Actuator{
-				GetTargetDomain:             func() string { return domain },
-				SkipGardenNamespaceDeletion: true,
+				GetTargetDomain:       func() string { return domain },
+				SeedIsSelfHostedShoot: true,
 			}
 			deployment := &seedmanagementv1alpha1.GardenletDeployment{
 				Env: []corev1.EnvVar{

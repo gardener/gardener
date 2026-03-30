@@ -135,6 +135,7 @@ type GardenletDeployment struct {
 }
 
 // Image specifies container image parameters.
+// Either Repository/Tag or Ref must be set, but not both.
 type Image struct {
 	// Repository is the image repository.
 	// +optional

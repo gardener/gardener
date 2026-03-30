@@ -887,7 +887,8 @@ generation, which is updated on mutation by the API Server.</p>
 <a href="#seedmanagement.gardener.cloud/v1alpha1.GardenletDeployment">GardenletDeployment</a>)
 </p>
 <p>
-<p>Image specifies container image parameters.</p>
+<p>Image specifies container image parameters.
+Either Repository/Tag or Ref must be set, but not both.</p>
 </p>
 <table>
 <thead>

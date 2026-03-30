@@ -148,7 +148,7 @@ func (r *Reconciler) isBootstrapTokenForThisCSR(ctx context.Context, csr *certif
 		if apierrors.IsNotFound(err) {
 			return false, "bootstrap token secret not found", nil
 		}
-		return false, "", err
+		return false, err.Error(), nil
 	}
 	if !found {
 		return false, "bootstrap token does not contain shoot metadata", nil

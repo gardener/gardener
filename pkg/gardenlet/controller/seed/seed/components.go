@@ -139,7 +139,6 @@ func (r *Reconciler) instantiateComponents(
 	alertingSMTPSecret *corev1.Secret,
 	wildCardCertSecret *corev1.Secret,
 	seedIsShoot bool,
-	_ bool,
 ) (
 	c components,
 	err error,

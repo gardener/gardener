@@ -106,25 +106,24 @@ func ShootMetaFromBootstrapToken(ctx context.Context, reader client.Reader, boot
 		return types.NamespacedName{}, false, fmt.Errorf("failed to read bootstrap token secret %s: %w", client.ObjectKeyFromObject(bootstrapTokenSecret), err)
 	}
 
-	shootMeta, found := extractShootMetaFromBootstrapToken(bootstrapTokenSecret)
-	return shootMeta, found, nil
+	return extractShootMetaFromBootstrapToken(bootstrapTokenSecret)
 }
 
-func extractShootMetaFromBootstrapToken(bootstrapTokenSecret *corev1.Secret) (types.NamespacedName, bool) {
+func extractShootMetaFromBootstrapToken(bootstrapTokenSecret *corev1.Secret) (types.NamespacedName, bool, error) {
 	description := string(bootstrapTokenSecret.Data[bootstraptokenapi.BootstrapTokenDescriptionKey])
 	if !strings.HasPrefix(description, bootstraptoken.SelfHostedShootBootstrapTokenSecretDescriptionPrefix) {
-		return types.NamespacedName{}, false
+		return types.NamespacedName{}, false, nil
 	}
 
 	parts := strings.Fields(strings.TrimPrefix(description, bootstraptoken.SelfHostedShootBootstrapTokenSecretDescriptionPrefix))
 	if len(parts) == 0 {
-		return types.NamespacedName{}, false
+		return types.NamespacedName{}, false, fmt.Errorf("could not extract shoot meta from bootstrap token description: %s", description)
 	}
 
 	split := strings.Split(parts[0], "/")
 	if len(split) != 2 {
-		return types.NamespacedName{}, false
+		return types.NamespacedName{}, false, fmt.Errorf("could not extract shoot namespace and name from bootstrap token description: %s", description)
 	}
 
-	return types.NamespacedName{Namespace: split[0], Name: split[1]}, true
+	return types.NamespacedName{Namespace: split[0], Name: split[1]}, true, nil
 }

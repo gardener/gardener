@@ -62,19 +62,19 @@ type Interface interface {
 
 // Actuator is a concrete implementation of Interface.
 type Actuator struct {
-	GardenConfig                *rest.Config
-	GardenClient                client.Client
-	GetTargetClientFunc         func(ctx context.Context) (kubernetes.Interface, error)
-	CheckIfVPAAlreadyExists     func(ctx context.Context) (bool, error)
-	GetTargetDomain             func() string
-	ApplyGardenletChart         func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]any) error
-	DeleteGardenletChart        func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]any) error
-	Clock                       clock.Clock
-	ValuesHelper                ValuesHelper
-	Recorder                    events.EventRecorder
-	GardenletNamespaceTarget    string
-	BootstrapToken              string
-	SkipGardenNamespaceDeletion bool
+	GardenConfig             *rest.Config
+	GardenClient             client.Client
+	GetTargetClientFunc      func(ctx context.Context) (kubernetes.Interface, error)
+	CheckIfVPAAlreadyExists  func(ctx context.Context) (bool, error)
+	GetTargetDomain          func() string
+	ApplyGardenletChart      func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]any) error
+	DeleteGardenletChart     func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]any) error
+	Clock                    clock.Clock
+	ValuesHelper             ValuesHelper
+	Recorder                 events.EventRecorder
+	GardenletNamespaceTarget string
+	BootstrapToken           string
+	SeedIsSelfHostedShoot    bool
 }
 
 // Reconcile deploys or updates gardenlets.
@@ -262,7 +262,7 @@ func (a *Actuator) Delete(
 	}
 
 	// Delete garden namespace from the target cluster if it still exists and is not already deleting
-	if !a.SkipGardenNamespaceDeletion {
+	if !a.SeedIsSelfHostedShoot {
 		gardenNamespace, err := a.getGardenNamespace(ctx, targetClient)
 		if err != nil {
 			a.Recorder.Eventf(obj, nil, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, gardencorev1beta1.EventActionDelete, err.Error())
@@ -748,8 +748,10 @@ func PrepareGardenletChartValues(
 // ensureGardenletEnvironment sets the KUBERNETES_SERVICE_HOST to the provided domain.
 // This may be needed so that the deployed gardenlet can properly set the network policies allowing access of control
 // plane components of the hosted shoots to the API server of the seed.
+// In self-hosted shoot clusters, the seed gardenlet runs inside the shoot cluster and communicates with the API server
+// directly, so KUBERNETES_SERVICE_HOST does not need to be set explicitly.
 func (a *Actuator) ensureGardenletEnvironment(deployment *seedmanagementv1alpha1.GardenletDeployment) *seedmanagementv1alpha1.GardenletDeployment {
-	if a.SkipGardenNamespaceDeletion {
+	if a.SeedIsSelfHostedShoot {
 		return deployment
 	}
 

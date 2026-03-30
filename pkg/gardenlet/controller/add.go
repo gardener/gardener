@@ -214,9 +214,9 @@ func AddToManager(
 		return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
 	}
 
+	// When the seed is a self-hosted shoot cluster, the gardenlet responsible for the self-hosted shoot in the
+	// kube-system namespace runs this controller.
 	if !seedIsSelfHostedShoot {
-		// When the seed is a self-hosted shoot cluster, the gardenlet responsible for the self-hosted shoot in the
-		// kube-system namespace runs this controller.
 		if err := (&tokenrequestor.Reconciler{
 			ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs, 0),
 			Class:           ptr.To(resourcesv1alpha1.ResourceManagerClassGarden),
