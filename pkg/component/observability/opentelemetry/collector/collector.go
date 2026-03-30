@@ -126,29 +126,32 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		objects                          = []client.Object{}
 	)
 
-	if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, o.client); err != nil {
-		return err
-	}
-	ingressTLSSecret, err := o.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
-		Name:                        "logging-tls",
-		CommonName:                  o.values.IngressHost,
-		Organization:                []string{"gardener.cloud:monitoring:ingress"},
-		DNSNames:                    []string{o.values.IngressHost, o.values.ValiHost},
-		CertType:                    secrets.ServerCert,
-		Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
-		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(o.values.SecretNameServerCA))
-	if err != nil {
-		return err
-	}
+	if o.values.ClusterType == component.ClusterTypeShoot {
 
-	genericTokenKubeconfigSecret, found := o.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
-	}
-	genericTokenKubeconfigSecretName = genericTokenKubeconfigSecret.Name
+		if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, o.client); err != nil {
+			return err
+		}
+		ingressTLSSecret, err := o.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+			Name:                        "logging-tls",
+			CommonName:                  o.values.IngressHost,
+			Organization:                []string{"gardener.cloud:monitoring:ingress"},
+			DNSNames:                    []string{o.values.IngressHost, o.values.ValiHost},
+			CertType:                    secrets.ServerCert,
+			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
+			SkipPublishingCACertificate: true,
+		}, secretsmanager.SignedByCA(o.values.SecretNameServerCA))
+		if err != nil {
+			return err
+		}
 
-	objects = append(objects, o.getIngress(ingressTLSSecret.Name))
+		genericTokenKubeconfigSecret, found := o.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+		if !found {
+			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+		}
+		genericTokenKubeconfigSecretName = genericTokenKubeconfigSecret.Name
+
+		objects = append(objects, o.getIngress(ingressTLSSecret.Name))
+	}
 
 	if o.values.ShootNodeLoggingEnabled {
 		if err := loggingAgentShootAccessSecret.Reconcile(ctx, o.client); err != nil {
