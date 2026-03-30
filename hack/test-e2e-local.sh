@@ -34,13 +34,4 @@ if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
   fi
 fi
 
-local_address="172.18.255.1"
-if [[ "${IPFAMILY:-}" == "ipv6" ]]; then
-  local_address="::1"
-fi
-local_address_operator="172.18.255.3"
-if [[ "${IPFAMILY:-}" == "ipv6" ]]; then
-  local_address_operator="::3"
-fi
-
 GO111MODULE=on ginkgo run --timeout=125m $ginkgo_flags --v --show-node-events "$@"
