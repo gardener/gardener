@@ -97,7 +97,6 @@ var _ = Describe("Registration", func() {
 				{
 					Action:            "mutating",
 					Name:              "webhook1",
-					Provider:          "provider1",
 					Types:             []Type{{Obj: &corev1.ConfigMap{}}, {Obj: &corev1.Secret{}}},
 					Target:            TargetSeed,
 					Path:              "path1",
@@ -105,7 +104,6 @@ var _ = Describe("Registration", func() {
 				},
 				{
 					Name:              "webhook2",
-					Provider:          "provider2",
 					Types:             []Type{{Obj: &corev1.Pod{}}},
 					Target:            TargetSeed,
 					Path:              "path2",
@@ -114,7 +112,6 @@ var _ = Describe("Registration", func() {
 				{
 					Action:            "mutating",
 					Name:              "webhook3",
-					Provider:          "provider3",
 					Types:             []Type{{Obj: &corev1.ServiceAccount{}, Subresource: ptr.To("token")}},
 					Target:            TargetShoot,
 					Path:              "path3",
@@ -124,7 +121,6 @@ var _ = Describe("Registration", func() {
 				},
 				{
 					Name:          "webhook4",
-					Provider:      "provider4",
 					Types:         []Type{{Obj: &corev1.Service{}}},
 					Target:        TargetShoot,
 					Path:          "path4",
@@ -136,7 +132,6 @@ var _ = Describe("Registration", func() {
 				{
 					Action:            "validating",
 					Name:              "webhook1",
-					Provider:          "provider1",
 					Types:             []Type{{Obj: &corev1.ConfigMap{}}, {Obj: &corev1.Secret{}}},
 					Target:            TargetSeed,
 					Path:              "path1",
@@ -145,7 +140,6 @@ var _ = Describe("Registration", func() {
 				{
 					Action:            "validating",
 					Name:              "webhook2",
-					Provider:          "provider2",
 					Types:             []Type{{Obj: &corev1.Pod{}}},
 					Target:            TargetSeed,
 					Path:              "path2",
@@ -154,7 +148,6 @@ var _ = Describe("Registration", func() {
 				{
 					Action:            "validating",
 					Name:              "webhook3",
-					Provider:          "provider3",
 					Types:             []Type{{Obj: &corev1.ServiceAccount{}, Subresource: ptr.To("token")}},
 					Target:            TargetShoot,
 					Path:              "path3",
@@ -165,7 +158,6 @@ var _ = Describe("Registration", func() {
 				{
 					Action:        "validating",
 					Name:          "webhook4",
-					Provider:      "provider4",
 					Types:         []Type{{Obj: &corev1.Service{}}},
 					Target:        TargetShoot,
 					Path:          "path4",

@@ -33,7 +33,6 @@ const (
 type Webhook struct {
 	Action            string
 	Name              string
-	Provider          string
 	Path              string
 	Target            string
 	Types             []Type
@@ -64,7 +63,6 @@ type Type struct {
 
 // Args contains Webhook creation arguments.
 type Args struct {
-	Provider          string
 	Name              string
 	Path              string
 	Target            string
@@ -80,7 +78,7 @@ func New(mgr manager.Manager, args Args) (*Webhook, error) {
 	var (
 		objTypes []Type
 
-		logger  = log.Log.WithName(args.Name).WithValues("provider", args.Provider)
+		logger  = log.Log.WithName(args.Name)
 		builder = NewBuilder(mgr, logger)
 	)
 
@@ -119,7 +117,6 @@ func New(mgr manager.Manager, args Args) (*Webhook, error) {
 
 	return &Webhook{
 		Name:              args.Name,
-		Provider:          args.Provider,
 		Action:            actionType,
 		NamespaceSelector: args.NamespaceSelector,
 		ObjectSelector:    args.ObjectSelector,

@@ -629,32 +629,29 @@ var _ = Describe("Certificates tests", func() {
 
 func newSeedWebhook(_ manager.Manager) (*extensionswebhook.Webhook, error) {
 	return &extensionswebhook.Webhook{
-		Name:     seedWebhookName,
-		Path:     seedWebhookPath,
-		Provider: extensionType,
-		Types:    []extensionswebhook.Type{{Obj: &corev1.Service{}}},
-		Target:   extensionswebhook.TargetSeed,
+		Name:   seedWebhookName,
+		Path:   seedWebhookPath,
+		Types:  []extensionswebhook.Type{{Obj: &corev1.Service{}}},
+		Target: extensionswebhook.TargetSeed,
 	}, nil
 }
 
 func newShootMutatingWebhook(_ manager.Manager) (*extensionswebhook.Webhook, error) {
 	return &extensionswebhook.Webhook{
-		Name:     shootMutatingWebhookName,
-		Path:     shootMutatingWebhookPath,
-		Provider: extensionType,
-		Types:    []extensionswebhook.Type{{Obj: &corev1.ServiceAccount{}}},
-		Target:   extensionswebhook.TargetShoot,
+		Name:   shootMutatingWebhookName,
+		Path:   shootMutatingWebhookPath,
+		Types:  []extensionswebhook.Type{{Obj: &corev1.ServiceAccount{}}},
+		Target: extensionswebhook.TargetShoot,
 	}, nil
 }
 
 func newShootValidatingWebhook(_ manager.Manager) (*extensionswebhook.Webhook, error) {
 	return &extensionswebhook.Webhook{
-		Action:   "validating",
-		Name:     shootValidatingWebhookName,
-		Path:     shootValidatingWebhookPath,
-		Provider: extensionType,
-		Types:    []extensionswebhook.Type{{Obj: &corev1.ServiceAccount{}}},
-		Target:   extensionswebhook.TargetShoot,
+		Action: "validating",
+		Name:   shootValidatingWebhookName,
+		Path:   shootValidatingWebhookPath,
+		Types:  []extensionswebhook.Type{{Obj: &corev1.ServiceAccount{}}},
+		Target: extensionswebhook.TargetShoot,
 	}, nil
 }
 

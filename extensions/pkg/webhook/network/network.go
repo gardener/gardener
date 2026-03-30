@@ -53,7 +53,6 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	logger.Info("Creating network webhook", "name", name)
 	return &extensionswebhook.Webhook{
 		Name:              name,
-		Provider:          args.NetworkProvider,
 		Types:             args.Types,
 		Target:            extensionswebhook.TargetSeed,
 		Path:              path,

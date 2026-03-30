@@ -31,8 +31,7 @@ var _ = Describe("Webhook", func() {
 
 		It("should successfully return a webhook object", func() {
 			webhook, err := New(mgr, Args{
-				Provider: "test-provider",
-				Name:     "webhook-test",
+				Name: "webhook-test",
 				NamespaceSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{"foo": "bar"},
 				},
@@ -46,7 +45,6 @@ var _ = Describe("Webhook", func() {
 			})
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(webhook.Provider).To(Equal("test-provider"))
 			Expect(webhook.Name).To(Equal("webhook-test"))
 			Expect(webhook.NamespaceSelector).To(Equal(&metav1.LabelSelector{
 				MatchLabels: map[string]string{"foo": "bar"},

@@ -51,7 +51,6 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 
 	return &extensionswebhook.Webhook{
 		Name:           WebhookName,
-		Provider:       provider,
 		Types:          types,
 		Target:         extensionswebhook.TargetShoot,
 		Path:           WebhookName,
