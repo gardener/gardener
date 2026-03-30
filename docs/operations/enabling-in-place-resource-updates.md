@@ -53,6 +53,9 @@ With the adoption of `Vertical Pod Autoscaler` [1.6.0](https://github.com/kubern
 
 With the adoption of `Vertical Pod Autoscaler` [1.6.0](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.6.0), the `InPlaceOrRecreate` feature gate got promoted to _GA_ and __cannot__ be disabled. Follow the [in-place resource updates](../usage/autoscaling/in-place-resource-updates.md#seed) guide for more details about the Vertical Pod Autoscaler components setup.
 
+> [!NOTE]
+> If you are using a VPA not managed by gardenlet (i.e., Seeds's `.spec.settings.verticalPodAutoscaler.enabled` is set to `false`), ensure that your VPA installation supports in-place resource updates.
+
 ### Gardener Operator
 
 > With Gardener [v1.138](https://github.com/gardener/gardener/releases/tag/v1.138.0), the `VPAInPlaceUpdates` feature gate got promoted to `Beta` and is now __enabled by default__.
@@ -65,6 +68,9 @@ featureGates:
 ```
 
 Refer to the `operator` component configuration [manifest](../../../example/operator/10-componentconfig.yaml) for an overview.
+
+> [!NOTE]
+> If you are using a VPA not managed by gardener-operator (i.e., Garden's `.spec.runtimeCluster.settings.verticalPodAutoscaler.enabled` is set to `false`), ensure that your VPA installation supports in-place resource updates.
 
 ## References
 
