@@ -44,7 +44,10 @@ func AddToManager(
 ) error {
 	var responsibleForUnmanagedSeed bool
 	if err := gardenCluster.GetAPIReader().Get(ctx, client.ObjectKey{Name: cfg.SeedConfig.Name, Namespace: v1beta1constants.GardenNamespace}, &seedmanagementv1alpha1.ManagedSeed{}); err != nil {
-		if !apierrors.IsNotFound(err) {
+		// Forbidden is treated like NotFound because the SeedAuthorizer only grants access to ManagedSeeds
+		// related to this seed via the resource graph. For unmanaged seeds, no ManagedSeed exists and no graph
+		// edge is present, so the authorizer returns Forbidden.
+		if !apierrors.IsNotFound(err) && !apierrors.IsForbidden(err) {
 			return fmt.Errorf("failed checking whether gardenlet is responsible for a managed seed: %w", err)
 		}
 		// ManagedSeed was not found, hence gardenlet is responsible for an unmanaged seed.
