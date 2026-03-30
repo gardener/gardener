@@ -262,6 +262,35 @@ var _ = Describe("validator", func() {
 					Expect(err).To(MatchError(ContainSubstring("seed using backup of type \"anotherProvider\" cannot use WorkloadIdentity of type \"provider\"")))
 				})
 			})
+
+			Context("LabelSelfHostedShootCluster label", func() {
+				BeforeEach(func() {
+					oldSeed = seedBase.DeepCopy()
+					newSeed = seedBase.DeepCopy()
+				})
+
+				It("should allow adding the label", func() {
+					metav1.SetMetaDataLabel(&newSeed.ObjectMeta, "seed.gardener.cloud/self-hosted-shoot-cluster", "true")
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				})
+
+				It("should forbid removing the label once set", func() {
+					metav1.SetMetaDataLabel(&oldSeed.ObjectMeta, "seed.gardener.cloud/self-hosted-shoot-cluster", "true")
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+				})
+
+				It("should allow keeping the label", func() {
+					metav1.SetMetaDataLabel(&oldSeed.ObjectMeta, "seed.gardener.cloud/self-hosted-shoot-cluster", "true")
+					metav1.SetMetaDataLabel(&newSeed.ObjectMeta, "seed.gardener.cloud/self-hosted-shoot-cluster", "true")
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				})
+			})
 		})
 
 		// The verification of protection is independent of the Cloud Provider (being checked before).

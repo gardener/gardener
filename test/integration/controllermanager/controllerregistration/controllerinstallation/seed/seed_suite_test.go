@@ -131,7 +131,11 @@ var _ = BeforeSuite(func() {
 
 	By("Setup field indexes")
 	Expect(indexer.AddBackupBucketSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+	Expect(indexer.AddBackupBucketShootRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+	Expect(indexer.AddBackupBucketShootRefNamespace(ctx, mgr.GetFieldIndexer())).To(Succeed())
 	Expect(indexer.AddBackupEntrySeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+	Expect(indexer.AddBackupEntryShootRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+	Expect(indexer.AddBackupEntryShootRefNamespace(ctx, mgr.GetFieldIndexer())).To(Succeed())
 	Expect(indexer.AddShootSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 	Expect(indexer.AddShootStatusSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 	Expect(indexer.AddControllerInstallationSeedRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())

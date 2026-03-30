@@ -709,7 +709,7 @@ var _ = Describe("Reconciler", func() {
 				extensionsv1alpha1.ControlPlaneResource+"/"+type3,
 			)
 
-			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, len(shootList), seed, SeedKind)
+			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, len(shootList), seed, SeedKind, nil)
 
 			Expect(names).To(Equal(sets.New(controllerRegistration1.Name, controllerRegistration2.Name, controllerRegistration3.Name, controllerRegistration4.Name, controllerRegistration7.Name, controllerRegistration8.Name)))
 			Expect(err).NotTo(HaveOccurred())
@@ -718,7 +718,7 @@ var _ = Describe("Reconciler", func() {
 		It("should not consider 'always-deploy-if-shoots' registrations when seed has no shoots", func() {
 			wantedKindTypeCombinations := sets.New[string]()
 
-			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, 0, seed, SeedKind)
+			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, 0, seed, SeedKind, nil)
 
 			Expect(names).To(Equal(sets.New(controllerRegistration4.Name, controllerRegistration7.Name)))
 			Expect(err).NotTo(HaveOccurred())
@@ -727,7 +727,7 @@ var _ = Describe("Reconciler", func() {
 		It("should consider 'always-deploy' registrations when seed has no shoots but no deletion timestamp", func() {
 			wantedKindTypeCombinations := sets.New[string]()
 
-			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, 0, seed, SeedKind)
+			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, 0, seed, SeedKind, nil)
 
 			Expect(names).To(Equal(sets.New(controllerRegistration4.Name, controllerRegistration7.Name)))
 			Expect(err).NotTo(HaveOccurred())
@@ -739,16 +739,36 @@ var _ = Describe("Reconciler", func() {
 			seedCopy.DeletionTimestamp = &time
 			wantedKindTypeCombinations := sets.New[string]()
 
-			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, 0, seedCopy, SeedKind)
+			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, 0, seedCopy, SeedKind, nil)
 
 			Expect(names).To(Equal(sets.New(controllerRegistration7.Name)))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should not include Always/AlwaysExceptNoShoots registrations or installedAndRequired when seed is a self-hosted shoot", func() {
+			// When selfHostedShoot is non-nil, the shoot reconciler handles Always/AlwaysExceptNoShoots registrations
+			// and owns all ControllerInstallations — the seed reconciler must not add any of them.
+			// controllerRegistration4 has deployAlways=true, controllerRegistration7 would normally be kept alive via
+			// installedAndRequired (controllerInstallation7 is Required=true with seedRef=seedName) — both must be
+			// excluded so the shoot reconciler remains the sole owner.
+			selfHostedShoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      seedName,
+					Namespace: "garden",
+				},
+			}
+			wantedKindTypeCombinations := sets.New[string]()
+
+			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, 0, seed, SeedKind, selfHostedShoot)
+
+			Expect(names).To(BeEmpty())
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
 	Describe("#computeRegistrationNameToInstallationNameMap", func() {
 		It("should correctly compute the result w/o error", func() {
-			regNameToInstallationName, err := computeRegistrationNameToInstallationMap(controllerInstallationList, controllerRegistrations, seed, SeedKind)
+			regNameToInstallationName, err := computeRegistrationNameToInstallationMap(controllerInstallationList, controllerRegistrations, seed, SeedKind, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(regNameToInstallationName).To(Equal(map[string]*gardencorev1beta1.ControllerInstallation{
@@ -760,7 +780,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should fail to compute the result and return error", func() {
-			regNameToInstallationName, err := computeRegistrationNameToInstallationMap(controllerInstallationList, map[string]controllerRegistration{}, seed, SeedKind)
+			regNameToInstallationName, err := computeRegistrationNameToInstallationMap(controllerInstallationList, map[string]controllerRegistration{}, seed, SeedKind, nil)
 
 			Expect(err).To(HaveOccurred())
 			Expect(regNameToInstallationName).To(BeNil())
@@ -804,7 +824,7 @@ var _ = Describe("Reconciler", func() {
 
 				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{})).Return(fakeErr)
 
-				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallation)
+				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, nil, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallation)
 
 				Expect(err).To(Equal(fakeErr))
 			})
@@ -820,7 +840,7 @@ var _ = Describe("Reconciler", func() {
 					}
 				)
 
-				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallation)
+				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, nil, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallation)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -857,7 +877,7 @@ var _ = Describe("Reconciler", func() {
 
 				k8sClient.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
 
-				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallation)
+				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, nil, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -901,7 +921,7 @@ var _ = Describe("Reconciler", func() {
 
 				k8sClient.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
 
-				Expect(deployNeededInstallations(ctx, log, k8sClient, shoot3, ShootKind, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallation)).To(Succeed())
+				Expect(deployNeededInstallations(ctx, log, k8sClient, shoot3, ShootKind, nil, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallation)).To(Succeed())
 			})
 
 			It("should not skip the controller registration that is after one in deletion", func() {
@@ -929,7 +949,7 @@ var _ = Describe("Reconciler", func() {
 				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
 				k8sClient.EXPECT().Patch(ctx, installation2, gomock.Any())
 
-				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, wantedControllerRegistrations, registrations, registrationNameToInstallation)
+				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, nil, wantedControllerRegistrations, registrations, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -951,7 +971,7 @@ var _ = Describe("Reconciler", func() {
 					}
 				)
 
-				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, wantedControllerRegistrations, registrations, registrationNameToInstallation)
+				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, nil, wantedControllerRegistrations, registrations, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -986,7 +1006,7 @@ var _ = Describe("Reconciler", func() {
 				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
 				k8sClient.EXPECT().Patch(ctx, installation2, gomock.Any())
 
-				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, wantedControllerRegistrations, registrations, registrationNameToInstallation)
+				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, nil, wantedControllerRegistrations, registrations, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -1021,7 +1041,7 @@ var _ = Describe("Reconciler", func() {
 				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
 				k8sClient.EXPECT().Patch(ctx, installation2, gomock.Any())
 
-				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, wantedControllerRegistrations, registrations, registrationNameToInstallation)
+				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, nil, wantedControllerRegistrations, registrations, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
 
@@ -1037,7 +1057,7 @@ var _ = Describe("Reconciler", func() {
 				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
 				k8sClient.EXPECT().Patch(ctx, installation2, gomock.Any())
 
-				err = deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, wantedControllerRegistrations, registrations, registrationNameToInstallation)
+				err = deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, nil, wantedControllerRegistrations, registrations, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -1055,7 +1075,7 @@ var _ = Describe("Reconciler", func() {
 
 				k8sClient.EXPECT().Delete(ctx, controllerInstallation1).Return(fakeErr)
 
-				err := deleteUnneededInstallations(ctx, log, k8sClient, wantedControllerRegistrationNames, registrationNameToInstallation)
+				err := deleteUnneededInstallations(ctx, log, k8sClient, SeedKind, wantedControllerRegistrationNames, registrationNameToInstallation)
 
 				Expect(err).To(Equal(fakeErr))
 			})
@@ -1073,7 +1093,43 @@ var _ = Describe("Reconciler", func() {
 				k8sClient.EXPECT().Delete(ctx, controllerInstallation1)
 				k8sClient.EXPECT().Delete(ctx, controllerInstallation3)
 
-				err := deleteUnneededInstallations(ctx, log, k8sClient, wantedControllerRegistrationNames, registrationNameToInstallation)
+				err := deleteUnneededInstallations(ctx, log, k8sClient, SeedKind, wantedControllerRegistrationNames, registrationNameToInstallation)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should remove the seed ownership label instead of deleting when the ControllerInstallation has the seed-ref-name label", func() {
+				installation := controllerInstallation2.DeepCopy()
+				metav1.SetMetaDataLabel(&installation.ObjectMeta, SeedRefName, seedName)
+
+				var (
+					wantedControllerRegistrationNames = sets.New[string]()
+					registrationNameToInstallation    = map[string]*gardencorev1beta1.ControllerInstallation{
+						controllerRegistration2.Name: installation,
+					}
+				)
+
+				expectedInstallation := installation.DeepCopy()
+				delete(expectedInstallation.Labels, SeedRefName)
+				k8sClient.EXPECT().Patch(ctx, expectedInstallation, gomock.Any())
+
+				err := deleteUnneededInstallations(ctx, log, k8sClient, SeedKind, wantedControllerRegistrationNames, registrationNameToInstallation)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should skip seed-owned ControllerInstallations when the shoot reconciler calls", func() {
+				installation := controllerInstallation2.DeepCopy()
+				metav1.SetMetaDataLabel(&installation.ObjectMeta, SeedRefName, seedName)
+
+				var (
+					wantedControllerRegistrationNames = sets.New[string]()
+					registrationNameToInstallation    = map[string]*gardencorev1beta1.ControllerInstallation{
+						controllerRegistration2.Name: installation,
+					}
+				)
+
+				err := deleteUnneededInstallations(ctx, log, k8sClient, ShootKind, wantedControllerRegistrationNames, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
 			})

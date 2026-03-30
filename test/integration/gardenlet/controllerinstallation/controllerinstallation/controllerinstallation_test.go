@@ -105,7 +105,9 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 		}).Should(Succeed())
 
 		By("Create ControllerInstallation")
-		controllerInstallation.Spec.SeedRef = &corev1.ObjectReference{Name: seed.Name}
+		if controllerInstallation.Spec.SeedRef == nil {
+			controllerInstallation.Spec.SeedRef = &corev1.ObjectReference{Name: seed.Name}
+		}
 		controllerInstallation.Spec.RegistrationRef = corev1.ObjectReference{Name: controllerRegistration.Name}
 		controllerInstallation.Spec.DeploymentRef = &corev1.ObjectReference{Name: controllerDeployment.Name}
 		Expect(testClient.Create(ctx, controllerInstallation)).To(Succeed())
@@ -623,16 +625,39 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 
 		When("seed is marked as self-hosted shoot clusters", func() {
 			BeforeEach(func() {
-				By("Mark Seed as self-hosted shoot cluster")
-				patch := client.MergeFrom(seed.DeepCopy())
-				metav1.SetMetaDataLabel(&seed.ObjectMeta, "seed.gardener.cloud/self-hosted-shoot-cluster", "true")
-				Expect(testClient.Patch(ctx, seed, patch)).To(Succeed())
+				// Use a dedicated seed with the label pre-set so the suite-global seed remains unaffected.
+				// The label cannot be removed once set (enforced by GAPI validation), so a throwaway seed
+				// is the only way to cleanly isolate this test.
+				selfHostedSeed := seed.DeepCopy()
+				selfHostedSeed.Name = ""
+				selfHostedSeed.ResourceVersion = ""
+				selfHostedSeed.Labels = map[string]string{
+					testID: testRunID,
+					"seed.gardener.cloud/self-hosted-shoot-cluster": "true",
+				}
+
+				By("Create self-hosted seed")
+				Expect(testClient.Create(ctx, selfHostedSeed)).To(Succeed())
+
+				By("Patch self-hosted seed status")
+				statusPatch := client.MergeFrom(selfHostedSeed.DeepCopy())
+				selfHostedSeed.Status.ClusterIdentity = ptr.To(seedClusterIdentity)
+				Expect(testClient.Status().Patch(ctx, selfHostedSeed, statusPatch)).To(Succeed())
+
+				By("Create self-hosted seed namespace")
+				selfHostedSeedNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "seed-" + selfHostedSeed.Name}}
+				Expect(testClient.Create(ctx, selfHostedSeedNamespace)).To(Succeed())
 
 				DeferCleanup(func() {
-					patch := client.MergeFrom(seed.DeepCopy())
-					delete(seed.Labels, "seed.gardener.cloud/self-hosted-shoot-cluster")
-					Expect(testClient.Patch(ctx, seed, patch)).To(Succeed())
+					By("Delete self-hosted seed")
+					Expect(testClient.Delete(ctx, selfHostedSeed)).To(Or(Succeed(), BeNotFoundError()))
+
+					By("Delete self-hosted seed namespace")
+					Expect(testClient.Delete(ctx, selfHostedSeedNamespace)).To(Or(Succeed(), BeNotFoundError()))
 				})
+
+				// Wire the ControllerInstallation (created in JustBeforeEach) to the self-hosted seed.
+				controllerInstallation.Spec.SeedRef = &corev1.ObjectReference{Name: selfHostedSeed.Name}
 			})
 
 			It("should set the selfHostedShootCluster value in the chart", func() {
