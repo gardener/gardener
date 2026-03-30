@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"slices"
 	"time"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
@@ -280,16 +281,28 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			heartbeatCtrlOptions.Completed().Apply(&heartbeat.DefaultAddOptions)
 			prometheusWebhookOptions.Completed().Apply(&prometheuswebhook.DefaultAddOptions)
 
-			reconcileOpts.Completed().Apply(&localbackupbucket.DefaultAddOptions.IgnoreOperationAnnotation, &localbackupbucket.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&localbastion.DefaultAddOptions.IgnoreOperationAnnotation, &localbastion.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation, &localcontrolplane.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&localextensionseedcontroller.DefaultAddOptions.IgnoreOperationAnnotation, &localextensionseedcontroller.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&localextensionshootcontroller.DefaultAddOptions.IgnoreOperationAnnotation, &localextensionshootcontroller.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation, &localdnsrecord.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&localinfrastructure.DefaultAddOptions.IgnoreOperationAnnotation, &localinfrastructure.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&localoperatingsystemconfig.DefaultAddOptions.IgnoreOperationAnnotation, &localoperatingsystemconfig.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&localworker.DefaultAddOptions.IgnoreOperationAnnotation, &localworker.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(nil, &localhealthcheck.DefaultAddOptions.ExtensionClasses)
+			// Apply extension classes
+			localbackupbucket.DefaultAddOptions.ExtensionClasses = slices.Clone(generalOpts.Completed().ExtensionClasses)
+			localbastion.DefaultAddOptions.ExtensionClasses = slices.Clone(generalOpts.Completed().ExtensionClasses)
+			localcontrolplane.DefaultAddOptions.ExtensionClasses = slices.Clone(generalOpts.Completed().ExtensionClasses)
+			localextensionseedcontroller.DefaultAddOptions.ExtensionClasses = slices.Clone(generalOpts.Completed().ExtensionClasses)
+			localextensionshootcontroller.DefaultAddOptions.ExtensionClasses = slices.Clone(generalOpts.Completed().ExtensionClasses)
+			localdnsrecord.DefaultAddOptions.ExtensionClasses = slices.Clone(generalOpts.Completed().ExtensionClasses)
+			localinfrastructure.DefaultAddOptions.ExtensionClasses = slices.Clone(generalOpts.Completed().ExtensionClasses)
+			localoperatingsystemconfig.DefaultAddOptions.ExtensionClasses = slices.Clone(generalOpts.Completed().ExtensionClasses)
+			localworker.DefaultAddOptions.ExtensionClasses = slices.Clone(generalOpts.Completed().ExtensionClasses)
+			localhealthcheck.DefaultAddOptions.ExtensionClasses = slices.Clone(generalOpts.Completed().ExtensionClasses)
+
+			// Apply ignore operation option
+			reconcileOpts.Completed().Apply(&localbackupbucket.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&localbastion.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&localextensionseedcontroller.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&localextensionshootcontroller.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&localinfrastructure.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&localoperatingsystemconfig.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&localworker.DefaultAddOptions.IgnoreOperationAnnotation)
 
 			if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
 				return fmt.Errorf("could not add healthcheck: %w", err)
