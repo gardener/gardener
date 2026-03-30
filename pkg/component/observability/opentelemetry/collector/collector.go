@@ -127,7 +127,6 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 	)
 
 	if o.values.ClusterType == component.ClusterTypeShoot {
-
 		if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, o.client); err != nil {
 			return err
 		}
