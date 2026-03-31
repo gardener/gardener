@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -210,8 +211,14 @@ func (r *Reconciler) reconcile(
 		if seed != nil {
 			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(seed.Spec.Provider.Zones, ","))
 		} else if shoot != nil {
-			if controlPlanePool := v1beta1helper.ControlPlaneWorkerPoolForShoot(shoot.Spec.Provider.Workers); controlPlanePool != nil && len(controlPlanePool.Zones) > 0 {
-				metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(controlPlanePool.Zones, ","))
+			zones := sets.New[string]()
+			for _, pool := range shoot.Spec.Provider.Workers {
+				if pool.ControlPlane != nil || v1beta1helper.SystemComponentsAllowed(&pool) {
+					zones.Insert(pool.Zones...)
+				}
+			}
+			if len(zones) > 0 {
+				metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(sets.List(zones), ","))
 			}
 		}
 
