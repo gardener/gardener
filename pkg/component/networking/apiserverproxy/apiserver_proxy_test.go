@@ -629,7 +629,7 @@ func getDaemonSet(hash string, advertiseIPAddress string) *appsv1.DaemonSet {
 					AutomountServiceAccountToken: func(b bool) *bool { return &b }(false),
 					Containers: []corev1.Container{
 						{
-							Args:            []string{"--ip-address=" + advertiseIPAddress, "--interface=lo"},
+							Args:            []string{"--ip-address=" + advertiseIPAddress, "--interface=apiserver-proxy"},
 							Image:           "sidecar-image:some-tag",
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Name:            "sidecar",
@@ -711,7 +711,7 @@ func getDaemonSet(hash string, advertiseIPAddress string) *appsv1.DaemonSet {
 					HostNetwork: true,
 					InitContainers: []corev1.Container{
 						{
-							Args:            []string{"--ip-address=" + advertiseIPAddress, "--daemon=false", "--interface=lo"},
+							Args:            []string{"--ip-address=" + advertiseIPAddress, "--daemon=false", "--interface=apiserver-proxy"},
 							Image:           "sidecar-image:some-tag",
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Name:            "setup",
