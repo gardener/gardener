@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
+	controllerinstallationcare "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/care"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
@@ -108,6 +109,14 @@ func AddToManager(
 			Config: *cfg.Controllers.Bastion,
 		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 			return fmt.Errorf("failed adding Bastion controller: %w", err)
+		}
+
+		// TODO(rfranzke): Remove this once all ControllerInstallation reconcilers are added via `shoot.AddToManager`.
+		if err := (&controllerinstallationcare.Reconciler{
+			Config:                   *cfg.Controllers.ControllerInstallationCare,
+			ManagedResourceNamespace: metav1.NamespaceSystem,
+		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+			return fmt.Errorf("failed adding ControllerInstallation care controller: %w", err)
 		}
 
 		if err := (&gardenlet.Reconciler{

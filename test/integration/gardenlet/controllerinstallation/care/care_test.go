@@ -152,6 +152,78 @@ var _ = Describe("ControllerInstallation Care controller tests", func() {
 	})
 })
 
+var _ = Describe("ControllerInstallation Care controller tests (self-hosted shoot)", func() {
+	var controllerInstallation *gardencorev1beta1.ControllerInstallation
+
+	BeforeEach(func() {
+		By("Create ControllerInstallation with ShootRef")
+		controllerInstallation = &gardencorev1beta1.ControllerInstallation{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "foo-",
+				Labels:       map[string]string{testID: testRunID},
+			},
+			Spec: gardencorev1beta1.ControllerInstallationSpec{
+				ShootRef: &corev1.ObjectReference{
+					Name:      "shoot1",
+					Namespace: "garden",
+				},
+				RegistrationRef: corev1.ObjectReference{
+					Name: "my-extension",
+				},
+				DeploymentRef: &corev1.ObjectReference{
+					Name: "foo-deployment",
+				},
+			},
+		}
+		Expect(testClient.Create(ctx, controllerInstallation)).To(Succeed())
+		log.Info("Created ControllerInstallation for test", "controllerInstallation", client.ObjectKeyFromObject(controllerInstallation))
+
+		DeferCleanup(func() {
+			By("Delete ControllerInstallation")
+			Expect(testClient.Delete(ctx, controllerInstallation)).To(Succeed())
+		})
+	})
+
+	It("should look up ManagedResource by RegistrationRef name", func() {
+		By("Create ManagedResource with RegistrationRef name and stale labels")
+		managedResource := &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "my-extension",
+				Namespace: gardenNamespace.Name,
+				Labels: map[string]string{
+					"controllerinstallation-name": "my-extension",
+					"controllerregistration-name": "my-extension",
+				},
+			},
+			Spec: resourcesv1alpha1.ManagedResourceSpec{
+				SecretRefs: []corev1.LocalObjectReference{{Name: "foo-secret"}},
+			},
+		}
+		Expect(testClient.Create(ctx, managedResource)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, managedResource)).To(Succeed())
+		})
+
+		By("Update ManagedResource status to healthy")
+		managedResource.Status.ObservedGeneration = managedResource.Generation
+		managedResource.Status.Conditions = []gardencorev1beta1.Condition{
+			{Type: resourcesv1alpha1.ResourcesApplied, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
+			{Type: resourcesv1alpha1.ResourcesHealthy, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
+			{Type: resourcesv1alpha1.ResourcesProgressing, Status: gardencorev1beta1.ConditionFalse, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
+		}
+		Expect(testClient.Status().Update(ctx, managedResource)).To(Succeed())
+
+		Eventually(func(g Gomega) {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+			g.Expect(controllerInstallation.Status.Conditions).To(ConsistOf(
+				And(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("InstallationSuccessful")),
+				And(OfType(gardencorev1beta1.ControllerInstallationHealthy), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("ControllerHealthy")),
+				And(OfType(gardencorev1beta1.ControllerInstallationProgressing), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ControllerRolledOut")),
+			))
+		}).Should(Succeed())
+	})
+})
+
 func withMessageSubstrings(messages ...string) gomegatypes.GomegaMatcher {
 	var substringMatchers = make([]gomegatypes.GomegaMatcher, 0, len(messages))
 	for _, message := range messages {
