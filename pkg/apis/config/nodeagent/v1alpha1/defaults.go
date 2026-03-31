@@ -42,6 +42,16 @@ func SetDefaults_TokenControllerConfig(obj *TokenControllerConfig) {
 	}
 }
 
+// SetDefaults_SystemdUnitCheckControllerConfig sets defaults for the SystemdUnitCheckControllerConfig object.
+func SetDefaults_SystemdUnitCheckControllerConfig(obj *SystemdUnitCheckControllerConfig) {
+	if obj.SyncPeriod == nil {
+		obj.SyncPeriod = &metav1.Duration{Duration: time.Minute}
+	}
+	if obj.StuckThreshold == nil {
+		obj.StuckThreshold = &metav1.Duration{Duration: 5 * time.Minute}
+	}
+}
+
 // SetDefaults_ClientConnectionConfiguration sets defaults for the garden client connection.
 func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.ClientConnectionConfiguration) {
 	componentbaseconfigv1alpha1.RecommendedDefaultClientConnectionConfiguration(obj)

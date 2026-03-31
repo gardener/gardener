@@ -108,6 +108,8 @@ type ControllerConfiguration struct {
 	OperatingSystemConfig OperatingSystemConfigControllerConfig `json:"operatingSystemConfig"`
 	// Token is the configuration for the access token controller.
 	Token TokenControllerConfig `json:"token"`
+	// SystemdUnitCheck is the configuration for the systemd unit check controller.
+	SystemdUnitCheck SystemdUnitCheckControllerConfig `json:"systemdUnitCheck"`
 }
 
 // OperatingSystemConfigControllerConfig defines the configuration of the operating system config controller.
@@ -140,6 +142,17 @@ type TokenSecretSyncConfig struct {
 	SecretName string `json:"secretName"`
 	// Path is the path on the machine where the access token content should be synced.
 	Path string `json:"path"`
+}
+
+// SystemdUnitCheckControllerConfig defines the configuration of the systemd unit check controller.
+type SystemdUnitCheckControllerConfig struct {
+	// SyncPeriod is the duration how often the systemd units are checked.
+	// +optional
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
+	// StuckThreshold is the duration after which a unit in a transitional state (activating/deactivating) is considered
+	// stuck.
+	// +optional
+	StuckThreshold *metav1.Duration `json:"stuckThreshold,omitempty"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

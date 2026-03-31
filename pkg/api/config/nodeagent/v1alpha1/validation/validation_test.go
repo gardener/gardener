@@ -37,6 +37,10 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 					}},
 					SyncPeriod: &metav1.Duration{Duration: time.Hour},
 				},
+				SystemdUnitCheck: SystemdUnitCheckControllerConfig{
+					SyncPeriod:     &metav1.Duration{Duration: time.Minute},
+					StuckThreshold: &metav1.Duration{Duration: 5 * time.Minute},
+				},
 			},
 		}
 	})
@@ -157,6 +161,30 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("controllers.token.syncPeriod"),
+				})),
+			))
+		})
+	})
+
+	Context("Systemd Unit Check Controller", func() {
+		It("should fail because sync period is too small", func() {
+			config.Controllers.SystemdUnitCheck.SyncPeriod = &metav1.Duration{Duration: 10 * time.Second}
+
+			Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("controllers.systemdUnitCheck.syncPeriod"),
+				})),
+			))
+		})
+
+		It("should fail because stuck threshold is too small", func() {
+			config.Controllers.SystemdUnitCheck.StuckThreshold = &metav1.Duration{Duration: 10 * time.Second}
+
+			Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("controllers.systemdUnitCheck.stuckThreshold"),
 				})),
 			))
 		})
