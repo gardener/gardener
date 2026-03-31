@@ -27,4 +27,5 @@ func SetObjectDefaults_NodeAgentConfiguration(in *NodeAgentConfiguration) {
 	SetDefaults_ServerConfiguration(&in.Server)
 	SetDefaults_OperatingSystemConfigControllerConfig(&in.Controllers.OperatingSystemConfig)
 	SetDefaults_TokenControllerConfig(&in.Controllers.Token)
+	SetDefaults_SystemdUnitCheckControllerConfig(&in.Controllers.SystemdUnitCheck)
 }
