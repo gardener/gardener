@@ -6,7 +6,7 @@ spec:
   ports:
   # Used to talk to the self-hosted shoot API server from the host machine.
   - name: self-hosted-shoot-apiserver
-    port: 4431
+    port: 30003
     targetPort: 443
     nodePort: 30003
   selector:
