@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/nodeagent/controller/lease"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/node"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
+	"github.com/gardener/gardener/pkg/nodeagent/controller/systemdunitcheck"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/token"
 )
 
@@ -81,6 +82,12 @@ func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Ma
 
 	if err := (&healthcheck.Reconciler{}).AddToManager(mgr, nodePredicate); err != nil {
 		return fmt.Errorf("failed adding health-check controller: %w", err)
+	}
+
+	if err := (&systemdunitcheck.Reconciler{
+		Config: cfg.Controllers.SystemdUnitCheck,
+	}).AddToManager(mgr, nodePredicate); err != nil {
+		return fmt.Errorf("failed adding systemd-unit-check controller: %w", err)
 	}
 
 	if err := (&hostnamecheck.Reconciler{

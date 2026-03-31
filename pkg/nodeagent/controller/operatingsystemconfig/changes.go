@@ -16,8 +16,6 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/ptr"
@@ -28,17 +26,9 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	kubeletcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	oscutils "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils"
+	"github.com/gardener/gardener/pkg/nodeagent"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
-
-var decoder runtime.Decoder
-
-func init() {
-	scheme := runtime.NewScheme()
-	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(kubeletconfigv1beta1.AddToScheme(scheme))
-	decoder = serializer.NewCodecFactory(scheme).UniversalDeserializer()
-}
 
 func extractOSCFromSecret(secret *corev1.Secret) (*extensionsv1alpha1.OperatingSystemConfig, string, error) {
 	oscRaw, ok := secret.Data[nodeagentconfigv1alpha1.DataKeyOperatingSystemConfig]
@@ -47,7 +37,7 @@ func extractOSCFromSecret(secret *corev1.Secret) (*extensionsv1alpha1.OperatingS
 	}
 
 	osc := &extensionsv1alpha1.OperatingSystemConfig{}
-	if err := runtime.DecodeInto(decoder, oscRaw, osc); err != nil {
+	if err := runtime.DecodeInto(nodeagent.OSCDecoder, oscRaw, osc); err != nil {
 		return nil, "", fmt.Errorf("unable to decode OSC from secret data key %s: %w", nodeagentconfigv1alpha1.DataKeyOperatingSystemConfig, err)
 	}
 
@@ -149,7 +139,7 @@ func computeOperatingSystemConfigChanges(
 	}
 
 	oldOSC := &extensionsv1alpha1.OperatingSystemConfig{}
-	if err := runtime.DecodeInto(decoder, oldOSCRaw, oldOSC); err != nil {
+	if err := runtime.DecodeInto(nodeagent.OSCDecoder, oldOSCRaw, oldOSC); err != nil {
 		return nil, fmt.Errorf("unable to decode the old OSC read from file path %s: %w", nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigFilePath, err)
 	}
 
