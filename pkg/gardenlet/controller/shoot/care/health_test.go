@@ -1099,6 +1099,80 @@ var _ = Describe("health check", func() {
 		)
 	})
 
+	Describe("#CheckSystemdUnitsReady", func() {
+		It("should return nil when no nodes have the condition", func() {
+			nodeList := corev1.NodeList{
+				Items: []corev1.Node{
+					{ObjectMeta: metav1.ObjectMeta{Name: "node1"}},
+				},
+			}
+
+			Expect(CheckSystemdUnitsReady(&nodeList)).To(Succeed())
+		})
+
+		It("should return nil when all nodes report healthy systemd units", func() {
+			nodeList := corev1.NodeList{
+				Items: []corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+						Status: corev1.NodeStatus{
+							Conditions: []corev1.NodeCondition{
+								{
+									Type:   "SystemdUnitsReady",
+									Status: corev1.ConditionTrue,
+								},
+							},
+						},
+					},
+				},
+			}
+
+			Expect(CheckSystemdUnitsReady(&nodeList)).To(Succeed())
+		})
+
+		It("should return error when a node reports unhealthy systemd units", func() {
+			nodeList := corev1.NodeList{
+				Items: []corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+						Status: corev1.NodeStatus{
+							Conditions: []corev1.NodeCondition{
+								{
+									Type:    "SystemdUnitsReady",
+									Status:  corev1.ConditionFalse,
+									Message: "bad.service: failed",
+								},
+							},
+						},
+					},
+				},
+			}
+
+			Expect(CheckSystemdUnitsReady(&nodeList)).To(MatchError(ContainSubstring("bad.service: failed")))
+		})
+
+		It("should return error when a node reports unknown systemd units status", func() {
+			nodeList := corev1.NodeList{
+				Items: []corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+						Status: corev1.NodeStatus{
+							Conditions: []corev1.NodeCondition{
+								{
+									Type:    "SystemdUnitsReady",
+									Status:  corev1.ConditionUnknown,
+									Message: "unable to determine status",
+								},
+							},
+						},
+					},
+				},
+			}
+
+			Expect(CheckSystemdUnitsReady(&nodeList)).To(MatchError(ContainSubstring("unable to determine status")))
+		})
+	})
+
 	Describe("ShootConditions", func() {
 		Describe("#NewShootConditions", func() {
 			It("should initialize all conditions", func() {

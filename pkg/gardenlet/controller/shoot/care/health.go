@@ -693,6 +693,11 @@ func (h *Health) CheckClusterNodes(
 		return &c, nil
 	}
 
+	if err := CheckSystemdUnitsReady(nodeList); err != nil {
+		c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "SystemdUnitsNotReady", err.Error())
+		return &c, nil
+	}
+
 	if !h.shoot.IsWorkerless && v1beta1helper.SeedSettingDependencyWatchdogProberEnabled(h.seed.GetInfo().Spec.Settings) {
 		leaseList := &coordinationv1.LeaseList{}
 		if err := shootClient.Client().List(ctx, leaseList, client.InNamespace(corev1.NamespaceNodeLease)); err != nil {
@@ -725,6 +730,23 @@ func CheckNodeAgentLeases(nodeList []*corev1.Node, leaseList *coordinationv1.Lea
 
 		if lease.Spec.RenewTime.Add(time.Second * time.Duration(*lease.Spec.LeaseDurationSeconds)).Before(clock.Now()) {
 			return fmt.Errorf("gardener-node-agent stopped running on node %q", node.Name)
+		}
+	}
+
+	return nil
+}
+
+// conditionTypeSystemdUnitsReady is the node condition type set by the systemd-unit-check controller in gardener-node-agent.
+const conditionTypeSystemdUnitsReady corev1.NodeConditionType = "SystemdUnitsReady"
+
+// CheckSystemdUnitsReady checks if all nodes report healthy systemd units.
+// Nodes without the SystemdUnitsReady condition are skipped for backward compatibility.
+func CheckSystemdUnitsReady(nodeList *corev1.NodeList) error {
+	for _, node := range nodeList.Items {
+		for _, condition := range node.Status.Conditions {
+			if condition.Type == conditionTypeSystemdUnitsReady && condition.Status != corev1.ConditionTrue {
+				return fmt.Errorf("systemd units on node %q are not healthy: %s", node.Name, condition.Message)
+			}
 		}
 	}
 
