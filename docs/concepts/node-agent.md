@@ -147,6 +147,20 @@ If a health check fails, the controller can restart the affected systemd service
 This controller periodically checks whether the hostname of the machine has changed.
 If a hostname change is detected, the controller triggers a restart of `gardener-node-agent` by calling its cancel function.
 
+### [Systemd Unit Check Controller](../../pkg/nodeagent/controller/systemdunitcheck)
+
+This controller periodically checks the health of all systemd units managed by `gardener-node-agent` (i.e., those from the last applied `OperatingSystemConfig`).
+It reports a `SystemdUnitsReady` condition on the `Node` object.
+
+The controller detects the following unhealthy states:
+- A unit is in `failed` state.
+- A unit is stuck in `activating` or `deactivating` for longer than a configurable threshold (default: 5 minutes). Stuck detection uses systemd's `StateChangeTimestamp` property, so it survives `gardener-node-agent` restarts without flapping.
+- An enabled unit is `inactive`.
+- An enabled unit is not loaded.
+
+The `gardenlet`'s shoot care controller incorporates this condition into the `EveryNodeReady` shoot condition.
+Nodes that do not yet have the `SystemdUnitsReady` condition (e.g., during rolling upgrades) are skipped for backward compatibility.
+
 ## Reasoning
 
 The `gardener-node-agent` is a replacement for what was called the `cloud-config-downloader` and the `cloud-config-executor`, both written in `bash`. The `gardener-node-agent` implements this functionality as a regular controller and feels more uniform in terms of maintenance.
