@@ -399,13 +399,19 @@ var _ = Describe("Add", func() {
 		})
 	})
 
-	Describe("#MapPodToServices", func() {
+	Describe("#EventHandlerForPod", func() {
 		var (
 			nsName  = "test-ns"
 			svcName = "test-svc"
+			queue   workqueue.TypedRateLimitingInterface[reconcile.Request]
+			handler handler.EventHandler
 		)
 
-		It("should return services relevant for the pod's namespace", func() {
+		BeforeEach(func() {
+			queue = workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]())
+			DeferCleanup(func() { queue.ShutDown() })
+			handler = reconciler.EventHandlerForPod(log)
+
 			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: nsName, Labels: map[string]string{"foo": "bar"}}}
 			Expect(fakeClient.Create(ctx, ns)).To(Succeed())
 
@@ -422,13 +428,129 @@ var _ = Describe("Add", func() {
 				},
 			}
 			Expect(fakeClient.Create(ctx, service)).To(Succeed())
+		})
 
-			pod := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Name: "pod", Namespace: nsName}}
-			pod.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
+		Describe("#Create", func() {
+			It("should enqueue services when pod with new label keys is created", func() {
+				pod := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{
+					Name: "pod-1", Namespace: nsName,
+					Labels: map[string]string{"networking.resources.gardener.cloud/to-foo-tcp-8080": "allowed"},
+				}}
+				pod.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
 
-			mapFn := reconciler.MapPodToServices(log)
-			requests := mapFn(ctx, pod)
-			Expect(requests).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: svcName, Namespace: "other-ns"}}))
+				handler.Create(ctx, event.CreateEvent{Object: pod}, queue)
+				verifyRequests(queue, 1, svcName, "other-ns")
+			})
+
+			It("should not enqueue when all label keys are already tracked", func() {
+				pod1 := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{
+					Name: "pod-1", Namespace: nsName,
+					Labels: map[string]string{"networking.resources.gardener.cloud/to-foo-tcp-8080": "allowed"},
+				}}
+				pod1.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
+
+				handler.Create(ctx, event.CreateEvent{Object: pod1}, queue)
+				item, _ := queue.Get()
+				queue.Done(item)
+
+				pod2 := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{
+					Name: "pod-2", Namespace: nsName,
+					Labels: map[string]string{"networking.resources.gardener.cloud/to-foo-tcp-8080": "allowed"},
+				}}
+				pod2.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
+
+				handler.Create(ctx, event.CreateEvent{Object: pod2}, queue)
+				Expect(queue.Len()).To(Equal(0))
+			})
+
+			It("should enqueue when pod brings a new label key", func() {
+				pod1 := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{
+					Name: "pod-1", Namespace: nsName,
+					Labels: map[string]string{"networking.resources.gardener.cloud/to-foo-tcp-8080": "allowed"},
+				}}
+				pod1.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
+
+				handler.Create(ctx, event.CreateEvent{Object: pod1}, queue)
+				item, _ := queue.Get()
+				queue.Done(item)
+
+				pod2 := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{
+					Name: "pod-2", Namespace: nsName,
+					Labels: map[string]string{"networking.resources.gardener.cloud/to-bar-tcp-9090": "allowed"},
+				}}
+				pod2.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
+
+				handler.Create(ctx, event.CreateEvent{Object: pod2}, queue)
+				verifyRequests(queue, 1, svcName, "other-ns")
+			})
+		})
+
+		Describe("#Delete", func() {
+			It("should always enqueue and clear tracking so re-create enqueues again", func() {
+				pod := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{
+					Name: "pod-1", Namespace: nsName,
+					Labels: map[string]string{"networking.resources.gardener.cloud/to-foo-tcp-8080": "allowed"},
+				}}
+				pod.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
+
+				handler.Create(ctx, event.CreateEvent{Object: pod}, queue)
+				item, _ := queue.Get()
+				queue.Done(item)
+
+				handler.Delete(ctx, event.DeleteEvent{Object: pod}, queue)
+				verifyRequests(queue, 1, svcName, "other-ns")
+
+				// Re-create with the same key should enqueue again since delete cleared tracking.
+				handler.Create(ctx, event.CreateEvent{Object: pod}, queue)
+				verifyRequests(queue, 1, svcName, "other-ns")
+			})
+		})
+
+		Describe("#Update", func() {
+			It("should enqueue when labels change", func() {
+				oldPod := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{
+					Name: "pod-1", Namespace: nsName,
+					Labels: map[string]string{"networking.resources.gardener.cloud/to-foo-tcp-8080": "allowed"},
+				}}
+				oldPod.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
+
+				newPod := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{
+					Name: "pod-1", Namespace: nsName,
+					Labels: map[string]string{"networking.resources.gardener.cloud/to-bar-tcp-9090": "allowed"},
+				}}
+				newPod.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
+
+				handler.Update(ctx, event.UpdateEvent{ObjectOld: oldPod, ObjectNew: newPod}, queue)
+				verifyRequests(queue, 1, svcName, "other-ns")
+			})
+		})
+
+		Describe("#Generic", func() {
+			It("should enqueue when keys are new", func() {
+				pod := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{
+					Name: "pod-1", Namespace: nsName,
+					Labels: map[string]string{"networking.resources.gardener.cloud/to-foo-tcp-8080": "allowed"},
+				}}
+				pod.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
+
+				handler.Generic(ctx, event.GenericEvent{Object: pod}, queue)
+				verifyRequests(queue, 1, svcName, "other-ns")
+			})
+
+			It("should not enqueue when keys are already tracked", func() {
+				pod := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{
+					Name: "pod-1", Namespace: nsName,
+					Labels: map[string]string{"networking.resources.gardener.cloud/to-foo-tcp-8080": "allowed"},
+				}}
+				pod.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
+
+				handler.Generic(ctx, event.GenericEvent{Object: pod}, queue)
+				item, _ := queue.Get()
+				queue.Done(item)
+
+				handler.Generic(ctx, event.GenericEvent{Object: pod}, queue)
+				Expect(queue.Len()).To(Equal(0))
+			})
 		})
 	})
 

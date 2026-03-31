@@ -103,7 +103,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		WatchesRawSource(source.Kind[client.Object](
 			targetCluster.GetCache(),
 			pod,
-			handler.EnqueueRequestsFromMapFunc(r.MapPodToServices(mgr.GetLogger().WithValues("controller", ControllerName))),
+			r.EventHandlerForPod(mgr.GetLogger().WithValues("controller", ControllerName)),
 			r.PodPredicate(),
 		)).
 		Build(r)
@@ -332,17 +332,81 @@ func (r *Reconciler) PodPredicate() predicate.Predicate {
 	}
 }
 
-// MapPodToServices returns a handler.MapFunc for mapping a pod to the services that create policies in its namespace.
-func (r *Reconciler) MapPodToServices(log logr.Logger) handler.MapFunc {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		namespace := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Name: obj.GetNamespace()}}
-		namespace.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace"))
-		if err := r.TargetClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
-			log.Error(err, "Failed to get namespace for pod", "pod", client.ObjectKeyFromObject(obj))
-			return nil
+// EventHandlerForPod returns an EventHandler that tracks seen network policy label keys per
+// namespace, only enqueueing services when a namespace's key coverage changes.
+// This avoids redundant lookups during cache warmup where many pods per namespace would
+// trigger identical service mappings (cf. https://github.com/kubernetes-sigs/controller-runtime/issues/3466).
+// The event handler functions are called sequentially by the informer's processorListener
+// goroutine (cf. https://github.com/kubernetes/client-go/blob/v0.35.3/tools/cache/shared_informer.go),
+// so no synchronization is needed for the tracking map.
+func (r *Reconciler) EventHandlerForPod(log logr.Logger) handler.EventHandler {
+	var (
+		namespaceNameToPodLabelKeys = make(map[string]sets.Set[string])
+
+		enqueueForNamespace = func(ctx context.Context, namespaceName string, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			namespace := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Name: namespaceName}}
+			namespace.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace"))
+			if err := r.TargetClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
+				log.Error(err, "Failed to get namespace for pod", "namespace", namespaceName)
+				return
+			}
+			r.requeueServicesForNamespace(ctx, namespace, q, log)
 		}
 
-		return r.getRelevantServiceForNamespace(ctx, namespace, log)
+		enqueueIfNewKeys = func(ctx context.Context, obj client.Object, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			var (
+				podKeys   = networkPolicyToLabelKeys(obj.GetLabels())
+				namespace = obj.GetNamespace()
+			)
+
+			existing := namespaceNameToPodLabelKeys[namespace]
+			if existing != nil && existing.HasAll(podKeys.UnsortedList()...) {
+				return
+			}
+
+			if existing == nil {
+				namespaceNameToPodLabelKeys[namespace] = podKeys
+			} else {
+				namespaceNameToPodLabelKeys[namespace] = existing.Union(podKeys)
+			}
+			enqueueForNamespace(ctx, namespace, q)
+		}
+	)
+
+	return handler.Funcs{
+		CreateFunc: func(ctx context.Context, e event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			enqueueIfNewKeys(ctx, e.Object, q)
+		},
+		UpdateFunc: func(ctx context.Context, e event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			var (
+				oldKeys   = networkPolicyToLabelKeys(e.ObjectOld.GetLabels())
+				newKeys   = networkPolicyToLabelKeys(e.ObjectNew.GetLabels())
+				namespace = e.ObjectNew.GetNamespace()
+			)
+
+			existing := namespaceNameToPodLabelKeys[namespace]
+			if existing == nil {
+				existing = sets.New[string]()
+			}
+
+			namespaceNameToPodLabelKeys[namespace] = existing.Difference(oldKeys).Union(newKeys)
+			enqueueForNamespace(ctx, namespace, q)
+		},
+		DeleteFunc: func(ctx context.Context, e event.DeleteEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			var (
+				podKeys   = networkPolicyToLabelKeys(e.Object.GetLabels())
+				namespace = e.Object.GetNamespace()
+			)
+
+			if existing, ok := namespaceNameToPodLabelKeys[namespace]; ok {
+				namespaceNameToPodLabelKeys[namespace] = existing.Difference(podKeys)
+			}
+
+			enqueueForNamespace(ctx, namespace, q)
+		},
+		GenericFunc: func(ctx context.Context, e event.GenericEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			enqueueIfNewKeys(ctx, e.Object, q)
+		},
 	}
 }
 
@@ -360,6 +424,16 @@ func getNetworkPolicyToLabels(labels map[string]string) map[string]string {
 	for k, v := range labels {
 		if strings.HasPrefix(k, resourcesv1alpha1.NetworkPolicyLabelKeyPrefix+"to-") {
 			result[k] = v
+		}
+	}
+	return result
+}
+
+func networkPolicyToLabelKeys(podLabels map[string]string) sets.Set[string] {
+	result := sets.New[string]()
+	for k := range podLabels {
+		if strings.HasPrefix(k, resourcesv1alpha1.NetworkPolicyLabelKeyPrefix+"to-") {
+			result.Insert(k)
 		}
 	}
 	return result
