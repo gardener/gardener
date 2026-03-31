@@ -572,7 +572,6 @@ spec:
     connectionPool:
       tcp:
         maxConnectionDuration: 86400s
-        maxConnections: 5000
         tcpKeepalive:
           interval: 75s
           time: 7200s
