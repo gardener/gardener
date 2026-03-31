@@ -13,6 +13,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 // CentralLoggingConfiguration returns a fluent-bit parser and filter for the event-logger logs.
@@ -21,6 +22,22 @@ func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
 }
 
 func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
+	filterItems := []fluentbitv1alpha2.FilterItem{
+		{
+			RecordModifier: &fluentbitv1alpha2filter.RecordModifier{
+				Records: []string{"job event-logging"},
+			},
+		},
+	}
+	if !features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		item := fluentbitv1alpha2.FilterItem{
+			Nest: &fluentbitv1alpha2filter.Nest{
+				Operation:   "lift",
+				NestedUnder: "log",
+			},
+		}
+		filterItems = append(filterItems, item)
+	}
 	return []*fluentbitv1alpha2.ClusterFilter{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -28,14 +45,8 @@ func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.FilterSpec{
-				Match: fmt.Sprintf("kubernetes.*%s*%s*", v1beta1constants.DeploymentNameEventLogger, name),
-				FilterItems: []fluentbitv1alpha2.FilterItem{
-					{
-						RecordModifier: &fluentbitv1alpha2filter.RecordModifier{
-							Records: []string{"job event-logging"},
-						},
-					},
-				},
+				Match:       fmt.Sprintf("kubernetes.*%s*%s*", v1beta1constants.DeploymentNameEventLogger, name),
+				FilterItems: filterItems,
 			},
 		},
 	}
