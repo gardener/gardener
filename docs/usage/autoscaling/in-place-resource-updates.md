@@ -12,8 +12,8 @@ This is a short guide covering the enablement of `in-place` resource updates in 
 
 ## Compatibility
 
-`In-place` resource updates got introduced as an alpha [feature](https://kubernetes.io/blog/2023/05/12/in-place-pod-resize-alpha/) in Kubernetes 1.27. In Kubernetes 1.33, it got promoted to beta and enabled by default.
-On the `Vertical Pod Autoscaler` side, with Release [1.5.0](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.5.0), `in-place` resources updates are available as a _beta_ feature (enabled by default) for `vpa-admission-controller` and `vpa-updater`. For more details, see the [In-Place Updates documentation](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/features.md#in-place-updates-inplaceorrecreate).
+In-place resource updates were introduced as an alpha [feature](https://kubernetes.io/blog/2023/05/12/in-place-pod-resize-alpha/) in Kubernetes 1.27, promoted to beta (enabled by default) in Kubernetes 1.33, and reached GA in Kubernetes 1.35.
+On the `Vertical Pod Autoscaler` side, with Release [1.6.0](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.6.0), `in-place` resources updates are available as a _GA_ feature for `vpa-admission-controller` and `vpa-updater`. For more details, see the [In-Place Updates documentation](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/features.md#in-place-updates-inplaceorrecreate).
 
 ### Kubernetes
 
@@ -21,7 +21,7 @@ With Kubernetes 1.33, the `InPlacePodVerticalScaling` feature gate, which enable
 
 ### Vertical Pod Autoscaling
 
-With [1.5.0](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.5.0), the `InPlaceOrRecreate` feature gate, which enables `in-place` resource updates for `vpa-admission-controller` and `vpa-updater`, got promoted to a __beta__ feature, making it _enabled_ by default.
+With [1.6.0](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.6.0), the `InPlaceOrRecreate` feature gate, which enables `in-place` resource updates for `vpa-admission-controller` and `vpa-updater`, got promoted to a __GA__ feature.
 Refer to the [usage guide](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/features.md#usage) for details about instrumenting a `VerticalPodAutoscaler` resource with `in-place` updates.
 
 ## Configuration
@@ -30,21 +30,10 @@ As described in the [Compatibility](#compatibility) section, _alpha_ versions of
 
 ### Shoot
 
-Since `Vertical Pod Autoscaler` has its `InPlaceOrRecreate` feature gate in _beta_, making it enabled by default, make sure that it is __not__ explicitly disabled. In addition, verify that the `InPlacePodVerticalScaling` Kubernetes feature gate is not explicitly disabled in the Shoot spec for:
+Verify that the `InPlacePodVerticalScaling` Kubernetes feature gate is not explicitly disabled in the Shoot spec for:
 - kube-apiserver: `.spec.kubernetes.kubeAPIServer.featureGates`
 - kubelet: `.spec.kubernetes.kubelet.featureGates` or `.spec.provider.workers[].kubernetes.kubelet.featureGates`
 
-### Seed
-
-> **Disclaimer:** The following configurations are relevant for Gardener `Operators` that have access to `Seed` cluster(s).
-
-For `Seed` clusters, `Vertical Pod Autoscaler` features gates can be managed in `seed.spec.settings.verticalPodAutoscaler.featureGates`. There are no additional Kubernetes versions validation when configuring `Seed` clusters.
-
-### Garden
-
-> **Disclaimer:** The following configurations are relevant for Gardener `Operators` that have access to `Garden` cluster(s).
-
-For `Garden` clusters, `Vertical Pod Autoscaler` feature gates can be managed in `garden.spec.runtimeCluster.settings.verticalPodAutoscaler.featureGates`. There are no additional Kubernetes versions validation when configuring `Garden` clusters.
 
 ## References
 
