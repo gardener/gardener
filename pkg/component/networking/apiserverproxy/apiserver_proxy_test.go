@@ -272,7 +272,7 @@ var _ = Describe("APIServerProxy", func() {
 
 		Context("IPv4", func() {
 			It("should deploy the managed resource successfully", func() {
-				testFunc("cb9301ef")
+				testFunc("00d55bbf") // hash of envoy config with V4_ONLY DNS + port 8443 (default: UseUnifiedHTTPProxyPort=true)
 			})
 		})
 
@@ -283,7 +283,7 @@ var _ = Describe("APIServerProxy", func() {
 			})
 
 			It("should deploy the managed resource successfully", func() {
-				testFunc("5a33f6dd")
+				testFunc("25408ef2") // hash of envoy config with V6_ONLY DNS + port 8443 (default: UseUnifiedHTTPProxyPort=true)
 			})
 		})
 
@@ -294,7 +294,7 @@ var _ = Describe("APIServerProxy", func() {
 			})
 
 			It("should deploy the managed resource successfully", func() {
-				testFunc("9e555b69")
+				testFunc("3b9cdaf4") // hash of envoy config with IstioTLSTermination + port 8443 (default: UseUnifiedHTTPProxyPort=true)
 			})
 		})
 	})
@@ -560,7 +560,7 @@ static_resources:
             address:
               socket_address:
                 address: api.internal.local.
-                port_value: 8132
+                port_value: 8443
     upstream_connection_options:
       tcp_keepalive:
         keepalive_time: 7200
