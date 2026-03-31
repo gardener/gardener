@@ -34,6 +34,14 @@ type DBus interface {
 	Restart(ctx context.Context, recorder events.EventRecorder, node runtime.Object, unitName string) error
 	// List lists all units and returns the output.
 	List(ctx context.Context) ([]dbus.UnitStatus, error)
+	// ListByNames returns statuses for the specified units.
+	ListByNames(ctx context.Context, unitNames []string) ([]dbus.UnitStatus, error)
+	// GetUnitStateChangeTimestamp returns the wall-clock time when the unit last changed state.
+	GetUnitStateChangeTimestamp(ctx context.Context, unitName string) (time.Time, error)
+	// GetTriggeredBy returns the list of units that trigger the given unit (e.g., timer or path units).
+	GetTriggeredBy(ctx context.Context, unitName string) ([]string, error)
+	// GetServiceType returns the service type (e.g., "simple", "oneshot") for the given unit.
+	GetServiceType(ctx context.Context, unitName string) (string, error)
 	// Reboot this machines, is the same as executing "systemctl reboot".
 	Reboot() error
 }
@@ -117,6 +125,80 @@ func (d *db) List(ctx context.Context) ([]dbus.UnitStatus, error) {
 	defer dbc.Close()
 
 	return dbc.ListUnitsContext(ctx)
+}
+
+func (*db) ListByNames(ctx context.Context, unitNames []string) ([]dbus.UnitStatus, error) {
+	dbc, err := dbus.NewWithContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to connect to dbus: %w", err)
+	}
+	defer dbc.Close()
+
+	return dbc.ListUnitsByNamesContext(ctx, unitNames)
+}
+
+func (*db) GetUnitStateChangeTimestamp(ctx context.Context, unitName string) (time.Time, error) {
+	dbc, err := dbus.NewWithContext(ctx)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("unable to connect to dbus: %w", err)
+	}
+	defer dbc.Close()
+
+	property, err := dbc.GetUnitPropertyContext(ctx, unitName, "StateChangeTimestamp")
+	if err != nil {
+		return time.Time{}, fmt.Errorf("unable to get StateChangeTimestamp for unit %s: %w", unitName, err)
+	}
+
+	// StateChangeTimestamp is a uint64 representing microseconds since the Unix epoch.
+	timestamp, ok := property.Value.Value().(uint64)
+	if !ok {
+		return time.Time{}, fmt.Errorf("unexpected type for StateChangeTimestamp of unit %s: %T", unitName, property.Value.Value())
+	}
+
+	// Split into seconds and remaining microseconds to avoid uint64->int64 overflow.
+	seconds := timestamp / 1_000_000
+	microseconds := timestamp % 1_000_000
+	return time.Unix(int64(seconds), int64(microseconds)*int64(time.Microsecond)), nil
+}
+
+func (*db) GetTriggeredBy(ctx context.Context, unitName string) ([]string, error) {
+	dbc, err := dbus.NewWithContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to connect to dbus: %w", err)
+	}
+	defer dbc.Close()
+
+	property, err := dbc.GetUnitPropertyContext(ctx, unitName, "TriggeredBy")
+	if err != nil {
+		return nil, fmt.Errorf("unable to get TriggeredBy for unit %s: %w", unitName, err)
+	}
+
+	triggers, ok := property.Value.Value().([]string)
+	if !ok {
+		return nil, fmt.Errorf("unexpected type for TriggeredBy of unit %s: %T", unitName, property.Value.Value())
+	}
+
+	return triggers, nil
+}
+
+func (*db) GetServiceType(ctx context.Context, unitName string) (string, error) {
+	dbc, err := dbus.NewWithContext(ctx)
+	if err != nil {
+		return "", fmt.Errorf("unable to connect to dbus: %w", err)
+	}
+	defer dbc.Close()
+
+	property, err := dbc.GetUnitTypePropertyContext(ctx, unitName, "Service", "Type")
+	if err != nil {
+		return "", fmt.Errorf("unable to get Type for unit %s: %w", unitName, err)
+	}
+
+	serviceType, ok := property.Value.Value().(string)
+	if !ok {
+		return "", fmt.Errorf("unexpected type for Type of unit %s: %T", unitName, property.Value.Value())
+	}
+
+	return serviceType, nil
 }
 
 func (*db) DaemonReload(ctx context.Context) error {
