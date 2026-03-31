@@ -80,7 +80,7 @@ case "$COMMAND" in
           -o jsonpath='{.spec.ports[*].name}' | grep -qw virtual-garden-apiserver; then
           kubectl --kubeconfig "$KUBECONFIG" -n gardenadm-unmanaged-infra patch service control-plane-machine \
             --type=json \
-            -p '[{"op":"add","path":"/spec/ports/-","value":{"name":"virtual-garden-apiserver","port":4432,"targetPort":31443,"nodePort":31443}}]'
+            -p '[{"op":"add","path":"/spec/ports/-","value":{"name":"virtual-garden-apiserver","port":31443,"targetPort":31443,"nodePort":31443}}]'
         fi
       fi
 

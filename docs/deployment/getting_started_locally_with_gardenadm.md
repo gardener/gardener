@@ -189,6 +189,15 @@ make gardenadm-up SCENARIO=connect
 
 This will deploy [`gardener-operator`](../concepts/operator.md) and create a `Garden` resource (which will then be reconciled and results in a full Gardener deployment) inside the self-hosted shoot cluster.
 Find all information about it [here](getting_started_locally.md#alternative-way-to-set-up-garden-and-seed-leveraging-gardener-operator).
+
+> [!NOTE]
+> There is an alternative way of deploying Gardener outside the self-hosted shoot but inside the KinD cluster in the
+> `garden` namespace.
+>
+> `make gardenadm-up SCENARIO=connect-kind`
+>
+> The following steps from above are the same.
+
 Note, that in this setup, no `Seed` will be registered in the Gardener - it's just a plain garden cluster without the ability to create regular shoot clusters.
 
 Once above command is finished, you can generate a bootstrap token using `gardenadm` to connect the shoot cluster to this Gardener instance.
@@ -235,14 +244,6 @@ kubectl --kubeconfig=./dev-setup/kubeconfigs/virtual-garden/kubeconfig get shoot
 NAMESPACE   NAME   CLOUDPROFILE   PROVIDER   REGION   K8S VERSION   HIBERNATION   LAST OPERATION   STATUS    AGE
 garden      root   local          local      local    1.33.0        Awake         <pending>        healthy   42m
 ```
-
-> [!NOTE]
-> There is an alternative way of deploying Gardener outside the self-hosted shoot but inside the KinD cluster in the
-> `garden` namespace.
->
-> `make gardenadm-up SCENARIO=connect-kind`
->
-> The following steps from above are the same.
 
 ## Running E2E Tests for `gardenadm`
 

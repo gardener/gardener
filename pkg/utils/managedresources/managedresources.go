@@ -443,10 +443,10 @@ func CheckIfManagedResourcesExist(ctx context.Context, c client.Client, class *s
 		return false, err
 	}
 
-	excludedNamespaces := sets.New(excludeNamespaces...)
+	excludeNamespaceSet := sets.New(excludeNamespaces...)
 
 	for _, managedResource := range managedResourceList.Items {
-		if excludedNamespaces.Has(managedResource.Namespace) {
+		if excludeNamespaceSet.Has(managedResource.Namespace) {
 			continue
 		}
 		if ptr.Equal(managedResource.Spec.Class, class) && !sets.New(excludeNames...).Has(managedResource.Name) {
