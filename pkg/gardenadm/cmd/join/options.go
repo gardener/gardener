@@ -66,5 +66,5 @@ func (o *Options) addFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.BootstrapToken, "bootstrap-token", "", "Bootstrap token for joining the cluster (create it with 'gardenadm token' on a control plane node)")
 	fs.StringVarP(&o.WorkerPoolName, "worker-pool-name", "w", "", "Name of the worker pool to assign the joining node.")
 	fs.BoolVar(&o.ControlPlane, "control-plane", false, "Create a new control plane instance on this node")
-	fs.StringVarP(&o.Zone, "zone", "z", "", "Availability zone for the new node. Required if the worker pool in the `Shoot` has multiple zones configured. Optional if exactly one zone is configured (applied automatically). Must not be set if no zones are configured.")
+	fs.StringVarP(&o.Zone, "zone", "z", "", "Availability zone for the new node. Required if the worker pool in the Shoot has multiple zones configured. Optional if exactly one zone is configured (applied automatically). Must not be set if no zones are configured.")
 }
