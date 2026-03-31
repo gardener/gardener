@@ -172,7 +172,8 @@ var _ = Describe("#Ingress", func() {
 				TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
 					ConnectionPool: &istioapinetworkingv1beta1.ConnectionPoolSettings{
 						Tcp: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
-							MaxConnections: 5000,
+							MaxConnectionDuration: &durationpb.Duration{Seconds: 86400},
+							MaxConnections:        5000,
 							TcpKeepalive: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
 								Time:     &durationpb.Duration{Seconds: 7200},
 								Interval: &durationpb.Duration{Seconds: 75},
