@@ -195,5 +195,5 @@ func StatefulSetVolumeClaimTemplateHostPath(volumeClaimTemplateName string) stri
 
 // HostPath returns the host path for the given pod name and volume name.
 func HostPath(podName, volumeName string) string {
-	return filepath.Join(string(filepath.Separator), "var", "lib", podName, volumeName)
+	return filepath.Join(string(filepath.Separator), "var", "lib", "static-pods", podName, volumeName)
 }

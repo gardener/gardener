@@ -17,6 +17,35 @@ spec:
       annotations:
         cni.projectcalico.org/ipv4pools: '["gardenadm-unmanaged-infra"]'
     spec:
+      initContainers:
+      # The main container mounts several directories from the persistent volume so that state written by gardenadm survives pod restarts.
+      # On the very first boot the volume subPaths are empty, so this init container seeds them from the image's default files.
+      # On subsequent boots the directories are already populated and the copy is skipped, preserving any changes made at runtime.
+      # For /etc/containerd, it also patches config_path so containerd finds the registry mirror configuration in /etc/containerd/certs.d from the very first start.
+      - name: init-machine-state
+        image: local-skaffold/gardener-extension-provider-local-node
+        command:
+        - sh
+        - -c
+        - |
+          if [ -z "$(ls -A /mnt/systemd-system)" ]; then
+            cp -a /etc/systemd/system/. /mnt/systemd-system/
+          fi
+          if [ -z "$(ls -A /mnt/containerd)" ]; then
+            cp -a /etc/containerd/. /mnt/containerd/
+            # Ensure containerd finds registry mirror configs in /etc/containerd/certs.d.
+            # The base image ships without config_path, so we inject it here.
+            if ! grep -q 'config_path' /mnt/containerd/config.toml; then
+              sed -i '/^\[plugins\."io\.containerd\.grpc\.v1\.cri"\.containerd\]$/a\  config_path = "/etc/containerd/certs.d"' /mnt/containerd/config.toml
+            fi
+          fi
+        volumeMounts:
+        - name: machine-state
+          mountPath: /mnt/systemd-system
+          subPath: systemd-system
+        - name: machine-state
+          mountPath: /mnt/containerd
+          subPath: containerd
       containers:
       - name: node
         image: local-skaffold/gardener-extension-provider-local-node
@@ -39,6 +68,36 @@ spec:
           mountPath: /etc/gardener/local-backupbuckets
         - name: gardenadm
           mountPath: /gardenadm
+        - name: machine-state
+          mountPath: /etc/containerd
+          subPath: containerd
+        - name: machine-state
+          mountPath: /etc/cni/net.d
+          subPath: cni-net-d
+        - name: machine-state
+          mountPath: /etc/kubernetes
+          subPath: kubernetes
+        - name: machine-state
+          mountPath: /etc/systemd/system
+          subPath: systemd-system
+        - name: machine-state
+          mountPath: /var/lib/static-pods
+          subPath: static-pods
+        - name: machine-state
+          mountPath: /var/lib/kubelet
+          subPath: kubelet
+        - name: machine-state
+          mountPath: /var/lib/gardenadm
+          subPath: gardenadm-state
+        - name: machine-state
+          mountPath: /var/lib/gardener-node-agent
+          subPath: gardener-node-agent
+        - name: machine-state
+          mountPath: /opt/bin
+          subPath: opt-bin
+        - name: machine-state
+          mountPath: /root
+          subPath: root-home
         - name: bashrc
           mountPath: /root/.bashrc
           subPath: bashrc
@@ -71,6 +130,13 @@ spec:
       resources:
         requests:
           storage: 1Gi
+  - metadata:
+      name: machine-state
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 2Gi
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -81,5 +147,6 @@ metadata:
 data:
   bashrc: |
     export KUBECONFIG=/etc/kubernetes/admin.conf
+    export HISTFILE=/root/.bash_history
     alias k=kubectl
     alias kg='kubectl -n garden'
