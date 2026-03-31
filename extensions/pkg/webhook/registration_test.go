@@ -352,46 +352,42 @@ var _ = Describe("Registration", func() {
 				Expect(seedWebhookConfig.MutatingWebhookConfig).To(Equal(expectedSeedMutatingWebhookConfig))
 
 				// Check shoot mutating webhooks
-				if !mergeShootWithSeedWebhooks {
-					Expect(shootWebhookConfig.MutatingWebhookConfig).To(Equal(&admissionregistrationv1.MutatingWebhookConfiguration{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:   "gardener-extension-" + providerName + "-shoot",
-							Labels: map[string]string{"remediation.webhook.shoot.gardener.cloud/exclude": "true"},
-						},
-						Webhooks: []admissionregistrationv1.MutatingWebhook{
-							buildMutatingWebhook(
-								mutatingWebhooks[2],
-								buildShootClientConfig,
-								[]admissionregistrationv1.RuleWithOperations{
-									{
-										Rule:       admissionregistrationv1.Rule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"serviceaccounts/token"}},
-										Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
-									},
+				Expect(shootWebhookConfig.MutatingWebhookConfig).To(Equal(&admissionregistrationv1.MutatingWebhookConfiguration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "gardener-extension-" + providerName + "-shoot",
+						Labels: map[string]string{"remediation.webhook.shoot.gardener.cloud/exclude": "true"},
+					},
+					Webhooks: []admissionregistrationv1.MutatingWebhook{
+						buildMutatingWebhook(
+							mutatingWebhooks[2],
+							buildShootClientConfig,
+							[]admissionregistrationv1.RuleWithOperations{
+								{
+									Rule:       admissionregistrationv1.Rule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"serviceaccounts/token"}},
+									Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
 								},
-								failurePolicyIgnore,
-								matchPolicyExact,
-								sideEffectsNone,
-								*mutatingWebhooks[2].TimeoutSeconds,
-							),
-							buildMutatingWebhook(
-								mutatingWebhooks[3],
-								buildShootClientConfig,
-								[]admissionregistrationv1.RuleWithOperations{
-									{
-										Rule:       admissionregistrationv1.Rule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"services"}},
-										Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
-									},
+							},
+							failurePolicyIgnore,
+							matchPolicyExact,
+							sideEffectsNone,
+							*mutatingWebhooks[2].TimeoutSeconds,
+						),
+						buildMutatingWebhook(
+							mutatingWebhooks[3],
+							buildShootClientConfig,
+							[]admissionregistrationv1.RuleWithOperations{
+								{
+									Rule:       admissionregistrationv1.Rule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"services"}},
+									Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
 								},
-								*mutatingWebhooks[3].FailurePolicy,
-								matchPolicyExact,
-								sideEffectsNone,
-								defaultTimeoutSeconds,
-							),
-						},
-					}))
-				} else {
-					Expect(shootWebhookConfig.MutatingWebhookConfig).To(BeNil())
-				}
+							},
+							*mutatingWebhooks[3].FailurePolicy,
+							matchPolicyExact,
+							sideEffectsNone,
+							defaultTimeoutSeconds,
+						),
+					},
+				}))
 
 				// Check seed validating webhooks
 				expectedSeedValidatingWebhookConfig := &admissionregistrationv1.ValidatingWebhookConfiguration{
@@ -467,51 +463,46 @@ var _ = Describe("Registration", func() {
 						),
 					)
 
-					Expect(shootWebhookConfig.ValidatingWebhookConfig).To(BeNil())
 				}
 				Expect(seedWebhookConfig.ValidatingWebhookConfig).To(Equal(expectedSeedValidatingWebhookConfig))
 
 				// Check shoot validating webhooks
-				if !mergeShootWithSeedWebhooks {
-					Expect(shootWebhookConfig.ValidatingWebhookConfig).To(Equal(&admissionregistrationv1.ValidatingWebhookConfiguration{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:   "gardener-extension-" + providerName + "-shoot",
-							Labels: map[string]string{"remediation.webhook.shoot.gardener.cloud/exclude": "true"},
-						},
-						Webhooks: []admissionregistrationv1.ValidatingWebhook{
-							buildValidatingWebhook(
-								validatingWebhooks[2],
-								buildShootClientConfig,
-								[]admissionregistrationv1.RuleWithOperations{
-									{
-										Rule:       admissionregistrationv1.Rule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"serviceaccounts/token"}},
-										Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
-									},
+				Expect(shootWebhookConfig.ValidatingWebhookConfig).To(Equal(&admissionregistrationv1.ValidatingWebhookConfiguration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "gardener-extension-" + providerName + "-shoot",
+						Labels: map[string]string{"remediation.webhook.shoot.gardener.cloud/exclude": "true"},
+					},
+					Webhooks: []admissionregistrationv1.ValidatingWebhook{
+						buildValidatingWebhook(
+							validatingWebhooks[2],
+							buildShootClientConfig,
+							[]admissionregistrationv1.RuleWithOperations{
+								{
+									Rule:       admissionregistrationv1.Rule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"serviceaccounts/token"}},
+									Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
 								},
-								failurePolicyIgnore,
-								matchPolicyExact,
-								sideEffectsNone,
-								*validatingWebhooks[2].TimeoutSeconds,
-							),
-							buildValidatingWebhook(
-								validatingWebhooks[3],
-								buildShootClientConfig,
-								[]admissionregistrationv1.RuleWithOperations{
-									{
-										Rule:       admissionregistrationv1.Rule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"services"}},
-										Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
-									},
+							},
+							failurePolicyIgnore,
+							matchPolicyExact,
+							sideEffectsNone,
+							*validatingWebhooks[2].TimeoutSeconds,
+						),
+						buildValidatingWebhook(
+							validatingWebhooks[3],
+							buildShootClientConfig,
+							[]admissionregistrationv1.RuleWithOperations{
+								{
+									Rule:       admissionregistrationv1.Rule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"services"}},
+									Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
 								},
-								*validatingWebhooks[3].FailurePolicy,
-								matchPolicyExact,
-								sideEffectsNone,
-								defaultTimeoutSeconds,
-							),
-						},
-					}))
-				} else {
-					Expect(shootWebhookConfig.ValidatingWebhookConfig).To(BeNil())
-				}
+							},
+							*validatingWebhooks[3].FailurePolicy,
+							matchPolicyExact,
+							sideEffectsNone,
+							defaultTimeoutSeconds,
+						),
+					},
+				}))
 			},
 
 			Entry("service mode", ModeService, "", false),

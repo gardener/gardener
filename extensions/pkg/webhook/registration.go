@@ -124,18 +124,7 @@ func BuildWebhookConfigs(
 			rules = append(rules, *rule)
 		}
 
-		target := webhook.Target
-		webhookCABundle := caBundle
-		failurePolicy := getFailurePolicy(admissionregistrationv1.Fail, webhook.FailurePolicy)
-
-		// Handle extra settings when shoot webhooks are merged into seed webhooks (self-hosted shoot case).
-		if mergeShootWebhooksIntoSeedWebhooks && target == TargetShoot {
-			target = TargetSeed
-			webhookCABundle = nil
-			failurePolicy = getFailurePolicy(admissionregistrationv1.Ignore, webhook.FailurePolicy)
-		}
-
-		switch target {
+		switch webhook.Target {
 		case TargetSeed:
 			// if all webhooks for one target are removed in a new version, extensions need to explicitly delete the respective
 			// webhook config
@@ -145,13 +134,29 @@ func BuildWebhookConfigs(
 				*webhook,
 				providerName,
 				rules,
-				failurePolicy,
+				getFailurePolicy(admissionregistrationv1.Fail, webhook.FailurePolicy),
 				&exact,
-				BuildClientConfigFor(webhook.Path, namespace, providerName, doNotPrefixComponentName, servicePort, mode, url, webhookCABundle),
+				BuildClientConfigFor(webhook.Path, namespace, providerName, doNotPrefixComponentName, servicePort, mode, url, caBundle),
 				&sideEffects,
 			)
 
 		case TargetShoot:
+			// When merging shoot webhooks into seed webhooks (self-hosted shoot), additionally register
+			// them in the seed webhook config so the shoot kube-apiserver can reach them.
+			if mergeShootWebhooksIntoSeedWebhooks {
+				createAndAddToWebhookConfig(
+					&seedWebhookConfigs,
+					name,
+					*webhook,
+					providerName,
+					rules,
+					getFailurePolicy(admissionregistrationv1.Ignore, webhook.FailurePolicy),
+					&exact,
+					BuildClientConfigFor(webhook.Path, namespace, providerName, doNotPrefixComponentName, servicePort, mode, url, nil),
+					&sideEffects,
+				)
+			}
+
 			createAndAddToWebhookConfig(
 				&shootWebhookConfigs,
 				name+NameSuffixShoot,
