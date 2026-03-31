@@ -146,12 +146,6 @@ func (b *Builder) WithSeed(s *seed.Seed) *Builder {
 	return b
 }
 
-// WithoutSeed sets the seedFunc attribute at the Builder to return a nil Seed.
-func (b *Builder) WithoutSeed() *Builder {
-	b.seedFunc = func(_ context.Context) (*seed.Seed, error) { return nil, nil }
-	return b
-}
-
 // WithSeedFrom sets the seedFunc attribute at the Builder which will build a new Seed object.
 func (b *Builder) WithSeedFrom(gardenClient client.Reader, seedName string) *Builder {
 	b.seedFunc = func(ctx context.Context) (*seed.Seed, error) {
@@ -174,13 +168,13 @@ func (b *Builder) WithShoot(s *shootpkg.Shoot) *Builder {
 // WithShootFromCluster sets the shootFunc attribute at the Builder which will build a new Shoot object constructed from the cluster resource.
 // The shoot status is still taken from the passed `shoot`, though.
 // The credentials in the Shoot object are always set to `nil`.
-func (b *Builder) WithShootFromCluster(seedClientSet kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
-	b.shootFunc = func(ctx context.Context, c client.Reader, gardenObj *garden.Garden, seedObj *seed.Seed, serviceAccountIssuerConfig *corev1.Secret) (*shootpkg.Shoot, error) {
-		controlPlaneNamespace := v1beta1helper.ControlPlaneNamespaceForShoot(s)
+func (b *Builder) WithShootFromCluster(seedClientSet kubernetes.Interface, shootObj *gardencorev1beta1.Shoot) *Builder {
+	b.shootFunc = func(ctx context.Context, c client.Reader, gardenObj *garden.Garden, seed *seed.Seed, serviceAccountIssuerConfig *corev1.Secret) (*shootpkg.Shoot, error) {
+		controlPlaneNamespace := v1beta1helper.ControlPlaneNamespaceForShoot(shootObj)
 
-		var seedInfo *gardencorev1beta1.Seed
-		if seedObj != nil {
-			seedInfo = seedObj.GetInfo()
+		var seedObj *gardencorev1beta1.Seed
+		if seed != nil {
+			seedObj = seed.GetInfo()
 		}
 
 		shoot, err := shootpkg.
@@ -191,7 +185,7 @@ func (b *Builder) WithShootFromCluster(seedClientSet kubernetes.Interface, s *ga
 			// When this shoot operation tries to read the referred infrastructure or DNS credentials as per the Shoot spec from the Cluster, the Seed Authorizer might not allow the request as it is using the Gardener API to build the authorization decision graph.
 			// To avoid potential authorization problems, we always set the infrastructure and DNS credentials to `nil`.
 			WithoutShootCredentials().
-			WithSeedObject(seedInfo).
+			WithSeedObject(seedObj).
 			WithoutShootDNS().
 			WithProjectName(gardenObj.Project.Name).
 			WithInternalDomain(gardenObj.InternalDomain).
@@ -203,7 +197,7 @@ func (b *Builder) WithShootFromCluster(seedClientSet kubernetes.Interface, s *ga
 		}
 		// It's OK to modify the value returned by GetInfo() here because at this point there
 		// can be no concurrent reads or writes
-		shoot.GetInfo().Status = s.Status
+		shoot.GetInfo().Status = shootObj.Status
 		return shoot, nil
 	}
 	return b
@@ -221,12 +215,11 @@ func (b *Builder) Build(
 	gardenClient client.Client,
 	seedClientSet kubernetes.Interface,
 	shootClientMap clientmap.ClientMap,
-	apiShoot *gardencorev1beta1.Shoot,
+	shootObj *gardencorev1beta1.Shoot,
 ) (
 	*Operation,
 	error,
 ) {
-	isSelfHostedShoot := v1beta1helper.IsShootSelfHosted(apiShoot.Spec.Provider.Workers)
 	operation := &Operation{
 		Clock:          b.clockFunc(),
 		GardenClient:   gardenClient,
@@ -235,10 +228,12 @@ func (b *Builder) Build(
 	}
 
 	var (
-		internalDomain *gardenerutils.Domain
-		defaultDomains []*gardenerutils.Domain
-		seed           *seed.Seed
-		secrets        map[string]*corev1.Secret
+		isSelfHostedShoot = v1beta1helper.IsShootSelfHosted(shootObj.Spec.Provider.Workers)
+		err               error
+		internalDomain    *gardenerutils.Domain
+		defaultDomains    []*gardenerutils.Domain
+		seed              *seed.Seed
+		secrets           map[string]*corev1.Secret
 	)
 
 	config, err := b.configFunc()
@@ -252,7 +247,7 @@ func (b *Builder) Build(
 		if err != nil {
 			return nil, err
 		}
-		secrets := make(map[string]*corev1.Secret, len(secretsMap))
+		secrets = make(map[string]*corev1.Secret, len(secretsMap))
 		maps.Copy(secrets, secretsMap)
 		operation.secrets = secrets
 
@@ -265,7 +260,7 @@ func (b *Builder) Build(
 			return nil, err
 		}
 
-		seed, err := b.seedFunc(ctx)
+		seed, err = b.seedFunc(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -277,6 +272,7 @@ func (b *Builder) Build(
 		}
 		operation.Seed.KubernetesVersion = seedVersion
 	}
+
 	garden, err := b.gardenFunc(ctx, internalDomain, defaultDomains)
 	if err != nil {
 		return nil, err
@@ -290,11 +286,9 @@ func (b *Builder) Build(
 	operation.Shoot = shoot
 
 	// Get the ManagedSeed object for this shoot, if it exists.
-	if !isSelfHostedShoot {
-		operation.ManagedSeed, err = kubernetesutils.GetManagedSeedWithReader(ctx, gardenClient, shoot.GetInfo().Namespace, shoot.GetInfo().Name)
-		if err != nil {
-			return nil, fmt.Errorf("could not get managed seed for shoot %s/%s: %w", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
-		}
+	operation.ManagedSeed, err = kubernetesutils.GetManagedSeedWithReader(ctx, gardenClient, shoot.GetInfo().Namespace, shoot.GetInfo().Name)
+	if err != nil {
+		return nil, fmt.Errorf("could not get managed seed for shoot %s/%s: %w", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
 	}
 
 	gardenerInfo, err := b.gardenerInfoFunc()
@@ -385,6 +379,11 @@ func (o *Operation) initShootClients(ctx context.Context, versionMatchRequired b
 
 // IsAPIServerRunning checks if the API server of the Shoot currently running (not scaled-down/deleted).
 func (o *Operation) IsAPIServerRunning(ctx context.Context) (bool, error) {
+	// For self-hosted shoots the API server is always running (there is no hibernation).
+	if o.Shoot.IsSelfHosted() {
+		return true, nil
+	}
+
 	deployment := &appsv1.Deployment{}
 	// use API reader here to make sure, we're not reading from a stale cache, when checking if we should initialize a shoot client (e.g. from within the care controller)
 	if err := o.SeedClientSet.APIReader().Get(ctx, client.ObjectKey{Namespace: o.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, deployment); err != nil {
@@ -399,24 +398,6 @@ func (o *Operation) IsAPIServerRunning(ctx context.Context) (bool, error) {
 	}
 
 	if deployment.Spec.Replicas == nil {
-		return false, nil
-	}
-
-	if o.Shoot.IsSelfHosted() {
-		// For SHSC, we have a static pod that is called kube-apiserver-<nodeName>
-		// So lets get a pod with the same label selector as the kube-apiserver deployment and check if it exists and is running
-		podList := &corev1.PodList{}
-		if err := o.SeedClientSet.APIReader().List(ctx, podList, client.InNamespace(o.Shoot.ControlPlaneNamespace), client.MatchingLabels(deployment.Spec.Selector.MatchLabels)); err != nil {
-			return false, err
-		}
-		if len(podList.Items) == 0 {
-			return false, nil
-		}
-		for _, pod := range podList.Items {
-			if pod.Status.Phase == corev1.PodRunning {
-				return true, nil
-			}
-		}
 		return false, nil
 	}
 

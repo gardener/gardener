@@ -169,7 +169,6 @@ var defaultNewOperationFunc NewOperationFunc = func(
 			WithGardenerInfo(gardenerInfo).
 			WithGardenClusterIdentity(gardenClusterIdentity).
 			WithGardenFrom(gardenClient, shoot.Namespace).
-			WithoutSeed().
 			WithShootFromCluster(seedClientSet, shoot).
 			Build(ctx, gardenClient, seedClientSet, shootClientMap, shoot)
 	}

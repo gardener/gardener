@@ -233,7 +233,7 @@ func (h *Health) getAllExtensionConditions(ctx context.Context) ([]healthchecker
 	if h.gardenletConfiguration.SeedConfig != nil {
 		listOpts = append(listOpts, client.MatchingFields{core.SeedRefName: h.gardenletConfiguration.SeedConfig.Name})
 	} else {
-		listOpts = append(listOpts, client.MatchingFields{core.ShootRefName: h.shoot.GetInfo().Name})
+		listOpts = append(listOpts, client.MatchingFields{core.ShootRefName: h.shoot.GetInfo().Name, core.ShootRefNamespace: h.shoot.GetInfo().Namespace})
 	}
 	if err := h.gardenClient.List(ctx, controllerInstallations, listOpts...); err != nil {
 		return nil, nil, nil, nil, err
@@ -464,21 +464,25 @@ func (h *Health) checkControlPlane(
 // checkBackupBucketsReady checks the health of the BackupBucket associated with the shoot's BackupEntry.
 // Used for self-hosted shoots.
 func (h *Health) checkBackupBucketsReady(ctx context.Context, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
-	be := &gardencorev1beta1.BackupEntry{}
-	if err := h.gardenClient.Get(ctx, client.ObjectKey{Name: h.shoot.BackupEntryName, Namespace: h.shoot.GetInfo().Namespace}, be); err != nil {
+	backupEntry := &gardencorev1beta1.BackupEntry{
+		ObjectMeta: metav1.ObjectMeta{Name: h.shoot.BackupEntryName, Namespace: h.shoot.GetInfo().Namespace},
+	}
+	if err := h.gardenClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry); err != nil {
 		if apierrors.IsNotFound(err) {
-			c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "BackupBucketsAvailable", "No BackupEntry found.")
+			c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "NoBackupEntry", "No BackupEntry found.")
 			return &c, nil
 		}
 		return nil, fmt.Errorf("failed getting BackupEntry %s: %w", h.shoot.BackupEntryName, err)
 	}
 
-	bb := &gardencorev1beta1.BackupBucket{}
-	if err := h.gardenClient.Get(ctx, client.ObjectKey{Name: be.Spec.BucketName}, bb); err != nil {
-		return nil, fmt.Errorf("failed getting BackupBucket %s: %w", be.Spec.BucketName, err)
+	backupBucket := &gardencorev1beta1.BackupBucket{
+		ObjectMeta: metav1.ObjectMeta{Name: backupEntry.Spec.BucketName},
+	}
+	if err := h.gardenClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket); err != nil {
+		return nil, fmt.Errorf("failed getting BackupBucket %s: %w", backupEntry.Spec.BucketName, err)
 	}
 
-	c := v1beta1helper.ComputeBackupBucketsCondition(h.clock, condition, []gardencorev1beta1.BackupBucket{*bb})
+	c := gardenerutils.ComputeBackupBucketsCondition(h.clock, condition, []gardencorev1beta1.BackupBucket{*backupBucket})
 	return &c, nil
 }
 

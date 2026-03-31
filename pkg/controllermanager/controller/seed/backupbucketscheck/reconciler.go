@@ -19,6 +19,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // Reconciler reconciles Seeds and maintains the BackupBucketsReady condition according to the observed status of the
@@ -51,7 +52,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	conditionBackupBucketsReady := v1beta1helper.GetOrInitConditionWithClock(r.Clock, seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady)
 	conditionThreshold := utils.GetThresholdForCondition(r.Config.ConditionThresholds, gardencorev1beta1.SeedBackupBucketsReady)
 
-	newCondition := v1beta1helper.ComputeBackupBucketsCondition(r.Clock, conditionBackupBucketsReady, backupBucketList.Items)
+	newCondition := gardenerutils.ComputeBackupBucketsCondition(r.Clock, conditionBackupBucketsReady, backupBucketList.Items)
 	switch newCondition.Status {
 	case gardencorev1beta1.ConditionFalse:
 		conditionBackupBucketsReady = utils.SetToProgressingOrFalse(r.Clock, conditionThreshold, conditionBackupBucketsReady, newCondition.Reason, newCondition.Message)
