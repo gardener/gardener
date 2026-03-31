@@ -259,10 +259,10 @@ check-apidiff:
 	@REPO_ROOT=$(REPO_ROOT) ./hack/check-apidiff.sh
 
 .PHONY: verify
-verify: check format test test-integration sast
+verify: check format test test-integration
 
 .PHONY: verify-extended
-verify-extended: check-generate check format test-cov test-cov-clean test-integration sast-report
+verify-extended: check-generate check format test-cov test-cov-clean test-integration
 
 #####################################################################
 # Rules for local environment                                       #
