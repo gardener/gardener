@@ -310,6 +310,7 @@ func run(ctx context.Context, opts *Options) error {
 		deployEtcdDruid = g.Add(flow.Task{
 			Name:         "Deploying ETCD Druid",
 			Fn:           b.DeployEtcdDruid,
+			SkipIf:       opts.UseBootstrapEtcd,
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})
 		deployEtcds = g.Add(flow.Task{
