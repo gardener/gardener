@@ -125,6 +125,10 @@ kubectl create namespace garden --dry-run=client -o yaml |
 kubectl create secret docker-registry -n garden gardener-images --docker-server="$registry" --docker-username=gardener --docker-password="$password" --docker-email=gardener@localhost --dry-run=client -o yaml | \
   kubectl --kubeconfig "$kubeconfig" --server-side=true apply  -f -
 
+echo "Creating registry domain ConfigMap"
+kubectl create configmap -n registry registry-domain --from-literal=domain="$registry" --dry-run=client -o yaml | \
+  kubectl --kubeconfig "$kubeconfig" --server-side=true apply  -f -
+
 if [[ -n "$virtual_garden_kubeconfig" ]]; then
   if kubectl --kubeconfig "$virtual_garden_kubeconfig" get namespace seed-remote >/dev/null 2>&1; then
     echo "Creating pull secret in seed-remote namespace of virtual garden"
