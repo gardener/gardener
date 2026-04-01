@@ -8,7 +8,7 @@ metadata:
     policies.kyverno.io/subject: Pod
     policies.kyverno.io/description: >-
       Locally built Gardener images are pushed to a container registry on the seed.
-      This registry requires an imagePullSecret, which cannot to gardener components by gardener itself.   
+      This registry requires an imagePullSecret, which cannot be added to gardener components by gardener itself.
 spec:
   failurePolicy: Ignore
   rules:
@@ -18,10 +18,15 @@ spec:
       - resources:
           kinds:
           - Pod
+    context:
+      - name: registrydomain
+        configMap:
+          name: registry-domain
+          namespace: registry
     mutate:
       patchStrategicMerge:
         spec:
           containers:
-          - <(image): "*/local-skaffold*"
+          - <(image): "{{ registrydomain.data.domain }}/*"
           imagePullSecrets:
           - name: gardener-images
