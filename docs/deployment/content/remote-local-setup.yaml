@@ -345,7 +345,7 @@ spec:
             kubectl apply -f example/provider-local/shoot.yaml
           EOF
           new_pane "Access the shoot cluster" <<"EOF"
-            KUBECONFIG=<(generate-admin-kubeconf.sh) kubectl get pods -A
+            KUBECONFIG=<(generate-kubeconfig.sh) kubectl get pods -A
           EOF
           new_pane "Run simple e2e test (create and delete shoot)" <<"EOF"
             GOFLAGS="-tags=musl" make test-e2e-local-simple
@@ -510,7 +510,7 @@ spec:
           fi
           new_pane "managed seed pods" <<"EOF"
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
-            generate-admin-kubeconf.sh --namespace garden --shoot-name managedseed > /tmp/shoot.kubeconfig && while true; do clear; k --kubeconfig /tmp/shoot.kubeconfig get pods -A -o wide; sleep 10s; done
+            generate-kubeconfig.sh --namespace garden --shoot-name managedseed > /tmp/shoot.kubeconfig && while true; do clear; k --kubeconfig /tmp/shoot.kubeconfig get pods -A -o wide; sleep 10s; done
           EOF
           new_window "runtime&seed pods" "pods" Enter <<"EOF"
             # the while loop is used instead of watch to allow for scrolling a longer list in the tmux pane
@@ -521,11 +521,11 @@ spec:
           EOF
           new_window "shoot pods" "pods" <<"EOF"
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
-            generate-admin-kubeconf.sh > /tmp/shoot.kubeconfig && watch k --kubeconfig /tmp/shoot.kubeconfig get pods -A
+            generate-kubeconfig.sh > /tmp/shoot.kubeconfig && watch k --kubeconfig /tmp/shoot.kubeconfig get pods -A
           EOF
           new_pane "not ready pods" <<"EOF"
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
-            generate-admin-kubeconf.sh > /tmp/shoot.kubeconfig && watch "k --kubeconfig /tmp/shoot.kubeconfig get pods -A -o wide | awk '{split(\$3, a, \"/\"); if (a[1]!=a[2] || \$4 != \"Running\") {print}}'"
+            generate-kubeconfig.sh > /tmp/shoot.kubeconfig && watch "k --kubeconfig /tmp/shoot.kubeconfig get pods -A -o wide | awk '{split(\$3, a, \"/\"); if (a[1]!=a[2] || \$4 != \"Running\") {print}}'"
           EOF
           new_window "gardenctl" "gardenctl" <<"EOF"
             gardenctl config set-garden local --kubeconfig $PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
