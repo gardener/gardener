@@ -233,38 +233,49 @@ var _ = Describe("ControllerInstallation Required controller tests (self-hosted 
 		}
 	})
 
-	It("should set the Required condition to True when extension resources exist", func() {
-		By("Create Infrastructure")
-		Expect(testClient.Create(ctx, infrastructure)).To(Succeed())
-		log.Info("Created Infrastructure for test", "infrastructure", client.ObjectKeyFromObject(infrastructure))
-
-		DeferCleanup(func() {
-			By("Delete Infrastructure")
-			Expect(testClient.Delete(ctx, infrastructure)).To(Succeed())
+	Context("when no extension resources exist", func() {
+		It("should set the Required condition to False", func() {
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+				return controllerInstallation.Status.Conditions
+			}).Should(ContainCondition(OfType(gardencorev1beta1.ControllerInstallationRequired), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("NoExtensionObjects")))
 		})
-
-		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
-			return controllerInstallation.Status.Conditions
-		}).Should(ContainCondition(OfType(gardencorev1beta1.ControllerInstallationRequired), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("ExtensionObjectsExist")))
 	})
 
-	It("should set the Required condition to False when all extension resources get deleted", func() {
-		By("Create Infrastructure")
-		Expect(testClient.Create(ctx, infrastructure)).To(Succeed())
-		log.Info("Created Infrastructure for test", "infrastructure", client.ObjectKeyFromObject(infrastructure))
+	Context("when extension resources exist", func() {
+		It("should set the Required condition to True", func() {
+			By("Create Infrastructure")
+			Expect(testClient.Create(ctx, infrastructure)).To(Succeed())
+			log.Info("Created Infrastructure for test", "infrastructure", client.ObjectKeyFromObject(infrastructure))
 
-		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
-			return controllerInstallation.Status.Conditions
-		}).Should(ContainCondition(OfType(gardencorev1beta1.ControllerInstallationRequired), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("ExtensionObjectsExist")))
+			DeferCleanup(func() {
+				By("Delete Infrastructure")
+				Expect(testClient.Delete(ctx, infrastructure)).To(Succeed())
+			})
 
-		By("Delete Infrastructure")
-		Expect(testClient.Delete(ctx, infrastructure)).To(Succeed())
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+				return controllerInstallation.Status.Conditions
+			}).Should(ContainCondition(OfType(gardencorev1beta1.ControllerInstallationRequired), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("ExtensionObjectsExist")))
+		})
 
-		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
-			return controllerInstallation.Status.Conditions
-		}).Should(ContainCondition(OfType(gardencorev1beta1.ControllerInstallationRequired), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("NoExtensionObjects")))
+		It("should set the Required condition to False when all extension resources get deleted", func() {
+			By("Create Infrastructure")
+			Expect(testClient.Create(ctx, infrastructure)).To(Succeed())
+			log.Info("Created Infrastructure for test", "infrastructure", client.ObjectKeyFromObject(infrastructure))
+
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+				return controllerInstallation.Status.Conditions
+			}).Should(ContainCondition(OfType(gardencorev1beta1.ControllerInstallationRequired), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("ExtensionObjectsExist")))
+
+			By("Delete Infrastructure")
+			Expect(testClient.Delete(ctx, infrastructure)).To(Succeed())
+
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+				return controllerInstallation.Status.Conditions
+			}).Should(ContainCondition(OfType(gardencorev1beta1.ControllerInstallationRequired), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("NoExtensionObjects")))
+		})
 	})
 })
