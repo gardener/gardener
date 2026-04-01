@@ -162,7 +162,7 @@ images:
   - name: cluster-autoscaler
     sourceRepository: github.com/gardener/autoscaler
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
-    tag: "v1.34.0"
+    tag: "v1.34.1"
     targetVersion: ">= 1.34"
   - name: cluster-autoscaler
     sourceRepository: github.com/gardener/autoscaler
