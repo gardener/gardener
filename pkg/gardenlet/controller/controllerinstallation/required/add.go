@@ -87,6 +87,19 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		return err
 	}
 
+	// Watch ControllerInstallation objects to enqueue them when created. This ensures that newly created
+	// ControllerInstallations are reconciled regardless of whether HandleOnce has already fired. Without this watch,
+	// ControllerInstallations created after startup would only be reconciled when an extension object changes.
+	// The gardenlet cache already restricts ControllerInstallation objects to the relevant seed or shoot, so no
+	// additional filtering is needed here.
+	if err = c.Watch(source.Kind[client.Object](
+		gardenCluster.GetCache(),
+		&gardencorev1beta1.ControllerInstallation{},
+		&handler.EnqueueRequestForObject{},
+	)); err != nil {
+		return err
+	}
+
 	for _, extension := range []struct {
 		objectKind        string
 		object            client.Object
@@ -111,22 +124,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 			extension.newObjectListFunc,
 		))
 
-		// Execute the mapper function at least once to initialize the `KindToRequiredTypes` map.
-		// This is necessary for extension kinds which are registered but for which no extension objects exist in the
-		// seed (e.g. when backups are disabled). In such cases, no regular watch event would be triggered. Hence, the
-		// mapping function would never be executed. Hence, the extension kind would never be part of the
-		// `KindToRequiredTypes` map. Hence, the reconciler would not be able to decide whether the
-		// ControllerInstallation is required.
-		if err = c.Watch(&controllerutils.HandleOnce[client.Object, reconcile.Request]{Handler: eventHandler}); err != nil {
-			return err
-		}
-
 		// Since the EnqueueRequestsFromMapFunc is costly, actual watches need to be registered after the manager was started.
 		// Registering them here might otherwise cause cache sync timeouts, esp. in large seed clusters.
 		// See https://github.com/kubernetes-sigs/controller-runtime/issues/3466 and https://github.com/gardener/gardener/issues/14391 for more information.
 		r.deferredEventHandlerRegistrations = append(r.deferredEventHandlerRegistrations, &eventHandlerRegistration{
 			registerFn: func() error {
-				return c.Watch(
+				if err := c.Watch(
 					source.Kind[client.Object](
 						seedCluster.GetCache(),
 						extension.object,
@@ -134,7 +137,15 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 						extensions.ObjectPredicate(),
 						predicateutils.HasClass(extensionsv1alpha1.ExtensionClassShoot, extensionsv1alpha1.ExtensionClassSeed),
 					),
-				)
+				); err != nil {
+					return err
+				}
+
+				// Execute the mapper function to initialize `KindToRequiredTypes` for this extension kind. This
+				// is necessary for kinds with no extension objects in the seed (e.g. when backups are disabled),
+				// as the source.Kind watch above would never deliver events for them. Without this, the
+				// reconciler could not decide whether a ControllerInstallation is required.
+				return c.Watch(&controllerutils.HandleOnce[client.Object, reconcile.Request]{Handler: eventHandler})
 			},
 		})
 	}
