@@ -52,4 +52,113 @@ var _ = Describe("reconciler", func() {
 		Entry("error -> success => false", v1beta1.ConditionFalse, addCreatedConditionTrue, v1beta1.ConditionTrue),
 		Entry("error -> error => false", v1beta1.ConditionFalse, addCreatedConditionFalse, v1beta1.ConditionFalse),
 	)
+
+	Describe("#getCreatedConditionStatus", func() {
+		It("should return Unknown when there are no conditions", func() {
+			status := &extensionsv1alpha1.DefaultStatus{}
+			Expect(getCreatedConditionStatus(status)).To(Equal(v1beta1.ConditionUnknown))
+		})
+
+		It("should return Unknown when there are conditions but none of type Created", func() {
+			status := &extensionsv1alpha1.DefaultStatus{
+				Conditions: []v1beta1.Condition{
+					{Type: "SomeOtherCondition", Status: v1beta1.ConditionTrue},
+				},
+			}
+			Expect(getCreatedConditionStatus(status)).To(Equal(v1beta1.ConditionUnknown))
+		})
+
+		It("should return True when the Created condition has status True", func() {
+			status := &extensionsv1alpha1.DefaultStatus{}
+			Expect(addCreatedConditionTrue(status)).To(Succeed())
+			Expect(getCreatedConditionStatus(status)).To(Equal(v1beta1.ConditionTrue))
+		})
+
+		It("should return False when the Created condition has status False", func() {
+			status := &extensionsv1alpha1.DefaultStatus{}
+			Expect(addCreatedConditionFalse(status)).To(Succeed())
+			Expect(getCreatedConditionStatus(status)).To(Equal(v1beta1.ConditionFalse))
+		})
+
+		It("should find the Created condition among multiple conditions", func() {
+			status := &extensionsv1alpha1.DefaultStatus{
+				Conditions: []v1beta1.Condition{
+					{Type: "SomeCondition", Status: v1beta1.ConditionFalse},
+					{Type: extensionsv1alpha1.ConditionTypeCreated, Status: v1beta1.ConditionTrue},
+					{Type: "AnotherCondition", Status: v1beta1.ConditionUnknown},
+				},
+			}
+			Expect(getCreatedConditionStatus(status)).To(Equal(v1beta1.ConditionTrue))
+		})
+	})
+
+	Describe("#addCreatedConditionTrue", func() {
+		It("should set the Created condition to True on empty status", func() {
+			status := &extensionsv1alpha1.DefaultStatus{}
+			Expect(addCreatedConditionTrue(status)).To(Succeed())
+
+			Expect(status.Conditions).To(HaveLen(1))
+			Expect(status.Conditions[0].Type).To(Equal(v1beta1.ConditionType(extensionsv1alpha1.ConditionTypeCreated)))
+			Expect(status.Conditions[0].Status).To(Equal(v1beta1.ConditionTrue))
+			Expect(status.Conditions[0].Reason).To(Equal("Success"))
+			Expect(status.Conditions[0].Message).To(Equal("Record was created successfully in infrastructure at least once"))
+		})
+
+		It("should update the Created condition from False to True", func() {
+			status := &extensionsv1alpha1.DefaultStatus{}
+			Expect(addCreatedConditionFalse(status)).To(Succeed())
+			Expect(status.Conditions[0].Status).To(Equal(v1beta1.ConditionFalse))
+
+			Expect(addCreatedConditionTrue(status)).To(Succeed())
+			Expect(status.Conditions).To(HaveLen(1))
+			Expect(status.Conditions[0].Status).To(Equal(v1beta1.ConditionTrue))
+		})
+
+		It("should not change the condition when already True", func() {
+			status := &extensionsv1alpha1.DefaultStatus{}
+			Expect(addCreatedConditionTrue(status)).To(Succeed())
+			oldTime := time.Now().Add(-1 * time.Second)
+			status.Conditions[0].LastUpdateTime.Time = oldTime
+
+			Expect(addCreatedConditionTrue(status)).To(Succeed())
+			Expect(status.Conditions).To(HaveLen(1))
+			Expect(status.Conditions[0].Status).To(Equal(v1beta1.ConditionTrue))
+			Expect(status.Conditions[0].LastUpdateTime.Time).To(Equal(oldTime))
+		})
+	})
+
+	Describe("#addCreatedConditionFalse", func() {
+		It("should set the Created condition to False on empty status", func() {
+			status := &extensionsv1alpha1.DefaultStatus{}
+			Expect(addCreatedConditionFalse(status)).To(Succeed())
+
+			Expect(status.Conditions).To(HaveLen(1))
+			Expect(status.Conditions[0].Type).To(Equal(v1beta1.ConditionType(extensionsv1alpha1.ConditionTypeCreated)))
+			Expect(status.Conditions[0].Status).To(Equal(v1beta1.ConditionFalse))
+			Expect(status.Conditions[0].Reason).To(Equal("Error"))
+			Expect(status.Conditions[0].Message).To(Equal("Error on initial record creation in infrastructure"))
+		})
+
+		It("should not update the Created condition from True to False (updateIfExisting=false)", func() {
+			status := &extensionsv1alpha1.DefaultStatus{}
+			Expect(addCreatedConditionTrue(status)).To(Succeed())
+			Expect(status.Conditions[0].Status).To(Equal(v1beta1.ConditionTrue))
+
+			Expect(addCreatedConditionFalse(status)).To(Succeed())
+			Expect(status.Conditions).To(HaveLen(1))
+			Expect(status.Conditions[0].Status).To(Equal(v1beta1.ConditionTrue))
+		})
+
+		It("should not change the condition when already False", func() {
+			status := &extensionsv1alpha1.DefaultStatus{}
+			Expect(addCreatedConditionFalse(status)).To(Succeed())
+			oldTime := time.Now().Add(-1 * time.Second)
+			status.Conditions[0].LastUpdateTime.Time = oldTime
+
+			Expect(addCreatedConditionFalse(status)).To(Succeed())
+			Expect(status.Conditions).To(HaveLen(1))
+			Expect(status.Conditions[0].Status).To(Equal(v1beta1.ConditionFalse))
+			Expect(status.Conditions[0].LastUpdateTime.Time).To(Equal(oldTime))
+		})
+	})
 })
