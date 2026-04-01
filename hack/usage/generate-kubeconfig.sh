@@ -25,12 +25,12 @@ parse_flags() {
         shift
         kubeconfig_type="${1:-$kubeconfig_type}"
         if [[ "${kubeconfig_type}" != "admin" && "${kubeconfig_type}" != "viewer" ]]; then
-          echo "Error: --type must be 'admin' or 'viewer'"
+          echo "Error: --type must be 'admin' or 'viewer'" >&2
           exit 1
         fi
         ;;
       *)
-        echo "Unknown argument: $1"
+        echo "Unknown argument: $1" >&2
         exit 1
         ;;
     esac
