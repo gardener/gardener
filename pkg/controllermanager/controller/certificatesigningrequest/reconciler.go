@@ -143,12 +143,15 @@ func (r *Reconciler) isBootstrapTokenForThisCSR(ctx context.Context, csr *certif
 		return false, "CSR does not seem to be requested via a bootstrap token", nil
 	}
 
-	shootMeta, err := gardenletutils.ShootMetaFromBootstrapToken(ctx, r.Client, bootstraptokenutil.BootstrapTokenSecretName(strings.TrimPrefix(csr.Spec.Username, bootstraptokenapi.BootstrapUserPrefix)))
+	shootMeta, found, err := gardenletutils.ShootMetaFromBootstrapToken(ctx, r.Client, bootstraptokenutil.BootstrapTokenSecretName(strings.TrimPrefix(csr.Spec.Username, bootstraptokenapi.BootstrapUserPrefix)))
 	if err != nil {
-		// Intentionally, we don't return the err as error here, but rather as reason. This will lead to denial of the
-		// CSR if we cannot extract the shoot metadata from the bootstrap token secret.
-		//nolint:nilerr
+		if apierrors.IsNotFound(err) {
+			return false, "bootstrap token secret not found", nil
+		}
 		return false, err.Error(), nil
+	}
+	if !found {
+		return false, "bootstrap token does not contain shoot metadata", nil
 	}
 
 	return ensureCSRSubjectMatchesBootstrapTokenDescription(shootMeta, csr.Spec.Request)

@@ -87,8 +87,12 @@ func (vp *valuesHelper) MergeGardenletConfiguration(config *gardenletconfigv1alp
 		return nil, err
 	}
 
-	// Delete gardenClientConnection.bootstrapKubeconfig, seedClientConnection.kubeconfig, and seedConfig in parent config values
+	// Delete gardenClientConnection.bootstrapKubeconfig, gardenClientConnection.kubeconfigSecret, seedClientConnection.kubeconfig, and seedConfig in parent config values
 	parentConfigValues, err = utils.DeleteFromValuesMap(parentConfigValues, "gardenClientConnection", "bootstrapKubeconfig")
+	if err != nil {
+		return nil, err
+	}
+	parentConfigValues, err = utils.DeleteFromValuesMap(parentConfigValues, "gardenClientConnection", "kubeconfigSecret")
 	if err != nil {
 		return nil, err
 	}
@@ -278,6 +282,7 @@ func getParentGardenletDeployment() (*seedmanagementv1alpha1.GardenletDeployment
 
 	return &seedmanagementv1alpha1.GardenletDeployment{
 		Image: &seedmanagementv1alpha1.Image{
+			Ref:        gardenletImage.Ref,
 			Repository: gardenletImage.Repository,
 			Tag:        gardenletImage.Tag,
 		},

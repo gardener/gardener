@@ -206,19 +206,19 @@ var _ = Describe("Gardenlet", func() {
 
 			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			result, found, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(found).To(BeTrue())
 			Expect(result).To(Equal(expectedNamespacedName))
 		})
 
-		It("should return error when bootstrap token secret is not found", func() {
-			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("failed to read bootstrap token secret"))
-			Expect(result).To(Equal(types.NamespacedName{}))
+		It("should return an error when bootstrap token secret is not found", func() {
+			_, found, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).To(BeNotFoundError())
+			Expect(found).To(BeFalse())
 		})
 
-		It("should return error when description does not start with required prefix", func() {
+		It("should return found=false when description does not start with required prefix", func() {
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      bootstrapTokenSecretName,
@@ -231,13 +231,12 @@ var _ = Describe("Gardenlet", func() {
 
 			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("bootstrap token description does not start with"))
-			Expect(result).To(Equal(types.NamespacedName{}))
+			_, found, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(found).To(BeFalse())
 		})
 
-		It("should return error when description has no shoot meta after prefix", func() {
+		It("should return an error when description has no shoot meta after prefix", func() {
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      bootstrapTokenSecretName,
@@ -250,13 +249,12 @@ var _ = Describe("Gardenlet", func() {
 
 			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("could not extract shoot meta from bootstrap token description"))
-			Expect(result).To(Equal(types.NamespacedName{}))
+			_, found, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).To(MatchError(ContainSubstring("could not extract shoot meta from bootstrap token description")))
+			Expect(found).To(BeFalse())
 		})
 
-		It("should return error when description has only whitespace after prefix", func() {
+		It("should return an error when description has only whitespace after prefix", func() {
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      bootstrapTokenSecretName,
@@ -269,13 +267,12 @@ var _ = Describe("Gardenlet", func() {
 
 			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("could not extract shoot meta from bootstrap token description"))
-			Expect(result).To(Equal(types.NamespacedName{}))
+			_, found, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).To(MatchError(ContainSubstring("could not extract shoot meta from bootstrap token description")))
+			Expect(found).To(BeFalse())
 		})
 
-		It("should return error when shoot meta format is invalid (no slash)", func() {
+		It("should return an error when shoot meta format is invalid (no slash)", func() {
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      bootstrapTokenSecretName,
@@ -288,13 +285,12 @@ var _ = Describe("Gardenlet", func() {
 
 			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("could not extract shoot namespace and name from bootstrap token description"))
-			Expect(result).To(Equal(types.NamespacedName{}))
+			_, found, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).To(MatchError(ContainSubstring("could not extract shoot namespace and name from bootstrap token description")))
+			Expect(found).To(BeFalse())
 		})
 
-		It("should return error when shoot meta format has multiple slashes", func() {
+		It("should return an error when shoot meta format has multiple slashes", func() {
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      bootstrapTokenSecretName,
@@ -307,13 +303,12 @@ var _ = Describe("Gardenlet", func() {
 
 			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("could not extract shoot namespace and name from bootstrap token description"))
-			Expect(result).To(Equal(types.NamespacedName{}))
+			_, found, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).To(MatchError(ContainSubstring("could not extract shoot namespace and name from bootstrap token description")))
+			Expect(found).To(BeFalse())
 		})
 
-		It("should return error when shoot meta format has empty namespace", func() {
+		It("should extract shoot meta when namespace is empty", func() {
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      bootstrapTokenSecretName,
@@ -326,12 +321,13 @@ var _ = Describe("Gardenlet", func() {
 
 			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			result, found, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(found).To(BeTrue())
 			Expect(result).To(Equal(types.NamespacedName{Namespace: "", Name: "my-shoot"}))
 		})
 
-		It("should return error when shoot meta format has empty name", func() {
+		It("should extract shoot meta when name is empty", func() {
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      bootstrapTokenSecretName,
@@ -344,8 +340,9 @@ var _ = Describe("Gardenlet", func() {
 
 			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			result, found, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(found).To(BeTrue())
 			Expect(result).To(Equal(types.NamespacedName{Namespace: "my-namespace", Name: ""}))
 		})
 
@@ -362,12 +359,13 @@ var _ = Describe("Gardenlet", func() {
 
 			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			result, found, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(found).To(BeTrue())
 			Expect(result).To(Equal(expectedNamespacedName))
 		})
 
-		It("should return error when description key is missing", func() {
+		It("should return found=false when description key is missing", func() {
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      bootstrapTokenSecretName,
@@ -380,10 +378,9 @@ var _ = Describe("Gardenlet", func() {
 
 			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("bootstrap token description does not start with"))
-			Expect(result).To(Equal(types.NamespacedName{}))
+			_, found, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(found).To(BeFalse())
 		})
 	})
 })

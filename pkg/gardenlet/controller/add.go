@@ -50,6 +50,7 @@ func AddToManager(
 	gardenletCancel context.CancelFunc,
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
+	seedClientSet kubernetes.Interface,
 	shootClientMap clientmap.ClientMap,
 	cfg *gardenletconfigv1alpha1.GardenletConfiguration,
 	healthManager healthz.Manager,
@@ -74,16 +75,6 @@ func AddToManager(
 		if !ok {
 			return fmt.Errorf("cluster-identity ConfigMap data does not have %q key", v1beta1constants.ClusterIdentity)
 		}
-	}
-
-	seedClientSet, err := kubernetes.NewWithConfig(
-		kubernetes.WithRESTConfig(seedCluster.GetConfig()),
-		kubernetes.WithRuntimeAPIReader(seedCluster.GetAPIReader()),
-		kubernetes.WithRuntimeClient(seedCluster.GetClient()),
-		kubernetes.WithRuntimeCache(seedCluster.GetCache()),
-	)
-	if err != nil {
-		return fmt.Errorf("failed creating seed clientset: %w", err)
 	}
 
 	seedNetworks := networkConfigForNetworkPolicyController(cfg, selfHostedShoot)
@@ -130,6 +121,18 @@ func AddToManager(
 			return fmt.Errorf("failed adding shoot-lease reconciler: %w", err)
 		}
 
+		if err := (&managedseed.Reconciler{
+			Config:              *cfg,
+			ShootClientMap:      shootClientMap,
+			GardenNamespaceSeed: metav1.NamespaceSystem,
+		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+			return fmt.Errorf("failed adding ManagedSeed controller: %w", err)
+		}
+
+		if err := networkpolicy.AddToManager(ctx, mgr, gardenletCancel, seedCluster, *cfg.Controllers.NetworkPolicy, seedNetworks, nil); err != nil {
+			return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
+		}
+
 		// TODO(tobschli): Remove this once all shoot reconcilers are added via `shoot.AddToManager`.
 		if err := (&state.Reconciler{
 			Config: *cfg.Controllers.ShootState,
@@ -143,8 +146,13 @@ func AddToManager(
 			return fmt.Errorf("failed adding status reconciler: %w", err)
 		}
 
-		if err := networkpolicy.AddToManager(ctx, mgr, gardenletCancel, seedCluster, *cfg.Controllers.NetworkPolicy, seedNetworks, nil); err != nil {
-			return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
+		// TargetNamespace is intentionally left empty: the SA namespace is provided via the
+		// serviceaccount.resources.gardener.cloud/namespace annotation set by AccessSecret.Reconcile().
+		if err := (&tokenrequestor.Reconciler{
+			ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs, 0),
+			Class:           ptr.To(resourcesv1alpha1.ResourceManagerClassGarden),
+		}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
+			return fmt.Errorf("failed adding TokenRequestorServiceAccount controller: %w", err)
 		}
 
 		if err := vpaevictionrequirements.AddToManager(ctx, mgr, gardenletCancel, *cfg.Controllers.VPAEvictionRequirements, seedCluster); err != nil {
@@ -157,16 +165,12 @@ func AddToManager(
 			return fmt.Errorf("failed adding TokenRequestorWorkloadIdentity controller: %w", err)
 		}
 
-		// TargetNamespace is intentionally left empty: the SA namespace is provided via the
-		// serviceaccount.resources.gardener.cloud/namespace annotation set by AccessSecret.Reconcile().
-		if err := (&tokenrequestor.Reconciler{
-			ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs, 0),
-			Class:           ptr.To(resourcesv1alpha1.ResourceManagerClassGarden),
-		}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
-			return fmt.Errorf("failed adding TokenRequestorServiceAccount controller: %w", err)
-		}
-
 		return nil
+	}
+
+	seedIsSelfHostedShoot, err := gardenletutils.SeedIsSelfHostedShoot(ctx, seedCluster.GetAPIReader())
+	if err != nil {
+		return fmt.Errorf("failed checking whether the seed is a self-hosted shoot cluster: %w", err)
 	}
 
 	if err := (&backupbucket.Reconciler{
@@ -210,6 +214,18 @@ func AddToManager(
 		return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
 	}
 
+	// When the seed is a self-hosted shoot cluster, the gardenlet responsible for the self-hosted shoot in the
+	// kube-system namespace runs this controller.
+	if !seedIsSelfHostedShoot {
+		if err := (&tokenrequestor.Reconciler{
+			ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs, 0),
+			Class:           ptr.To(resourcesv1alpha1.ResourceManagerClassGarden),
+			TargetNamespace: gardenerutils.ComputeGardenNamespace(cfg.SeedConfig.Name),
+		}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
+			return fmt.Errorf("failed adding TokenRequestorServiceAccount controller: %w", err)
+		}
+	}
+
 	if err := seed.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, healthManager); err != nil {
 		return fmt.Errorf("failed adding Seed controller: %w", err)
 	}
@@ -220,14 +236,6 @@ func AddToManager(
 
 	if err := vpaevictionrequirements.AddToManager(ctx, mgr, gardenletCancel, *cfg.Controllers.VPAEvictionRequirements, seedCluster); err != nil {
 		return fmt.Errorf("failed adding VPAEvictionRequirements controller: %w", err)
-	}
-
-	if err := (&tokenrequestor.Reconciler{
-		ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs, 0),
-		Class:           ptr.To(resourcesv1alpha1.ResourceManagerClassGarden),
-		TargetNamespace: gardenerutils.ComputeGardenNamespace(cfg.SeedConfig.Name),
-	}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
-		return fmt.Errorf("failed adding TokenRequestorServiceAccount controller: %w", err)
 	}
 
 	if err := (&workloadidentity.Reconciler{

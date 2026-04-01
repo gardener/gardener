@@ -77,6 +77,7 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 			resourceSetup{&certificatesv1.CertificateSigningRequest{}, g.setupCertificateSigningRequestWatch},
 			resourceSetup{&gardencorev1beta1.ControllerInstallation{}, g.setupControllerInstallationWatch},
 			resourceSetup{&seedmanagementv1alpha1.Gardenlet{}, g.setupGardenletWatch},
+			resourceSetup{&seedmanagementv1alpha1.ManagedSeed{}, g.setupManagedSeedWatch},
 			resourceSetup{&corev1.ServiceAccount{}, g.setupServiceAccountWatch},
 			resourceSetup{&gardencorev1beta1.Shoot{}, g.setupShootWatch},
 			resourceSetup{&securityv1alpha1.CredentialsBinding{}, g.setupCredentialsBindingWatch},

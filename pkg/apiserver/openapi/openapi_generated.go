@@ -12662,7 +12662,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_Image(ref common.ReferenceCallback)
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Image specifies container image parameters.",
+				Description: "Image specifies container image parameters. Either Repository/Tag or Ref must be set, but not both.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"repository": {
@@ -12685,6 +12685,13 @@ func schema_pkg_apis_seedmanagement_v1alpha1_Image(ref common.ReferenceCallback)
 							Type:        []string{"string"},
 							Format:      "",
 							Enum:        []interface{}{"Always", "IfNotPresent", "Never"},
+						},
+					},
+					"ref": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Ref is the full image reference.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},

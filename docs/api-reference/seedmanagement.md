@@ -887,7 +887,8 @@ generation, which is updated on mutation by the API Server.</p>
 <a href="#seedmanagement.gardener.cloud/v1alpha1.GardenletDeployment">GardenletDeployment</a>)
 </p>
 <p>
-<p>Image specifies container image parameters.</p>
+<p>Image specifies container image parameters.
+Either Repository/Tag or Ref must be set, but not both.</p>
 </p>
 <table>
 <thead>
@@ -934,6 +935,18 @@ Kubernetes core/v1.PullPolicy
 <em>(Optional)</em>
 <p>PullPolicy is the image pull policy. One of Always, Never, IfNotPresent.
 Defaults to Always if latest tag is specified, or IfNotPresent otherwise.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ref</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Ref is the full image reference.</p>
 </td>
 </tr>
 </tbody>

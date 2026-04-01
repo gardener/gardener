@@ -235,11 +235,17 @@ func ValidateGardenletDeployment(deployment *seedmanagement.GardenletDeployment,
 func validateImage(image *seedmanagement.Image, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	if image.Ref != nil && *image.Ref == "" {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("ref"), *image.Ref, "ref must not be empty if specified"))
+	}
 	if image.Repository != nil && *image.Repository == "" {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("repository"), *image.Repository, "repository must not be empty if specified"))
 	}
 	if image.Tag != nil && *image.Tag == "" {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("tag"), *image.Tag, "tag must not be empty if specified"))
+	}
+	if image.Ref != nil && (image.Repository != nil || image.Tag != nil) {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "ref and repository/tag are mutually exclusive"))
 	}
 	if image.PullPolicy != nil {
 		validValues := []string{string(corev1.PullAlways), string(corev1.PullIfNotPresent), string(corev1.PullNever)}

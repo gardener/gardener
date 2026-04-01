@@ -109,15 +109,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, r.updateStatusOperationError(ctx, seed, err, operationType)
 	}
 
+	seedIsSelfHostedShoot, err := gardenletutils.SeedIsSelfHostedShoot(ctx, r.SeedClientSet.Client())
+	if err != nil {
+		return reconcile.Result{}, r.updateStatusOperationError(ctx, seed, err, operationType)
+	}
+
 	if seed.DeletionTimestamp != nil {
-		result, err := r.delete(ctx, log, seedObj, seedIsGarden, seedIsShoot)
+		result, err := r.delete(ctx, log, seedObj, seedIsGarden, seedIsShoot, seedIsSelfHostedShoot)
 		if err != nil {
 			return result, r.updateStatusOperationError(ctx, seed, err, operationType)
 		}
 		return result, nil
 	}
 
-	if err := r.reconcile(ctx, log, seedObj, seedIsGarden, seedIsShoot); err != nil {
+	if err := r.reconcile(ctx, log, seedObj, seedIsGarden, seedIsShoot, seedIsSelfHostedShoot); err != nil {
 		return reconcile.Result{}, r.updateStatusOperationError(ctx, seed, err, operationType)
 	}
 

@@ -109,6 +109,7 @@ type GardenletDeployment struct {
 }
 
 // Image specifies container image parameters.
+// Either Repository/Tag or Ref must be set, but not both.
 type Image struct {
 	// Repository is the image repository.
 	Repository *string
@@ -117,6 +118,8 @@ type Image struct {
 	// PullPolicy is the image pull policy. One of Always, Never, IfNotPresent.
 	// Defaults to Always if latest tag is specified, or IfNotPresent otherwise.
 	PullPolicy *corev1.PullPolicy
+	// Ref is the full image reference.
+	Ref *string
 }
 
 // Bootstrap describes a mechanism for bootstrapping gardenlet connection to the Garden cluster.
