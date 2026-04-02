@@ -12,7 +12,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
@@ -528,35 +527,6 @@ func CalculateEffectiveKubeletConfiguration(shootKubelet *gardencorev1beta1.Kube
 // SystemComponentsAllowed checks if the given worker allows system components to be scheduled onto it
 func SystemComponentsAllowed(worker *gardencorev1beta1.Worker) bool {
 	return worker.SystemComponents == nil || worker.SystemComponents.Allow
-}
-
-// SumResourceReservations adds together the given *gardencorev1beta1.KubeletConfigReserved values.
-// The func is suitable to calculate the sum of kubeReserved and systemReserved.
-func SumResourceReservations(left, right *gardencorev1beta1.KubeletConfigReserved) *gardencorev1beta1.KubeletConfigReserved {
-	if left == nil {
-		return right
-	} else if right == nil {
-		return left
-	}
-
-	return &gardencorev1beta1.KubeletConfigReserved{
-		CPU:              sumQuantities(left.CPU, right.CPU),
-		Memory:           sumQuantities(left.Memory, right.Memory),
-		PID:              sumQuantities(left.PID, right.PID),
-		EphemeralStorage: sumQuantities(left.EphemeralStorage, right.EphemeralStorage),
-	}
-}
-
-func sumQuantities(left, right *resource.Quantity) *resource.Quantity {
-	if left == nil {
-		return right
-	} else if right == nil {
-		return left
-	}
-
-	copy := left.DeepCopy()
-	copy.Add(*right)
-	return &copy
 }
 
 // IsCoreDNSAutoscalingModeUsed indicates whether the specified autoscaling mode of CoreDNS is enabled or not.

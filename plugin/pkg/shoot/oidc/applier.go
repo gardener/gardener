@@ -15,24 +15,16 @@ func ApplyOIDCConfiguration(shoot *core.Shoot, preset *settingsv1alpha1.OpenIDCo
 		return
 	}
 
-	var client *core.OpenIDConnectClientAuthentication
-	if preset.Client != nil {
-		client = &core.OpenIDConnectClientAuthentication{
-			Secret:      preset.Client.Secret,
-			ExtraConfig: preset.Client.ExtraConfig,
-		}
-	}
 	oidc := &core.OIDCConfig{
-		CABundle:             preset.Server.CABundle,
-		ClientID:             &preset.Server.ClientID,
-		GroupsClaim:          preset.Server.GroupsClaim,
-		GroupsPrefix:         preset.Server.GroupsPrefix,
-		IssuerURL:            &preset.Server.IssuerURL,
-		SigningAlgs:          preset.Server.SigningAlgs,
-		UsernameClaim:        preset.Server.UsernameClaim,
-		UsernamePrefix:       preset.Server.UsernamePrefix,
-		RequiredClaims:       preset.Server.RequiredClaims,
-		ClientAuthentication: client,
+		CABundle:       preset.Server.CABundle,
+		ClientID:       &preset.Server.ClientID,
+		GroupsClaim:    preset.Server.GroupsClaim,
+		GroupsPrefix:   preset.Server.GroupsPrefix,
+		IssuerURL:      &preset.Server.IssuerURL,
+		SigningAlgs:    preset.Server.SigningAlgs,
+		UsernameClaim:  preset.Server.UsernameClaim,
+		UsernamePrefix: preset.Server.UsernamePrefix,
+		RequiredClaims: preset.Server.RequiredClaims,
 	}
 
 	if shoot.Spec.Kubernetes.KubeAPIServer == nil {

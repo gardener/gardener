@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
@@ -17,14 +16,13 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 // FilePathKubernetesManifests is a constant for a path to a directory containing static pod manifests.
 var FilePathKubernetesManifests = filepath.Join(string(filepath.Separator), "etc", "kubernetes", "manifests")
 
 // Config returns a kubelet config based on the provided parameters and for the provided Kubernetes version.
-func Config(kubernetesVersion *semver.Version, clusterDNSAddresses []string, clusterDomain string, taints []corev1.Taint, params components.ConfigurableKubeletConfigParameters) *kubeletconfigv1beta1.KubeletConfiguration {
+func Config(clusterDNSAddresses []string, clusterDomain string, taints []corev1.Taint, params components.ConfigurableKubeletConfigParameters) *kubeletconfigv1beta1.KubeletConfiguration {
 	setConfigDefaults(&params)
 
 	nodeTaints := append(taints, corev1.Taint{
@@ -52,7 +50,13 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddresses []string, clu
 				CacheUnauthorizedTTL: metav1.Duration{Duration: 30 * time.Second},
 			},
 		},
-		CgroupDriver:                     getCgroupDriver(kubernetesVersion),
+		// TODO: Consider NOT specifying the cgroup driver when the KubeletCgroupDriverFromCRI feature gate is GA and every OS runs containerd 2.0+.
+		// The implementation of KubeletCgroupDriverFromCRI requires a new CRI API that will be available only in containerd 2.0+.
+		//
+		// Upstream docs: https://kubernetes.io/docs/setup/production-environment/container-runtimes/#systemd-cgroup-driver
+		// Kubernetes feature implementation: https://github.com/kubernetes/kubernetes/pull/118770
+		// containerd implementation of the new CRI API: https://github.com/containerd/containerd/pull/8722
+		CgroupDriver:                     "systemd",
 		CgroupRoot:                       "/",
 		CgroupsPerQOS:                    ptr.To(true),
 		ClusterDNS:                       clusterDNSAddresses,
@@ -155,22 +159,6 @@ var (
 		string(corev1.ResourceMemory): "1Gi",
 	}
 )
-
-// TODO: Consider NOT specifying the cgroup driver when the KubeletCgroupDriverFromCRI feature gate is GA and every OS runs containerd 2.0+.
-// The implementation of KubeletCgroupDriverFromCRI requires a new CRI API that will be available only in containerd 2.0+.
-//
-// Upstream docs: https://kubernetes.io/docs/setup/production-environment/container-runtimes/#systemd-cgroup-driver
-// Kubernetes feature implementation: https://github.com/kubernetes/kubernetes/pull/118770
-// containerd implementation of the new CRI API: https://github.com/containerd/containerd/pull/8722
-func getCgroupDriver(kubernetesVersion *semver.Version) string {
-	cgroupDriver := "systemd"
-
-	if version.ConstraintK8sLess131.Check(kubernetesVersion) {
-		cgroupDriver = "cgroupfs"
-	}
-
-	return cgroupDriver
-}
 
 func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 	if c.CpuCFSQuota == nil {

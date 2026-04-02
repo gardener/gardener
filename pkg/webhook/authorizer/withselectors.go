@@ -80,10 +80,6 @@ func (w *withSelectorsChecker) isAuthorizeWithSelectorsFeatureEnabled() (enabled
 	}
 
 	switch {
-	case versionutils.ConstraintK8sLess131.Check(version):
-		w.log.Info("Kubernetes version is lower than 1.31 -> feature gate did not exist", "authorizationWithSelectorsPossible", false)
-		return false, false, nil
-
 	case versionutils.ConstraintK8sGreaterEqual134.Check(version):
 		w.log.Info("Kubernetes version is at least 1.34 -> feature gate is GA and locked to 'enabled'", "authorizationWithSelectorsPossible", true)
 		return true, false, nil

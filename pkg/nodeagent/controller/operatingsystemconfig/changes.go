@@ -312,73 +312,27 @@ func ComputeKubeletConfigChange(oldConfig, newConfig *kubeletconfigv1beta1.Kubel
 		return true, cpuManagerPolicyChanged, nil
 	}
 
-	oldReserved, err := sumResourceReservations(oldConfig.KubeReserved, oldConfig.SystemReserved)
-	if err != nil {
-		return false, cpuManagerPolicyChanged, fmt.Errorf("failed to sum resource reservations for old kubelet config: %w", err)
-	}
-	newReserved, err := sumResourceReservations(newConfig.KubeReserved, newConfig.SystemReserved)
-	if err != nil {
-		return false, cpuManagerPolicyChanged, fmt.Errorf("failed to sum resource reservations for new kubelet config: %w", err)
+	for _, config := range []*kubeletconfigv1beta1.KubeletConfiguration{oldConfig, newConfig} {
+		if err := validateQuantities(config); err != nil {
+			return false, cpuManagerPolicyChanged, fmt.Errorf("error validating quantities: %v", err)
+		}
 	}
 
-	return !maps.Equal(oldReserved, newReserved), cpuManagerPolicyChanged, nil
+	return !maps.Equal(oldConfig.KubeReserved, newConfig.KubeReserved), cpuManagerPolicyChanged, nil
 }
 
-func sumResourceReservations(left, right map[string]string) (map[string]string, error) {
-	if left == nil {
-		return right, nil
-	} else if right == nil {
-		return left, nil
+func validateQuantities(config *kubeletconfigv1beta1.KubeletConfiguration) error {
+	if config == nil {
+		return nil
 	}
 
-	out := make(map[string]string)
-
-	for _, resource := range []string{"cpu", "memory", "ephemeral-storage", "pid"} {
-		if quantity, err := sumQuantities(left[resource], right[resource]); err != nil {
-			return nil, fmt.Errorf("failed to sum %s reservations: %w", resource, err)
-		} else {
-			out[resource] = quantity.String()
+	for _, q := range config.KubeReserved {
+		if _, err := resource.ParseQuantity(q); err != nil {
+			return fmt.Errorf("failed to parse quantity: %w", err)
 		}
 	}
 
-	return out, nil
-}
-
-func sumQuantities(l, r string) (*resource.Quantity, error) {
-	var (
-		left, right resource.Quantity
-		err         error
-	)
-
-	if r == "" && l == "" {
-		return resource.NewQuantity(0, resource.DecimalSI), nil
-	}
-
-	if l != "" {
-		left, err = resource.ParseQuantity(l)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse left quantity: %w", err)
-		}
-
-		if r == "" {
-			return &left, nil
-		}
-	}
-
-	if r != "" {
-		right, err = resource.ParseQuantity(r)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse right quantity: %w", err)
-		}
-
-		if l == "" {
-			return &right, nil
-		}
-	}
-
-	copy := left.DeepCopy()
-	copy.Add(right)
-	return &copy, nil
+	return nil
 }
 
 func computeUnitDiffs(oldUnits, newUnits []extensionsv1alpha1.Unit, fileDiffs files) units {

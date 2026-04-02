@@ -19,8 +19,6 @@ import (
 var (
 	// See https://tools.ietf.org/html/rfc7518#section-3.1 (without "none")
 	validSigningAlgs = sets.New("RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512")
-	// used by oidc-provider
-	forbiddenKeys = sets.New("idp-issuer-url", "client-id", "client-secret", "idp-certificate-authority", "idp-certificate-authority-data", "id-token", "refresh-token")
 )
 
 func validateOpenIDConnectPresetSpec(spec *settings.OpenIDConnectPresetSpec, fldPath *field.Path) field.ErrorList {
@@ -33,10 +31,6 @@ func validateOpenIDConnectPresetSpec(spec *settings.OpenIDConnectPresetSpec, fld
 	}
 
 	allErrs = append(allErrs, validateServer(&spec.Server, fldPath.Child("server"))...)
-
-	if spec.Client != nil {
-		allErrs = append(allErrs, validateClient(spec.Client, fldPath.Child("client"))...)
-	}
 
 	return allErrs
 }
@@ -93,25 +87,5 @@ func validateServer(server *settings.KubeAPIServerOpenIDConnect, fldPath *field.
 	if server.UsernamePrefix != nil && len(*server.UsernamePrefix) == 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("usernamePrefix"), *server.UsernamePrefix, "must not be empty"))
 	}
-	return allErrs
-}
-
-func validateClient(client *settings.OpenIDConnectClientAuthentication, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if client.Secret != nil && len(*client.Secret) == 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("secret"), *client.Secret, "must not be empty"))
-	}
-
-	scopeFldPath := fldPath.Child("extraConfig")
-	for key, val := range client.ExtraConfig {
-		if len(val) == 0 {
-			allErrs = append(allErrs, field.Invalid(scopeFldPath.Key(key), val, "must not be empty"))
-		}
-		if forbiddenKeys.Has(key) {
-			allErrs = append(allErrs, field.Forbidden(scopeFldPath.Key(key), fmt.Sprintf("cannot be any of %v", sets.List(forbiddenKeys))))
-		}
-	}
-
 	return allErrs
 }

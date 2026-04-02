@@ -1049,7 +1049,7 @@ func calculateKeyForVersion(
 ) {
 	switch version {
 	case 1:
-		// TODO(MichaelEischer): Remove KeyV1 after support for Kubernetes 1.30 is dropped
+		// TODO(MichaelEischer): Remove KeyV1 after the feature gate WorkerPoolHashVersioning has been locked to true.
 		return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
 	case 2:
 		return KeyV2(kubernetesVersion, values.CredentialsRotationStatus, worker, values.NodeLocalDNSEnabled, kubeletConfiguration, kubeProxyConfig), nil

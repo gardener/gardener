@@ -846,7 +846,7 @@ func CalculateDataStringForKubeletConfiguration(kubeletConfiguration *gardencore
 		return nil
 	}
 
-	if resources := v1beta1helper.SumResourceReservations(kubeletConfiguration.KubeReserved, kubeletConfiguration.SystemReserved); resources != nil {
+	if resources := kubeletConfiguration.KubeReserved; resources != nil {
 		data = append(data, fmt.Sprintf("%s-%s-%s-%s", resources.CPU, resources.Memory, resources.PID, resources.EphemeralStorage))
 	}
 	if eviction := kubeletConfiguration.EvictionHard; eviction != nil {
