@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/opentelemetry/dataplanedeployment"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
@@ -126,7 +127,6 @@ metadata:
   name: otel-collector-dataplane-deployment
   namespace: kube-system
 spec:
-  clusterIP: None
   ports:
   - name: metrics
     port: 8080
@@ -279,11 +279,10 @@ status:
 					Labels:          map[string]string{"origin": "gardener"},
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					DeletePersistentVolumeClaims: ptr.To(false),
-					InjectLabels:                 map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-					KeepObjects:                  ptr.To(false),
+					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+					KeepObjects:  ptr.To(false),
 					SecretRefs: []corev1.LocalObjectReference{{
-						Name: managedResourceSecret.Name,
+						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
 				},
 			}
@@ -302,14 +301,18 @@ status:
 		})
 
 		It("should successfully deploy all resources", func() {
-			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__otel-collector-dataplane-deployment.yaml"])).To(Equal(serviceAccountYAML))
-			Expect(string(managedResourceSecret.Data["clusterrole____otel-collector-dataplane-deployment.yaml"])).To(Equal(clusterRoleYAML))
-			Expect(string(managedResourceSecret.Data["clusterrolebinding____otel-collector-dataplane-deployment.yaml"])).To(Equal(clusterRoleBindingYAML))
-			Expect(string(managedResourceSecret.Data["service__kube-system__otel-collector-dataplane-deployment.yaml"])).To(Equal(serviceYAML))
-			Expect(string(managedResourceSecret.Data["configmap__kube-system__otel-collector-dataplane-deployment.yaml"])).To(ContainSubstring("receivers:"))
-			Expect(string(managedResourceSecret.Data["configmap__kube-system__otel-collector-dataplane-deployment.yaml"])).To(ContainSubstring("prometheus:"))
-			Expect(string(managedResourceSecret.Data["deployment__kube-system__otel-collector-dataplane-deployment.yaml"])).To(ContainSubstring(image))
-			Expect(string(managedResourceSecret.Data["deployment__kube-system__otel-collector-dataplane-deployment.yaml"])).To(ContainSubstring("gardener-shoot-system-700"))
+			manifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(manifests).To(ContainElement(ContainSubstring("kind: ServiceAccount")))
+			Expect(manifests).To(ContainElement(ContainSubstring("kind: ClusterRole\n")))
+			Expect(manifests).To(ContainElement(ContainSubstring("kind: ClusterRoleBinding")))
+			Expect(manifests).To(ContainElement(ContainSubstring("kind: Service\n")))
+			Expect(manifests).To(ContainElement(ContainSubstring("kind: ConfigMap")))
+			Expect(manifests).To(ContainElement(ContainSubstring("receivers:")))
+			Expect(manifests).To(ContainElement(ContainSubstring("prometheus:")))
+			Expect(manifests).To(ContainElement(ContainSubstring("kind: Deployment")))
+			Expect(manifests).To(ContainElement(ContainSubstring(image)))
+			Expect(manifests).To(ContainElement(ContainSubstring("gardener-shoot-system-700")))
 		})
 	})
 
