@@ -184,13 +184,6 @@ volumeStatsAggPeriod: 1m0s
 			))
 			Expect(files).To(ConsistOf(kubeletFiles(ctx, kubeletConfig, kubeletCABundleBase64)))
 		},
-
-		Entry(
-			"kubernetes 1.30",
-			"1.30.1",
-			kubeletConfigFor("cgroupfs"),
-			false,
-		),
 		Entry(
 			"kubernetes 1.31",
 			"1.31.1",

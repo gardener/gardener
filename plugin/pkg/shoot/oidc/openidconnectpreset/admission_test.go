@@ -68,10 +68,6 @@ var _ = Describe("OpenID Connect Preset", func() {
 						UsernameClaim:  ptr.To("user"),
 						UsernamePrefix: ptr.To("user-prefix"),
 					},
-					Client: &settingsv1alpha1.OpenIDConnectClientAuthentication{
-						Secret:      ptr.To("secret"),
-						ExtraConfig: map[string]string{"foo": "bar", "baz": "dap"},
-					},
 				},
 			}
 			admissionHandler, _ = New()
@@ -193,11 +189,6 @@ var _ = Describe("OpenID Connect Preset", func() {
 						SigningAlgs:    []string{"alg-1", "alg-2"},
 						UsernameClaim:  ptr.To("user"),
 						UsernamePrefix: ptr.To("user-prefix"),
-
-						ClientAuthentication: &core.OpenIDConnectClientAuthentication{
-							Secret:      ptr.To("secret"),
-							ExtraConfig: map[string]string{"foo": "bar", "baz": "dap"},
-						},
 					},
 				}
 			})
@@ -210,7 +201,6 @@ var _ = Describe("OpenID Connect Preset", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(shoot.Spec.Kubernetes.KubeAPIServer).NotTo(BeNil())
 				Expect(shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig).NotTo(BeNil())
-				Expect(shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientAuthentication).NotTo(BeNil())
 				Expect(shoot).To(Equal(expected))
 			})
 

@@ -2559,7 +2559,7 @@ var _ = Describe("Validation Tests", func() {
 						})
 
 						It("should not complain when OIDC config is configured in both gardener-dashboard and kube-apiserver via structured authentication", func() {
-							garden.Spec.VirtualCluster.Kubernetes.Version = "1.30.0"
+							garden.Spec.VirtualCluster.Kubernetes.Version = "1.35.0"
 							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{OIDCConfig: &operatorv1alpha1.DashboardOIDC{
 								IssuerURL:      ptr.To("https://example.com"),
 								ClientIDPublic: ptr.To("my-client-id"),

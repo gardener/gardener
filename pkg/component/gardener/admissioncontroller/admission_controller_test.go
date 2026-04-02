@@ -171,17 +171,6 @@ var _ = Describe("GardenerAdmissionController", func() {
 					verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues)
 				})
 			})
-
-			When("runtime Kubernetes version is < 1.31", func() {
-				BeforeEach(func() {
-					testValues.RuntimeVersion = semver.MustParse("1.30.3")
-				})
-
-				It("should successfully deploy", func() {
-					Expect(deployer.Deploy(ctx)).To(Succeed())
-					verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues)
-				})
-			})
 		})
 
 		Context("without ResourceAdmissionConfiguration", func() {

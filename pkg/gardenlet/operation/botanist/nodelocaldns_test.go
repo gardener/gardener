@@ -49,14 +49,14 @@ var _ = Describe("NodeLocalDNS", func() {
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.30.1",
+					Version: "1.35.0",
 				},
 				Networking: &gardencorev1beta1.Networking{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}},
 				Provider: gardencorev1beta1.Provider{
 					Workers: []gardencorev1beta1.Worker{
 						{
 							Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-								Version: ptr.To("1.30.1"),
+								Version: ptr.To("1.35.0"),
 							},
 							Name: "worker-aaaa",
 							Machine: gardencorev1beta1.Machine{

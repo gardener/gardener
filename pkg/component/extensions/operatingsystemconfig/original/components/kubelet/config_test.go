@@ -7,7 +7,6 @@ package kubelet_test
 import (
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -269,44 +268,16 @@ var _ = Describe("Config", func() {
 	)
 
 	DescribeTable("#Config",
-		func(kubernetesVersion string, clusterDNSAddresses []string, clusterDomain string, params components.ConfigurableKubeletConfigParameters, expectedConfig *kubeletconfigv1beta1.KubeletConfiguration, mutateExpectConfigFn func(*kubeletconfigv1beta1.KubeletConfiguration)) {
+		func(clusterDNSAddresses []string, clusterDomain string, params components.ConfigurableKubeletConfigParameters, expectedConfig *kubeletconfigv1beta1.KubeletConfiguration, mutateExpectConfigFn func(*kubeletconfigv1beta1.KubeletConfiguration)) {
 			expectation := expectedConfig.DeepCopy()
 			if mutateExpectConfigFn != nil {
 				mutateExpectConfigFn(expectation)
 			}
 
-			Expect(kubelet.Config(semver.MustParse(kubernetesVersion), clusterDNSAddresses, clusterDomain, taints, params)).To(DeepEqual(expectation))
+			Expect(kubelet.Config(clusterDNSAddresses, clusterDomain, taints, params)).To(DeepEqual(expectation))
 		},
-
 		Entry(
-			"kubernetes 1.30 w/o defaults",
-			"1.30.1",
-			clusterDNSAddresses,
-			clusterDomain,
-			components.ConfigurableKubeletConfigParameters{},
-			kubeletConfigWithDefaults,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.RotateCertificates = true
-				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-				cfg.ProtectKernelDefaults = true
-				cfg.StreamingConnectionIdleTimeout = metav1.Duration{Duration: time.Minute * 5}
-			},
-		),
-		Entry(
-			"kubernetes 1.30 w/ defaults",
-			"1.30.1",
-			clusterDNSAddresses,
-			clusterDomain,
-			params,
-			kubeletConfigWithParams,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.RotateCertificates = true
-				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-			},
-		),
-		Entry(
-			"kubernetes 1.31 w/o defaults",
-			"1.31.1",
+			"w/o defaults",
 			clusterDNSAddresses,
 			clusterDomain,
 			components.ConfigurableKubeletConfigParameters{},
@@ -320,8 +291,7 @@ var _ = Describe("Config", func() {
 			},
 		),
 		Entry(
-			"kubernetes 1.31 w/ defaults",
-			"1.31.1",
+			"w/ defaults",
 			clusterDNSAddresses,
 			clusterDomain,
 			params,

@@ -29,9 +29,8 @@ var _ = Describe("apigroups", func() {
 		Entry("Unknown API Group Version", "Unknown", "core/v2", false, false),
 		Entry("Unknown API Group Version Resource", "Unknown", "core/v1/random", false, false),
 		Entry("Known API Group Version but kubernetes version not present in supported range", "networking.k8s.io/v1beta1/ipaddresses", "1.31", false, true),
-		Entry("Known API Group Version Resource but kubernetes version not present in supported range", "coordination.k8s.io/v1alpha1/leasecandidates", "1.30", false, true),
+		Entry("Known API Group Version Resource but kubernetes version not present in supported range", "coordination.k8s.io/v1alpha1/leasecandidates", "1.33", false, true),
 		Entry("Known API Group Version and kubernetes version present in supported range", "resource.k8s.io/v1alpha3", "1.31", true, true),
-		Entry("Known API Group Version Resource and kubernetes version present in supported range", "resource.k8s.io/v1alpha2/resourceclaimparameters", "1.30", true, true),
 		Entry("Known API Group Version but kubernetes version range not present", "policy/v1", "1.33", true, true),
 		Entry("Known API Group Version Resource but kubernetes version range not present", "policy/v1/poddisruptionbudgets", "1.33", true, true),
 	)
@@ -69,11 +68,6 @@ var _ = Describe("apigroups", func() {
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal("runtimeConfig[networking.k8s.io/v1beta1/ipaddresses]"),
 				"Detail": Equal("api \"networking.k8s.io/v1beta1/ipaddresses\" is not supported in Kubernetes version 1.32.1, only supported in versions < 1.31"),
-			})))),
-			Entry("unsupported API group version resource", map[string]bool{"coordination.k8s.io/v1alpha1/leasecandidates": true}, "1.30.4", false, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("runtimeConfig[coordination.k8s.io/v1alpha1/leasecandidates]"),
-				"Detail": Equal("api \"coordination.k8s.io/v1alpha1/leasecandidates\" is not supported in Kubernetes version 1.30.4, only supported in versions >= 1.31, < 1.32"),
 			})))),
 			Entry("unsupported API group version", map[string]bool{"resource.k8s.io/v1beta2": false}, "1.32.4", false, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),

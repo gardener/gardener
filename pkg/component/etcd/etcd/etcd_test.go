@@ -1840,7 +1840,6 @@ var _ = Describe("Etcd", func() {
 				Entry("when runtime Kubernetes version is >= 1.34", semver.MustParse("1.34.0")),
 				Entry("when runtime Kubernetes version is >= 1.32, < 1.34", semver.MustParse("1.32.1")),
 				Entry("when runtime Kubernetes version is 1.31", semver.MustParse("1.31.2")),
-				Entry("when runtime Kubernetes version is < 1.31", semver.MustParse("1.30.3")),
 			)
 		})
 

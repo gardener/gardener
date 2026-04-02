@@ -769,20 +769,6 @@ server:
 						Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
 					})
 				})
-
-				When("runtime Kubernetes version is < 1.31", func() {
-					BeforeEach(func() {
-						runtimeVersion = semver.MustParse("1.30.3")
-					})
-
-					It("should successfully deploy all resources", func() {
-						metav1.SetMetaDataAnnotation(&service.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
-						metav1.SetMetaDataLabel(&service.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
-
-						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
-						Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
-					})
-				})
 			})
 		})
 	})

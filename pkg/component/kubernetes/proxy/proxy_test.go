@@ -247,8 +247,8 @@ var _ = Describe("KubeProxy", func() {
 			Kubeconfig:  kubeconfig,
 			VPAEnabled:  false,
 			WorkerPools: []WorkerPool{
-				{Name: "pool1", KubernetesVersion: semver.MustParse("1.30.4"), Image: "some-image:some-tag1"},
-				{Name: "pool2", KubernetesVersion: semver.MustParse("1.33.0"), Image: "some-image:some-tag2"},
+				{Name: "pool1", KubernetesVersion: semver.MustParse("1.32.4"), Image: "some-image:some-tag1"},
+				{Name: "pool2", KubernetesVersion: semver.MustParse("1.35.0"), Image: "some-image:some-tag2"},
 			},
 		}
 		component = New(c, namespace, values)

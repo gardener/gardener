@@ -319,7 +319,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 									},
 									CRI:                      []core.CRI{{Name: "containerd"}},
 									Architectures:            []string{"amd64"},
-									KubeletVersionConstraint: ptr.To(">= 1.30.0"),
+									KubeletVersionConstraint: ptr.To(">= 1.32.0"),
 								},
 							},
 						},

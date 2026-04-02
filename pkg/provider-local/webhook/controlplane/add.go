@@ -21,9 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
 
-var (
-	logger = log.Log.WithName("local-controlplane-webhook")
-)
+var logger = log.Log.WithName("local-controlplane-webhook")
 
 // AddToManager creates a webhook and adds it to the manager.
 func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {

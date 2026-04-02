@@ -66,7 +66,7 @@ var _ = Describe("KubeControllerManager", func() {
 		_, serviceCIDR2, _       = net.ParseCIDR("2001:db8::/64")
 		serviceCIDRs             = []net.IPNet{*serviceCIDR1, *serviceCIDR2}
 		namespace                = "shoot--foo--bar"
-		version                  = "1.30.3"
+		version                  = "1.33.0"
 		semverVersion, _         = semver.NewVersion(version)
 		runtimeKubernetesVersion = semver.MustParse("1.31.1")
 		image                    = "registry.k8s.io/kube-controller-manager:v1.33.3"
@@ -782,7 +782,7 @@ namespace: kube-system
 				configWithNodeMonitorGracePeriod,
 				nil,
 				true,
-				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-endpoint,-ephemeral-volume,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-pv-protection,-ttl",
+				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-device-taint-eviction-controller,-endpoint,-ephemeral-volume,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-pv-protection,-ttl",
 			),
 			Entry("with disabled APIs (workerless)",
 				configWithNodeMonitorGracePeriod,
@@ -790,7 +790,7 @@ namespace: kube-system
 					"apps/v1": false,
 				},
 				true,
-				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-daemonset,-deployment,-endpoint,-ephemeral-volume,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-pv-protection,-replicaset,-statefulset,-ttl",
+				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-daemonset,-deployment,-device-taint-eviction-controller,-endpoint,-ephemeral-volume,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-pv-protection,-replicaset,-statefulset,-ttl",
 			),
 			Entry("with non-disabled APIs (workerless)",
 				configWithNodeMonitorGracePeriod,
@@ -798,7 +798,7 @@ namespace: kube-system
 					"apps/v1": true,
 				},
 				true,
-				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-endpoint,-ephemeral-volume,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-pv-protection,-ttl",
+				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-device-taint-eviction-controller,-endpoint,-ephemeral-volume,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-pv-protection,-ttl",
 			),
 			Entry("with disabled APIs",
 				configWithNodeMonitorGracePeriod,
@@ -821,7 +821,7 @@ namespace: kube-system
 					"rbac.authorization.k8s.io/v1":       false,
 				},
 				false,
-				"--controllers=*,bootstrapsigner,tokencleaner,-clusterrole-aggregation,-endpointslice,-endpointslicemirroring,-resource-claim-controller,-storage-version-gc",
+				"--controllers=*,bootstrapsigner,tokencleaner,-clusterrole-aggregation,-endpointslice,-endpointslicemirroring,-storage-version-gc",
 			),
 		)
 

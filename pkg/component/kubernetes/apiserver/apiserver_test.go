@@ -152,8 +152,8 @@ var _ = Describe("KubeAPIServer", func() {
 		sm = fakesecretsmanager.New(c, namespace)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
-		version = semver.MustParse("1.30.1")
-		runtimeVersion = semver.MustParse("1.30.1")
+		version = semver.MustParse("1.31.0")
+		runtimeVersion = semver.MustParse("1.31.0")
 		namePrefix = ""
 	})
 
@@ -951,7 +951,7 @@ var _ = Describe("KubeAPIServer", func() {
 					caBundle   = "some-ca-bundle"
 					clientID   = "some-client-id"
 					issuerURL  = "https://issuer.url.com"
-					version    = semver.MustParse("1.30.0")
+					version    = semver.MustParse("1.31.0")
 					oidcConfig = &gardencorev1beta1.OIDCConfig{
 						IssuerURL: &issuerURL,
 						ClientID:  &clientID,
@@ -984,7 +984,7 @@ var _ = Describe("KubeAPIServer", func() {
 					caBundle   = "some-ca-bundle"
 					clientID   = "some-client-id"
 					issuerURL  = "https://issuer.url.com"
-					version    = semver.MustParse("1.30.0")
+					version    = semver.MustParse("1.31.0")
 					oidcConfig = &gardencorev1beta1.OIDCConfig{
 						IssuerURL: &issuerURL,
 						ClientID:  &clientID,
@@ -1018,7 +1018,7 @@ var _ = Describe("KubeAPIServer", func() {
 			It("should successfully deploy the OIDCCABundle secret resource when feature gate is set to false", func() {
 				var (
 					caBundle   = "some-ca-bundle"
-					version    = semver.MustParse("1.30.0")
+					version    = semver.MustParse("1.31.0")
 					oidcConfig = &gardencorev1beta1.OIDCConfig{CABundle: &caBundle}
 				)
 
@@ -1732,7 +1732,7 @@ rules:
 				It("should error when authentication config and oidc settings are configured", func() {
 					var (
 						authenticationConfig = "some-auth-config"
-						version              = semver.MustParse("1.30.0")
+						version              = semver.MustParse("1.31.0")
 					)
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
@@ -2168,7 +2168,7 @@ rules:
 				It("should not deploy the configmap resource when feature gate is disabled", func() {
 					var (
 						authenticationConfig = "some-auth-config"
-						version              = semver.MustParse("1.30.0")
+						version              = semver.MustParse("1.31.0")
 					)
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
@@ -2208,7 +2208,7 @@ rules:
 							UsernameClaim:  ptr.To("some-username-claim"),
 							UsernamePrefix: ptr.To("some-username-prefix"),
 						}
-						version              = semver.MustParse("1.30.0")
+						version              = semver.MustParse("1.31.0")
 						authenticationConfig = `apiVersion: apiserver.config.k8s.io/v1beta1
 jwt:
 - claimMappings:
@@ -2268,7 +2268,7 @@ kind: AuthenticationConfiguration
 						GroupsClaim: ptr.To("some-groups-claim"),
 						IssuerURL:   ptr.To("https://issuer.url.com"),
 					}
-					version              = semver.MustParse("1.30.0")
+					version              = semver.MustParse("1.31.0")
 					authenticationConfig = `apiVersion: apiserver.config.k8s.io/v1beta1
 jwt:
 - claimMappings:
@@ -2323,7 +2323,7 @@ kind: AuthenticationConfiguration
 						IssuerURL:      ptr.To("https://issuer.url.com"),
 						UsernamePrefix: ptr.To("-"),
 					}
-					version              = semver.MustParse("1.30.0")
+					version              = semver.MustParse("1.31.0")
 					authenticationConfig = `apiVersion: apiserver.config.k8s.io/v1beta1
 jwt:
 - claimMappings:
@@ -2371,7 +2371,7 @@ kind: AuthenticationConfiguration
 
 			Context("authorization configuration", func() {
 				It("should do nothing when the feature gate is disabled", func() {
-					version := semver.MustParse("1.30.0")
+					version := semver.MustParse("1.31.0")
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
@@ -2392,7 +2392,7 @@ kind: AuthenticationConfiguration
 				})
 
 				It("should successfully deploy the configmap resource w/o webhooks", func() {
-					version := semver.MustParse("1.30.0")
+					version := semver.MustParse("1.31.0")
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
@@ -2430,7 +2430,7 @@ kind: AuthorizationConfiguration
 				})
 
 				It("should successfully deploy the configmap resource w/ webhooks", func() {
-					version := semver.MustParse("1.30.0")
+					version := semver.MustParse("1.31.0")
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
@@ -2498,7 +2498,7 @@ kind: AuthorizationConfiguration
 				})
 
 				It("should successfully deploy the configmap resource for workerless clusters w/o webhooks", func() {
-					version := semver.MustParse("1.30.0")
+					version := semver.MustParse("1.31.0")
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
@@ -2535,7 +2535,7 @@ kind: AuthorizationConfiguration
 				})
 
 				It("should successfully deploy the configmap resource for workerless clusters w/ webhooks", func() {
-					version := semver.MustParse("1.30.0")
+					version := semver.MustParse("1.31.0")
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
@@ -4136,7 +4136,7 @@ anonymous: null
 							},
 						}
 
-						version = semver.MustParse("1.30.0")
+						version = semver.MustParse("1.31.0")
 					)
 
 					authenticationConfig, err := runtime.Encode(ConfigCodec, authenticationConfigInput)
@@ -4199,7 +4199,7 @@ anonymous: null
 							ClientID:  ptr.To("some-client-id"),
 							IssuerURL: ptr.To("https://issuer.url.com"),
 						}
-						version              = semver.MustParse("1.30.0")
+						version              = semver.MustParse("1.31.0")
 						authenticationConfig = `apiVersion: apiserver.config.k8s.io/v1beta1
 jwt:
 - claimMappings:
@@ -4637,7 +4637,7 @@ kind: AuthenticationConfiguration
 								SubjectAccessReviewVersion: "v1alpha1",
 							},
 						}}
-						values.Version = semver.MustParse("1.30.3")
+						values.Version = semver.MustParse("1.32.0")
 						kapi = New(kubernetesInterface, namespace, sm, values)
 						deployAndRead()
 

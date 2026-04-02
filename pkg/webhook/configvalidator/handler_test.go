@@ -70,7 +70,7 @@ var _ = Describe("Handler", func() {
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.30.0",
+					Version: "1.35.0",
 				},
 			},
 		}
@@ -85,7 +85,7 @@ var _ = Describe("Handler", func() {
 			Spec: operatorv1alpha1.GardenSpec{
 				VirtualCluster: operatorv1alpha1.VirtualCluster{
 					Kubernetes: operatorv1alpha1.Kubernetes{
-						Version: "1.30.0",
+						Version: "1.35.0",
 					},
 					Gardener: operatorv1alpha1.Gardener{
 						APIServer: &operatorv1alpha1.GardenerAPIServerConfig{

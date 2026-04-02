@@ -26,7 +26,7 @@ var _ = Describe("CRD", func() {
 		c           client.Client
 		ctx         = context.TODO()
 		crdDeployer component.Deployer
-		k8sVersion  = semver.MustParse("1.30")
+		k8sVersion  = semver.MustParse("1.32")
 	)
 
 	Describe("Deployer", func() {
