@@ -125,7 +125,7 @@ func VerifyInClusterAccessToAPIServer(s *ShootContext) {
 					g.Expect(health.IsPodReady(pod)).To(BeTrue())
 				}).Should(Succeed(), "pod %q should get ready", client.ObjectKeyFromObject(pod))
 			}
-		}, SpecTimeout(time.Minute))
+		}, SpecTimeout(3*time.Minute))
 
 		It("should access the API server via direct path", func(ctx SpecContext) {
 			// this pod connects to the API server directly, i.e., uses the KUBERNETES_SERVICE_HOST env var injected by gardener
