@@ -232,7 +232,7 @@ func (h *Health) getAllExtensionConditions(ctx context.Context) ([]healthchecker
 	var listOpts []client.ListOption
 	if h.gardenletConfiguration.SeedConfig != nil {
 		listOpts = append(listOpts, client.MatchingFields{core.SeedRefName: h.gardenletConfiguration.SeedConfig.Name})
-	} else {
+	} else if v1beta1helper.IsShootSelfHosted(h.shoot.GetInfo().Spec.Provider.Workers) {
 		listOpts = append(listOpts, client.MatchingFields{core.ShootRefName: h.shoot.GetInfo().Name, core.ShootRefNamespace: h.shoot.GetInfo().Namespace})
 	}
 	if err := h.gardenClient.List(ctx, controllerInstallations, listOpts...); err != nil {

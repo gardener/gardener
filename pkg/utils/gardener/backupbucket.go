@@ -21,9 +21,9 @@ func ComputeBackupBucketsCondition(
 	backupBuckets []gardencorev1beta1.BackupBucket,
 ) gardencorev1beta1.Condition {
 	var erroneousBuckets []string
-	for _, bb := range backupBuckets {
-		if hasError, msg := v1beta1helper.BackupBucketIsErroneous(&bb); hasError {
-			erroneousBuckets = append(erroneousBuckets, fmt.Sprintf("Name: %s, Error: %s", bb.Name, msg))
+	for _, backupBucket := range backupBuckets {
+		if hasError, msg := v1beta1helper.BackupBucketIsErroneous(&backupBucket); hasError {
+			erroneousBuckets = append(erroneousBuckets, fmt.Sprintf("Name: %s, Error: %s", backupBucket.Name, msg))
 		}
 	}
 

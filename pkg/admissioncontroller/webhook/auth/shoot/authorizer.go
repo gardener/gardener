@@ -169,6 +169,7 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 					core.ShootRefNamespace: shootNamespace,
 				}),
 			)
+
 		case controllerRegistrationResource:
 			return requestAuthorizer.Check(graph.VertexTypeControllerRegistration, attrs,
 				authwebhook.WithAlwaysAllowedVerbs("get", "list", "watch"),
