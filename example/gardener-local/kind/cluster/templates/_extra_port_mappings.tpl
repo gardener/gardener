@@ -39,11 +39,10 @@
 {{- end -}}
 {{- end -}}
 
-{{- define "extraPortMappings.gardener.seed.dns" -}}
-{{- if .Values.gardener.controlPlane.deployed -}}
-- containerPort: 30053
-  hostPort: 5353
-  protocol: TCP
-  listenAddress: 172.18.255.1
+{{- define "extraPortMappings.gardener.selfHostedShoot" -}}
+{{- if .Values.gardener.selfHostedShoot.deployed -}}
+- containerPort: 30003
+  hostPort: 443
+  listenAddress: {{ .Values.gardener.selfHostedShoot.listenAddress }}
 {{- end -}}
 {{- end -}}

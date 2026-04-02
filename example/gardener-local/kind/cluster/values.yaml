@@ -22,6 +22,9 @@ gardener:
     deployed: false
     virtualGarden:
       listenAddress: 172.18.255.3
+  selfHostedShoot:
+    deployed: true
+    listenAddress: 172.18.255.4
 
 backupBucket:
   deployed: true
