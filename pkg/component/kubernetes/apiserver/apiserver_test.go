@@ -74,6 +74,16 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVar(&secretsutils.Clock, testclock.NewFakeClock(time.Time{})))
 })
 
+// newSeedFakeClientBuilder returns a fake client builder using the simpler client-go ObjectTracker instead of the
+// default FieldManagedObjectTracker. SeedScheme registers types from ~20 scheme builders (hundreds of GVKs), and the
+// field-managed tracker's REST mapper and structured-merge-diff machinery causes significant overhead, leading to flaky
+// test timeouts under CPU contention.
+func newSeedFakeClientBuilder() *fakeclient.ClientBuilder {
+	return fakeclient.NewClientBuilder().
+		WithScheme(kubernetes.SeedScheme).
+		WithObjectTracker(testing.NewObjectTracker(kubernetes.SeedScheme, scheme.Codecs.UniversalDecoder()))
+}
+
 var _ = Describe("KubeAPIServer", func() {
 	var (
 		ctx = context.Background()
@@ -138,7 +148,7 @@ var _ = Describe("KubeAPIServer", func() {
 	)
 
 	BeforeEach(func() {
-		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjectTracker(testing.NewObjectTracker(kubernetes.SeedScheme, scheme.Codecs.UniversalDecoder())).Build()
+		c = newSeedFakeClientBuilder().Build()
 		sm = fakesecretsmanager.New(c, namespace)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
@@ -4817,7 +4827,7 @@ kind: AuthenticationConfiguration
 		})
 
 		It("should successfully wait for the deployment to be updated", func() {
-			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjectTracker(testing.NewObjectTracker(kubernetes.SeedScheme, scheme.Codecs.UniversalDecoder())).Build()
+			fakeClient := newSeedFakeClientBuilder().Build()
 			fakeKubernetesInterface := fakekubernetes.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
 			kapi = New(fakeKubernetesInterface, namespace, nil, Values{
 				Values: apiserver.Values{
@@ -4862,7 +4872,7 @@ kind: AuthenticationConfiguration
 
 	Describe("#WaitCleanup", func() {
 		It("should successfully wait for the deployment to be deleted", func() {
-			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjectTracker(testing.NewObjectTracker(kubernetes.SeedScheme, scheme.Codecs.UniversalDecoder())).Build()
+			fakeClient := newSeedFakeClientBuilder().Build()
 			fakeKubernetesInterface := fakekubernetes.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
 			kapi = New(fakeKubernetesInterface, namespace, nil, Values{})
 			deploy := deployment.DeepCopy()
