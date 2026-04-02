@@ -46,6 +46,7 @@ case "$COMMAND" in
       --kubeconfig "$VIRTUAL_GARDEN_KUBECONFIG" \
       --status-check=false --platform="linux/$SYSTEM_ARCH" # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
 
+    # Rerun registry script to deploy pull secret into virtual garden
     if [[ "$SCENARIO" == "remote" ]]; then
       "$SCRIPT_DIR"/remote/registry/deploy-registry.sh "$KUBECONFIG" "$registry_domain" "$VIRTUAL_GARDEN_KUBECONFIG"
       kubectl apply -k "$SCRIPT_DIR/remote/registry/kyverno-policies"

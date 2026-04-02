@@ -124,6 +124,8 @@ kubectl create namespace garden --dry-run=client -o yaml |
   kubectl --kubeconfig "$kubeconfig" --server-side=true apply  -f -
 kubectl create secret docker-registry -n garden gardener-images --docker-server="$registry" --docker-username=gardener --docker-password="$password" --docker-email=gardener@localhost --dry-run=client -o yaml | \
   kubectl --kubeconfig "$kubeconfig" --server-side=true apply  -f -
+# With this label the secret will be propagated automatically for extensions by the gardener-operator
+kubectl label --kubeconfig "$kubeconfig" -n garden secret gardener-images "gardener.cloud/role=helm-pull-secret"
 
 echo "Creating registry domain ConfigMap"
 kubectl create configmap -n registry registry-domain --from-literal=domain="$registry" --dry-run=client -o yaml | \
@@ -133,11 +135,8 @@ if [[ -n "$virtual_garden_kubeconfig" ]]; then
   echo "Creating pull secret in garden namespace of virtual garden"
   kubectl create secret docker-registry -n garden gardener-images --docker-server="$registry" --docker-username=gardener --docker-password="$password" --docker-email=gardener@localhost --dry-run=client -o yaml | \
     kubectl --kubeconfig "$virtual_garden_kubeconfig" --server-side=true apply  -f -
-  if kubectl --kubeconfig "$virtual_garden_kubeconfig" get namespace seed-remote >/dev/null 2>&1; then
-    echo "Creating pull secret in seed-remote namespace of virtual garden"
-    kubectl create secret docker-registry -n seed-remote gardener-images --docker-server="$registry" --docker-username=gardener --docker-password="$password" --docker-email=gardener@localhost --dry-run=client -o yaml | \
-      kubectl --kubeconfig "$virtual_garden_kubeconfig" --server-side=true apply  -f -
-  fi
+  # With this label the secret will be propagated automatically to all seed namespaces by the gardener-controller-manager
+  kubectl label --kubeconfig "$virtual_garden_kubeconfig" -n garden secret gardener-images "gardener.cloud/role=helm-pull-secret"
 fi
 
 echo "Deploying container registry $registry"
