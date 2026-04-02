@@ -4,10 +4,6 @@ kind: Service
 metadata:
   name: gardener-admission-controller
   namespace: garden
-  annotations:
-    {{- if and .Values.global.admission.service.topologyAwareRouting.enabled (semverCompare "< 1.31-0" .Capabilities.KubeVersion.Version) }}
-    service.kubernetes.io/topology-mode: "auto"
-    {{- end }}
   labels:
     app: gardener
     role: admission-controller
