@@ -32,7 +32,7 @@ The connections are forwarded via the [HaProxy Proxy Protocol](https://www.envoy
 The Istio ingress-gateway forwards the connection to the respective shoot API Server by it's cluster IP address.
 As TLS termination happens at the API Server, the traffic is end-to-end encrypted the same way as with SNI.
 
-Details can be found in [GEP-0011](https://github.com/gardener/enhancements/tree/main/geps/0011-apiserver-network-proxy).
+Details can be found in [GEP-0008](https://github.com/gardener/enhancements/tree/main/geps/0008-shoot-apiserver-via-sni).
 
 ## Reversed VPN Tunnel
 
