@@ -1159,13 +1159,10 @@ type OIDCConfig struct {
 	// If set, the OpenID server's certificate will be verified by one of the authorities in the oidc-ca-file, otherwise the host's root CA set will be used.
 	// +optional
 	CABundle *string `json:"caBundle,omitempty" protobuf:"bytes,1,opt,name=caBundle"`
-	// ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
-	//
-	// Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31.
-	// It's use was planned for generating OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
-	// TODO(AleksandarSavchev): Drop this field after support for Kubernetes 1.30 is dropped.
-	// +optional
-	ClientAuthentication *OpenIDConnectClientAuthentication `json:"clientAuthentication,omitempty" protobuf:"bytes,2,opt,name=clientAuthentication"`
+
+	// ClientAuthentication is tombstoned to show why 2 is reserved protobuf tag.
+	// ClientAuthentication *OpenIDConnectClientAuthentication `json:"clientAuthentication,omitempty" protobuf:"bytes,2,opt,name=clientAuthentication"`
+
 	// The client ID for the OpenID Connect client, must be set.
 	// +optional
 	ClientID *string `json:"clientID,omitempty" protobuf:"bytes,3,opt,name=clientID"`
@@ -1438,14 +1435,10 @@ type KubeletConfig struct {
 	// +optional
 	// Default: cpu=80m,memory=1Gi,pid=20k
 	KubeReserved *KubeletConfigReserved `json:"kubeReserved,omitempty" protobuf:"bytes,14,opt,name=kubeReserved"`
-	// SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
-	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
-	//
-	// Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31.
-	// Please merge existing resource reservations into the kubeReserved field.
-	// TODO(MichaelEischer): Drop this field after support for Kubernetes 1.30 is dropped.
-	// +optional
-	SystemReserved *KubeletConfigReserved `json:"systemReserved,omitempty" protobuf:"bytes,15,opt,name=systemReserved"`
+
+	// SystemReserved is tombstoned to show why 15 is reserved protobuf tag.
+	// SystemReserved *KubeletConfigReserved `json:"systemReserved,omitempty" protobuf:"bytes,15,opt,name=systemReserved"`
+
 	// ImageGCHighThresholdPercent describes the percent of the disk usage which triggers image garbage collection.
 	// +optional
 	// Default: 50

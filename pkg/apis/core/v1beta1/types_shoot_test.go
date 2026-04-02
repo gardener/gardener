@@ -68,6 +68,20 @@ var _ = Describe("Shoot", func() {
 		})
 	})
 
+	Describe("OIDCConfig", func() {
+		It("should not allow to reuse protobuf numbers of already removed fields", func() {
+			obj := reflect.ValueOf(OIDCConfig{}).Type()
+			for i := 0; i < obj.NumField(); i++ {
+				f := obj.Field(i)
+
+				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
+				if protobufNum == "2" {
+					Fail("protobuf 2 in OIDCConfig is reserved for removed clientAuthentication field")
+				}
+			}
+		})
+	})
+
 	Describe("KubeletConfig", func() {
 		It("should not allow to reuse protobuf numbers of already removed fields", func() {
 			obj := reflect.ValueOf(KubeletConfig{}).Type()
@@ -77,6 +91,18 @@ var _ = Describe("Shoot", func() {
 				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
 				if protobufNum == "12" {
 					Fail("protobuf 12 in KubeletConfig is reserved for removed imagePullProgressDeadline field")
+				}
+			}
+		})
+
+		It("should not allow to reuse protobuf numbers of already removed fields", func() {
+			obj := reflect.ValueOf(KubeletConfig{}).Type()
+			for i := 0; i < obj.NumField(); i++ {
+				f := obj.Field(i)
+
+				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
+				if protobufNum == "15" {
+					Fail("protobuf 15 in KubeletConfig is reserved for removed systemReserved field")
 				}
 			}
 		})

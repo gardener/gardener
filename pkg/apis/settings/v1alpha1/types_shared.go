@@ -24,16 +24,8 @@ type OpenIDConnectPresetSpec struct {
 	// configuration already set on the Shoot object.
 	Server KubeAPIServerOpenIDConnect `json:"server" protobuf:"bytes,1,opt,name=server"`
 
-	// Client contains the configuration used for client OIDC authentication
-	// of Shoot clusters.
-	// This configuration is not overwriting any existing OpenID Connect
-	// client authentication already set on the Shoot object.
-	//
-	// Deprecated: The OpenID Connect configuration this field specifies is not used and will be forbidden starting from Kubernetes 1.31.
-	// It's use was planned for generating OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
-	// TODO(AleksandarSavchev): Drop this field after support for Kubernetes 1.30 is dropped.
-	// +optional
-	Client *OpenIDConnectClientAuthentication `json:"client,omitempty" protobuf:"bytes,2,opt,name=client"`
+	// Client is tombstoned to show why 2 is reserved protobuf tag.
+	// Client *OpenIDConnectClientAuthentication `json:"client,omitempty" protobuf:"bytes,2,opt,name=client"`
 
 	// ShootSelector decides whether to apply the configuration if the
 	// Shoot has matching labels.
