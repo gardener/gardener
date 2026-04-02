@@ -5915,18 +5915,6 @@ boolean
 </tr>
 <tr>
 <td>
-<code>systemReserved</code></br>
-<em>
-<a href="#kubeletconfigreserved">KubeletConfigReserved</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).<br />When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.<br />Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31.<br />Please merge existing resource reservations into the kubeReserved field.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>imageGCHighThresholdPercent</code></br>
 <em>
 integer
@@ -8918,18 +8906,6 @@ string
 </tr>
 <tr>
 <td>
-<code>clientAuthentication</code></br>
-<em>
-<a href="#openidconnectclientauthentication">OpenIDConnectClientAuthentication</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ClientAuthentication can optionally contain client configuration used for kubeconfig generation.<br />Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31.<br />It's use was planned for generating OIDC kubeconfig https://github.com/gardener/gardener/issues/1433</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>clientID</code></br>
 <em>
 string
@@ -9082,10 +9058,6 @@ ObservabilityRotation contains information about the observability credential ro
 <h3 id="openidconnectclientauthentication">OpenIDConnectClientAuthentication
 </h3>
 
-
-<p>
-(<em>Appears on:</em><a href="#oidcconfig">OIDCConfig</a>)
-</p>
 
 <p>
 OpenIDConnectClientAuthentication contains configuration for OIDC clients.

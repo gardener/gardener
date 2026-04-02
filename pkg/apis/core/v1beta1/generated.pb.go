@@ -5804,18 +5804,6 @@ func (m *KubeletConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x80
 	}
-	if m.SystemReserved != nil {
-		{
-			size, err := m.SystemReserved.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x7a
-	}
 	if m.KubeReserved != nil {
 		{
 			size, err := m.KubeReserved.MarshalToSizedBuffer(dAtA[:i])
@@ -8441,18 +8429,6 @@ func (m *OIDCConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i = encodeVarintGenerated(dAtA, i, uint64(len(*m.ClientID)))
 		i--
 		dAtA[i] = 0x1a
-	}
-	if m.ClientAuthentication != nil {
-		{
-			size, err := m.ClientAuthentication.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
 	}
 	if m.CABundle != nil {
 		i -= len(*m.CABundle)
@@ -15571,10 +15547,6 @@ func (m *KubeletConfig) Size() (n int) {
 		l = m.KubeReserved.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
-	if m.SystemReserved != nil {
-		l = m.SystemReserved.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
 	if m.ImageGCHighThresholdPercent != nil {
 		n += 2 + sovGenerated(uint64(*m.ImageGCHighThresholdPercent))
 	}
@@ -16549,10 +16521,6 @@ func (m *OIDCConfig) Size() (n int) {
 	_ = l
 	if m.CABundle != nil {
 		l = len(*m.CABundle)
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	if m.ClientAuthentication != nil {
-		l = m.ClientAuthentication.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
 	if m.ClientID != nil {
@@ -19841,7 +19809,6 @@ func (this *KubeletConfig) String() string {
 		`PodPIDsLimit:` + valueToStringGenerated(this.PodPIDsLimit) + `,`,
 		`FailSwapOn:` + valueToStringGenerated(this.FailSwapOn) + `,`,
 		`KubeReserved:` + strings.Replace(this.KubeReserved.String(), "KubeletConfigReserved", "KubeletConfigReserved", 1) + `,`,
-		`SystemReserved:` + strings.Replace(this.SystemReserved.String(), "KubeletConfigReserved", "KubeletConfigReserved", 1) + `,`,
 		`ImageGCHighThresholdPercent:` + valueToStringGenerated(this.ImageGCHighThresholdPercent) + `,`,
 		`ImageGCLowThresholdPercent:` + valueToStringGenerated(this.ImageGCLowThresholdPercent) + `,`,
 		`SerializeImagePulls:` + valueToStringGenerated(this.SerializeImagePulls) + `,`,
@@ -20491,7 +20458,6 @@ func (this *OIDCConfig) String() string {
 	mapStringForRequiredClaims += "}"
 	s := strings.Join([]string{`&OIDCConfig{`,
 		`CABundle:` + valueToStringGenerated(this.CABundle) + `,`,
-		`ClientAuthentication:` + strings.Replace(this.ClientAuthentication.String(), "OpenIDConnectClientAuthentication", "OpenIDConnectClientAuthentication", 1) + `,`,
 		`ClientID:` + valueToStringGenerated(this.ClientID) + `,`,
 		`GroupsClaim:` + valueToStringGenerated(this.GroupsClaim) + `,`,
 		`GroupsPrefix:` + valueToStringGenerated(this.GroupsPrefix) + `,`,
@@ -37244,42 +37210,6 @@ func (m *KubeletConfig) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 15:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SystemReserved", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.SystemReserved == nil {
-				m.SystemReserved = &KubeletConfigReserved{}
-			}
-			if err := m.SystemReserved.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
 		case 16:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ImageGCHighThresholdPercent", wireType)
@@ -44834,42 +44764,6 @@ func (m *OIDCConfig) Unmarshal(dAtA []byte) error {
 			}
 			s := string(dAtA[iNdEx:postIndex])
 			m.CABundle = &s
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ClientAuthentication", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.ClientAuthentication == nil {
-				m.ClientAuthentication = &OpenIDConnectClientAuthentication{}
-			}
-			if err := m.ClientAuthentication.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
