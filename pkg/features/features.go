@@ -115,8 +115,8 @@ const (
 
 	// OpenTelemetryDataplaneCollector enables an OpenTelemetry Collector deployment in the shoot cluster's data plane
 	// for collecting metrics using kubernetes service discovery.
-	// owner: @bobi-wan
-	// alpha: v1.136.0
+	// owner: @bobi-wan @iypetrov
+	// alpha: v1.141.0
 	OpenTelemetryDataplaneCollector featuregate.Feature = "OpenTelemetryDataplaneCollector"
 )
 

@@ -278,6 +278,8 @@ metadata:
 			serviceYAML = `apiVersion: v1
 kind: Service
 metadata:
+  annotations:
+    networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports: '[{"protocol":"TCP","port":16909}]'
   labels:
     component: node-exporter
   name: node-exporter
