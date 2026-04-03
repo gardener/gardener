@@ -34,6 +34,8 @@ import (
 	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/testing"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
@@ -71,6 +73,16 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVar(&secretsutils.GenerateVPNKey, secretsutils.FakeGenerateVPNKey))
 	DeferCleanup(test.WithVar(&secretsutils.Clock, testclock.NewFakeClock(time.Time{})))
 })
+
+// newSeedFakeClientBuilder returns a fake client builder using the simpler client-go ObjectTracker instead of the
+// default FieldManagedObjectTracker. SeedScheme registers types from ~20 scheme builders (hundreds of GVKs), and the
+// field-managed tracker's REST mapper and structured-merge-diff machinery causes significant overhead, leading to flaky
+// test timeouts under CPU contention.
+func newSeedFakeClientBuilder() *fakeclient.ClientBuilder {
+	return fakeclient.NewClientBuilder().
+		WithScheme(kubernetes.SeedScheme).
+		WithObjectTracker(testing.NewObjectTracker(kubernetes.SeedScheme, scheme.Codecs.UniversalDecoder()))
+}
 
 var _ = Describe("KubeAPIServer", func() {
 	var (
@@ -136,7 +148,7 @@ var _ = Describe("KubeAPIServer", func() {
 	)
 
 	BeforeEach(func() {
-		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		c = newSeedFakeClientBuilder().Build()
 		sm = fakesecretsmanager.New(c, namespace)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
@@ -4815,7 +4827,7 @@ kind: AuthenticationConfiguration
 		})
 
 		It("should successfully wait for the deployment to be updated", func() {
-			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			fakeClient := newSeedFakeClientBuilder().Build()
 			fakeKubernetesInterface := fakekubernetes.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
 			kapi = New(fakeKubernetesInterface, namespace, nil, Values{
 				Values: apiserver.Values{
@@ -4826,7 +4838,7 @@ kind: AuthenticationConfiguration
 			deploy := deployment.DeepCopy()
 
 			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
-			defer test.WithVars(&TimeoutWaitForDeployment, 100*time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 500*time.Millisecond)()
 
 			Expect(fakeClient.Create(ctx, deploy)).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(Succeed())
@@ -4860,13 +4872,13 @@ kind: AuthenticationConfiguration
 
 	Describe("#WaitCleanup", func() {
 		It("should successfully wait for the deployment to be deleted", func() {
-			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			fakeClient := newSeedFakeClientBuilder().Build()
 			fakeKubernetesInterface := fakekubernetes.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
 			kapi = New(fakeKubernetesInterface, namespace, nil, Values{})
 			deploy := deployment.DeepCopy()
 
 			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
-			defer test.WithVars(&TimeoutWaitForDeployment, 100*time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 500*time.Millisecond)()
 
 			Expect(fakeClient.Create(ctx, deploy)).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(Succeed())
