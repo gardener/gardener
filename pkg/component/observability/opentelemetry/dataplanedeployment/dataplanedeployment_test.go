@@ -35,7 +35,7 @@ var _ = Describe("DataplaneDeployment", func() {
 		image               = "some-otel-image:some-tag"
 
 		c         client.Client
-		config    Config
+		config    Values
 		component component.DeployWaiter
 
 		managedResource       *resourcesv1alpha1.ManagedResource
@@ -44,7 +44,7 @@ var _ = Describe("DataplaneDeployment", func() {
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		config = Config{
+		config = Values{
 			Image:    image,
 			Replicas: 1,
 		}

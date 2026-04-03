@@ -25,7 +25,7 @@ func (b *Botanist) DefaultOtelDataplaneDeployment() (component.DeployWaiter, err
 		return nil, err
 	}
 
-	config := dataplanedeployment.Config{
+	config := dataplanedeployment.Values{
 		Image:    image.String(),
 		Replicas: 1,
 	}

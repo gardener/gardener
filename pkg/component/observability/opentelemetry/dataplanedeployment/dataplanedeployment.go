@@ -6,10 +6,8 @@ package dataplanedeployment
 
 import (
 	"context"
-	// "strconv"
 	"time"
 
-	// monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,9 +21,11 @@ import (
 	// resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+
 	// kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	prometheusshoot "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+
 	// "github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -52,8 +52,8 @@ type KubernetesScrapeConfig struct {
 	Namespaces []string
 }
 
-// Config is the configuration for the OTEL collector dataplane deployment component.
-type Config struct {
+// Values is the values for OpenTelemetry Collector Dataplane Deployment configurations.
+type Values struct {
 	// Image is the container image used for the OTEL collector.
 	Image string
 	// Replicas is the number of replicas for the deployment.
@@ -65,19 +65,19 @@ type Config struct {
 type dataplaneDeployment struct {
 	client    client.Client
 	namespace string
-	config    Config
+	values    Values
 }
 
-// New creates a new instance of DeployWaiter for OTEL collector dataplane deployment.
+// New creates a new instance of DeployWaiter for OpenTelemetry Collector Dataplane Deployment.
 func New(
 	client client.Client,
 	namespace string,
-	config Config,
+	values Values,
 ) component.DeployWaiter {
 	return &dataplaneDeployment{
 		client:    client,
 		namespace: namespace,
-		config:    config,
+		values:    values,
 	}
 }
 
@@ -90,9 +90,8 @@ func (d *dataplaneDeployment) Deploy(ctx context.Context) error {
 }
 
 func (d *dataplaneDeployment) Destroy(ctx context.Context) error {
-	if err := kubernetesutils.DeleteObjects(ctx, d.client,
-		d.emptyScrapeConfig(),
-	); err != nil {
+	err := kubernetesutils.DeleteObjects(ctx, d.client, d.emptyScrapeConfig())
+	if err != nil {
 		return err
 	}
 
@@ -194,7 +193,7 @@ func (d *dataplaneDeployment) computeResourcesData() (map[string][]byte, error) 
 				Labels:    getLabels(),
 			},
 			Data: map[string]string{
-				"config.yaml": d.getOTELConfig(),
+				"config.yaml": d.getOTelConfig(),
 			},
 		}
 
@@ -203,13 +202,13 @@ func (d *dataplaneDeployment) computeResourcesData() (map[string][]byte, error) 
 				Name:      componentName,
 				Namespace: targetNamespace,
 				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-					// TODO: should it be GardenRoleMonitoring or GardenRoleObservability here?
+					// TODO(Bobi-Wan): should it be GardenRoleMonitoring or GardenRoleObservability here?
 					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleMonitoring,
 					managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 				}),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             &d.config.Replicas,
+				Replicas:             &d.values.Replicas,
 				RevisionHistoryLimit: ptr.To[int32](2),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: getLabels(),
@@ -217,17 +216,17 @@ func (d *dataplaneDeployment) computeResourcesData() (map[string][]byte, error) 
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-							v1beta1constants.GardenRole:                                                                v1beta1constants.GardenRoleMonitoring,
-							managedresources.LabelKeyOrigin:                                                            managedresources.LabelValueGardener,
-							v1beta1constants.LabelNetworkPolicyShootFromSeed:                                           v1beta1constants.LabelNetworkPolicyAllowed,
-							v1beta1constants.LabelNetworkPolicyShootToAPIServer:                                        v1beta1constants.LabelNetworkPolicyAllowed,
-							v1beta1constants.LabelNetworkPolicyShootToKubelet:                                          v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.GardenRole:                            v1beta1constants.GardenRoleMonitoring,
+							managedresources.LabelKeyOrigin:                        managedresources.LabelValueGardener,
+							v1beta1constants.LabelNetworkPolicyShootFromSeed:       v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyShootToAPIServer:    v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyShootToKubelet:      v1beta1constants.LabelNetworkPolicyAllowed,
 							v1beta1constants.LabelNetworkPolicyToDNS:               v1beta1constants.LabelNetworkPolicyAllowed,
 							v1beta1constants.LabelNetworkPolicyShootToNodeExporter: v1beta1constants.LabelNetworkPolicyAllowed,
 						}),
 					},
 					Spec: corev1.PodSpec{
-						PriorityClassName:v1beta1constants.PriorityClassNameShootSystem700,
+						PriorityClassName:  v1beta1constants.PriorityClassNameShootSystem700,
 						ServiceAccountName: serviceAccount.Name,
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsNonRoot: ptr.To(true),
@@ -239,7 +238,7 @@ func (d *dataplaneDeployment) computeResourcesData() (map[string][]byte, error) 
 						Containers: []corev1.Container{
 							{
 								Name:            componentName,
-								Image:           d.config.Image,
+								Image:           d.values.Image,
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Command: []string{
 									"/bin/otelcol",
@@ -310,7 +309,7 @@ func (d *dataplaneDeployment) computeResourcesData() (map[string][]byte, error) 
 	)
 }
 
-func (d *dataplaneDeployment) getOTELConfig() string {
+func (d *dataplaneDeployment) getOTelConfig() string {
 	return otelConfig
 }
 

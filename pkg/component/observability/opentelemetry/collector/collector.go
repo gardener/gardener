@@ -51,7 +51,7 @@ const (
 	timeoutWaitForManagedResources = 2 * time.Minute
 )
 
-// Values is the values for OpenTelemetry Collector configurations
+// Values is the values for OpenTelemetry Collector configurations.
 type Values struct {
 	// Image is the collector image.
 	Image string

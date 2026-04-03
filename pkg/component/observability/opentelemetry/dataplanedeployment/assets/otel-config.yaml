@@ -17,12 +17,14 @@ receivers:
             - source_labels: [__meta_kubernetes_node_name]
               action: replace
               target_label: instance
+            # TODO(Bobi-Wan): check if needed
             - source_labels: [__meta_kubernetes_node_name]
               action: replace
               target_label: node
           metric_relabel_configs:
             - source_labels: [__name__]
               action: keep
+              # TODO(Bobi-Wan): check if "up" is required
               regex: ^(up|kubelet_running_pods|process_max_fds|process_open_fds|kubelet_volume_stats_available_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes|kubelet_image_pull_duration_seconds_bucket|kubelet_image_pull_duration_seconds_sum|kubelet_image_pull_duration_seconds_count)$
 
         - job_name: 'cadvisor'
