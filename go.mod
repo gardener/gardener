@@ -22,7 +22,7 @@ require (
 	github.com/gardener/gardener/pkg/apis v0.0.0
 	github.com/gardener/machine-controller-manager v0.61.3
 	github.com/gardener/terminal-controller-manager v0.35.0
-	github.com/go-jose/go-jose/v4 v4.1.3
+	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/go-logr/logr v1.4.3
 	github.com/go-test/deep v1.1.0
 	github.com/goccy/go-yaml v1.19.2
