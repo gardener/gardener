@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/nodeexporter"
 	componenttest "github.com/gardener/gardener/pkg/component/test"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -463,8 +464,10 @@ status: {}
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			actualScrapeConfig := &monitoringv1alpha1.ScrapeConfig{}
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig), actualScrapeConfig)).To(Succeed())
-			Expect(actualScrapeConfig).To(DeepEqual(scrapeConfig))
+			if !features.DefaultFeatureGate.Enabled(features.OpenTelemetryDataplaneCollector) {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig), actualScrapeConfig)).To(Succeed())
+				Expect(actualScrapeConfig).To(DeepEqual(scrapeConfig))
+			}
 
 			actualPrometheusRule := &monitoringv1.PrometheusRule{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), actualPrometheusRule)).To(Succeed())
