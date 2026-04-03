@@ -408,6 +408,36 @@ var _ = Describe("ShootSystem", func() {
 					},
 				}
 
+				networkPolicyToNodeExporter = &networkingv1.NetworkPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gardener.cloud--allow-to-node-exporter",
+						Namespace: "kube-system",
+						Annotations: map[string]string{
+							"gardener.cloud/description": "Allows egress traffic to node exporter in TCP port 16909 for pods labeled with 'networking.gardener.cloud/to-node-exporter=allowed'.",
+						},
+					},
+					Spec: networkingv1.NetworkPolicySpec{
+						PodSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"networking.gardener.cloud/to-node-exporter": "allowed",
+							},
+						},
+						Egress: []networkingv1.NetworkPolicyEgressRule{
+							{
+								Ports: []networkingv1.NetworkPolicyPort{
+									{
+										Protocol: ptr.To(corev1.ProtocolTCP),
+										Port:     ptr.To(intstr.FromInt32(16909)),
+									},
+								},
+							},
+						},
+						PolicyTypes: []networkingv1.PolicyType{
+							networkingv1.PolicyTypeEgress,
+						},
+					},
+				}
+
 				networkPolicyToPublicNetworks = &networkingv1.NetworkPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "gardener.cloud--allow-to-public-networks",
@@ -450,6 +480,7 @@ var _ = Describe("ShootSystem", func() {
 					networkPolicyToAPIServer,
 					networkPolicyToDNS,
 					networkPolicyToKubelet,
+					networkPolicyToNodeExporter,
 					networkPolicyToPublicNetworks,
 				))
 
