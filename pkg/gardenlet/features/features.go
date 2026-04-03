@@ -32,5 +32,6 @@ func GetFeatures() []featuregate.Feature {
 		features.VPNBondingModeRoundRobin,
 		features.PrometheusHealthChecks,
 		features.RemoveVali,
+		features.OpenTelemetryDataplaneCollector,
 	}
 }

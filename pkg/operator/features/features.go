@@ -21,5 +21,6 @@ func RegisterFeatureGates() {
 		features.VPAInPlaceUpdates,
 		features.PrometheusHealthChecks,
 		features.RemoveVali,
+		features.OpenTelemetryDataplaneCollector,
 	)))
 }

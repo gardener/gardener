@@ -85,12 +85,7 @@ func (n *nodeExporter) Deploy(ctx context.Context) error {
 	// When the OTEL dataplane collector is enabled, it handles scraping node-exporter metrics
 	// locally in the shoot cluster, so we skip creating the direct scrape config to avoid
 	// duplicate traffic.
-	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryDataplaneCollector) {
-		// Delete the scrape config if it exists (cleanup from previous state)
-		if err := kubernetesutils.DeleteObjects(ctx, n.client, n.emptyScrapeConfig()); err != nil {
-			return err
-		}
-	} else {
+	if !features.DefaultFeatureGate.Enabled(features.OpenTelemetryDataplaneCollector) {
 		scrapeConfig := n.emptyScrapeConfig()
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, n.client, scrapeConfig, func() error {
 			metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
@@ -129,6 +124,11 @@ func (n *nodeExporter) Deploy(ctx context.Context) error {
 			)
 			return nil
 		}); err != nil {
+			return err
+		}
+	} else {
+		// Delete the scrape config if it exists (cleanup from previous state)
+		if err := kubernetesutils.DeleteObjects(ctx, n.client, n.emptyScrapeConfig()); err != nil {
 			return err
 		}
 	}
@@ -330,14 +330,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 				Selector: getLabels(),
 			},
 		}
-	)
 
-	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(portMetrics)),
-		Protocol: ptr.To(corev1.ProtocolTCP),
-	}))
-
-	var (
 		daemonSet = &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
@@ -491,6 +484,11 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 
 		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)
+
+	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
+		Port:     ptr.To(intstr.FromInt32(portMetrics)),
+		Protocol: ptr.To(corev1.ProtocolTCP),
+	}))
 
 	if n.values.VPAEnabled {
 		vpaUpdateMode := vpaautoscalingv1.UpdateModeRecreate
