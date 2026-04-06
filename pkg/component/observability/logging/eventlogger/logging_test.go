@@ -18,35 +18,16 @@ import (
 
 var _ = Describe("Logging", func() {
 	Describe("#CentralLoggingConfiguration", func() {
-		BeforeEach(func() {
-			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, false))
-		})
-		It("should return the expected logging parser and filter", func() {
-			loggingConfig, err := CentralLoggingConfiguration()
 
-			Expect(err).NotTo(HaveOccurred())
+		When("OpenTelemetryCollector=false", func() {
+			BeforeEach(func() {
+				DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, false))
+			})
 
-			if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
-				Expect(loggingConfig.Filters).To(Equal(
-					[]*fluentbitv1alpha2.ClusterFilter{
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:   "event-logger",
-								Labels: map[string]string{"fluentbit.gardener/type": "seed"},
-							},
-							Spec: fluentbitv1alpha2.FilterSpec{
-								Match: "kubernetes.*event-logger*event-logger*",
-								FilterItems: []fluentbitv1alpha2.FilterItem{
-									{
-										RecordModifier: &fluentbitv1alpha2filter.RecordModifier{
-											Records: []string{"job event-logging"},
-										},
-									},
-								},
-							},
-						},
-					}))
-			} else {
+			It("should return the expected logging parser and filter", func() {
+				loggingConfig, err := CentralLoggingConfiguration()
+
+				Expect(err).NotTo(HaveOccurred())
 				Expect(loggingConfig.Filters).To(Equal(
 					[]*fluentbitv1alpha2.ClusterFilter{
 						{
@@ -72,9 +53,42 @@ var _ = Describe("Logging", func() {
 							},
 						},
 					}))
-			}
-			Expect(loggingConfig.Inputs).To(BeNil())
-			Expect(loggingConfig.Parsers).To(BeNil())
+				Expect(loggingConfig.Inputs).To(BeNil())
+				Expect(loggingConfig.Parsers).To(BeNil())
+			})
+		})
+
+		When("OpenTelemetryCollector=true", func() {
+			BeforeEach(func() {
+				DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, true))
+			})
+
+			It("should return the expected logging parser and filter", func() {
+				loggingConfig, err := CentralLoggingConfiguration()
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(loggingConfig.Filters).To(Equal(
+					[]*fluentbitv1alpha2.ClusterFilter{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:   "event-logger",
+								Labels: map[string]string{"fluentbit.gardener/type": "seed"},
+							},
+							Spec: fluentbitv1alpha2.FilterSpec{
+								Match: "kubernetes.*event-logger*event-logger*",
+								FilterItems: []fluentbitv1alpha2.FilterItem{
+									{
+										RecordModifier: &fluentbitv1alpha2filter.RecordModifier{
+											Records: []string{"job event-logging"},
+										},
+									},
+								},
+							},
+						},
+					}))
+				Expect(loggingConfig.Inputs).To(BeNil())
+				Expect(loggingConfig.Parsers).To(BeNil())
+			})
 		})
 	})
 })
