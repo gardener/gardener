@@ -81,7 +81,7 @@ YQ_VERSION ?= v4.52.5
 # renovate: datasource=github-releases depName=ironcore-dev/vgopath
 VGOPATH_VERSION ?= v0.1.10
 # renovate: datasource=github-releases depName=crate-ci/typos
-TYPOS_VERSION ?= v1.44.0
+TYPOS_VERSION ?= v1.45.0
 GOBUILDCACHE_VERSION ?= 83bfeb837b93a786ff37b33d0be108bcc74b089f
 
 # tool versions from go.mod
