@@ -38,6 +38,7 @@ func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 		}
 		filterItems = append(filterItems, item)
 	}
+
 	return []*fluentbitv1alpha2.ClusterFilter{
 		{
 			ObjectMeta: metav1.ObjectMeta{
