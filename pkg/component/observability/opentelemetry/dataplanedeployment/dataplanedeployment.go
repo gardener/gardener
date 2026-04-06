@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/goccy/go-yaml"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,15 +19,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	// resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 
-	// kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	prometheusshoot "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 
-	// "github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -174,7 +172,6 @@ func (d *dataplaneDeployment) computeResourcesData() (map[string][]byte, error) 
 				Labels:    getLabels(),
 			},
 			Spec: corev1.ServiceSpec{
-				// ClusterIP: "None",
 				Ports: []corev1.ServicePort{
 					{
 						Name:     metricsPortName,
@@ -310,7 +307,218 @@ func (d *dataplaneDeployment) computeResourcesData() (map[string][]byte, error) 
 }
 
 func (d *dataplaneDeployment) getOTelConfig() string {
-	return otelConfig
+	config := map[string]any{
+		"receivers": map[string]any{
+			"prometheus": map[string]any{
+				"config": map[string]any{
+					"scrape_configs": []any{
+						map[string]any{
+							"job_name":          "kube-kubelet",
+							"honor_labels":      true,
+							"scrape_interval":   "30s",
+							"scheme":            "https",
+							"bearer_token_file": "/var/run/secrets/kubernetes.io/serviceaccount/token",
+							"tls_config": map[string]any{
+								// "ca_file": "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+								"insecure_skip_verify": true,
+							},
+							"metrics_path": "/metrics",
+							"kubernetes_sd_configs": []any{
+								map[string]any{"role": "node"},
+							},
+							"relabel_configs": []any{
+								map[string]any{
+									"source_labels": []string{"__meta_kubernetes_node_name"},
+									"action":        "replace",
+									"target_label":  "instance",
+								},
+								// TODO(Bobi-Wan): check if needed
+								map[string]any{
+									"source_labels": []string{"__meta_kubernetes_node_name"},
+									"action":        "replace",
+									"target_label":  "node",
+								},
+							},
+							"metric_relabel_configs": []any{
+								map[string]any{
+									"source_labels": []string{"__name__"},
+									"action":        "keep",
+									// TODO(Bobi-Wan): check if "up" is required
+									"regex": "^(up|kubelet_running_pods|process_max_fds|process_open_fds|kubelet_volume_stats_available_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes|kubelet_image_pull_duration_seconds_bucket|kubelet_image_pull_duration_seconds_sum|kubelet_image_pull_duration_seconds_count)$",
+								},
+							},
+						},
+						map[string]any{
+							"job_name":          "cadvisor",
+							"honor_labels":      true,
+							"scrape_interval":   "30s",
+							"scheme":            "https",
+							"bearer_token_file": "/var/run/secrets/kubernetes.io/serviceaccount/token",
+							"tls_config": map[string]any{
+								// "ca_file": "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+								"insecure_skip_verify": true,
+							},
+							"metrics_path": "/metrics/cadvisor",
+							"kubernetes_sd_configs": []any{
+								map[string]any{"role": "node"},
+							},
+							"relabel_configs": []any{
+								map[string]any{
+									"action": "labelmap",
+									"regex":  "__meta_kubernetes_node_label_(.+)",
+								},
+								map[string]any{
+									"source_labels": []string{"__meta_kubernetes_node_name"},
+									"action":        "replace",
+									"target_label":  "instance",
+								},
+								map[string]any{
+									"source_labels": []string{"__meta_kubernetes_node_name"},
+									"action":        "replace",
+									"target_label":  "node",
+								},
+								map[string]any{
+									"target_label": "type",
+									"replacement":  "shoot",
+								},
+							},
+							"metric_relabel_configs": []any{
+								// Extract systemd_service_name from id label
+								map[string]any{
+									"source_labels": []string{"id"},
+									"action":        "replace",
+									"regex":         "^/system\\.slice/(.+)\\.service$",
+									"target_label":  "systemd_service_name",
+								},
+								// Extract container from id label (for systemd services)
+								map[string]any{
+									"source_labels": []string{"id"},
+									"action":        "replace",
+									"regex":         "^/system\\.slice/(.+)\\.service$",
+									// "replacement": "$1",
+									"target_label": "container",
+								},
+								// Keep only exact metric names from original
+								map[string]any{
+									"source_labels": []string{"__name__"},
+									"action":        "keep",
+									"regex":         "^(up|container_cpu_cfs_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_cfs_throttled_periods_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_fs_reads_total|container_fs_writes_total|container_last_seen|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$",
+								},
+								// Keep only kube-system namespace (and empty for systemd containers)
+								map[string]any{
+									"source_labels": []string{"namespace"},
+									"action":        "keep",
+									"regex":         "(^$|^kube-system$)",
+								},
+								// Drop POD container metrics (not network)
+								map[string]any{
+									"source_labels": []string{"container", "__name__"},
+									"action":        "drop",
+									"regex":         "POD;(container_cpu_cfs_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_cfs_throttled_periods_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_last_seen|container_memory_working_set_bytes)",
+								},
+								// Network interface filtering - keep
+								map[string]any{
+									"source_labels": []string{"__name__", "container", "interface", "id"},
+									"action":        "keep",
+									"regex":         "container_network.+;;(eth0;/.+|(en.+|tunl0|eth0);/)|.+;.+;.*;.*",
+								},
+								// Network interface filtering - drop
+								map[string]any{
+									"source_labels": []string{"__name__", "container", "interface"},
+									"action":        "drop",
+									"regex":         "container_network.+;POD;(.{5,}|tun0|en.+)",
+								},
+								// Set host_network label for container_network metrics on host
+								map[string]any{
+									"source_labels": []string{"__name__", "id"},
+									"regex":         "container_network.+;/",
+									"replacement":   "true",
+									"target_label":  "host_network",
+								},
+								// Drop id label
+								map[string]any{
+									"regex":  "^id$",
+									"action": "labeldrop",
+								},
+							},
+						},
+						map[string]any{
+							"job_name":        "node-exporter",
+							"honor_labels":    true,
+							"scrape_interval": "30s",
+							// Note: node-exporter uses plain HTTP without authentication
+							"kubernetes_sd_configs": []any{
+								map[string]any{
+									"role": "endpoints",
+									"namespaces": map[string]any{
+										"names": []string{"kube-system"},
+									},
+								},
+							},
+							"relabel_configs": []any{
+								map[string]any{
+									"source_labels": []string{"__meta_kubernetes_service_name"},
+									"action":        "keep",
+									"regex":         "node-exporter",
+								},
+								map[string]any{
+									"source_labels": []string{"__meta_kubernetes_endpoint_port_name"},
+									"action":        "keep",
+									"regex":         "metrics",
+								},
+								map[string]any{
+									"source_labels": []string{"__meta_kubernetes_pod_node_name"},
+									"action":        "replace",
+									"target_label":  "instance",
+								},
+								map[string]any{
+									"source_labels": []string{"__meta_kubernetes_pod_node_name"},
+									"action":        "replace",
+									"target_label":  "node",
+								},
+							},
+							"metric_relabel_configs": []any{
+								map[string]any{
+									"source_labels": []string{"__name__"},
+									"action":        "keep",
+									"regex":         "^(up|node_boot_time_seconds|node_cpu_seconds_total|node_disk_read_bytes_total|node_disk_written_bytes_total|node_disk_io_time_weighted_seconds_total|node_disk_io_time_seconds_total|node_disk_write_time_seconds_total|node_disk_writes_completed_total|node_disk_read_time_seconds_total|node_disk_reads_completed_total|node_filesystem_avail_bytes|node_filesystem_files|node_filesystem_files_free|node_filesystem_free_bytes|node_filesystem_readonly|node_filesystem_size_bytes|node_load1|node_load15|node_load5|node_memory_.+|node_nf_conntrack_.+|node_scrape_collector_duration_seconds|node_scrape_collector_success|process_max_fds|process_open_fds)$",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"processors": map[string]any{
+			"batch": map[string]any{
+				"timeout":         "10s",
+				"send_batch_size": 1000,
+			},
+		},
+		"exporters": map[string]any{
+			"prometheus": map[string]any{
+				"endpoint": "0.0.0.0:8080",
+				// "namespace": "",
+				"send_timestamps":   true,
+				"metric_expiration": "5m",
+			},
+		},
+		"service": map[string]any{
+			"pipelines": map[string]any{
+				"metrics": map[string]any{
+					"receivers":  []string{"prometheus"},
+					"processors": []string{"batch"},
+					"exporters":  []string{"prometheus"},
+				},
+			},
+		},
+	}
+
+	data, err := yaml.Marshal(config)
+	if err != nil {
+		panic(err)
+	}
+	return string(data)
 }
 
 func getLabels() map[string]string {

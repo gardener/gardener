@@ -8,7 +8,6 @@ receivers:
           scheme: https
           bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
           tls_config:
-            # ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
             insecure_skip_verify: true
           metrics_path: /metrics
           kubernetes_sd_configs:
@@ -17,14 +16,12 @@ receivers:
             - source_labels: [__meta_kubernetes_node_name]
               action: replace
               target_label: instance
-            # TODO(Bobi-Wan): check if needed
             - source_labels: [__meta_kubernetes_node_name]
               action: replace
               target_label: node
           metric_relabel_configs:
             - source_labels: [__name__]
               action: keep
-              # TODO(Bobi-Wan): check if "up" is required
               regex: ^(up|kubelet_running_pods|process_max_fds|process_open_fds|kubelet_volume_stats_available_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes|kubelet_image_pull_duration_seconds_bucket|kubelet_image_pull_duration_seconds_sum|kubelet_image_pull_duration_seconds_count)$
 
         - job_name: 'cadvisor'
@@ -33,7 +30,6 @@ receivers:
           scheme: https
           bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
           tls_config:
-            # ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
             insecure_skip_verify: true
           metrics_path: /metrics/cadvisor
           kubernetes_sd_configs:
@@ -50,49 +46,38 @@ receivers:
             - target_label: type
               replacement: shoot
           metric_relabel_configs:
-            # Extract systemd_service_name from id label
             - source_labels: [id]
               action: replace
               regex: ^/system\.slice/(.+)\.service$
               target_label: systemd_service_name
-            # Extract container from id label (for systemd services)
             - source_labels: [id]
               action: replace
               regex: ^/system\.slice/(.+)\.service$
-              # replacement: $1
               target_label: container
-            # Keep only exact metric names from original
             - source_labels: [__name__]
               action: keep
               regex: ^(up|container_cpu_cfs_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_cfs_throttled_periods_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_fs_reads_total|container_fs_writes_total|container_last_seen|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$
-            # Keep only kube-system namespace (and empty for systemd containers)
             - source_labels: [namespace]
               action: keep
               regex: (^$|^kube-system$)
-            # Drop POD container metrics (not network)
             - source_labels: [container, __name__]
               action: drop
               regex: POD;(container_cpu_cfs_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_cfs_throttled_periods_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_last_seen|container_memory_working_set_bytes)
-            # Network interface filtering - keep
             - source_labels: [__name__, container, interface, id]
               action: keep
               regex: container_network.+;;(eth0;/.+|(en.+|tunl0|eth0);/)|.+;.+;.*;.*
-            # Network interface filtering - drop
             - source_labels: [__name__, container, interface]
               action: drop
               regex: container_network.+;POD;(.{5,}|tun0|en.+)
-            # Set host_network label for container_network metrics on host
             - source_labels: [__name__, id]
               regex: container_network.+;/
               replacement: "true"
               target_label: host_network
-            # Drop id label
             - regex: ^id$
               action: labeldrop
         - job_name: 'node-exporter'
           honor_labels: true
           scrape_interval: 30s
-          # Note: node-exporter uses plain HTTP without authentication
           kubernetes_sd_configs:
             - role: endpoints
               namespaces:
@@ -124,7 +109,6 @@ processors:
 exporters:
   prometheus:
     endpoint: "0.0.0.0:8080"
-    # namespace: ""
     send_timestamps: true
     metric_expiration: 5m
 
