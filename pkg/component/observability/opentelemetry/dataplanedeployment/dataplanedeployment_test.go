@@ -81,7 +81,6 @@ var _ = Describe("DataplaneDeployment", func() {
 			},
 		}
 
-		// ✅ mock retry (CRITICAL)
 		fakeOps = &retryfake.Ops{MaxAttempts: 1}
 		DeferCleanup(test.WithVars(
 			&retry.Until, fakeOps.Until,
@@ -154,10 +153,6 @@ var _ = Describe("DataplaneDeployment", func() {
 		})
 	})
 })
-
-/*
-   ---------------- HELPERS ----------------
-*/
 
 func getOtelCollectorDataplaneServiceAccount() *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
