@@ -84,7 +84,6 @@ var _ = Describe("Reconciler", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.RequeueAfter).To(Equal(DefaultSyncPeriod))
 
-			// Verify CA secret was created
 			caSecrets := &corev1.SecretList{}
 			Expect(fakeClient.List(ctx, caSecrets, client.InNamespace(namespace), client.MatchingLabels{
 				secretsmanager.LabelKeyName:            caSecretName,
@@ -93,7 +92,6 @@ var _ = Describe("Reconciler", func() {
 			})).To(Succeed())
 			Expect(caSecrets.Items).NotTo(BeEmpty())
 
-			// Verify server secret was created
 			serverSecrets := &corev1.SecretList{}
 			Expect(fakeClient.List(ctx, serverSecrets, client.InNamespace(namespace), client.MatchingLabels{
 				secretsmanager.LabelKeyName:            serverSecName,
@@ -102,12 +100,10 @@ var _ = Describe("Reconciler", func() {
 			})).To(Succeed())
 			Expect(serverSecrets.Items).NotTo(BeEmpty())
 
-			// Verify that server secret contains tls.crt and tls.key
 			serverSecret := serverSecrets.Items[0]
 			Expect(serverSecret.Data).To(HaveKey(secretsutils.DataKeyCertificate))
 			Expect(serverSecret.Data).To(HaveKey(secretsutils.DataKeyPrivateKey))
 
-			// Verify the source webhook config was created with CA bundle
 			mutatingConfig := &admissionregistrationv1.MutatingWebhookConfiguration{}
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "gardener-extension-provider-test"}, mutatingConfig)).To(Succeed())
 			Expect(mutatingConfig.Webhooks).To(HaveLen(1))
@@ -257,7 +253,6 @@ var _ = Describe("Reconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.RequeueAfter).To(Equal(DefaultSyncPeriod))
 
-				// Verify CA secret was created
 				caSecrets := &corev1.SecretList{}
 				Expect(fakeClient.List(ctx, caSecrets, client.InNamespace(namespace), client.MatchingLabels{
 					secretsmanager.LabelKeyName:            caSecretName,

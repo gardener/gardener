@@ -33,9 +33,7 @@ var _ = Describe("Utils", func() {
 			Expect(MergeSecretMaps(a, nil)).To(Equal(a))
 		})
 		It("should return the first map if the second is nil", func() {
-			result := MergeSecretMaps(nil, b)
-			Expect(result).To(HaveLen(1))
-			Expect(result).To(HaveKeyWithValue("test1", test1))
+			Expect(MergeSecretMaps(nil, b)).To(Equal(b))
 		})
 		It("should properly merge the given non-empty maps", func() {
 			result := MergeSecretMaps(a, b)
