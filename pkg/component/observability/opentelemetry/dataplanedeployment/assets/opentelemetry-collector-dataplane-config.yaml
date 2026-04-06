@@ -1,0 +1,120 @@
+receivers:
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'kube-kubelet'
+          honor_labels: true
+          scrape_interval: 30s
+          scheme: https
+          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+          tls_config:
+            insecure_skip_verify: true
+          metrics_path: /metrics
+          kubernetes_sd_configs:
+            - role: node
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_node_name]
+              action: replace
+              target_label: instance
+            - source_labels: [__meta_kubernetes_node_name]
+              action: replace
+              target_label: node
+          metric_relabel_configs:
+            - source_labels: [__name__]
+              action: keep
+              regex: ^(up|kubelet_running_pods|process_max_fds|process_open_fds|kubelet_volume_stats_available_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes|kubelet_image_pull_duration_seconds_bucket|kubelet_image_pull_duration_seconds_sum|kubelet_image_pull_duration_seconds_count)$
+
+        - job_name: 'cadvisor'
+          honor_labels: true
+          scrape_interval: 30s
+          scheme: https
+          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+          tls_config:
+            insecure_skip_verify: true
+          metrics_path: /metrics/cadvisor
+          kubernetes_sd_configs:
+            - role: node
+          relabel_configs:
+            - action: labelmap
+              regex: __meta_kubernetes_node_label_(.+)
+            - source_labels: [__meta_kubernetes_node_name]
+              action: replace
+              target_label: instance
+            - source_labels: [__meta_kubernetes_node_name]
+              action: replace
+              target_label: node
+            - target_label: type
+              replacement: shoot
+          metric_relabel_configs:
+            - source_labels: [id]
+              action: replace
+              regex: ^/system\.slice/(.+)\.service$
+              target_label: systemd_service_name
+            - source_labels: [id]
+              action: replace
+              regex: ^/system\.slice/(.+)\.service$
+              target_label: container
+            - source_labels: [__name__]
+              action: keep
+              regex: ^(up|container_cpu_cfs_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_cfs_throttled_periods_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_fs_reads_total|container_fs_writes_total|container_last_seen|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$
+            - source_labels: [namespace]
+              action: keep
+              regex: (^$|^kube-system$)
+            - source_labels: [container, __name__]
+              action: drop
+              regex: POD;(container_cpu_cfs_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_cfs_throttled_periods_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_last_seen|container_memory_working_set_bytes)
+            - source_labels: [__name__, container, interface, id]
+              action: keep
+              regex: container_network.+;;(eth0;/.+|(en.+|tunl0|eth0);/)|.+;.+;.*;.*
+            - source_labels: [__name__, container, interface]
+              action: drop
+              regex: container_network.+;POD;(.{5,}|tun0|en.+)
+            - source_labels: [__name__, id]
+              regex: container_network.+;/
+              replacement: "true"
+              target_label: host_network
+            - regex: ^id$
+              action: labeldrop
+        - job_name: 'node-exporter'
+          honor_labels: true
+          scrape_interval: 30s
+          kubernetes_sd_configs:
+            - role: endpoints
+              namespaces:
+                names:
+                  - kube-system
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_service_name]
+              action: keep
+              regex: node-exporter
+            - source_labels: [__meta_kubernetes_endpoint_port_name]
+              action: keep
+              regex: metrics
+            - source_labels: [__meta_kubernetes_pod_node_name]
+              action: replace
+              target_label: instance
+            - source_labels: [__meta_kubernetes_pod_node_name]
+              action: replace
+              target_label: node
+          metric_relabel_configs:
+            - source_labels: [__name__]
+              action: keep
+              regex: ^(up|node_boot_time_seconds|node_cpu_seconds_total|node_disk_read_bytes_total|node_disk_written_bytes_total|node_disk_io_time_weighted_seconds_total|node_disk_io_time_seconds_total|node_disk_write_time_seconds_total|node_disk_writes_completed_total|node_disk_read_time_seconds_total|node_disk_reads_completed_total|node_filesystem_avail_bytes|node_filesystem_files|node_filesystem_files_free|node_filesystem_free_bytes|node_filesystem_readonly|node_filesystem_size_bytes|node_load1|node_load15|node_load5|node_memory_.+|node_nf_conntrack_.+|node_scrape_collector_duration_seconds|node_scrape_collector_success|process_max_fds|process_open_fds)$
+
+processors:
+  batch:
+    timeout: 10s
+    send_batch_size: 1000
+
+exporters:
+  prometheus:
+    endpoint: "0.0.0.0:8080"
+    send_timestamps: true
+    metric_expiration: 5m
+
+service:
+  pipelines:
+    metrics:
+      receivers: [prometheus]
+      processors: [batch]
+      exporters: [prometheus]

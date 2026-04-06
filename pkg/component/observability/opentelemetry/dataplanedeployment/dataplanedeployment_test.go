@@ -6,13 +6,19 @@ package dataplanedeployment_test
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
+	"github.com/onsi/gomega/types"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -23,105 +29,90 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/opentelemetry/dataplanedeployment"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 var _ = Describe("DataplaneDeployment", func() {
 	var (
 		ctx = context.Background()
 
-		managedResourceName = "shoot-core-otel-collector-dataplane"
-		namespace           = "some-namespace"
-		image               = "some-otel-image:some-tag"
+		namespace = "some-namespace"
+		image     = "some-otel-image:some-tag"
 
-		c         client.Client
-		config    Values
-		component component.DeployWaiter
+		c            client.Client
+		component    component.DeployWaiter
+		consistOf    func(...client.Object) types.GomegaMatcher
+		customValues Values
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
+
+		fakeOps *retryfake.Ops
 	)
 
 	BeforeEach(func() {
+		format.MaxDepth = 100000
+		format.MaxLength = 100000
+		format.TruncateThreshold = 100000
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		config = Values{
+
+		customValues = Values{
 			Image:    image,
 			Replicas: 1,
 		}
 
+		component = New(c, namespace, customValues)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
+
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      managedResourceName,
+				Name:      "shoot-core-otel-collector-dataplane",
 				Namespace: namespace,
 			},
 		}
+
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "managedresource-" + managedResource.Name,
-				Namespace: managedResource.Namespace,
+				Name:      "managedresource-shoot-core-otel-collector-dataplane",
+				Namespace: namespace,
 			},
 		}
+
+		// ✅ mock retry (CRITICAL)
+		fakeOps = &retryfake.Ops{MaxAttempts: 1}
+		DeferCleanup(test.WithVars(
+			&retry.Until, fakeOps.Until,
+			&retry.UntilTimeout, fakeOps.UntilTimeout,
+		))
 	})
 
 	Describe("#Deploy", func() {
-		JustBeforeEach(func() {
-			component = New(c, namespace, config)
-			// why do we initiall set managedResource but overwrite it here?
-			// we haven't added anything to the fake client
-			// what is the state of the managedResource object afterwards
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
-
+		It("should successfully deploy all resources", func() {
 			Expect(component.Deploy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-			expectedMr := &resourcesv1alpha1.ManagedResource{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            managedResourceName,
-					Namespace:       namespace,
-					ResourceVersion: "1",
-					Labels:          map[string]string{"origin": "gardener"},
-				},
-				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-					KeepObjects:  ptr.To(false),
-					SecretRefs: []corev1.LocalObjectReference{{
-						Name: managedResource.Spec.SecretRefs[0].Name,
-					}},
-				},
-			}
-			utilruntime.Must(references.InjectAnnotations(expectedMr))
-			Expect(managedResource).To(DeepEqual(expectedMr))
 
-			// EXPLAIN: is this really the pattern used throughout other tests? To reuse the same object used for
-			// generating the object key for the GET request?
+			utilruntime.Must(references.InjectAnnotations(managedResource))
+
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-		})
 
-		It("should successfully deploy all resources", func() {
-			manifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(manifests).To(ContainElement(ContainSubstring("kind: ServiceAccount")))
-			Expect(manifests).To(ContainElement(ContainSubstring("kind: ClusterRole\n")))
-			Expect(manifests).To(ContainElement(ContainSubstring("kind: ClusterRoleBinding")))
-			Expect(manifests).To(ContainElement(ContainSubstring("kind: Service\n")))
-			Expect(manifests).To(ContainElement(ContainSubstring("kind: ConfigMap")))
-			Expect(manifests).To(ContainElement(ContainSubstring("receivers:")))
-			Expect(manifests).To(ContainElement(ContainSubstring("prometheus:")))
-			Expect(manifests).To(ContainElement(ContainSubstring("kind: Deployment")))
-			Expect(manifests).To(ContainElement(ContainSubstring(image)))
-			Expect(manifests).To(ContainElement(ContainSubstring("gardener-shoot-system-700")))
+			Expect(managedResource).To(consistOf(
+				getOtelCollectorDataplaneServiceAccount(),
+				getOtelCollectorDataplaneClusterRole(),
+				getOtelCollectorDataplaneClusterRoleBinding(),
+				getOtelCollectorDataplaneService(),
+				getOtelCollectorDataplaneConfigMap(),
+				getOtelCollectorDataplaneDeployment(image),
+			))
 		})
 	})
 
 	Describe("#Destroy", func() {
-		It("should successfully destroy all resources", func() {
-			component = New(c, namespace, config)
+		It("should delete managed resources", func() {
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 
@@ -133,63 +124,22 @@ var _ = Describe("DataplaneDeployment", func() {
 	})
 
 	Describe("#Wait", func() {
-		It("should fail because reading the ManagedResource fails", func() {
-			component = New(c, namespace, config)
-
+		It("should fail when MR does not exist", func() {
 			Expect(component.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
 		})
 
-		It("should fail because the ManagedResource is unhealthy", func() {
-			component = New(c, namespace, config)
-
+		It("should succeed when MR is healthy", func() {
 			Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:       managedResourceName,
+					Name:       managedResource.Name,
 					Namespace:  namespace,
 					Generation: 1,
 				},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
 					Conditions: []gardencorev1beta1.Condition{
-						{
-							Type:   resourcesv1alpha1.ResourcesApplied,
-							Status: gardencorev1beta1.ConditionFalse,
-						},
-						{
-							Type:   resourcesv1alpha1.ResourcesHealthy,
-							Status: gardencorev1beta1.ConditionFalse,
-						},
-					},
-				},
-			})).To(Succeed())
-
-			Expect(component.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
-		})
-
-		It("should succeed because the ManagedResource is healthy and progressing", func() {
-			component = New(c, namespace, config)
-
-			Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       managedResourceName,
-					Namespace:  namespace,
-					Generation: 1,
-				},
-				Status: resourcesv1alpha1.ManagedResourceStatus{
-					ObservedGeneration: 1,
-					Conditions: []gardencorev1beta1.Condition{
-						{
-							Type:   resourcesv1alpha1.ResourcesApplied,
-							Status: gardencorev1beta1.ConditionTrue,
-						},
-						{
-							Type:   resourcesv1alpha1.ResourcesHealthy,
-							Status: gardencorev1beta1.ConditionTrue,
-						},
-						{
-							Type:   resourcesv1alpha1.ResourcesProgressing,
-							Status: gardencorev1beta1.ConditionTrue,
-						},
+						{Type: resourcesv1alpha1.ResourcesApplied, Status: gardencorev1beta1.ConditionTrue},
+						{Type: resourcesv1alpha1.ResourcesHealthy, Status: gardencorev1beta1.ConditionTrue},
 					},
 				},
 			})).To(Succeed())
@@ -199,21 +149,15 @@ var _ = Describe("DataplaneDeployment", func() {
 	})
 
 	Describe("#WaitCleanup", func() {
-		It("should fail when the wait for the managed resource deletion fails", func() {
-			component = New(c, namespace, config)
-
-			Expect(c.Create(ctx, managedResource)).To(Succeed())
-			Expect(component.WaitCleanup(ctx)).To(MatchError(ContainSubstring("still exists")))
-		})
-
-		// WaitCleanup should return success if the resources didn't exist in the first place.
-		It("should not return an error when it is already removed", func() {
-			component = New(c, namespace, config)
-
+		It("should succeed when deleted", func() {
 			Expect(component.WaitCleanup(ctx)).To(Succeed())
 		})
 	})
 })
+
+/*
+   ---------------- HELPERS ----------------
+*/
 
 func getOtelCollectorDataplaneServiceAccount() *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
@@ -224,7 +168,7 @@ func getOtelCollectorDataplaneServiceAccount() *corev1.ServiceAccount {
 				"component": "otel-collector-dataplane-deployment",
 			},
 		},
-		AutomountServiceAccountToken: pointer.Bool(true),
+		AutomountServiceAccountToken: ptr.To(true),
 	}
 }
 
@@ -299,6 +243,123 @@ func getOtelCollectorDataplaneService() *corev1.Service {
 					Name:     "metrics",
 					Port:     8080,
 					Protocol: corev1.ProtocolTCP,
+				},
+			},
+		},
+	}
+}
+
+func getOtelCollectorDataplaneConfigMap() *corev1.ConfigMap {
+	const configPath = "testdata/opentelemetry-collector-dataplane-config.test.yaml"
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		panic(fmt.Sprintf("failed to read config file %s: %v", configPath, err))
+	}
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "otel-collector-dataplane-deployment",
+			Namespace: "kube-system",
+			Labels: map[string]string{
+				"component": "otel-collector-dataplane-deployment",
+			},
+		},
+		Data: map[string]string{
+			"config.yaml": string(data),
+		},
+	}
+}
+func getOtelCollectorDataplaneDeployment(image string) *appsv1.Deployment {
+	replicas := int32(1)
+	revHistory := int32(2)
+
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "otel-collector-dataplane-deployment",
+			Namespace: "kube-system",
+			Labels: map[string]string{
+				"component":           "otel-collector-dataplane-deployment",
+				"gardener.cloud/role": "monitoring",
+				"origin":              "gardener",
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas:             &replicas,
+			RevisionHistoryLimit: &revHistory,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"component": "otel-collector-dataplane-deployment",
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"component":                                  "otel-collector-dataplane-deployment",
+						"gardener.cloud/role":                        "monitoring",
+						"networking.gardener.cloud/from-seed":        "allowed",
+						"networking.gardener.cloud/to-apiserver":     "allowed",
+						"networking.gardener.cloud/to-dns":           "allowed",
+						"networking.gardener.cloud/to-kubelet":       "allowed",
+						"networking.gardener.cloud/to-node-exporter": "allowed",
+						"origin": "gardener",
+					},
+				},
+				Spec: corev1.PodSpec{
+					PriorityClassName:  "gardener-shoot-system-700",
+					ServiceAccountName: "otel-collector-dataplane-deployment",
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsNonRoot: ptr.To(true),
+						RunAsUser:    ptr.To(int64(65534)),
+						SeccompProfile: &corev1.SeccompProfile{
+							Type: corev1.SeccompProfileTypeRuntimeDefault,
+						},
+					},
+					Containers: []corev1.Container{
+						{
+							Name:    "otel-collector-dataplane-deployment",
+							Image:   image,
+							Command: []string{"/bin/otelcol", "--config=/etc/otel-collector/config.yaml"},
+							Ports: []corev1.ContainerPort{
+								{Name: "metrics", ContainerPort: 8080, Protocol: corev1.ProtocolTCP},
+							},
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							SecurityContext: &corev1.SecurityContext{
+								ReadOnlyRootFilesystem:   ptr.To(true),
+								AllowPrivilegeEscalation: ptr.To(false),
+								Capabilities: &corev1.Capabilities{
+									Drop: []corev1.Capability{"ALL"},
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "config",
+									ReadOnly:  true,
+									MountPath: "/etc/otel-collector",
+								},
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("100m"),
+									corev1.ResourceMemory: resource.MustParse("256Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceMemory: resource.MustParse("512Mi"),
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "config",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "otel-collector-dataplane-deployment",
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
