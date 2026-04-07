@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	fakekubernetes "k8s.io/client-go/kubernetes/fake"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -50,7 +51,6 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/pkg/utils/version"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("OperatingSystemConfig", func() {
@@ -77,8 +77,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 			log     logr.Logger
 			fakeErr = fmt.Errorf("some random error")
 
-			mockNow *mocktime.MockNow
-			now     time.Time
+			fakeClock *testclock.FakeClock
+			now       time.Time
 
 			poolHashesSecret    *corev1.Secret
 			apiServerURL        = "https://url-to-apiserver"
@@ -346,8 +346,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
-			mockNow = mocktime.NewMockNow(ctrl)
-			now = time.Now()
+			now = time.Unix(60, 0)
+			fakeClock = testclock.NewFakeClock(now)
 
 			ctx = context.TODO()
 			log = logr.Discard()
@@ -653,12 +653,10 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("should successfully deploy all extensions resources", func() {
 				DeferCleanup(test.WithVars(
-					&TimeNow, mockNow.Do,
+					&TimeNow, fakeClock.Now,
 					&InitConfigFn, initConfigFn,
 					&OriginalConfigFn, originalConfigFn,
 				))
-
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
@@ -675,13 +673,11 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("should successfully deploy all extensions resources and SSH access is enabled", func() {
 				DeferCleanup(test.WithVars(
-					&TimeNow, mockNow.Do,
+					&TimeNow, fakeClock.Now,
 					&InitConfigFn, initConfigFn,
 					&OriginalConfigFn, originalConfigFn,
 					&values.SSHAccessEnabled, true,
 				))
-
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
@@ -743,14 +739,12 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				It("should successfully deploy all extensions resources and SSH access is enabled", func() {
 					DeferCleanup(test.WithVars(
-						&TimeNow, mockNow.Do,
+						&TimeNow, fakeClock.Now,
 						&InitConfigFn, initConfigFn,
 						&OriginalConfigFn, originalConfigFn,
 						&values.SSHAccessEnabled, true,
 						&format.MaxLength, 0,
 					))
-
-					mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 					Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
@@ -780,12 +774,10 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}
 
 				defer test.WithVars(
-					&TimeNow, mockNow.Do,
+					&TimeNow, fakeClock.Now,
 					&InitConfigFn, initConfigFnWithBootstrapToken,
 					&OriginalConfigFn, originalConfigFn,
 				)()
-
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
@@ -909,10 +901,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 				defer test.WithVars(
 					&InitConfigFn, initConfigFn,
 					&OriginalConfigFn, originalConfigFn,
-					&TimeNow, mockNow.Do,
-					&extensions.TimeNow, mockNow.Do,
+					&TimeNow, fakeClock.Now,
+					&extensions.TimeNow, fakeClock.Now,
 				)()
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				mc := mockclient.NewMockClient(ctrl)
 				mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
@@ -985,8 +976,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			})
 
 			It("should return error when resource is not ready", func() {
-				defer test.WithVars(&TimeNow, mockNow.Do)()
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+				defer test.WithVars(&TimeNow, fakeClock.Now)()
 
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
@@ -1006,9 +996,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("should return error when status does not contain cloud config information", func() {
 				defer test.WithVars(
-					&TimeNow, mockNow.Do,
+					&TimeNow, fakeClock.Now,
 				)()
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				// Deploy should fill internal state with the added timestamp annotation
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
@@ -1033,10 +1022,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("should return error if we haven't observed the latest timestamp annotation", func() {
 				defer test.WithVars(
-					&TimeNow, mockNow.Do,
+					&TimeNow, fakeClock.Now,
 					&OriginalConfigFn, originalConfigFn,
 				)()
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				By("Deploy")
 				// Deploy should fill internal state with the added timestamp annotation
@@ -1081,10 +1069,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("should return no error when it's ready", func() {
 				defer test.WithVars(
-					&TimeNow, mockNow.Do,
+					&TimeNow, fakeClock.Now,
 					&OriginalConfigFn, originalConfigFn,
 				)()
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				By("Deploy")
 				// Deploy should fill internal state with the added timestamp annotation
@@ -1132,11 +1119,10 @@ var _ = Describe("OperatingSystemConfig", func() {
 		Describe("WorkerNameToOperatingSystemConfigsMap", func() {
 			It("should return the correct result from the Deploy and Wait operations", func() {
 				DeferCleanup(test.WithVars(
-					&TimeNow, mockNow.Do,
+					&TimeNow, fakeClock.Now,
 					&InitConfigFn, initConfigFn,
 					&OriginalConfigFn, originalConfigFn,
 				))
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				// Deploy should fill internal state with the added timestamp annotation
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
@@ -1257,10 +1243,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("should return error if not deleted successfully", func() {
 				defer test.WithVars(
-					&extensions.TimeNow, mockNow.Do,
-					&gardenerutils.TimeNow, mockNow.Do,
+					&extensions.TimeNow, fakeClock.Now,
+					&gardenerutils.TimeNow, fakeClock.Now,
 				)()
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				expectedOSC := extensionsv1alpha1.OperatingSystemConfig{
 					ObjectMeta: metav1.ObjectMeta{

@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -31,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("#Network", func() {
@@ -59,8 +59,8 @@ var _ = Describe("#Network", func() {
 		log              logr.Logger
 		defaultDepWaiter component.DeployMigrateWaiter
 
-		mockNow *mocktime.MockNow
-		now     time.Time
+		fakeClock *testclock.FakeClock
+		now       time.Time
 
 		networkPodCIDR     = fmt.Sprintf("%s/%d", networkPodIp, networkPodMask)
 		networkServiceCIDR = fmt.Sprintf("%s/%d", networkServiceIp, networkServiceMask)
@@ -72,8 +72,8 @@ var _ = Describe("#Network", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
-		mockNow = mocktime.NewMockNow(ctrl)
-		now = time.Now()
+		now = time.Unix(60, 0)
+		fakeClock = testclock.NewFakeClock(now)
 
 		ctx = context.TODO()
 		log = logr.Discard()
@@ -139,10 +139,8 @@ var _ = Describe("#Network", func() {
 
 		testFunc := func() {
 			defer test.WithVars(
-				&network.TimeNow, mockNow.Do,
+				&network.TimeNow, fakeClock.Now,
 			)()
-
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			Expect(defaultDepWaiter.Deploy(ctx)).ToNot(HaveOccurred())
 
@@ -201,9 +199,8 @@ var _ = Describe("#Network", func() {
 
 		It("should return error if we haven't observed the latest timestamp annotation", func() {
 			defer test.WithVars(
-				&network.TimeNow, mockNow.Do,
+				&network.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
@@ -227,9 +224,8 @@ var _ = Describe("#Network", func() {
 
 		It("should return no error when it's ready", func() {
 			defer test.WithVars(
-				&network.TimeNow, mockNow.Do,
+				&network.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
@@ -266,11 +262,9 @@ var _ = Describe("#Network", func() {
 
 		It("should return error when it's not deleted successfully", func() {
 			defer test.WithVars(
-				&extensions.TimeNow, mockNow.Do,
-				&gardenerutils.TimeNow, mockNow.Do,
+				&extensions.TimeNow, fakeClock.Now,
+				&gardenerutils.TimeNow, fakeClock.Now,
 			)()
-
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			expected := extensionsv1alpha1.Network{
 				ObjectMeta: metav1.ObjectMeta{
@@ -325,10 +319,9 @@ var _ = Describe("#Network", func() {
 
 		It("should restore the network state if it exists in the shoot state", func() {
 			defer test.WithVars(
-				&network.TimeNow, mockNow.Do,
-				&extensions.TimeNow, mockNow.Do,
+				&network.TimeNow, fakeClock.Now,
+				&extensions.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			mc := mockclient.NewMockClient(ctrl)
 			mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
@@ -367,10 +360,9 @@ var _ = Describe("#Network", func() {
 	Describe("#Migrate", func() {
 		It("should migrate the resource", func() {
 			defer test.WithVars(
-				&network.TimeNow, mockNow.Do,
-				&extensions.TimeNow, mockNow.Do,
+				&network.TimeNow, fakeClock.Now,
+				&extensions.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 			mc := mockclient.NewMockClient(ctrl)
 
 			expectedCopy := empty.DeepCopy()
@@ -384,10 +376,9 @@ var _ = Describe("#Network", func() {
 
 		It("should not return error if resource does not exist", func() {
 			defer test.WithVars(
-				&network.TimeNow, mockNow.Do,
-				&extensions.TimeNow, mockNow.Do,
+				&network.TimeNow, fakeClock.Now,
+				&extensions.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 			mc := mockclient.NewMockClient(ctrl)
 
 			expectedCopy := empty.DeepCopy()

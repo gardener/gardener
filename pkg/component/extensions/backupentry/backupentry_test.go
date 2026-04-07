@@ -32,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("#BackupEntry", func() {
@@ -49,7 +48,6 @@ var _ = Describe("#BackupEntry", func() {
 		defaultDepWaiter component.DeployMigrateWaiter
 
 		fakeClock *testclock.FakeClock
-		mockNow   *mocktime.MockNow
 
 		name                       = "test-deploy"
 		region                     = "region"
@@ -66,8 +64,7 @@ var _ = Describe("#BackupEntry", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
-		mockNow = mocktime.NewMockNow(ctrl)
-		fakeClock = testclock.NewFakeClock(time.Now())
+		fakeClock = testclock.NewFakeClock(time.Unix(60, 0))
 
 		ctx = context.TODO()
 		log = logr.Discard()
@@ -206,11 +203,10 @@ var _ = Describe("#BackupEntry", func() {
 
 		It("should return error when it's not deleted successfully", func() {
 			defer test.WithVars(
-				&extensions.TimeNow, mockNow.Do,
-				&gardenerutils.TimeNow, mockNow.Do,
+				&extensions.TimeNow, fakeClock.Now,
+				&gardenerutils.TimeNow, fakeClock.Now,
 			)()
 
-			mockNow.EXPECT().Do().Return(fakeClock.Now().UTC()).AnyTimes()
 			mc := mockclient.NewMockClient(ctrl)
 
 			expected = empty.DeepCopy()
@@ -271,9 +267,8 @@ var _ = Describe("#BackupEntry", func() {
 			// care about what helper funcs are used internally or whether it uses update or patch to fulfill
 			// the task, as long as the result is what we expect (which is what should be asserted instead).
 			defer test.WithVars(
-				&extensions.TimeNow, mockNow.Do,
+				&extensions.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(fakeClock.Now().UTC()).AnyTimes()
 
 			mc := mockclient.NewMockClient(ctrl)
 			mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
@@ -311,9 +306,8 @@ var _ = Describe("#BackupEntry", func() {
 	Describe("#Migrate", func() {
 		It("should migrate the resource", func() {
 			defer test.WithVars(
-				&extensions.TimeNow, mockNow.Do,
+				&extensions.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(fakeClock.Now().UTC()).AnyTimes()
 			mc := mockclient.NewMockClient(ctrl)
 
 			expectedCopy := empty.DeepCopy()
@@ -327,9 +321,8 @@ var _ = Describe("#BackupEntry", func() {
 
 		It("should not return error if resource does not exist", func() {
 			defer test.WithVars(
-				&extensions.TimeNow, mockNow.Do,
+				&extensions.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(fakeClock.Now().UTC()).AnyTimes()
 			mc := mockclient.NewMockClient(ctrl)
 
 			expectedCopy := empty.DeepCopy()

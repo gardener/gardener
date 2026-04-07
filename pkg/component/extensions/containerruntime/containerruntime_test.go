@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -30,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("#ContainerRuntime", func() {
@@ -52,14 +52,14 @@ var _ = Describe("#ContainerRuntime", func() {
 		defaultDepWaiter containerruntime.Interface
 		workers          []gardencorev1beta1.Worker
 
-		mockNow *mocktime.MockNow
-		now     time.Time
+		fakeClock *testclock.FakeClock
+		now       time.Time
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		mockNow = mocktime.NewMockNow(ctrl)
-		now = time.Now()
+		now = time.Unix(60, 0)
+		fakeClock = testclock.NewFakeClock(now)
 
 		ctx = context.TODO()
 		log = logr.Discard()
@@ -136,10 +136,8 @@ var _ = Describe("#ContainerRuntime", func() {
 	Describe("#Deploy", func() {
 		It("should successfully deploy all containerruntime resources", func() {
 			defer test.WithVars(
-				&containerruntime.TimeNow, mockNow.Do,
+				&containerruntime.TimeNow, fakeClock.Now,
 			)()
-
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
@@ -175,9 +173,8 @@ var _ = Describe("#ContainerRuntime", func() {
 
 		It("should return error if we haven't observed the latest timestamp annotation", func() {
 			defer test.WithVars(
-				&containerruntime.TimeNow, mockNow.Do,
+				&containerruntime.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
@@ -203,9 +200,8 @@ var _ = Describe("#ContainerRuntime", func() {
 
 		It("should return no error when it's ready", func() {
 			defer test.WithVars(
-				&containerruntime.TimeNow, mockNow.Do,
+				&containerruntime.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
@@ -243,11 +239,9 @@ var _ = Describe("#ContainerRuntime", func() {
 
 		It("should return error if not deleted successfully", func() {
 			defer test.WithVars(
-				&extensions.TimeNow, mockNow.Do,
-				&gardenerutils.TimeNow, mockNow.Do,
+				&extensions.TimeNow, fakeClock.Now,
+				&gardenerutils.TimeNow, fakeClock.Now,
 			)()
-
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			worker := gardencorev1beta1.Worker{
 				Name: workerNames[0],
@@ -329,11 +323,10 @@ var _ = Describe("#ContainerRuntime", func() {
 
 		It("should properly restore the containerruntime state if it exists", func() {
 			defer test.WithVars(
-				&containerruntime.TimeNow, mockNow.Do,
-				&extensions.TimeNow, mockNow.Do,
+				&containerruntime.TimeNow, fakeClock.Now,
+				&extensions.TimeNow, fakeClock.Now,
 			)()
 
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 			mc := mockclient.NewMockClient(ctrl)
 			mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
 

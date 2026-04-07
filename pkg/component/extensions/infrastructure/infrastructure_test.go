@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -34,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("#Interface", func() {
@@ -49,10 +49,10 @@ var _ = Describe("#Interface", func() {
 		log     logr.Logger
 		fakeErr = errors.New("fake")
 
-		ctrl    *gomock.Controller
-		c       client.Client
-		mockNow *mocktime.MockNow
-		now     time.Time
+		ctrl      *gomock.Controller
+		c         client.Client
+		fakeClock *testclock.FakeClock
+		now       time.Time
 
 		region         string
 		sshPublicKey   []byte
@@ -76,8 +76,8 @@ var _ = Describe("#Interface", func() {
 		log = logr.Discard()
 
 		ctrl = gomock.NewController(GinkgoT())
-		mockNow = mocktime.NewMockNow(ctrl)
-		now = time.Now()
+		now = time.Unix(60, 0)
+		fakeClock = testclock.NewFakeClock(now)
 
 		s := runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).To(Succeed())
@@ -151,9 +151,8 @@ var _ = Describe("#Interface", func() {
 
 		It("correct Infrastructure is created (AnnotateOperation=false)", func() {
 			defer test.WithVars(
-				&infrastructure.TimeNow, mockNow.Do,
+				&infrastructure.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			deployWaiter.SetSSHPublicKey([]byte(""))
 			Expect(deployWaiter.Deploy(ctx)).To(Succeed())
@@ -167,9 +166,8 @@ var _ = Describe("#Interface", func() {
 
 		It("correct Infrastructure is created (AnnotateOperation=true)", func() {
 			defer test.WithVars(
-				&infrastructure.TimeNow, mockNow.Do,
+				&infrastructure.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			values.AnnotateOperation = true
 			deployWaiter.SetSSHPublicKey(sshPublicKey)
@@ -182,9 +180,8 @@ var _ = Describe("#Interface", func() {
 
 		It("should deploy the Infrastructure with operation annotation if it is in error state", func() {
 			defer test.WithVars(
-				&infrastructure.TimeNow, mockNow.Do,
+				&infrastructure.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 			existingInfra := expected.DeepCopy()
 			existingInfra.ResourceVersion = ""
 			delete(existingInfra.Annotations, v1beta1constants.GardenerOperation)
@@ -219,9 +216,8 @@ var _ = Describe("#Interface", func() {
 
 		It("should deploy the Infrastructure with operation annotation if gardener timestamp is after status.lastOperation.lastUpdateTime", func() {
 			defer test.WithVars(
-				&infrastructure.TimeNow, mockNow.Do,
+				&infrastructure.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 			existingInfra := expected.DeepCopy()
 			existingInfra.ResourceVersion = ""
 			delete(existingInfra.Annotations, v1beta1constants.GardenerOperation)
@@ -273,9 +269,8 @@ var _ = Describe("#Interface", func() {
 
 		It("should return error if we haven't observed the latest timestamp annotation", func() {
 			defer test.WithVars(
-				&infrastructure.TimeNow, mockNow.Do,
+				&infrastructure.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
@@ -301,9 +296,8 @@ var _ = Describe("#Interface", func() {
 
 		It("should return no error when is ready", func() {
 			defer test.WithVars(
-				&infrastructure.TimeNow, mockNow.Do,
+				&infrastructure.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
@@ -381,11 +375,10 @@ var _ = Describe("#Interface", func() {
 
 		It("should return error when it's not deleted successfully", func() {
 			defer test.WithVars(
-				&extensions.TimeNow, mockNow.Do,
-				&gardenerutils.TimeNow, mockNow.Do,
+				&extensions.TimeNow, fakeClock.Now,
+				&gardenerutils.TimeNow, fakeClock.Now,
 			)()
 
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 			mc := mockclient.NewMockClient(ctrl)
 
 			expected = empty.DeepCopy()
@@ -436,10 +429,9 @@ var _ = Describe("#Interface", func() {
 
 		It("should properly restore the infrastructure state if it exists", func() {
 			defer test.WithVars(
-				&infrastructure.TimeNow, mockNow.Do,
-				&extensions.TimeNow, mockNow.Do,
+				&infrastructure.TimeNow, fakeClock.Now,
+				&extensions.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			mc := mockclient.NewMockClient(ctrl)
 			mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
@@ -480,10 +472,9 @@ var _ = Describe("#Interface", func() {
 	Describe("#Migrate", func() {
 		It("should migrate the resources", func() {
 			defer test.WithVars(
-				&infrastructure.TimeNow, mockNow.Do,
-				&extensions.TimeNow, mockNow.Do,
+				&infrastructure.TimeNow, fakeClock.Now,
+				&extensions.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			Expect(c.Create(ctx, expected)).To(Succeed(), "creating infrastructure succeeds")
 
