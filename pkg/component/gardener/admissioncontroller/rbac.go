@@ -35,6 +35,7 @@ func (a *gardenerAdmissionController) clusterRole() *rbacv1.ClusterRole {
 				Resources: []string{
 					"backupbuckets",
 					"backupentries",
+					"controllerdeployments",
 					"controllerinstallations",
 					"secretbindings",
 					"seeds",

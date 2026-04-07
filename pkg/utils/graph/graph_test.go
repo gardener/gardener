@@ -59,6 +59,7 @@ var _ = Describe("graph for seeds", func() {
 		fakeInformerControllerInstallation    *controllertest.FakeInformer
 		fakeInformerManagedSeed               *controllertest.FakeInformer
 		fakeInformerGardenlet                 *controllertest.FakeInformer
+		fakeInformerControllerDeployment      *controllertest.FakeInformer
 		fakeInformerCertificateSigningRequest *controllertest.FakeInformer
 		fakeInformerServiceAccount            *controllertest.FakeInformer
 		fakeInformers                         *informertest.FakeInformers
@@ -157,6 +158,7 @@ var _ = Describe("graph for seeds", func() {
 		fakeInformerSecretBinding = &controllertest.FakeInformer{}
 		fakeInformerCredentialsBinding = &controllertest.FakeInformer{}
 		fakeInformerControllerInstallation = &controllertest.FakeInformer{}
+		fakeInformerControllerDeployment = &controllertest.FakeInformer{}
 		fakeInformerManagedSeed = &controllertest.FakeInformer{}
 		fakeInformerGardenlet = &controllertest.FakeInformer{}
 		fakeInformerCertificateSigningRequest = &controllertest.FakeInformer{}
@@ -173,6 +175,7 @@ var _ = Describe("graph for seeds", func() {
 				operationsv1alpha1.SchemeGroupVersion.WithKind("Bastion"):               fakeInformerBastion,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("SecretBinding"):          fakeInformerSecretBinding,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerInstallation"): fakeInformerControllerInstallation,
+				gardencorev1.SchemeGroupVersion.WithKind("ControllerDeployment"):        fakeInformerControllerDeployment,
 				securityv1alpha1.SchemeGroupVersion.WithKind("CredentialsBinding"):      fakeInformerCredentialsBinding,
 				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed"):       fakeInformerManagedSeed,
 				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("Gardenlet"):         fakeInformerGardenlet,
@@ -1669,6 +1672,60 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeControllerDeployment, "", controllerInstallation1.Spec.DeploymentRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeShoot, controllerInstallation1.Spec.ShootRef.Namespace, controllerInstallation1.Spec.ShootRef.Name)).To(BeFalse())
+	})
+
+	It("should behave as expected for gardencorev1.ControllerDeployment", func() {
+		pullSecretName := "my-pull-secret"
+		newPullSecretName := "my-new-pull-secret"
+
+		caBundleSecretName := "my-ca-bundle-secret"
+		newCABundleSecretName := "my-new-ca-bundle-secret"
+
+		controllerDeployment := &gardencorev1.ControllerDeployment{
+			ObjectMeta: metav1.ObjectMeta{Name: "controllerdeployment"},
+			Helm: &gardencorev1.HelmControllerDeployment{
+				OCIRepository: &gardencorev1.OCIRepository{
+					PullSecretRef:     &corev1.LocalObjectReference{Name: pullSecretName},
+					CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
+				},
+			},
+		}
+
+		By("Add")
+		fakeInformerControllerDeployment.Add(controllerDeployment)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeSecret, v1beta1constants.GardenNamespace, pullSecretName, VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, v1beta1constants.GardenNamespace, caBundleSecretName, VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeTrue())
+
+		By("Update (secret refs changed)")
+		controllerDeploymentCopy := controllerDeployment.DeepCopy()
+		controllerDeployment.Helm.OCIRepository.PullSecretRef = &corev1.LocalObjectReference{Name: newPullSecretName}
+		controllerDeployment.Helm.OCIRepository.CABundleSecretRef = &corev1.LocalObjectReference{Name: newCABundleSecretName}
+		fakeInformerControllerDeployment.Update(controllerDeploymentCopy, controllerDeployment)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeSecret, v1beta1constants.GardenNamespace, newPullSecretName, VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, v1beta1constants.GardenNamespace, newCABundleSecretName, VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, v1beta1constants.GardenNamespace, pullSecretName, VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, v1beta1constants.GardenNamespace, caBundleSecretName, VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeFalse())
+
+		By("Update (irrelevant change - same pull secret ref and ca bundle secret ref)")
+		controllerDeploymentCopy = controllerDeployment.DeepCopy()
+		controllerDeployment.ResourceVersion = "123"
+		nodesBefore := graph.graph.Nodes().Len()
+		edgesBefore := graph.graph.Edges().Len()
+		fakeInformerControllerDeployment.Update(controllerDeploymentCopy, controllerDeployment)
+		Expect(graph.graph.Nodes().Len()).To(Equal(nodesBefore))
+		Expect(graph.graph.Edges().Len()).To(Equal(edgesBefore))
+
+		By("Delete")
+		fakeInformerControllerDeployment.Delete(controllerDeployment)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeSecret, v1beta1constants.GardenNamespace, newPullSecretName, VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, v1beta1constants.GardenNamespace, newCABundleSecretName, VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeFalse())
+		Expect(graph.HasVertex(VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeFalse())
 	})
 
 	It("should behave as expected for seedmanagementv1alpha1.ManagedSeed", func() {
