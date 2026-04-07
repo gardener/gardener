@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	fakekubernetes "k8s.io/client-go/kubernetes/fake"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -31,7 +32,6 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	mockutilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client/mock"
 	"github.com/gardener/gardener/pkg/utils/test"
-	mocktime "github.com/gardener/gardener/pkg/utils/time/mock"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
@@ -58,7 +58,8 @@ var _ = Describe("Cleaner", func() {
 		cm2WithFinalizer corev1.ConfigMap
 		nsWithFinalizer  corev1.Namespace
 
-		timeOps *mocktime.MockOps
+		fakeClock *testclock.FakeClock
+		now       time.Time
 	)
 
 	BeforeEach(func() {
@@ -80,7 +81,8 @@ var _ = Describe("Cleaner", func() {
 		ns.DeepCopyInto(&nsWithFinalizer)
 		nsWithFinalizer.Spec.Finalizers = []corev1.FinalizerName{"kubernetes"}
 
-		timeOps = mocktime.NewMockOps(ctrl)
+		now = time.Unix(60, 0)
+		fakeClock = testclock.NewFakeClock(now)
 	})
 	AfterEach(func() {
 		ctrl.Finish()
@@ -91,7 +93,7 @@ var _ = Describe("Cleaner", func() {
 			It("should delete the target object", func() {
 				var (
 					ctx     = context.TODO()
-					cleaner = NewCleaner(timeOps, NewFinalizer())
+					cleaner = NewCleaner(fakeClock, NewFinalizer())
 				)
 
 				gomock.InOrder(
@@ -105,7 +107,7 @@ var _ = Describe("Cleaner", func() {
 			It("should succeed if not found error occurs for target object", func() {
 				var (
 					ctx     = context.TODO()
-					cleaner = NewCleaner(timeOps, NewFinalizer())
+					cleaner = NewCleaner(fakeClock, NewFinalizer())
 				)
 
 				c.EXPECT().Get(ctx, cm1Key, &cm1).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
@@ -116,7 +118,7 @@ var _ = Describe("Cleaner", func() {
 			It("should succeed if no match error occurs for target object", func() {
 				var (
 					ctx     = context.TODO()
-					cleaner = NewCleaner(timeOps, NewFinalizer())
+					cleaner = NewCleaner(fakeClock, NewFinalizer())
 				)
 
 				c.EXPECT().Get(ctx, cm1Key, &cm1).Return(&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}})
@@ -128,7 +130,7 @@ var _ = Describe("Cleaner", func() {
 				var (
 					ctx     = context.TODO()
 					list    = &corev1.ConfigMapList{}
-					cleaner = NewCleaner(timeOps, NewFinalizer())
+					cleaner = NewCleaner(fakeClock, NewFinalizer())
 				)
 
 				listCall := c.EXPECT().List(ctx, list).SetArg(1, cmList)
@@ -142,7 +144,7 @@ var _ = Describe("Cleaner", func() {
 				var (
 					ctx     = context.TODO()
 					list    = &corev1.ConfigMapList{}
-					cleaner = NewCleaner(timeOps, NewFinalizer())
+					cleaner = NewCleaner(fakeClock, NewFinalizer())
 				)
 
 				c.EXPECT().List(ctx, list).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
@@ -154,7 +156,7 @@ var _ = Describe("Cleaner", func() {
 				var (
 					ctx     = context.TODO()
 					list    = &corev1.ConfigMapList{}
-					cleaner = NewCleaner(timeOps, NewFinalizer())
+					cleaner = NewCleaner(fakeClock, NewFinalizer())
 				)
 
 				c.EXPECT().List(ctx, list).Return(&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}})
@@ -167,15 +169,16 @@ var _ = Describe("Cleaner", func() {
 					ctx               = context.TODO()
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
 					now               = time.Unix(60, 0)
-					cleaner           = NewCleaner(timeOps, NewFinalizer())
+					cleaner           = NewCleaner(fakeClock, NewFinalizer())
 				)
 
 				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
 				cm2.DeletionTimestamp = &deletionTimestamp
 
+				fakeClock.SetTime(now)
+
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, cm2Key, &cm2).SetArg(2, cm2WithFinalizer),
-					timeOps.EXPECT().Now().Return(now),
 					test.EXPECTPatch(ctx, c, &cm2, &cm2WithFinalizer, types.MergePatchType),
 				)
 
@@ -189,15 +192,16 @@ var _ = Describe("Cleaner", func() {
 					now               = time.Unix(60, 0)
 					sw                = mockclient.NewMockSubResourceClient(ctrl)
 					finalizer         = NewNamespaceFinalizer()
-					cleaner           = NewCleaner(timeOps, finalizer)
+					cleaner           = NewCleaner(fakeClock, finalizer)
 				)
 
 				nsWithFinalizer.DeletionTimestamp = &deletionTimestamp
 				ns.DeletionTimestamp = &deletionTimestamp
 
+				fakeClock.SetTime(now)
+
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, nsKey, &nsWithFinalizer),
-					timeOps.EXPECT().Now().Return(now),
 					c.EXPECT().SubResource("finalize").Return(sw),
 					sw.EXPECT().Update(ctx, &ns).Return(nil),
 				)
@@ -210,15 +214,16 @@ var _ = Describe("Cleaner", func() {
 					ctx               = context.TODO()
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
 					now               = time.Unix(50, 0)
-					cleaner           = NewCleaner(timeOps, NewFinalizer())
+					cleaner           = NewCleaner(fakeClock, NewFinalizer())
 				)
 
 				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
 				cm2.DeletionTimestamp = &deletionTimestamp
 
+				fakeClock.SetTime(now)
+
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, cm2Key, &cm2).SetArg(2, cm2WithFinalizer),
-					timeOps.EXPECT().Now().Return(now),
 				)
 
 				Expect(cleaner.Clean(ctx, c, &cm2, FinalizeGracePeriodSeconds(20))).To(Succeed())
@@ -229,15 +234,16 @@ var _ = Describe("Cleaner", func() {
 					ctx               = context.TODO()
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
 					now               = time.Unix(50, 0)
-					cleaner           = NewCleaner(timeOps, NewFinalizer())
+					cleaner           = NewCleaner(fakeClock, NewFinalizer())
 				)
 
 				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
 				cm2.DeletionTimestamp = &deletionTimestamp
 
+				fakeClock.SetTime(now)
+
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, cm2Key, &cm2),
-					timeOps.EXPECT().Now().Return(now),
 				)
 
 				Expect(cleaner.Clean(ctx, c, &cm2, FinalizeGracePeriodSeconds(10))).To(Succeed())
@@ -247,17 +253,17 @@ var _ = Describe("Cleaner", func() {
 				var (
 					ctx               = context.TODO()
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
-					now               = time.Unix(60, 0)
 					list              = &corev1.ConfigMapList{}
-					cleaner           = NewCleaner(timeOps, NewFinalizer())
+					cleaner           = NewCleaner(fakeClock, NewFinalizer())
 				)
 
 				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
 				cm2.DeletionTimestamp = &deletionTimestamp
 
+				fakeClock.SetTime(now)
+
 				gomock.InOrder(
 					c.EXPECT().List(ctx, list).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2WithFinalizer}}),
-					timeOps.EXPECT().Now().Return(now),
 					test.EXPECTPatch(ctx, c, &cm2, &cm2WithFinalizer, types.MergePatchType),
 				)
 
@@ -268,17 +274,17 @@ var _ = Describe("Cleaner", func() {
 				var (
 					ctx               = context.TODO()
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
-					now               = time.Unix(60, 0)
 					list              = &corev1.ConfigMapList{}
-					cleaner           = NewCleaner(timeOps, NewFinalizer())
+					cleaner           = NewCleaner(fakeClock, NewFinalizer())
 				)
 
 				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
 				cm2.DeletionTimestamp = &deletionTimestamp
 
+				fakeClock.SetTime(now)
+
 				gomock.InOrder(
 					c.EXPECT().List(ctx, list).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2WithFinalizer}}),
-					timeOps.EXPECT().Now().Return(now),
 					test.EXPECTPatch(ctx, c, &cm2, &cm2WithFinalizer, types.MergePatchType).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 				)
 
@@ -291,15 +297,16 @@ var _ = Describe("Cleaner", func() {
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
 					now               = time.Unix(50, 0)
 					list              = &corev1.ConfigMapList{}
-					cleaner           = NewCleaner(timeOps, NewFinalizer())
+					cleaner           = NewCleaner(fakeClock, NewFinalizer())
 				)
 
 				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
 				cm2.DeletionTimestamp = &deletionTimestamp
 
+				fakeClock.SetTime(now)
+
 				gomock.InOrder(
 					c.EXPECT().List(ctx, list).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2WithFinalizer}}),
-					timeOps.EXPECT().Now().Return(now),
 				)
 
 				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(20))).To(Succeed())
@@ -311,15 +318,16 @@ var _ = Describe("Cleaner", func() {
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
 					now               = time.Unix(50, 0)
 					list              = &corev1.ConfigMapList{}
-					cleaner           = NewCleaner(timeOps, NewFinalizer())
+					cleaner           = NewCleaner(fakeClock, NewFinalizer())
 				)
 
 				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
 				cm2.DeletionTimestamp = &deletionTimestamp
 
+				fakeClock.SetTime(now)
+
 				gomock.InOrder(
 					c.EXPECT().List(ctx, list).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2}}),
-					timeOps.EXPECT().Now().Return(now),
 				)
 
 				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(10))).To(Succeed())
@@ -329,7 +337,7 @@ var _ = Describe("Cleaner", func() {
 				var (
 					ctx     = context.TODO()
 					list    = &corev1.ConfigMapList{}
-					cleaner = NewCleaner(timeOps, NewFinalizer())
+					cleaner = NewCleaner(fakeClock, NewFinalizer())
 				)
 
 				c.EXPECT().List(ctx, list).DoAndReturn(func(_ context.Context, _ *corev1.ConfigMapList, _ ...client.ListOption) error {
@@ -355,14 +363,12 @@ var _ = Describe("Cleaner", func() {
 		BeforeEach(func() {
 			var (
 				deletionTimestampLater = metav1.NewTime(deletionTimestamp.Add(-1 * time.Second))
-				now                    = time.Unix(60, 0)
 				finalizers             = []string{"foo/bar"}
 			)
 
 			deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
-			timeOps.EXPECT().Now().Return(now).AnyTimes()
 
-			cleaner = NewVolumeSnapshotContentCleaner(timeOps)
+			cleaner = NewVolumeSnapshotContentCleaner(fakeClock)
 			labels = map[string]string{"action": "cleanup"}
 			cleanOps = []CleanOption{
 				ListWith{
