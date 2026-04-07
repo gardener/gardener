@@ -10,11 +10,11 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -23,19 +23,16 @@ import (
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
-	mocktime "github.com/gardener/gardener/pkg/utils/time/mock"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 )
 
 var _ = Describe("quotavalidator", func() {
 	Describe("#Admit", func() {
 		var (
-			ctrl *gomock.Controller
-
 			admissionHandler        *QuotaValidator
 			coreInformerFactory     gardencoreinformers.SharedInformerFactory
 			securityInformerFactory securityinformers.SharedInformerFactory
-			timeOps                 *mocktime.MockOps
+			fakeClock               *testclock.FakeClock
 			shoot                   core.Shoot
 			oldShoot                core.Shoot
 			secretBinding           gardencorev1beta1.SecretBinding
@@ -271,10 +268,11 @@ var _ = Describe("quotavalidator", func() {
 			quotaProject = *quotaProjectBase.DeepCopy()
 			quotaSecret = *quotaSecretBase.DeepCopy()
 
-			ctrl = gomock.NewController(GinkgoT())
-			timeOps = mocktime.NewMockOps(ctrl)
+			now, err := time.Parse(time.RFC3339, "2018-01-01T00:00:00+00:00")
+			Expect(err).NotTo(HaveOccurred())
+			fakeClock = testclock.NewFakeClock(now)
 
-			admissionHandler, _ = New(timeOps)
+			admissionHandler, _ = New(fakeClock)
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
@@ -455,11 +453,7 @@ var _ = Describe("quotavalidator", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootExpirationTimestamp, "2018-01-02T00:00:00+00:00") // plus 1 day compared to time.Now()
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				now, err := time.Parse(time.RFC3339, "2018-01-01T00:00:00+00:00")
-				Expect(err).NotTo(HaveOccurred())
-				timeOps.EXPECT().Now().Return(now)
-
-				err = admissionHandler.Validate(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -467,11 +461,7 @@ var _ = Describe("quotavalidator", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootExpirationTimestamp, "2018-01-05T00:00:00+00:00") // plus 4 days compared to time.Now()
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				now, err := time.Parse(time.RFC3339, "2018-01-01T00:00:00+00:00")
-				Expect(err).NotTo(HaveOccurred())
-				timeOps.EXPECT().Now().Return(now)
-
-				err = admissionHandler.Validate(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
 			})
 
@@ -479,11 +469,7 @@ var _ = Describe("quotavalidator", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootExpirationTimestamp, "2018-01-09T00:00:00+00:00") // plus 8 days compared to time.Now()
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				now, err := time.Parse(time.RFC3339, "2018-01-01T00:00:00+00:00")
-				Expect(err).NotTo(HaveOccurred())
-				timeOps.EXPECT().Now().Return(now)
-
-				err = admissionHandler.Validate(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
 			})
 		})

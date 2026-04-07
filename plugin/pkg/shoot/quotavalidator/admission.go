@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/api/core/helper"
@@ -30,7 +31,6 @@ import (
 	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	securityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	timeutils "github.com/gardener/gardener/pkg/utils/time"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
@@ -47,7 +47,7 @@ var (
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
 	plugins.Register(plugin.PluginNameShootQuotaValidator, func(_ io.Reader) (admission.Interface, error) {
-		return New(timeutils.DefaultOps())
+		return New(clock.RealClock{})
 	})
 }
 
@@ -62,7 +62,7 @@ type QuotaValidator struct {
 	credentialsBindingLister     securityv1alpha1listers.CredentialsBindingLister
 	quotaLister                  gardencorev1beta1listers.QuotaLister
 	readyFunc                    admission.ReadyFunc
-	time                         timeutils.Ops
+	clock                        clock.Clock
 }
 
 var (
@@ -73,10 +73,10 @@ var (
 )
 
 // New creates a new QuotaValidator admission plugin.
-func New(time timeutils.Ops) (*QuotaValidator, error) {
+func New(clock clock.Clock) (*QuotaValidator, error) {
 	return &QuotaValidator{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
-		time:    time,
+		clock:   clock,
 	}, nil
 }
 
@@ -255,7 +255,7 @@ func (q *QuotaValidator) Validate(_ context.Context, a admission.Attributes, _ a
 			return apierrors.NewInternalError(err)
 		}
 
-		maxPossibleExpirationTime = q.time.Now().Add(time.Duration(*maxShootLifetime*24) * time.Hour)
+		maxPossibleExpirationTime = q.clock.Now().Add(time.Duration(*maxShootLifetime*24) * time.Hour)
 		if plannedExpirationTime.After(maxPossibleExpirationTime) {
 			return admission.NewForbidden(a, fmt.Errorf("requested shoot expiration time is too long. Can only be extended by %d day(s)", *maxShootLifetime))
 		}
