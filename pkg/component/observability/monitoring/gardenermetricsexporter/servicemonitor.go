@@ -55,6 +55,7 @@ func (g *gardenerMetricsExporter) serviceMonitor() *monitoringv1.ServiceMonitor 
 					"garden_seed_condition",
 					"garden_seed_capacity",
 					"garden_seed_usage",
+					"garden_seed_operation_states",
 				),
 			}},
 		},
