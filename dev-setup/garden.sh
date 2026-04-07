@@ -35,6 +35,11 @@ case "$COMMAND" in
     fi
     # Export kubeconfig for the virtual garden cluster
     RUNTIME_CLUSTER_KUBECONFIG="$KUBECONFIG" GARDEN_NAME="$garden_name" "$(dirname "$0")"/../hack/usage/generate-admin-kubeconfig-local.sh virtual-garden > "$VIRTUAL_GARDEN_KUBECONFIG"
+    # Rerun registry script to deploy pull secret into virtual garden
+    if [[ "$SCENARIO" == "remote" ]]; then
+      registry_domain=$(cat "$(dirname "$0")/remote/registry/registrydomain")
+      "$(dirname "$0")"/remote/registry/deploy-registry.sh "$KUBECONFIG" "$registry_domain" "$VIRTUAL_GARDEN_KUBECONFIG"
+    fi
     ;;
 
   down)
