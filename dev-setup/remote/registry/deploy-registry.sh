@@ -123,7 +123,7 @@ echo "Creating pull secret in garden namespace"
 kubectl create namespace garden --dry-run=client -o yaml |
   kubectl --kubeconfig "$kubeconfig" --server-side=true apply  -f -
 kubectl create secret docker-registry -n garden gardener-images --docker-server="$registry" --docker-username=gardener --docker-password="$password" --docker-email=gardener@localhost --dry-run=client -o yaml | \
-  kubectl label --dry-run=client -o yaml -f - "gardener.cloud/role=helm-pull-secret" | \
+  yq '.metadata.labels["gardener.cloud/role"] = "helm-pull-secret"' | \
   kubectl --kubeconfig "$kubeconfig" --server-side=true apply  -f -
 
 echo "Creating registry domain ConfigMap"
@@ -133,7 +133,7 @@ kubectl create configmap -n registry registry-domain --from-literal=domain="$reg
 if [[ -n "$virtual_garden_kubeconfig" ]]; then
   echo "Creating pull secret in garden namespace of virtual garden"
   kubectl create secret docker-registry -n garden gardener-images --docker-server="$registry" --docker-username=gardener --docker-password="$password" --docker-email=gardener@localhost --dry-run=client -o yaml | \
-    kubectl label --dry-run=client -o yaml -f - "gardener.cloud/role=helm-pull-secret" | \
+    yq '.metadata.labels["gardener.cloud/role"] = "helm-pull-secret"' | \
     kubectl --kubeconfig "$virtual_garden_kubeconfig" --server-side=true apply  -f -
 fi
 
