@@ -41,6 +41,9 @@ hack/tools/logcheck/pkg/logcheck/testdata/src/sigs.k8s.io/controller-runtime/pkg
 # gosec
 gosec-report.sarif
 
+# go workspace
+go.work.sum
+
 # AI coding agents
 # Claude
 .claude/
