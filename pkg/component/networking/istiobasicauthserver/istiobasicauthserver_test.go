@@ -176,7 +176,7 @@ spec:
   trafficPolicy:
     connectionPool:
       tcp:
-        maxConnections: 5000
+        maxConnectionDuration: 86400s
         tcpKeepalive:
           interval: 75s
           time: 7200s
