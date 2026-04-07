@@ -171,11 +171,6 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 			)
 
 		case controllerRegistrationResource:
-			return requestAuthorizer.Check(graph.VertexTypeControllerRegistration, attrs,
-				authwebhook.WithAlwaysAllowedVerbs("get", "list", "watch"),
-			)
-
-		case controllerRegistrationResource:
 			return requestAuthorizer.CheckRead(graph.VertexTypeControllerRegistration, attrs)
 
 		case eventCoreResource, eventResource:
