@@ -133,7 +133,6 @@ kubectl --kubeconfig "$kubeconfig" create configmap -n registry registry-domain 
 if [[ -n "$virtual_garden_kubeconfig" ]]; then
   echo "Creating pull secret in garden namespace of virtual garden"
   kubectl --kubeconfig "$virtual_garden_kubeconfig" create secret docker-registry -n garden gardener-images --docker-server="$registry" --docker-username=gardener --docker-password="$password" --docker-email=gardener@localhost --dry-run=client -o yaml | \
-    yq '.metadata.labels["gardener.cloud/role"] = "helm-pull-secret"' | \
     kubectl --kubeconfig "$virtual_garden_kubeconfig" --server-side=true apply  -f -
 fi
 
