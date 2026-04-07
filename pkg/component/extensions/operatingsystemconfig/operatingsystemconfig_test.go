@@ -49,7 +49,6 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	"github.com/gardener/gardener/pkg/utils/version"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
@@ -175,9 +174,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Containerd: &extensionsv1alpha1.ContainerdConfig{
 							SandboxImage: "registry.k8s.io/pause:latest",
 						},
-					}
-					if version.ConstraintK8sGreaterEqual131.Check(k8sVersion) {
-						criConfig.CgroupDriver = ptr.To(extensionsv1alpha1.CgroupDriverSystemd)
+						CgroupDriver: ptr.To(extensionsv1alpha1.CgroupDriverSystemd),
 					}
 
 					criConfigProvisioning = &extensionsv1alpha1.CRIConfig{

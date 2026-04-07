@@ -753,11 +753,8 @@ func service(namespace string, testValues Values) *corev1.Service {
 			svc.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferSameZone)
 		} else if versionutils.ConstraintK8sGreaterEqual132.Check(testValues.RuntimeVersion) {
 			svc.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
-		} else if versionutils.ConstraintK8sEqual131.Check(testValues.RuntimeVersion) {
-			svc.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
-			metav1.SetMetaDataLabel(&svc.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
 		} else {
-			metav1.SetMetaDataAnnotation(&svc.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
+			svc.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
 			metav1.SetMetaDataLabel(&svc.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
 		}
 	}

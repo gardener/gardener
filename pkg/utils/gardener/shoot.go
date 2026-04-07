@@ -904,20 +904,16 @@ func IsAuthorizeWithSelectorsEnabled(kubeAPIServer *gardencorev1beta1.KubeAPISer
 	}
 
 	// The feature gate is alpha in v1.31 and disabled by default.
-	if versionutils.ConstraintK8sGreaterEqual131.Check(kubernetesVersion) {
-		if kubeAPIServer == nil {
-			return false
-		}
-
-		value, ok := kubeAPIServer.FeatureGates["AuthorizeWithSelectors"]
-		if !ok {
-			return false
-		}
-
-		return value
+	if kubeAPIServer == nil {
+		return false
 	}
 
-	return false
+	value, ok := kubeAPIServer.FeatureGates["AuthorizeWithSelectors"]
+	if !ok {
+		return false
+	}
+
+	return value
 }
 
 // CalculateWorkerPoolHashForInPlaceUpdate calculates the data string for the worker pool hash to be used for in-place updates.

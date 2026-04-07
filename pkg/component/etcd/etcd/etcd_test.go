@@ -187,11 +187,8 @@ var _ = Describe("Etcd", func() {
 					clientService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferSameZone)
 				} else if versionutils.ConstraintK8sGreaterEqual132.Check(runtimeKubernetesVersion) {
 					clientService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
-				} else if versionutils.ConstraintK8sEqual131.Check(runtimeKubernetesVersion) {
-					clientService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
-					metav1.SetMetaDataLabel(&clientService.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
 				} else {
-					metav1.SetMetaDataAnnotation(&clientService.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
+					clientService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
 					metav1.SetMetaDataLabel(&clientService.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
 				}
 			}

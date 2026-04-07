@@ -1000,13 +1000,10 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			d.osc.Spec.CRIConfig.Name == extensionsv1alpha1.CRINameContainerD &&
 			d.purpose == extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
 			d.osc.Spec.CRIConfig.Containerd = &extensionsv1alpha1.ContainerdConfig{}
+			d.osc.Spec.CRIConfig.CgroupDriver = ptr.To(extensionsv1alpha1.CgroupDriverSystemd)
 
 			if pauseImage := d.images[imagevector.ContainerImageNamePauseContainer]; pauseImage != nil {
 				d.osc.Spec.CRIConfig.Containerd.SandboxImage = pauseImage.String()
-			}
-
-			if version.ConstraintK8sGreaterEqual131.Check(d.kubernetesVersion) {
-				d.osc.Spec.CRIConfig.CgroupDriver = ptr.To(extensionsv1alpha1.CgroupDriverSystemd)
 			}
 		}
 
