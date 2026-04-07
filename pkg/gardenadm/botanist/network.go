@@ -10,33 +10,36 @@ import (
 	"net"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/component/networking/coredns"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy/hostnameresolver"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/nodeagent"
 )
 
-// IsPodNetworkAvailable checks if the ManagedResource for CoreDNS is deployed and ready. If yes, pod network must be
-// available. Otherwise, CoreDNS which runs in this network wouldn't be available.
+// IsPodNetworkAvailable checks if the control plane Node has the pod network configured.
+// It checks the NetworkUnavailable condition - when False, the pod network is available.
 func (b *GardenadmBotanist) IsPodNetworkAvailable(ctx context.Context) (bool, error) {
-	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: coredns.ManagedResourceName, Namespace: b.Shoot.ControlPlaneNamespace}}
-	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {
-		if meta.IsNoMatchError(err) || apierrors.IsNotFound(err) {
-			return false, nil
-		}
-		return false, fmt.Errorf("failed reading ManagedResource %s: %w", client.ObjectKeyFromObject(managedResource), err)
+	node, err := nodeagent.FetchNodeByHostName(ctx, b.SeedClientSet.Client(), b.HostName)
+	if err != nil {
+		return false, fmt.Errorf("failed fetching node object by hostname %q: %w", b.HostName, err)
 	}
-	return health.CheckManagedResource(managedResource) == nil, nil
+
+	// If no Node exists yet, pod network is not available
+	if node == nil {
+		return false, nil
+	}
+
+	for _, condition := range node.Status.Conditions {
+		if condition.Type == corev1.NodeNetworkUnavailable {
+			return condition.Status == corev1.ConditionFalse, nil
+		}
+	}
+
+	return false, nil
 }
 
 // ApplyNetworkPolicies reconciles all namespaces in the cluster in order to apply the network policies.
