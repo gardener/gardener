@@ -18,6 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -361,8 +363,14 @@ func (r *Reconciler) delete(
 			Fn:           component.OpDestroyAndWait(c.victoriaOperator).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyVictoriaLogs),
 		})
+		resetExtensionRequiredVirtualCondition = g.Add(flow.Task{
+			Name:         "Resetting RequiredVirtual condition on extensions since virtual cluster has been destroyed",
+			Fn:           r.resetExtensionRequiredVirtualCondition,
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
+		})
 		syncPointCleanedUp = flow.NewTaskIDs(
 			waitUntilExtensionResourcesDeleted,
+			resetExtensionRequiredVirtualCondition,
 			destroyDNSRecords,
 			destroyMainETCDBackupBucket,
 			destroyEtcdDruid,
@@ -585,4 +593,33 @@ func (r *Reconciler) cleanupIstioInternalLoadBalancingConfigMap(ctx context.Cont
 		[]string{},
 		false,
 	)
+}
+
+func (r *Reconciler) resetExtensionRequiredVirtualCondition(ctx context.Context) error {
+	extensionList := &operatorv1alpha1.ExtensionList{}
+	if err := r.RuntimeClientSet.Client().List(ctx, extensionList); err != nil {
+		return err
+	}
+
+	for _, extension := range extensionList.Items {
+		condition := v1beta1helper.GetCondition(extension.Status.Conditions, operatorv1alpha1.ExtensionRequiredVirtual)
+		if condition == nil || condition.Status == gardencorev1beta1.ConditionFalse {
+			continue
+		}
+
+		patch := client.MergeFromWithOptions(extension.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		extension.Status.Conditions = v1beta1helper.MergeConditions(extension.Status.Conditions, v1beta1helper.UpdatedConditionWithClock(
+			r.Clock,
+			*condition,
+			gardencorev1beta1.ConditionFalse,
+			"GardenDeleted",
+			"Virtual cluster has been destroyed",
+		))
+
+		if err := r.RuntimeClientSet.Client().Status().Patch(ctx, &extension, patch); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
