@@ -10,9 +10,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -20,7 +20,6 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("DeletionConfirmation", func() {
@@ -58,31 +57,25 @@ var _ = Describe("DeletionConfirmation", func() {
 
 	Describe("#ConfirmDeletion", func() {
 		var (
-			ctx     context.Context
-			ctrl    *gomock.Controller
-			c       client.Client
-			now     time.Time
-			mockNow *mocktime.MockNow
-			obj     client.Object
+			ctx       context.Context
+			c         client.Client
+			obj       client.Object
+			fakeClock *testclock.FakeClock
+			now       time.Time
 		)
 
 		BeforeEach(func() {
 			ctx = context.Background()
-			ctrl = gomock.NewController(GinkgoT())
-			mockNow = mocktime.NewMockNow(ctrl)
 			obj = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
 			c = fake.NewClientBuilder().WithObjects(obj).Build()
-		})
-
-		AfterEach(func() {
-			ctrl.Finish()
+			now = time.Now().UTC()
+			fakeClock = testclock.NewFakeClock(now)
 		})
 
 		It("should add the deletion confirmation annotation for an object without annotations", func() {
 			DeferCleanup(test.WithVars(
-				&TimeNow, mockNow.Do,
+				&TimeNow, fakeClock.Now,
 			))
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			expectedAnnotations := map[string]string{v1beta1constants.ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano)}
 
@@ -94,9 +87,8 @@ var _ = Describe("DeletionConfirmation", func() {
 
 		It("should add the deletion confirmation annotation for an object with annotations", func() {
 			DeferCleanup(test.WithVars(
-				&TimeNow, mockNow.Do,
+				&TimeNow, fakeClock.Now,
 			))
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			obj.SetAnnotations(map[string]string{"foo": "bar"})
 			Expect(c.Update(ctx, obj)).To(Succeed())
