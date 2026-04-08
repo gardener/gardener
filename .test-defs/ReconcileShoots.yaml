@@ -16,4 +16,4 @@ spec:
     -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
     -gardener-version=$GARDENER_VERSION
 
-  image: golang:1.26.1
+  image: golang:1.26.2
