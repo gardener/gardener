@@ -8,6 +8,7 @@ import (
 	"regexp"
 
 	"github.com/Masterminds/semver/v3"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 )
@@ -49,6 +50,9 @@ const (
 	// AnnotationKeyChecksumAppliedOperatingSystemConfig is a constant for an annotation key on a Node describing the
 	// checksum of the last applied operating system configuration.
 	AnnotationKeyChecksumAppliedOperatingSystemConfig = "checksum/cloud-config-data"
+
+	// ConditionTypeSystemdUnitsReady is the node condition type indicating whether all managed systemd units are healthy.
+	ConditionTypeSystemdUnitsReady corev1.NodeConditionType = "SystemdUnitsReady"
 )
 
 // OSVersionRegex is a regular expression to match operating system versions.
@@ -146,7 +150,7 @@ type TokenSecretSyncConfig struct {
 
 // SystemdUnitCheckControllerConfig defines the configuration of the systemd unit check controller.
 type SystemdUnitCheckControllerConfig struct {
-	// SyncPeriod is the duration how often the systemd units are checked.
+	// SyncPeriod determines how frequent the systemd units are checked.
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 	// StuckThreshold is the duration after which a unit in a transitional state (activating/deactivating) is considered

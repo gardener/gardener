@@ -20,7 +20,6 @@ import (
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/nodeagent/controller/systemdunitcheck"
 )
 
 var _ = Describe("SystemdUnitCheck controller tests", func() {
@@ -56,7 +55,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 	getNodeCondition := func(g Gomega) *corev1.NodeCondition {
 		g.Expect(testClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
 		for _, condition := range node.Status.Conditions {
-			if condition.Type == systemdunitcheck.ConditionTypeSystemdUnitsReady {
+			if condition.Type == nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady {
 				return &condition
 			}
 		}
@@ -87,7 +86,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		Eventually(func(g Gomega) *corev1.NodeCondition {
 			return getNodeCondition(g)
 		}).Should(PointTo(MatchFields(IgnoreExtras, Fields{
-			"Type":   Equal(systemdunitcheck.ConditionTypeSystemdUnitsReady),
+			"Type":   Equal(nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady),
 			"Status": Equal(corev1.ConditionTrue),
 			"Reason": Equal("AllUnitsHealthy"),
 		})))
@@ -111,7 +110,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		Eventually(func(g Gomega) *corev1.NodeCondition {
 			return getNodeCondition(g)
 		}).Should(PointTo(MatchFields(IgnoreExtras, Fields{
-			"Type":    Equal(systemdunitcheck.ConditionTypeSystemdUnitsReady),
+			"Type":    Equal(nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady),
 			"Status":  Equal(corev1.ConditionFalse),
 			"Reason":  Equal("UnhealthyUnits"),
 			"Message": ContainSubstring("bad.service: failed"),
@@ -135,7 +134,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		Eventually(func(g Gomega) *corev1.NodeCondition {
 			return getNodeCondition(g)
 		}).Should(PointTo(MatchFields(IgnoreExtras, Fields{
-			"Type":    Equal(systemdunitcheck.ConditionTypeSystemdUnitsReady),
+			"Type":    Equal(nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady),
 			"Status":  Equal(corev1.ConditionFalse),
 			"Reason":  Equal("UnhealthyUnits"),
 			"Message": ContainSubstring("stuck.service: stuck in activating"),
@@ -159,7 +158,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		Eventually(func(g Gomega) *corev1.NodeCondition {
 			return getNodeCondition(g)
 		}).Should(PointTo(MatchFields(IgnoreExtras, Fields{
-			"Type":   Equal(systemdunitcheck.ConditionTypeSystemdUnitsReady),
+			"Type":   Equal(nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady),
 			"Status": Equal(corev1.ConditionTrue),
 			"Reason": Equal("ProgressingUnits"),
 		})))
@@ -181,7 +180,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		Eventually(func(g Gomega) *corev1.NodeCondition {
 			return getNodeCondition(g)
 		}).Should(PointTo(MatchFields(IgnoreExtras, Fields{
-			"Type":   Equal(systemdunitcheck.ConditionTypeSystemdUnitsReady),
+			"Type":   Equal(nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady),
 			"Status": Equal(corev1.ConditionTrue),
 			"Reason": Equal("AllUnitsHealthy"),
 		})))
@@ -203,7 +202,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		Eventually(func(g Gomega) *corev1.NodeCondition {
 			return getNodeCondition(g)
 		}).Should(PointTo(MatchFields(IgnoreExtras, Fields{
-			"Type":    Equal(systemdunitcheck.ConditionTypeSystemdUnitsReady),
+			"Type":    Equal(nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady),
 			"Status":  Equal(corev1.ConditionFalse),
 			"Reason":  Equal("UnhealthyUnits"),
 			"Message": ContainSubstring("stopped.service: inactive but should be enabled"),
@@ -229,7 +228,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		Eventually(func(g Gomega) *corev1.NodeCondition {
 			return getNodeCondition(g)
 		}).Should(PointTo(MatchFields(IgnoreExtras, Fields{
-			"Type":   Equal(systemdunitcheck.ConditionTypeSystemdUnitsReady),
+			"Type":   Equal(nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady),
 			"Status": Equal(corev1.ConditionTrue),
 			"Reason": Equal("AllUnitsHealthy"),
 		})))
@@ -252,7 +251,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		Eventually(func(g Gomega) *corev1.NodeCondition {
 			return getNodeCondition(g)
 		}).Should(PointTo(MatchFields(IgnoreExtras, Fields{
-			"Type":   Equal(systemdunitcheck.ConditionTypeSystemdUnitsReady),
+			"Type":   Equal(nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady),
 			"Status": Equal(corev1.ConditionTrue),
 			"Reason": Equal("AllUnitsHealthy"),
 		})))
@@ -274,13 +273,13 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		Eventually(func(g Gomega) *corev1.NodeCondition {
 			return getNodeCondition(g)
 		}).Should(PointTo(MatchFields(IgnoreExtras, Fields{
-			"Type":   Equal(systemdunitcheck.ConditionTypeSystemdUnitsReady),
+			"Type":   Equal(nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady),
 			"Status": Equal(corev1.ConditionTrue),
 			"Reason": Equal("AllUnitsHealthy"),
 		})))
 	})
 
-	It("should skip gardener-node-agent's own units to avoid self-monitoring", func() {
+	It("should also monitor gardener-node-agent's own units", func() {
 		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Units: []extensionsv1alpha1.Unit{
@@ -292,13 +291,15 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		})
 
 		fakeDBus.AddUnitsToList(
+			systemddbus.UnitStatus{Name: nodeagentconfigv1alpha1.UnitName, ActiveState: "active"},
+			systemddbus.UnitStatus{Name: nodeagentconfigv1alpha1.InitUnitName, ActiveState: "active"},
 			systemddbus.UnitStatus{Name: "kubelet.service", ActiveState: "active"},
 		)
 
 		Eventually(func(g Gomega) *corev1.NodeCondition {
 			return getNodeCondition(g)
 		}).Should(PointTo(MatchFields(IgnoreExtras, Fields{
-			"Type":   Equal(systemdunitcheck.ConditionTypeSystemdUnitsReady),
+			"Type":   Equal(nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady),
 			"Status": Equal(corev1.ConditionTrue),
 			"Reason": Equal("AllUnitsHealthy"),
 		})))
@@ -316,7 +317,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		Eventually(func(g Gomega) *corev1.NodeCondition {
 			return getNodeCondition(g)
 		}).Should(PointTo(MatchFields(IgnoreExtras, Fields{
-			"Type":    Equal(systemdunitcheck.ConditionTypeSystemdUnitsReady),
+			"Type":    Equal(nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady),
 			"Status":  Equal(corev1.ConditionFalse),
 			"Reason":  Equal("UnhealthyUnits"),
 			"Message": ContainSubstring("missing.service: not loaded"),
@@ -380,7 +381,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		Eventually(func(g Gomega) *corev1.NodeCondition {
 			return getNodeCondition(g)
 		}).Should(PointTo(MatchFields(IgnoreExtras, Fields{
-			"Type":   Equal(systemdunitcheck.ConditionTypeSystemdUnitsReady),
+			"Type":   Equal(nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady),
 			"Status": Equal(corev1.ConditionTrue),
 			"Reason": Equal("AllUnitsHealthy"),
 		})))
@@ -407,7 +408,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		Eventually(func(g Gomega) *corev1.NodeCondition {
 			return getNodeCondition(g)
 		}).Should(PointTo(MatchFields(IgnoreExtras, Fields{
-			"Type":    Equal(systemdunitcheck.ConditionTypeSystemdUnitsReady),
+			"Type":    Equal(nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady),
 			"Status":  Equal(corev1.ConditionFalse),
 			"Reason":  Equal("UnhealthyUnits"),
 			"Message": ContainSubstring("systemd-user-sessions.service: inactive but should be enabled"),

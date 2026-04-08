@@ -30,9 +30,6 @@ import (
 )
 
 const (
-	// ConditionTypeSystemdUnitsReady is the condition type indicating whether all managed systemd units are healthy.
-	ConditionTypeSystemdUnitsReady corev1.NodeConditionType = "SystemdUnitsReady"
-
 	reasonAllUnitsHealthy = "AllUnitsHealthy"
 	reasonUnhealthyUnits  = "UnhealthyUnits"
 	reasonProgressing     = "ProgressingUnits"
@@ -110,20 +107,11 @@ func (r *Reconciler) readManagedUnits() ([]unitInfo, error) {
 
 	var units []unitInfo
 	for _, unit := range osc.Spec.Units {
-		// Skip gardener-node-agent's own units to avoid self-monitoring — if the agent is unhealthy, it cannot
-		// report its own condition anyway.
-		if unit.Name == nodeagentconfigv1alpha1.UnitName || unit.Name == nodeagentconfigv1alpha1.InitUnitName {
-			continue
-		}
 		units = append(units, unitInfo{name: unit.Name, enabled: ptr.Deref(unit.Enable, unitCarriesConfiguration(unit))})
 	}
 
 	// Extension units override spec units — apply on top.
 	for _, unit := range osc.Status.ExtensionUnits {
-		if unit.Name == nodeagentconfigv1alpha1.UnitName || unit.Name == nodeagentconfigv1alpha1.InitUnitName {
-			continue
-		}
-
 		if idx := slices.IndexFunc(units, func(u unitInfo) bool { return u.name == unit.Name }); idx >= 0 {
 			if unit.Enable != nil {
 				units[idx].enabled = *unit.Enable
@@ -240,21 +228,21 @@ func (r *Reconciler) updateNodeCondition(ctx context.Context, node *corev1.Node,
 	switch {
 	case len(unhealthyMessages) > 0:
 		newCondition = corev1.NodeCondition{
-			Type:    ConditionTypeSystemdUnitsReady,
+			Type:    nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  reasonUnhealthyUnits,
 			Message: strings.Join(unhealthyMessages, "; "),
 		}
 	case len(progressingMessages) > 0:
 		newCondition = corev1.NodeCondition{
-			Type:    ConditionTypeSystemdUnitsReady,
+			Type:    nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady,
 			Status:  corev1.ConditionTrue,
 			Reason:  reasonProgressing,
 			Message: strings.Join(progressingMessages, "; "),
 		}
 	default:
 		newCondition = corev1.NodeCondition{
-			Type:    ConditionTypeSystemdUnitsReady,
+			Type:    nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady,
 			Status:  corev1.ConditionTrue,
 			Reason:  reasonAllUnitsHealthy,
 			Message: "All systemd units from the operating system config are running as expected.",
@@ -262,7 +250,7 @@ func (r *Reconciler) updateNodeCondition(ctx context.Context, node *corev1.Node,
 	}
 
 	existingIdx := slices.IndexFunc(node.Status.Conditions, func(c corev1.NodeCondition) bool {
-		return c.Type == ConditionTypeSystemdUnitsReady
+		return c.Type == nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady
 	})
 
 	if existingIdx >= 0 && node.Status.Conditions[existingIdx].Status == newCondition.Status {
