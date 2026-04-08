@@ -21,13 +21,11 @@ parse_flags() {
         shift
         shoot_name="${1:-$shoot_name}"
         ;;
-      --type)
-        shift
-        kubeconfig_type="${1:-$kubeconfig_type}"
-        if [[ "${kubeconfig_type}" != "admin" && "${kubeconfig_type}" != "viewer" ]]; then
-          echo "Error: --type must be 'admin' or 'viewer'" >&2
-          exit 1
-        fi
+      --admin)
+        kubeconfig_type="admin"
+        ;;
+      --viewer)
+        kubeconfig_type="viewer"
         ;;
       *)
         echo "Unknown argument: $1" >&2

@@ -231,10 +231,10 @@ For convenience a [helper script](../../hack/usage/generate-kubeconfig.sh) is pr
 ./hack/usage/generate-kubeconfig.sh > admin-kubeconf.yaml
 ```
 
-To generate a viewer kubeconfig instead of an admin kubeconfig, use the `--type viewer` flag:
+To generate a viewer kubeconfig instead of an admin kubeconfig, use the `--viewer` flag:
 
 ```bash
-./hack/usage/generate-kubeconfig.sh --type viewer > viewer-kubeconf.yaml
+./hack/usage/generate-kubeconfig.sh --viewer > viewer-kubeconf.yaml
 ```
 
 > [!NOTE]
