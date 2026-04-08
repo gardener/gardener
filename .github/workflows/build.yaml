@@ -13,7 +13,7 @@ on:
 
 jobs:
   prepare:
-    uses: gardener/cc-utils/.github/workflows/prepare.yaml@master
+    uses: gardener/cc-utils/.github/workflows/prepare.yaml@v1
     with:
       mode: ${{ inputs.mode }}
     permissions:
@@ -22,8 +22,8 @@ jobs:
   tests:
     runs-on: ${{ github.repository_owner == 'gardener' && 'ubuntu-latest-large' || 'ubuntu-latest' }}
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
-      - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@v1
+      - uses: gardener/cc-utils/.github/actions/setup-git-identity@v1
       - uses: actions/setup-go@v6
         with:
           go-version: '1.26'
@@ -41,7 +41,7 @@ jobs:
             exit 0
           fi
       - name: add-tests-report-to-component-descriptor
-        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@v1
         with:
           blobs-directory: /tmp/blobs.d
           ocm-resources: |
@@ -56,7 +56,7 @@ jobs:
                   - test
 
   sast-lint:
-    uses: gardener/cc-utils/.github/workflows/sastlint-ocm.yaml@master
+    uses: gardener/cc-utils/.github/workflows/sastlint-ocm.yaml@v1
     permissions:
       contents: read
     with:
@@ -83,7 +83,7 @@ jobs:
       packages: write
       id-token: write
     secrets: inherit
-    uses: gardener/cc-utils/.github/workflows/oci-ocm.yaml@master
+    uses: gardener/cc-utils/.github/workflows/oci-ocm.yaml@v1
     strategy:
       matrix:
         args:
@@ -133,7 +133,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
-    uses: gardener/cc-utils/.github/workflows/helmchart-ocm.yaml@master
+    uses: gardener/cc-utils/.github/workflows/helmchart-ocm.yaml@v1
     strategy:
       matrix:
         args:
@@ -217,7 +217,7 @@ jobs:
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.args.runner }}
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@v1
       - uses: actions/setup-go@v6
         with:
           go-version: '1.26'
@@ -263,7 +263,7 @@ jobs:
           fi
 
           unlink ${outpath}
-      - uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+      - uses: gardener/cc-utils/.github/actions/export-ocm-fragments@v1
         with:
           blobs-directory: /tmp/blobs.d
           ocm-resources: |
