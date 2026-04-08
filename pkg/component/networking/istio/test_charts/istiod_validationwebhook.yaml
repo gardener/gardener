@@ -32,6 +32,5 @@ webhooks:
     # will update this to `Fail` and patch in the `caBundle` when the webhook
     # endpoint is ready.
     failurePolicy: Ignore
-    matchPolicy: Exact
     sideEffects: None
-    admissionReviewVersions: ["v1beta1", "v1"]
+    admissionReviewVersions: ["v1"]

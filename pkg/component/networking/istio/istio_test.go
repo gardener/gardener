@@ -265,31 +265,6 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
-		istioIngressMetricsDestinationRule = func() string {
-			data, _ := os.ReadFile("./test_charts/ingress_metrics_destinationrule.yaml")
-			return string(data)
-		}
-
-		istioIngressMetricsEnvoyFilter = func() string {
-			data, _ := os.ReadFile("./test_charts/ingress_metrics_envoyfilter.yaml")
-			return string(data)
-		}
-
-		istioIngressMetricsGateway = func() string {
-			data, _ := os.ReadFile("./test_charts/ingress_metrics_gateway.yaml")
-			return string(data)
-		}
-
-		istioIngressMetricsServiceEntry = func() string {
-			data, _ := os.ReadFile("./test_charts/ingress_metrics_serviceentry.yaml")
-			return string(data)
-		}
-
-		istioIngressMetricsVirtualService = func() string {
-			data, _ := os.ReadFile("./test_charts/ingress_metrics_virtualservice.yaml")
-			return string(data)
-		}
-
 		istioIngressNamespace = func() string {
 			data, _ := os.ReadFile("./test_charts/ingress_namespace.yaml")
 			return string(data)
@@ -438,11 +413,6 @@ var _ = Describe("istiod", func() {
 				istioIngressServiceAccount(),
 				istioIngressDeployment(minReplicas),
 				istioIngressEnvoyFilter(),
-				istioIngressMetricsDestinationRule(),
-				istioIngressMetricsEnvoyFilter(),
-				istioIngressMetricsGateway(),
-				istioIngressMetricsServiceEntry(),
-				istioIngressMetricsVirtualService(),
 				istioIngressServiceMonitor(),
 				istioIngressTelemetry(),
 			}
