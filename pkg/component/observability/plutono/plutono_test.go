@@ -345,7 +345,8 @@ metadata:
 										Command: []string{
 											"python",
 											"-u",
-											"sidecar.py",
+											"-m",
+											"sidecar",
 											"--req-username-file=/etc/data-refresher/plutono-admin/username",
 											"--req-password-file=/etc/data-refresher/plutono-admin/password",
 										},
@@ -387,7 +388,8 @@ metadata:
 										Command: []string{
 											"python",
 											"-u",
-											"sidecar.py",
+											"-m",
+											"sidecar",
 											"--req-username-file=/etc/data-refresher/plutono-admin/username",
 											"--req-password-file=/etc/data-refresher/plutono-admin/password",
 										},
