@@ -352,6 +352,8 @@ spec:
           There are {{ .Value }} seeds in {{ $externalLabels.landscape }} with a VPA that shows
           an uncapped target recommendation larger than the regular target recommendation. Query
           in the garden Prometheus for more details:
+
+          
           ALERTS{alertname="VerticalPodAutoscalerCappedRecommendation", type="seed"}
 
     - alert: SeedReconciliationFailed
