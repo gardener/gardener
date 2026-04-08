@@ -688,7 +688,7 @@ func (h *Health) CheckClusterNodes(
 		return nil, err
 	}
 
-	if err := CheckNodeAgentLeases(nodeList, leaseList, h.clock); err != nil {
+	if err := CheckNodeAgentLeases(nodesManagedByMCM, leaseList, h.clock); err != nil {
 		c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "NodeAgentUnhealthy", err.Error())
 		return &c, nil
 	}
@@ -708,7 +708,7 @@ func (h *Health) CheckClusterNodes(
 }
 
 // CheckNodeAgentLeases checks if all nodes in the shoot cluster have a corresponding Lease object maintained by gardener-node-agent
-func CheckNodeAgentLeases(nodeList *corev1.NodeList, leaseList *coordinationv1.LeaseList, clock clock.Clock) error {
+func CheckNodeAgentLeases(nodeList []*corev1.Node, leaseList *coordinationv1.LeaseList, clock clock.Clock) error {
 	nodeNameToLease := make(map[string]coordinationv1.Lease, len(leaseList.Items))
 	for _, lease := range leaseList.Items {
 		if strings.HasPrefix(lease.Name, gardenerutils.NodeLeasePrefix) {
@@ -717,7 +717,7 @@ func CheckNodeAgentLeases(nodeList *corev1.NodeList, leaseList *coordinationv1.L
 		}
 	}
 
-	for _, node := range nodeList.Items {
+	for _, node := range nodeList {
 		lease, ok := nodeNameToLease[node.Name]
 		if !ok {
 			return fmt.Errorf("gardener-node-agent is not running on node %q", node.Name)
