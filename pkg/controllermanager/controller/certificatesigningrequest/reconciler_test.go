@@ -12,11 +12,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	fakeclientset "k8s.io/client-go/kubernetes/fake"
@@ -25,37 +23,32 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Reconciler", func() {
 	var (
 		ctx                    = context.TODO()
-		ctrl                   *gomock.Controller
-		c                      *mockclient.MockClient
+		c                      client.Client
 		fakeCertificatesClient certificatesclientv1.CertificateSigningRequestInterface
 
-		sar                *authorizationv1.SubjectAccessReview
 		csr                *certificatesv1.CertificateSigningRequest
 		reconciler         reconcile.Reconciler
 		privateKey         *rsa.PrivateKey
 		certificateSubject *pkix.Name
-
-		errNotFound = &apierrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}}
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
-
-		fakeClient := fakeclientset.NewSimpleClientset()
-		fakeCertificatesClient = fakeClient.CertificatesV1().CertificateSigningRequests()
+		fakeClientset := fakeclientset.NewSimpleClientset()
+		fakeCertificatesClient = fakeClientset.CertificatesV1().CertificateSigningRequests()
 
 		privateKey, _ = secretsutils.FakeGenerateKey(rand.Reader, 4096)
 		csr = &certificatesv1.CertificateSigningRequest{
@@ -73,23 +66,11 @@ var _ = Describe("Reconciler", func() {
 			},
 		}
 
-		sar = &authorizationv1.SubjectAccessReview{
-			Status: authorizationv1.SubjectAccessReviewStatus{
-				Allowed: false,
-				Denied:  false,
-			},
-		}
-
+		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient}
 	})
 
-	AfterEach(func() {
-		ctrl.Finish()
-	})
-
 	It("should return nil because object not found", func() {
-		c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), &certificatesv1.CertificateSigningRequest{}).Return(errNotFound)
-
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
 		Expect(result).To(Equal(reconcile.Result{}))
 		Expect(err).NotTo(HaveOccurred())
@@ -97,12 +78,8 @@ var _ = Describe("Reconciler", func() {
 
 	Context("when csr is in final state", func() {
 		It("should ignore it because certificate is present in the status field", func() {
-			c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, obj *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
-					csr.Status.Certificate = []byte("test-certificate")
-					csr.DeepCopyInto(obj)
-					return nil
-				}).AnyTimes()
+			csr.Status.Certificate = []byte("test-certificate")
+			Expect(c.Create(ctx, csr.DeepCopy())).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
 			Expect(result).To(Equal(reconcile.Result{}))
@@ -110,14 +87,10 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should ignore it because csr is Approved", func() {
-			c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, obj *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
-					csr.Status.Conditions = append(csr.Status.Conditions, certificatesv1.CertificateSigningRequestCondition{
-						Type: certificatesv1.CertificateApproved,
-					})
-					csr.DeepCopyInto(obj)
-					return nil
-				}).AnyTimes()
+			csr.Status.Conditions = append(csr.Status.Conditions, certificatesv1.CertificateSigningRequestCondition{
+				Type: certificatesv1.CertificateApproved,
+			})
+			Expect(c.Create(ctx, csr.DeepCopy())).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
 			Expect(result).To(Equal(reconcile.Result{}))
@@ -134,11 +107,7 @@ var _ = Describe("Reconciler", func() {
 			Expect(err).NotTo(HaveOccurred())
 			csr.Spec.Request = csrData
 
-			c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, obj *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
-					csr.DeepCopyInto(obj)
-					return nil
-				}).AnyTimes()
+			Expect(c.Create(ctx, csr.DeepCopy())).To(Succeed())
 		})
 
 		It("should ignore the csr because csr does not match the requirements for a client certificate for a seed", func() {
@@ -158,31 +127,33 @@ var _ = Describe("Reconciler", func() {
 			Expect(err).NotTo(HaveOccurred())
 			csr.Spec.Request = csrData
 
-			c.EXPECT().Create(gomock.Any(), gomock.AssignableToTypeOf(&authorizationv1.SubjectAccessReview{})).DoAndReturn(func(_ context.Context, obj *authorizationv1.SubjectAccessReview, _ ...client.CreateOption) error {
-				// For the simplicity of test, we are assuming SubjectAccessReview will be allowed if user is admin and not allowed for other users.
-				if obj.Spec.User == "admin" {
-					sar.Status = authorizationv1.SubjectAccessReviewStatus{
-						Allowed: true,
-					}
-				} else {
-					sar.Status = authorizationv1.SubjectAccessReviewStatus{
-						Allowed: false,
-					}
-				}
-				sar.DeepCopyInto(obj)
-				return nil
-			})
+			// Build client with SAR interceptor that allows admin
+			c = fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.GardenScheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+						if sar, ok := obj.(*authorizationv1.SubjectAccessReview); ok {
+							if sar.Spec.User == "admin" {
+								sar.Status = authorizationv1.SubjectAccessReviewStatus{Allowed: true}
+							} else {
+								sar.Status = authorizationv1.SubjectAccessReviewStatus{Allowed: false}
+							}
+							return nil
+						}
+						return cl.Create(ctx, obj, opts...)
+					},
+				}).
+				Build()
 
 			reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient}
 		})
 
-		It("should result an error when user does not has authorization for seedclient subresource (sar.Status.Allowed is false)", func() {
-			c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, obj *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
-					csr.Spec.Username = "foo"
-					csr.DeepCopyInto(obj)
-					return nil
-				}).AnyTimes()
+		It("should result an error when user does not have authorization for seedclient subresource (sar.Status.Allowed is false)", func() {
+			csrObj := csr.DeepCopy()
+			csrObj.Spec.Username = "foo"
+
+			Expect(c.Create(ctx, csrObj)).To(Succeed())
+
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).To(MatchError(ContainSubstring("recognized CSR but SubjectAccessReview was not allowed")))
@@ -191,12 +162,11 @@ var _ = Describe("Reconciler", func() {
 		It("should approve the csr when user has authorization for seedclient subresource (sar.Status.Allowed is true)", func() {
 			_, err := fakeCertificatesClient.Create(ctx, csr, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, obj *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
-					csr.Spec.Username = "admin"
-					csr.DeepCopyInto(obj)
-					return nil
-				}).AnyTimes()
+
+			csrObj := csr.DeepCopy()
+			csrObj.Spec.Username = "admin"
+
+			Expect(c.Create(ctx, csrObj)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
 			Expect(result).To(Equal(reconcile.Result{}))
@@ -221,37 +191,42 @@ var _ = Describe("Reconciler", func() {
 			csrData, err := certutil.MakeCSR(privateKey, certificateSubject, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 			csr.Spec.Request = csrData
-
-			c.EXPECT().Create(gomock.Any(), gomock.AssignableToTypeOf(&authorizationv1.SubjectAccessReview{})).DoAndReturn(func(_ context.Context, obj *authorizationv1.SubjectAccessReview, _ ...client.CreateOption) error {
-				// For the simplicity of test, we are assuming SubjectAccessReview will be allowed if user is the bootstrap user and not allowed for other users.
-				if obj.Spec.User == bootstrapUsername {
-					sar.Status = authorizationv1.SubjectAccessReviewStatus{
-						Allowed: true,
-					}
-				} else {
-					sar.Status = authorizationv1.SubjectAccessReviewStatus{
-						Allowed: false,
-					}
-				}
-				sar.DeepCopyInto(obj)
-				return nil
-			}).AnyTimes()
-
-			reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient}
 		})
+
+		buildClientWithSAR := func(bootstrapUser string) client.Client {
+			cl := fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.GardenScheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+						if sar, ok := obj.(*authorizationv1.SubjectAccessReview); ok {
+							if sar.Spec.User == bootstrapUser {
+								sar.Status = authorizationv1.SubjectAccessReviewStatus{Allowed: true}
+							} else {
+								sar.Status = authorizationv1.SubjectAccessReviewStatus{Allowed: false}
+							}
+							return nil
+						}
+						return cl.Create(ctx, obj, opts...)
+					},
+				}).
+				Build()
+
+			return cl
+		}
 
 		When("CSR is not requested via bootstrap token", func() {
 			It("should result an error when username does not have bootstrap token prefix", func() {
 				_, err := fakeCertificatesClient.Create(ctx, csr, metav1.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
-				c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, obj *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
-						csr.Spec.Username = "regular-user"
-						csr.Spec.Groups = []string{"system:authenticated"}
-						csr.DeepCopyInto(obj)
-						return nil
-					}).AnyTimes()
+				csrObj := csr.DeepCopy()
+				csrObj.Spec.Username = "regular-user"
+				csrObj.Spec.Groups = []string{"system:authenticated"}
+
+				c = buildClientWithSAR(bootstrapUsername)
+				Expect(c.Create(ctx, csrObj)).To(Succeed())
+
+				reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient}
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
 				Expect(result).To(Equal(reconcile.Result{}))
@@ -268,13 +243,14 @@ var _ = Describe("Reconciler", func() {
 				_, err := fakeCertificatesClient.Create(ctx, csr, metav1.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
-				c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, obj *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
-						csr.Spec.Username = bootstrapUsername
-						csr.Spec.Groups = []string{"system:authenticated"}
-						csr.DeepCopyInto(obj)
-						return nil
-					}).AnyTimes()
+				csrObj := csr.DeepCopy()
+				csrObj.Spec.Username = bootstrapUsername
+				csrObj.Spec.Groups = []string{"system:authenticated"}
+
+				c = buildClientWithSAR(bootstrapUsername)
+				Expect(c.Create(ctx, csrObj)).To(Succeed())
+
+				reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient}
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
 				Expect(result).To(Equal(reconcile.Result{}))
@@ -293,15 +269,15 @@ var _ = Describe("Reconciler", func() {
 				_, err := fakeCertificatesClient.Create(ctx, csr, metav1.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
-				c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, obj *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
-						csr.Spec.Username = bootstrapUsername
-						csr.Spec.Groups = []string{bootstraptokenapi.BootstrapDefaultGroup}
-						csr.DeepCopyInto(obj)
-						return nil
-					}).AnyTimes()
+				csrObj := csr.DeepCopy()
+				csrObj.Spec.Username = bootstrapUsername
+				csrObj.Spec.Groups = []string{bootstraptokenapi.BootstrapDefaultGroup}
 
-				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: bootstrapTokenName}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
+				// No bootstrap token secret created
+				c = buildClientWithSAR(bootstrapUsername)
+				Expect(c.Create(ctx, csrObj)).To(Succeed())
+
+				reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient}
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
 				Expect(result).To(Equal(reconcile.Result{}))
@@ -330,19 +306,15 @@ var _ = Describe("Reconciler", func() {
 				_, err := fakeCertificatesClient.Create(ctx, csr, metav1.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
-				c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, obj *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
-						csr.Spec.Username = bootstrapUsername
-						csr.Spec.Groups = []string{bootstraptokenapi.BootstrapDefaultGroup}
-						csr.DeepCopyInto(obj)
-						return nil
-					}).AnyTimes()
+				csrObj := csr.DeepCopy()
+				csrObj.Spec.Username = bootstrapUsername
+				csrObj.Spec.Groups = []string{bootstraptokenapi.BootstrapDefaultGroup}
 
-				c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(bootstrapTokenSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-						bootstrapTokenSecret.DeepCopyInto(obj)
-						return nil
-					}).AnyTimes()
+				c = buildClientWithSAR(bootstrapUsername)
+				Expect(c.Create(ctx, csrObj)).To(Succeed())
+				Expect(c.Create(ctx, bootstrapTokenSecret)).To(Succeed())
+
+				reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient}
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
 				Expect(result).To(Equal(reconcile.Result{}))
@@ -369,19 +341,15 @@ var _ = Describe("Reconciler", func() {
 				_, err := fakeCertificatesClient.Create(ctx, csr, metav1.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
-				c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, obj *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
-						csr.Spec.Username = bootstrapUsername
-						csr.Spec.Groups = []string{bootstraptokenapi.BootstrapDefaultGroup}
-						csr.DeepCopyInto(obj)
-						return nil
-					}).AnyTimes()
+				csrObj := csr.DeepCopy()
+				csrObj.Spec.Username = bootstrapUsername
+				csrObj.Spec.Groups = []string{bootstraptokenapi.BootstrapDefaultGroup}
 
-				c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(bootstrapTokenSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-						bootstrapTokenSecret.DeepCopyInto(obj)
-						return nil
-					}).AnyTimes()
+				c = buildClientWithSAR(bootstrapUsername)
+				Expect(c.Create(ctx, csrObj)).To(Succeed())
+				Expect(c.Create(ctx, bootstrapTokenSecret)).To(Succeed())
+
+				reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient}
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
 				Expect(result).To(Equal(reconcile.Result{}))
@@ -418,20 +386,16 @@ var _ = Describe("Reconciler", func() {
 					},
 				}
 
-				c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, obj *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
-						csr.Spec.Username = bootstrapUsername
-						csr.Spec.Groups = []string{bootstraptokenapi.BootstrapDefaultGroup}
-						csr.Spec.Request = wrongCSRData
-						csr.DeepCopyInto(obj)
-						return nil
-					}).AnyTimes()
+				csrObj := csr.DeepCopy()
+				csrObj.Spec.Username = bootstrapUsername
+				csrObj.Spec.Groups = []string{bootstraptokenapi.BootstrapDefaultGroup}
+				csrObj.Spec.Request = wrongCSRData
 
-				c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(bootstrapTokenSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-						bootstrapTokenSecret.DeepCopyInto(obj)
-						return nil
-					}).AnyTimes()
+				c = buildClientWithSAR(bootstrapUsername)
+				Expect(c.Create(ctx, csrObj)).To(Succeed())
+				Expect(c.Create(ctx, bootstrapTokenSecret)).To(Succeed())
+
+				reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient}
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
 				Expect(result).To(Equal(reconcile.Result{}))
@@ -460,19 +424,15 @@ var _ = Describe("Reconciler", func() {
 				_, err := fakeCertificatesClient.Create(ctx, csr, metav1.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
-				c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, obj *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
-						csr.Spec.Username = "unauthorized-user"
-						csr.Spec.Groups = []string{bootstraptokenapi.BootstrapDefaultGroup}
-						csr.DeepCopyInto(obj)
-						return nil
-					}).AnyTimes()
+				csrObj := csr.DeepCopy()
+				csrObj.Spec.Username = "unauthorized-user"
+				csrObj.Spec.Groups = []string{bootstraptokenapi.BootstrapDefaultGroup}
 
-				c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(bootstrapTokenSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-						bootstrapTokenSecret.DeepCopyInto(obj)
-						return nil
-					}).AnyTimes()
+				c = buildClientWithSAR(bootstrapUsername)
+				Expect(c.Create(ctx, csrObj)).To(Succeed())
+				Expect(c.Create(ctx, bootstrapTokenSecret)).To(Succeed())
+
+				reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient}
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
 				Expect(result).To(Equal(reconcile.Result{}))
@@ -501,19 +461,15 @@ var _ = Describe("Reconciler", func() {
 				_, err := fakeCertificatesClient.Create(ctx, csr, metav1.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
-				c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, obj *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
-						csr.Spec.Username = bootstrapUsername
-						csr.Spec.Groups = []string{bootstraptokenapi.BootstrapDefaultGroup}
-						csr.DeepCopyInto(obj)
-						return nil
-					}).AnyTimes()
+				csrObj := csr.DeepCopy()
+				csrObj.Spec.Username = bootstrapUsername
+				csrObj.Spec.Groups = []string{bootstraptokenapi.BootstrapDefaultGroup}
 
-				c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(bootstrapTokenSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-						bootstrapTokenSecret.DeepCopyInto(obj)
-						return nil
-					}).AnyTimes()
+				c = buildClientWithSAR(bootstrapUsername)
+				Expect(c.Create(ctx, csrObj)).To(Succeed())
+				Expect(c.Create(ctx, bootstrapTokenSecret)).To(Succeed())
+
+				reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient}
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
 				Expect(result).To(Equal(reconcile.Result{}))

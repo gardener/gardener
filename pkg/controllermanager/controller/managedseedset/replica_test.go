@@ -6,23 +6,25 @@ package managedseedset_test
 
 import (
 	"context"
+	"encoding/json"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1constants "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 const (
@@ -32,9 +34,8 @@ const (
 
 var _ = Describe("Replica", func() {
 	var (
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
-		ctx  context.Context
+		fakeClient client.Client
+		ctx        context.Context
 
 		managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet
 
@@ -42,8 +43,7 @@ var _ = Describe("Replica", func() {
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		ctx = context.TODO()
 
 		managedSeedSet = &seedmanagementv1alpha1.ManagedSeedSet{
@@ -90,10 +90,6 @@ var _ = Describe("Replica", func() {
 				},
 			},
 		}
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
 	})
 
 	var (
@@ -301,134 +297,90 @@ var _ = Describe("Replica", func() {
 
 	Describe("#CreateShoot", func() {
 		It("should create the shoot", func() {
-			c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
-				func(_ context.Context, s *gardencorev1beta1.Shoot, _ ...client.CreateOption) error {
-					Expect(s).To(Equal(&gardencorev1beta1.Shoot{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      replicaName,
-							Namespace: namespace,
-							Labels: map[string]string{
-								"foo": "bar",
-							},
-							OwnerReferences: []metav1.OwnerReference{
-								*metav1.NewControllerRef(managedSeedSet, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeedSet")),
-							},
-						},
-						Spec: gardencorev1beta1.ShootSpec{
-							DNS: &gardencorev1beta1.DNS{
-								Domain: ptr.To(replicaName + ".example.com"),
-							},
-						},
-					}))
-					return nil
-				},
-			)
-
 			replica := NewReplica(managedSeedSet, nil, nil, nil, false)
-			err := replica.CreateShoot(ctx, c, ordinal)
+			err := replica.CreateShoot(ctx, fakeClient, ordinal)
 			Expect(err).ToNot(HaveOccurred())
+
+			createdShoot := &gardencorev1beta1.Shoot{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: replicaName}, createdShoot)).To(Succeed())
+			Expect(createdShoot.Name).To(Equal(replicaName))
+			Expect(createdShoot.Namespace).To(Equal(namespace))
+			Expect(createdShoot.Labels).To(Equal(map[string]string{"foo": "bar"}))
+			Expect(createdShoot.OwnerReferences).To(Equal([]metav1.OwnerReference{
+				*metav1.NewControllerRef(managedSeedSet, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeedSet")),
+			}))
+			Expect(createdShoot.Spec.DNS).ToNot(BeNil())
+			Expect(createdShoot.Spec.DNS.Domain).To(Equal(ptr.To(replicaName + ".example.com")))
 		})
 	})
 
 	Describe("#CreateManagedSeed", func() {
 		It("should create the managed seed", func() {
-			shoot := shoot(nil, "", "", "", false)
-			c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
-				func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ ...client.CreateOption) error {
-					Expect(ms).To(Equal(&seedmanagementv1alpha1.ManagedSeed{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      replicaName,
-							Namespace: namespace,
-							Labels: map[string]string{
-								"foo": "bar",
-							},
-							OwnerReferences: []metav1.OwnerReference{
-								*metav1.NewControllerRef(managedSeedSet, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeedSet")),
-							},
-						},
-						Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-							Shoot: &seedmanagementv1alpha1.Shoot{
-								Name: replicaName,
-							},
-							Gardenlet: seedmanagementv1alpha1.GardenletConfig{
-								Config: runtime.RawExtension{
-									Object: &gardenletconfigv1alpha1.GardenletConfiguration{
-										SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
-											SeedTemplate: gardencorev1beta1.SeedTemplate{
-												Spec: gardencorev1beta1.SeedSpec{
-													Ingress: &gardencorev1beta1.Ingress{
-														Domain: "ingress." + replicaName + ".example.com",
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					}))
-					return nil
-				},
-			)
-
-			replica := NewReplica(managedSeedSet, shoot, nil, nil, false)
-			err := replica.CreateManagedSeed(ctx, c)
+			s := shoot(nil, "", "", "", false)
+			replica := NewReplica(managedSeedSet, s, nil, nil, false)
+			err := replica.CreateManagedSeed(ctx, fakeClient)
 			Expect(err).ToNot(HaveOccurred())
+
+			createdMS := &seedmanagementv1alpha1.ManagedSeed{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: replicaName}, createdMS)).To(Succeed())
+			Expect(createdMS.Name).To(Equal(replicaName))
+			Expect(createdMS.Namespace).To(Equal(namespace))
+			Expect(createdMS.Labels).To(Equal(map[string]string{"foo": "bar"}))
+			Expect(createdMS.OwnerReferences).To(Equal([]metav1.OwnerReference{
+				*metav1.NewControllerRef(managedSeedSet, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeedSet")),
+			}))
+			Expect(createdMS.Spec.Shoot).ToNot(BeNil())
+			Expect(createdMS.Spec.Shoot.Name).To(Equal(replicaName))
+			Expect(createdMS.Spec.Gardenlet.Config.Raw).NotTo(BeNil())
+			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{}
+			Expect(json.Unmarshal(createdMS.Spec.Gardenlet.Config.Raw, gardenletConfig)).To(Succeed())
+			Expect(gardenletConfig.SeedConfig).ToNot(BeNil())
+			Expect(gardenletConfig.SeedConfig.SeedTemplate.Spec.Ingress).ToNot(BeNil())
+			Expect(gardenletConfig.SeedConfig.SeedTemplate.Spec.Ingress.Domain).To(Equal("ingress." + replicaName + ".example.com"))
 		})
 	})
 
 	Describe("#DeleteShoot", func() {
 		It("should clean the retries, confirm the deletion, and delete the shoot", func() {
-			shoot := shoot(nil, "", "", "", false)
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, s *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
-					Expect(s.Annotations).To(HaveKeyWithValue(v1beta1constants.ConfirmationDeletion, "true"))
-					*shoot = *s
-					return nil
-				},
-			)
-			c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
-				func(_ context.Context, s *gardencorev1beta1.Shoot, _ ...client.DeleteOption) error {
-					Expect(s).To(Equal(shoot))
-					return nil
-				},
-			)
+			s := shoot(nil, "", "", "", false)
+			s.ResourceVersion = ""
+			Expect(fakeClient.Create(ctx, s)).To(Succeed())
 
-			replica := NewReplica(managedSeedSet, shoot, nil, nil, false)
-			err := replica.DeleteShoot(ctx, c)
+			replica := NewReplica(managedSeedSet, s, nil, nil, false)
+			err := replica.DeleteShoot(ctx, fakeClient)
 			Expect(err).ToNot(HaveOccurred())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: replicaName}, &gardencorev1beta1.Shoot{})).To(BeNotFoundError())
 		})
 	})
 
 	Describe("#DeleteManagedSeed", func() {
 		It("should delete the managed seed", func() {
-			managedSeed := managedSeed(nil, false, false)
-			c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
-				func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ ...client.DeleteOption) error {
-					Expect(ms).To(Equal(managedSeed))
-					return nil
-				},
-			)
+			ms := managedSeed(nil, false, false)
+			ms.ResourceVersion = ""
+			Expect(fakeClient.Create(ctx, ms)).To(Succeed())
 
-			replica := NewReplica(managedSeedSet, nil, managedSeed, nil, false)
-			err := replica.DeleteManagedSeed(ctx, c)
+			replica := NewReplica(managedSeedSet, nil, ms, nil, false)
+			err := replica.DeleteManagedSeed(ctx, fakeClient)
 			Expect(err).ToNot(HaveOccurred())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: replicaName}, &seedmanagementv1alpha1.ManagedSeed{})).To(BeNotFoundError())
 		})
 	})
 
 	Describe("#RetryShoot", func() {
 		It("should managedSeedSet the operation to retry and the retries to 1", func() {
-			shoot := shoot(nil, "", "", "", false)
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, s *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
-					Expect(s.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry))
-					return nil
-				},
-			)
+			s := shoot(nil, "", "", "", false)
+			s.ResourceVersion = ""
+			Expect(fakeClient.Create(ctx, s)).To(Succeed())
 
-			replica := NewReplica(managedSeedSet, shoot, nil, nil, false)
-			err := replica.RetryShoot(ctx, c)
+			replica := NewReplica(managedSeedSet, s, nil, nil, false)
+			err := replica.RetryShoot(ctx, fakeClient)
 			Expect(err).ToNot(HaveOccurred())
+
+			patchedShoot := &gardencorev1beta1.Shoot{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: replicaName}, patchedShoot)).To(Succeed())
+			Expect(patchedShoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry))
 		})
 	})
 })

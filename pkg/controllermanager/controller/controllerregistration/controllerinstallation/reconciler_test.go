@@ -11,21 +11,22 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"go.uber.org/goleak"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Reconciler", func() {
@@ -789,29 +790,17 @@ var _ = Describe("Reconciler", func() {
 
 	Context("deployment and deletion", func() {
 		var (
-			ctrl      *gomock.Controller
-			k8sClient *mockclient.MockClient
+			k8sClient client.Client
 		)
 
 		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
-			k8sClient = mockclient.NewMockClient(ctrl)
+			k8sClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 
-			k8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: controllerDeployment.Name}, gomock.AssignableToTypeOf(&gardencorev1.ControllerDeployment{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, obj *gardencorev1.ControllerDeployment, _ ...client.GetOption) error {
-					*obj = *controllerDeployment
-					return nil
-				},
-			).AnyTimes()
-
-		})
-
-		AfterEach(func() {
-			ctrl.Finish()
+			Expect(k8sClient.Create(ctx, controllerDeployment.DeepCopy())).To(Succeed())
 		})
 
 		Describe("#deployNeededInstallations", func() {
-			It("should return an error when cannot get controller installation", func() {
+			It("should return an error when it cannot get controller installation", func() {
 				var (
 					wantedControllerRegistrations  = sets.New(controllerRegistration2.Name)
 					registrationNameToInstallation = map[string]*gardencorev1beta1.ControllerInstallation{
@@ -822,7 +811,16 @@ var _ = Describe("Reconciler", func() {
 					fakeErr = errors.New("err")
 				)
 
-				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{})).Return(fakeErr)
+				k8sClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+							if _, ok := obj.(*gardencorev1beta1.ControllerInstallation); ok && key.Name == controllerInstallation2.Name {
+								return fakeErr
+							}
+							return c.Get(ctx, key, obj, opts...)
+						},
+					}).Build()
+				Expect(k8sClient.Create(ctx, controllerDeployment.DeepCopy())).To(Succeed())
 
 				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, nil, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallation)
 
@@ -856,41 +854,51 @@ var _ = Describe("Reconciler", func() {
 					}
 				)
 
-				installation2 := controllerInstallation2.DeepCopy()
-				installation2.Labels = map[string]string{
-					ControllerDeploymentHash: "deb30f197b882cd1",
-					RegistrationSpecHash:     "61ca93a1782c5fa3",
-					SeedSpecHash:             "9cebb557b37cc60b",
-				}
-
-				installation3 := controllerInstallation3.DeepCopy()
-				installation3.Labels = map[string]string{
-					RegistrationSpecHash: "61ca93a1782c5fa3",
-					SeedSpecHash:         "9cebb557b37cc60b",
-				}
-
-				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
-				k8sClient.EXPECT().Patch(ctx, installation2, gomock.Any())
-
-				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation3.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
-				k8sClient.EXPECT().Patch(ctx, installation3, gomock.Any())
-
-				k8sClient.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
+				Expect(k8sClient.Create(ctx, controllerInstallation2.DeepCopy())).To(Succeed())
+				Expect(k8sClient.Create(ctx, controllerInstallation3.DeepCopy())).To(Succeed())
 
 				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, nil, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
+
+				ciList := &gardencorev1beta1.ControllerInstallationList{}
+				Expect(k8sClient.List(ctx, ciList)).To(Succeed())
+				Expect(ciList.Items).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"ObjectMeta": MatchFields(IgnoreExtras, Fields{
+							"Name": Equal(controllerInstallation2.Name),
+							"Labels": And(
+								HaveKeyWithValue(ControllerDeploymentHash, "deb30f197b882cd1"),
+								HaveKeyWithValue(RegistrationSpecHash, "61ca93a1782c5fa3"),
+								HaveKeyWithValue(SeedSpecHash, "9cebb557b37cc60b"),
+							),
+						}),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"ObjectMeta": MatchFields(IgnoreExtras, Fields{
+							"Name": Equal(controllerInstallation3.Name),
+							"Labels": And(
+								Not(HaveKey(ControllerDeploymentHash)),
+								HaveKeyWithValue(RegistrationSpecHash, "61ca93a1782c5fa3"),
+								HaveKeyWithValue(SeedSpecHash, "9cebb557b37cc60b"),
+							),
+						}),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"ObjectMeta": MatchFields(IgnoreExtras, Fields{
+							"Name": HavePrefix(controllerRegistration4.Name),
+							"Labels": And(
+								Not(HaveKey(ControllerDeploymentHash)),
+								HaveKeyWithValue(RegistrationSpecHash, "9c7dbe8f62b60dfb"), // spellchecker:disable-line
+								HaveKeyWithValue(SeedSpecHash, "9cebb557b37cc60b"),
+							),
+						}),
+					}),
+				))
 			})
 
 			It("should correctly deploy needed controller installations for shoots", func() {
 				var (
-					setShootRef = func(controllerInstallation *gardencorev1beta1.ControllerInstallation, shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.ControllerInstallation {
-						obj := controllerInstallation.DeepCopy()
-						obj.Spec.SeedRef = nil
-						obj.Spec.ShootRef = &corev1.ObjectReference{Name: shoot.Name, Namespace: shoot.Namespace, ResourceVersion: shoot.ResourceVersion}
-						return obj
-					}
-
 					wantedControllerRegistrations  = sets.New(controllerRegistration2.Name, controllerRegistration3.Name, controllerRegistration4.Name)
 					registrationNameToInstallation = map[string]*gardencorev1beta1.ControllerInstallation{
 						controllerRegistration1.Name: controllerInstallation1,
@@ -900,28 +908,45 @@ var _ = Describe("Reconciler", func() {
 					}
 				)
 
-				installation2 := setShootRef(controllerInstallation2, shoot3)
-				installation2.Labels = map[string]string{
-					ControllerDeploymentHash: "deb30f197b882cd1",
-					RegistrationSpecHash:     "61ca93a1782c5fa3",
-					ShootSpecHash:            "a1fbf32b9ada7b98",
-				}
-
-				installation3 := setShootRef(controllerInstallation3, shoot3)
-				installation3.Labels = map[string]string{
-					RegistrationSpecHash: "61ca93a1782c5fa3",
-					ShootSpecHash:        "a1fbf32b9ada7b98",
-				}
-
-				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
-				k8sClient.EXPECT().Patch(ctx, installation2, gomock.Any())
-
-				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation3.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
-				k8sClient.EXPECT().Patch(ctx, installation3, gomock.Any())
-
-				k8sClient.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
+				Expect(k8sClient.Create(ctx, controllerInstallation2.DeepCopy())).To(Succeed())
+				Expect(k8sClient.Create(ctx, controllerInstallation3.DeepCopy())).To(Succeed())
 
 				Expect(deployNeededInstallations(ctx, log, k8sClient, shoot3, ShootKind, nil, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallation)).To(Succeed())
+
+				ciList := &gardencorev1beta1.ControllerInstallationList{}
+				Expect(k8sClient.List(ctx, ciList)).To(Succeed())
+				Expect(ciList.Items).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"ObjectMeta": MatchFields(IgnoreExtras, Fields{
+							"Name": Equal(controllerInstallation2.Name),
+							"Labels": And(
+								HaveKeyWithValue(ControllerDeploymentHash, "deb30f197b882cd1"),
+								HaveKeyWithValue(RegistrationSpecHash, "61ca93a1782c5fa3"),
+								HaveKeyWithValue(ShootSpecHash, "a1fbf32b9ada7b98"),
+							),
+						}),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"ObjectMeta": MatchFields(IgnoreExtras, Fields{
+							"Name": Equal(controllerInstallation3.Name),
+							"Labels": And(
+								Not(HaveKey(ControllerDeploymentHash)),
+								HaveKeyWithValue(RegistrationSpecHash, "61ca93a1782c5fa3"),
+								HaveKeyWithValue(ShootSpecHash, "a1fbf32b9ada7b98"),
+							),
+						}),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"ObjectMeta": MatchFields(IgnoreExtras, Fields{
+							"Name": HavePrefix(controllerRegistration4.Name),
+							"Labels": And(
+								Not(HaveKey(ControllerDeploymentHash)),
+								HaveKeyWithValue(RegistrationSpecHash, "9c7dbe8f62b60dfb"), // spellchecker:disable-line
+								HaveKeyWithValue(ShootSpecHash, "a1fbf32b9ada7b98"),
+							),
+						}),
+					}),
+				))
 			})
 
 			It("should not skip the controller registration that is after one in deletion", func() {
@@ -939,19 +964,19 @@ var _ = Describe("Reconciler", func() {
 					}
 				)
 
-				installation2 := controllerInstallation2.DeepCopy()
-				installation2.Labels = map[string]string{
-					ControllerDeploymentHash: "deb30f197b882cd1",
-					RegistrationSpecHash:     "61ca93a1782c5fa3",
-					SeedSpecHash:             "9cebb557b37cc60b",
-				}
-
-				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
-				k8sClient.EXPECT().Patch(ctx, installation2, gomock.Any())
+				Expect(k8sClient.Create(ctx, controllerInstallation2.DeepCopy())).To(Succeed())
 
 				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, nil, wantedControllerRegistrations, registrations, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
+
+				patchedInstallation2 := &gardencorev1beta1.ControllerInstallation{}
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation2), patchedInstallation2)).To(Succeed())
+				Expect(patchedInstallation2.Labels).To(And(
+					HaveKeyWithValue(ControllerDeploymentHash, "deb30f197b882cd1"),
+					HaveKeyWithValue(RegistrationSpecHash, "61ca93a1782c5fa3"),
+					HaveKeyWithValue(SeedSpecHash, "9cebb557b37cc60b"),
+				))
 			})
 
 			It("should not create or update controller installation for controller registration in deletion", func() {
@@ -993,22 +1018,15 @@ var _ = Describe("Reconciler", func() {
 					}
 				)
 
-				installation2 := controllerInstallation2.DeepCopy()
-				installation2.Labels = map[string]string{
-					ControllerDeploymentHash: "deb30f197b882cd1",
-					RegistrationSpecHash:     "61ca93a1782c5fa3",
-					SeedSpecHash:             "9cebb557b37cc60b",
-				}
-				installation2.Annotations = map[string]string{
-					v1beta1constants.AnnotationPodSecurityEnforce: "baseline",
-				}
-
-				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
-				k8sClient.EXPECT().Patch(ctx, installation2, gomock.Any())
+				Expect(k8sClient.Create(ctx, controllerInstallation2.DeepCopy())).To(Succeed())
 
 				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, nil, wantedControllerRegistrations, registrations, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
+
+				patchedInstallation2 := &gardencorev1beta1.ControllerInstallation{}
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation2), patchedInstallation2)).To(Succeed())
+				Expect(patchedInstallation2.Annotations).To(HaveKeyWithValue(v1beta1constants.AnnotationPodSecurityEnforce, "baseline"))
 			})
 
 			It("should deploy controller installation without security.gardener.cloud/pod-security-enforce annotation when removed from controller registration", func() {
@@ -1028,38 +1046,26 @@ var _ = Describe("Reconciler", func() {
 					}
 				)
 
-				installation2 := controllerInstallation2.DeepCopy()
-				installation2.Labels = map[string]string{
-					ControllerDeploymentHash: "deb30f197b882cd1",
-					RegistrationSpecHash:     "61ca93a1782c5fa3",
-					SeedSpecHash:             "9cebb557b37cc60b",
-				}
-				installation2.Annotations = map[string]string{
-					v1beta1constants.AnnotationPodSecurityEnforce: "baseline",
-				}
-
-				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
-				k8sClient.EXPECT().Patch(ctx, installation2, gomock.Any())
+				Expect(k8sClient.Create(ctx, controllerInstallation2.DeepCopy())).To(Succeed())
 
 				err := deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, nil, wantedControllerRegistrations, registrations, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
 
+				patchedInstallation2 := &gardencorev1beta1.ControllerInstallation{}
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation2), patchedInstallation2)).To(Succeed())
+				Expect(patchedInstallation2.Annotations).To(HaveKeyWithValue(v1beta1constants.AnnotationPodSecurityEnforce, "baseline"))
+
+				// Now remove the annotation from registration and re-deploy
 				delete(registration2.Annotations, v1beta1constants.AnnotationPodSecurityEnforce)
 				registrations[registration2.Name] = controllerRegistration{obj: registration2, deployAlways: false}
-				installation2 = controllerInstallation2.DeepCopy()
-				installation2.Labels = map[string]string{
-					ControllerDeploymentHash: "deb30f197b882cd1",
-					RegistrationSpecHash:     "61ca93a1782c5fa3",
-					SeedSpecHash:             "9cebb557b37cc60b",
-				}
-
-				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
-				k8sClient.EXPECT().Patch(ctx, installation2, gomock.Any())
 
 				err = deployNeededInstallations(ctx, log, k8sClient, seed, SeedKind, nil, wantedControllerRegistrations, registrations, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
+
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation2), patchedInstallation2)).To(Succeed())
+				Expect(patchedInstallation2.Annotations).NotTo(HaveKey(v1beta1constants.AnnotationPodSecurityEnforce))
 			})
 		})
 
@@ -1073,7 +1079,12 @@ var _ = Describe("Reconciler", func() {
 					fakeErr = errors.New("err")
 				)
 
-				k8sClient.EXPECT().Delete(ctx, controllerInstallation1).Return(fakeErr)
+				k8sClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Delete: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.DeleteOption) error {
+							return fakeErr
+						},
+					}).Build()
 
 				err := deleteUnneededInstallations(ctx, log, k8sClient, SeedKind, wantedControllerRegistrationNames, registrationNameToInstallation)
 
@@ -1090,12 +1101,18 @@ var _ = Describe("Reconciler", func() {
 					}
 				)
 
-				k8sClient.EXPECT().Delete(ctx, controllerInstallation1)
-				k8sClient.EXPECT().Delete(ctx, controllerInstallation3)
+				Expect(k8sClient.Create(ctx, controllerInstallation1.DeepCopy())).To(Succeed())
+				Expect(k8sClient.Create(ctx, controllerInstallation2.DeepCopy())).To(Succeed())
+				Expect(k8sClient.Create(ctx, controllerInstallation3.DeepCopy())).To(Succeed())
 
 				err := deleteUnneededInstallations(ctx, log, k8sClient, SeedKind, wantedControllerRegistrationNames, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
+
+				// Verify ci1 and ci3 are deleted, ci2 remains
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation1), &gardencorev1beta1.ControllerInstallation{})).To(BeNotFoundError())
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation2), &gardencorev1beta1.ControllerInstallation{})).To(Succeed())
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation3), &gardencorev1beta1.ControllerInstallation{})).To(BeNotFoundError())
 			})
 
 			It("should remove the seed ownership label instead of deleting when the ControllerInstallation has the seed-ref-name label", func() {
@@ -1109,13 +1126,16 @@ var _ = Describe("Reconciler", func() {
 					}
 				)
 
-				expectedInstallation := installation.DeepCopy()
-				delete(expectedInstallation.Labels, SeedRefName)
-				k8sClient.EXPECT().Patch(ctx, expectedInstallation, gomock.Any())
+				Expect(k8sClient.Create(ctx, installation.DeepCopy())).To(Succeed())
 
 				err := deleteUnneededInstallations(ctx, log, k8sClient, SeedKind, wantedControllerRegistrationNames, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
+
+				// Verify the installation still exists but without the SeedRefName label
+				patchedInstallation := &gardencorev1beta1.ControllerInstallation{}
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation2), patchedInstallation)).To(Succeed())
+				Expect(patchedInstallation.Labels).NotTo(HaveKey(SeedRefName))
 			})
 
 			It("should skip seed-owned ControllerInstallations when the shoot reconciler calls", func() {
@@ -1129,9 +1149,16 @@ var _ = Describe("Reconciler", func() {
 					}
 				)
 
+				Expect(k8sClient.Create(ctx, installation.DeepCopy())).To(Succeed())
+
 				err := deleteUnneededInstallations(ctx, log, k8sClient, ShootKind, wantedControllerRegistrationNames, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
+
+				// Verify the installation still exists with the SeedRefName label (not touched)
+				patchedInstallation := &gardencorev1beta1.ControllerInstallation{}
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation2), patchedInstallation)).To(Succeed())
+				Expect(patchedInstallation.Labels).To(HaveKey(SeedRefName))
 			})
 		})
 	})
