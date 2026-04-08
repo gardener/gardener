@@ -10,6 +10,10 @@ patches:
         path: /spec/kubeconfigSecretRef
         value:
           name: seed-remote
+      - op: remove
+        path: /spec/config/seedConfig/spec/backup
+      - op: remove
+        path: /spec/config/seedConfig/spec/extensions
     target:
       group: seedmanagement.gardener.cloud
       kind: Gardenlet
