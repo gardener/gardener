@@ -739,7 +739,8 @@ func (p *plutono) refresherSidecar(what, label, folder string, volumeMount corev
 		Command: []string{
 			"python",
 			"-u",
-			"sidecar.py",
+			"-m",
+			"sidecar",
 			"--req-username-file=" + volumeMountPathAdminUser + "/" + secretsutils.DataKeyUserName,
 			"--req-password-file=" + volumeMountPathAdminUser + "/" + secretsutils.DataKeyPassword,
 		},
