@@ -39,7 +39,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -62,16 +61,9 @@ const (
 	WorkerPoolHashesSecretName = "worker-pools-operatingsystemconfig-hashes" // #nosec G101 -- No credential.
 	// poolHashesDataKey is the key in the data of the WorkerPoolHashesSecretName used to store the calculated hashes.
 	poolHashesDataKey = "pools"
+	// latestHashVersion is the latest version of the worker pool hash calculation.
+	latestHashVersion = 2
 )
-
-// LatestHashVersion is the latest version support for calculateKeyVersion. Exposed for testing.
-var LatestHashVersion = func() int {
-	// WorkerPoolHash is behind feature gate as extensions must be updated first
-	if features.DefaultFeatureGate.Enabled(features.NewWorkerPoolHash) {
-		return 2
-	}
-	return 1
-}
 
 // TimeNow returns the current time. Exposed for testing.
 var TimeNow = time.Now
@@ -355,7 +347,7 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) 
 			workerHash, ok := workerPoolNameToHashEntry[worker.Name]
 			if !ok {
 				workerHash.Name = worker.Name
-				workerHash.CurrentVersion = LatestHashVersion()
+				workerHash.CurrentVersion = latestHashVersion
 			}
 
 			// check if hashes still match
@@ -372,7 +364,7 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) 
 			}
 
 			if hashHasChanged {
-				workerHash.CurrentVersion = LatestHashVersion()
+				workerHash.CurrentVersion = latestHashVersion
 			}
 
 			// calculate expected hashes
@@ -380,7 +372,7 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) 
 			if err != nil {
 				return err
 			}
-			latestHash, err := calculateKeyForValues(LatestHashVersion(), o.values, &worker)
+			latestHash, err := calculateKeyForValues(latestHashVersion, o.values, &worker)
 			if err != nil {
 				return err
 			}
@@ -391,7 +383,7 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) 
 				workerHash.HashVersionToOSCKey = map[int]string{}
 			}
 			workerHash.HashVersionToOSCKey[workerHash.CurrentVersion] = currentHash
-			workerHash.HashVersionToOSCKey[LatestHashVersion()] = latestHash
+			workerHash.HashVersionToOSCKey[latestHashVersion] = latestHash
 
 			// update secret
 			workerPoolNameToHashEntry[worker.Name] = workerHash

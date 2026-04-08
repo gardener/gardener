@@ -546,7 +546,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 			It("should successfully fill missing hashes and workers in the worker-pools-operatingsystemconfig-hashes secret", func() {
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
-					&LatestHashVersion, func() int { return 2 },
 					&CalculateKeyForVersion, calculateKeyForVersionFn,
 				))
 
@@ -580,7 +579,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 			It("should successfully upgrade the hash versions in the worker-pools-operatingsystemconfig-hashes secret", func() {
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
-					&LatestHashVersion, func() int { return 2 },
 					&CalculateKeyForVersion, calculateKeyForVersionFn,
 				))
 
@@ -626,7 +624,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 			It("should successfully keep the current hash versions if nothing changes in the worker-pools-operatingsystemconfig-hashes secret", func() {
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
-					&LatestHashVersion, func() int { return 2 },
 					&CalculateKeyForVersion, calculateStableKeyForVersionFn,
 				))
 

@@ -107,15 +107,12 @@ The complete list of fields that trigger a rolling update:
 * `.spec.provider.workers[].machine.type`
 * `.spec.provider.workers[].volume.type`
 * `.spec.provider.workers[].volume.size`
-* `.spec.provider.workers[].providerConfig` (provider extension dependent with feature gate `NewWorkerPoolHash`)
+* `.spec.provider.workers[].providerConfig` (provider extension dependent)
 * `.spec.provider.workers[].cri.name`
 * `.spec.provider.workers[].kubernetes.version` (except for patch version changes)
 * `.spec.systemComponents.nodeLocalDNS.enabled` (for Kubernetes version < 1.34 or if `kube-proxy` runs in `IPVS` mode)
 * `.status.credentials.rotation.certificateAuthorities.lastInitiationTime` (changed by Gardener when a shoot CA rotation is initiated) when worker pool is not part of `.status.credentials.rotation.certificateAuthorities.pendingWorkersRollouts[]`
 * `.status.credentials.rotation.serviceAccountKey.lastInitiationTime` (changed by Gardener when a shoot service account signing key rotation is initiated) when worker pool is not part of `.status.credentials.rotation.serviceAccountKey.pendingWorkersRollouts[]`
-
-If feature gate `NewWorkerPoolHash` is enabled:
-
 * `.spec.kubernetes.kubelet.kubeReserved` (unless a worker pool-specific value is set)
 * `.spec.kubernetes.kubelet.systemReserved` (unless a worker pool-specific value is set)
 * `.spec.kubernetes.kubelet.evictionHard` (unless a worker pool-specific value is set)
@@ -128,7 +125,7 @@ If feature gate `NewWorkerPoolHash` is enabled:
 Changes to `kubeReserved` or `systemReserved` do not trigger a node roll if their sum does not change.
 
 Generally, the provider extension controllers might have additional constraints for changes leading to rolling updates, so please consult the respective documentation as well.
-In particular, if the feature gate `NewWorkerPoolHash` is enabled and a worker pool uses the new hash, then the `providerConfig` as a whole is not included. Instead only fields selected by the provider extension are considered.
+In particular, the `providerConfig` as a whole is not included. Instead only fields selected by the provider extension are considered.
 
 ### In-Place Updates
 
