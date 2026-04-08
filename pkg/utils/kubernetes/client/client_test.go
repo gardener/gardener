@@ -21,18 +21,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	fakekubernetes "k8s.io/client-go/kubernetes/fake"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	mockutilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client/mock"
-	"github.com/gardener/gardener/pkg/utils/test"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 func TestClient(t *testing.T) {
@@ -42,21 +42,9 @@ func TestClient(t *testing.T) {
 
 var _ = Describe("Cleaner", func() {
 	var (
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
-		ctx  context.Context
-
-		cm1Key client.ObjectKey
-		cm2Key client.ObjectKey
-		nsKey  client.ObjectKey
-
-		cm1    corev1.ConfigMap
-		cm2    corev1.ConfigMap
-		cmList corev1.ConfigMapList
-		ns     corev1.Namespace
-
-		cm2WithFinalizer corev1.ConfigMap
-		nsWithFinalizer  corev1.Namespace
+		ctrl       *gomock.Controller
+		ctx        context.Context
+		fakeClient client.Client
 
 		fakeClock *testclock.FakeClock
 		now       time.Time
@@ -64,22 +52,8 @@ var _ = Describe("Cleaner", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
 		ctx = context.Background()
-
-		cm1Key = client.ObjectKey{Namespace: "n", Name: "foo"}
-		cm2Key = client.ObjectKey{Namespace: "n", Name: "bar"}
-		nsKey = client.ObjectKey{Name: "baz"}
-
-		cm1 = corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "foo"}}
-		cm2 = corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "bar"}}
-		cmList = corev1.ConfigMapList{Items: []corev1.ConfigMap{cm1, cm2}}
-		ns = corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "baz"}}
-
-		cm2.DeepCopyInto(&cm2WithFinalizer)
-		cm2WithFinalizer.Finalizers = []string{"finalize.me"}
-		ns.DeepCopyInto(&nsWithFinalizer)
-		nsWithFinalizer.Spec.Finalizers = []corev1.FinalizerName{"kubernetes"}
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 
 		now = time.Unix(60, 0)
 		fakeClock = testclock.NewFakeClock(now)
@@ -91,310 +65,328 @@ var _ = Describe("Cleaner", func() {
 	Context("Cleaner", func() {
 		Describe("#Clean", func() {
 			It("should delete the target object", func() {
-				var (
-					ctx     = context.TODO()
-					cleaner = NewCleaner(fakeClock, NewFinalizer())
-				)
+				cleaner := NewCleaner(fakeClock, NewFinalizer())
 
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, cm1Key, &cm1),
-					c.EXPECT().Delete(ctx, &cm1),
-				)
+				cm1 := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "foo"}}
+				Expect(fakeClient.Create(ctx, cm1)).To(Succeed())
 
-				Expect(cleaner.Clean(ctx, c, &cm1)).To(Succeed())
+				Expect(cleaner.Clean(ctx, fakeClient, cm1)).To(Succeed())
+
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(cm1), &corev1.ConfigMap{})).To(BeNotFoundError())
 			})
 
 			It("should succeed if not found error occurs for target object", func() {
-				var (
-					ctx     = context.TODO()
-					cleaner = NewCleaner(fakeClock, NewFinalizer())
-				)
+				cleaner := NewCleaner(fakeClock, NewFinalizer())
 
-				c.EXPECT().Get(ctx, cm1Key, &cm1).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-
-				Expect(cleaner.Clean(ctx, c, &cm1)).To(Succeed())
+				cm1 := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "foo"}}
+				Expect(cleaner.Clean(ctx, fakeClient, cm1)).To(Succeed())
 			})
 
 			It("should succeed if no match error occurs for target object", func() {
-				var (
-					ctx     = context.TODO()
-					cleaner = NewCleaner(fakeClock, NewFinalizer())
-				)
+				cleaner := NewCleaner(fakeClock, NewFinalizer())
 
-				c.EXPECT().Get(ctx, cm1Key, &cm1).Return(&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}})
+				c := fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+							return &meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}}
+						},
+					}).Build()
 
-				Expect(cleaner.Clean(ctx, c, &cm1)).To(Succeed())
+				cm1 := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "foo"}}
+				Expect(cleaner.Clean(ctx, c, cm1)).To(Succeed())
 			})
 
 			It("should delete all objects matching the selector", func() {
-				var (
-					ctx     = context.TODO()
-					list    = &corev1.ConfigMapList{}
-					cleaner = NewCleaner(fakeClock, NewFinalizer())
-				)
+				cleaner := NewCleaner(fakeClock, NewFinalizer())
 
-				listCall := c.EXPECT().List(ctx, list).SetArg(1, cmList)
-				c.EXPECT().Delete(ctx, &cm1).After(listCall)
-				c.EXPECT().Delete(ctx, &cm2).After(listCall)
+				cm1 := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "foo"}}
+				cm2 := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "bar"}}
+				Expect(fakeClient.Create(ctx, cm1)).To(Succeed())
+				Expect(fakeClient.Create(ctx, cm2)).To(Succeed())
 
-				Expect(cleaner.Clean(ctx, c, list)).To(Succeed())
+				Expect(cleaner.Clean(ctx, fakeClient, &corev1.ConfigMapList{})).To(Succeed())
+
+				list := &corev1.ConfigMapList{}
+				Expect(fakeClient.List(ctx, list)).To(Succeed())
+				Expect(list.Items).To(BeEmpty())
 			})
 
 			It("should succeed if not found error occurs for list type", func() {
-				var (
-					ctx     = context.TODO()
-					list    = &corev1.ConfigMapList{}
-					cleaner = NewCleaner(fakeClock, NewFinalizer())
-				)
+				cleaner := NewCleaner(fakeClock, NewFinalizer())
 
-				c.EXPECT().List(ctx, list).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+				c := fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+							return apierrors.NewNotFound(schema.GroupResource{}, "")
+						},
+					}).Build()
 
-				Expect(cleaner.Clean(ctx, c, list)).To(Succeed())
+				Expect(cleaner.Clean(ctx, c, &corev1.ConfigMapList{})).To(Succeed())
 			})
 
 			It("should succeed if no match error occurs for list type", func() {
-				var (
-					ctx     = context.TODO()
-					list    = &corev1.ConfigMapList{}
-					cleaner = NewCleaner(fakeClock, NewFinalizer())
-				)
+				cleaner := NewCleaner(fakeClock, NewFinalizer())
 
-				c.EXPECT().List(ctx, list).Return(&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}})
+				c := fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+							return &meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}}
+						},
+					}).Build()
 
-				Expect(cleaner.Clean(ctx, c, list)).To(Succeed())
+				Expect(cleaner.Clean(ctx, c, &corev1.ConfigMapList{})).To(Succeed())
 			})
 
 			It("should finalize the object if its deletion timestamp is over the finalize grace period", func() {
-				var (
-					ctx               = context.TODO()
-					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
-					now               = time.Unix(60, 0)
-					cleaner           = NewCleaner(fakeClock, NewFinalizer())
-				)
+				cleaner := NewCleaner(fakeClock, NewFinalizer())
 
-				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
-				cm2.DeletionTimestamp = &deletionTimestamp
+				cm := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "bar", Finalizers: []string{"finalize.me"}},
+				}
+				Expect(fakeClient.Create(ctx, cm)).To(Succeed())
+				Expect(fakeClient.Delete(ctx, cm)).To(Succeed())
 
-				fakeClock.SetTime(now)
+				result := &corev1.ConfigMap{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(cm), result)).To(Succeed())
+				fakeClock.SetTime(result.DeletionTimestamp.Add(21 * time.Second))
 
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, cm2Key, &cm2).SetArg(2, cm2WithFinalizer),
-					test.EXPECTPatch(ctx, c, &cm2, &cm2WithFinalizer, types.MergePatchType),
-				)
+				Expect(cleaner.Clean(ctx, fakeClient, result, FinalizeGracePeriodSeconds(20))).To(Succeed())
 
-				Expect(cleaner.Clean(ctx, c, &cm2, FinalizeGracePeriodSeconds(20))).To(Succeed())
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(cm), &corev1.ConfigMap{})).To(BeNotFoundError())
 			})
 
 			It("should finalize the namespace if its deletion timestamp is over the finalize grace period", func() {
-				var (
-					ctx               = context.TODO()
-					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
-					now               = time.Unix(60, 0)
-					sw                = mockclient.NewMockSubResourceClient(ctrl)
-					finalizer         = NewNamespaceFinalizer()
-					cleaner           = NewCleaner(fakeClock, finalizer)
-				)
+				finalizer := NewNamespaceFinalizer()
+				cleaner := NewCleaner(fakeClock, finalizer)
 
-				nsWithFinalizer.DeletionTimestamp = &deletionTimestamp
-				ns.DeletionTimestamp = &deletionTimestamp
+				subResourceUpdateCalled := false
+				c := fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						SubResourceUpdate: func(_ context.Context, _ client.Client, subResourceName string, obj client.Object, _ ...client.SubResourceUpdateOption) error {
+							subResourceUpdateCalled = true
+							Expect(subResourceName).To(Equal("finalize"))
+							ns, ok := obj.(*corev1.Namespace)
+							Expect(ok).To(BeTrue())
+							Expect(ns.Finalizers).To(BeEmpty())
+							Expect(ns.Spec.Finalizers).To(BeEmpty())
+							return nil
+						},
+					}).Build()
 
 				fakeClock.SetTime(now)
+				ns := &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{Name: "baz", Finalizers: []string{"some-finalizer"}},
+					Spec:       corev1.NamespaceSpec{Finalizers: []corev1.FinalizerName{"kubernetes"}},
+				}
+				Expect(c.Create(ctx, ns)).To(Succeed())
+				Expect(c.Delete(ctx, ns)).To(Succeed())
 
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, nsKey, &nsWithFinalizer),
-					c.EXPECT().SubResource("finalize").Return(sw),
-					sw.EXPECT().Update(ctx, &ns).Return(nil),
-				)
+				result := &corev1.Namespace{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(ns), result)).To(Succeed())
+				fakeClock.SetTime(result.DeletionTimestamp.Add(21 * time.Second))
 
-				Expect(cleaner.Clean(ctx, c, &nsWithFinalizer, FinalizeGracePeriodSeconds(20))).To(Succeed())
+				Expect(cleaner.Clean(ctx, c, result, FinalizeGracePeriodSeconds(20))).To(Succeed())
+				Expect(subResourceUpdateCalled).To(BeTrue())
 			})
 
 			It("should not delete the object if its deletion timestamp is not over the finalize grace period", func() {
-				var (
-					ctx               = context.TODO()
-					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
-					now               = time.Unix(50, 0)
-					cleaner           = NewCleaner(fakeClock, NewFinalizer())
-				)
+				cleaner := NewCleaner(fakeClock, NewFinalizer())
 
-				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
-				cm2.DeletionTimestamp = &deletionTimestamp
+				cm := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "bar", Finalizers: []string{"finalize.me"}},
+				}
+				Expect(fakeClient.Create(ctx, cm)).To(Succeed())
+				Expect(fakeClient.Delete(ctx, cm)).To(Succeed())
 
 				fakeClock.SetTime(now)
+				result := &corev1.ConfigMap{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(cm), result)).To(Succeed())
 
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, cm2Key, &cm2).SetArg(2, cm2WithFinalizer),
-				)
+				Expect(cleaner.Clean(ctx, fakeClient, result, FinalizeGracePeriodSeconds(20))).To(Succeed())
 
-				Expect(cleaner.Clean(ctx, c, &cm2, FinalizeGracePeriodSeconds(20))).To(Succeed())
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(cm), result)).To(Succeed())
+				Expect(result.Finalizers).To(ConsistOf("finalize.me"))
 			})
 
 			It("should not delete the object if its deletion timestamp is over the finalize grace period and no finalizer is left", func() {
 				var (
-					ctx               = context.TODO()
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
 					now               = time.Unix(50, 0)
 					cleaner           = NewCleaner(fakeClock, NewFinalizer())
 				)
 
-				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
-				cm2.DeletionTimestamp = &deletionTimestamp
+				cm2 := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "bar", DeletionTimestamp: &deletionTimestamp}}
+				c := fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(_ context.Context, _ client.WithWatch, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+							if key.Name == "bar" && key.Namespace == "n" {
+								cm2.DeepCopyInto(obj.(*corev1.ConfigMap))
+								return nil
+							}
+							return apierrors.NewNotFound(schema.GroupResource{Resource: "configmaps"}, key.Name)
+						},
+					}).Build()
 
 				fakeClock.SetTime(now)
 
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, cm2Key, &cm2),
-				)
-
-				Expect(cleaner.Clean(ctx, c, &cm2, FinalizeGracePeriodSeconds(10))).To(Succeed())
+				Expect(cleaner.Clean(ctx, c, cm2, FinalizeGracePeriodSeconds(10))).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(cm2), &corev1.ConfigMap{})).To(Succeed())
 			})
 
 			It("should finalize the list if the object's deletion timestamps are over the finalize grace period", func() {
-				var (
-					ctx               = context.TODO()
-					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
-					list              = &corev1.ConfigMapList{}
-					cleaner           = NewCleaner(fakeClock, NewFinalizer())
-				)
+				cleaner := NewCleaner(fakeClock, NewFinalizer())
 
-				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
-				cm2.DeletionTimestamp = &deletionTimestamp
+				cmTemplate := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "bar", Finalizers: []string{"finalize.me"}},
+				}
+				for i := range 3 {
+					cm1 := cmTemplate.DeepCopy()
+					cm1.Name = fmt.Sprintf("bar-%d", i)
+					Expect(fakeClient.Create(ctx, cm1)).To(Succeed())
+					Expect(fakeClient.Delete(ctx, cm1)).To(Succeed())
+				}
 
-				fakeClock.SetTime(now)
+				result := &corev1.ConfigMap{}
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: "n", Name: "bar-2"}, result)).To(Succeed())
+				fakeClock.SetTime(result.DeletionTimestamp.Add(21 * time.Second))
 
-				gomock.InOrder(
-					c.EXPECT().List(ctx, list).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2WithFinalizer}}),
-					test.EXPECTPatch(ctx, c, &cm2, &cm2WithFinalizer, types.MergePatchType),
-				)
+				Expect(cleaner.Clean(ctx, fakeClient, &corev1.ConfigMapList{}, FinalizeGracePeriodSeconds(20))).To(Succeed())
 
-				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(20))).To(Succeed())
+				cmList := &corev1.ConfigMapList{}
+				Expect(fakeClient.List(ctx, cmList)).To(Succeed())
+				Expect(cmList.Items).To(BeEmpty())
 			})
 
 			It("should ignore not found errors when finalizing objects", func() {
-				var (
-					ctx               = context.TODO()
-					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
-					list              = &corev1.ConfigMapList{}
-					cleaner           = NewCleaner(fakeClock, NewFinalizer())
-				)
+				cleaner := NewCleaner(fakeClock, NewFinalizer())
 
-				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
-				cm2.DeletionTimestamp = &deletionTimestamp
+				patchCalled := false
+				c := fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Patch: func(_ context.Context, _ client.WithWatch, _ client.Object, _ client.Patch, _ ...client.PatchOption) error {
+							patchCalled = true
+							return apierrors.NewNotFound(schema.GroupResource{}, "")
+						},
+					}).Build()
 
 				fakeClock.SetTime(now)
+				cm := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "bar", Finalizers: []string{"finalize.me"}},
+				}
+				Expect(c.Create(ctx, cm)).To(Succeed())
+				Expect(c.Delete(ctx, cm)).To(Succeed())
 
-				gomock.InOrder(
-					c.EXPECT().List(ctx, list).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2WithFinalizer}}),
-					test.EXPECTPatch(ctx, c, &cm2, &cm2WithFinalizer, types.MergePatchType).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
-				)
+				result := &corev1.ConfigMap{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(cm), result)).To(Succeed())
+				fakeClock.SetTime(result.DeletionTimestamp.Add(21 * time.Second))
 
-				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(20))).To(Succeed())
+				Expect(cleaner.Clean(ctx, c, &corev1.ConfigMapList{}, FinalizeGracePeriodSeconds(20))).To(Succeed())
+				Expect(patchCalled).To(BeTrue())
 			})
 
 			It("should not delete the list if the object's deletion timestamp is not over the finalize grace period", func() {
-				var (
-					ctx               = context.TODO()
-					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
-					now               = time.Unix(50, 0)
-					list              = &corev1.ConfigMapList{}
-					cleaner           = NewCleaner(fakeClock, NewFinalizer())
-				)
+				cleaner := NewCleaner(fakeClock, NewFinalizer())
 
-				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
-				cm2.DeletionTimestamp = &deletionTimestamp
+				cmTemplate := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "bar", Finalizers: []string{"finalize.me"}},
+				}
+
+				for i := range 3 {
+					cm1 := cmTemplate.DeepCopy()
+					cm1.Name = fmt.Sprintf("bar-%d", i)
+					Expect(fakeClient.Create(ctx, cm1)).To(Succeed())
+					Expect(fakeClient.Delete(ctx, cm1)).To(Succeed())
+				}
 
 				fakeClock.SetTime(now)
 
-				gomock.InOrder(
-					c.EXPECT().List(ctx, list).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2WithFinalizer}}),
-				)
+				Expect(cleaner.Clean(ctx, fakeClient, &corev1.ConfigMapList{}, FinalizeGracePeriodSeconds(20))).To(Succeed())
 
-				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(20))).To(Succeed())
+				cmList := &corev1.ConfigMapList{}
+				Expect(fakeClient.List(ctx, cmList)).To(Succeed())
+				Expect(cmList.Items).To(HaveLen(3))
+				for i := range 3 {
+					Expect(cmList.Items[i].Finalizers).To(ConsistOf("finalize.me"))
+				}
 			})
 
 			It("should not delete the list if the object's deletion timestamp is over the finalize grace period and no finalizers are left", func() {
 				var (
-					ctx               = context.TODO()
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
 					now               = time.Unix(50, 0)
-					list              = &corev1.ConfigMapList{}
 					cleaner           = NewCleaner(fakeClock, NewFinalizer())
 				)
 
-				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
-				cm2.DeletionTimestamp = &deletionTimestamp
+				cm1 := corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "bar-1", DeletionTimestamp: &deletionTimestamp}}
+				cm2 := corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "bar-2", DeletionTimestamp: &deletionTimestamp}}
+				c := fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						List: func(_ context.Context, _ client.WithWatch, list client.ObjectList, _ ...client.ListOption) error {
+							cmList, ok := list.(*corev1.ConfigMapList)
+							if ok {
+								cmList.Items = []corev1.ConfigMap{cm1, cm2}
+							}
+							return nil
+						},
+					}).Build()
 
 				fakeClock.SetTime(now)
 
-				gomock.InOrder(
-					c.EXPECT().List(ctx, list).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2}}),
-				)
+				Expect(cleaner.Clean(ctx, c, &corev1.ConfigMapList{}, FinalizeGracePeriodSeconds(10))).To(Succeed())
 
-				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(10))).To(Succeed())
+				cmList := &corev1.ConfigMapList{}
+				Expect(c.List(ctx, cmList)).To(Succeed())
+				Expect(cmList.Items).To(HaveLen(2))
 			})
 
 			It("should ensure that no error occurs because resource is not present in the cluster", func() {
-				var (
-					ctx     = context.TODO()
-					list    = &corev1.ConfigMapList{}
-					cleaner = NewCleaner(fakeClock, NewFinalizer())
-				)
+				cleaner := NewCleaner(fakeClock, NewFinalizer())
 
-				c.EXPECT().List(ctx, list).DoAndReturn(func(_ context.Context, _ *corev1.ConfigMapList, _ ...client.ListOption) error {
-					return &meta.NoResourceMatchError{}
-				})
+				c := fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+							return &meta.NoResourceMatchError{}
+						},
+					}).Build()
 
-				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(10))).To(Succeed())
+				Expect(cleaner.Clean(ctx, c, &corev1.ConfigMapList{}, FinalizeGracePeriodSeconds(10))).To(Succeed())
 			})
 		})
 	})
 
 	Describe("VolumeSnapshotCleaner", func() {
 		var (
-			cl       client.Client
-			cleaner  Cleaner
-			labels   map[string]string
-			cleanOps []CleanOption
+			fakeClient client.Client
+			cleaner    Cleaner
+			labels     map[string]string
+			cleanOps   []CleanOption
 
-			deletionTimestamp                metav1.Time
 			cleanupContent, remainingContent map[string]*volumesnapshotv1.VolumeSnapshotContent
 		)
 
 		BeforeEach(func() {
 			var (
-				deletionTimestampLater = metav1.NewTime(deletionTimestamp.Add(-1 * time.Second))
-				finalizers             = []string{"foo/bar"}
+				finalizers = []string{"foo/bar"}
 			)
 
-			deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
-
-			cleaner = NewVolumeSnapshotContentCleaner(fakeClock)
 			labels = map[string]string{"action": "cleanup"}
-			cleanOps = []CleanOption{
-				ListWith{
-					client.MatchingLabels(labels),
-				},
-				DeleteWith{
-					client.GracePeriodSeconds(29),
-				},
-			}
+
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
 
 			cleanupContent = map[string]*volumesnapshotv1.VolumeSnapshotContent{
 				"content1": {
 					ObjectMeta: metav1.ObjectMeta{
-						DeletionTimestamp: &deletionTimestamp,
-						Finalizers:        finalizers,
-						Name:              "content1",
-						Namespace:         "default",
-						Labels:            labels,
+						Finalizers: finalizers,
+						Name:       "content1",
+						Namespace:  "default",
+						Labels:     labels,
 					},
 				},
 				"content2": {
 					ObjectMeta: metav1.ObjectMeta{
-						DeletionTimestamp: &deletionTimestamp,
-						Finalizers:        finalizers,
-						Name:              "content2",
-						Namespace:         "default",
+						Finalizers: finalizers,
+						Name:       "content2",
+						Namespace:  "default",
 						Annotations: map[string]string{
 							"snapshot.storage.kubernetes.io/volumesnapshot-being-deleted": "yes",
 							"snapshot.storage.kubernetes.io/volumesnapshot-being-created": "yes",
@@ -404,10 +396,9 @@ var _ = Describe("Cleaner", func() {
 				},
 				"content3": {
 					ObjectMeta: metav1.ObjectMeta{
-						DeletionTimestamp: &deletionTimestamp,
-						Finalizers:        finalizers,
-						Name:              "content3",
-						Namespace:         "default",
+						Finalizers: finalizers,
+						Name:       "content3",
+						Namespace:  "default",
 						Annotations: map[string]string{
 							"snapshot.storage.kubernetes.io/volumesnapshot-being-created": "yes",
 						},
@@ -431,42 +422,65 @@ var _ = Describe("Cleaner", func() {
 				// Object w/o matching label.
 				"content5": {
 					ObjectMeta: metav1.ObjectMeta{
-						DeletionTimestamp: &deletionTimestamp,
-						Finalizers:        finalizers,
-						Name:              "content5",
-						Namespace:         "default",
+						Finalizers: finalizers,
+						Name:       "content5",
+						Namespace:  "default",
 					},
 				},
-				// Object w/ deletionTimestamp before grace period passed.
+				// Object w/ deletionTimestamp before grace period passed (created 1s later, so shorter time since deletion).
 				"content6": {
 					ObjectMeta: metav1.ObjectMeta{
-						DeletionTimestamp: &deletionTimestampLater,
-						Finalizers:        finalizers,
-						Name:              "content6",
-						Namespace:         "default",
+						Finalizers: finalizers,
+						Name:       "content6",
+						Namespace:  "default",
 					},
 				},
 			}
 
-			fakeClientBuilder := fakeclient.NewClientBuilder()
+			// Create objects that should be cleaned up (with deletion timestamps)
 			for _, content := range cleanupContent {
-				obj := content
-				fakeClientBuilder.WithObjects(obj)
+				Expect(fakeClient.Create(ctx, content.DeepCopy())).To(Succeed())
 			}
 
+			// Delete cleanup content objects so they get deletion timestamps
+			for name := range cleanupContent {
+				Expect(fakeClient.Delete(ctx, &volumesnapshotv1.VolumeSnapshotContent{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: name}})).To(Succeed())
+			}
+
+			// Create remaining objects
 			for _, content := range remainingContent {
-				obj := content
-				fakeClientBuilder.WithObjects(obj)
+				Expect(fakeClient.Create(ctx, content.DeepCopy())).To(Succeed())
 			}
 
-			cl = fakeClientBuilder.WithScheme(kubernetes.ShootScheme).Build()
+			// Delete content5 and content6 so they get deletion timestamps too
+			for _, name := range []string{"content5", "content6"} {
+				Expect(fakeClient.Delete(ctx, &volumesnapshotv1.VolumeSnapshotContent{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: name}})).To(Succeed())
+			}
+
+			// Read back an actual deletion timestamp from one of the cleanup objects to determine "now"
+			vsc := &volumesnapshotv1.VolumeSnapshotContent{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: "default", Name: "content6"}, vsc)).To(Succeed())
+			deletionTimestamp := vsc.DeletionTimestamp
+
+			// Set fakeClock to well past the grace period (29s) for the cleanup objects
+			fakeClock.SetTime(deletionTimestamp.Add(30 * time.Second))
+
+			cleaner = NewVolumeSnapshotContentCleaner(fakeClock)
+			cleanOps = []CleanOption{
+				ListWith{
+					client.MatchingLabels(labels),
+				},
+				DeleteWith{
+					client.GracePeriodSeconds(29),
+				},
+			}
 		})
 
 		It("should maintain the right annotations for all contents in the list to be cleaned up", func() {
-			Expect(cleaner.Clean(ctx, cl, &volumesnapshotv1.VolumeSnapshotContentList{}, cleanOps...)).To(Succeed())
+			Expect(cleaner.Clean(ctx, fakeClient, &volumesnapshotv1.VolumeSnapshotContentList{}, cleanOps...)).To(Succeed())
 
 			contents := &volumesnapshotv1.VolumeSnapshotContentList{}
-			Expect(cl.List(ctx, contents)).To(Succeed())
+			Expect(fakeClient.List(ctx, contents)).To(Succeed())
 
 			for _, content := range contents.Items {
 				if _, ok := cleanupContent[content.Name]; ok {
@@ -481,12 +495,14 @@ var _ = Describe("Cleaner", func() {
 		})
 
 		It("should maintain the right annotations for the content to be cleaned up", func() {
-			cleanupContent := cleanupContent["content1"]
+			// Get the object as stored in the fake client (with deletion timestamp set by Delete)
+			storedContent := &volumesnapshotv1.VolumeSnapshotContent{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: "default", Name: "content1"}, storedContent)).To(Succeed())
 
-			Expect(cleaner.Clean(ctx, cl, cleanupContent, cleanOps...)).To(Succeed())
+			Expect(cleaner.Clean(ctx, fakeClient, storedContent, cleanOps...)).To(Succeed())
 
 			content := &volumesnapshotv1.VolumeSnapshotContent{}
-			Expect(cl.Get(ctx, client.ObjectKeyFromObject(cleanupContent), content)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(storedContent), content)).To(Succeed())
 
 			Expect(content.Annotations).To(HaveKeyWithValue("snapshot.storage.kubernetes.io/volumesnapshot-being-deleted", "yes"))
 			Expect(content.Annotations).NotTo(HaveKeyWithValue("snapshot.storage.kubernetes.io/volumesnapshot-being-created", "yes"))
@@ -494,103 +510,108 @@ var _ = Describe("Cleaner", func() {
 	})
 
 	Describe("#EnsureGone", func() {
+		var fakeClient client.Client
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+		})
+
 		It("should ensure that the object is gone when not found error occurs", func() {
-			ctx := context.TODO()
-
-			c.EXPECT().Get(ctx, cm1Key, &cm1).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-
-			Expect(EnsureGone(ctx, logr.Discard(), c, &cm1)).To(Succeed())
+			cm1 := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "foo"}}
+			Expect(EnsureGone(ctx, logr.Discard(), fakeClient, cm1)).To(Succeed())
 		})
 
 		It("should ensure that the object is gone when no match error occurs", func() {
-			ctx := context.TODO()
+			c := fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+						return &meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}}
+					},
+				}).Build()
 
-			c.EXPECT().Get(ctx, cm1Key, &cm1).Return(&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}})
-
-			Expect(EnsureGone(ctx, logr.Discard(), c, &cm1)).To(Succeed())
+			cm1 := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "foo"}}
+			Expect(EnsureGone(ctx, logr.Discard(), c, cm1)).To(Succeed())
 		})
 
 		It("should ensure that the list is gone", func() {
-			var (
-				ctx  = context.TODO()
-				list = corev1.ConfigMapList{}
-			)
-
-			c.EXPECT().List(ctx, &list)
-
-			Expect(EnsureGone(ctx, logr.Discard(), c, &list)).To(Succeed())
+			list := corev1.ConfigMapList{}
+			Expect(EnsureGone(ctx, logr.Discard(), fakeClient, &list)).To(Succeed())
 		})
 
 		It("should ensure that the list is gone when not found error occurs", func() {
-			var (
-				ctx  = context.TODO()
-				list = corev1.ConfigMapList{}
-			)
+			c := fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+						return apierrors.NewNotFound(schema.GroupResource{}, "")
+					},
+				}).Build()
 
-			c.EXPECT().List(ctx, &list).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-
+			list := corev1.ConfigMapList{}
 			Expect(EnsureGone(ctx, logr.Discard(), c, &list)).To(Succeed())
 		})
 
 		It("should ensure that the list is gone when no match error occurs", func() {
-			var (
-				ctx  = context.TODO()
-				list = corev1.ConfigMapList{}
-			)
+			c := fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+						return &meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}}
+					},
+				}).Build()
 
-			c.EXPECT().List(ctx, &list).Return(&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}})
-
+			list := corev1.ConfigMapList{}
 			Expect(EnsureGone(ctx, logr.Discard(), c, &list)).To(Succeed())
 		})
 
 		It("should error that the object is still present", func() {
-			ctx := context.TODO()
+			cm1 := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "foo"}}
+			Expect(fakeClient.Create(ctx, cm1)).To(Succeed())
 
-			c.EXPECT().Get(ctx, cm1Key, &cm1)
-
-			Expect(EnsureGone(ctx, logr.Discard(), c, &cm1)).To(Equal(NewObjectsRemaining(&cm1)))
+			Expect(EnsureGone(ctx, logr.Discard(), fakeClient, cm1)).To(Equal(NewObjectsRemaining(cm1)))
 		})
 
 		It("should ensure that the object is ignored", func() {
-			ctx := context.TODO()
+			cm1 := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "foo"}}
+			Expect(fakeClient.Create(ctx, cm1)).To(Succeed())
 
-			c.EXPECT().Get(ctx, cm1Key, &cm1)
-
-			Expect(EnsureGone(ctx, logr.Discard(), c, &cm1, &CleanOptions{
+			Expect(EnsureGone(ctx, logr.Discard(), fakeClient, cm1, &CleanOptions{
 				IgnoreLeftovers: []IgnoreLeftoverFunc{
 					func(_ logr.Logger, _ client.Object) bool {
 						return true
 					},
 				},
 			})).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(cm1), &corev1.ConfigMap{})).To(Succeed())
 		})
 
 		It("should error that the list is non-empty", func() {
-			var (
-				ctx  = context.TODO()
-				list = corev1.ConfigMapList{}
-			)
+			cm1 := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "foo"}}
+			cm2 := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "bar"}}
+			Expect(fakeClient.Create(ctx, cm1)).To(Succeed())
+			Expect(fakeClient.Create(ctx, cm2)).To(Succeed())
 
-			c.EXPECT().List(ctx, &list).SetArg(1, cmList)
-
-			Expect(EnsureGone(ctx, logr.Discard(), c, &list)).To(Equal(NewObjectsRemaining(&cmList)))
+			list := corev1.ConfigMapList{}
+			err := EnsureGone(ctx, logr.Discard(), fakeClient, &list)
+			Expect(err).To(HaveOccurred())
+			Expect(AreObjectsRemaining(err)).To(BeTrue())
 		})
 
 		It("should ensure objects in list are ignored", func() {
-			var (
-				ctx  = context.TODO()
-				list = corev1.ConfigMapList{}
-			)
+			cm1 := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "foo"}}
+			cm2 := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "bar"}}
+			Expect(fakeClient.Create(ctx, cm1)).To(Succeed())
+			Expect(fakeClient.Create(ctx, cm2)).To(Succeed())
 
-			c.EXPECT().List(ctx, &list).SetArg(1, cmList)
-
-			Expect(EnsureGone(ctx, logr.Discard(), c, &list, &CleanOptions{
+			list := corev1.ConfigMapList{}
+			Expect(EnsureGone(ctx, logr.Discard(), fakeClient, &list, &CleanOptions{
 				IgnoreLeftovers: []IgnoreLeftoverFunc{
 					func(_ logr.Logger, _ client.Object) bool {
 						return true
 					},
 				},
 			})).To(Succeed())
+
+			Expect(fakeClient.List(ctx, &list)).To(Succeed())
+			Expect(list.Items).To(HaveLen(2))
 		})
 	})
 
@@ -608,14 +629,14 @@ var _ = Describe("Cleaner", func() {
 
 		Describe("CleanAndEnsureGone", func() {
 			It("should clean and ensure that the object is gone", func() {
-				ctx := context.TODO()
+				cm1 := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "foo"}}
 
 				gomock.InOrder(
-					cleaner.EXPECT().Clean(ctx, c, &cm1),
-					ensurer.EXPECT().EnsureGone(ctx, logr.Discard(), c, &cm1),
+					cleaner.EXPECT().Clean(ctx, fakeClient, cm1),
+					ensurer.EXPECT().EnsureGone(ctx, logr.Discard(), fakeClient, cm1),
 				)
 
-				Expect(o.CleanAndEnsureGone(ctx, logr.Discard(), c, &cm1)).To(Succeed())
+				Expect(o.CleanAndEnsureGone(ctx, logr.Discard(), fakeClient, cm1)).To(Succeed())
 			})
 		})
 	})

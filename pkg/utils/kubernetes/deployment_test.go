@@ -10,31 +10,27 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Deployments", func() {
 	var (
-		ctrl      *gomock.Controller
-		c         *mockclient.MockClient
-		namespace = "test"
-		name      = "dummy-app"
+		ctx        = context.TODO()
+		fakeClient client.Client
+		namespace  = "test"
+		name       = "dummy-app"
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 	})
 
 	DescribeTable("#ValidDeploymentContainerImageVersion",
@@ -63,37 +59,30 @@ var _ = Describe("Deployments", func() {
 
 	Describe("#HasDeploymentRolloutCompleted", func() {
 		It("Rollout is complete", func() {
+			var (
+				replicas   int32 = 5
+				generation int64 = 10
+			)
 
-			c.EXPECT().
-				Get(
-					gomock.Any(),
-					gomock.AssignableToTypeOf(client.ObjectKey{}),
-					gomock.AssignableToTypeOf(&appsv1.Deployment{}),
-				).
-				DoAndReturn(func(
-					_ context.Context,
-					_ client.ObjectKey,
-					deployment *appsv1.Deployment,
-					_ ...client.GetOption,
-				) error {
-					var (
-						replicas   int32 = 5
-						generation int64 = 10
-					)
+			deployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       name,
+					Namespace:  namespace,
+					Generation: generation,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: &replicas,
+				},
+				Status: appsv1.DeploymentStatus{
+					ObservedGeneration: generation,
+					Replicas:           replicas,
+					UpdatedReplicas:    replicas,
+					AvailableReplicas:  replicas,
+				},
+			}
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
 
-					deployment.Generation = generation
-					deployment.Spec.Replicas = &replicas
-					deployment.Status = appsv1.DeploymentStatus{
-						ObservedGeneration: generation,
-						Replicas:           replicas,
-						UpdatedReplicas:    replicas,
-						AvailableReplicas:  replicas,
-					}
-
-					return nil
-				})
-
-			_, actualError := kubernetes.HasDeploymentRolloutCompleted(context.TODO(), c, namespace, name)
+			_, actualError := kubernetes.HasDeploymentRolloutCompleted(ctx, fakeClient, namespace, name)
 			Expect(actualError).NotTo(HaveOccurred())
 		})
 
@@ -107,31 +96,25 @@ var _ = Describe("Deployments", func() {
 			_, expectedError := retry.MinorError(fmt.Errorf("%q not observed at latest generation (%d/%d)",
 				name, observedGeneration, generation))
 
-			c.EXPECT().
-				Get(
-					gomock.Any(),
-					gomock.AssignableToTypeOf(client.ObjectKey{}),
-					gomock.AssignableToTypeOf(&appsv1.Deployment{}),
-				).
-				DoAndReturn(func(
-					_ context.Context,
-					_ client.ObjectKey,
-					deployment *appsv1.Deployment,
-					_ ...client.GetOption,
-				) error {
-					deployment.Generation = generation
-					deployment.Spec.Replicas = &replicas
-					deployment.Status = appsv1.DeploymentStatus{
-						ObservedGeneration: observedGeneration,
-						Replicas:           replicas - 1,
-						UpdatedReplicas:    replicas - 1,
-						AvailableReplicas:  replicas - 1,
-					}
+			deployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       name,
+					Namespace:  namespace,
+					Generation: generation,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: &replicas,
+				},
+				Status: appsv1.DeploymentStatus{
+					ObservedGeneration: observedGeneration,
+					Replicas:           replicas - 1,
+					UpdatedReplicas:    replicas - 1,
+					AvailableReplicas:  replicas - 1,
+				},
+			}
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
 
-					return nil
-				})
-
-			_, actualError := kubernetes.HasDeploymentRolloutCompleted(context.TODO(), c, namespace, name)
+			_, actualError := kubernetes.HasDeploymentRolloutCompleted(ctx, fakeClient, namespace, name)
 			Expect(actualError).To(Equal(expectedError))
 		})
 
@@ -146,31 +129,25 @@ var _ = Describe("Deployments", func() {
 			_, expectedError := retry.MinorError(fmt.Errorf("deployment %q currently has Updated/Available: %d/%d replicas. Desired: %d",
 				name, updatedReplicas, availableReplicas, replicas))
 
-			c.EXPECT().
-				Get(
-					gomock.Any(),
-					gomock.AssignableToTypeOf(client.ObjectKey{}),
-					gomock.AssignableToTypeOf(&appsv1.Deployment{}),
-				).
-				DoAndReturn(func(
-					_ context.Context,
-					_ client.ObjectKey,
-					deployment *appsv1.Deployment,
-					_ ...client.GetOption,
-				) error {
-					deployment.Generation = generation
-					deployment.Spec.Replicas = &replicas
-					deployment.Status = appsv1.DeploymentStatus{
-						ObservedGeneration: generation,
-						Replicas:           replicas - 1,
-						UpdatedReplicas:    updatedReplicas,
-						AvailableReplicas:  availableReplicas,
-					}
+			deployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       name,
+					Namespace:  namespace,
+					Generation: generation,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: &replicas,
+				},
+				Status: appsv1.DeploymentStatus{
+					ObservedGeneration: generation,
+					Replicas:           replicas - 1,
+					UpdatedReplicas:    updatedReplicas,
+					AvailableReplicas:  availableReplicas,
+				},
+			}
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
 
-					return nil
-				})
-
-			_, actualError := kubernetes.HasDeploymentRolloutCompleted(context.TODO(), c, namespace, name)
+			_, actualError := kubernetes.HasDeploymentRolloutCompleted(ctx, fakeClient, namespace, name)
 			Expect(actualError).To(Equal(expectedError))
 		})
 
@@ -185,31 +162,25 @@ var _ = Describe("Deployments", func() {
 			_, expectedError := retry.MinorError(fmt.Errorf("deployment %q currently has Updated/Available: %d/%d replicas. Desired: %d",
 				name, updatedReplicas, availableReplicas, replicas))
 
-			c.EXPECT().
-				Get(
-					gomock.Any(),
-					gomock.AssignableToTypeOf(client.ObjectKey{}),
-					gomock.AssignableToTypeOf(&appsv1.Deployment{}),
-				).
-				DoAndReturn(func(
-					_ context.Context,
-					_ client.ObjectKey,
-					deployment *appsv1.Deployment,
-					_ ...client.GetOption,
-				) error {
-					deployment.Generation = generation
-					deployment.Spec.Replicas = &replicas
-					deployment.Status = appsv1.DeploymentStatus{
-						ObservedGeneration: generation,
-						Replicas:           replicas - 1,
-						UpdatedReplicas:    updatedReplicas,
-						AvailableReplicas:  availableReplicas,
-					}
+			deployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       name,
+					Namespace:  namespace,
+					Generation: generation,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: &replicas,
+				},
+				Status: appsv1.DeploymentStatus{
+					ObservedGeneration: generation,
+					Replicas:           replicas - 1,
+					UpdatedReplicas:    updatedReplicas,
+					AvailableReplicas:  availableReplicas,
+				},
+			}
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
 
-					return nil
-				})
-
-			_, actualError := kubernetes.HasDeploymentRolloutCompleted(context.TODO(), c, namespace, name)
+			_, actualError := kubernetes.HasDeploymentRolloutCompleted(ctx, fakeClient, namespace, name)
 			Expect(actualError).To(Equal(expectedError))
 		})
 	})
