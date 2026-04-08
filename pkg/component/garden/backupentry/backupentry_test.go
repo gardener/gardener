@@ -11,10 +11,10 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -23,13 +23,10 @@ import (
 	. "github.com/gardener/gardener/pkg/component/garden/backupentry"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("BackupEntry", func() {
 	var (
-		ctrl *gomock.Controller
-
 		ctx              context.Context
 		c                client.Client
 		expected         *gardencorev1beta1.BackupEntry
@@ -37,8 +34,8 @@ var _ = Describe("BackupEntry", func() {
 		log              logr.Logger
 		defaultDepWaiter Interface
 
-		mockNow *mocktime.MockNow
-		now     time.Time
+		fakeClock *testclock.FakeClock
+		now       time.Time
 
 		name         = "be"
 		namespace    = "namespace"
@@ -52,9 +49,8 @@ var _ = Describe("BackupEntry", func() {
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-
-		mockNow = mocktime.NewMockNow(ctrl)
+		now = time.Unix(60, 0)
+		fakeClock = testclock.NewFakeClock(now)
 
 		ctx = context.TODO()
 		log = logr.Discard()
@@ -94,18 +90,13 @@ var _ = Describe("BackupEntry", func() {
 		defaultDepWaiter = New(log, c, values, time.Millisecond, 500*time.Millisecond)
 	})
 
-	AfterEach(func() {
-		ctrl.Finish()
-	})
-
 	Describe("#Deploy", func() {
 		BeforeEach(func() {
 			expected.ResourceVersion = "1"
 		})
 
 		It("should create correct BackupEntry (newly created)", func() {
-			defer test.WithVars(&TimeNow, mockNow.Do)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+			defer test.WithVars(&TimeNow, fakeClock.Now)()
 
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
@@ -117,8 +108,7 @@ var _ = Describe("BackupEntry", func() {
 		})
 
 		It("should create correct BackupEntry (reconciling/updating)", func() {
-			defer test.WithVars(&TimeNow, mockNow.Do)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+			defer test.WithVars(&TimeNow, fakeClock.Now)()
 
 			existing := expected.DeepCopy()
 			existing.ResourceVersion = ""
@@ -154,8 +144,7 @@ var _ = Describe("BackupEntry", func() {
 			})
 
 			It("should create correct BackupEntry (newly created)", func() {
-				defer test.WithVars(&TimeNow, mockNow.Do)()
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+				defer test.WithVars(&TimeNow, fakeClock.Now)()
 
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
@@ -200,8 +189,7 @@ var _ = Describe("BackupEntry", func() {
 		})
 
 		It("should change the BucketName of the BackupEntry", func() {
-			defer test.WithVars(&TimeNow, mockNow.Do)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+			defer test.WithVars(&TimeNow, fakeClock.Now)()
 
 			existing := expected.DeepCopy()
 			existing.ResourceVersion = ""
@@ -227,8 +215,7 @@ var _ = Describe("BackupEntry", func() {
 		})
 
 		It("should correctly migrate the BackupEntry", func() {
-			defer test.WithVars(&TimeNow, mockNow.Do)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+			defer test.WithVars(&TimeNow, fakeClock.Now)()
 
 			existing := expected.DeepCopy()
 			existing.ResourceVersion = ""
@@ -270,8 +257,9 @@ var _ = Describe("BackupEntry", func() {
 		It("should not return error when migrated successfully", func() {
 			expected.Status.LastError = nil
 			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				State: gardencorev1beta1.LastOperationStateSucceeded,
-				Type:  gardencorev1beta1.LastOperationTypeMigrate,
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				Type:           gardencorev1beta1.LastOperationTypeMigrate,
+				LastUpdateTime: metav1.Time{Time: now},
 			}
 
 			Expect(c.Create(ctx, expected)).To(Succeed(), "migrating BackupEntry succeeds")

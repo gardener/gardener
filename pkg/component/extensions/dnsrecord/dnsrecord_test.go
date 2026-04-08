@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -34,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 const (
@@ -63,13 +63,13 @@ var _ = Describe("DNSRecord", func() {
 		secret *corev1.Secret
 
 		ctx     = context.TODO()
-		now     = time.Now()
+		now     = time.Unix(60, 0)
 		log     = logr.Discard()
 		testErr = errors.New("test")
 
-		fakeOps *retryfake.Ops
-		mockNow *mocktime.MockNow
-		cleanup func()
+		fakeOps   *retryfake.Ops
+		fakeClock *testclock.FakeClock
+		cleanup   func()
 	)
 
 	BeforeEach(func() {
@@ -132,14 +132,13 @@ var _ = Describe("DNSRecord", func() {
 		}
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 1}
-		mockNow = mocktime.NewMockNow(ctrl)
-		mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+		fakeClock = testclock.NewFakeClock(now)
 		cleanup = test.WithVars(
 			&retry.Until, fakeOps.Until,
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
-			&dnsrecord.TimeNow, mockNow.Do,
-			&extensions.TimeNow, mockNow.Do,
-			&gardenerutils.TimeNow, mockNow.Do,
+			&dnsrecord.TimeNow, fakeClock.Now,
+			&extensions.TimeNow, fakeClock.Now,
+			&gardenerutils.TimeNow, fakeClock.Now,
 		)
 	})
 

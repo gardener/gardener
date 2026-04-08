@@ -15,12 +15,12 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	timeutils "github.com/gardener/gardener/pkg/utils/time"
 )
 
 type objectsRemaining []client.Object
@@ -121,16 +121,16 @@ func (f *namespaceFinalizer) HasFinalizers(obj client.Object) (bool, error) {
 }
 
 type cleaner struct {
-	time      timeutils.Ops
+	clock     clock.Clock
 	finalizer Finalizer
 }
 
-// NewCleaner instantiates a new Cleaner with the given timeutils.Ops and finalizer.
-func NewCleaner(time timeutils.Ops, finalizer Finalizer) Cleaner {
-	return &cleaner{time, finalizer}
+// NewCleaner instantiates a new Cleaner with the given clock and finalizer.
+func NewCleaner(clock clock.Clock, finalizer Finalizer) Cleaner {
+	return &cleaner{clock, finalizer}
 }
 
-var defaultCleaner = NewCleaner(timeutils.DefaultOps(), defaultFinalizer)
+var defaultCleaner = NewCleaner(clock.RealClock{}, defaultFinalizer)
 
 // DefaultCleaner is the default Cleaner.
 func DefaultCleaner() Cleaner {
@@ -157,7 +157,7 @@ func (cl *cleaner) doClean(ctx context.Context, c client.Client, obj client.Obje
 		gracePeriod *= time.Duration(*cleanOptions.FinalizeGracePeriodSeconds)
 	}
 
-	if !obj.GetDeletionTimestamp().IsZero() && obj.GetDeletionTimestamp().Time.Add(gracePeriod).Before(cl.time.Now()) {
+	if !obj.GetDeletionTimestamp().IsZero() && obj.GetDeletionTimestamp().Time.Add(gracePeriod).Before(cl.clock.Now()) {
 		hasFinalizers, err := cl.finalizer.HasFinalizers(obj)
 		if err != nil {
 			return err
@@ -191,7 +191,7 @@ func (cl *cleaner) doClean(ctx context.Context, c client.Client, obj client.Obje
 var _ Cleaner = (*volumeSnapshotContentCleaner)(nil)
 
 type volumeSnapshotContentCleaner struct {
-	time timeutils.Ops
+	clock clock.Clock
 }
 
 // Clean annotates the VolumeSnapshotContents so that they are cleaned up by the CSI snapshot controller.
@@ -208,7 +208,7 @@ func (v *volumeSnapshotContentCleaner) Clean(ctx context.Context, c client.Clien
 	return fmt.Errorf("type %T does neither implement client.Object nor client.ObjectList", obj)
 }
 
-func gracePeriodIsPassed(obj client.Object, ops *CleanOptions, t timeutils.Ops) bool {
+func gracePeriodIsPassed(obj client.Object, ops *CleanOptions, cl clock.Clock) bool {
 	if obj.GetDeletionTimestamp().IsZero() {
 		return false
 	}
@@ -219,7 +219,7 @@ func gracePeriodIsPassed(obj client.Object, ops *CleanOptions, t timeutils.Ops) 
 	}
 
 	gracePeriod := time.Second * time.Duration(ptr.Deref(deleteOp.GracePeriodSeconds, 0))
-	return obj.GetDeletionTimestamp().Time.Add(gracePeriod).Before(t.Now())
+	return obj.GetDeletionTimestamp().Time.Add(gracePeriod).Before(cl.Now())
 }
 
 const (
@@ -228,7 +228,7 @@ const (
 )
 
 func (v *volumeSnapshotContentCleaner) triggerVolumeSnapshotDeletion(ctx context.Context, c client.Client, obj client.Object, ops *CleanOptions) error {
-	if !gracePeriodIsPassed(obj, ops, v.time) {
+	if !gracePeriodIsPassed(obj, ops, v.clock) {
 		return nil
 	}
 
@@ -256,13 +256,13 @@ func (v *volumeSnapshotContentCleaner) triggerVolumeSnapshotDeletion(ctx context
 
 // NewVolumeSnapshotContentCleaner instantiates a new Cleaner with ability to clean VolumeSnapshotContents
 // **after** they got deleted and the given deletion grace period is passed.
-func NewVolumeSnapshotContentCleaner(time timeutils.Ops) Cleaner {
+func NewVolumeSnapshotContentCleaner(clock clock.Clock) Cleaner {
 	return &volumeSnapshotContentCleaner{
-		time: time,
+		clock: clock,
 	}
 }
 
-var defaultVolumeSnapshotContentCleaner = NewVolumeSnapshotContentCleaner(timeutils.DefaultOps())
+var defaultVolumeSnapshotContentCleaner = NewVolumeSnapshotContentCleaner(clock.RealClock{})
 
 // DefaultVolumeSnapshotContentCleaner is the default cleaner for VolumeSnapshotContents.
 // The VolumeSnapshotCleaner initiates the deletion of VolumeSnapshots **after** they got deleted

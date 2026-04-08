@@ -19,6 +19,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -32,7 +33,6 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("extensions", func() {
@@ -40,7 +40,7 @@ var _ = Describe("extensions", func() {
 		ctx       context.Context
 		log       logr.Logger
 		ctrl      *gomock.Controller
-		mockNow   *mocktime.MockNow
+		fakeClock *testclock.FakeClock
 		now       time.Time
 		fakeOps   *retryfake.Ops
 		resetVars func()
@@ -62,7 +62,9 @@ var _ = Describe("extensions", func() {
 		ctx = context.TODO()
 		log = logr.Discard()
 		ctrl = gomock.NewController(GinkgoT())
-		mockNow = mocktime.NewMockNow(ctrl)
+		now = time.Unix(60, 0)
+
+		fakeClock = testclock.NewFakeClock(now)
 
 		scheme = runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
@@ -350,14 +352,12 @@ var _ = Describe("extensions", func() {
 
 		It("should delete extension object", func() {
 			defer test.WithVars(
-				&TimeNow, mockNow.Do,
+				&TimeNow, fakeClock.Now,
 			)()
 
 			expected.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
-
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			mc := mockclient.NewMockClient(ctrl)
 			// add deletion confirmation and Timestamp annotation
@@ -554,9 +554,8 @@ var _ = Describe("extensions", func() {
 		Describe("#RestoreExtensionWithDeployFunction", func() {
 			It("should restore the extension object state with the provided deploy function and annotate it for restoration", func() {
 				defer test.WithVars(
-					&TimeNow, mockNow.Do,
+					&TimeNow, fakeClock.Now,
 				)()
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				err := RestoreExtensionWithDeployFunction(
 					ctx,
@@ -579,9 +578,8 @@ var _ = Describe("extensions", func() {
 
 			It("should only annotate the resource with restore operation annotation if a corresponding state does not exist in the ShootState", func() {
 				defer test.WithVars(
-					&TimeNow, mockNow.Do,
+					&TimeNow, fakeClock.Now,
 				)()
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				expected.Name = "worker2"
 				err := RestoreExtensionWithDeployFunction(
@@ -618,9 +616,8 @@ var _ = Describe("extensions", func() {
 
 			It("should update the state if the extension object exists", func() {
 				defer test.WithVars(
-					&TimeNow, mockNow.Do,
+					&TimeNow, fakeClock.Now,
 				)()
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing worker succeeds")
 				err := RestoreExtensionObjectState(
@@ -636,9 +633,8 @@ var _ = Describe("extensions", func() {
 
 			It("should not overwrite the extension object's state if already present", func() {
 				defer test.WithVars(
-					&TimeNow, mockNow.Do,
+					&TimeNow, fakeClock.Now,
 				)()
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				Expect(c.Create(ctx, expected)).To(Succeed())
 
@@ -795,10 +791,8 @@ var _ = Describe("extensions", func() {
 
 		It("should properly annotate extension object for migration", func() {
 			defer test.WithVars(
-				&TimeNow, mockNow.Do,
+				&TimeNow, fakeClock.Now,
 			)()
-
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			expectedWithAnnotations := expected.DeepCopy()
 			expectedWithAnnotations.Annotations = map[string]string{
@@ -1006,10 +1000,8 @@ var _ = Describe("extensions", func() {
 
 		It("should annotate extension object with operation", func() {
 			defer test.WithVars(
-				&TimeNow, mockNow.Do,
+				&TimeNow, fakeClock.Now,
 			)()
-
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			expectedWithAnnotations := expected.DeepCopy()
 			expectedWithAnnotations.Annotations = map[string]string{

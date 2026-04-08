@@ -297,7 +297,6 @@ build:
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/secrets/manager
-            - pkg/utils/time
             - pkg/utils/validation
             - pkg/utils/validation/admissionplugins
             - pkg/utils/validation/apigroups
@@ -442,7 +441,6 @@ build:
             - pkg/utils/kubernetes/unstructured
             - pkg/utils/retry
             - pkg/utils/secrets
-            - pkg/utils/time
             - pkg/utils/validation
             - pkg/utils/validation/admissionplugins
             - pkg/utils/validation/apigroups

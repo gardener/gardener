@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -39,7 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("Worker", func() {
@@ -47,7 +47,7 @@ var _ = Describe("Worker", func() {
 		ctrl *gomock.Controller
 		c    client.Client
 
-		mockNow   *mocktime.MockNow
+		fakeClock *testclock.FakeClock
 		now       time.Time
 		metav1Now metav1.Time
 
@@ -129,8 +129,8 @@ var _ = Describe("Worker", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		mockNow = mocktime.NewMockNow(ctrl)
-		now = time.Now()
+		now = time.Unix(60, 0)
+		fakeClock = testclock.NewFakeClock(now)
 		metav1Now = metav1.NewTime(now)
 
 		s := runtime.NewScheme()
@@ -379,8 +379,7 @@ var _ = Describe("Worker", func() {
 
 	Describe("#Deploy", func() {
 		It("should successfully deploy the Worker resource", func() {
-			defer test.WithVars(&worker.TimeNow, mockNow.Do)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+			defer test.WithVars(&worker.TimeNow, fakeClock.Now)()
 
 			defaultDepWaiter = worker.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
@@ -405,8 +404,7 @@ var _ = Describe("Worker", func() {
 		})
 
 		It("should initialize nodeTemplate when it exists for pool in worker resource, but absent in cloudProfile", func() {
-			defer test.WithVars(&worker.TimeNow, mockNow.Do)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+			defer test.WithVars(&worker.TimeNow, fakeClock.Now)()
 
 			newValues := *values
 			newValues.Workers = []gardencorev1beta1.Worker{
@@ -449,8 +447,7 @@ var _ = Describe("Worker", func() {
 		})
 
 		It("should initialize nodeTemplate from cloudProfile, when machineType updated for worker pool", func() {
-			defer test.WithVars(&worker.TimeNow, mockNow.Do)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+			defer test.WithVars(&worker.TimeNow, fakeClock.Now)()
 
 			newValues := *values
 			newValues.Workers = []gardencorev1beta1.Worker{
@@ -492,8 +489,7 @@ var _ = Describe("Worker", func() {
 		})
 
 		It("should successfully deploy the Worker resource with cluster autoscaler options when present", func() {
-			defer test.WithVars(&worker.TimeNow, mockNow.Do)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+			defer test.WithVars(&worker.TimeNow, fakeClock.Now)()
 
 			newValues := *values
 			newValues.Workers[0].ClusterAutoscaler = &gardencorev1beta1.ClusterAutoscalerOptions{
@@ -549,8 +545,7 @@ var _ = Describe("Worker", func() {
 		})
 
 		It("should use a set machineCreationTimeout in the cloud profile if no value is provided in the worker pool", func() {
-			defer test.WithVars(&worker.TimeNow, mockNow.Do)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+			defer test.WithVars(&worker.TimeNow, fakeClock.Now)()
 
 			newValues := *values
 			workerWithCreationTimeout := values.Workers[0]
@@ -614,9 +609,8 @@ var _ = Describe("Worker", func() {
 
 		It("should return error if we haven't observed the latest timestamp annotation", func() {
 			defer test.WithVars(
-				&worker.TimeNow, mockNow.Do,
+				&worker.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
@@ -643,9 +637,8 @@ var _ = Describe("Worker", func() {
 
 		It("should return no error when it's ready", func() {
 			defer test.WithVars(
-				&worker.TimeNow, mockNow.Do,
+				&worker.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
@@ -705,9 +698,9 @@ var _ = Describe("Worker", func() {
 
 			By("Restore")
 			defer test.WithVars(
-				&worker.TimeNow, mockNow.Do,
+				&worker.TimeNow, fakeClock.Now,
+				&extensions.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			Expect(defaultDepWaiter.Restore(ctx, shootState)).To(Succeed(), "restore should succeed")
 
@@ -760,9 +753,8 @@ var _ = Describe("Worker", func() {
 
 		It("should return error if we haven't observed the latest timestamp annotation", func() {
 			defer test.WithVars(
-				&worker.TimeNow, mockNow.Do,
+				&worker.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
@@ -807,9 +799,8 @@ var _ = Describe("Worker", func() {
 
 		It("should return no error when status.machineDeploymentsLastUpdateTime is added for the first time", func() {
 			defer test.WithVars(
-				&worker.TimeNow, mockNow.Do,
+				&worker.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
@@ -838,9 +829,8 @@ var _ = Describe("Worker", func() {
 
 		It("should return no error when status.machineDeploymentsLastUpdateTime is updated", func() {
 			defer test.WithVars(
-				&worker.TimeNow, mockNow.Do,
+				&worker.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			obj := w.DeepCopy()
 			obj.Status.MachineDeploymentsLastUpdateTime = &metav1Now
@@ -885,10 +875,9 @@ var _ = Describe("Worker", func() {
 
 		It("should return error if not deleted successfully", func() {
 			defer test.WithVars(
-				&extensions.TimeNow, mockNow.Do,
-				&gardenerutils.TimeNow, mockNow.Do,
+				&extensions.TimeNow, fakeClock.Now,
+				&gardenerutils.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			fakeErr := fmt.Errorf("some random error")
 			obj := w.DeepCopy()
@@ -940,10 +929,9 @@ var _ = Describe("Worker", func() {
 
 		It("should properly restore the worker state if it exists", func() {
 			defer test.WithVars(
-				&worker.TimeNow, mockNow.Do,
-				&extensions.TimeNow, mockNow.Do,
+				&worker.TimeNow, fakeClock.Now,
+				&extensions.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			mc := mockclient.NewMockClient(ctrl)
 			mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)

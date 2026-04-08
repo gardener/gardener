@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -30,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("ControlPlane", func() {
@@ -38,8 +38,8 @@ var _ = Describe("ControlPlane", func() {
 		ctrl *gomock.Controller
 		c    client.Client
 
-		mockNow *mocktime.MockNow
-		now     time.Time
+		fakeClock *testclock.FakeClock
+		now       time.Time
 
 		ctx = context.TODO()
 		log = logr.Discard()
@@ -60,8 +60,8 @@ var _ = Describe("ControlPlane", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		mockNow = mocktime.NewMockNow(ctrl)
-		now = time.Now()
+		now = time.Unix(60, 0)
+		fakeClock = testclock.NewFakeClock(now)
 
 		s := runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
@@ -109,8 +109,7 @@ var _ = Describe("ControlPlane", func() {
 
 	Describe("#Deploy", func() {
 		It("should successfully deploy the ControlPlane resource", func() {
-			defer test.WithVars(&controlplane.TimeNow, mockNow.Do)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+			defer test.WithVars(&controlplane.TimeNow, fakeClock.Now)()
 
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
@@ -149,8 +148,7 @@ var _ = Describe("ControlPlane", func() {
 		})
 
 		It("should return error if we haven't observed the latest timestamp annotation", func() {
-			defer test.WithVars(&controlplane.TimeNow, mockNow.Do)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+			defer test.WithVars(&controlplane.TimeNow, fakeClock.Now)()
 
 			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
@@ -172,8 +170,7 @@ var _ = Describe("ControlPlane", func() {
 		})
 
 		It("should return no error when it's ready", func() {
-			defer test.WithVars(&controlplane.TimeNow, mockNow.Do)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+			defer test.WithVars(&controlplane.TimeNow, fakeClock.Now)()
 
 			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
@@ -208,10 +205,9 @@ var _ = Describe("ControlPlane", func() {
 
 		It("should return error if not deleted successfully", func() {
 			defer test.WithVars(
-				&extensions.TimeNow, mockNow.Do,
-				&gardenerutils.TimeNow, mockNow.Do,
+				&extensions.TimeNow, fakeClock.Now,
+				&gardenerutils.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			fakeErr := fmt.Errorf("some random error")
 			obj := cp.DeepCopy()
@@ -266,10 +262,9 @@ var _ = Describe("ControlPlane", func() {
 
 		It("should properly restore the controlplane state if it exists", func() {
 			defer test.WithVars(
-				&controlplane.TimeNow, mockNow.Do,
-				&extensions.TimeNow, mockNow.Do,
+				&controlplane.TimeNow, fakeClock.Now,
+				&extensions.TimeNow, fakeClock.Now,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			mc := mockclient.NewMockClient(ctrl)
 			mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
