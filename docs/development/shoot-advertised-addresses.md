@@ -27,10 +27,10 @@ e.g. observability-related components such as `plutono`, `vali`, `prometheus`,
 etc.
 
 > [!NOTE]
-> As of now, only `Ingress` resources support may be advertised using this label.
+> As of now, only `Ingress` and `VirtualService` resources support to be advertised using this label.
 > In the future, support for `Gateway` resources will be added as well.
 
-In order to advertise such endpoints, their respective `Ingress` resource needs
+In order to advertise such endpoints, their respective `Ingress` or `VirtualService` resource needs
 to be labeled with `endpoint.shoot.gardener.cloud/advertise=true`.
 
 Optionally, an application name can be set using the

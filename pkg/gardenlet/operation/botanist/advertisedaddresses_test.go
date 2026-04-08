@@ -9,6 +9,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -352,6 +354,74 @@ var _ = Describe("AdvertisedAddresses", func() {
 					Name:        "ingress/ingress-2/0/0",
 					URL:         "https://bar.example.org",
 					Application: ptr.To("Monitoring"),
+				},
+			}))
+		})
+	})
+
+	Describe("#GetVirtualServiceAdvertisedEndpoints", func() {
+		It("returns nothing with no virtual service resources", func() {
+			items, err := botanist.GetVirtualServiceAdvertisedEndpoints(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(items).To(BeEmpty())
+		})
+
+		It("returns nothing when no virtual service is labeled", func() {
+			// Resource does not have the expected labels
+			virtualService := &istionetworkingv1beta1.VirtualService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "virtual-service-1",
+					Namespace: shootNamespace.Name,
+				},
+				Spec: istioapinetworkingv1beta1.VirtualService{
+					Hosts: []string{"foo.example.org"},
+				},
+			}
+
+			Expect(botanist.SeedClientSet.Client().Create(ctx, virtualService)).To(Succeed())
+			items, err := botanist.GetVirtualServiceAdvertisedEndpoints(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(items).To(BeEmpty())
+		})
+
+		It("returns valid endpoints from virtual service resources", func() {
+			virtualServiceA := &istionetworkingv1beta1.VirtualService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "virtual-service-1",
+					Namespace: shootNamespace.Name,
+					Labels: map[string]string{
+						v1beta1constants.LabelShootEndpointAdvertise: "true",
+					},
+				},
+				Spec: istioapinetworkingv1beta1.VirtualService{
+					Hosts: []string{"foo.example.org"},
+				},
+			}
+			virtualServiceB := &istionetworkingv1beta1.VirtualService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "virtual-service-2",
+					Namespace: shootNamespace.Name,
+					Labels: map[string]string{
+						v1beta1constants.LabelShootEndpointAdvertise: "true",
+					},
+				},
+				Spec: istioapinetworkingv1beta1.VirtualService{
+					Hosts: []string{"bar.example.org"},
+				},
+			}
+
+			Expect(botanist.SeedClientSet.Client().Create(ctx, virtualServiceA)).To(Succeed())
+			Expect(botanist.SeedClientSet.Client().Create(ctx, virtualServiceB)).To(Succeed())
+			items, err := botanist.GetVirtualServiceAdvertisedEndpoints(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(items).To(HaveExactElements([]gardencorev1beta1.ShootAdvertisedAddress{
+				{
+					Name: "virtualservice/virtual-service-1/0",
+					URL:  "https://foo.example.org",
+				},
+				{
+					Name: "virtualservice/virtual-service-2/0",
+					URL:  "https://bar.example.org",
 				},
 			}))
 		})
