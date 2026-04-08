@@ -12,8 +12,6 @@ spec:
   config:
     seedConfig:
       spec:
-        # Specify all fields when defining 'backup' so that they correctly overwrite the corresponding fields in example/gardener-local/gardenlet/values.yaml
-        backup: ~
         provider:
           # This field will be automatically set by `make remote-up` when using a Gardener shoot.
           region: ""
@@ -57,8 +55,6 @@ spec:
             domain: ""
             # Enter the zone of the default domain of your seed
             zone: ""
-        # Specify extensions if you want to use any
-        extensions: ~
         ingress:
           controller:
             kind: nginx
