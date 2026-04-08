@@ -13,23 +13,19 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	. "github.com/gardener/gardener/extensions/pkg/terraformer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-)
-
-var (
-	configMapGroupResource = schema.GroupResource{Resource: "ConfigMaps"}
-	secretGroupResource    = schema.GroupResource{Resource: "Secrets"}
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 const (
@@ -46,10 +42,10 @@ const (
 
 var _ = Describe("terraformer", func() {
 	var (
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
-		ctx  context.Context
-		log  logr.Logger
+		c      client.Client
+		ctx    context.Context
+		log    logr.Logger
+		scheme *runtime.Scheme
 
 		infra = extensionsv1alpha1.Infrastructure{
 			ObjectMeta: metav1.ObjectMeta{
@@ -62,128 +58,118 @@ var _ = Describe("terraformer", func() {
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
-
 		ctx = context.Background()
-
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
-	})
 
-	AfterEach(func() {
-		ctrl.Finish()
+		scheme = runtime.NewScheme()
+		Expect(corev1.AddToScheme(scheme)).To(Succeed())
+
+		c = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 	})
 
 	Describe("#CreateOrUpdateConfigurationConfigMap", func() {
 		It("Should create the config map without owner reference", func() {
-			var (
-				objectMeta = metav1.ObjectMeta{Namespace: namespace, Name: name}
-				expected   = &corev1.ConfigMap{
-					ObjectMeta: objectMeta,
-					Data: map[string]string{
-						MainKey:      mainName,
-						VariablesKey: variablesName,
-					},
-				}
-			)
-
-			gomock.InOrder(
-				c.EXPECT().
-					Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: name}, &corev1.ConfigMap{ObjectMeta: objectMeta}).
-					Return(apierrors.NewNotFound(configMapGroupResource, name)),
-				c.EXPECT().
-					Create(gomock.Any(), expected.DeepCopy()),
-			)
-
 			actual, err := CreateOrUpdateConfigurationConfigMap(ctx, c, namespace, name, mainName, variablesName, nil)
 			Expect(err).NotTo(HaveOccurred())
+
+			expected := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:       namespace,
+					Name:            name,
+					ResourceVersion: "1",
+				},
+				Data: map[string]string{
+					MainKey:      mainName,
+					VariablesKey: variablesName,
+				},
+			}
 			Expect(actual).To(Equal(expected))
+
+			// Verify state: ConfigMap exists in the fake client
+			got := &corev1.ConfigMap{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, got)).To(Succeed())
+			Expect(got.Data).To(Equal(expected.Data))
 		})
 
 		It("Should create the config map with owner reference", func() {
-			var (
-				objectMeta = metav1.ObjectMeta{
-					Namespace: namespace,
-					Name:      name,
-				}
-				objectMetaWithOwnerRef = metav1.ObjectMeta{
-					Namespace: namespace,
-					Name:      name,
+			actual, err := CreateOrUpdateConfigurationConfigMap(ctx, c, namespace, name, mainName, variablesName, ownerRef)
+			Expect(err).NotTo(HaveOccurred())
+
+			expected := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:       namespace,
+					Name:            name,
+					ResourceVersion: "1",
 					OwnerReferences: []metav1.OwnerReference{
 						*ownerRef,
 					},
-				}
-				expected = &corev1.ConfigMap{
-					ObjectMeta: objectMetaWithOwnerRef,
-					Data: map[string]string{
-						MainKey:      mainName,
-						VariablesKey: variablesName,
-					},
-				}
-			)
-
-			gomock.InOrder(
-				c.EXPECT().
-					Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: name}, &corev1.ConfigMap{ObjectMeta: objectMeta}).
-					Return(apierrors.NewNotFound(configMapGroupResource, name)),
-				c.EXPECT().
-					Create(gomock.Any(), expected.DeepCopy()),
-			)
-
-			actual, err := CreateOrUpdateConfigurationConfigMap(ctx, c, namespace, name, mainName, variablesName, ownerRef)
-			Expect(err).NotTo(HaveOccurred())
+				},
+				Data: map[string]string{
+					MainKey:      mainName,
+					VariablesKey: variablesName,
+				},
+			}
 			Expect(actual).To(Equal(expected))
+
+			// Verify state: ConfigMap exists with owner reference
+			got := &corev1.ConfigMap{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, got)).To(Succeed())
+			Expect(got.OwnerReferences).To(ConsistOf(*ownerRef))
 		})
 	})
 
 	Describe("#StateConfigMapInitializer", func() {
-
 		Describe("#CreateState", func() {
 			var (
-				stateConfigMap            *corev1.ConfigMap
-				expected                  *corev1.ConfigMap
 				stateConfigMapInitializer StateConfigMapInitializerFunc
 			)
 
 			BeforeEach(func() {
-				stateConfigMap = &corev1.ConfigMap{
+				stateConfigMapInitializer = CreateState
+			})
+
+			It("should create the ConfigMap", func() {
+				err := stateConfigMapInitializer.Initialize(ctx, c, namespace, name, ownerRef)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Verify state: ConfigMap was created with owner ref and empty state
+				got := &corev1.ConfigMap{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, got)).To(Succeed())
+				Expect(got.Data).To(Equal(map[string]string{StateKey: ""}))
+				Expect(got.OwnerReferences).To(ConsistOf(*ownerRef))
+			})
+
+			It("should return nil when the ConfigMap already exists", func() {
+				// Pre-create the ConfigMap
+				existing := &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: namespace,
 						Name:      name,
 					},
 					Data: map[string]string{
-						StateKey: "",
+						StateKey: "existing-state",
 					},
 				}
-				expected = stateConfigMap.DeepCopy()
-				expected.OwnerReferences = []metav1.OwnerReference{
-					*ownerRef,
-				}
-				stateConfigMapInitializer = CreateState
-			})
-
-			It("should create the ConfigMap", func() {
-				c.EXPECT().Create(gomock.Any(), expected.DeepCopy())
-
-				err := stateConfigMapInitializer.Initialize(ctx, c, namespace, name, ownerRef)
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("should return nil when the ConfigMap already exists", func() {
-				c.EXPECT().
-					Create(gomock.Any(), stateConfigMap.DeepCopy()).
-					Return(apierrors.NewAlreadyExists(configMapGroupResource, name))
+				Expect(c.Create(ctx, existing)).To(Succeed())
 
 				err := stateConfigMapInitializer.Initialize(ctx, c, namespace, name, nil)
 				Expect(err).NotTo(HaveOccurred())
+
+				// Verify original state was preserved (not overwritten)
+				got := &corev1.ConfigMap{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, got)).To(Succeed())
+				Expect(got.Data[StateKey]).To(Equal("existing-state"))
 			})
 
 			It("should return error when the ConfigMap creation fails", func() {
-				c.EXPECT().
-					Create(gomock.Any(), expected.DeepCopy()).
-					Return(apierrors.NewForbidden(configMapGroupResource, name, errors.New("not allowed to create ConfigMap")))
+				// Use interceptor to simulate a forbidden error on Create
+				fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+					Create: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.CreateOption) error {
+						return apierrors.NewForbidden(corev1.Resource("configmaps"), name, errors.New("not allowed to create ConfigMap"))
+					},
+				}).Build()
 
-				err := stateConfigMapInitializer.Initialize(ctx, c, namespace, name, ownerRef)
+				err := stateConfigMapInitializer.Initialize(ctx, fakeClient, namespace, name, ownerRef)
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
 			})
@@ -191,177 +177,90 @@ var _ = Describe("terraformer", func() {
 
 		Describe("#CreateOrUpdateState", func() {
 			It("Should create the ConfigMap", func() {
-				var (
-					state      = "state"
-					stateKey   = client.ObjectKey{Namespace: namespace, Name: name}
-					objectMeta = metav1.ObjectMeta{
-						Namespace: namespace,
-						Name:      name,
-						OwnerReferences: []metav1.OwnerReference{
-							*ownerRef,
-						},
-					}
-					getState = &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: namespace,
-							Name:      name,
-						},
-					}
-					expected = &corev1.ConfigMap{
-						ObjectMeta: objectMeta,
-						Data: map[string]string{
-							StateKey: state,
-						},
-					}
-					stateConfigMapInitializer = &CreateOrUpdateState{State: &state}
-					stateNotFound             = apierrors.NewNotFound(configMapGroupResource, name)
-				)
-				gomock.InOrder(
-					c.EXPECT().
-						Get(gomock.Any(), stateKey, getState.DeepCopy()).
-						Return(stateNotFound),
-					c.EXPECT().Create(gomock.Any(), expected.DeepCopy()),
-				)
+				state := "state"
+				stateConfigMapInitializer := &CreateOrUpdateState{State: &state}
 
 				err := stateConfigMapInitializer.Initialize(ctx, c, namespace, name, ownerRef)
 				Expect(err).NotTo(HaveOccurred())
+
+				// Verify state: ConfigMap was created with the state data
+				got := &corev1.ConfigMap{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, got)).To(Succeed())
+				Expect(got.Data).To(Equal(map[string]string{StateKey: state}))
+				Expect(got.OwnerReferences).To(ConsistOf(*ownerRef))
 			})
 		})
 	})
 
 	Describe("#CreateOrUpdateTFVarsSecret", func() {
 		It("Should create the secret without owner reference", func() {
-
-			var (
-				tfVars     = []byte("tfvars")
-				objectMeta = metav1.ObjectMeta{Namespace: namespace, Name: name}
-				expected   = &corev1.Secret{
-					ObjectMeta: objectMeta,
-					Data: map[string][]byte{
-						TFVarsKey: tfVars,
-					},
-				}
-			)
-
-			gomock.InOrder(
-				c.EXPECT().
-					Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: name}, &corev1.Secret{ObjectMeta: objectMeta}).
-					Return(apierrors.NewNotFound(secretGroupResource, name)),
-				c.EXPECT().
-					Create(gomock.Any(), expected.DeepCopy()),
-			)
+			tfVars := []byte("tfvars")
 
 			actual, err := CreateOrUpdateTFVarsSecret(ctx, c, namespace, name, tfVars, nil)
 			Expect(err).NotTo(HaveOccurred())
+
+			expected := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:       namespace,
+					Name:            name,
+					ResourceVersion: "1",
+				},
+				Data: map[string][]byte{
+					TFVarsKey: tfVars,
+				},
+			}
 			Expect(actual).To(Equal(expected))
+
+			// Verify state: Secret exists in the fake client
+			got := &corev1.Secret{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, got)).To(Succeed())
+			Expect(got.Data).To(Equal(expected.Data))
 		})
 
 		It("Should create the secret with owner reference", func() {
-			var (
-				tfVars     = []byte("tfvars")
-				objectMeta = metav1.ObjectMeta{
-					Namespace: namespace,
-					Name:      name,
-				}
-				objectMetaWithOwnerRef = metav1.ObjectMeta{
-					Namespace: namespace,
-					Name:      name,
-					OwnerReferences: []metav1.OwnerReference{
-						*ownerRef,
-					},
-				}
-				expected = &corev1.Secret{
-					ObjectMeta: objectMetaWithOwnerRef,
-					Data: map[string][]byte{
-						TFVarsKey: tfVars,
-					},
-				}
-			)
-
-			gomock.InOrder(
-				c.EXPECT().
-					Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: name}, &corev1.Secret{ObjectMeta: objectMeta}).
-					Return(apierrors.NewNotFound(secretGroupResource, name)),
-				c.EXPECT().
-					Create(gomock.Any(), expected.DeepCopy()),
-			)
+			tfVars := []byte("tfvars")
 
 			actual, err := CreateOrUpdateTFVarsSecret(ctx, c, namespace, name, tfVars, ownerRef)
 			Expect(err).NotTo(HaveOccurred())
+
+			expected := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:       namespace,
+					Name:            name,
+					ResourceVersion: "1",
+					OwnerReferences: []metav1.OwnerReference{
+						*ownerRef,
+					},
+				},
+				Data: map[string][]byte{
+					TFVarsKey: tfVars,
+				},
+			}
 			Expect(actual).To(Equal(expected))
+
+			// Verify state: Secret exists with owner reference
+			got := &corev1.Secret{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, got)).To(Succeed())
+			Expect(got.OwnerReferences).To(ConsistOf(*ownerRef))
 		})
 	})
 
 	Describe("#Initializers", func() {
 		var (
 			tfVars []byte
-
-			configurationKey client.ObjectKey
-			variablesKey     client.ObjectKey
-			stateKey         client.ObjectKey
-
-			configurationObjectMeta metav1.ObjectMeta
-			variablesObjectMeta     metav1.ObjectMeta
-			stateObjectMeta         metav1.ObjectMeta
-
-			getConfiguration *corev1.ConfigMap
-			getVariables     *corev1.Secret
-			getState         *corev1.ConfigMap
-
-			createConfiguration *corev1.ConfigMap
-			createVariables     *corev1.Secret
 		)
 
 		BeforeEach(func() {
 			tfVars = []byte("tfvars")
-
-			configurationKey = client.ObjectKey{Namespace: namespace, Name: configurationName}
-			variablesKey = client.ObjectKey{Namespace: namespace, Name: variablesName}
-			stateKey = client.ObjectKey{Namespace: namespace, Name: stateName}
-
-			configurationObjectMeta = metav1.ObjectMeta{Namespace: namespace, Name: configurationName}
-			variablesObjectMeta = metav1.ObjectMeta{Namespace: namespace, Name: variablesName}
-			stateObjectMeta = metav1.ObjectMeta{Namespace: namespace, Name: stateName}
-
-			getConfiguration = &corev1.ConfigMap{ObjectMeta: configurationObjectMeta}
-			getVariables = &corev1.Secret{ObjectMeta: variablesObjectMeta}
-			getState = &corev1.ConfigMap{ObjectMeta: stateObjectMeta}
-
-			createConfiguration = &corev1.ConfigMap{
-				ObjectMeta: configurationObjectMeta,
-				Data: map[string]string{
-					MainKey:      mainName,
-					VariablesKey: variablesName,
-				},
-			}
-			createVariables = &corev1.Secret{
-				ObjectMeta: variablesObjectMeta,
-				Data: map[string][]byte{
-					TFVarsKey: tfVars,
-				},
-			}
 		})
 
 		Describe("#DefaultInitializer", func() {
 			var (
-				state                                                   string
-				createState                                             *corev1.ConfigMap
-				configurationNotFound, variablesNotFound, stateNotFound *apierrors.StatusError
-				runInitializer                                          func(ctx context.Context, initializeState bool) error
+				runInitializer func(ctx context.Context, initializeState bool) error
 			)
 
 			Context("When there is no init state", func() {
 				BeforeEach(func() {
-					state = ""
-					createState = &corev1.ConfigMap{
-						ObjectMeta: stateObjectMeta,
-						Data: map[string]string{
-							StateKey: state,
-						},
-					}
-					configurationNotFound = apierrors.NewNotFound(configMapGroupResource, configurationName)
-					variablesNotFound = apierrors.NewNotFound(secretGroupResource, variablesName)
-
 					runInitializer = func(ctx context.Context, initializeState bool) error {
 						return DefaultInitializer(c, mainName, variablesName, tfVars, StateConfigMapInitializerFunc(CreateState)).Initialize(
 							ctx,
@@ -378,36 +277,32 @@ var _ = Describe("terraformer", func() {
 				})
 
 				It("should not initialize state when initializeState is false", func() {
-					gomock.InOrder(
-						c.EXPECT().
-							Get(gomock.Any(), configurationKey, getConfiguration.DeepCopy()).
-							Return(configurationNotFound),
-						c.EXPECT().
-							Create(gomock.Any(), createConfiguration.DeepCopy()),
-
-						c.EXPECT().
-							Get(gomock.Any(), variablesKey, getVariables.DeepCopy()).
-							Return(variablesNotFound),
-						c.EXPECT().
-							Create(gomock.Any(), createVariables.DeepCopy()),
-					)
-
 					Expect(runInitializer(ctx, false)).NotTo(HaveOccurred())
+
+					// Verify configuration ConfigMap was created
+					configCM := &corev1.ConfigMap{}
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: configurationName}, configCM)).To(Succeed())
+					Expect(configCM.Data).To(Equal(map[string]string{
+						MainKey:      mainName,
+						VariablesKey: variablesName,
+					}))
+
+					// Verify variables Secret was created
+					varSecret := &corev1.Secret{}
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: variablesName}, varSecret)).To(Succeed())
+					Expect(varSecret.Data).To(Equal(map[string][]byte{
+						TFVarsKey: tfVars,
+					}))
+
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: stateName}, &corev1.ConfigMap{})).To(BeNotFoundError())
 				})
 			})
 
 			Context("When there is init state", func() {
+				var state string
+
 				BeforeEach(func() {
 					state = "{\"data\":\"big data\"}"
-					createState = &corev1.ConfigMap{
-						ObjectMeta: stateObjectMeta,
-						Data: map[string]string{
-							StateKey: state,
-						},
-					}
-					configurationNotFound = apierrors.NewNotFound(configMapGroupResource, configurationName)
-					variablesNotFound = apierrors.NewNotFound(secretGroupResource, variablesName)
-					stateNotFound = apierrors.NewNotFound(configMapGroupResource, stateName)
 
 					runInitializer = func(ctx context.Context, initializeState bool) error {
 						return DefaultInitializer(c, mainName, variablesName, tfVars, &CreateOrUpdateState{State: &state}).Initialize(
@@ -425,45 +320,51 @@ var _ = Describe("terraformer", func() {
 				})
 
 				It("should create all resources", func() {
-					gomock.InOrder(
-						c.EXPECT().
-							Get(gomock.Any(), configurationKey, getConfiguration.DeepCopy()).
-							Return(configurationNotFound),
-						c.EXPECT().
-							Create(gomock.Any(), createConfiguration.DeepCopy()),
-
-						c.EXPECT().
-							Get(gomock.Any(), variablesKey, getVariables.DeepCopy()).
-							Return(variablesNotFound),
-						c.EXPECT().
-							Create(gomock.Any(), createVariables.DeepCopy()),
-
-						c.EXPECT().
-							Get(gomock.Any(), stateKey, getState.DeepCopy()).
-							Return(stateNotFound),
-						c.EXPECT().
-							Create(gomock.Any(), createState.DeepCopy()),
-					)
-
 					Expect(runInitializer(ctx, true)).NotTo(HaveOccurred())
+
+					// Verify configuration ConfigMap was created
+					configCM := &corev1.ConfigMap{}
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: configurationName}, configCM)).To(Succeed())
+					Expect(configCM.Data).To(Equal(map[string]string{
+						MainKey:      mainName,
+						VariablesKey: variablesName,
+					}))
+
+					// Verify variables Secret was created
+					varSecret := &corev1.Secret{}
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: variablesName}, varSecret)).To(Succeed())
+					Expect(varSecret.Data).To(Equal(map[string][]byte{
+						TFVarsKey: tfVars,
+					}))
+
+					// Verify state ConfigMap was created with the state data
+					stateCM := &corev1.ConfigMap{}
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: stateName}, stateCM)).To(Succeed())
+					Expect(stateCM.Data).To(Equal(map[string]string{
+						StateKey: state,
+					}))
 				})
 
 				It("should not initialize state when initializeState is false", func() {
-					gomock.InOrder(
-						c.EXPECT().
-							Get(gomock.Any(), configurationKey, getConfiguration.DeepCopy()).
-							Return(configurationNotFound),
-						c.EXPECT().
-							Create(gomock.Any(), createConfiguration.DeepCopy()),
-
-						c.EXPECT().
-							Get(gomock.Any(), variablesKey, getVariables.DeepCopy()).
-							Return(variablesNotFound),
-						c.EXPECT().
-							Create(gomock.Any(), createVariables.DeepCopy()),
-					)
-
 					Expect(runInitializer(ctx, false)).NotTo(HaveOccurred())
+
+					// Verify configuration ConfigMap was created
+					configCM := &corev1.ConfigMap{}
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: configurationName}, configCM)).To(Succeed())
+					Expect(configCM.Data).To(Equal(map[string]string{
+						MainKey:      mainName,
+						VariablesKey: variablesName,
+					}))
+
+					// Verify variables Secret was created
+					varSecret := &corev1.Secret{}
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: variablesName}, varSecret)).To(Succeed())
+					Expect(varSecret.Data).To(Equal(map[string][]byte{
+						TFVarsKey: tfVars,
+					}))
+
+					// Verify state ConfigMap was NOT created
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: stateName}, &corev1.ConfigMap{})).To(BeNotFoundError())
 				})
 			})
 		})
@@ -480,8 +381,7 @@ var _ = Describe("terraformer", func() {
 
 	Describe("#GetStateOutputVariables", func() {
 		var (
-			stateName = fmt.Sprintf("%s.%s.tf-state", name, purpose)
-			stateKey  = client.ObjectKey{Namespace: namespace, Name: stateName}
+			tfStateName = fmt.Sprintf("%s.%s.tf-state", name, purpose)
 		)
 
 		It("should return err when state version is not supported", func() {
@@ -491,14 +391,17 @@ var _ = Describe("terraformer", func() {
 			stateJSON, err := json.Marshal(state)
 			Expect(err).NotTo(HaveOccurred())
 
-			c.EXPECT().
-				Get(gomock.Any(), stateKey, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					cm.Data = map[string]string{
-						StateKey: string(stateJSON),
-					}
-					return nil
-				})
+			// Create the state ConfigMap
+			stateCM := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      tfStateName,
+				},
+				Data: map[string]string{
+					StateKey: string(stateJSON),
+				},
+			}
+			Expect(c.Create(ctx, stateCM)).To(Succeed())
 
 			terraformer := New(log, c, nil, purpose, namespace, name, image)
 			actual, err := terraformer.GetStateOutputVariables(ctx, "variableV1")
@@ -523,14 +426,17 @@ var _ = Describe("terraformer", func() {
 			stateJSON, err := json.Marshal(state)
 			Expect(err).NotTo(HaveOccurred())
 
-			c.EXPECT().
-				Get(gomock.Any(), stateKey, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					cm.Data = map[string]string{
-						StateKey: string(stateJSON),
-					}
-					return nil
-				})
+			// Create the state ConfigMap
+			stateCM := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      tfStateName,
+				},
+				Data: map[string]string{
+					StateKey: string(stateJSON),
+				},
+			}
+			Expect(c.Create(ctx, stateCM)).To(Succeed())
 
 			terraformer := New(log, c, nil, purpose, namespace, name, image)
 			actual, err := terraformer.GetStateOutputVariables(ctx, "variableV3")
@@ -554,14 +460,17 @@ var _ = Describe("terraformer", func() {
 			stateJSON, err := json.Marshal(state)
 			Expect(err).NotTo(HaveOccurred())
 
-			c.EXPECT().
-				Get(gomock.Any(), stateKey, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					cm.Data = map[string]string{
-						StateKey: string(stateJSON),
-					}
-					return nil
-				})
+			// Create the state ConfigMap
+			stateCM := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      tfStateName,
+				},
+				Data: map[string]string{
+					StateKey: string(stateJSON),
+				},
+			}
+			Expect(c.Create(ctx, stateCM)).To(Succeed())
 
 			terraformer := New(log, c, nil, purpose, namespace, name, image)
 			actual, err := terraformer.GetStateOutputVariables(ctx, "variableV4")
@@ -578,69 +487,71 @@ var _ = Describe("terraformer", func() {
 		var (
 			prefix = fmt.Sprintf("%s.%s", name, purpose)
 
-			configName    = prefix + ConfigSuffix
-			variablesName = prefix + VariablesSuffix
-			stateName     = prefix + StateSuffix
-
-			secret = &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: variablesName},
-			}
-			config = &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: configName},
-			}
-			state = &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: stateName},
-			}
+			tfConfigName    = prefix + ConfigSuffix
+			tfVariablesName = prefix + VariablesSuffix
+			tfStateName     = prefix + StateSuffix
 		)
 
 		It("should delete all resources", func() {
+			// Create the resources to be deleted
+			Expect(c.Create(ctx, &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: tfStateName},
+			})).To(Succeed())
+			Expect(c.Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: tfVariablesName},
+			})).To(Succeed())
+			Expect(c.Create(ctx, &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: tfConfigName},
+			})).To(Succeed())
+
 			t := New(log, c, nil, purpose, namespace, name, image)
-
-			gomock.InOrder(
-				c.EXPECT().
-					Delete(gomock.Any(), state.DeepCopy()),
-				c.EXPECT().
-					Delete(gomock.Any(), secret.DeepCopy()),
-				c.EXPECT().
-					Delete(gomock.Any(), config.DeepCopy()),
-			)
-
 			Expect(t.CleanupConfiguration(ctx)).NotTo(HaveOccurred())
+
+			// Verify all resources are deleted
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: tfStateName}, &corev1.ConfigMap{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: tfVariablesName}, &corev1.Secret{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: tfConfigName}, &corev1.ConfigMap{})).To(BeNotFoundError())
 		})
 
 		It("should remove the terraform finalizer from all resources", func() {
+			// Create the resources with the terraformer finalizer
+			Expect(c.Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  namespace,
+					Name:       tfVariablesName,
+					Finalizers: []string{TerraformerFinalizer},
+				},
+			})).To(Succeed())
+			Expect(c.Create(ctx, &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  namespace,
+					Name:       tfStateName,
+					Finalizers: []string{TerraformerFinalizer},
+				},
+			})).To(Succeed())
+			Expect(c.Create(ctx, &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  namespace,
+					Name:       tfConfigName,
+					Finalizers: []string{TerraformerFinalizer},
+				},
+			})).To(Succeed())
+
 			t := New(log, c, nil, purpose, namespace, name, image)
-
-			gomock.InOrder(
-				c.EXPECT().
-					Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: variablesName}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
-						s.SetFinalizers([]string{TerraformerFinalizer})
-						return nil
-					}),
-				c.EXPECT().
-					Patch(gomock.Any(), gomock.AssignableToTypeOf(secret.DeepCopy()), gomock.AssignableToTypeOf(client.MergeFromWithOptions(secret.DeepCopy(), client.MergeFromWithOptimisticLock{}))),
-
-				c.EXPECT().
-					Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: stateName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, configMap *corev1.ConfigMap, _ ...client.GetOption) error {
-						configMap.SetFinalizers([]string{TerraformerFinalizer})
-						return nil
-					}),
-				c.EXPECT().
-					Patch(gomock.Any(), gomock.AssignableToTypeOf(config.DeepCopy()), gomock.AssignableToTypeOf(client.MergeFromWithOptions(config.DeepCopy(), client.MergeFromWithOptimisticLock{}))),
-
-				c.EXPECT().
-					Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: configName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, configMap *corev1.ConfigMap, _ ...client.GetOption) error {
-						configMap.SetFinalizers([]string{TerraformerFinalizer})
-						return nil
-					}),
-				c.EXPECT().
-					Patch(gomock.Any(), gomock.AssignableToTypeOf(state.DeepCopy()), gomock.AssignableToTypeOf(client.MergeFromWithOptions(state.DeepCopy(), client.MergeFromWithOptimisticLock{}))),
-			)
-
 			Expect(t.RemoveTerraformerFinalizerFromConfig(ctx)).NotTo(HaveOccurred())
+
+			// Verify finalizers are removed from all resources
+			secret := &corev1.Secret{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: tfVariablesName}, secret)).To(Succeed())
+			Expect(secret.Finalizers).To(BeEmpty())
+
+			stateCM := &corev1.ConfigMap{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: tfStateName}, stateCM)).To(Succeed())
+			Expect(stateCM.Finalizers).To(BeEmpty())
+
+			configCM := &corev1.ConfigMap{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: tfConfigName}, configCM)).To(Succeed())
+			Expect(configCM.Finalizers).To(BeEmpty())
 		})
 	})
 })

@@ -15,7 +15,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
-	"go.uber.org/mock/gomock"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,6 +22,7 @@ import (
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -33,14 +33,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("extensions", func() {
 	var (
 		ctx       context.Context
 		log       logr.Logger
-		ctrl      *gomock.Controller
 		fakeClock *testclock.FakeClock
 		now       time.Time
 		fakeOps   *retryfake.Ops
@@ -62,7 +60,6 @@ var _ = Describe("extensions", func() {
 	BeforeEach(func() {
 		ctx = context.TODO()
 		log = logr.Discard()
-		ctrl = gomock.NewController(GinkgoT())
 		now = time.Unix(60, 0)
 
 		fakeClock = testclock.NewFakeClock(now)
@@ -98,7 +95,6 @@ var _ = Describe("extensions", func() {
 
 	AfterEach(func() {
 		resetVars()
-		ctrl.Finish()
 	})
 
 	Describe("#WaitUntilExtensionObjectReady", func() {
@@ -205,23 +201,22 @@ var _ = Describe("extensions", func() {
 		})
 
 		It("should retry getting object if it does not exist in the cache yet", func() {
-			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Scheme().Return(scheme).AnyTimes()
-
-			gomock.InOrder(
-				mc.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
-					Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("workers"), expected.Name)),
-				mc.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Worker, _ ...client.GetOption) error {
-						expected.DeepCopyInto(obj)
-						return nil
-					}),
-			)
+			callCount := 0
+			fakeClientWithRetry := fake.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(&extensionsv1alpha1.Worker{}).WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					callCount++
+					if callCount == 1 {
+						return apierrors.NewNotFound(extensionsv1alpha1.Resource("workers"), key.Name)
+					}
+					return client.Get(ctx, key, obj, opts...)
+				},
+			}).Build()
+			Expect(fakeClientWithRetry.Create(ctx, expected)).To(Succeed())
 
 			fakeOps.MaxAttempts = 2
 
 			err := WaitUntilObjectReadyWithHealthFunction(
-				ctx, mc, log,
+				ctx, fakeClientWithRetry, log,
 				func(_ client.Object) error {
 					return nil
 				},
@@ -347,13 +342,18 @@ var _ = Describe("extensions", func() {
 		})
 
 		It("should not return error if CRD does not exist (NoMatchError)", func() {
-			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{}), gomock.Any()).Return(&meta.NoKindMatchError{
+			noMatchErr := &meta.NoKindMatchError{
 				GroupKind:        expected.GetObjectKind().GroupVersionKind().GroupKind(),
 				SearchedVersions: []string{"v1alpha1"},
-			})
+			}
 
-			Expect(DeleteExtensionObject(ctx, mc, expected)).To(Succeed())
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				Patch: func(_ context.Context, _ client.WithWatch, _ client.Object, _ client.Patch, _ ...client.PatchOption) error {
+					return noMatchErr
+				},
+			}).Build()
+
+			Expect(DeleteExtensionObject(ctx, fakeClient, expected)).To(Succeed())
 		})
 
 		It("should not return error if deleted successfully", func() {
@@ -361,21 +361,25 @@ var _ = Describe("extensions", func() {
 			Expect(DeleteExtensionObject(ctx, c, expected)).To(Succeed())
 		})
 
-		It("should delete extension object", func() {
+		It("should return error if deleting extension object fails", func() {
 			defer test.WithVars(
 				&TimeNow, fakeClock.Now,
 			)()
 
-			expected.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
-			}
+			fakeErr := fmt.Errorf("some random error")
+			c := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+					if _, ok := obj.(*extensionsv1alpha1.Worker); ok {
+						return fakeErr
+					}
+					return client.Delete(ctx, obj, opts...)
+				},
+			}).Build()
 
-			mc := mockclient.NewMockClient(ctrl)
-			// add deletion confirmation and Timestamp annotation
-			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{}), gomock.Any()).SetArg(1, *expected).Return(nil)
-			mc.EXPECT().Delete(ctx, expected).Times(1).Return(fmt.Errorf("some random error"))
-
-			Expect(DeleteExtensionObject(ctx, mc, expected)).To(HaveOccurred())
+			Expect(c.Create(ctx, expected)).To(Succeed())
+			Expect(DeleteExtensionObject(ctx, c, expected)).To(HaveOccurred())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: expected.Name}, expected)).To(Succeed())
+			Expect(expected.GetAnnotations()).To(HaveKeyWithValue(v1beta1constants.ConfirmationDeletion, "true"))
 		})
 	})
 
@@ -404,22 +408,24 @@ var _ = Describe("extensions", func() {
 		})
 
 		It("should not return error if CRD does not exist (NoMatchError)", func() {
-			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().List(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.WorkerList{}), client.InNamespace(namespace)).Return(&meta.NoKindMatchError{
+			noMatchErr := &meta.NoKindMatchError{
 				GroupKind:        expected.GetObjectKind().GroupVersionKind().GroupKind(),
 				SearchedVersions: []string{"v1alpha1"},
-			})
+			}
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+					return noMatchErr
+				},
+			}).Build()
 
 			list := &extensionsv1alpha1.WorkerList{}
-			err := DeleteExtensionObjects(
+			Expect(DeleteExtensionObjects(
 				ctx,
-				mc,
+				fakeClient,
 				list,
 				namespace,
 				func(_ extensionsv1alpha1.Object) bool { return true },
-			)
-
-			Expect(err).NotTo(HaveOccurred())
+			)).To(Succeed())
 		})
 	})
 
@@ -458,23 +464,26 @@ var _ = Describe("extensions", func() {
 			})
 
 			It("should not return error if CRD does not exist (NoMatchError)", func() {
-				mc := mockclient.NewMockClient(ctrl)
-				mc.EXPECT().List(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.WorkerList{}), client.InNamespace(namespace)).Return(&meta.NoKindMatchError{
+				noMatchErr := &meta.NoKindMatchError{
 					GroupKind:        expected.GetObjectKind().GroupVersionKind().GroupKind(),
 					SearchedVersions: []string{"v1alpha1"},
-				})
+				}
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+					List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+						return noMatchErr
+					},
+				}).Build()
 
 				list := &extensionsv1alpha1.WorkerList{}
-				err := WaitUntilExtensionObjectsDeleted(
+				Expect(WaitUntilExtensionObjectsDeleted(
 					ctx,
-					mc,
+					fakeClient,
 					log,
 					list,
 					extensionsv1alpha1.WorkerResource,
 					namespace, defaultInterval, defaultTimeout,
 					nil,
-				)
-				Expect(err).NotTo(HaveOccurred())
+				)).To(Succeed())
 			})
 		})
 
@@ -579,16 +588,19 @@ var _ = Describe("extensions", func() {
 		})
 
 		It("should not return error if CRD does not exist (NoMatchError)", func() {
-			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{})).Return(&meta.NoKindMatchError{
+			noMatchErr := &meta.NoKindMatchError{
 				GroupKind:        expected.GetObjectKind().GroupVersionKind().GroupKind(),
 				SearchedVersions: []string{"v1alpha1"},
-			})
+			}
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+					return noMatchErr
+				},
+			}).Build()
 
-			err := WaitUntilExtensionObjectDeleted(ctx, mc, log,
+			Expect(WaitUntilExtensionObjectDeleted(ctx, fakeClient, log,
 				expected, extensionsv1alpha1.WorkerResource,
-				defaultInterval, defaultTimeout)
-			Expect(err).NotTo(HaveOccurred())
+				defaultInterval, defaultTimeout)).To(Succeed())
 		})
 	})
 
@@ -857,17 +869,13 @@ var _ = Describe("extensions", func() {
 				&TimeNow, fakeClock.Now,
 			)()
 
-			expectedWithAnnotations := expected.DeepCopy()
-			expectedWithAnnotations.Annotations = map[string]string{
-				v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationMigrate,
-				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
-			}
+			Expect(c.Create(ctx, expected)).To(Succeed())
+			Expect(MigrateExtensionObject(ctx, c, expected)).To(Succeed())
 
-			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Patch(ctx, expectedWithAnnotations, gomock.AssignableToTypeOf(client.MergeFrom(expected))).Return(nil)
-
-			err := MigrateExtensionObject(ctx, mc, expected)
-			Expect(err).NotTo(HaveOccurred())
+			result := &extensionsv1alpha1.Worker{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), result)).To(Succeed())
+			Expect(result.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate))
+			Expect(result.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerTimestamp, now.UTC().Format(time.RFC3339Nano)))
 		})
 	})
 
@@ -1066,17 +1074,13 @@ var _ = Describe("extensions", func() {
 				&TimeNow, fakeClock.Now,
 			)()
 
-			expectedWithAnnotations := expected.DeepCopy()
-			expectedWithAnnotations.Annotations = map[string]string{
-				v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationMigrate,
-				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
-			}
+			Expect(c.Create(ctx, expected)).To(Succeed())
+			Expect(AnnotateObjectWithOperation(ctx, c, expected, v1beta1constants.GardenerOperationMigrate)).To(Succeed())
 
-			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Patch(ctx, expectedWithAnnotations, gomock.AssignableToTypeOf(client.MergeFrom(expected))).Return(nil)
-
-			err := AnnotateObjectWithOperation(ctx, mc, expected, v1beta1constants.GardenerOperationMigrate)
-			Expect(err).NotTo(HaveOccurred())
+			result := &extensionsv1alpha1.Worker{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), result)).To(Succeed())
+			Expect(result.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate))
+			Expect(result.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerTimestamp, now.UTC().Format(time.RFC3339Nano)))
 		})
 	})
 })
