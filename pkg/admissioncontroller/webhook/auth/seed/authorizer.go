@@ -24,8 +24,10 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity"
 	seedidentity "github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity/seed"
 	authwebhook "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -124,9 +126,10 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			)
 		case bastionResource:
 			return requestAuthorizer.Check(graph.VertexTypeBastion, attrs,
-				authwebhook.WithAllowedVerbs("update", "patch"),
-				authwebhook.WithAlwaysAllowedVerbs("create", "get", "list", "watch"),
+				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
+				authwebhook.WithAlwaysAllowedVerbs("create"),
 				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithFieldSelectors(map[string]string{operations.BastionSeedName: seedName}),
 			)
 		case certificateSigningRequestResource:
 			if userType == gardenletidentity.UserTypeExtension {
@@ -158,9 +161,9 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return requestAuthorizer.CheckRead(graph.VertexTypeControllerDeployment, attrs)
 		case controllerInstallationResource:
 			return requestAuthorizer.Check(graph.VertexTypeControllerInstallation, attrs,
-				authwebhook.WithAllowedVerbs("update", "patch"),
-				authwebhook.WithAlwaysAllowedVerbs("get", "list", "watch"),
+				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
 				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithFieldSelectors(map[string]string{gardencore.SeedRefName: seedName}),
 			)
 		case controllerRegistrationResource:
 			return requestAuthorizer.Check(graph.VertexTypeControllerRegistration, attrs,
@@ -181,15 +184,17 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeLease(requestAuthorizer, userType, attrs)
 		case gardenletResource:
 			return requestAuthorizer.Check(graph.VertexTypeGardenlet, attrs,
-				authwebhook.WithAllowedVerbs("update", "patch"),
-				authwebhook.WithAlwaysAllowedVerbs("get", "list", "watch", "create"),
+				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
+				authwebhook.WithAlwaysAllowedVerbs("create"),
+				authwebhook.WithAllowedNamespaces(v1beta1constants.GardenNamespace),
 				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithFieldSelectors(map[string]string{metav1.ObjectNameField: seedName}),
 			)
 		case managedSeedResource:
 			return requestAuthorizer.Check(graph.VertexTypeManagedSeed, attrs,
-				authwebhook.WithAllowedVerbs("update", "patch"),
-				authwebhook.WithAlwaysAllowedVerbs("get", "list", "watch"),
+				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
 				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithLabelSelectors(map[string]string{v1beta1constants.LabelPrefixSeedName + seedName: "true"}),
 			)
 		case namespaceResource:
 			return requestAuthorizer.CheckRead(graph.VertexTypeNamespace, attrs)
@@ -206,9 +211,10 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			)
 		case seedResource:
 			return requestAuthorizer.Check(graph.VertexTypeSeed, attrs,
-				authwebhook.WithAllowedVerbs("update", "patch", "delete"),
-				authwebhook.WithAlwaysAllowedVerbs("create", "get", "list", "watch"),
+				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch", "delete"),
+				authwebhook.WithAlwaysAllowedVerbs("create"),
 				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithLabelSelectors(map[string]string{v1beta1constants.LabelPrefixSeedName + seedName: "true"}),
 			)
 		case serviceAccountResource:
 			if userType == gardenletidentity.UserTypeExtension {
@@ -222,9 +228,9 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeServiceAccount(requestAuthorizer, attrs)
 		case shootResource:
 			return requestAuthorizer.Check(graph.VertexTypeShoot, attrs,
-				authwebhook.WithAllowedVerbs("update", "patch"),
-				authwebhook.WithAlwaysAllowedVerbs("get", "list", "watch"),
+				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
 				authwebhook.WithAllowedSubresources("status", "finalizers"),
+				authwebhook.WithLabelSelectors(map[string]string{v1beta1constants.LabelPrefixSeedName + seedName: "true"}),
 			)
 		case shootStateResource:
 			return requestAuthorizer.Check(graph.VertexTypeShootState, attrs,
