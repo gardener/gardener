@@ -272,10 +272,13 @@ func runTest(c client.Client, ignoreOperationAnnotation bool) {
 		metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "foo", "bar")
 		Expect(c.Update(ctx, secret)).To(Succeed())
 
-		By("Wait until backupbucket is ready")
-		// also wait for lastOperation's update time to be updated to give extension controller some time to observe
-		// secret event and start reconciliation
-		Expect(waitForBackupBucketToBeReady(ctx, c, log, backupBucket, backupBucket.Status.LastOperation.LastUpdateTime)).To(Succeed())
+		By("Wait until backupbucket is reconciled with new time-in annotation")
+		Eventually(func(g Gomega) {
+			backupBucket = &extensionsv1alpha1.BackupBucket{}
+			g.Expect(c.Get(ctx, backupBucketObjectKey, backupBucket)).To(Succeed())
+			g.Expect(backupBucket.Annotations[extensionsintegrationtest.AnnotationKeyTimeOut]).To(Equal(timeIn4))
+		}).WithTimeout(pollTimeout).WithPolling(pollInterval).Should(Succeed())
+		Expect(waitForBackupBucketToBeReady(ctx, c, log, backupBucket)).To(Succeed())
 
 		By("Verify backupbucket readiness (reconciliation should have happened due to secret mapping)")
 		backupBucket = &extensionsv1alpha1.BackupBucket{}
@@ -348,17 +351,12 @@ func patchBackupBucketObject(ctx context.Context, c client.Client, backupBucket 
 	return c.Patch(ctx, backupBucket, patch)
 }
 
-func waitForBackupBucketToBeReady(ctx context.Context, c client.Client, log logr.Logger, backupBucket *extensionsv1alpha1.BackupBucket, minOperationUpdateTime ...metav1.Time) error {
-	healthFuncs := []health.Func{health.CheckExtensionObject}
-	if len(minOperationUpdateTime) > 0 {
-		healthFuncs = append(healthFuncs, health.ExtensionOperationHasBeenUpdatedSince(minOperationUpdateTime[0]))
-	}
-
+func waitForBackupBucketToBeReady(ctx context.Context, c client.Client, log logr.Logger, backupBucket *extensionsv1alpha1.BackupBucket) error {
 	return extensions.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
 		c,
 		log,
-		health.And(healthFuncs...),
+		health.CheckExtensionObject,
 		backupBucket,
 		extensionsv1alpha1.BackupBucketResource,
 		pollInterval,
