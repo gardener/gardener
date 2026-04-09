@@ -155,10 +155,10 @@ func (*db) GetUnitStateChangeTimestamp(ctx context.Context, unitName string) (ti
 		return time.Time{}, fmt.Errorf("unexpected type for StateChangeTimestamp of unit %s: %T", unitName, property.Value.Value())
 	}
 
-	// Split into seconds and remaining microseconds to avoid uint64->int64 overflow.
+	// Split into seconds and remaining microseconds — both fit comfortably in int64.
 	seconds := timestamp / 1_000_000
 	microseconds := timestamp % 1_000_000
-	return time.Unix(int64(seconds), int64(microseconds)*int64(time.Microsecond)), nil
+	return time.Unix(int64(seconds), int64(microseconds)*int64(time.Microsecond)), nil // #nosec G115 -- seconds overflow int64 only around year 292 billion
 }
 
 func (*db) GetTriggeredBy(ctx context.Context, unitName string) ([]string, error) {
