@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
 	controllerinstallationcare "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/care"
+	controllerinstallationreconciler "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
 	controllerinstallationrequired "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/required"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
@@ -110,6 +111,18 @@ func AddToManager(
 			ManagedResourceNamespace: metav1.NamespaceSystem,
 		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 			return fmt.Errorf("failed adding ControllerInstallation care controller: %w", err)
+		}
+
+		// TODO(rfranzke): Remove this once all ControllerInstallation reconcilers are added via `shoot.AddToManager`.
+		if err := (&controllerinstallationreconciler.Reconciler{
+			SeedClientSet:         seedClientSet,
+			Config:                *cfg,
+			Identity:              identity,
+			GardenClusterIdentity: gardenClusterIdentity,
+			GardenNamespace:       metav1.NamespaceSystem,
+			SelfHostedShootMeta:   &types.NamespacedName{Name: selfHostedShoot.Name, Namespace: selfHostedShoot.Namespace},
+		}).AddToManager(ctx, mgr, gardenCluster); err != nil {
+			return fmt.Errorf("failed adding ControllerInstallation controller: %w", err)
 		}
 
 		// TODO(rfranzke): Remove this once all ControllerInstallation reconcilers are added via `shoot.AddToManager`.

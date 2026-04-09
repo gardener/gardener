@@ -76,9 +76,9 @@ var (
 	leaseResource                     = coordinationv1.Resource("leases")
 	managedSeedResource               = seedmanagementv1alpha1.Resource("managedseeds")
 	projectResource                   = gardencorev1beta1.Resource("projects")
-	seedResource                      = gardencorev1beta1.Resource("seeds")
 	secretResource                    = corev1.Resource("secrets")
 	secretBindingResource             = gardencorev1beta1.Resource("secretbindings")
+	seedResource                      = gardencorev1beta1.Resource("seeds")
 	serviceAccountResource            = corev1.Resource("serviceaccounts")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
 	shootStateResource                = gardencorev1beta1.Resource("shootstates")
@@ -156,6 +156,9 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 		case configMapResource:
 			return requestAuthorizer.CheckRead(graph.VertexTypeConfigMap, attrs)
 
+		case controllerDeploymentResource:
+			return requestAuthorizer.CheckRead(graph.VertexTypeControllerDeployment, attrs)
+
 		case controllerInstallationResource:
 			return requestAuthorizer.Check(graph.VertexTypeControllerInstallation, attrs,
 				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
@@ -165,6 +168,9 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 					core.ShootRefNamespace: shootNamespace,
 				}),
 			)
+
+		case controllerRegistrationResource:
+			return requestAuthorizer.CheckRead(graph.VertexTypeControllerRegistration, attrs)
 
 		case eventCoreResource, eventResource:
 			return a.authorizeEvent(log, attrs)
@@ -191,14 +197,20 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 				}),
 			)
 
+		case secretResource:
+			return a.authorizeSecret(ctx, requestAuthorizer, attrs)
+
 		case seedResource:
+			// The self-hosted shoot gardenlet needs read access for the Seed whose name matches its shoot name.
+			if slices.Contains([]string{"get", "list", "watch"}, attrs.GetVerb()) &&
+				(attrs.GetName() == "" || attrs.GetName() == shootName) {
+				return auth.DecisionAllow, "", nil
+			}
+
 			return requestAuthorizer.Check(graph.VertexTypeSeed, attrs,
 				authwebhook.WithAllowedVerbs("get", "delete"),
 				authwebhook.WithAlwaysAllowedVerbs("list", "watch"),
 			)
-
-		case secretResource:
-			return a.authorizeSecret(ctx, requestAuthorizer, attrs)
 
 		case serviceAccountResource:
 			if userType == gardenletidentity.UserTypeExtension {

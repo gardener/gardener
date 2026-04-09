@@ -303,7 +303,10 @@ In order to allow extension controller deployments to get information about the 
     gardenlet:
       featureGates: <gardenlet-feature-gates>
   ```
-- If the extension is deployed in an [self-hosted shoot cluster](https://github.com/gardener/enhancements/tree/main/geps/0028-self-hosted-shoot-clusters), then the `.gardener.selfHostedShootCluster` field is additionally propagated and set to `true`.
+- If the extension is deployed in a [self-hosted shoot cluster](https://github.com/gardener/enhancements/tree/main/geps/0028-self-hosted-shoot-clusters), then the `.gardener.selfHostedShootCluster` field is additionally propagated and set to `true`.
+  In addition, a `.gardener.shoot` section is populated with `name`, `namespace`, `labels`, `annotations`, `spec`, and (if available) `clusterIdentity`.
+  If the self-hosted shoot has not yet been promoted to a `Seed`, the `.gardener.seed` section is omitted entirely.
+  Extension charts should handle this gracefully (e.g., `{{ if .Values.gardener.seed }}`).
 
 Extension controller deployments can use this information in their Helm chart in case they require knowledge about the garden and the seed environment.
 The list might be extended in the future.

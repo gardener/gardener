@@ -39,11 +39,15 @@ They can simply read the file specified by the `GARDEN_KUBECONFIG` and construct
 When installing a [`ControllerInstallation`](registration.md#deploying-extension-controllers), gardenlet creates two secrets in the installation's namespace: a generic garden kubeconfig (`generic-garden-kubeconfig-<hash>`) and a garden access secret (`garden-access-extension`).
 Note that the `ServiceAccount` created based on this access secret will be created in the respective `seed-*` namespace in the garden cluster and labelled with `controllerregistration.core.gardener.cloud/name=<name>`.
 
-Additionally, gardenlet injects `volume`, `volumeMounts`, and two environment variables into all (init) containers in all objects in the `apps` and `batch` API groups:
+Additionally, gardenlet injects `volume`, `volumeMounts`, and environment variables into all (init) containers in all objects in the `apps` and `batch` API groups:
 
 - `GARDEN_KUBECONFIG`: points to the path where the generic garden kubeconfig is mounted.
-- `SEED_NAME`: set to the name of the `Seed` where the extension is installed. 
+- `SEED_NAME`: set to the name of the `Seed` where the extension is installed.
   This is useful for restricting watches in the garden cluster to relevant objects.
+- `SHOOT_NAME`: set to the name of the self-hosted `Shoot` when the extension is installed in a [self-hosted shoot cluster](https://github.com/gardener/enhancements/tree/main/geps/0028-self-hosted-shoot-clusters).
+  Only injected when the `ControllerInstallation` references `.spec.shootRef`.
+- `SHOOT_NAMESPACE`: set to the namespace of the self-hosted `Shoot`.
+  Only injected alongside `SHOOT_NAME`.
 
 If an object already contains the `GARDEN_KUBECONFIG` environment variable, it is not overwritten and injection of `volume` and `volumeMounts` is skipped.
 
