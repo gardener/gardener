@@ -302,6 +302,12 @@ spec:
                               will be injected/merged into every load balancer service
                               object.
                             type: object
+                          externalTrafficPolicy:
+                            description: |-
+                              ExternalTrafficPolicy specifies how nodes distribute service traffic they receive on one of the service's
+                              externally-facing addresses.
+                              Defaults to "Cluster". Can be set to "Local" when the load balancer is transparent (preserves client IP).
+                            type: string
                           proxyProtocol:
                             description: |-
                               ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.

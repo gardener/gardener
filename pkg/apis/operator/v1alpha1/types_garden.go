@@ -181,6 +181,11 @@ type SettingLoadBalancerServices struct {
 	// Annotations is a map of annotations that will be injected/merged into every load balancer service object.
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
+	// ExternalTrafficPolicy specifies how nodes distribute service traffic they receive on one of the service's
+	// externally-facing addresses.
+	// Defaults to "Cluster". Can be set to "Local" when the load balancer is transparent (preserves client IP).
+	// +optional
+	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty"`
 	// ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
 	// Defaults to nil, which is equivalent to not allowing ProxyProtocol.
 	// +optional

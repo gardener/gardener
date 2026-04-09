@@ -1689,6 +1689,11 @@ func (in *SettingLoadBalancerServices) DeepCopyInto(out *SettingLoadBalancerServ
 			(*out)[key] = val
 		}
 	}
+	if in.ExternalTrafficPolicy != nil {
+		in, out := &in.ExternalTrafficPolicy, &out.ExternalTrafficPolicy
+		*out = new(corev1.ServiceExternalTrafficPolicy)
+		**out = **in
+	}
 	if in.ProxyProtocol != nil {
 		in, out := &in.ProxyProtocol, &out.ProxyProtocol
 		*out = new(LoadBalancerServicesProxyProtocol)

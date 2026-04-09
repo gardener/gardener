@@ -3465,6 +3465,18 @@ object (keys:string, values:string)
 </tr>
 <tr>
 <td>
+<code>externalTrafficPolicy</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#serviceexternaltrafficpolicy-v1-core">ServiceExternalTrafficPolicy</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExternalTrafficPolicy specifies how nodes distribute service traffic they receive on one of the service's<br />externally-facing addresses.<br />Defaults to "Cluster". Can be set to "Local" when the load balancer is transparent (preserves client IP).</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>proxyProtocol</code></br>
 <em>
 <a href="#loadbalancerservicesproxyprotocol">LoadBalancerServicesProxyProtocol</a>
