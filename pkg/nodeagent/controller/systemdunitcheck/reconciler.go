@@ -162,6 +162,11 @@ func (r *Reconciler) checkUnits(ctx context.Context, units []unitInfo) (unhealth
 		}
 
 		switch status.ActiveState {
+		case "active":
+			if !unit.enabled {
+				unhealthyMessages = append(unhealthyMessages, fmt.Sprintf("%s: active but should be disabled", unit.name))
+			}
+
 		case "failed":
 			unhealthyMessages = append(unhealthyMessages, fmt.Sprintf("%s: failed", unit.name))
 

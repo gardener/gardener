@@ -257,6 +257,29 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		})))
 	})
 
+	It("should report unhealthy when a disabled unit is still active", func() {
+		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
+			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+				Units: []extensionsv1alpha1.Unit{
+					{Name: "should-be-off.service", Enable: ptr.To(false)},
+				},
+			},
+		})
+
+		fakeDBus.AddUnitsToList(
+			systemddbus.UnitStatus{Name: "should-be-off.service", ActiveState: "active"},
+		)
+
+		Eventually(func(g Gomega) *corev1.NodeCondition {
+			return getNodeCondition(g)
+		}).Should(PointTo(MatchFields(IgnoreExtras, Fields{
+			"Type":    Equal(nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady),
+			"Status":  Equal(corev1.ConditionFalse),
+			"Reason":  Equal("UnhealthyUnits"),
+			"Message": ContainSubstring("should-be-off.service: active but should be disabled"),
+		})))
+	})
+
 	It("should not report unhealthy for an inactive unit that is disabled", func() {
 		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
