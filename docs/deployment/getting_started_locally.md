@@ -225,10 +225,16 @@ make test-e2e-local-simple KUBECONFIG="$PWD/example/gardener-local/kind/local/ku
 
 To access the `Shoot`, you can acquire a `kubeconfig` by using the [`shoots/adminkubeconfig` subresource](../usage/shoot/shoot_access.md#shootsadminkubeconfig-subresource).
 
-For convenience a [helper script](../../hack/usage/generate-admin-kubeconf.sh) is provided in the `hack` directory. By default, the script will generate a kubeconfig for a `Shoot` named "local" in the `garden-local` namespace valid for one hour.
+For convenience a [helper script](../../hack/usage/generate-kubeconfig.sh) is provided in the `hack` directory. By default, the script will generate an admin kubeconfig for a `Shoot` named "local" in the `garden-local` namespace valid for one hour.
 
 ```bash
-./hack/usage/generate-admin-kubeconf.sh > admin-kubeconf.yaml
+./hack/usage/generate-kubeconfig.sh > admin-kubeconf.yaml
+```
+
+To generate a viewer kubeconfig instead of an admin kubeconfig, use the `--viewer` flag:
+
+```bash
+./hack/usage/generate-kubeconfig.sh --viewer > viewer-kubeconf.yaml
 ```
 
 > [!NOTE]
@@ -238,7 +244,7 @@ For convenience a [helper script](../../hack/usage/generate-admin-kubeconf.sh) i
 If you want to change the default namespace or shoot name, you can do so by passing different values as arguments.
 
 ```bash
-./hack/usage/generate-admin-kubeconf.sh --namespace <namespace> --shoot-name <shootname> > admin-kubeconf.yaml
+./hack/usage/generate-kubeconfig.sh --namespace <namespace> --shoot-name <shootname> > admin-kubeconf.yaml
 ```
 
 To access an Ingress resource from the `Seed`, use the Ingress host with port `8448` (`https://<ingress-host>:8448`, for example `https://gu-local--local.ingress.local.seed.local.gardener.cloud:8448`).
