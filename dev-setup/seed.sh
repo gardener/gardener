@@ -61,6 +61,7 @@ case "$COMMAND" in
     skaffold --kubeconfig "$VIRTUAL_GARDEN_KUBECONFIG" delete -m gardenlet
     kubectl  --kubeconfig "$VIRTUAL_GARDEN_KUBECONFIG" delete seed/"$gardenlet_name" --ignore-not-found --wait --timeout 5m
     kubectl  -n garden delete deployment gardenlet --ignore-not-found
+    kubectl  -n garden delete secret gardenlet-kubeconfig --ignore-not-found
 
     if [[ "$SCENARIO" == "remote" ]]; then
       kubectl delete -k "$SCRIPT_DIR/remote/registry/kyverno-policies" --ignore-not-found
