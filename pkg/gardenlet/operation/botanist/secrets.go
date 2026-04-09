@@ -132,11 +132,11 @@ func restoreSecretFromPersistedData(ctx context.Context, seedClient client.Clien
 	var (
 		secretData map[string][]byte
 		immutable  *bool
-		secretType corev1.SecretType
+		secretType = corev1.SecretTypeOpaque
 	)
 
 	if err := json.Unmarshal(rawData, &newSecretInfo); err != nil || newSecretInfo.Data == nil {
-		// TODO(tobschli): Remove this fallback after v1.140 has been released, as ShootStates will be reconciled and use the new format.
+		// TODO(tobschli): Remove this fallback after v1.143 has been released, as ShootStates will be reconciled and use the new format.
 		// plain map[string][]byte
 		if err := json.Unmarshal(rawData, &secretData); err != nil {
 			return fmt.Errorf("failed unmarshalling secret data for secret %s: neither new nor old format matched: %w", objectMeta.Name, err)
@@ -146,16 +146,11 @@ func restoreSecretFromPersistedData(ctx context.Context, seedClient client.Clien
 			secret := secretsmanager.Secret(objectMeta, secretData)
 			return client.IgnoreAlreadyExists(seedClient.Create(ctx, secret))
 		}
-
-		immutable = nil
-		secretType = corev1.SecretTypeOpaque
 	} else {
 		secretData = newSecretInfo.Data
 		immutable = newSecretInfo.Immutable
 		if newSecretInfo.Type != "" {
 			secretType = newSecretInfo.Type
-		} else {
-			secretType = corev1.SecretTypeOpaque
 		}
 	}
 
