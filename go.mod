@@ -56,7 +56,7 @@ require (
 	go.yaml.in/yaml/v2 v2.4.3
 	go.yaml.in/yaml/v4 v4.0.0-rc.2
 	golang.org/x/crypto v0.49.0
-	golang.org/x/text v0.35.0
+	golang.org/x/text v0.36.0
 	golang.org/x/time v0.15.0
 	golang.org/x/tools v0.43.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
