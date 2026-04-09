@@ -353,5 +353,35 @@ spec:
           an uncapped target recommendation larger than the regular target recommendation. Query
           in the garden Prometheus for more details:
 
-
+          
           ALERTS{alertname="VerticalPodAutoscalerCappedRecommendation", type="seed"}
+
+    - alert: SeedReconciliationFailed
+      expr: |
+        garden_seed_operation_states{operation="Reconcile"} == 6
+      for: 0m
+      labels:
+        severity: critical
+        topology: seed
+        mute_on_weekends: "true"
+      annotations:
+        summary: Seed reconciliation has permanently failed
+        description: >-
+          The seed {{$labels.name}} in {{$externalLabels.landscape}} has
+          reached a terminal Failed state for its Reconcile operation.
+          Manual intervention is required.
+
+    - alert: SeedReconciliationError
+      expr: |
+        garden_seed_operation_states{operation="Reconcile"} == 5
+      for: 30m
+      labels:
+        severity: warning
+        topology: seed
+        mute_on_weekends: "true"
+      annotations:
+        summary: Seed reconciliation is in error state
+        description: >-
+          The seed {{$labels.name}} in {{$externalLabels.landscape}} has
+          been in an Error state for its Reconcile operation for more than
+          30 minutes. Gardenlet will keep retrying.
