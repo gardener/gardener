@@ -775,6 +775,9 @@ type ClusterAutoscaler struct {
 	// NodeGroupBackoffResetTimeout is the time after last failed scale-up when the backoff duration is reset (default: 3h).
 	// +optional
 	NodeGroupBackoffResetTimeout *metav1.Duration `json:"nodeGroupBackoffResetTimeout,omitempty" protobuf:"bytes,21,opt,name=nodeGroupBackoffResetTimeout"`
+	// EmitPerNodeGroupMetrics emits additional per node group metrics
+	// +optional
+	EmitPerNodeGroupMetrics *bool `json:"emitPerNodeGroupMetrics,omitempty" protobuf:"bytes,22,opt,name=emitPerNodeGroupMetrics"`
 }
 
 // ExpanderMode is type used for Expander values

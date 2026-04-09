@@ -604,6 +604,10 @@ message ClusterAutoscaler {
   // NodeGroupBackoffResetTimeout is the time after last failed scale-up when the backoff duration is reset (default: 3h).
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration nodeGroupBackoffResetTimeout = 21;
+
+  // EmitPerNodeGroupMetrics emits additional per node group metrics
+  // +optional
+  optional bool emitPerNodeGroupMetrics = 22;
 }
 
 // ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.

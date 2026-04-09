@@ -2215,6 +2215,18 @@ func (m *ClusterAutoscaler) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.EmitPerNodeGroupMetrics != nil {
+		i--
+		if *m.EmitPerNodeGroupMetrics {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xb0
+	}
 	if m.NodeGroupBackoffResetTimeout != nil {
 		{
 			size, err := m.NodeGroupBackoffResetTimeout.MarshalToSizedBuffer(dAtA[:i])
@@ -14285,6 +14297,9 @@ func (m *ClusterAutoscaler) Size() (n int) {
 		l = m.NodeGroupBackoffResetTimeout.Size()
 		n += 2 + l + sovGenerated(uint64(l))
 	}
+	if m.EmitPerNodeGroupMetrics != nil {
+		n += 3
+	}
 	return n
 }
 
@@ -18937,6 +18952,7 @@ func (this *ClusterAutoscaler) String() string {
 		`InitialNodeGroupBackoffDuration:` + strings.Replace(fmt.Sprintf("%v", this.InitialNodeGroupBackoffDuration), "Duration", "v11.Duration", 1) + `,`,
 		`MaxNodeGroupBackoffDuration:` + strings.Replace(fmt.Sprintf("%v", this.MaxNodeGroupBackoffDuration), "Duration", "v11.Duration", 1) + `,`,
 		`NodeGroupBackoffResetTimeout:` + strings.Replace(fmt.Sprintf("%v", this.NodeGroupBackoffResetTimeout), "Duration", "v11.Duration", 1) + `,`,
+		`EmitPerNodeGroupMetrics:` + valueToStringGenerated(this.EmitPerNodeGroupMetrics) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -27423,6 +27439,27 @@ func (m *ClusterAutoscaler) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		case 22:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field EmitPerNodeGroupMetrics", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			b := bool(v != 0)
+			m.EmitPerNodeGroupMetrics = &b
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])

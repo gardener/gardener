@@ -133,6 +133,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		configScaleDownUtilizationThreshold         = ptr.To(float64(1.2345))
 		configScanInterval                          = &metav1.Duration{Duration: time.Second}
 		configIgnoreDaemonsetsUtilization           = true
+		configEmitPerNodeGroupMetrics               = true
 		configVerbosity                       int32 = 4
 		configMaxEmptyBulkDelete                    = ptr.To[int32](20)
 		configMaxScaleDownParallelism               = ptr.To[int32](20)
@@ -156,6 +157,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			StatusTaints:                    configTaints,
 			IgnoreTaints:                    configTaints,
 			IgnoreDaemonsetsUtilization:     &configIgnoreDaemonsetsUtilization,
+			EmitPerNodeGroupMetrics:         &configEmitPerNodeGroupMetrics,
 			Verbosity:                       &configVerbosity,
 			MaxEmptyBulkDelete:              configMaxEmptyBulkDelete,
 			MaxScaleDownParallelism:         configMaxScaleDownParallelism,
@@ -326,6 +328,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					"--max-drain-parallelism=1",
 					"--new-pod-scale-up-delay=0s",
 					"--max-nodes-total=0",
+					"--emit-per-nodegroup-metrics=false",
 				)
 			} else {
 				commandConfigFlags = append(commandConfigFlags,
@@ -347,6 +350,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					fmt.Sprintf("--max-drain-parallelism=%d", *configMaxDrainParallelism),
 					fmt.Sprintf("--new-pod-scale-up-delay=%s", configNewPodScaleUpDelay.Duration),
 					"--max-nodes-total=0",
+					fmt.Sprintf("--emit-per-nodegroup-metrics=%t", configEmitPerNodeGroupMetrics),
 					fmt.Sprintf("--startup-taint=%s", configTaints[0]),
 					fmt.Sprintf("--startup-taint=%s", configTaints[1]),
 					fmt.Sprintf("--status-taint=%s", configTaints[0]),
@@ -504,7 +508,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 						SourceLabels: []monitoringv1.LabelName{"__name__"},
 						Action:       "keep",
-						Regex:        `^(process_max_fds|process_open_fds|cluster_autoscaler_cluster_safe_to_autoscale|cluster_autoscaler_nodes_count|cluster_autoscaler_unschedulable_pods_count|cluster_autoscaler_node_groups_count|cluster_autoscaler_max_nodes_count|cluster_autoscaler_cluster_cpu_current_cores|cluster_autoscaler_cpu_limits_cores|cluster_autoscaler_cluster_memory_current_bytes|cluster_autoscaler_memory_limits_bytes|cluster_autoscaler_last_activity|cluster_autoscaler_function_duration_seconds|cluster_autoscaler_errors_total|cluster_autoscaler_scaled_up_nodes_total|cluster_autoscaler_scaled_down_nodes_total|cluster_autoscaler_scaled_up_gpu_nodes_total|cluster_autoscaler_scaled_down_gpu_nodes_total|cluster_autoscaler_failed_scale_ups_total|cluster_autoscaler_evicted_pods_total|cluster_autoscaler_unneeded_nodes_count|cluster_autoscaler_old_unregistered_nodes_removed_count|cluster_autoscaler_skipped_scale_events_count)$`,
+						Regex:        `^(process_max_fds|process_open_fds|cluster_autoscaler_cluster_safe_to_autoscale|cluster_autoscaler_nodes_count|cluster_autoscaler_unschedulable_pods_count|cluster_autoscaler_node_groups_count|cluster_autoscaler_max_nodes_count|cluster_autoscaler_cluster_cpu_current_cores|cluster_autoscaler_cpu_limits_cores|cluster_autoscaler_cluster_memory_current_bytes|cluster_autoscaler_memory_limits_bytes|cluster_autoscaler_last_activity|cluster_autoscaler_function_duration_seconds|cluster_autoscaler_errors_total|cluster_autoscaler_scaled_up_nodes_total|cluster_autoscaler_scaled_down_nodes_total|cluster_autoscaler_scaled_up_gpu_nodes_total|cluster_autoscaler_scaled_down_gpu_nodes_total|cluster_autoscaler_failed_scale_ups_total|cluster_autoscaler_evicted_pods_total|cluster_autoscaler_unneeded_nodes_count|cluster_autoscaler_old_unregistered_nodes_removed_count|cluster_autoscaler_skipped_scale_events_count|cluster_autoscaler_node_group_backoff_status|cluster_autoscaler_node_group_healthiness|cluster_autoscaler_node_group_target_count|cluster_autoscaler_node_group_max_count|cluster_autoscaler_node_group_min_count)$`,
 					}},
 				}},
 			},

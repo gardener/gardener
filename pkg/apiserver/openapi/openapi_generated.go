@@ -2625,6 +2625,13 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 							Ref:         ref(metav1.Duration{}.OpenAPIModelName()),
 						},
 					},
+					"emitPerNodeGroupMetrics": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EmitPerNodeGroupMetrics emits additional per node group metrics",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},

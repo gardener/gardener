@@ -348,6 +348,7 @@ spec:
   #   maxScaleDownParallelism: 10
   #   maxDrainParallelism: 1
   #   ignoreDaemonsetsUtilization: false
+  #   emitPerNodeGroupMetrics: false
   #   verbosity: 2
   # verticalPodAutoscaler:
   #   enabled: true

@@ -348,6 +348,11 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 					"cluster_autoscaler_unneeded_nodes_count",
 					"cluster_autoscaler_old_unregistered_nodes_removed_count",
 					"cluster_autoscaler_skipped_scale_events_count",
+					"cluster_autoscaler_node_group_backoff_status",
+					"cluster_autoscaler_node_group_healthiness",
+					"cluster_autoscaler_node_group_target_count",
+					"cluster_autoscaler_node_group_max_count",
+					"cluster_autoscaler_node_group_min_count",
 				),
 			}},
 		}
@@ -500,6 +505,7 @@ func (c *clusterAutoscaler) computeCommand(workersHavePriorityConfigured bool) [
 		fmt.Sprintf("--max-drain-parallelism=%d", *c.config.MaxDrainParallelism),
 		fmt.Sprintf("--new-pod-scale-up-delay=%s", c.config.NewPodScaleUpDelay.Duration),
 		fmt.Sprintf("--max-nodes-total=%d", c.maxNodesTotal),
+		fmt.Sprintf("--emit-per-nodegroup-metrics=%t", *c.config.EmitPerNodeGroupMetrics),
 	)
 
 	for _, taint := range c.config.StartupTaints {
