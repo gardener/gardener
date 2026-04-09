@@ -21,8 +21,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | Feature                        | Default | Stage   | Since   | Until   |
 |--------------------------------|---------|---------|---------|---------|
 | DefaultSeccompProfile          | `false` | `Alpha` | `1.54`  |         |
-| NewWorkerPoolHash              | `false` | `Alpha` | `1.98`  | `1.125` |
-| NewWorkerPoolHash              | `true`  | `Beta`  | `1.126` |         |
 | InPlaceNodeUpdates             | `false` | `Alpha` | `1.113` |         |
 | IstioTLSTermination            | `false` | `Alpha` | `1.114` |         |
 | CloudProfileCapabilities       | `false` | `Alpha` | `1.117` |         |
@@ -217,6 +215,9 @@ The following tables are a summary of the feature gates that you can set on diff
 | DoNotCopyBackupCredentials                   | `false` | `Alpha`      | `1.121` | `1.122` |
 | DoNotCopyBackupCredentials                   | `true`  | `Beta`       | `1.123` | `1.133` |
 | DoNotCopyBackupCredentials                   | `true`  | `GA`         | `1.134` |         |
+| NewWorkerPoolHash                            | `false` | `Alpha`      | `1.98`  | `1.125` |
+| NewWorkerPoolHash                            | `true`  | `Beta`       | `1.126` | `1.140` |
+| NewWorkerPoolHash                            | `true`  | `GA`         | `1.141` |         |
 
 ## Using a Feature
 

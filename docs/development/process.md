@@ -227,7 +227,7 @@ For example, the `.spec.kubernetes.enableStaticTokenKubeconfig` field in the `Sh
 In case you have to remove or change functionality _which cannot be directly connected with a Kubernetes version upgrade_, please consider introducing a feature gate.
 This way, landscape operators can announce the planned changes to their users and communicate a timeline when they plan to activate the feature gate.
 End-users can then prepare for it accordingly.
-For example, the fact that changes to `kubelet.kubeReserved` in the `Shoot` API will lead to a rolling update of the worker nodes (previously, these changes were updated in-place) is controlled via the `NewWorkerPoolHash` feature gate.
+For example, the fact that changes to `kubelet.kubeReserved` in the `Shoot` API will lead to a rolling update of the worker nodes.
 
 In case you have to remove functionality _relevant to Gardener extensions_, please deprecate it first, and add a [TODO statement](#todo-statements) to remove it only after **at least 9 releases**.
 Do not forget to write a proper release note as part of your pull request.
