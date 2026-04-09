@@ -7,7 +7,6 @@ package botanist_test
 import (
 	"context"
 	"net"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -17,7 +16,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/gardenadm/botanist"
@@ -66,52 +64,74 @@ var _ = Describe("Network", func() {
 	})
 
 	Describe("#IsPodNetworkAvailable", func() {
-		var managedResource *resourcesv1alpha1.ManagedResource
+		var (
+			hostName = "foo"
+
+			node *corev1.Node
+		)
 
 		BeforeEach(func() {
-			managedResource = &resourcesv1alpha1.ManagedResource{
+			node = &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "shoot-core-coredns",
-					Namespace: namespaceName,
+					GenerateName: "node-",
+					Labels:       map[string]string{"kubernetes.io/hostname": hostName},
 				},
 			}
+			b.HostName = hostName
 		})
 
-		It("should return false because the ManagedResource does not exist", func() {
+		It("should return false because the Node does not exist", func() {
 			available, err := b.IsPodNetworkAvailable(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(available).To(BeFalse())
 		})
 
-		It("should return false because the ManagedResource is unhealthy", func() {
-			Expect(b.SeedClientSet.Client().Create(ctx, managedResource)).To(Succeed())
+		It("should return an error when it fails fetching node object by hostname", func() {
+			node2 := node.DeepCopy()
+
+			Expect(b.SeedClientSet.Client().Create(ctx, node)).To(Succeed())
+			Expect(b.SeedClientSet.Client().Create(ctx, node2)).To(Succeed())
+
+			available, err := b.IsPodNetworkAvailable(ctx)
+			Expect(err).To(MatchError(ContainSubstring("failed fetching node object by hostname")))
+			Expect(available).To(BeFalse())
+		})
+
+		It("should return false because the Node's NetworkUnavailable condition is true", func() {
+			node.Status.Conditions = []corev1.NodeCondition{
+				{
+					Type:   corev1.NodeNetworkUnavailable,
+					Status: corev1.ConditionTrue,
+				},
+			}
+			Expect(b.SeedClientSet.Client().Create(ctx, node)).To(Succeed())
 
 			available, err := b.IsPodNetworkAvailable(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(available).To(BeFalse())
 		})
 
-		It("should return true because the ManagedResource is healthy", func() {
-			managedResource.Status.ObservedGeneration = managedResource.Generation
-			managedResource.Status.Conditions = []gardencorev1beta1.Condition{
+		It("should return true because the Node's NetworkUnavailable condition is false", func() {
+			node.Status.Conditions = []corev1.NodeCondition{
 				{
-					Type:               "ResourcesHealthy",
-					Status:             "True",
-					LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
-					LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
-				},
-				{
-					Type:               "ResourcesApplied",
-					Status:             "True",
-					LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
-					LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
+					Type:   corev1.NodeNetworkUnavailable,
+					Status: corev1.ConditionFalse,
 				},
 			}
-			Expect(b.SeedClientSet.Client().Create(ctx, managedResource)).To(Succeed())
+			Expect(b.SeedClientSet.Client().Create(ctx, node)).To(Succeed())
 
 			available, err := b.IsPodNetworkAvailable(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(available).To(BeTrue())
+		})
+
+		It("should return false because the Node's does not have a NetworkUnavailable condition", func() {
+			node.Status.Conditions = []corev1.NodeCondition{}
+			Expect(b.SeedClientSet.Client().Create(ctx, node)).To(Succeed())
+
+			available, err := b.IsPodNetworkAvailable(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(available).To(BeFalse())
 		})
 	})
 
