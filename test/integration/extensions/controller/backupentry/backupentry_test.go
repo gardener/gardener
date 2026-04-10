@@ -332,14 +332,13 @@ var _ = Describe("BackupEntry", func() {
 					Expect(testClient.Update(ctx, backupEntrySecret)).To(Succeed())
 				})
 
-				It("should verify that BackupEntry becomes ready after modification of Secret", func() {
-					// wait for lastOperation's update time to be updated to give extension controller some time to observe
-					// event and start reconciliation
-					Expect(waitForBackupEntryToBeReady(ctx, testClient, log, backupEntry, backupEntry.Status.LastOperation.LastUpdateTime)).To(Succeed())
-				})
-
 				It("should verify that BackupEntry is reconciled after modification of Secret and has new time-in annotation", func() {
-					Expect(testClient.Get(ctx, backupEntryObjectKey, backupEntry)).To(Succeed())
+					Eventually(func(g Gomega) {
+						g.Expect(testClient.Get(ctx, backupEntryObjectKey, backupEntry)).To(Succeed())
+						g.Expect(backupEntry.Annotations[extensionsintegrationtest.AnnotationKeyTimeOut]).To(Equal(modificationTimeIn))
+					}).WithTimeout(pollTimeout).WithPolling(pollInterval).Should(Succeed())
+
+					Expect(waitForBackupEntryToBeReady(ctx, testClient, log, backupEntry)).To(Succeed())
 					verifyBackupEntry(backupEntry, 1, 1, modificationTimeIn, Equal(gardencorev1beta1.LastOperationTypeReconcile), lastOperationStateMatcher)
 				})
 			})
@@ -369,14 +368,13 @@ var _ = Describe("BackupEntry", func() {
 					Expect(testClient.Update(ctx, testNamespace)).To(Succeed())
 				})
 
-				It("should verify that BackupEntry becomes ready after modification of Namespace", func() {
-					// wait for lastOperation's update time to be updated to give extension controller some time to observe
-					// event and start reconciliation
-					Expect(waitForBackupEntryToBeReady(ctx, testClient, log, backupEntry, backupEntry.Status.LastOperation.LastUpdateTime)).To(Succeed())
-				})
-
 				It("should verify that BackupEntry is reconciled after modification of Namespace and has new time-in annotation", func() {
-					Expect(testClient.Get(ctx, backupEntryObjectKey, backupEntry)).To(Succeed())
+					Eventually(func(g Gomega) {
+						g.Expect(testClient.Get(ctx, backupEntryObjectKey, backupEntry)).To(Succeed())
+						g.Expect(backupEntry.Annotations[extensionsintegrationtest.AnnotationKeyTimeOut]).To(Equal(modificationTimeIn))
+					}).WithTimeout(pollTimeout).WithPolling(pollInterval).Should(Succeed())
+
+					Expect(waitForBackupEntryToBeReady(ctx, testClient, log, backupEntry)).To(Succeed())
 					verifyBackupEntry(backupEntry, 1, 1, modificationTimeIn, Equal(gardencorev1beta1.LastOperationTypeReconcile), lastOperationStateMatcher)
 				})
 			})
@@ -721,17 +719,12 @@ func patchBackupEntryObject(ctx context.Context, c client.Client, backupEntry *e
 	return c.Patch(ctx, backupEntry, patch)
 }
 
-func waitForBackupEntryToBeReady(ctx context.Context, c client.Client, log logr.Logger, backupEntry *extensionsv1alpha1.BackupEntry, minOperationUpdateTime ...metav1.Time) error {
-	healthFuncs := []health.Func{health.CheckExtensionObject}
-	if len(minOperationUpdateTime) > 0 {
-		healthFuncs = append(healthFuncs, health.ExtensionOperationHasBeenUpdatedSince(minOperationUpdateTime[0]))
-	}
-
+func waitForBackupEntryToBeReady(ctx context.Context, c client.Client, log logr.Logger, backupEntry *extensionsv1alpha1.BackupEntry) error {
 	return extensions.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
 		c,
 		log,
-		health.And(healthFuncs...),
+		health.CheckExtensionObject,
 		backupEntry,
 		extensionsv1alpha1.BackupEntryResource,
 		pollInterval,
