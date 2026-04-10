@@ -9,32 +9,34 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/client-go/kubernetes/scheme"
+	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	. "github.com/gardener/gardener/pkg/controllerutils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("utils", func() {
 	Describe("#TypedCreateOrUpdate", func() {
 		var (
-			ctx  context.Context
-			ctrl *gomock.Controller
-			c    *mockclient.MockClient
-			s    *runtime.Scheme
+			ctx context.Context
+
+			// fakeScheme is passed to the fake client — includes VPA so the client can store/retrieve VPA objects.
+			fakeScheme *runtime.Scheme
+			// scheme is passed to TypedCreateOrUpdate and may differ per context (e.g. VPA context excludes VPA
+			// to exercise the unstructured fallback path).
+			scheme *runtime.Scheme
 
 			name      string
 			namespace string
@@ -43,10 +45,12 @@ var _ = Describe("utils", func() {
 
 		BeforeEach(func() {
 			ctx = context.TODO()
-			s = scheme.Scheme
 
-			ctrl = gomock.NewController(GinkgoT())
-			c = mockclient.NewMockClient(ctrl)
+			fakeScheme = runtime.NewScheme()
+			Expect(k8sscheme.AddToScheme(fakeScheme)).To(Succeed())
+			Expect(vpaautoscalingv1.AddToScheme(fakeScheme)).To(Succeed())
+
+			scheme = fakeScheme
 
 			name = "foo"
 			namespace = "bar"
@@ -56,14 +60,9 @@ var _ = Describe("utils", func() {
 			obj.SetNamespace(namespace)
 		})
 
-		AfterEach(func() {
-			ctrl.Finish()
-		})
-
 		Context("kind registered in scheme (Deployment)", func() {
 			var (
-				deploymentGVK schema.GroupVersionKind
-
+				deploymentGVK                 schema.GroupVersionKind
 				currentDeployment             *appsv1.Deployment
 				currentDeploymentUnstructured *unstructured.Unstructured
 			)
@@ -83,103 +82,112 @@ var _ = Describe("utils", func() {
 				}
 
 				currentDeploymentUnstructured = &unstructured.Unstructured{}
-				Expect(s.Convert(currentDeployment, currentDeploymentUnstructured, nil)).To(Succeed(), "should be able to convert deployment to unstructured")
+				Expect(scheme.Convert(currentDeployment, currentDeploymentUnstructured, nil)).To(Succeed(), "should be able to convert deployment to unstructured")
 			})
 
 			It("should make a typed get request and correctly create the object", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).
-						Return(apierrors.NewNotFound(appsv1.Resource("deployments"), name)),
-					c.EXPECT().Create(ctx, obj),
-				)
+				typedGetCalled := false
+				c := fakeclient.NewClientBuilder().WithScheme(fakeScheme).WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, o client.Object, opts ...client.GetOption) error {
+						if _, ok := o.(*appsv1.Deployment); ok {
+							typedGetCalled = true
+						}
+						return cl.Get(ctx, key, o, opts...)
+					},
+				}).Build()
 
-				operationType, err := TypedCreateOrUpdate(ctx, c, s, obj, false, func() error {
+				operationType, err := TypedCreateOrUpdate(ctx, c, scheme, obj, false, func() error {
 					Expect(obj.Object["spec"]).To(BeNil(), "obj should not be filled, as the object does not exist yet")
 					return nil
 				})
 
 				Expect(operationType).To(Equal(controllerutil.OperationResultCreated))
 				Expect(err).NotTo(HaveOccurred())
+				Expect(typedGetCalled).To(BeTrue())
+				Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj)).To(Succeed())
 			})
 
 			It("should make a typed get request and skip update (no changes)", func() {
-				c.EXPECT().Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object, _ ...client.GetOption) error {
-						deploy, ok := o.(*appsv1.Deployment)
-						Expect(ok).To(BeTrue())
+				updateCalled := false
+				c := fakeclient.NewClientBuilder().WithScheme(fakeScheme).WithObjects(currentDeployment.DeepCopy()).WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(ctx context.Context, cl client.WithWatch, o client.Object, opts ...client.UpdateOption) error {
+						updateCalled = true
+						return cl.Update(ctx, o, opts...)
+					},
+				}).Build()
 
-						currentDeployment.DeepCopyInto(deploy)
-						return nil
-					})
+				Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, currentDeploymentUnstructured)).To(Succeed())
 
-				operationType, err := TypedCreateOrUpdate(ctx, c, s, obj, false, func() error {
+				operationType, err := TypedCreateOrUpdate(ctx, c, scheme, obj, false, func() error {
 					Expect(obj).To(DeepEqual(currentDeploymentUnstructured), "obj should be filled with the obj's current spec")
 					return nil
 				})
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(operationType).To(Equal(controllerutil.OperationResultNone))
+				Expect(updateCalled).To(BeFalse())
 			})
 
-			It("should make a typed get request and don't skip update (no changes but alwaysUpdate=false)", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).
-						DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object, _ ...client.GetOption) error {
-							deploy, ok := o.(*appsv1.Deployment)
-							Expect(ok).To(BeTrue())
+			It("should make a typed get request and don't skip update (no changes but alwaysUpdate=true)", func() {
+				updateCalled := false
+				c := fakeclient.NewClientBuilder().WithScheme(fakeScheme).WithObjects(currentDeployment.DeepCopy()).WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(ctx context.Context, cl client.WithWatch, o client.Object, opts ...client.UpdateOption) error {
+						updateCalled = true
+						return cl.Update(ctx, o, opts...)
+					},
+				}).Build()
 
-							currentDeployment.DeepCopyInto(deploy)
-							return nil
-						}),
-					c.EXPECT().Update(ctx, obj),
-				)
+				Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, currentDeploymentUnstructured)).To(Succeed())
 
-				operationType, err := TypedCreateOrUpdate(ctx, c, s, obj, true, func() error {
+				operationType, err := TypedCreateOrUpdate(ctx, c, scheme, obj, true, func() error {
 					Expect(obj).To(DeepEqual(currentDeploymentUnstructured), "obj should be filled with the obj's current spec")
 					return nil
 				})
 
 				Expect(operationType).To(Equal(controllerutil.OperationResultUpdated))
 				Expect(err).NotTo(HaveOccurred())
+				Expect(updateCalled).To(BeTrue())
 			})
 
 			It("should make a typed get request and correctly update the object", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).
-						DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object, _ ...client.GetOption) error {
-							deploy, ok := o.(*appsv1.Deployment)
-							Expect(ok).To(BeTrue())
+				updateCalled := false
+				c := fakeclient.NewClientBuilder().WithScheme(fakeScheme).WithObjects(currentDeployment.DeepCopy()).WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(ctx context.Context, cl client.WithWatch, o client.Object, opts ...client.UpdateOption) error {
+						updateCalled = true
+						return cl.Update(ctx, o, opts...)
+					},
+				}).Build()
 
-							currentDeployment.DeepCopyInto(deploy)
-							return nil
-						}),
-					c.EXPECT().Update(ctx, obj),
-				)
+				Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, currentDeploymentUnstructured)).To(Succeed())
 
-				operationType, err := TypedCreateOrUpdate(ctx, c, s, obj, false, func() error {
+				operationType, err := TypedCreateOrUpdate(ctx, c, scheme, obj, false, func() error {
 					Expect(obj).To(DeepEqual(currentDeploymentUnstructured), "obj should be filled with the obj's current spec")
-
-					// mutate object
-					obj.SetLabels(map[string]string{
-						"foo": "bar",
-					})
+					obj.SetLabels(map[string]string{"foo": "bar"})
 					return nil
 				})
 
 				Expect(operationType).To(Equal(controllerutil.OperationResultUpdated))
 				Expect(err).NotTo(HaveOccurred())
+				Expect(updateCalled).To(BeTrue())
+
+				updated := &appsv1.Deployment{}
+				Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, updated)).To(Succeed())
+				Expect(updated.Labels).To(HaveKeyWithValue("foo", "bar"))
 			})
 		})
 
-		Context("kind registered in scheme (VerticalPodAutoscaler)", func() {
+		Context("kind not registered in scheme (VerticalPodAutoscaler)", func() {
 			var (
-				vpaGVK schema.GroupVersionKind
-
+				vpaGVK                 schema.GroupVersionKind
 				currentVPA             *vpaautoscalingv1.VerticalPodAutoscaler
 				currentVPAUnstructured *unstructured.Unstructured
 			)
 
 			BeforeEach(func() {
+				// scheme intentionally excludes VPA to exercise the unstructured fallback path.
+				scheme = runtime.NewScheme()
+				Expect(k8sscheme.AddToScheme(scheme)).To(Succeed())
+
 				vpaGVK = vpaautoscalingv1.SchemeGroupVersion.WithKind("VerticalPodAutoscaler")
 				obj.SetGroupVersionKind(vpaGVK)
 
@@ -204,87 +212,98 @@ var _ = Describe("utils", func() {
 			})
 
 			It("should fallback to an unstructured get request and correctly create the object", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, gomock.AssignableToTypeOf(&unstructured.Unstructured{})).
-						Return(apierrors.NewNotFound(vpaautoscalingv1.Resource("verticalpodautoscalers"), name)),
-					c.EXPECT().Create(ctx, obj),
-				)
+				unstructuredGetCalled := false
+				createCalled := false
+				c := fakeclient.NewClientBuilder().WithScheme(fakeScheme).WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, o client.Object, opts ...client.GetOption) error {
+						if _, ok := o.(*unstructured.Unstructured); ok {
+							unstructuredGetCalled = true
+						}
+						return cl.Get(ctx, key, o, opts...)
+					},
+					Create: func(ctx context.Context, cl client.WithWatch, o client.Object, opts ...client.CreateOption) error {
+						createCalled = true
+						return cl.Create(ctx, o, opts...)
+					},
+				}).Build()
 
-				operationType, err := TypedCreateOrUpdate(ctx, c, s, obj, false, func() error {
+				operationType, err := TypedCreateOrUpdate(ctx, c, scheme, obj, false, func() error {
 					Expect(obj.Object["spec"]).To(BeNil(), "obj should not be filled, as the object does not exist yet")
 					return nil
 				})
 
 				Expect(operationType).To(Equal(controllerutil.OperationResultCreated))
 				Expect(err).NotTo(HaveOccurred())
+				Expect(unstructuredGetCalled).To(BeTrue())
+				Expect(createCalled).To(BeTrue())
 			})
 
 			It("should fallback to an unstructured get request and skip update (no changes)", func() {
-				c.EXPECT().Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, gomock.AssignableToTypeOf(&unstructured.Unstructured{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object, _ ...client.GetOption) error {
-						vpa, ok := o.(*unstructured.Unstructured)
-						Expect(ok).To(BeTrue())
+				updateCalled := false
+				c := fakeclient.NewClientBuilder().WithScheme(fakeScheme).WithObjects(currentVPA.DeepCopy()).WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(ctx context.Context, cl client.WithWatch, o client.Object, opts ...client.UpdateOption) error {
+						updateCalled = true
+						return cl.Update(ctx, o, opts...)
+					},
+				}).Build()
 
-						currentVPAUnstructured.DeepCopyInto(vpa)
-						return nil
-					})
+				Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, currentVPAUnstructured)).To(Succeed())
 
-				operationType, err := TypedCreateOrUpdate(ctx, c, s, obj, false, func() error {
+				operationType, err := TypedCreateOrUpdate(ctx, c, scheme, obj, false, func() error {
 					Expect(obj).To(DeepEqual(currentVPAUnstructured), "obj should be filled with the obj's current spec")
 					return nil
 				})
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(operationType).To(Equal(controllerutil.OperationResultNone))
+				Expect(updateCalled).To(BeFalse())
 			})
 
 			It("should fallback to an unstructured get request but don't skip update (no changes but alwaysUpdate=true)", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, gomock.AssignableToTypeOf(&unstructured.Unstructured{})).
-						DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object, _ ...client.GetOption) error {
-							vpa, ok := o.(*unstructured.Unstructured)
-							Expect(ok).To(BeTrue())
+				updateCalled := false
+				c := fakeclient.NewClientBuilder().WithScheme(fakeScheme).WithObjects(currentVPA.DeepCopy()).WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(ctx context.Context, cl client.WithWatch, o client.Object, opts ...client.UpdateOption) error {
+						updateCalled = true
+						return cl.Update(ctx, o, opts...)
+					},
+				}).Build()
 
-							currentVPAUnstructured.DeepCopyInto(vpa)
-							return nil
-						}),
-					c.EXPECT().Update(ctx, obj),
-				)
+				Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, currentVPAUnstructured)).To(Succeed())
 
-				operationType, err := TypedCreateOrUpdate(ctx, c, s, obj, true, func() error {
+				operationType, err := TypedCreateOrUpdate(ctx, c, scheme, obj, true, func() error {
 					Expect(obj).To(DeepEqual(currentVPAUnstructured), "obj should be filled with the obj's current spec")
 					return nil
 				})
 
 				Expect(operationType).To(Equal(controllerutil.OperationResultUpdated))
 				Expect(err).NotTo(HaveOccurred())
+				Expect(updateCalled).To(BeTrue())
 			})
 
 			It("should fallback to an unstructured get request and correctly update the object", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, gomock.AssignableToTypeOf(&unstructured.Unstructured{})).
-						DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object, _ ...client.GetOption) error {
-							vpa, ok := o.(*unstructured.Unstructured)
-							Expect(ok).To(BeTrue())
+				updateCalled := false
+				c := fakeclient.NewClientBuilder().WithScheme(fakeScheme).WithObjects(currentVPA.DeepCopy()).WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(ctx context.Context, cl client.WithWatch, o client.Object, opts ...client.UpdateOption) error {
+						updateCalled = true
+						return cl.Update(ctx, o, opts...)
+					},
+				}).Build()
 
-							currentVPAUnstructured.DeepCopyInto(vpa)
-							return nil
-						}),
-					c.EXPECT().Update(ctx, obj),
-				)
+				Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, currentVPAUnstructured)).To(Succeed())
 
-				operationType, err := TypedCreateOrUpdate(ctx, c, s, obj, false, func() error {
+				operationType, err := TypedCreateOrUpdate(ctx, c, scheme, obj, false, func() error {
 					Expect(obj).To(DeepEqual(currentVPAUnstructured), "obj should be filled with the obj's current spec")
-
-					// mutate object
-					obj.SetLabels(map[string]string{
-						"foo": "bar",
-					})
+					obj.SetLabels(map[string]string{"foo": "bar"})
 					return nil
 				})
 
 				Expect(operationType).To(Equal(controllerutil.OperationResultUpdated))
 				Expect(err).NotTo(HaveOccurred())
+				Expect(updateCalled).To(BeTrue())
+
+				updated := &vpaautoscalingv1.VerticalPodAutoscaler{}
+				Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, updated)).To(Succeed())
+				Expect(updated.Labels).To(HaveKeyWithValue("foo", "bar"))
 			})
 		})
 	})
