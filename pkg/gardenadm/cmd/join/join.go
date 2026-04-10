@@ -262,6 +262,9 @@ func run(ctx context.Context, opts *Options) error {
 					func(ctx context.Context) error {
 						return waitForNodeReadiness(ctx, log, b.ShootClientSet.Client(), node)
 					},
+					func(ctx context.Context) error {
+						return waitForCriticalComponentsTaintToBeRemoved(ctx, log, b.ShootClientSet.Client(), node)
+					},
 				)(ctx)
 			},
 			Dependencies: flow.NewTaskIDs(applyOperatingSystemConfig),
@@ -442,6 +445,26 @@ func waitForNodeReadiness(ctx context.Context, log logr.Logger, c client.Client,
 
 		if err := health.CheckNode(node); err != nil {
 			return retry.MinorError(err)
+		}
+
+		return retry.Ok()
+	})
+}
+
+func waitForCriticalComponentsTaintToBeRemoved(ctx context.Context, log logr.Logger, c client.Client, node *corev1.Node) error {
+	log.Info("Waiting for node-critical components to be ready")
+	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+
+	return retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (done bool, err error) {
+		if err := c.Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
+			return retry.SevereError(fmt.Errorf("failed to get node %s: %w", node.Name, err))
+		}
+
+		if slices.ContainsFunc(node.Spec.Taints, func(taint corev1.Taint) bool {
+			return taint.Key == v1beta1constants.TaintNodeCriticalComponentsNotReady
+		}) {
+			return retry.MinorError(fmt.Errorf("taint %q is still present on node %q", v1beta1constants.TaintNodeCriticalComponentsNotReady, node.Name))
 		}
 
 		return retry.Ok()
