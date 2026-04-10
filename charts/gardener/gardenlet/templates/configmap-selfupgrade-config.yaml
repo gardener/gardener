@@ -23,6 +23,14 @@ data:
         helm:
           ociRepository:
 {{ required ".Values.selfUpgrade.deployment.helm.ociRepository is required" .Values.selfUpgrade.deployment.helm.ociRepository | toYaml | indent 12 }}
+        {{- if .Values.imageVectorOverwrite }}
+        imageVectorOverwrite: |
+          {{- .Values.imageVectorOverwrite | nindent 10 }}
+        {{- end }}
+        {{- if .Values.componentImageVectorOverwrite }}
+        componentImageVectorOverwrite: |
+          {{- .Values.componentImageVectorOverwrite | nindent 10 }}
+        {{- end }}
         replicaCount: {{ .Values.replicaCount }}
         {{- if .Values.revisionHistoryLimit }}
         revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}

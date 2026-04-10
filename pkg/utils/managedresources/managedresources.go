@@ -437,13 +437,18 @@ func checkConfigurationError(err error) []gardencorev1beta1.ErrorCode {
 }
 
 // CheckIfManagedResourcesExist checks if some ManagedResources of the given class still exist. If yes it returns true.
-func CheckIfManagedResourcesExist(ctx context.Context, c client.Client, class *string, excludeNames ...string) (bool, error) {
+func CheckIfManagedResourcesExist(ctx context.Context, c client.Client, class *string, excludeNames, excludeNamespaces []string) (bool, error) {
 	managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 	if err := c.List(ctx, managedResourceList); err != nil {
 		return false, err
 	}
 
+	excludeNamespaceSet := sets.New(excludeNamespaces...)
+
 	for _, managedResource := range managedResourceList.Items {
+		if excludeNamespaceSet.Has(managedResource.Namespace) {
+			continue
+		}
 		if ptr.Equal(managedResource.Spec.Class, class) && !sets.New(excludeNames...).Has(managedResource.Name) {
 			return true, nil
 		}

@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -79,6 +80,13 @@ func run(ctx context.Context, opts *Options) error {
 	podNetworkAvailable, err := b.IsPodNetworkAvailable(ctx)
 	if err != nil {
 		return fmt.Errorf("failed checking whether pod network is already available: %w", err)
+	}
+
+	// If the self-hosted shoot is also the garden runtime cluster, then gardener-operator is taking over
+	// responsibility of some components (e.g., etcd-druid). Detect this by checking whether a Garden resource exists.
+	shootIsGarden, err := gardenletutils.ClusterIsGarden(ctx, b.SeedClientSet.Client())
+	if err != nil {
+		return fmt.Errorf("failed checking whether shoot is garden: %w", err)
 	}
 
 	var (
@@ -139,6 +147,10 @@ func run(ctx context.Context, opts *Options) error {
 				b.Components.RuntimeResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
 				b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
 
+				if shootIsGarden {
+					return b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx)
+				}
+
 				return flow.Parallel(
 					b.Components.RuntimeResourceManager.Deploy,
 					b.Shoot.Components.ControlPlane.ResourceManager.Deploy,
@@ -148,10 +160,16 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		waitUntilGardenerResourceManagerReady = g.Add(flow.Task{
 			Name: "Waiting until gardener-resource-manager reports readiness",
-			Fn: flow.Parallel(
-				b.Components.RuntimeResourceManager.Wait,
-				b.Shoot.Components.ControlPlane.ResourceManager.Wait,
-			),
+			Fn: func(ctx context.Context) error {
+				if shootIsGarden {
+					return b.Shoot.Components.ControlPlane.ResourceManager.Wait(ctx)
+				}
+
+				return flow.Parallel(
+					b.Components.RuntimeResourceManager.Wait,
+					b.Shoot.Components.ControlPlane.ResourceManager.Wait,
+				)(ctx)
+			},
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
@@ -238,6 +256,10 @@ func run(ctx context.Context, opts *Options) error {
 				b.Components.RuntimeResourceManager.SetBootstrapControlPlaneNode(false)
 				b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(false)
 
+				if shootIsGarden {
+					return b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx)
+				}
+
 				return flow.Parallel(
 					b.Components.RuntimeResourceManager.Deploy,
 					b.Shoot.Components.ControlPlane.ResourceManager.Deploy,
@@ -248,10 +270,16 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		waitUntilGardenerResourceManagerInPodNetworkReady = g.Add(flow.Task{
 			Name: "Waiting until gardener-resource-manager (in pod network) reports readiness",
-			Fn: flow.Parallel(
-				b.Components.RuntimeResourceManager.Wait,
-				b.Shoot.Components.ControlPlane.ResourceManager.Wait,
-			),
+			Fn: func(ctx context.Context) error {
+				if shootIsGarden {
+					return b.Shoot.Components.ControlPlane.ResourceManager.Wait(ctx)
+				}
+
+				return flow.Parallel(
+					b.Components.RuntimeResourceManager.Wait,
+					b.Shoot.Components.ControlPlane.ResourceManager.Wait,
+				)(ctx)
+			},
 			SkipIf:       podNetworkAvailable,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManagerIntoPodNetwork),
 		})
@@ -310,7 +338,7 @@ func run(ctx context.Context, opts *Options) error {
 		deployEtcdDruid = g.Add(flow.Task{
 			Name:         "Deploying ETCD Druid",
 			Fn:           b.DeployEtcdDruid,
-			SkipIf:       opts.UseBootstrapEtcd,
+			SkipIf:       opts.UseBootstrapEtcd || shootIsGarden,
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})
 		deployEtcds = g.Add(flow.Task{

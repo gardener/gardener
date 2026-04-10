@@ -17,15 +17,13 @@ trap "
   ( export_artifacts_host_services; export_artifacts_infra )
   ( export KUBECONFIG=$PWD/dev-setup/kubeconfigs/runtime/kubeconfig; export_artifacts 'gardener-operator-local'; export_resource_yamls_for garden )
   ( export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig; export cluster_name='virtual-garden'; export_resource_yamls_for seeds shoots )
-  ( make gardenadm-down SCENARIO=connect )
+  ( make gardenadm-down SCENARIO=connect-kind )
   ( make gardenadm-down SCENARIO=unmanaged-infra )
   ( make kind-single-node-down )
 " EXIT
 
 make kind-single-node-up
-
 make gardenadm-up SCENARIO=unmanaged-infra
-make test-e2e-local-gardenadm-unmanaged-infra-initjoin
+make gardenadm-up SCENARIO=connect-kind
 
-make gardenadm-up SCENARIO=connect
-make test-e2e-local-gardenadm-unmanaged-infra-connect
+make test-e2e-local-gardenadm-unmanaged-infra

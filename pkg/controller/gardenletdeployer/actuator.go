@@ -689,7 +689,7 @@ func PrepareGardenletChartValues(
 	}
 
 	// Set network policy label
-	isGarden, err := gardenletutils.SeedIsGarden(ctx, targetClusterClient)
+	isGarden, err := gardenletutils.ClusterIsGarden(ctx, targetClusterClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check if seed is garden: %w", err)
 	}
