@@ -11,15 +11,15 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/webhook/authorizer"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("WithSelectors", func() {
@@ -28,8 +28,7 @@ var _ = Describe("WithSelectors", func() {
 			ctx = context.Background()
 			log = logr.Discard()
 
-			ctrl          *gomock.Controller
-			mockClient    *mockclient.MockClient
+			fakeClient    client.Client
 			fakeClientSet kubernetes.Interface
 			fakeClock     *testclock.FakeClock
 
@@ -37,10 +36,6 @@ var _ = Describe("WithSelectors", func() {
 		)
 
 		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
-			DeferCleanup(func() { ctrl.Finish() })
-
-			mockClient = mockclient.NewMockClient(ctrl)
 			fakeClock = testclock.NewFakeClock(time.Now())
 		})
 
@@ -52,7 +47,7 @@ var _ = Describe("WithSelectors", func() {
 			When("Kubernetes version is at least 1.34", func() {
 				BeforeEach(func() {
 					fakeClientSet = fakekubernetes.NewClientSetBuilder().
-						WithClient(mockClient).
+						WithClient(fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()).
 						WithVersion("1.34.0").
 						Build()
 					checker = NewWithSelectorsChecker(ctx, log, fakeClientSet, fakeClock)
@@ -65,7 +60,18 @@ var _ = Describe("WithSelectors", func() {
 				})
 
 				It("should never query the API server to check if the feature gate is turned on", func() {
-					mockClient.EXPECT().Create(gomock.Any(), gomock.Any()).Times(0)
+					createCalls := 0
+					interceptedClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
+						Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+							createCalls++
+							return c.Create(ctx, obj, opts...)
+						},
+					}).Build()
+					fakeClientSet = fakekubernetes.NewClientSetBuilder().
+						WithClient(interceptedClient).
+						WithVersion("1.34.0").
+						Build()
+					checker = NewWithSelectorsChecker(ctx, log, fakeClientSet, fakeClock)
 
 					_, _ = checker.IsPossible()
 					fakeClock.Step(5 * time.Minute)
@@ -74,23 +80,26 @@ var _ = Describe("WithSelectors", func() {
 					_, _ = checker.IsPossible()
 					fakeClock.Step(5 * time.Minute)
 					_, _ = checker.IsPossible()
+
+					Expect(createCalls).To(Equal(0))
 				})
 			})
 
 			When("Kubernetes version is between 1.31 and 1.33", func() {
 				BeforeEach(func() {
+					fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 					fakeClientSet = fakekubernetes.NewClientSetBuilder().
-						WithClient(mockClient).
+						WithClient(fakeClient).
 						WithVersion("1.33.0").
 						Build()
 					checker = NewWithSelectorsChecker(ctx, log, fakeClientSet, fakeClock)
 				})
 
 				It("should return true when the feature is turned on", func() {
-					mockClient.EXPECT().Create(gomock.Any(), gomock.AssignableToTypeOf(&authorizationv1.SubjectAccessReview{}), gomock.Any()).Do(func(_ context.Context, _ client.Object, _ ...client.CreateOption) {
-						// we do not modify the .spec.resourceAttributes.labelSelector here, hence, it is part of the
-						// returned object --> feature gate is turned on
-					})
+					// we do not modify the .spec.resourceAttributes.labelSelector here, hence, it is part of the
+					// returned object --> feature gate is turned on
+					checker = NewWithSelectorsChecker(ctx, log, fakeClientSet, fakeClock)
+					fakeClock.Step(time.Second)
 
 					possible, err := checker.IsPossible()
 					Expect(err).NotTo(HaveOccurred())
@@ -98,11 +107,20 @@ var _ = Describe("WithSelectors", func() {
 				})
 
 				It("should return false when the feature gate is turned off", func() {
-					mockClient.EXPECT().Create(gomock.Any(), gomock.AssignableToTypeOf(&authorizationv1.SubjectAccessReview{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
-						// we remove the .spec.resourceAttributes.labelSelector here, hence, it is not part of the
-						// returned object --> feature gate is turned off
-						obj.(*authorizationv1.SubjectAccessReview).Spec.ResourceAttributes.LabelSelector = nil
-					})
+					interceptedClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
+						Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+							// we remove the .spec.resourceAttributes.labelSelector here, hence, it is not part of the
+							// returned object --> feature gate is turned off
+							obj.(*authorizationv1.SubjectAccessReview).Spec.ResourceAttributes.LabelSelector = nil
+							return c.Create(ctx, obj, opts...)
+						},
+					}).Build()
+					fakeClientSet = fakekubernetes.NewClientSetBuilder().
+						WithClient(interceptedClient).
+						WithVersion("1.33.0").
+						Build()
+					checker = NewWithSelectorsChecker(ctx, log, fakeClientSet, fakeClock)
+					fakeClock.Step(time.Second)
 
 					possible, err := checker.IsPossible()
 					Expect(err).NotTo(HaveOccurred())
@@ -110,23 +128,53 @@ var _ = Describe("WithSelectors", func() {
 				})
 
 				It("should cache the result for 10 minutes", func() {
-					mockClient.EXPECT().Create(gomock.Any(), gomock.AssignableToTypeOf(&authorizationv1.SubjectAccessReview{}), gomock.Any()).Times(1)
+					createCalls := 0
+
+					interceptedClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
+						Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+							createCalls++
+							return c.Create(ctx, obj, opts...)
+						},
+					}).Build()
+					fakeClientSet = fakekubernetes.NewClientSetBuilder().
+						WithClient(interceptedClient).
+						WithVersion("1.33.0").
+						Build()
+					checker = NewWithSelectorsChecker(ctx, log, fakeClientSet, fakeClock)
+					fakeClock.Step(time.Second)
 
 					_, _ = checker.IsPossible()
 					fakeClock.Step(5 * time.Minute)
 					_, _ = checker.IsPossible()
 					fakeClock.Step(5 * time.Minute)
 					_, _ = checker.IsPossible()
+
+					Expect(createCalls).To(Equal(1))
 				})
 
 				It("should re-check the feature gate after 10 minutes", func() {
-					mockClient.EXPECT().Create(gomock.Any(), gomock.AssignableToTypeOf(&authorizationv1.SubjectAccessReview{}), gomock.Any()).Times(2)
+					createCalls := 0
+
+					interceptedClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
+						Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+							createCalls++
+							return c.Create(ctx, obj, opts...)
+						},
+					}).Build()
+					fakeClientSet = fakekubernetes.NewClientSetBuilder().
+						WithClient(interceptedClient).
+						WithVersion("1.33.0").
+						Build()
+					checker = NewWithSelectorsChecker(ctx, log, fakeClientSet, fakeClock)
+					fakeClock.Step(time.Second)
 
 					_, _ = checker.IsPossible()
 					fakeClock.Step(5 * time.Minute)
 					_, _ = checker.IsPossible()
 					fakeClock.Step(5*time.Minute + time.Second)
 					_, _ = checker.IsPossible()
+
+					Expect(createCalls).To(Equal(2))
 				})
 			})
 		})

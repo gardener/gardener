@@ -12,13 +12,12 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
-	"go.uber.org/mock/gomock"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -26,7 +25,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("handler", func() {
@@ -36,22 +34,17 @@ var _ = Describe("handler", func() {
 
 		handler *Handler
 
-		ctrl       *gomock.Controller
-		mockClient *mockclient.MockClient
-		mockReader *mockclient.MockReader
+		fakeClient client.Client
 
-		namespaceName     = "foo"
-		projectName       = "bar"
-		namespace         *corev1.Namespace
-		shootMetadataList *metav1.PartialObjectMetadataList
+		namespaceName = "foo"
+		projectName   = "bar"
+		namespace     *corev1.Namespace
 	)
 
 	BeforeEach(func() {
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 
-		ctrl = gomock.NewController(GinkgoT())
-		mockClient = mockclient.NewMockClient(ctrl)
-		mockReader = mockclient.NewMockReader(ctrl)
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 
 		namespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -60,14 +53,7 @@ var _ = Describe("handler", func() {
 			},
 		}
 
-		shootMetadataList = &metav1.PartialObjectMetadataList{}
-		shootMetadataList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
-
-		handler = &Handler{Logger: log, APIReader: mockReader, Client: mockClient}
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
+		handler = &Handler{Logger: log, APIReader: fakeClient, Client: fakeClient}
 	})
 
 	test := func(matcher gomegatypes.GomegaMatcher) {
@@ -78,67 +64,82 @@ var _ = Describe("handler", func() {
 	}
 
 	It("should pass because no projects available", func() {
-		mockClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespaceName}, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
-			namespace.DeepCopyInto(obj)
-			return nil
-		})
-		mockClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: projectName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+		Expect(fakeClient.Create(ctx, namespace)).To(Succeed())
+		// Project not created → Get returns NotFound
 
 		test(Succeed())
 	})
 
 	It("should pass because namespace is not project related", func() {
-		mockClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespaceName}, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
-			(&corev1.Namespace{}).DeepCopyInto(obj)
-			return nil
-		})
+		Expect(fakeClient.Create(ctx, &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{Name: namespaceName},
+		})).To(Succeed())
 
 		test(Succeed())
 	})
 
 	It("should fail because get namespace fails", func() {
-		mockClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespaceName}, gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(errors.New("fake"))
+		errClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
+			Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				if _, ok := obj.(*corev1.Namespace); ok {
+					return errors.New("fake")
+				}
+				return c.Get(ctx, key, obj, opts...)
+			},
+		}).Build()
+		handler.Client = errClient
+		handler.APIReader = errClient
 
 		test(MatchError(ContainSubstring("fake")))
 	})
 
 	It("should fail because getting the projects fails", func() {
-		mockClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespaceName}, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
-			namespace.DeepCopyInto(obj)
-			return nil
-		})
-		mockClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: projectName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).Return(errors.New("fake"))
+		errClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).
+			WithObjects(namespace).
+			WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if _, ok := obj.(*gardencorev1beta1.Project); ok {
+						return errors.New("fake")
+					}
+					return c.Get(ctx, key, obj, opts...)
+				},
+			}).Build()
+		handler.Client = errClient
+		handler.APIReader = errClient
 
 		test(MatchError(ContainSubstring("fake")))
 	})
 
 	It("should pass because namespace is already gone", func() {
-		mockClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespaceName}, gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+		// Namespace not created → Get returns NotFound
 
 		test(Succeed())
 	})
 
 	Context("related project available", func() {
-		var relatedProject gardencorev1beta1.Project
-
 		It("should pass because namespace is already marked for deletion", func() {
-			mockClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespaceName}, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
-				now := metav1.Now()
-				namespace.SetDeletionTimestamp(&now)
-				namespace.DeepCopyInto(obj)
-				return nil
-			})
-			mockClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: projectName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
+			now := metav1.Now()
+			ns := namespace.DeepCopy()
+			ns.Finalizers = []string{"kubernetes"}
+			ns.SetDeletionTimestamp(&now)
+			project := &gardencorev1beta1.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: projectName},
+			}
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).
+				WithObjects(ns, project).Build()
+			handler.Client = fakeClient
+			handler.APIReader = fakeClient
 
 			test(Succeed())
 		})
 
 		It("should forbid namespace deletion because project is not marked for deletion", func() {
-			mockClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespaceName}, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
-				namespace.DeepCopyInto(obj)
-				return nil
-			})
-			mockClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: projectName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
+			Expect(fakeClient.Create(ctx, namespace)).To(Succeed())
+
+			project := &gardencorev1beta1.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: projectName},
+			}
+			Expect(fakeClient.Create(ctx, project)).To(Succeed())
 
 			test(MatchError(ContainSubstring("direct deletion of namespace")))
 		})
@@ -146,40 +147,54 @@ var _ = Describe("handler", func() {
 		Context("related project marked for deletion ", func() {
 			BeforeEach(func() {
 				now := metav1.Now()
-				relatedProject.SetDeletionTimestamp(&now)
-
-				mockClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespaceName}, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
-					namespace.DeepCopyInto(obj)
-					return nil
-				})
-				mockClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: projectName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project, _ ...client.GetOption) error {
-					relatedProject.DeepCopyInto(obj)
-					return nil
-				})
-				mockClient.EXPECT().Scheme().Return(kubernetes.GardenScheme)
+				project := &gardencorev1beta1.Project{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              projectName,
+						Finalizers:        []string{"kubernetes"},
+						DeletionTimestamp: &now,
+					},
+				}
+				fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).
+					WithObjects(namespace, project).Build()
+				handler.Client = fakeClient
+				handler.APIReader = fakeClient
 			})
 
 			It("should fail because listing shoots fails", func() {
-				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(_ context.Context, _ *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
-					return errors.New("fake")
-				})
+				now := metav1.Now()
+				project := &gardencorev1beta1.Project{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              projectName,
+						Finalizers:        []string{"kubernetes"},
+						DeletionTimestamp: &now,
+					},
+				}
+				errClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).
+					WithObjects(namespace, project).
+					WithInterceptorFuncs(interceptor.Funcs{
+						List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+							if pml, ok := list.(*metav1.PartialObjectMetadataList); ok && pml.GetObjectKind().GroupVersionKind() == gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList") {
+								return errors.New("fake")
+							}
+
+							return c.List(ctx, list, opts...)
+						},
+					}).Build()
+				handler.Client = errClient
+				handler.APIReader = errClient
 
 				test(MatchError(ContainSubstring("fake")))
 			})
 
 			It("should pass because namespace is does not contain any shoots", func() {
-				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(_ context.Context, _ *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
-					return nil
-				})
-
 				test(Succeed())
 			})
 
 			It("should forbid namespace deletion because it still contain shoots", func() {
-				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
-					list.Items = []metav1.PartialObjectMetadata{{ObjectMeta: metav1.ObjectMeta{Name: "shoot1", Namespace: namespaceName}}}
-					return nil
-				})
+				existingShoot := &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{Name: "shoot1", Namespace: namespaceName},
+				}
+				Expect(fakeClient.Create(ctx, existingShoot)).To(Succeed())
 
 				test(MatchError(ContainSubstring("still contains Shoots")))
 			})

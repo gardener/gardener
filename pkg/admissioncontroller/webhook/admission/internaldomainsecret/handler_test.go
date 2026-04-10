@@ -12,12 +12,13 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -28,23 +29,20 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("handler", func() {
 	var (
-		ctrl       *gomock.Controller
-		mockReader *mockclient.MockReader
-
 		ctx     = context.TODO()
 		fakeErr = errors.New("fake err")
 		log     logr.Logger
 		handler *Handler
 
-		secret            *corev1.Secret
-		shootMetadataList *metav1.PartialObjectMetadataList
-		warning           admission.Warnings
-		err               error
+		fakeClient client.Client
+
+		secret  *corev1.Secret
+		warning admission.Warnings
+		err     error
 
 		resourceName         = "foo"
 		regularNamespaceName = "regular-namespace"
@@ -54,12 +52,20 @@ var _ = Describe("handler", func() {
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		mockReader = mockclient.NewMockReader(ctrl)
-
 		ctx = admission.NewContextWithRequest(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Name: resourceName}})
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
-		handler = &Handler{Logger: log, APIReader: mockReader, Scheme: kubernetes.GardenScheme}
+
+		fakeClient = fakeclient.NewClientBuilder().
+			WithScheme(kubernetes.GardenScheme).
+			WithIndex(&gardencorev1beta1.Shoot{}, gardencore.ShootSeedName, func(obj client.Object) []string {
+				shoot, ok := obj.(*gardencorev1beta1.Shoot)
+				if !ok || shoot.Spec.SeedName == nil {
+					return nil
+				}
+				return []string{*shoot.Spec.SeedName}
+			}).
+			Build()
+		handler = &Handler{Logger: log, APIReader: fakeClient, Scheme: kubernetes.GardenScheme}
 
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -74,15 +80,9 @@ var _ = Describe("handler", func() {
 				},
 			},
 		}
-		shootMetadataList = &metav1.PartialObjectMetadataList{}
-		shootMetadataList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 
 		seedName = "aws"
 		seedNamespace = gardenerutils.ComputeGardenNamespace(seedName)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
 	})
 
 	Context("ignored requests", func() {
@@ -105,13 +105,15 @@ var _ = Describe("handler", func() {
 
 	Context("create", func() {
 		It("should fail because the check for other internal domain secrets failed", func() {
-			mockReader.EXPECT().List(
-				gomock.Any(),
-				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
-				client.InNamespace(gardenNamespaceName),
-				client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
-				client.Limit(1),
-			).Return(fakeErr)
+			errClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
+				List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+					if pml, ok := list.(*metav1.PartialObjectMetadataList); ok && pml.GetObjectKind().GroupVersionKind() == corev1.SchemeGroupVersion.WithKind("SecretList") {
+						return fakeErr
+					}
+					return c.List(ctx, list, opts...)
+				},
+			}).Build()
+			handler.APIReader = errClient
 
 			warning, err = handler.ValidateCreate(ctx, secret)
 			Expect(warning).To(BeNil())
@@ -123,16 +125,14 @@ var _ = Describe("handler", func() {
 		})
 
 		It("should fail because another internal domain secret exists in the garden namespace", func() {
-			mockReader.EXPECT().List(
-				gomock.Any(),
-				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
-				client.InNamespace(gardenNamespaceName),
-				client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
-				client.Limit(1),
-			).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
-				(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list.(*metav1.PartialObjectMetadataList))
-				return nil
-			})
+			existingSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "other-internal-domain-secret",
+					Namespace: gardenNamespaceName,
+					Labels:    map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
+				},
+			}
+			Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 
 			warning, err = handler.ValidateCreate(ctx, secret)
 			Expect(warning).To(BeNil())
@@ -140,16 +140,14 @@ var _ = Describe("handler", func() {
 		})
 
 		It("should fail because another internal domain secret exists in the same seed namespace", func() {
-			mockReader.EXPECT().List(
-				gomock.Any(),
-				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
-				client.InNamespace(seedNamespace),
-				client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
-				client.Limit(1),
-			).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
-				(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list.(*metav1.PartialObjectMetadataList))
-				return nil
-			})
+			existingSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "other-internal-domain-secret",
+					Namespace: seedNamespace,
+					Labels:    map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
+				},
+			}
+			Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 
 			secret.Namespace = seedNamespace
 			warning, err = handler.ValidateCreate(ctx, secret)
@@ -158,14 +156,6 @@ var _ = Describe("handler", func() {
 		})
 
 		It("should fail because the secret misses domain info", func() {
-			mockReader.EXPECT().List(
-				gomock.Any(),
-				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
-				client.InNamespace(gardenNamespaceName),
-				client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
-				client.Limit(1),
-			)
-
 			secret.Annotations = nil
 			warning, err = handler.ValidateCreate(ctx, secret)
 			Expect(warning).To(BeNil())
@@ -173,14 +163,6 @@ var _ = Describe("handler", func() {
 		})
 
 		It("should pass because no other internal domain secret exists", func() {
-			mockReader.EXPECT().List(
-				gomock.Any(),
-				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
-				client.InNamespace(gardenNamespaceName),
-				client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
-				client.Limit(1),
-			)
-
 			warning, err = handler.ValidateCreate(ctx, secret)
 			Expect(warning).To(BeNil())
 			Expect(err).To(Succeed())
@@ -197,13 +179,15 @@ var _ = Describe("handler", func() {
 			})
 
 			It("should fail because the check for other internal domain secrets failed", func() {
-				mockReader.EXPECT().List(
-					gomock.Any(),
-					gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
-					client.InNamespace(gardenNamespaceName),
-					client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
-					client.Limit(1),
-				).Return(fakeErr)
+				errClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
+					List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+						if pml, ok := list.(*metav1.PartialObjectMetadataList); ok && pml.GetObjectKind().GroupVersionKind() == corev1.SchemeGroupVersion.WithKind("SecretList") {
+							return fakeErr
+						}
+						return c.List(ctx, list, opts...)
+					},
+				}).Build()
+				handler.APIReader = errClient
 
 				warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
 				Expect(warning).To(BeNil())
@@ -215,16 +199,14 @@ var _ = Describe("handler", func() {
 			})
 
 			It("should fail because another internal domain secret exists in the garden namespace", func() {
-				mockReader.EXPECT().List(
-					gomock.Any(),
-					gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
-					client.InNamespace(gardenNamespaceName),
-					client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
-					client.Limit(1),
-				).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
-					(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list.(*metav1.PartialObjectMetadataList))
-					return nil
-				})
+				existingSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "other-internal-domain-secret",
+						Namespace: gardenNamespaceName,
+						Labels:    map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
+					},
+				}
+				Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 
 				warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
 				Expect(warning).To(BeNil())
@@ -249,11 +231,15 @@ var _ = Describe("handler", func() {
 		})
 
 		It("should forbid because the domain is changed but shoot listing failed", func() {
-			mockReader.EXPECT().List(
-				gomock.Any(),
-				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
-				client.Limit(1),
-			).Return(fakeErr)
+			errClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
+				List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+					if pml, ok := list.(*metav1.PartialObjectMetadataList); ok && pml.GetObjectKind().GroupVersionKind() == gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList") {
+						return fakeErr
+					}
+					return c.List(ctx, list, opts...)
+				},
+			}).Build()
+			handler.APIReader = errClient
 
 			oldSecret := secret.DeepCopy()
 			secret.Annotations["dns.gardener.cloud/domain"] = "foobar"
@@ -268,14 +254,10 @@ var _ = Describe("handler", func() {
 		})
 
 		It("should forbid because the global domain is changed but shoots exist", func() {
-			mockReader.EXPECT().List(
-				gomock.Any(),
-				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
-				client.Limit(1),
-			).DoAndReturn(func(_ context.Context, list client.ObjectList, _ client.ListOption) error {
-				(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list.(*metav1.PartialObjectMetadataList))
-				return nil
-			})
+			existingShoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{Name: "shoot1", Namespace: "garden-foo"},
+			}
+			Expect(fakeClient.Create(ctx, existingShoot)).To(Succeed())
 
 			oldSecret := secret.DeepCopy()
 			secret.Annotations["dns.gardener.cloud/domain"] = "foobar"
@@ -285,15 +267,13 @@ var _ = Describe("handler", func() {
 		})
 
 		It("should forbid because the domain in seed namespace is changed but shoots using the seed exist", func() {
-			mockReader.EXPECT().List(
-				gomock.Any(),
-				gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}),
-				client.MatchingFields{gardencore.ShootSeedName: seedName},
-				client.Limit(1),
-			).DoAndReturn(func(_ context.Context, shoots *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-				shoots.Items = []gardencorev1beta1.Shoot{{}}
-				return nil
-			})
+			existingShoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{Name: "shoot1", Namespace: "garden-foo"},
+				Spec: gardencorev1beta1.ShootSpec{
+					SeedName: &seedName,
+				},
+			}
+			Expect(fakeClient.Create(ctx, existingShoot)).To(Succeed())
 
 			secret.Namespace = seedNamespace
 			oldSecret := secret.DeepCopy()
@@ -304,12 +284,6 @@ var _ = Describe("handler", func() {
 		})
 
 		It("should allow because the domain is changed but no shoots exist", func() {
-			mockReader.EXPECT().List(
-				gomock.Any(),
-				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
-				client.Limit(1),
-			)
-
 			oldSecret := secret.DeepCopy()
 			secret.Annotations["dns.gardener.cloud/domain"] = "foobar"
 			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
@@ -328,11 +302,15 @@ var _ = Describe("handler", func() {
 
 	Context("delete", func() {
 		It("should fail because the shoot listing fails", func() {
-			mockReader.EXPECT().List(
-				gomock.Any(),
-				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
-				client.Limit(1),
-			).Return(fakeErr)
+			errClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
+				List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+					if pml, ok := list.(*metav1.PartialObjectMetadataList); ok && pml.GetObjectKind().GroupVersionKind() == gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList") {
+						return fakeErr
+					}
+					return c.List(ctx, list, opts...)
+				},
+			}).Build()
+			handler.APIReader = errClient
 
 			warning, err = handler.ValidateDelete(ctx, secret)
 			Expect(warning).To(BeNil())
@@ -344,14 +322,10 @@ var _ = Describe("handler", func() {
 		})
 
 		It("should fail because at least one shoot exists", func() {
-			mockReader.EXPECT().List(
-				gomock.Any(),
-				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
-				client.Limit(1),
-			).DoAndReturn(func(_ context.Context, list client.ObjectList, _ client.ListOption) error {
-				(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list.(*metav1.PartialObjectMetadataList))
-				return nil
-			})
+			existingShoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{Name: "shoot1", Namespace: "garden-foo"},
+			}
+			Expect(fakeClient.Create(ctx, existingShoot)).To(Succeed())
 
 			warning, err = handler.ValidateDelete(ctx, secret)
 			Expect(warning).To(BeNil())
@@ -359,15 +333,13 @@ var _ = Describe("handler", func() {
 		})
 
 		It("should fail because at least one shoot on the seed exists", func() {
-			mockReader.EXPECT().List(
-				gomock.Any(),
-				gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}),
-				client.MatchingFields{gardencore.ShootSeedName: seedName},
-				client.Limit(1),
-			).DoAndReturn(func(_ context.Context, shoots *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-				shoots.Items = []gardencorev1beta1.Shoot{{}}
-				return nil
-			})
+			existingShoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{Name: "shoot1", Namespace: "garden-foo"},
+				Spec: gardencorev1beta1.ShootSpec{
+					SeedName: &seedName,
+				},
+			}
+			Expect(fakeClient.Create(ctx, existingShoot)).To(Succeed())
 
 			secret.Namespace = seedNamespace
 			warning, err = handler.ValidateDelete(ctx, secret)
@@ -376,12 +348,6 @@ var _ = Describe("handler", func() {
 		})
 
 		It("should pass because no shoots exist", func() {
-			mockReader.EXPECT().List(
-				gomock.Any(),
-				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
-				client.Limit(1),
-			)
-
 			warning, err = handler.ValidateDelete(ctx, secret)
 			Expect(warning).To(BeNil())
 			Expect(err).To(Succeed())

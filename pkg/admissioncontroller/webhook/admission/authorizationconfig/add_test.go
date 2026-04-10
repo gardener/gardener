@@ -11,22 +11,19 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/authorizationconfig"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("handler", func() {
@@ -37,8 +34,6 @@ var _ = Describe("handler", func() {
 		decoder admission.Decoder
 		handler admission.Handler
 
-		ctrl       *gomock.Controller
-		mockReader *mockclient.MockReader
 		fakeClient client.Client
 
 		statusCodeAllowed       int32 = http.StatusOK
@@ -118,13 +113,11 @@ authorizers:
 	BeforeEach(func() {
 		testEncoder = &jsonserializer.Serializer{}
 
-		ctrl = gomock.NewController(GinkgoT())
-		mockReader = mockclient.NewMockReader(ctrl)
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 
 		decoder = admission.NewDecoder(kubernetes.GardenScheme)
 
-		handler = NewHandler(mockReader, fakeClient, decoder)
+		handler = NewHandler(fakeClient, fakeClient, decoder)
 
 		request = admission.Request{}
 
@@ -148,10 +141,6 @@ authorizers:
 				},
 			},
 		}
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
 	})
 
 	test := func(op admissionv1.Operation, oldObj runtime.Object, obj runtime.Object, expectedAllowed bool, expectedStatusCode int32, expectedMsg string, expectedReason string) {
@@ -204,43 +193,32 @@ authorizers:
 			})
 
 			It("references a valid AuthorizationConfig (CREATE)", func() {
-				returnedCm := corev1.ConfigMap{
-					TypeMeta:   metav1.TypeMeta{},
-					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "1"},
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: configMapName, Namespace: shootNamespace},
 					Data:       map[string]string{"config.yaml": validAuthorizationConfiguration},
-				}
-				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: configMapName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					*cm = returnedCm
-					return nil
-				})
+				})).To(Succeed())
 				test(admissionv1.Create, nil, shoot, true, statusCodeAllowed, "referenced authorization configuration is valid", "")
 			})
 
 			It("AuthorizationConfig name was added (UPDATE)", func() {
-				returnedCm := corev1.ConfigMap{
-					Data: map[string]string{"config.yaml": validAuthorizationConfiguration},
-				}
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: configMapName, Namespace: shootNamespace},
+					Data:       map[string]string{"config.yaml": validAuthorizationConfiguration},
+				})).To(Succeed())
 				apiServerConfig := shoot.Spec.Kubernetes.KubeAPIServer.DeepCopy()
 				shoot.Spec.Kubernetes.KubeAPIServer = nil
 				newShoot := shoot.DeepCopy()
 				newShoot.Spec.Kubernetes.KubeAPIServer = apiServerConfig
-				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: configMapName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					*cm = returnedCm
-					return nil
-				})
 				test(admissionv1.Update, shoot, newShoot, true, statusCodeAllowed, "referenced authorization configuration is valid", "")
 			})
 
 			It("referenced AuthorizationConfig name was changed (UPDATE)", func() {
-				returnedCm := corev1.ConfigMap{
-					Data: map[string]string{"config.yaml": validAuthorizationConfiguration},
-				}
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: configMapNameOther, Namespace: shootNamespace},
+					Data:       map[string]string{"config.yaml": validAuthorizationConfiguration},
+				})).To(Succeed())
 				newShoot := shoot.DeepCopy()
 				newShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization.ConfigMapName = configMapNameOther
-				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: configMapNameOther}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					*cm = returnedCm
-					return nil
-				})
 				test(admissionv1.Update, shoot, newShoot, true, statusCodeAllowed, "referenced authorization configuration is valid", "")
 			})
 
@@ -271,76 +249,63 @@ authorizers:
 
 		Context("Deny", func() {
 			It("references a ConfigMap that does not exist", func() {
-				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: configMapName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ *corev1.ConfigMap, _ ...client.GetOption) error {
-					return apierrors.NewNotFound(schema.GroupResource{Resource: "configmaps"}, configMapName)
-				})
 				test(admissionv1.Create, nil, shoot, false, statusCodeInvalid, "referenced authorization configuration ConfigMap fake-cm-namespace/fake-cm-name does not exist: configmaps \"fake-cm-name\" not found", "")
 			})
 
 			It("fails getting ConfigMap", func() {
-				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: configMapName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ *corev1.ConfigMap, _ ...client.GetOption) error {
-					return errors.New("fake")
-				})
+				fakeErr := errors.New("fake")
+				errClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						if _, ok := obj.(*corev1.ConfigMap); ok {
+							return fakeErr
+						}
+						return c.Get(ctx, key, obj, opts...)
+					},
+				}).Build()
+				handler = NewHandler(errClient, fakeClient, decoder)
 				test(admissionv1.Create, nil, shoot, false, statusCodeInternalError, "could not retrieve authorization configuration ConfigMap fake-cm-namespace/fake-cm-name: fake", "")
 			})
 
 			It("references ConfigMap without a config.yaml key", func() {
-				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: configMapName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					*cm = corev1.ConfigMap{
-						Data: nil,
-					}
-					return nil
-				})
-				test(admissionv1.Create, nil, shoot, false, statusCodeInvalid, "error getting authorization configuration from ConfigMap /: missing authorization configuration key in config.yaml ConfigMap data", "")
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: configMapName, Namespace: shootNamespace},
+					Data:       nil,
+				})).To(Succeed())
+				test(admissionv1.Create, nil, shoot, false, statusCodeInvalid, "error getting authorization configuration from ConfigMap fake-cm-namespace/fake-cm-name: missing authorization configuration key in config.yaml ConfigMap data", "")
 			})
 
 			It("references ConfigMap with a webhook for which no kubeconfig secret name is specified (CREATE)", func() {
-				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: configMapName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					*cm = corev1.ConfigMap{
-						Data: map[string]string{"config.yaml": validAuthorizationConfiguration},
-					}
-					return nil
-				})
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: configMapName, Namespace: shootNamespace},
+					Data:       map[string]string{"config.yaml": validAuthorizationConfiguration},
+				})).To(Succeed())
 				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization.Kubeconfigs = nil
 				test(admissionv1.Create, nil, shoot, false, statusCodeInvalid, `provided invalid authorization configuration: must provide kubeconfig secret name reference for webhook authorizer "webhook"`, "")
 			})
 
 			It("references ConfigMap with a webhook for which no kubeconfig secret name is specified (UPDATE)", func() {
-				returnedCm := corev1.ConfigMap{
-					Data: map[string]string{"config.yaml": validAuthorizationConfiguration},
-				}
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: configMapName, Namespace: shootNamespace},
+					Data:       map[string]string{"config.yaml": validAuthorizationConfiguration},
+				})).To(Succeed())
 				newShoot := shoot.DeepCopy()
 				newShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization.Kubeconfigs[0].AuthorizerName = "does-not-exist"
-				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: configMapName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					*cm = returnedCm
-					return nil
-				})
 				test(admissionv1.Update, shoot, newShoot, false, statusCodeInvalid, "provided invalid authorization configuration: must provide kubeconfig secret name reference for webhook authorizer \"webhook\" in shoot fake-cm-namespace/fake-shoot-name", "")
 			})
 
 			It("references authorization configuration which breaks validation rules", func() {
-				returnedCm := corev1.ConfigMap{
-					TypeMeta:   metav1.TypeMeta{},
-					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: configMapName, Namespace: shootNamespace},
 					Data:       map[string]string{"config.yaml": invalidAuthorizationConfiguration},
-				}
-				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: configMapName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					*cm = returnedCm
-					return nil
-				})
+				})).To(Succeed())
 				test(admissionv1.Create, nil, shoot, false, statusCodeInvalid, "provided invalid authorization configuration: [authorizers[0].connectionInfo: Forbidden: connectionInfo is not allowed to be set]", "")
 			})
 
 			It("references authorization configuration with invalid structure", func() {
-				returnedCm := corev1.ConfigMap{
-					TypeMeta:   metav1.TypeMeta{},
-					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: configMapName, Namespace: shootNamespace},
 					Data:       map[string]string{"config.yaml": missingKeyConfiguration},
-				}
-				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: configMapName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					*cm = returnedCm
-					return nil
-				})
+				})).To(Succeed())
 				test(admissionv1.Create, nil, shoot, false, statusCodeInvalid, "provided invalid authorization configuration: [[].authorizers[0].subjectAccessReviewVersion: Required value]", "")
 			})
 		})
