@@ -356,6 +356,7 @@ status: {}
 			Image:             image,
 			PriorityClassName: priorityClassName,
 			Replicas:          int32(1),
+			SigningCA:         "ca-istio-basic-auth-server",
 		}
 		component = New(c, namespace, fakeSecretManager, values)
 
@@ -441,6 +442,7 @@ status: {}
 			Context("Garden", func() {
 				BeforeEach(func() {
 					values.IsGardenCluster = true
+					values.SigningCA = "ca-virtual-garden-istio-basic-auth-server"
 					component = New(c, namespace, fakeSecretManager, values)
 				})
 
@@ -470,6 +472,7 @@ status: {}
 			Context("Garden", func() {
 				BeforeEach(func() {
 					values.IsGardenCluster = true
+					values.SigningCA = "ca-virtual-garden-istio-basic-auth-server"
 					component = New(c, namespace, fakeSecretManager, values)
 				})
 

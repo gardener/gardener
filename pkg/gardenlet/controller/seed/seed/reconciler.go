@@ -30,6 +30,8 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // Reconciler reconciles Seed resources and provisions or de-provisions the seed system components.
@@ -287,4 +289,18 @@ func determineClusterIdentity(ctx context.Context, c client.Client) (string, err
 
 func vpaEnabled(settings *gardencorev1beta1.SeedSettings) bool {
 	return settings == nil || settings.VerticalPodAutoscaler == nil || settings.VerticalPodAutoscaler.Enabled
+}
+
+func caCertConfigurations() []secretsutils.ConfigInterface {
+	return []secretsutils.ConfigInterface{
+		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCASeed, CommonName: "kubernetes", CertType: secretsutils.CACert, Validity: ptr.To(30 * 24 * time.Hour)},
+		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAIstioBasicAuthServer, CommonName: "istio-basic-auth-server", CertType: secretsutils.CACert, Validity: ptr.To(30 * 24 * time.Hour)},
+	}
+}
+
+func caCertGenerateOptionsFor(name string) []secretsmanager.GenerateOption {
+	return []secretsmanager.GenerateOption{
+		secretsmanager.Rotate(secretsmanager.KeepOld),
+		secretsmanager.IgnoreOldSecretsAfter(24 * time.Hour),
+	}
 }

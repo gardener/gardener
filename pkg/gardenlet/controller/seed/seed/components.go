@@ -537,6 +537,7 @@ func (r *Reconciler) newIstioBasicAuthServer(secretsManager secretsmanager.Inter
 		1,
 		v1beta1constants.PriorityClassNameSeedSystem600,
 		false,
+		v1beta1constants.SecretNameCAIstioBasicAuthServer,
 	)
 }
 

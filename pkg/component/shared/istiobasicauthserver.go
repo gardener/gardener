@@ -22,6 +22,7 @@ func NewIstioBasicAuthServer(
 	replicas int32,
 	priorityClassName string,
 	isGardenCluster bool,
+	signingCA string,
 ) (
 	deployer component.DeployWaiter,
 	err error,
@@ -40,6 +41,7 @@ func NewIstioBasicAuthServer(
 			PriorityClassName: priorityClassName,
 			Replicas:          replicas,
 			IsGardenCluster:   isGardenCluster,
+			SigningCA:         signingCA,
 		},
 	)
 

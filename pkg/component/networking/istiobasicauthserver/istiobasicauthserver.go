@@ -57,6 +57,8 @@ type Values struct {
 	Replicas int32
 	// IsGardenCluster specifies whether the cluster is garden cluster.
 	IsGardenCluster bool
+	// SigningCA is the name of the CA that should be used to sign the server certificate.
+	SigningCA string
 }
 
 type istioBasicAuthServer struct {
@@ -85,12 +87,11 @@ func (i *istioBasicAuthServer) Deploy(ctx context.Context) error {
 	var (
 		registry        = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 		destinationHost = kubernetesutils.FQDNForService(i.getPrefix()+svcName, i.namespace)
-		caName          = "ca-" + i.getPrefix() + name
 	)
 
-	caBundle, found := i.secretsManager.Get(caName)
+	caBundle, found := i.secretsManager.Get(i.values.SigningCA)
 	if !found {
-		return fmt.Errorf("failed to find ca certificate bundle %q", caName)
+		return fmt.Errorf("failed to find ca certificate bundle %q", i.values.SigningCA)
 	}
 
 	serverSecret, err := i.secretsManager.Generate(ctx,
@@ -99,11 +100,10 @@ func (i *istioBasicAuthServer) Deploy(ctx context.Context) error {
 			CommonName: destinationHost,
 			DNSNames:   kubernetesutils.DNSNamesForService(i.getPrefix()+svcName, i.namespace),
 			CertType:   secretsutils.ServerCert,
-			Validity:   ptr.To(15 * 24 * time.Hour),
+			Validity:   ptr.To(15 * 24 * time.Hour), // Rotate frequently regardless of scenario (shoot default is long)
 		},
-		secretsmanager.SignedByCA(caName),
+		secretsmanager.SignedByCA(i.values.SigningCA),
 		secretsmanager.Rotate(secretsmanager.InPlace),
-		secretsmanager.Namespace(i.namespace),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to generate server certificate: %w", err)

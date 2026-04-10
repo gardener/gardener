@@ -135,7 +135,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		if !meta.IsNoMatchError(err) {
 			return err
 		}
-		mgr.GetLogger().Info("Network policy controller for istio virtual services deactivated because istio CRDs are not installed", "error", err)
+		mgr.GetLogger().WithValues("controller", ControllerName).Info("VirtualService watch will not be added because Istio CRDs are not installed")
 		return nil
 	}
 	r.istioCRDsFound = true

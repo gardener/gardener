@@ -280,9 +280,9 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, log logr.Logg
 		return nil, nil, err
 	}
 
-	for _, p := range portsExposedViaVirtualServices {
-		policyID := policyIDFor(service.Name, p.networkPolicyPort)
-		addTasksForPort(p.networkPolicyPort, policyID, p.namespace, p.podSelector, ingressPolicyObjectMetaWhenExposedViaVirtualServiceFor, egressPolicyObjectMetaWhenExposedViaVirtualServiceFor)
+	for _, port := range portsExposedViaVirtualServices {
+		policyID := policyIDFor(service.Name, port.networkPolicyPort)
+		addTasksForPort(port.networkPolicyPort, policyID, port.namespace, port.podSelector, ingressPolicyObjectMetaWhenExposedViaVirtualServiceFor, egressPolicyObjectMetaWhenExposedViaVirtualServiceFor)
 	}
 
 	return taskFns, desiredObjectMetaKeys, nil
@@ -597,13 +597,13 @@ func (r *Reconciler) collectIstioNamespaces(ctx context.Context, gateway *istion
 		return nil, fmt.Errorf("gateway %q in namespace %q has no selector, which is not supported by the network policy controller", gateway.Name, gateway.Namespace)
 	}
 
-	namespaces := sets.New[string]()
 	podList := &metav1.PartialObjectMetadataList{}
 	podList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("PodList"))
 	if err := r.TargetClient.List(ctx, podList, client.MatchingLabels(gateway.Spec.Selector)); err != nil {
 		return nil, fmt.Errorf("failed listing pods to determine gateway namespaces: %w", err)
 	}
 
+	namespaces := sets.New[string]()
 	for _, pod := range podList.Items {
 		namespaces.Insert(pod.Namespace)
 	}

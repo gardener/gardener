@@ -20,5 +20,6 @@ func (b *Botanist) DefaultIstioBasicAuthServer() (component.DeployWaiter, error)
 		b.Shoot.GetReplicas(1),
 		v1beta1constants.PriorityClassNameShootControlPlane100,
 		false,
+		v1beta1constants.SecretNameCAIstioBasicAuthServer,
 	)
 }

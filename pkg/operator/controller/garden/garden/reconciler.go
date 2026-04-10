@@ -530,7 +530,7 @@ func completeRotationWorkloadIdentityKey(garden *operatorv1alpha1.Garden, now *m
 func caCertConfigurations() []secretsutils.ConfigInterface {
 	return append([]secretsutils.ConfigInterface{
 		&secretsutils.CertificateSecretConfig{Name: operatorv1alpha1.SecretNameCARuntime, CertType: secretsutils.CACert, Validity: ptr.To(30 * 24 * time.Hour)},
-		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAVirtualGardenIstioBasicAuthServer, CommonName: "istio-basic-auth-server-ca", CertType: secretsutils.CACert, Validity: ptr.To(30 * 24 * time.Hour)},
+		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAVirtualGardenIstioBasicAuthServer, CommonName: "istio-basic-auth-server", CertType: secretsutils.CACert, Validity: ptr.To(30 * 24 * time.Hour)},
 	}, nonAutoRotatedCACertConfigurations()...)
 }
 

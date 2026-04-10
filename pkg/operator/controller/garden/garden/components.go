@@ -1099,6 +1099,7 @@ func (r *Reconciler) newIstioBasicAuthServer(secretsManager secretsmanager.Inter
 		1,
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		true,
+		v1beta1constants.SecretNameCAVirtualGardenIstioBasicAuthServer,
 	)
 }
 

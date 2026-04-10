@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -41,7 +40,6 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -134,22 +132,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 	// Deploy dedicated CA certificate for seed cluster, auto-rotate it roughly once a month and drop the old CA 24 hours
 	// after rotation.
 	log.Info("Generating CA certificates for seed cluster")
-	if _, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:       v1beta1constants.SecretNameCASeed,
-		CommonName: "kubernetes",
-		CertType:   secretsutils.CACert,
-		Validity:   ptr.To(30 * 24 * time.Hour),
-	}, secretsmanager.Rotate(secretsmanager.KeepOld), secretsmanager.IgnoreOldSecretsAfter(24*time.Hour)); err != nil {
-		return err
-	}
-
-	if _, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:       v1beta1constants.SecretNameCAIstioBasicAuthServer,
-		CommonName: "istio-basic-auth-server-ca",
-		CertType:   secretsutils.CACert,
-		Validity:   ptr.To(30 * 24 * time.Hour),
-	}, secretsmanager.Rotate(secretsmanager.KeepOld), secretsmanager.IgnoreOldSecretsAfter(24*time.Hour)); err != nil {
-		return err
+	for _, config := range caCertConfigurations() {
+		if _, err := secretsManager.Generate(ctx, config, caCertGenerateOptionsFor(config.GetName())...); err != nil {
+			return err
+		}
 	}
 
 	secrets, err := gardenerutils.ReadGardenSecrets(
