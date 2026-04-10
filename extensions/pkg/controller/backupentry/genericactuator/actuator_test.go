@@ -25,8 +25,8 @@ import (
 	extensionsmockgenericactuator "github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator/mock"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )
 
 const (
@@ -43,7 +43,7 @@ var _ = Describe("Actuator", func() {
 		log logr.Logger
 
 		ctrl *gomock.Controller
-		mgr  *mockmanager.MockManager
+		mgr  test.FakeManager
 
 		backupEntry              *extensionsv1alpha1.BackupEntry
 		backupProviderSecretData map[string][]byte
@@ -106,7 +106,6 @@ var _ = Describe("Actuator", func() {
 			},
 		}
 
-		mgr = mockmanager.NewMockManager(ctrl)
 	})
 
 	AfterEach(func() {
@@ -123,7 +122,7 @@ var _ = Describe("Actuator", func() {
 		Context("seed namespace exist", func() {
 			It("should create etcd-backup secret if it does not exist", func() {
 				fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(seedNamespace, backupEntrySecret).Build()
-				mgr.EXPECT().GetClient().Return(fakeClient)
+				mgr.Client = fakeClient
 				backupEntryDelegate.EXPECT().GetETCDSecretData(ctx, gomock.AssignableToTypeOf(logr.Logger{}), backupEntry, backupProviderSecretData).Return(etcdBackupSecretData, nil)
 
 				a = genericactuator.NewActuator(mgr, backupEntryDelegate)
@@ -141,7 +140,7 @@ var _ = Describe("Actuator", func() {
 					"new-key": []byte("new-value"),
 				}
 				fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(seedNamespace, backupEntrySecret, existingEtcdBackupSecret).Build()
-				mgr.EXPECT().GetClient().Return(fakeClient)
+				mgr.Client = fakeClient
 				backupEntryDelegate.EXPECT().GetETCDSecretData(ctx, gomock.AssignableToTypeOf(logr.Logger{}), backupEntry, backupProviderSecretData).Return(etcdBackupSecretData, nil)
 
 				a = genericactuator.NewActuator(mgr, backupEntryDelegate)
@@ -160,7 +159,7 @@ var _ = Describe("Actuator", func() {
 				existingEtcdBackupSecret.Labels = testKeyValue
 
 				fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(seedNamespace, backupEntrySecret, existingEtcdBackupSecret).Build()
-				mgr.EXPECT().GetClient().Return(fakeClient)
+				mgr.Client = fakeClient
 				backupEntryDelegate.EXPECT().GetETCDSecretData(ctx, gomock.AssignableToTypeOf(logr.Logger{}), backupEntry, backupProviderSecretData).Return(etcdBackupSecretData, nil)
 
 				a = genericactuator.NewActuator(mgr, backupEntryDelegate)
@@ -203,7 +202,7 @@ var _ = Describe("Actuator", func() {
 					}
 
 					fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(seedNamespace, backupEntrySecret, existingEtcdBackupSecret).Build()
-					mgr.EXPECT().GetClient().Return(fakeClient)
+					mgr.Client = fakeClient
 					passedData := map[string][]byte{
 						"bucketName": []byte(bucketName),
 						"config":     backupEntrySecret.Data["config"],
@@ -285,7 +284,7 @@ var _ = Describe("Actuator", func() {
 		Context("seed namespace does not exist", func() {
 			It("should not create etcd-backup secret", func() {
 				fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(backupEntrySecret).Build()
-				mgr.EXPECT().GetClient().Return(fakeClient)
+				mgr.Client = fakeClient
 
 				a = genericactuator.NewActuator(mgr, backupEntryDelegate)
 				Expect(a.Reconcile(ctx, log, backupEntry)).To(Succeed())
@@ -300,7 +299,7 @@ var _ = Describe("Actuator", func() {
 
 		BeforeEach(func() {
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(seedNamespace, backupEntrySecret).Build()
-			mgr.EXPECT().GetClient().Return(fakeClient)
+			mgr.Client = fakeClient
 
 			backupEntryDelegate = extensionsmockgenericactuator.NewMockBackupEntryDelegate(ctrl)
 			backupEntryDelegate.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(logr.Logger{}), backupEntry).Return(nil)

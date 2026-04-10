@@ -30,8 +30,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	testutils "github.com/gardener/gardener/pkg/utils/test"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )
 
 var _ = Describe("Worker Reconcile", func() {
@@ -65,16 +65,12 @@ var _ = Describe("Worker Reconcile", func() {
 		ctrl   *gomock.Controller
 		ctx    context.Context
 		logger logr.Logger
-		mgr    *mockmanager.MockManager
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		ctx = context.TODO()
 		logger = log.Log.WithName("Reconcile-Test-Controller")
-
-		// Create fake manager
-		mgr = mockmanager.NewMockManager(ctrl)
 	})
 
 	AfterEach(func() {
@@ -102,8 +98,7 @@ var _ = Describe("Worker Reconcile", func() {
 
 	DescribeTable("Reconcile function", func(t *test) {
 		apiReader := mockclient.NewMockReader(ctrl)
-		mgr.EXPECT().GetClient().Return(t.fields.client).AnyTimes()
-		mgr.EXPECT().GetAPIReader().Return(apiReader).AnyTimes()
+		mgr := testutils.FakeManager{Client: t.fields.client, APIReader: apiReader}
 		reconciler := worker.NewReconciler(mgr, t.fields.actuator(ctrl))
 
 		got, err := reconciler.Reconcile(ctx, t.args.request)

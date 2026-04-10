@@ -28,7 +28,7 @@ import (
 	. "github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionsmockwebhook "github.com/gardener/gardener/extensions/pkg/webhook/mock"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var logger = log.Log.WithName("controlplane-webhook-test")
@@ -41,7 +41,7 @@ var _ = Describe("Handler", func() {
 
 	var (
 		ctrl       *gomock.Controller
-		mgr        *mockmanager.MockManager
+		mgr        test.FakeManager
 		fakeClient client.Client
 
 		objTypes = []Type{{Obj: &corev1.Service{}}}
@@ -61,9 +61,7 @@ var _ = Describe("Handler", func() {
 
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
-		mgr = mockmanager.NewMockManager(ctrl)
-		mgr.EXPECT().GetScheme().Return(scheme)
-		mgr.EXPECT().GetClient().Return(fakeClient)
+		mgr = test.FakeManager{Scheme: scheme, Client: fakeClient}
 
 		req = admission.Request{
 			AdmissionRequest: admissionv1.AdmissionRequest{

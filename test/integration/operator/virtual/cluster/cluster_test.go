@@ -7,7 +7,6 @@ package cluster_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -16,14 +15,13 @@ import (
 
 var _ = Describe("Cluster controller tests", func() {
 	It("should create and add the virtual cluster", func() {
-		mockManager.EXPECT().GetLogger().AnyTimes()
-
 		var virtualClusterToManager cluster.Cluster
-		mockManager.EXPECT().Add(gomock.Any()).Do(func(r manager.Runnable) {
+		fakeManager.AddFunc = func(r manager.Runnable) error {
 			var ok bool
 			virtualClusterToManager, ok = r.(cluster.Cluster)
 			Expect(ok).To(BeTrue())
-		})
+			return nil
+		}
 
 		channel <- event.TypedGenericEvent[*rest.Config]{Object: restConfig}
 
