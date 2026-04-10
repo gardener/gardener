@@ -172,7 +172,7 @@ anonymous:
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.30.0",
+					Version: "1.34.0",
 					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
 						StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{
 							ConfigMapName: cmName,
@@ -455,7 +455,7 @@ anonymous:
 
 				It("should allow if the authenticationConfiguration is changed to something valid", func() {
 					Expect(fakeClient.Create(ctx, shootv1beta1)).To(Succeed())
-					shootv1beta1.Spec.Kubernetes.Version = "1.30.1"
+					shootv1beta1.Spec.Kubernetes.Version = "1.34.1"
 					newCm := cm.DeepCopy()
 					newCm.Data["config.yaml"] = anotherValidAuthenticationConfiguration
 

@@ -241,11 +241,6 @@ func (in *OpenIDConnectPresetList) DeepCopyObject() runtime.Object {
 func (in *OpenIDConnectPresetSpec) DeepCopyInto(out *OpenIDConnectPresetSpec) {
 	*out = *in
 	in.Server.DeepCopyInto(&out.Server)
-	if in.Client != nil {
-		in, out := &in.Client, &out.Client
-		*out = new(OpenIDConnectClientAuthentication)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.ShootSelector != nil {
 		in, out := &in.ShootSelector, &out.ShootSelector
 		*out = new(v1.LabelSelector)

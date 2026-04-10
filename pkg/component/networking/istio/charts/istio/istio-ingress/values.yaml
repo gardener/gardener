@@ -29,7 +29,7 @@ cpuRequests: 300m
 minReplicas: 2
 maxReplicas: 9
 enforceSpreadAcrossHosts: false
-kubernetesVersion: "1.30.0"
+kubernetesVersion: "1.33.0"
 
 # Istio Ingress Configuration Resources
 apiServerRequestHeaderUserName: X-Remote-User

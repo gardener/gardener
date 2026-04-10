@@ -4668,7 +4668,6 @@ func autoConvert_v1beta1_KubeletConfig_To_core_KubeletConfig(in *KubeletConfig, 
 	out.PodPIDsLimit = (*int64)(unsafe.Pointer(in.PodPIDsLimit))
 	out.FailSwapOn = (*bool)(unsafe.Pointer(in.FailSwapOn))
 	out.KubeReserved = (*core.KubeletConfigReserved)(unsafe.Pointer(in.KubeReserved))
-	out.SystemReserved = (*core.KubeletConfigReserved)(unsafe.Pointer(in.SystemReserved))
 	out.ImageGCHighThresholdPercent = (*int32)(unsafe.Pointer(in.ImageGCHighThresholdPercent))
 	out.ImageGCLowThresholdPercent = (*int32)(unsafe.Pointer(in.ImageGCLowThresholdPercent))
 	out.SerializeImagePulls = (*bool)(unsafe.Pointer(in.SerializeImagePulls))
@@ -4709,7 +4708,6 @@ func autoConvert_core_KubeletConfig_To_v1beta1_KubeletConfig(in *core.KubeletCon
 	out.PodPIDsLimit = (*int64)(unsafe.Pointer(in.PodPIDsLimit))
 	out.FailSwapOn = (*bool)(unsafe.Pointer(in.FailSwapOn))
 	out.KubeReserved = (*KubeletConfigReserved)(unsafe.Pointer(in.KubeReserved))
-	out.SystemReserved = (*KubeletConfigReserved)(unsafe.Pointer(in.SystemReserved))
 	out.ImageMinimumGCAge = (*metav1.Duration)(unsafe.Pointer(in.ImageMinimumGCAge))
 	out.ImageMaximumGCAge = (*metav1.Duration)(unsafe.Pointer(in.ImageMaximumGCAge))
 	out.ImageGCHighThresholdPercent = (*int32)(unsafe.Pointer(in.ImageGCHighThresholdPercent))
@@ -5880,7 +5878,6 @@ func Convert_core_OCIRepository_To_v1beta1_OCIRepository(in *core.OCIRepository,
 
 func autoConvert_v1beta1_OIDCConfig_To_core_OIDCConfig(in *OIDCConfig, out *core.OIDCConfig, s conversion.Scope) error {
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
-	out.ClientAuthentication = (*core.OpenIDConnectClientAuthentication)(unsafe.Pointer(in.ClientAuthentication))
 	out.ClientID = (*string)(unsafe.Pointer(in.ClientID))
 	out.GroupsClaim = (*string)(unsafe.Pointer(in.GroupsClaim))
 	out.GroupsPrefix = (*string)(unsafe.Pointer(in.GroupsPrefix))
@@ -5899,7 +5896,6 @@ func Convert_v1beta1_OIDCConfig_To_core_OIDCConfig(in *OIDCConfig, out *core.OID
 
 func autoConvert_core_OIDCConfig_To_v1beta1_OIDCConfig(in *core.OIDCConfig, out *OIDCConfig, s conversion.Scope) error {
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
-	out.ClientAuthentication = (*OpenIDConnectClientAuthentication)(unsafe.Pointer(in.ClientAuthentication))
 	out.ClientID = (*string)(unsafe.Pointer(in.ClientID))
 	out.GroupsClaim = (*string)(unsafe.Pointer(in.GroupsClaim))
 	out.GroupsPrefix = (*string)(unsafe.Pointer(in.GroupsPrefix))

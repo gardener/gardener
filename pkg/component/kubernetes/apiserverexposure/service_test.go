@@ -250,22 +250,6 @@ var _ = Describe("#Service", func() {
 				Expect(actual.Labels).To(HaveKeyWithValue("endpoint-slice-hints.resources.gardener.cloud/consider", "true"))
 			})
 		})
-
-		When("runtime Kubernetes version < 1.31", func() {
-			BeforeEach(func() {
-				values.RuntimeKubernetesVersion = semver.MustParse("1.30.3")
-			})
-
-			It("should successfully deploy with expected kube-apiserver service annotation, label and spec field", func() {
-				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-				actual := &corev1.Service{}
-				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace.Name, Name: expectedName}, actual)).To(Succeed())
-
-				Expect(actual.Annotations).To(HaveKeyWithValue("service.kubernetes.io/topology-mode", "auto"))
-				Expect(actual.Labels).To(HaveKeyWithValue("endpoint-slice-hints.resources.gardener.cloud/consider", "true"))
-			})
-		})
 	})
 
 	Context("when service has a suffix", func() {

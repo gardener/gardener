@@ -173,7 +173,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Domain: &domain,
 					},
 					Kubernetes: core.Kubernetes{
-						Version: "1.30.3",
+						Version: "1.31.0",
 						ETCD: &core.ETCD{
 							Main: &core.ETCDConfig{
 								Autoscaling: &core.ControlPlaneAutoscaling{
@@ -2597,16 +2597,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 				)
 
 				It("should forbid setting clientAuthentication from kubernetes version 1.31", func() {
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientAuthentication = &core.OpenIDConnectClientAuthentication{}
 					shoot.Spec.Kubernetes.Version = "1.31"
 
 					errorList := ValidateShoot(shoot)
 
-					Expect(errorList).To(HaveLen(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.clientAuthentication"),
-					}))
+					Expect(errorList).To(BeEmpty())
 				})
 			})
 
@@ -4522,7 +4517,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Context("Authentication validation", func() {
 			It("should forbid empty name", func() {
-				shoot.Spec.Kubernetes.Version = "v1.30.0"
+				shoot.Spec.Kubernetes.Version = "v1.31.0"
 				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
 				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication = &core.StructuredAuthentication{}
 				errorList := ValidateShoot(shoot)
@@ -4536,7 +4531,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid setting structured authentication when feature gate is disabled", func() {
-				shoot.Spec.Kubernetes.Version = "v1.30.0"
+				shoot.Spec.Kubernetes.Version = "v1.31.0"
 				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
 				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication = &core.StructuredAuthentication{
 					ConfigMapName: "foo",
@@ -4555,7 +4550,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid setting both oidcConfig and structured authentication", func() {
-				shoot.Spec.Kubernetes.Version = "v1.30.0"
+				shoot.Spec.Kubernetes.Version = "v1.31.0"
 				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication = &core.StructuredAuthentication{
 					ConfigMapName: "foo",
 				}
@@ -4570,7 +4565,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should allow when config is valid", func() {
-				shoot.Spec.Kubernetes.Version = "v1.30.0"
+				shoot.Spec.Kubernetes.Version = "v1.31.0"
 				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
 				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication = &core.StructuredAuthentication{
 					ConfigMapName: "foo",
@@ -4582,7 +4577,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Context("Authorization validation", func() {
 			It("should forbid empty name", func() {
-				shoot.Spec.Kubernetes.Version = "v1.30.0"
+				shoot.Spec.Kubernetes.Version = "v1.31.0"
 				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &core.StructuredAuthorization{}
 
 				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -4593,7 +4588,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid empty list of kubeconfig references", func() {
-				shoot.Spec.Kubernetes.Version = "v1.30.0"
+				shoot.Spec.Kubernetes.Version = "v1.31.0"
 				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &core.StructuredAuthorization{
 					ConfigMapName: "foo",
 				}
@@ -4606,7 +4601,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid setting structured authorization when feature gate is disabled", func() {
-				shoot.Spec.Kubernetes.Version = "v1.30.0"
+				shoot.Spec.Kubernetes.Version = "v1.31.0"
 				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &core.StructuredAuthorization{
 					ConfigMapName: "foo",
 					Kubeconfigs:   []core.AuthorizerKubeconfigReference{{}},
@@ -4623,7 +4618,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should allow when config is valid", func() {
-				shoot.Spec.Kubernetes.Version = "v1.30.0"
+				shoot.Spec.Kubernetes.Version = "v1.31.0"
 				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &core.StructuredAuthorization{
 					ConfigMapName: "foo",
 					Kubeconfigs: []core.AuthorizerKubeconfigReference{{
@@ -9434,18 +9429,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("should allow empty memory swap", false, nil, "1.30", BeEmpty()),
-			Entry("should allow empty memory swap - NodeSwap set and FailSwap=false", true, nil, "1.30", BeEmpty()),
-			Entry("should allow LimitedSwap behavior", true, ptr.To("LimitedSwap"), "1.30", BeEmpty()),
-			Entry("should forbid random behavior", true, ptr.To("MagicSwap"), "1.30", ConsistOf(
+			Entry("should allow empty memory swap", false, nil, "1.35", BeEmpty()),
+			Entry("should allow empty memory swap - NodeSwap set and FailSwap=false", true, nil, "1.35", BeEmpty()),
+			Entry("should allow LimitedSwap behavior", true, ptr.To("LimitedSwap"), "1.35", BeEmpty()),
+			Entry("should forbid random behavior", true, ptr.To("MagicSwap"), "1.35", ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeNotSupported),
 					"Field":  Equal("memorySwap.swapBehavior"),
 					"Detail": Equal("supported values: \"NoSwap\", \"LimitedSwap\""),
 				})),
 			)),
-			Entry("should allow NoSwap behavior", true, ptr.To("NoSwap"), "1.30", BeEmpty()),
-			Entry("should forbid configuration of swap behaviour if either the feature gate NodeSwap is not set or FailSwap=true", false, ptr.To("LimitedSwap"), "1.30", ConsistOf(
+			Entry("should allow NoSwap behavior", true, ptr.To("NoSwap"), "1.35", BeEmpty()),
+			Entry("should forbid configuration of swap behaviour if either the feature gate NodeSwap is not set or FailSwap=true", false, ptr.To("LimitedSwap"), "1.35", ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("memorySwap"),
@@ -9659,34 +9654,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("only allow positive resource.Quantity for any value", &invalidResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(field.NewPath("kubeReserved.cpu").String()),
-				})))),
-			)
-
-			DescribeTable("SystemReserved",
-				func(cpu, memory, ephemeralStorage, pid *resource.Quantity, k8sVersion string, matcher gomegatypes.GomegaMatcher) {
-					kubeletConfig := core.KubeletConfig{
-						SystemReserved: &core.KubeletConfigReserved{
-							CPU:              cpu,
-							Memory:           memory,
-							EphemeralStorage: ephemeralStorage,
-							PID:              pid,
-						},
-					}
-					Expect(ValidateKubeletConfig(kubeletConfig, k8sVersion, nil)).To(matcher)
-				},
-
-				Entry("valid configuration (cpu)", &validResourceQuantity, nil, nil, nil, "1.30.0", BeEmpty()),
-				Entry("valid configuration (memory)", nil, &validResourceQuantity, nil, nil, "1.30.0", BeEmpty()),
-				Entry("valid configuration (storage)", nil, nil, &validResourceQuantity, nil, "1.30.0", BeEmpty()),
-				Entry("valid configuration (pid)", nil, nil, nil, &validResourceQuantity, "1.30.0", BeEmpty()),
-				Entry("valid configuration (all)", &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, "1.30.0", BeEmpty()),
-				Entry("only allow positive resource.Quantity for any value", &invalidResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, "1.30.0", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(field.NewPath("systemReserved.cpu").String()),
-				})))),
-				Entry("forbid string from kubernetes version 1.31", &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, "1.31.0", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(field.NewPath("systemReserved").String()),
 				})))),
 			)
 		})
@@ -10243,7 +10210,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 								Name:           "worker-1",
 								UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
 								Kubernetes: &core.WorkerKubernetes{
-									Version: ptr.To("1.30.0"),
+									Version: ptr.To("1.35.0"),
 									Kubelet: &core.KubeletConfig{
 										EvictionHard: &core.KubeletConfigEviction{
 											MemoryAvailable:  ptr.To("200Mi"),

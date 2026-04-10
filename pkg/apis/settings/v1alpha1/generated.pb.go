@@ -451,18 +451,6 @@ func (m *OpenIDConnectPresetSpec) MarshalToSizedBuffer(dAtA []byte) (int, error)
 		i--
 		dAtA[i] = 0x1a
 	}
-	if m.Client != nil {
-		{
-			size, err := m.Client.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
 	{
 		size, err := m.Server.MarshalToSizedBuffer(dAtA[:i])
 		if err != nil {
@@ -638,10 +626,6 @@ func (m *OpenIDConnectPresetSpec) Size() (n int) {
 	_ = l
 	l = m.Server.Size()
 	n += 1 + l + sovGenerated(uint64(l))
-	if m.Client != nil {
-		l = m.Client.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
 	if m.ShootSelector != nil {
 		l = m.ShootSelector.Size()
 		n += 1 + l + sovGenerated(uint64(l))
@@ -776,7 +760,6 @@ func (this *OpenIDConnectPresetSpec) String() string {
 	}
 	s := strings.Join([]string{`&OpenIDConnectPresetSpec{`,
 		`Server:` + strings.Replace(strings.Replace(this.Server.String(), "KubeAPIServerOpenIDConnect", "KubeAPIServerOpenIDConnect", 1), `&`, ``, 1) + `,`,
-		`Client:` + strings.Replace(this.Client.String(), "OpenIDConnectClientAuthentication", "OpenIDConnectClientAuthentication", 1) + `,`,
 		`ShootSelector:` + strings.Replace(fmt.Sprintf("%v", this.ShootSelector), "LabelSelector", "v1.LabelSelector", 1) + `,`,
 		`Weight:` + fmt.Sprintf("%v", this.Weight) + `,`,
 		`}`,
@@ -2083,42 +2066,6 @@ func (m *OpenIDConnectPresetSpec) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if err := m.Server.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Client", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Client == nil {
-				m.Client = &OpenIDConnectClientAuthentication{}
-			}
-			if err := m.Client.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

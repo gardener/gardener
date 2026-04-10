@@ -5,7 +5,6 @@
 package validation_test
 
 import (
-	"fmt"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -53,12 +52,6 @@ func TestValidation(t *testing.T) {
 }
 
 func validationAssertions(p provider) {
-	var presetSpec *settings.OpenIDConnectPresetSpec
-
-	BeforeEach(func() {
-		presetSpec = p.preset().GetPresetSpec()
-	})
-
 	It("should allow valid resource", func() {
 		errorList := p.providerFunc()
 		Expect(errorList).To(BeEmpty())
@@ -287,67 +280,5 @@ func validationAssertions(p provider) {
 	})
 
 	Context("client", func() {
-		BeforeEach(func() {
-			presetSpec.Client = &settings.OpenIDConnectClientAuthentication{}
-		})
-
-		Context("secret", func() {
-			It("valid secret", func() {
-				secret := "some secret"
-				presetSpec.Client.Secret = &secret
-
-				errorList := p.providerFunc()
-
-				Expect(errorList).To(BeEmpty())
-			})
-			It("empty secret", func() {
-				secret := empty
-				presetSpec.Client.Secret = &secret
-
-				errorList := p.providerFunc()
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal("spec.client.secret"),
-					"BadValue": Equal(empty),
-					"Detail":   Equal("must not be empty"),
-				})),
-				))
-			})
-		})
-
-		Context("extraConfigs", func() {
-			DescribeTable("fobideen config", func(key string) {
-				p.preset().GetPresetSpec().Client.ExtraConfig = map[string]string{key: "some-key"}
-				errorList := p.providerFunc()
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal(fmt.Sprintf("spec.client.extraConfig[%s]", key)),
-					"Detail": Equal("cannot be any of [client-id client-secret id-token idp-certificate-authority idp-certificate-authority-data idp-issuer-url refresh-token]"),
-				}))))
-			},
-				Entry("idp-issuer-url", "idp-issuer-url"),
-				Entry("client-id", "client-id"),
-				Entry("client-secret", "client-secret"),
-				Entry("idp-certificate-authority", "idp-certificate-authority"),
-				Entry("idp-certificate-authority-data", "idp-certificate-authority-data"),
-				Entry("id-token", "id-token"),
-				Entry("refresh-token", "refresh-token"),
-			)
-
-			It("empty config key", func() {
-				presetSpec.Client.ExtraConfig = map[string]string{"foo": ""}
-
-				errorList := p.providerFunc()
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.client.extraConfig[foo]"),
-					"Detail": Equal("must not be empty"),
-				})),
-				))
-			})
-		})
 	})
 }

@@ -49,25 +49,6 @@ It is simpler than `service.kubernetes.io/topology-mode: auto` - if there are Se
 
 ## How to make a Service topology-aware
 
-### How to make a Service topology-aware in Kubernetes < 1.31
-
-In Kubernetes < 1.31, `TopologyAwareHints` and EndpointSlice Hints mutating webhook are being used to make a Service topology-aware. The following annotation and label have to be added to the Service:
-
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  annotations:
-    service.kubernetes.io/topology-mode: "auto"
-  labels:
-    endpoint-slice-hints.resources.gardener.cloud/consider: "true"
-```
-
-The `service.kubernetes.io/topology-mode=auto` annotation is needed for kube-proxy. One of the prerequisites on kube-proxy side for using topology-aware routing is the corresponding Service to be annotated with the `service.kubernetes.io/topology-mode=auto`. For more details, see the following [kube-proxy function](https://github.com/kubernetes/kubernetes/blob/b46a3f887ca979b1a5d14fd39cb1af43e7e5d12d/pkg/proxy/topology.go#L140-L186).
-The `endpoint-slice-hints.resources.gardener.cloud/consider=true` label is needed for gardener-resource-manager to prevent the EndpointSlice hints mutating webhook from selecting all EndpointSlice resources but only the ones that are labeled with the consider label.
-
-The Gardener extensions can use this approach to make a Service they deploy topology-aware.
-
 ### How to make a Service topology-aware in Kubernetes 1.31
 
 In Kubernetes 1.31, `ServiceTrafficDistribution` and EndpointSlice Hints mutating webhook are being used to make a Service topology-aware. The `.spec.trafficDistribution` field has to be set to `PreferClose` and the label `endpoint-slice-hints.resources.gardener.cloud/consider=true` needs to be added:

@@ -1453,33 +1453,6 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						serviceRuntime.Spec.TrafficDistribution = nil
 					})
 				})
-
-				Context("Kubernetes version < 1.31", func() {
-					BeforeEach(func() {
-						values.RuntimeVersion = semver.MustParse("1.30.0")
-						deployer = New(fakeClient, namespace, fakeSecretManager, values)
-					})
-
-					It("should successfully deploy all resources", func() {
-						metav1.SetMetaDataAnnotation(&serviceRuntime.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
-						metav1.SetMetaDataLabel(&serviceRuntime.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
-						serviceRuntime.Spec.TrafficDistribution = nil
-
-						expectedRuntimeObjects = append(
-							expectedRuntimeObjects,
-							podDisruptionBudget,
-							serviceRuntime,
-						)
-
-						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
-					})
-
-					AfterEach(func() {
-						delete(serviceRuntime.Annotations, "service.kubernetes.io/topology-mode")
-						delete(serviceRuntime.Labels, "endpoint-slice-hints.resources.gardener.cloud/consider")
-						serviceRuntime.Spec.TrafficDistribution = nil
-					})
-				})
 			})
 		})
 	})

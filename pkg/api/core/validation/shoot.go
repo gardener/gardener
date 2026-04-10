@@ -1756,10 +1756,6 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, kubernetesVe
 				allErrs = append(allErrs, field.Invalid(oidcPath.Child("caBundle"), *oidc.CABundle, "caBundle is not a valid PEM-encoded certificate"))
 			}
 		}
-		// TODO(AleksandarSavchev): Remove this check as soon as v1.31 is the least supported Kubernetes version in Gardener.
-		if oidc.ClientAuthentication != nil && versionutils.ConstraintK8sGreaterEqual131.CheckVersion(kubernetesVersion) {
-			allErrs = append(allErrs, field.Forbidden(oidcPath.Child("clientAuthentication"), "for Kubernetes versions >= 1.31, clientAuthentication field is no longer supported"))
-		}
 		if oidc.GroupsClaim != nil && len(*oidc.GroupsClaim) == 0 {
 			allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsClaim"), *oidc.GroupsClaim, "groupsClaim cannot be empty when key is provided"))
 		}
@@ -2080,14 +2076,8 @@ func validateKubeProxy(kp *core.KubeProxyConfig, kubernetesVersion string, fldPa
 		} else if mode := *kp.Mode; !availableProxyModes.Has(string(mode)) {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("mode"), mode, sets.List(availableProxyModes)))
 		} else if *kp.Mode == core.ProxyModeNFTables {
-			if versionutils.ConstraintK8sLess131.CheckVersion(kubernetesVersion) {
-				if value, ok := kp.FeatureGates["NFTablesProxyMode"]; !ok || !value {
-					allErrs = append(allErrs, field.Invalid(fldPath.Child("mode"), mode, "NFTables mode requires feature gate NFTablesProxyMode=true for Kubernetes < 1.31"))
-				}
-			} else {
-				if value, ok := kp.FeatureGates["NFTablesProxyMode"]; ok && !value {
-					allErrs = append(allErrs, field.Invalid(fldPath.Child("mode"), mode, "NFTables mode cannot be used when feature gate NFTablesProxyMode is explicitly set to false"))
-				}
+			if value, ok := kp.FeatureGates["NFTablesProxyMode"]; ok && !value {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("mode"), mode, "NFTables mode cannot be used when feature gate NFTablesProxyMode is explicitly set to false"))
 			}
 		}
 		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kp.FeatureGates, kubernetesVersion, fldPath.Child("featureGates"))...)
@@ -2513,13 +2503,6 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, kubernetesVersion s
 	}
 	if kubeletConfig.KubeReserved != nil {
 		allErrs = append(allErrs, validateKubeletConfigReserved(kubeletConfig.KubeReserved, fldPath.Child("kubeReserved"))...)
-	}
-	if kubeletConfig.SystemReserved != nil {
-		allErrs = append(allErrs, validateKubeletConfigReserved(kubeletConfig.SystemReserved, fldPath.Child("systemReserved"))...)
-
-		if versionutils.ConstraintK8sGreaterEqual131.CheckVersion(kubernetesVersion) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("systemReserved"), kubeletConfig.SystemReserved, "for Kubernetes versions >= 1.31, systemReserved field is no longer supported"))
-		}
 	}
 	if v := kubeletConfig.ImageMinimumGCAge; v != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(v.Seconds()), fldPath.Child("imageMinimumGCAge"))...)

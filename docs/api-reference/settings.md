@@ -99,18 +99,6 @@ project selector matching Shoots in Projects.
 </tr>
 <tr>
 <td>
-<code>client</code></br>
-<em>
-<a href="#openidconnectclientauthentication">OpenIDConnectClientAuthentication</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Client contains the configuration used for client OIDC authentication<br />of Shoot clusters.<br />This configuration is not overwriting any existing OpenID Connect<br />client authentication already set on the Shoot object.<br />Deprecated: The OpenID Connect configuration this field specifies is not used and will be forbidden starting from Kubernetes 1.31.<br />It's use was planned for generating OIDC kubeconfig https://github.com/gardener/gardener/issues/1433</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>shootSelector</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#labelselector-v1-meta">LabelSelector</a>
@@ -287,10 +275,6 @@ string
 
 
 <p>
-(<em>Appears on:</em><a href="#clusteropenidconnectpresetspec">ClusterOpenIDConnectPresetSpec</a>, <a href="#openidconnectpresetspec">OpenIDConnectPresetSpec</a>)
-</p>
-
-<p>
 OpenIDConnectClientAuthentication contains configuration for OIDC clients.
 </p>
 
@@ -408,18 +392,6 @@ a specific OpenID Connect configuration is applied.
 </td>
 <td>
 <p>Server contains the kube-apiserver's OpenID Connect configuration.<br />This configuration is not overwriting any existing OpenID Connect<br />configuration already set on the Shoot object.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>client</code></br>
-<em>
-<a href="#openidconnectclientauthentication">OpenIDConnectClientAuthentication</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Client contains the configuration used for client OIDC authentication<br />of Shoot clusters.<br />This configuration is not overwriting any existing OpenID Connect<br />client authentication already set on the Shoot object.<br />Deprecated: The OpenID Connect configuration this field specifies is not used and will be forbidden starting from Kubernetes 1.31.<br />It's use was planned for generating OIDC kubeconfig https://github.com/gardener/gardener/issues/1433</p>
 </td>
 </tr>
 <tr>

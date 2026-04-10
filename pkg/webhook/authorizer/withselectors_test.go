@@ -49,34 +49,6 @@ var _ = Describe("WithSelectors", func() {
 		})
 
 		Describe("#IsPossible", func() {
-			When("Kubernetes version is less then 1.31", func() {
-				BeforeEach(func() {
-					fakeClientSet = fakekubernetes.NewClientSetBuilder().
-						WithClient(mockClient).
-						WithVersion("1.30.0").
-						Build()
-					checker = NewWithSelectorsChecker(ctx, log, fakeClientSet, fakeClock)
-				})
-
-				It("should return false", func() {
-					possible, err := checker.IsPossible()
-					Expect(err).NotTo(HaveOccurred())
-					Expect(possible).To(BeFalse())
-				})
-
-				It("should never query the API server to check if the feature gate is turned on", func() {
-					mockClient.EXPECT().Create(gomock.Any(), gomock.Any()).Times(0)
-
-					_, _ = checker.IsPossible()
-					fakeClock.Step(5 * time.Minute)
-					_, _ = checker.IsPossible()
-					fakeClock.Step(5 * time.Minute)
-					_, _ = checker.IsPossible()
-					fakeClock.Step(5 * time.Minute)
-					_, _ = checker.IsPossible()
-				})
-			})
-
 			When("Kubernetes version is at least 1.34", func() {
 				BeforeEach(func() {
 					fakeClientSet = fakekubernetes.NewClientSetBuilder().

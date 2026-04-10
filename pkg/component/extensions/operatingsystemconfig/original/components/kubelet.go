@@ -97,7 +97,6 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 		out.PodPidsLimit = kubeletConfig.PodPIDsLimit
 		out.ProtectKernelDefaults = kubeletConfig.ProtectKernelDefaults
 		out.StreamingConnectionIdleTimeout = kubeletConfig.StreamingConnectionIdleTimeout
-		out.SystemReserved = reservedFromKubeletConfig(kubeletConfig.SystemReserved)
 
 		if eviction := kubeletConfig.EvictionHard; eviction != nil {
 			if out.EvictionHard == nil {

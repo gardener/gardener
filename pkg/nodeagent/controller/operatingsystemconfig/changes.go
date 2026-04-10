@@ -275,100 +275,56 @@ func getKubeletConfig(osc *extensionsv1alpha1.OperatingSystemConfig) (*kubeletco
 // ComputeKubeletConfigChange computes changes in the kubelet configuration relevant for in-place updates.
 // This function needs to be updated when the kubelet configuration triggers in https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/shoot_updates.md#rolling-update-triggers are changed.
 func ComputeKubeletConfigChange(oldConfig, newConfig *kubeletconfigv1beta1.KubeletConfiguration) (bool, bool, error) {
-	var (
-		cpuManagerPolicyChanged = oldConfig.CPUManagerPolicy != newConfig.CPUManagerPolicy
-		oldRelevantEvictionHard = make(map[string]string)
-		newRelevantEvictionHard = make(map[string]string)
-	)
+	cpuManagerPolicyChanged := oldConfig.CPUManagerPolicy != newConfig.CPUManagerPolicy
+	collectRelevantEntries := func(data map[string]string, relevantKeys []string) map[string]string {
+		filteredData := make(map[string]string)
+		relevantKeysSet := sets.New(relevantKeys...)
+
+		for k, v := range data {
+			if !relevantKeysSet.Has(k) {
+				continue
+			}
+			filteredData[k] = v
+		}
+
+		return filteredData
+	}
 
 	// Copy only relevant config values for comparison.
-	if oldConfig.EvictionHard != nil {
-		oldRelevantEvictionHard[components.MemoryAvailable] = oldConfig.EvictionHard[components.MemoryAvailable]
-		oldRelevantEvictionHard[components.ImageFSAvailable] = oldConfig.EvictionHard[components.ImageFSAvailable]
-		oldRelevantEvictionHard[components.ImageFSInodesFree] = oldConfig.EvictionHard[components.ImageFSInodesFree]
-		oldRelevantEvictionHard[components.NodeFSAvailable] = oldConfig.EvictionHard[components.NodeFSAvailable]
-		oldRelevantEvictionHard[components.NodeFSInodesFree] = oldConfig.EvictionHard[components.NodeFSInodesFree]
-	}
-
-	if newConfig.EvictionHard != nil {
-		newRelevantEvictionHard[components.MemoryAvailable] = newConfig.EvictionHard[components.MemoryAvailable]
-		newRelevantEvictionHard[components.ImageFSAvailable] = newConfig.EvictionHard[components.ImageFSAvailable]
-		newRelevantEvictionHard[components.ImageFSInodesFree] = newConfig.EvictionHard[components.ImageFSInodesFree]
-		newRelevantEvictionHard[components.NodeFSAvailable] = newConfig.EvictionHard[components.NodeFSAvailable]
-		newRelevantEvictionHard[components.NodeFSInodesFree] = newConfig.EvictionHard[components.NodeFSInodesFree]
-	}
+	relevantEvictionNames := []string{components.MemoryAvailable, components.ImageFSAvailable, components.ImageFSInodesFree, components.NodeFSAvailable, components.NodeFSInodesFree}
+	oldRelevantEvictionHard := collectRelevantEntries(oldConfig.EvictionHard, relevantEvictionNames)
+	newRelevantEvictionHard := collectRelevantEntries(newConfig.EvictionHard, relevantEvictionNames)
 
 	if !maps.Equal(oldRelevantEvictionHard, newRelevantEvictionHard) {
 		return true, cpuManagerPolicyChanged, nil
 	}
 
-	oldReserved, err := sumResourceReservations(oldConfig.KubeReserved, oldConfig.SystemReserved)
-	if err != nil {
-		return false, cpuManagerPolicyChanged, fmt.Errorf("failed to sum resource reservations for old kubelet config: %w", err)
-	}
-	newReserved, err := sumResourceReservations(newConfig.KubeReserved, newConfig.SystemReserved)
-	if err != nil {
-		return false, cpuManagerPolicyChanged, fmt.Errorf("failed to sum resource reservations for new kubelet config: %w", err)
+	for _, config := range []*kubeletconfigv1beta1.KubeletConfiguration{oldConfig, newConfig} {
+		if err := validateQuantities(config); err != nil {
+			return false, cpuManagerPolicyChanged, fmt.Errorf("error validating quantities: %v", err)
+		}
 	}
 
-	return !maps.Equal(oldReserved, newReserved), cpuManagerPolicyChanged, nil
+	// Copy only relevant config values for comparison.
+	relevantKubeReservedNames := []string{"cpu", "memory", "ephemeral-storage", "pid"}
+	oldConfigKubeReserved := collectRelevantEntries(oldConfig.KubeReserved, relevantKubeReservedNames)
+	newConfigKubeReserved := collectRelevantEntries(newConfig.KubeReserved, relevantKubeReservedNames)
+
+	return !maps.Equal(oldConfigKubeReserved, newConfigKubeReserved), cpuManagerPolicyChanged, nil
 }
 
-func sumResourceReservations(left, right map[string]string) (map[string]string, error) {
-	if left == nil {
-		return right, nil
-	} else if right == nil {
-		return left, nil
+func validateQuantities(config *kubeletconfigv1beta1.KubeletConfiguration) error {
+	if config == nil {
+		return nil
 	}
 
-	out := make(map[string]string)
-
-	for _, resource := range []string{"cpu", "memory", "ephemeral-storage", "pid"} {
-		if quantity, err := sumQuantities(left[resource], right[resource]); err != nil {
-			return nil, fmt.Errorf("failed to sum %s reservations: %w", resource, err)
-		} else {
-			out[resource] = quantity.String()
+	for _, q := range config.KubeReserved {
+		if _, err := resource.ParseQuantity(q); err != nil {
+			return fmt.Errorf("failed to parse quantity: %w", err)
 		}
 	}
 
-	return out, nil
-}
-
-func sumQuantities(l, r string) (*resource.Quantity, error) {
-	var (
-		left, right resource.Quantity
-		err         error
-	)
-
-	if r == "" && l == "" {
-		return resource.NewQuantity(0, resource.DecimalSI), nil
-	}
-
-	if l != "" {
-		left, err = resource.ParseQuantity(l)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse left quantity: %w", err)
-		}
-
-		if r == "" {
-			return &left, nil
-		}
-	}
-
-	if r != "" {
-		right, err = resource.ParseQuantity(r)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse right quantity: %w", err)
-		}
-
-		if l == "" {
-			return &right, nil
-		}
-	}
-
-	copy := left.DeepCopy()
-	copy.Add(right)
-	return &copy, nil
+	return nil
 }
 
 func computeUnitDiffs(oldUnits, newUnits []extensionsv1alpha1.Unit, fileDiffs files) units {

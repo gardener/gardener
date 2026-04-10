@@ -2039,12 +2039,6 @@ var _ = Describe("Shoot", func() {
 					NodeFSAvailable:   ptr.To("200Mi"),
 					NodeFSInodesFree:  ptr.To("1k"),
 				},
-				SystemReserved: &gardencorev1beta1.KubeletConfigReserved{
-					CPU:              ptr.To(resource.MustParse("1m")),
-					Memory:           ptr.To(resource.MustParse("1Mi")),
-					PID:              ptr.To(resource.MustParse("1k")),
-					EphemeralStorage: ptr.To(resource.MustParse("100Gi")),
-				},
 				KubeReserved: &gardencorev1beta1.KubeletConfigReserved{
 					CPU:              ptr.To(resource.MustParse("100m")),
 					Memory:           ptr.To(resource.MustParse("2Gi")),
@@ -2054,7 +2048,7 @@ var _ = Describe("Shoot", func() {
 			}
 
 			Expect(CalculateDataStringForKubeletConfiguration(kubeletConfig)).To(ConsistOf(
-				"101m-2049Mi-16k-142Gi",
+				"100m-2Gi-15k-42Gi",
 				"200Mi-1k-200Mi-200Mi-1k",
 				"static",
 			))
@@ -2178,10 +2172,6 @@ var _ = Describe("Shoot", func() {
 				},
 			},
 			semver.MustParse("1.31.0"),
-			BeFalse()),
-		Entry("version is < 1.31",
-			&gardencorev1beta1.KubeAPIServerConfig{},
-			semver.MustParse("1.30.0"),
 			BeFalse()),
 	)
 
@@ -2316,30 +2306,6 @@ var _ = Describe("Shoot", func() {
 
 			It("when changing CPUManagerPolicy", func() {
 				kubeletConfig.CPUManagerPolicy = ptr.To("test")
-			})
-
-			It("when changing systemReserved CPU", func() {
-				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
-					CPU: ptr.To(resource.MustParse("1m")),
-				}
-			})
-
-			It("when changing systemReserved memory", func() {
-				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
-					Memory: ptr.To(resource.MustParse("1Mi")),
-				}
-			})
-
-			It("when systemReserved PID", func() {
-				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
-					PID: ptr.To(resource.MustParse("1k")),
-				}
-			})
-
-			It("when changing systemReserved EphemeralStorage", func() {
-				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
-					EphemeralStorage: ptr.To(resource.MustParse("100Gi")),
-				}
 			})
 		})
 

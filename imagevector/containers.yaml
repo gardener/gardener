@@ -87,21 +87,6 @@ images:
     sourceRepository: github.com/kubernetes/ingress-nginx
     repository: registry.k8s.io/ingress-nginx/controller-chroot
     tag: "v1.15.1"
-    targetVersion: ">= 1.31"
-    labels:
-      - name: 'gardener.cloud/cve-categorisation'
-        value:
-          network_exposure: 'public'
-          authentication_enforced: true
-          user_interaction: 'end-user'
-          confidentiality_requirement: 'high'
-          integrity_requirement: 'high'
-          availability_requirement: 'low'
-  - name: nginx-ingress-controller
-    sourceRepository: github.com/kubernetes/ingress-nginx
-    repository: registry.k8s.io/ingress-nginx/controller-chroot
-    tag: "v1.14.5"
-    targetVersion: "1.30.x"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
@@ -179,11 +164,6 @@ images:
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
     tag: "v1.31.1"
     targetVersion: "1.31.x"
-  - name: cluster-autoscaler
-    sourceRepository: github.com/gardener/autoscaler
-    repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
-    tag: "v1.30.3"
-    targetVersion: "1.30.x"
   - name: vpn-server
     sourceRepository: github.com/gardener/vpn2
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-server
@@ -409,25 +389,6 @@ images:
     sourceRepository: github.com/kubernetes-sigs/metrics-server
     repository: registry.k8s.io/metrics-server/metrics-server
     tag: v0.8.1
-    targetVersion: ">= 1.31"
-    labels:
-      - name: gardener.cloud/cve-categorisation
-        value:
-          network_exposure: private
-          authentication_enforced: false
-          user_interaction: gardener-operator
-          confidentiality_requirement: high
-          integrity_requirement: high
-          availability_requirement: low
-      - name: 'cloud.gardener.cnudie/responsibles'
-        value:
-          - type: 'githubTeam'
-            teamname: 'gardener/monitoring-maintainers'
-  - name: metrics-server
-    sourceRepository: github.com/kubernetes-sigs/metrics-server
-    repository: registry.k8s.io/metrics-server/metrics-server
-    tag: v0.7.2
-    targetVersion: "< 1.31"
     labels:
       - name: gardener.cloud/cve-categorisation
         value:

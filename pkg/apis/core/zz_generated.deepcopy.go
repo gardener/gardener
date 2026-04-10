@@ -2931,11 +2931,6 @@ func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 		*out = new(KubeletConfigReserved)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.SystemReserved != nil {
-		in, out := &in.SystemReserved, &out.SystemReserved
-		*out = new(KubeletConfigReserved)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.ImageMinimumGCAge != nil {
 		in, out := &in.ImageMinimumGCAge, &out.ImageMinimumGCAge
 		*out = new(metav1.Duration)
@@ -4286,11 +4281,6 @@ func (in *OIDCConfig) DeepCopyInto(out *OIDCConfig) {
 		in, out := &in.CABundle, &out.CABundle
 		*out = new(string)
 		**out = **in
-	}
-	if in.ClientAuthentication != nil {
-		in, out := &in.ClientAuthentication, &out.ClientAuthentication
-		*out = new(OpenIDConnectClientAuthentication)
-		(*in).DeepCopyInto(*out)
 	}
 	if in.ClientID != nil {
 		in, out := &in.ClientID, &out.ClientID

@@ -992,13 +992,10 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			d.osc.Spec.CRIConfig.Name == extensionsv1alpha1.CRINameContainerD &&
 			d.purpose == extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
 			d.osc.Spec.CRIConfig.Containerd = &extensionsv1alpha1.ContainerdConfig{}
+			d.osc.Spec.CRIConfig.CgroupDriver = ptr.To(extensionsv1alpha1.CgroupDriverSystemd)
 
 			if pauseImage := d.images[imagevector.ContainerImageNamePauseContainer]; pauseImage != nil {
 				d.osc.Spec.CRIConfig.Containerd.SandboxImage = pauseImage.String()
-			}
-
-			if version.ConstraintK8sGreaterEqual131.Check(d.kubernetesVersion) {
-				d.osc.Spec.CRIConfig.CgroupDriver = ptr.To(extensionsv1alpha1.CgroupDriverSystemd)
 			}
 		}
 
@@ -1041,7 +1038,7 @@ func calculateKeyForVersion(
 ) {
 	switch version {
 	case 1:
-		// TODO(MichaelEischer): Remove KeyV1 after support for Kubernetes 1.30 is dropped
+		// TODO(MichaelEischer): Remove KeyV1 after the feature gate WorkerPoolHashVersioning has been locked to true.
 		return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
 	case 2:
 		return KeyV2(kubernetesVersion, values.CredentialsRotationStatus, worker, values.NodeLocalDNSEnabled, kubeletConfiguration, kubeProxyConfig), nil

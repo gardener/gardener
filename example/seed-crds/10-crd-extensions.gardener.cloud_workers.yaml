@@ -451,43 +451,6 @@ spec:
                             This field cannot be set lower than "30s" or greater than "4h".
                             Default: "5m".
                           type: string
-                        systemReserved:
-                          description: |-
-                            SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
-                            When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
-
-                            Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31.
-                            Please merge existing resource reservations into the kubeReserved field.
-                          properties:
-                            cpu:
-                              anyOf:
-                              - type: integer
-                              - type: string
-                              description: CPU is the reserved cpu.
-                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                              x-kubernetes-int-or-string: true
-                            ephemeralStorage:
-                              anyOf:
-                              - type: integer
-                              - type: string
-                              description: EphemeralStorage is the reserved ephemeral-storage.
-                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                              x-kubernetes-int-or-string: true
-                            memory:
-                              anyOf:
-                              - type: integer
-                              - type: string
-                              description: Memory is the reserved memory.
-                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                              x-kubernetes-int-or-string: true
-                            pid:
-                              anyOf:
-                              - type: integer
-                              - type: string
-                              description: PID is the reserved process-ids.
-                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                              x-kubernetes-int-or-string: true
-                          type: object
                       type: object
                     kubeletDataVolumeName:
                       description: KubeletDataVolumeName contains the name of a dataVolume

@@ -1684,15 +1684,6 @@ message KubeletConfig {
   // Default: cpu=80m,memory=1Gi,pid=20k
   optional KubeletConfigReserved kubeReserved = 14;
 
-  // SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
-  // When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
-  //
-  // Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31.
-  // Please merge existing resource reservations into the kubeReserved field.
-  // TODO(MichaelEischer): Drop this field after support for Kubernetes 1.30 is dropped.
-  // +optional
-  optional KubeletConfigReserved systemReserved = 15;
-
   // ImageGCHighThresholdPercent describes the percent of the disk usage which triggers image garbage collection.
   // +optional
   // Default: 50
@@ -2491,14 +2482,6 @@ message OIDCConfig {
   // If set, the OpenID server's certificate will be verified by one of the authorities in the oidc-ca-file, otherwise the host's root CA set will be used.
   // +optional
   optional string caBundle = 1;
-
-  // ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
-  //
-  // Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31.
-  // It's use was planned for generating OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
-  // TODO(AleksandarSavchev): Drop this field after support for Kubernetes 1.30 is dropped.
-  // +optional
-  optional OpenIDConnectClientAuthentication clientAuthentication = 2;
 
   // The client ID for the OpenID Connect client, must be set.
   // +optional

@@ -58,10 +58,6 @@ var _ = Describe("Applier", func() {
 			UsernameClaim:  ptr.To("user"),
 			UsernamePrefix: ptr.To("user-prefix"),
 		}
-		spec.Client = &v1alpha1.OpenIDConnectClientAuthentication{
-			Secret:      ptr.To("secret"),
-			ExtraConfig: map[string]string{"foo": "bar", "baz": "dap"},
-		}
 
 		shoot.Spec.Kubernetes.Version = "v1.31.0"
 
@@ -80,11 +76,6 @@ var _ = Describe("Applier", func() {
 				SigningAlgs:    []string{"alg-1", "alg-2"},
 				UsernameClaim:  ptr.To("user"),
 				UsernamePrefix: ptr.To("user-prefix"),
-
-				ClientAuthentication: &core.OpenIDConnectClientAuthentication{
-					Secret:      ptr.To("secret"),
-					ExtraConfig: map[string]string{"foo": "bar", "baz": "dap"},
-				},
 			},
 		}
 

@@ -139,7 +139,6 @@ authorizers:
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.30.0",
 					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
 						StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{
 							ConfigMapName: configMapName,
@@ -389,7 +388,7 @@ authorizers:
 
 				It("should allow if the AuthorizationConfig is changed to something valid", func() {
 					Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-					shoot.Spec.Kubernetes.Version = "1.30.1"
+					shoot.Spec.Kubernetes.Version = "1.32.1"
 					newCm := configMap.DeepCopy()
 					newCm.Data["config.yaml"] = anotherValidAuthorizationConfiguration
 

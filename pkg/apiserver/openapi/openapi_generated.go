@@ -5290,12 +5290,6 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 							Ref:         ref(v1beta1.KubeletConfigReserved{}.OpenAPIModelName()),
 						},
 					},
-					"systemReserved": {
-						SchemaProps: spec.SchemaProps{
-							Description: "SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald). When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.\n\nDeprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31. Please merge existing resource reservations into the kubeReserved field.",
-							Ref:         ref(v1beta1.KubeletConfigReserved{}.OpenAPIModelName()),
-						},
-					},
 					"imageGCHighThresholdPercent": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ImageGCHighThresholdPercent describes the percent of the disk usage which triggers image garbage collection. Default: 50",
@@ -7258,12 +7252,6 @@ func schema_pkg_apis_core_v1beta1_OIDCConfig(ref common.ReferenceCallback) commo
 							Format:      "",
 						},
 					},
-					"clientAuthentication": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ClientAuthentication can optionally contain client configuration used for kubeconfig generation.\n\nDeprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31. It's use was planned for generating OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
-							Ref:         ref(v1beta1.OpenIDConnectClientAuthentication{}.OpenAPIModelName()),
-						},
-					},
 					"clientID": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The client ID for the OpenID Connect client, must be set.",
@@ -7340,8 +7328,6 @@ func schema_pkg_apis_core_v1beta1_OIDCConfig(ref common.ReferenceCallback) commo
 				},
 			},
 		},
-		Dependencies: []string{
-			v1beta1.OpenIDConnectClientAuthentication{}.OpenAPIModelName()},
 	}
 }
 
@@ -13389,12 +13375,6 @@ func schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetSpec(ref common
 							Ref:         ref(settingsv1alpha1.KubeAPIServerOpenIDConnect{}.OpenAPIModelName()),
 						},
 					},
-					"client": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwriting any existing OpenID Connect client authentication already set on the Shoot object.\n\nDeprecated: The OpenID Connect configuration this field specifies is not used and will be forbidden starting from Kubernetes 1.31. It's use was planned for generating OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
-							Ref:         ref(settingsv1alpha1.OpenIDConnectClientAuthentication{}.OpenAPIModelName()),
-						},
-					},
 					"shootSelector": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ShootSelector decides whether to apply the configuration if the Shoot has matching labels. Use the selector only if the OIDC Preset is opt-in, because end users may skip the admission by setting the labels. Default to the empty LabelSelector, which matches everything.",
@@ -13420,7 +13400,7 @@ func schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetSpec(ref common
 			},
 		},
 		Dependencies: []string{
-			settingsv1alpha1.KubeAPIServerOpenIDConnect{}.OpenAPIModelName(), settingsv1alpha1.OpenIDConnectClientAuthentication{}.OpenAPIModelName(), metav1.LabelSelector{}.OpenAPIModelName()},
+			settingsv1alpha1.KubeAPIServerOpenIDConnect{}.OpenAPIModelName(), metav1.LabelSelector{}.OpenAPIModelName()},
 	}
 }
 
@@ -13665,12 +13645,6 @@ func schema_pkg_apis_settings_v1alpha1_OpenIDConnectPresetSpec(ref common.Refere
 							Ref:         ref(settingsv1alpha1.KubeAPIServerOpenIDConnect{}.OpenAPIModelName()),
 						},
 					},
-					"client": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwriting any existing OpenID Connect client authentication already set on the Shoot object.\n\nDeprecated: The OpenID Connect configuration this field specifies is not used and will be forbidden starting from Kubernetes 1.31. It's use was planned for generating OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
-							Ref:         ref(settingsv1alpha1.OpenIDConnectClientAuthentication{}.OpenAPIModelName()),
-						},
-					},
 					"shootSelector": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ShootSelector decides whether to apply the configuration if the Shoot has matching labels. Use the selector only if the OIDC Preset is opt-in, because end users may skip the admission by setting the labels. Default to the empty LabelSelector, which matches everything.",
@@ -13690,7 +13664,7 @@ func schema_pkg_apis_settings_v1alpha1_OpenIDConnectPresetSpec(ref common.Refere
 			},
 		},
 		Dependencies: []string{
-			settingsv1alpha1.KubeAPIServerOpenIDConnect{}.OpenAPIModelName(), settingsv1alpha1.OpenIDConnectClientAuthentication{}.OpenAPIModelName(), metav1.LabelSelector{}.OpenAPIModelName()},
+			settingsv1alpha1.KubeAPIServerOpenIDConnect{}.OpenAPIModelName(), metav1.LabelSelector{}.OpenAPIModelName()},
 	}
 }
 

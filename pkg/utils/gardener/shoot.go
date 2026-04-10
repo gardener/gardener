@@ -846,7 +846,7 @@ func CalculateDataStringForKubeletConfiguration(kubeletConfiguration *gardencore
 		return nil
 	}
 
-	if resources := v1beta1helper.SumResourceReservations(kubeletConfiguration.KubeReserved, kubeletConfiguration.SystemReserved); resources != nil {
+	if resources := kubeletConfiguration.KubeReserved; resources != nil {
 		data = append(data, fmt.Sprintf("%s-%s-%s-%s", resources.CPU, resources.Memory, resources.PID, resources.EphemeralStorage))
 	}
 	if eviction := kubeletConfiguration.EvictionHard; eviction != nil {
@@ -904,20 +904,16 @@ func IsAuthorizeWithSelectorsEnabled(kubeAPIServer *gardencorev1beta1.KubeAPISer
 	}
 
 	// The feature gate is alpha in v1.31 and disabled by default.
-	if versionutils.ConstraintK8sGreaterEqual131.Check(kubernetesVersion) {
-		if kubeAPIServer == nil {
-			return false
-		}
-
-		value, ok := kubeAPIServer.FeatureGates["AuthorizeWithSelectors"]
-		if !ok {
-			return false
-		}
-
-		return value
+	if kubeAPIServer == nil {
+		return false
 	}
 
-	return false
+	value, ok := kubeAPIServer.FeatureGates["AuthorizeWithSelectors"]
+	if !ok {
+		return false
+	}
+
+	return value
 }
 
 // CalculateWorkerPoolHashForInPlaceUpdate calculates the data string for the worker pool hash to be used for in-place updates.

@@ -1044,7 +1044,7 @@ func makeIngressGateway(namespace string, annotations, labels map[string]string,
 			PriorityClassName:                  v1beta1constants.PriorityClassNameSeedSystemCritical,
 			TerminateLoadBalancerProxyProtocol: false,
 			VPNEnabled:                         true,
-			KubernetesVersion:                  "1.30.0",
+			KubernetesVersion:                  "1.35.0",
 		},
 	}
 }

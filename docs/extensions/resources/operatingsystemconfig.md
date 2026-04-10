@@ -350,7 +350,7 @@ If CRI configurations are not supported, it is recommended to create a validatin
 
 ### cgroup driver
 
-For Shoot clusters using Kubernetes < 1.31, Gardener is setting the kubelet's cgroup driver to [`cgroupfs`](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#cgroupfs-cgroup-driver) and containerd's cgroup driver is unmanaged. For Shoot clusters using Kubernetes 1.31+, Gardener is setting both kubelet's and containerd's cgroup driver to [`systemd`](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#systemd-cgroup-driver).
+Gardener sets both kubelet's and containerd's cgroup driver to [`systemd`](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#systemd-cgroup-driver).
 
 The `systemd` cgroup driver is a requirement for operating systems using [cgroup v2](https://kubernetes.io/docs/concepts/architecture/cgroups/). It's important to ensure that both kubelet and the container runtime (containerd) are using the same cgroup driver to avoid potential issues.
 

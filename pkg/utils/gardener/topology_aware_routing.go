@@ -33,16 +33,9 @@ func ReconcileTopologyAwareRoutingSettings(service *corev1.Service, topologyAwar
 	} else if versionutils.ConstraintK8sGreaterEqual132.Check(k8sVersion) {
 		// For Kubernetes >= 1.32, only use the PreferClose strategy of the ServiceTrafficDistribution feature.
 		service.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
-	} else if versionutils.ConstraintK8sEqual131.Check(k8sVersion) {
-		// For Kubernetes 1.31, use the PreferClose strategy of the ServiceTrafficDistribution feature in combination with the GRM's endpoints-slice-hints webhook.
-		//
-		// The webhook is still used to cover the migration case to prevent disabling the topology-aware routing feature during Kubernetes 1.30 -> 1.31 migration
-		// for Services until they are reconciled in the next maintenance time window of the Shoot.
-		service.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
-		metav1.SetMetaDataLabel(&service.ObjectMeta, resourcesv1alpha1.EndpointSliceHintsConsider, "true")
 	} else {
-		// For Kubernetes < 1.31, use the TopologyAwareHints feature (with the new annotation key) in combination with the GRM's endpoints-slice-hints webhook.
-		metav1.SetMetaDataAnnotation(&service.ObjectMeta, corev1.AnnotationTopologyMode, "auto")
+		// For Kubernetes 1.31, use the PreferClose strategy of the ServiceTrafficDistribution feature in combination with the GRM's endpoints-slice-hints webhook.
+		service.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
 		metav1.SetMetaDataLabel(&service.ObjectMeta, resourcesv1alpha1.EndpointSliceHintsConsider, "true")
 	}
 }

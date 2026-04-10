@@ -292,7 +292,6 @@ func autoConvert_v1alpha1_OpenIDConnectPresetSpec_To_settings_OpenIDConnectPrese
 	if err := Convert_v1alpha1_KubeAPIServerOpenIDConnect_To_settings_KubeAPIServerOpenIDConnect(&in.Server, &out.Server, s); err != nil {
 		return err
 	}
-	out.Client = (*settings.OpenIDConnectClientAuthentication)(unsafe.Pointer(in.Client))
 	out.ShootSelector = (*v1.LabelSelector)(unsafe.Pointer(in.ShootSelector))
 	out.Weight = in.Weight
 	return nil
@@ -307,7 +306,6 @@ func autoConvert_settings_OpenIDConnectPresetSpec_To_v1alpha1_OpenIDConnectPrese
 	if err := Convert_settings_KubeAPIServerOpenIDConnect_To_v1alpha1_KubeAPIServerOpenIDConnect(&in.Server, &out.Server, s); err != nil {
 		return err
 	}
-	out.Client = (*OpenIDConnectClientAuthentication)(unsafe.Pointer(in.Client))
 	out.ShootSelector = (*v1.LabelSelector)(unsafe.Pointer(in.ShootSelector))
 	out.Weight = in.Weight
 	return nil

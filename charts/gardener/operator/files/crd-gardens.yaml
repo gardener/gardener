@@ -1671,25 +1671,6 @@ spec:
                                   oidc-ca-file, otherwise the host's root CA set will
                                   be used.
                                 type: string
-                              clientAuthentication:
-                                description: |-
-                                  ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
-
-                                  Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31.
-                                  It's use was planned for generating OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
-                                properties:
-                                  extraConfig:
-                                    additionalProperties:
-                                      type: string
-                                    description: |-
-                                      Extra configuration added to kubeconfig's auth-provider.
-                                      Must not be any of idp-issuer-url, client-id, client-secret, idp-certificate-authority, idp-certificate-authority-data, id-token or refresh-token
-                                    type: object
-                                  secret:
-                                    description: The client Secret for the OpenID
-                                      Connect client.
-                                    type: string
-                                type: object
                               clientID:
                                 description: The client ID for the OpenID Connect
                                   client, must be set.
