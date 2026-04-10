@@ -10,7 +10,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -28,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	"github.com/gardener/gardener/pkg/utils/test"
-	mockworkqueue "github.com/gardener/gardener/third_party/mock/client-go/util/workqueue"
 )
 
 var _ = Describe("Add", func() {
@@ -80,7 +78,7 @@ var _ = Describe("Add", func() {
 	Describe("#EnqueueWithJitterDelay", func() {
 		var (
 			hdlr           handler.EventHandler
-			queue          *mockworkqueue.MockTypedRateLimitingInterface[reconcile.Request]
+			queue          *test.FakeQueue[reconcile.Request]
 			obj            *seedmanagementv1alpha1.ManagedSeed
 			req            reconcile.Request
 			cfg            gardenletconfigv1alpha1.GardenletConfiguration
@@ -97,7 +95,7 @@ var _ = Describe("Add", func() {
 			}
 
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
-			queue = mockworkqueue.NewMockTypedRateLimitingInterface[reconcile.Request](gomock.NewController(GinkgoT()))
+			queue = &test.FakeQueue[reconcile.Request]{}
 			obj = &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: "managedseed", Namespace: "namespace"}}
 			req = reconcile.Request{NamespacedName: types.NamespacedName{Name: obj.Name, Namespace: obj.Namespace}}
 
@@ -107,102 +105,108 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should enqueue the object without delay for Create events when deletion timestamp is set", func() {
-			queue.EXPECT().Add(req)
-
 			now := metav1.Now()
 			obj.SetDeletionTimestamp(&now)
 			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
+
+			Expect(queue.Added).To(ConsistOf(req))
 		})
 
 		It("should enqueue the object without delay for Create events when generation is set to 1", func() {
-			queue.EXPECT().Add(req)
-
 			obj.Generation = 1
 			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
+
+			Expect(queue.Added).To(ConsistOf(req))
 		})
 
 		It("should enqueue the object without delay for Create events when generation changed and jitterudpates is set to false", func() {
-			queue.EXPECT().Add(req)
-
 			cfg.Controllers.ManagedSeed.JitterUpdates = ptr.To(false)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
 			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
+
+			Expect(queue.Added).To(ConsistOf(req))
 		})
 
 		It("should enqueue the object with random delay for Create events when generation changed and  jitterUpdates is set to true", func() {
-			queue.EXPECT().AddAfter(req, randomDuration)
-
 			cfg.Controllers.ManagedSeed.JitterUpdates = ptr.To(true)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
 			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
+
+			Expect(queue.AddedAfter).To(ConsistOf(test.AddAfterArgs[reconcile.Request]{Item: req, Duration: randomDuration}))
 		})
 
 		It("should enqueue the object with random delay for Create events when there is no change in generation", func() {
-			queue.EXPECT().AddAfter(req, randomDuration)
-
 			cfg.Controllers.ManagedSeed.JitterUpdates = ptr.To(false)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 2
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
 			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
+
+			Expect(queue.AddedAfter).To(ConsistOf(test.AddAfterArgs[reconcile.Request]{Item: req, Duration: randomDuration}))
 		})
 
 		It("should not enqueue the object for Update events when generation and observedGeneration are equal", func() {
 			obj.Generation = 1
 			obj.Status.ObservedGeneration = 1
 			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+
+			Expect(queue.Added).To(BeEmpty())
+			Expect(queue.AddedAfter).To(BeEmpty())
 		})
 
 		It("should enqueue the object for Update events when deletion timestamp is set", func() {
-			queue.EXPECT().Add(req)
-
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
 			now := metav1.Now()
 			obj.SetDeletionTimestamp(&now)
 			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+
+			Expect(queue.Added).To(ConsistOf(req))
 		})
 
 		It("should enqueue the object for Update events when generation is 1", func() {
-			queue.EXPECT().Add(req)
-
 			obj.Generation = 1
 			obj.Status.ObservedGeneration = 0
 			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+
+			Expect(queue.Added).To(ConsistOf(req))
 		})
 
 		It("should enqueue the object for Update events when jitterUpdates is set to false", func() {
-			queue.EXPECT().Add(req)
-
 			cfg.Controllers.ManagedSeed.JitterUpdates = ptr.To(false)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
 			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+
+			Expect(queue.Added).To(ConsistOf(req))
 		})
 
 		It("should enqueue the object with random delay for Update events when jitterUpdates is set to true", func() {
-			queue.EXPECT().AddAfter(req, randomDuration)
-
 			cfg.Controllers.ManagedSeed.JitterUpdates = ptr.To(true)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
 			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+
+			Expect(queue.AddedAfter).To(ConsistOf(test.AddAfterArgs[reconcile.Request]{Item: req, Duration: randomDuration}))
 		})
 
 		It("should enqueue the object for Delete events", func() {
-			queue.EXPECT().Add(req)
-
 			hdlr.Delete(ctx, event.DeleteEvent{Object: obj}, queue)
+
+			Expect(queue.Added).To(ConsistOf(req))
 		})
 
 		It("should not enqueue the object for Generic events", func() {
 			hdlr.Generic(ctx, event.GenericEvent{Object: obj}, queue)
+
+			Expect(queue.Added).To(BeEmpty())
+			Expect(queue.AddedAfter).To(BeEmpty())
 		})
 	})
 })

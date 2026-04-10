@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
-	"go.uber.org/mock/gomock"
+	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
@@ -24,7 +24,6 @@ import (
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
 	"github.com/gardener/gardener/pkg/utils/test"
-	mockworkqueue "github.com/gardener/gardener/third_party/mock/client-go/util/workqueue"
 )
 
 var _ = Describe("Add", func() {
@@ -51,7 +50,7 @@ var _ = Describe("Add", func() {
 	Describe("#EventHandler", func() {
 		var (
 			hdlr  handler.EventHandler
-			queue *mockworkqueue.MockTypedRateLimitingInterface[reconcile.Request]
+			queue *test.FakeQueue[reconcile.Request]
 			obj   *gardencorev1beta1.Shoot
 			req   reconcile.Request
 		)
@@ -61,7 +60,7 @@ var _ = Describe("Add", func() {
 				Config: cfg,
 				Clock:  cl,
 			}).EventHandler(log)
-			queue = mockworkqueue.NewMockTypedRateLimitingInterface[reconcile.Request](gomock.NewController(GinkgoT()))
+			queue = &test.FakeQueue[reconcile.Request]{}
 			obj = &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "shoot", Namespace: "namespace"}}
 			req = reconcile.Request{NamespacedName: types.NamespacedName{Name: obj.Name, Namespace: obj.Namespace}}
 		})
@@ -73,33 +72,40 @@ var _ = Describe("Add", func() {
 					EnqueueAfter: duration,
 				}
 			}))
-			queue.EXPECT().AddAfter(req, duration)
 
 			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
+
+			Expect(queue.AddedAfter).To(ConsistOf(test.AddAfterArgs[reconcile.Request]{Item: req, Duration: duration}))
 		})
 
 		It("should enqueue the object for Update events", func() {
-			queue.EXPECT().Add(req)
-
 			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+
+			Expect(queue.Added).To(ConsistOf(req))
 		})
 
 		It("should forget the backoff and enqueue the object for Update events setting the deletionTimestamp", func() {
-			queue.EXPECT().Forget(req)
-			queue.EXPECT().Add(req)
-
 			objOld := obj.DeepCopy()
 			now := metav1.Now()
 			obj.SetDeletionTimestamp(&now)
 			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: objOld}, queue)
+
+			Expect(queue.Forgotten).To(ConsistOf(req))
+			Expect(queue.Added).To(ConsistOf(req))
 		})
 
 		It("should not enqueue the object for Delete events", func() {
 			hdlr.Delete(ctx, event.DeleteEvent{Object: obj}, queue)
+
+			Expect(queue.Added).To(BeEmpty())
+			Expect(queue.AddedAfter).To(BeEmpty())
 		})
 
 		It("should not enqueue the object for Generic events", func() {
 			hdlr.Generic(ctx, event.GenericEvent{Object: obj}, queue)
+
+			Expect(queue.Added).To(BeEmpty())
+			Expect(queue.AddedAfter).To(BeEmpty())
 		})
 	})
 })
