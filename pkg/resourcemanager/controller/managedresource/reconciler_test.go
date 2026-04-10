@@ -105,49 +105,48 @@ var _ = Describe("Controller", func() {
 		})
 	})
 
-	Describe("#deleteOnInvalidUpdate", func() {
-		var obj *unstructured.Unstructured
-
-		BeforeEach(func() {
-			obj = &unstructured.Unstructured{Object: map[string]any{}}
-		})
-
-		It("should return false for a generic error with no immutable cause", func() {
-			err := apierrors.NewBadRequest("something went wrong")
-			Expect(deleteOnInvalidUpdate(obj, err)).To(BeFalse())
-		})
-
-		It("should return true for an Invalid cause with 'field is immutable'", func() {
-			err := apierrors.NewInvalid(
+	DescribeTable("#deleteOnInvalidUpdate",
+		func(annotations map[string]string, err error, expected bool) {
+			obj := &unstructured.Unstructured{Object: map[string]any{}}
+			obj.SetAnnotations(annotations)
+			Expect(deleteOnInvalidUpdate(obj, err)).To(Equal(expected))
+		},
+		Entry("should return false for a generic error with no immutable cause",
+			nil,
+			apierrors.NewBadRequest("something went wrong"),
+			false,
+		),
+		Entry("should return true for an Invalid cause with 'field is immutable'",
+			nil,
+			apierrors.NewInvalid(
 				schema.GroupKind{Group: "apps", Kind: "Deployment"},
 				"metrics-server",
 				field.ErrorList{field.Invalid(field.NewPath("spec", "selector"), nil, "field is immutable")},
-			)
-			Expect(deleteOnInvalidUpdate(obj, err)).To(BeTrue())
-		})
-
-		It("should return true for a Forbidden cause with 'field is immutable'", func() {
-			err := apierrors.NewInvalid(
+			),
+			true,
+		),
+		Entry("should return true for a Forbidden cause with 'field is immutable')",
+			nil,
+			apierrors.NewInvalid(
 				schema.GroupKind{Group: "", Kind: "Secret"},
 				"test-secret",
 				field.ErrorList{field.Forbidden(field.NewPath("data"), "field is immutable when `immutable` is set")},
-			)
-			Expect(deleteOnInvalidUpdate(obj, err)).To(BeTrue())
-		})
-
-		It("should return false for an Invalid cause with an unrelated message", func() {
-			err := apierrors.NewInvalid(
+			),
+			true,
+		),
+		Entry("should return false for an Invalid cause with an unrelated message",
+			nil,
+			apierrors.NewInvalid(
 				schema.GroupKind{Group: "apps", Kind: "Deployment"},
 				"test-deploy",
 				field.ErrorList{field.Invalid(field.NewPath("spec", "replicas"), nil, "must be greater than zero")},
-			)
-			Expect(deleteOnInvalidUpdate(obj, err)).To(BeFalse())
-		})
-
-		It("should return true when the delete-on-invalid-update annotation is set, regardless of error", func() {
-			obj.SetAnnotations(map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"})
-			err := apierrors.NewBadRequest("something went wrong")
-			Expect(deleteOnInvalidUpdate(obj, err)).To(BeTrue())
-		})
-	})
+			),
+			false,
+		),
+		Entry("should return true when the delete-on-invalid-update annotation is set, regardless of error",
+			map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+			apierrors.NewBadRequest("something went wrong"),
+			true,
+		),
+	)
 })
