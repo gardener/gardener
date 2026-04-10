@@ -157,8 +157,10 @@ func (b *Botanist) GetIngressAdvertisedEndpoints(ctx context.Context) ([]gardenc
 // from any existing [istionetworkingv1beta1.VirtualService] resources labeled with
 // [v1beta1constants.LabelShootEndpointAdvertise].
 func (b *Botanist) GetVirtualServiceAdvertisedEndpoints(ctx context.Context) ([]gardencorev1beta1.ShootAdvertisedAddress, error) {
-	result := make([]gardencorev1beta1.ShootAdvertisedAddress, 0)
-	var virtualServiceList istionetworkingv1beta1.VirtualServiceList
+	var (
+		result             = make([]gardencorev1beta1.ShootAdvertisedAddress, 0)
+		virtualServiceList istionetworkingv1beta1.VirtualServiceList
+	)
 
 	if err := b.SeedClientSet.Client().List(
 		ctx,
@@ -171,9 +173,6 @@ func (b *Botanist) GetVirtualServiceAdvertisedEndpoints(ctx context.Context) ([]
 		return nil, fmt.Errorf("failed to list virtual service resources: %w", err)
 	}
 
-	// Only the TLS items are processed, since
-	// [gardencorev1beta1.ShootAdvertisedAddress] is constrained to https://
-	// endpoints only.
 	for _, virtualService := range virtualServiceList.Items {
 		for hostIdx, hostItem := range virtualService.Spec.Hosts {
 			if strings.Contains(hostItem, "*") {
