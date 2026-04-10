@@ -6,8 +6,6 @@ package runtime
 
 import (
 	"context"
-	"fmt"
-	"slices"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -27,14 +25,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/extensions"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 )
 
 // ControllerName is the name of this controller.
@@ -112,32 +107,20 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	return nil
 }
 
-// MapGardenToExtensions returns a mapping function that maps a given garden resource to all related extensions.
+// MapGardenToExtensions returns a mapping function that maps a given garden resource to all extensions.
+// All extensions are enqueued (not just the currently required ones) so that extensions transitioning from
+// required to not-required are also reconciled and have their conditions updated.
 func (r *Reconciler) MapGardenToExtensions(log logr.Logger) handler.MapFunc {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		garden, ok := obj.(*operatorv1alpha1.Garden)
-		if !ok {
-			log.Error(fmt.Errorf("expected Garden but got %#v", obj), "Unable to convert to Garden")
-			return nil
-		}
-
+	return func(ctx context.Context, _ client.Object) []reconcile.Request {
 		extensionList := &operatorv1alpha1.ExtensionList{}
 		if err := r.Client.List(ctx, extensionList); err != nil {
 			log.Error(err, "Failed to list extensions")
 			return nil
 		}
 
-		var (
-			requests           []reconcile.Request
-			requiredExtensions = operator.ComputeRequiredExtensionsForGarden(garden, extensionList)
-		)
-
+		var requests []reconcile.Request
 		for _, extension := range extensionList.Items {
-			if slices.ContainsFunc(extension.Spec.Resources, func(resource gardencorev1beta1.ControllerResource) bool {
-				return requiredExtensions.Has(gardenerutils.ExtensionsID(resource.Kind, resource.Type))
-			}) {
-				requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: extension.Name, Namespace: extension.Namespace}})
-			}
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: extension.Name, Namespace: extension.Namespace}})
 		}
 
 		return requests
