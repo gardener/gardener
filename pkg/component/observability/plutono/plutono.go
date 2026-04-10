@@ -897,7 +897,7 @@ func (p *plutono) getIstioResources(ctx context.Context) ([]client.Object, error
 		},
 	}}, virtualService.Spec.Http...)
 
-	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: p.namespace}}
+	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: p.namespace}}
 	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), destinationHost)(); err != nil {
 		return nil, fmt.Errorf("failed to create destination rule resource: %w", err)
 	}

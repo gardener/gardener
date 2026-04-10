@@ -16,7 +16,6 @@ import (
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -100,7 +99,6 @@ func (i *istioBasicAuthServer) Deploy(ctx context.Context) error {
 			CommonName: destinationHost,
 			DNSNames:   kubernetesutils.DNSNamesForService(i.getPrefix()+svcName, i.namespace),
 			CertType:   secretsutils.ServerCert,
-			Validity:   ptr.To(15 * 24 * time.Hour), // Rotate frequently regardless of scenario (shoot default is long)
 		},
 		secretsmanager.SignedByCA(i.values.SigningCA),
 		secretsmanager.Rotate(secretsmanager.InPlace),

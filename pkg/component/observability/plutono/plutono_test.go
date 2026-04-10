@@ -618,12 +618,21 @@ status: {}
 				return out
 			}
 
-			destinationRuleYAMLFor = `apiVersion: networking.istio.io/v1beta1
+			destinationRuleYAMLFor = func(values Values) string {
+				out := `apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
   labels:
     component: plutono
-  name: plutono
+  name: `
+				if values.IsGardenCluster {
+					out += `virtual-garden-plutono-garden`
+				} else if values.ClusterType == comp.ClusterTypeShoot {
+					out += `plutono-` + namespace
+				} else {
+					out += `plutono`
+				}
+				out += `
   namespace: ` + namespace + `
 spec:
   exportTo:
@@ -645,6 +654,8 @@ spec:
     tls: {}
 status: {}
 `
+				return out
+			}
 
 			tlsSecretMetaFor = func(values Values) metav1.ObjectMeta {
 				ns := "istio-ingress"
@@ -741,7 +752,7 @@ status: {}
 				serviceYAMLFor(values),
 				gatewayYAMLFor(values),
 				virtualServiceYAMLFor(values),
-				destinationRuleYAMLFor,
+				destinationRuleYAMLFor(values),
 			), "Resource manifests do not match the expected ones")
 			Expect(secretMetas).To(HaveLen(1))
 			Expect(secretMetas[0]).To(Equal(tlsSecretMetaFor(values)))
