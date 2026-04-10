@@ -44,6 +44,12 @@ const (
 	// SecretNameCASeed is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate generated for a seed cluster.
 	SecretNameCASeed = "ca-seed"
+	// SecretNameCAIstioBasicAuthServer is a constant for the name of a Kubernetes secret object that contains
+	// the CA certificate generated for the istio-basic-auth-server.
+	SecretNameCAIstioBasicAuthServer = "ca-istio-basic-auth-server"
+	// SecretNameCAVirtualGardenIstioBasicAuthServer is a constant for the name of a Kubernetes secret object
+	// that contains the CA certificate generated for the istio-basic-auth-server of the virtual garden.
+	SecretNameCAVirtualGardenIstioBasicAuthServer = "ca-virtual-garden-istio-basic-auth-server"
 
 	// SecretNameCloudProvider is a constant for the name of a Kubernetes secret object that contains the provider
 	// specific credentials that shall be used to create/delete the shoot.
@@ -176,6 +182,9 @@ const (
 	DeploymentNameVPARecommender = "vpa-recommender"
 	// DeploymentNameVPAUpdater is a constant for the name of the VPA updater deployment.
 	DeploymentNameVPAUpdater = "vpa-updater"
+
+	// DeploymentNameIstioBasicAuthServer is a constant for the name of the istio-basic-auth-server deployment.
+	DeploymentNameIstioBasicAuthServer = "istio-basic-auth-server"
 
 	// DeploymentNameKubernetesDashboard is a constant for the name of the kubernetes dashboard deployment.
 	DeploymentNameKubernetesDashboard = "kubernetes-dashboard"
@@ -520,6 +529,8 @@ const (
 	LabelPrefixSeedName = "name.seed.gardener.cloud/"
 	// LabelObservability is a constant for a label for observability stack configurations
 	LabelObservability = "observability"
+	// LabelBasicAuthSecretName is a constant for a label used on virtual services to include the referenced secret into the istio-basic-auth-server for basic auth.
+	LabelBasicAuthSecretName = "reference.gardener.cloud/basic-auth-secret-name"
 
 	// LabelExtensionExtensionTypePrefix is used to prefix extension label for extension types.
 	LabelExtensionExtensionTypePrefix = "extensions.extensions.gardener.cloud/"

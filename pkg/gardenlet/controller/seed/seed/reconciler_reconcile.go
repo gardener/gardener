@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -41,7 +40,6 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -134,13 +132,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 	// Deploy dedicated CA certificate for seed cluster, auto-rotate it roughly once a month and drop the old CA 24 hours
 	// after rotation.
 	log.Info("Generating CA certificates for seed cluster")
-	if _, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:       v1beta1constants.SecretNameCASeed,
-		CommonName: "kubernetes",
-		CertType:   secretsutils.CACert,
-		Validity:   ptr.To(30 * 24 * time.Hour),
-	}, secretsmanager.Rotate(secretsmanager.KeepOld), secretsmanager.IgnoreOldSecretsAfter(24*time.Hour)); err != nil {
-		return err
+	for _, config := range caCertConfigurations() {
+		if _, err := secretsManager.Generate(ctx, config, caCertGenerateOptionsFor()...); err != nil {
+			return err
+		}
 	}
 
 	secrets, err := gardenerutils.ReadGardenSecrets(
@@ -261,10 +256,16 @@ func (r *Reconciler) runReconcileSeedFlow(
 			},
 			Dependencies: flow.NewTaskIDs(syncPointCRDs),
 		})
+		waitForIstioCRDs = g.Add(flow.Task{
+			Name:         "Waiting for custom resource definitions for Istio",
+			Fn:           c.istioCRD.Wait,
+			Dependencies: flow.NewTaskIDs(deployIstioCRDs),
+			SkipIf:       seedIsGarden,
+		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
 			Fn:           component.OpWait(c.gardenerResourceManager).Deploy,
-			Dependencies: flow.NewTaskIDs(syncPointCRDs),
+			Dependencies: flow.NewTaskIDs(syncPointCRDs, waitForIstioCRDs),
 			SkipIf:       seedIsGarden || seedIsSelfHostedShoot,
 		})
 		deploySystemResources = g.Add(flow.Task{
@@ -458,10 +459,15 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents, deployFluentOperator),
 			SkipIf:       seedIsGarden,
 		})
-		_ = g.Add(flow.Task{
+		deployPlutono = g.Add(flow.Task{
 			Name:         "Deploying Plutono",
 			Fn:           c.plutono.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+		})
+		waitUntilPlutonoReady = g.Add(flow.Task{
+			Name:         "Waiting until Plutono is ready",
+			Fn:           c.plutono.Wait,
+			Dependencies: flow.NewTaskIDs(deployPlutono),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying VictoriaLogs",
@@ -474,6 +480,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn:           c.vali.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 			SkipIf:       seedIsGarden,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying istio-basic-auth-server",
+			Fn:           c.istioBasicAuthServer.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents, waitUntilPlutonoReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Prometheus Operator",

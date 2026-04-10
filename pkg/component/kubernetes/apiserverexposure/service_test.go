@@ -287,14 +287,14 @@ var _ = Describe("#Service", func() {
 func netpolAnnotations() map[string]string {
 	return map[string]string{
 		"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
-		"networking.resources.gardener.cloud/namespace-selectors":                          `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}}]`,
+		"networking.resources.gardener.cloud/namespace-selectors":                          `[{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}}]`,
 	}
 }
 
 func shootNetpolAnnotations() map[string]string {
 	return map[string]string{
 		"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
-		"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}},{"matchLabels":{"kubernetes.io/metadata.name":"garden"}},{"matchExpressions":[{"key":"handler.exposureclass.gardener.cloud/name","operator":"Exists"}]},{"matchLabels":{"gardener.cloud/role":"extension"}}]`,
+		"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}},{"matchLabels":{"kubernetes.io/metadata.name":"garden"}},{"matchLabels":{"gardener.cloud/role":"extension"}}]`,
 		"networking.resources.gardener.cloud/pod-label-selector-namespace-alias":    "all-shoots",
 	}
 }

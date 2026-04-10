@@ -41,7 +41,7 @@ var _ = Describe("VirtualService", func() {
 		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, []string{"host-1", "host-2"}, "my-gateway", uint32(123456), "destination.namespace.svc.cluster.local"),
 	)
 
-	DescribeTable("#VirtualServiceForTLSTermination", func(labels map[string]string, hosts []string, gatewayName string, port uint32, destinationHost, upgradeDestinationHost, connectionUpgradeRouteName string) {
+	DescribeTable("#VirtualServiceForTLSTermination", func(labels map[string]string, hosts []string, gatewayName string, port uint32, destinationHost, upgradeDestinationHost, connectionUpgradeRouteName string, withUpgrade bool) {
 		virtualService := &istionetworkingv1beta1.VirtualService{}
 
 		function := VirtualServiceForTLSTermination(virtualService, labels, hosts, gatewayName, port, destinationHost, upgradeDestinationHost, connectionUpgradeRouteName)
@@ -55,22 +55,34 @@ var _ = Describe("VirtualService", func() {
 		Expect(virtualService.Spec.Hosts).To(Equal(hosts))
 		Expect(virtualService.Spec.Gateways).To(HaveLen(1))
 		Expect(virtualService.Spec.Gateways[0]).To(Equal(gatewayName))
-		Expect(virtualService.Spec.Http).To(HaveLen(2))
-		Expect(virtualService.Spec.Http[0].Match).To(HaveLen(1))
-		Expect(virtualService.Spec.Http[0].Match[0].Headers).To(HaveLen(2))
-		Expect(virtualService.Spec.Http[0].Match[0].Headers["Connection"]).To(Equal(&istioapinetworkingv1beta1.StringMatch{MatchType: &istioapinetworkingv1beta1.StringMatch_Exact{Exact: "Upgrade"}}))
-		Expect(virtualService.Spec.Http[0].Match[0].Headers["Upgrade"]).To(Equal(&istioapinetworkingv1beta1.StringMatch{}))
-		Expect(virtualService.Spec.Http[0].Route).To(HaveLen(1))
-		Expect(virtualService.Spec.Http[0].Name).To(Equal(connectionUpgradeRouteName))
-		Expect(virtualService.Spec.Http[0].Route[0].Destination.Host).To(Equal(upgradeDestinationHost))
-		Expect(virtualService.Spec.Http[0].Route[0].Destination.Port.Number).To(Equal(port))
-		Expect(virtualService.Spec.Http[1].Match).To(BeEmpty())
-		Expect(virtualService.Spec.Http[1].Route).To(HaveLen(1))
-		Expect(virtualService.Spec.Http[1].Route[0].Destination.Host).To(Equal(destinationHost))
-		Expect(virtualService.Spec.Http[1].Route[0].Destination.Port.Number).To(Equal(port))
+		if withUpgrade {
+			Expect(virtualService.Spec.Http).To(HaveLen(2))
+		} else {
+			Expect(virtualService.Spec.Http).To(HaveLen(1))
+		}
+		if withUpgrade {
+			Expect(virtualService.Spec.Http[0].Match).To(HaveLen(1))
+			Expect(virtualService.Spec.Http[0].Match[0].Headers).To(HaveLen(2))
+			Expect(virtualService.Spec.Http[0].Match[0].Headers["Connection"]).To(Equal(&istioapinetworkingv1beta1.StringMatch{MatchType: &istioapinetworkingv1beta1.StringMatch_Exact{Exact: "Upgrade"}}))
+			Expect(virtualService.Spec.Http[0].Match[0].Headers["Upgrade"]).To(Equal(&istioapinetworkingv1beta1.StringMatch{}))
+			Expect(virtualService.Spec.Http[0].Route).To(HaveLen(1))
+			Expect(virtualService.Spec.Http[0].Name).To(Equal(connectionUpgradeRouteName))
+			Expect(virtualService.Spec.Http[0].Route[0].Destination.Host).To(Equal(upgradeDestinationHost))
+			Expect(virtualService.Spec.Http[0].Route[0].Destination.Port.Number).To(Equal(port))
+			Expect(virtualService.Spec.Http[1].Match).To(BeEmpty())
+			Expect(virtualService.Spec.Http[1].Route).To(HaveLen(1))
+			Expect(virtualService.Spec.Http[1].Route[0].Destination.Host).To(Equal(destinationHost))
+			Expect(virtualService.Spec.Http[1].Route[0].Destination.Port.Number).To(Equal(port))
+		} else {
+			Expect(virtualService.Spec.Http[0].Match).To(BeEmpty())
+			Expect(virtualService.Spec.Http[0].Route).To(HaveLen(1))
+			Expect(virtualService.Spec.Http[0].Route[0].Destination.Host).To(Equal(destinationHost))
+			Expect(virtualService.Spec.Http[0].Route[0].Destination.Port.Number).To(Equal(port))
+		}
 	},
 
-		Entry("Nil values", nil, nil, "", uint32(0), "", "", ""),
-		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, []string{"host-1", "host-2"}, "my-gateway", uint32(123456), "destination.namespace.svc.cluster.local", "destination-upgrade.namespace.svc.cluster.local", "connection-upgrade"),
+		Entry("Nil values", nil, nil, "", uint32(0), "", "", "", false),
+		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, []string{"host-1", "host-2"}, "my-gateway", uint32(123456), "destination.namespace.svc.cluster.local", "destination-upgrade.namespace.svc.cluster.local", "connection-upgrade", true),
+		Entry("Some values without upgrade", map[string]string{"foo": "bar", "key": "value"}, []string{"host-1", "host-2"}, "my-gateway", uint32(123456), "destination.namespace.svc.cluster.local", "", "", false),
 	)
 })

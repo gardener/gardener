@@ -11,6 +11,8 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -190,6 +192,85 @@ var _ = Describe("Add", func() {
 				ingress.Spec.Rules = append(ingress.Spec.Rules, networkingv1.IngressRule{})
 
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldIngress, ObjectNew: ingress})).To(BeTrue())
+			})
+		})
+
+		Describe("#Delete", func() {
+			It("should return true", func() {
+				Expect(p.Delete(event.DeleteEvent{})).To(BeTrue())
+			})
+		})
+
+		Describe("#Generic", func() {
+			It("should return true", func() {
+				Expect(p.Generic(event.GenericEvent{})).To(BeTrue())
+			})
+		})
+	})
+
+	Describe("#VirtualServicePredicate", func() {
+		var (
+			p              predicate.Predicate
+			virtualService *istionetworkingv1beta1.VirtualService
+		)
+
+		BeforeEach(func() {
+			p = reconciler.VirtualServicePredicate()
+			virtualService = &istionetworkingv1beta1.VirtualService{}
+		})
+
+		Describe("#Create", func() {
+			It("should return true", func() {
+				Expect(p.Create(event.CreateEvent{})).To(BeTrue())
+			})
+		})
+
+		Describe("#Update", func() {
+			It("should return false because new object is no virtual service", func() {
+				Expect(p.Update(event.UpdateEvent{})).To(BeFalse())
+			})
+
+			It("should return false because old object is no virtual service", func() {
+				Expect(p.Update(event.UpdateEvent{ObjectNew: virtualService})).To(BeFalse())
+			})
+
+			It("should return false because nothing changed", func() {
+				Expect(p.Update(event.UpdateEvent{ObjectOld: virtualService, ObjectNew: virtualService})).To(BeFalse())
+			})
+
+			It("should return true because the hosts were changed", func() {
+				oldVirtualService := virtualService.DeepCopy()
+				virtualService.Spec.Hosts = append(virtualService.Spec.Hosts, "new.host")
+
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldVirtualService, ObjectNew: virtualService})).To(BeTrue())
+			})
+
+			It("should return true because the gateways were changed", func() {
+				oldVirtualService := virtualService.DeepCopy()
+				virtualService.Spec.Gateways = append(virtualService.Spec.Gateways, "new.gateway")
+
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldVirtualService, ObjectNew: virtualService})).To(BeTrue())
+			})
+
+			It("should return true because the http rules were changed", func() {
+				oldVirtualService := virtualService.DeepCopy()
+				virtualService.Spec.Http = append(virtualService.Spec.Http, &istioapinetworkingv1beta1.HTTPRoute{Name: "new-http-route"})
+
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldVirtualService, ObjectNew: virtualService})).To(BeTrue())
+			})
+
+			It("should return true because the tls rules were changed", func() {
+				oldVirtualService := virtualService.DeepCopy()
+				virtualService.Spec.Tls = append(virtualService.Spec.Tls, &istioapinetworkingv1beta1.TLSRoute{})
+
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldVirtualService, ObjectNew: virtualService})).To(BeTrue())
+			})
+
+			It("should return true because the tcp rules were changed", func() {
+				oldVirtualService := virtualService.DeepCopy()
+				virtualService.Spec.Tcp = append(virtualService.Spec.Tcp, &istioapinetworkingv1beta1.TCPRoute{})
+
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldVirtualService, ObjectNew: virtualService})).To(BeTrue())
 			})
 		})
 
@@ -624,6 +705,75 @@ var _ = Describe("Add", func() {
 			)
 
 			Expect(reconciler.MapIngressToServices(ctx, ingress)).To(ConsistOf(
+				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: service1}},
+				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: service2}},
+				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: service3}},
+			))
+		})
+	})
+
+	Describe("#MapVirtualServiceToServices", func() {
+		It("should map to all referenced services", func() {
+			var (
+				namespace = "some-namespace"
+				service1  = "svc1"
+				service2  = "svc2"
+				service3  = "svc3"
+
+				virtualService = &istionetworkingv1beta1.VirtualService{
+					Spec: istioapinetworkingv1beta1.VirtualService{
+						Http: []*istioapinetworkingv1beta1.HTTPRoute{
+							{
+								Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
+									{
+										Destination: &istioapinetworkingv1beta1.Destination{
+											Host: "some.random.external.host",
+										},
+									},
+								},
+							},
+							{
+								Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
+									{
+										Destination: &istioapinetworkingv1beta1.Destination{
+											Host: "svc1.some-namespace.svc.cluster.local",
+										},
+									},
+								},
+							},
+						},
+						Tls: []*istioapinetworkingv1beta1.TLSRoute{
+							{
+								Route: []*istioapinetworkingv1beta1.RouteDestination{
+									{
+										Destination: &istioapinetworkingv1beta1.Destination{
+											Host: "svc2.some-namespace.svc.cluster.local",
+										},
+									},
+									{
+										Destination: &istioapinetworkingv1beta1.Destination{
+											Host: "another.random.external.host",
+										},
+									},
+								},
+							},
+						},
+						Tcp: []*istioapinetworkingv1beta1.TCPRoute{
+							{
+								Route: []*istioapinetworkingv1beta1.RouteDestination{
+									{
+										Destination: &istioapinetworkingv1beta1.Destination{
+											Host: "svc3.some-namespace.svc.cluster.local",
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			)
+
+			Expect(reconciler.MapVirtualServiceToServices(ctx, virtualService)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: service1}},
 				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: service2}},
 				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: service3}},

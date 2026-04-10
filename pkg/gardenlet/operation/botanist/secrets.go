@@ -156,6 +156,7 @@ func caCertConfigurations(isWorkerless, isSelfHosted bool) []secretsutils.Config
 		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCD, CommonName: "etcd", CertType: secretsutils.CACert},
 		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretsutils.CACert},
 		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAFrontProxy, CommonName: "front-proxy", CertType: secretsutils.CACert},
+		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAIstioBasicAuthServer, CommonName: "istio-basic-auth-server", CertType: secretsutils.CACert},
 	}
 
 	if !isWorkerless {

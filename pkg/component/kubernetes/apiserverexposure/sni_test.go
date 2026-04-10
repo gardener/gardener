@@ -116,6 +116,7 @@ var _ = Describe("#SNI", func() {
 			Kind:               "Namespace",
 			Name:               "test-namespace",
 			UID:                "foo",
+			Controller:         ptr.To(true),
 			BlockOwnerDeletion: ptr.To(true),
 		}}
 

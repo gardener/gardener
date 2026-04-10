@@ -12,9 +12,11 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -23,6 +25,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -33,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
@@ -122,7 +126,26 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		}
 	}
 
-	return nil
+	gvk, err := apiutil.GVKForObject(&istionetworkingv1beta1.VirtualService{}, r.TargetClient.Scheme())
+	if err != nil {
+		return fmt.Errorf("cannot determine GVK for virtual service: %w", err)
+	}
+
+	if _, err = targetCluster.GetRESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version); err != nil {
+		if !meta.IsNoMatchError(err) {
+			return err
+		}
+		mgr.GetLogger().WithValues("controller", ControllerName).Info("VirtualService watch will not be added because Istio CRDs are not installed")
+		return nil
+	}
+	r.istioCRDsFound = true
+
+	return c.Watch(source.Kind[client.Object](
+		targetCluster.GetCache(),
+		&istionetworkingv1beta1.VirtualService{},
+		handler.EnqueueRequestsFromMapFunc(r.MapVirtualServiceToServices),
+		r.VirtualServicePredicate(),
+	))
 }
 
 // ServicePredicate returns a predicate which filters UPDATE events on services such that only updates to the deletion
@@ -190,6 +213,30 @@ func (r *Reconciler) IngressPredicate() predicate.Predicate {
 			}
 
 			return !apiequality.Semantic.DeepEqual(oldIngress.Spec.Rules, ingress.Spec.Rules)
+		},
+	}
+}
+
+// VirtualServicePredicate returns a predicate which filters UPDATE events on VirtualServices such that only updates to
+// the hosts, gateways, http, TLS or TCP routes are relevant.
+func (r *Reconciler) VirtualServicePredicate() predicate.Predicate {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			virtualService, ok := e.ObjectNew.(*istionetworkingv1beta1.VirtualService)
+			if !ok {
+				return false
+			}
+
+			oldVirtualService, ok := e.ObjectOld.(*istionetworkingv1beta1.VirtualService)
+			if !ok {
+				return false
+			}
+
+			return !apiequality.Semantic.DeepEqual(oldVirtualService.Spec.Hosts, virtualService.Spec.Hosts) ||
+				!apiequality.Semantic.DeepEqual(oldVirtualService.Spec.Gateways, virtualService.Spec.Gateways) ||
+				!apiequality.Semantic.DeepEqual(oldVirtualService.Spec.Http, virtualService.Spec.Http) ||
+				!apiequality.Semantic.DeepEqual(oldVirtualService.Spec.Tls, virtualService.Spec.Tls) ||
+				!apiequality.Semantic.DeepEqual(oldVirtualService.Spec.Tcp, virtualService.Spec.Tcp)
 		},
 	}
 }
@@ -437,4 +484,62 @@ func networkPolicyToLabelKeys(podLabels map[string]string) sets.Set[string] {
 		}
 	}
 	return result
+}
+
+// MapVirtualServiceToServices is a handler.MapFunc for mapping a VirtualService to all referenced services in its routes.
+func (r *Reconciler) MapVirtualServiceToServices(_ context.Context, obj client.Object) []reconcile.Request {
+	virtualService, ok := obj.(*istionetworkingv1beta1.VirtualService)
+	if !ok {
+		return nil
+	}
+
+	var requests []reconcile.Request
+
+	for _, httpRoute := range virtualService.Spec.Http {
+		for _, route := range httpRoute.Route {
+			if route.Destination != nil && route.Destination.Host != "" {
+				if svc, ok := r.extractServiceNameFromDomain(route.Destination.Host); ok {
+					requests = append(requests, reconcile.Request{NamespacedName: svc})
+				}
+			}
+		}
+	}
+
+	for _, tlsRoute := range virtualService.Spec.Tls {
+		for _, route := range tlsRoute.Route {
+			if route.Destination != nil && route.Destination.Host != "" {
+				if svc, ok := r.extractServiceNameFromDomain(route.Destination.Host); ok {
+					requests = append(requests, reconcile.Request{NamespacedName: svc})
+				}
+			}
+		}
+	}
+
+	for _, tcpRoute := range virtualService.Spec.Tcp {
+		for _, route := range tcpRoute.Route {
+			if route.Destination != nil && route.Destination.Host != "" {
+				if svc, ok := r.extractServiceNameFromDomain(route.Destination.Host); ok {
+					requests = append(requests, reconcile.Request{NamespacedName: svc})
+				}
+			}
+		}
+	}
+
+	return requests
+}
+
+func (r *Reconciler) extractServiceNameFromDomain(domain string) (types.NamespacedName, bool) {
+	// Only support fully qualified domain names in the form <service>.<namespace>.svc.<cluster-domain>.
+	const defaultSuffix = ".svc." + gardencorev1beta1.DefaultDomain
+	if !strings.HasSuffix(domain, defaultSuffix) {
+		return types.NamespacedName{}, false
+	}
+
+	serviceAndNamespace := domain[:len(domain)-len(defaultSuffix)]
+	parts := strings.Split(serviceAndNamespace, ".")
+	if len(parts) != 2 {
+		return types.NamespacedName{}, false
+	}
+
+	return types.NamespacedName{Name: parts[0], Namespace: parts[1]}, true
 }

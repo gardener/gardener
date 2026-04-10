@@ -853,6 +853,109 @@ spec:
 > ℹ️ Note that `Ingress` resources reference the service port while `NetworkPolicy`s reference the target port/container port.
 > The controller automatically translates this when reconciling the `NetworkPolicy` resources.
 
+#### Services Exposed via Istio `VirtualService` Resources
+
+The controller watches Istio `VirtualService` resources and automatically creates `NetworkPolicy` resources allowing the respective ingress/egress traffic for the backends exposed by the `VirtualService`s.
+This way, neither custom `NetworkPolicy`s nor custom labels must be provided.
+
+As an example, let's assume that istio ingress gateway is running in namespace `istio-ingress` and  above `gardener-resource-manager` `Service` was exposed via the following `VirtualService` and `Gateway` resources:
+
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: grm-gateway
+  namespace: a
+spec:
+  selector:
+    foo: bar
+  servers:
+  - hosts:
+    - grm.foo.example.com
+    port:
+      name: tls
+      number: 443
+      protocol: HTTPS
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: gardener-resource-manager
+  namespace: a
+spec:
+  hosts:
+  - grm.foo.example.com
+  gateways:
+  - grm-gateway
+  http:
+  - route:
+    - destination:
+        host: gardener-resource-manager.a.svc.cluster.local
+        port:
+          number: 443
+```
+
+As a result, the controller would automatically create the following `NetworkPolicy`s:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows ingress TCP traffic to port 10250 for pods
+      selected by the a/gardener-resource-manager service selector from
+      pods running in namespace istio-ingress labeled with map[foo:bar].
+  name: ingress-to-gardener-resource-manager-tcp-10250-from-istio-ingress
+  namespace: a
+spec:
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              foo: bar
+          namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: istio-ingress
+      ports:
+        - port: 10250
+          protocol: TCP
+  podSelector:
+    matchLabels:
+      app: gardener-resource-manager
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows egress TCP traffic to port 10250 from pods
+      running in namespace istio-ingress labeled with map[foo:bar] to pods selected by
+      the a/gardener-resource-manager service selector.
+  name: egress-to-a-gardener-resource-manager-tcp-10250-from-istio
+  namespace: istio-ingress
+spec:
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: gardener-resource-manager
+      namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: a
+    ports:
+    - port: 10250
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      foo: bar
+  policyTypes:
+  - Egress
+```
+
+> ℹ️ Note that `VirtualService` resources reference the service port while `NetworkPolicy`s reference the target port/container port.
+> The controller automatically translates this when reconciling the `NetworkPolicy` resources.
+
 ### [`Node` Controller](../../pkg/resourcemanager/controller/node)
 
 #### [Critical Components Controller](../../pkg/resourcemanager/controller/node/criticalcomponents)
