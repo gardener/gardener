@@ -11,7 +11,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,11 +20,11 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var (
@@ -50,7 +49,6 @@ var _ = Describe("chart applier", func() {
 	)
 
 	var (
-		ctrl       *gomock.Controller
 		ca         kubernetes.ChartApplier
 		ctx        context.Context
 		c          client.Client
@@ -60,7 +58,6 @@ var _ = Describe("chart applier", func() {
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
 		ctx = context.TODO()
 
 		c = fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
@@ -84,10 +81,6 @@ var _ = Describe("chart applier", func() {
 	JustBeforeEach(func() {
 		ca = kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, mapper))
 		Expect(ca).NotTo(BeNil(), "should return chart applier")
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
 	})
 
 	Describe("#ApplyFromEmbeddedFS", func() {
@@ -209,25 +202,13 @@ var _ = Describe("chart applier", func() {
 			})
 
 			Context("when object is not mapped", func() {
-				var (
-					ctrl *gomock.Controller
-					mc   *mockclient.MockClient
-				)
-
 				BeforeEach(func() {
-					ctrl = gomock.NewController(GinkgoT())
-					mc = mockclient.NewMockClient(ctrl)
-
-					c = mc
+					c = fake.NewClientBuilder().WithScheme(scheme.Scheme).WithInterceptorFuncs(interceptor.Funcs{
+						Delete: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.DeleteOption) error {
+							return &meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}}
+						},
+					}).Build()
 					mapper = meta.NewDefaultRESTMapper([]schema.GroupVersion{})
-
-					mc.EXPECT().Delete(gomock.Any(), gomock.Any()).AnyTimes().Return(
-						&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}},
-					)
-				})
-
-				AfterEach(func() {
-					ctrl.Finish()
 				})
 
 				It("no error when IgnoreNoMatch is set", func() {
@@ -366,25 +347,13 @@ var _ = Describe("chart applier", func() {
 			})
 
 			Context("when object is not mapped", func() {
-				var (
-					ctrl *gomock.Controller
-					mc   *mockclient.MockClient
-				)
-
 				BeforeEach(func() {
-					ctrl = gomock.NewController(GinkgoT())
-					mc = mockclient.NewMockClient(ctrl)
-
-					c = mc
+					c = fake.NewClientBuilder().WithScheme(scheme.Scheme).WithInterceptorFuncs(interceptor.Funcs{
+						Delete: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.DeleteOption) error {
+							return &meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}}
+						},
+					}).Build()
 					mapper = meta.NewDefaultRESTMapper([]schema.GroupVersion{})
-
-					mc.EXPECT().Delete(gomock.Any(), gomock.Any()).AnyTimes().Return(
-						&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}},
-					)
-				})
-
-				AfterEach(func() {
-					ctrl.Finish()
 				})
 
 				It("no error when IgnoreNoMatch is set", func() {

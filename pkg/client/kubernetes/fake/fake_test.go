@@ -15,14 +15,15 @@ import (
 	"k8s.io/client-go/discovery"
 	fakekubernetes "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	mockdiscovery "github.com/gardener/gardener/third_party/mock/client-go/discovery"
 	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Fake ClientSet", func() {
@@ -76,14 +77,14 @@ var _ = Describe("Fake ClientSet", func() {
 	})
 
 	It("should correctly set client attribute", func() {
-		client := mockclient.NewMockClient(ctrl)
+		client := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		cs := builder.WithClient(client).Build()
 
 		Expect(cs.Client()).To(BeIdenticalTo(client))
 	})
 
 	It("should correctly set apiReader attribute", func() {
-		apiReader := mockclient.NewMockReader(ctrl)
+		apiReader := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		cs := builder.WithAPIReader(apiReader).Build()
 
 		Expect(cs.APIReader()).To(BeIdenticalTo(apiReader))

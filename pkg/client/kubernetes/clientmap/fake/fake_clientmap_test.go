@@ -9,7 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -17,27 +17,20 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("FakeClientMap", func() {
 	var (
-		ctx  context.Context
-		cm   *fake.ClientMap
-		key  clientmap.ClientSetKey
-		ctrl *gomock.Controller
+		ctx context.Context
+		cm  *fake.ClientMap
+		key clientmap.ClientSetKey
 	)
 
 	BeforeEach(func() {
 		ctx = context.TODO()
 		key = keys.ForShoot(&gardencorev1beta1.Shoot{})
-		ctrl = gomock.NewController(GinkgoT())
 
 		cm = fake.NewClientMap()
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
 	})
 
 	Context("#GetClient", func() {
@@ -59,7 +52,7 @@ var _ = Describe("FakeClientMap", func() {
 
 	Context("#AddRuntimeClient", func() {
 		It("should correctly add and return a runtime client", func() {
-			mockClient := mockclient.NewMockClient(ctrl)
+			mockClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 			cm.AddRuntimeClient(key, mockClient)
 
 			cs, err := cm.GetClient(ctx, key)
