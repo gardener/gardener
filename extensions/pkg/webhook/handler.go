@@ -173,7 +173,7 @@ func (h *handler) handle(ctx context.Context, req admission.Request, action hand
 	switch {
 	case action.mutator != nil:
 		if err = action.mutator.Mutate(ctx, newObj, oldObj); err != nil {
-			h.logger.Error(fmt.Errorf("could not process: %w", err), "Admission denied", "kind", ar.Kind.Kind, "namespace", obj.GetNamespace(), "name", obj.GetName())
+			h.logger.Info("Admission denied", "kind", ar.Kind.Kind, "namespace", obj.GetNamespace(), "name", obj.GetName(), "error", fmt.Errorf("could not process: %w", err))
 			return admission.Denied(err.Error())
 		}
 
@@ -193,7 +193,7 @@ func (h *handler) handle(ctx context.Context, req admission.Request, action hand
 
 	case action.validator != nil:
 		if err = action.validator.Validate(ctx, newObj, oldObj); err != nil {
-			h.logger.Error(fmt.Errorf("could not process: %w", err), "Admission denied", "kind", ar.Kind.Kind, "namespace", obj.GetNamespace(), "name", obj.GetName())
+			h.logger.Info("Admission denied", "kind", ar.Kind.Kind, "namespace", obj.GetNamespace(), "name", obj.GetName(), "error", fmt.Errorf("could not process: %w", err))
 			return admission.Denied(err.Error())
 		}
 	}
