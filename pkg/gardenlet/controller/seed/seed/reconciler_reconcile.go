@@ -133,7 +133,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	// after rotation.
 	log.Info("Generating CA certificates for seed cluster")
 	for _, config := range caCertConfigurations() {
-		if _, err := secretsManager.Generate(ctx, config, caCertGenerateOptionsFor(config.GetName())...); err != nil {
+		if _, err := secretsManager.Generate(ctx, config, caCertGenerateOptionsFor()...); err != nil {
 			return err
 		}
 	}

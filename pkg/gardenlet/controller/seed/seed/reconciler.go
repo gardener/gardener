@@ -298,7 +298,7 @@ func caCertConfigurations() []secretsutils.ConfigInterface {
 	}
 }
 
-func caCertGenerateOptionsFor(_ string) []secretsmanager.GenerateOption {
+func caCertGenerateOptionsFor() []secretsmanager.GenerateOption {
 	return []secretsmanager.GenerateOption{
 		secretsmanager.Rotate(secretsmanager.KeepOld),
 		secretsmanager.IgnoreOldSecretsAfter(24 * time.Hour),
