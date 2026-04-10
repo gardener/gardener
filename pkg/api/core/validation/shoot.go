@@ -135,6 +135,13 @@ var (
 		string(core.ClusterAutoscalerExpanderMostPods),
 		string(core.ClusterAutoscalerExpanderPriority),
 		string(core.ClusterAutoscalerExpanderRandom),
+		string(core.ClusterAutoscalerExpanderLeastNodes),
+	)
+	availableClusterAutoscalerExpanderModesWithK8s130 = sets.New(
+		string(core.ClusterAutoscalerExpanderLeastWaste),
+		string(core.ClusterAutoscalerExpanderMostPods),
+		string(core.ClusterAutoscalerExpanderPriority),
+		string(core.ClusterAutoscalerExpanderRandom),
 	)
 	availableCoreDNSAutoscalingModes = sets.New(
 		string(core.CoreDNSAutoscalingModeClusterProportional),
@@ -1489,11 +1496,15 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, kubernetesVers
 
 	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.ScanInterval, fldPath.Child("scanInterval"))...)
 
+	expanderModes := availableClusterAutoscalerExpanderModes
+	if !versionutils.ConstraintK8sGreaterEqual131.CheckVersion(kubernetesVersion) {
+		expanderModes = availableClusterAutoscalerExpanderModesWithK8s130
+	}
 	if expander := autoScaler.Expander; expander != nil {
 		expanderArray := strings.SplitSeq(string(*expander), ",")
 		for exp := range expanderArray {
-			if !availableClusterAutoscalerExpanderModes.Has(exp) {
-				allErrs = append(allErrs, field.NotSupported(fldPath.Child("expander"), *expander, sets.List(availableClusterAutoscalerExpanderModes)))
+			if !expanderModes.Has(exp) {
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child("expander"), *expander, sets.List(expanderModes)))
 			}
 		}
 	}

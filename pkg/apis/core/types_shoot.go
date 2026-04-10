@@ -631,6 +631,10 @@ const (
 	// ClusterAutoscalerExpanderRandom should be used when you don't have a particular need
 	// for the node groups to scale differently.
 	ClusterAutoscalerExpanderRandom ExpanderMode = "random"
+	// ClusterAutoscalerExpanderLeastNodes selects the node group that will use the least number of nodes after scale-up.
+	// This is useful when you want to minimize the number of nodes in the cluster and instead opt for fewer larger nodes.
+	// Useful when chained with the most-pods expander before it to ensure that the node group selected can fit the most pods on the fewest nodes.
+	ClusterAutoscalerExpanderLeastNodes ExpanderMode = "least-nodes"
 )
 
 // VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
