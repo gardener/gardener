@@ -48,6 +48,7 @@ func validateControllerConfiguration(conf nodeagentconfigv1alpha1.ControllerConf
 
 	allErrs = append(allErrs, validateOperatingSystemConfigControllerConfiguration(conf.OperatingSystemConfig, fldPath.Child("operatingSystemConfig"))...)
 	allErrs = append(allErrs, validateTokenControllerConfiguration(conf.Token, fldPath.Child("token"))...)
+	allErrs = append(allErrs, validateSystemdUnitCheckControllerConfiguration(conf.SystemdUnitCheck, fldPath.Child("systemdUnitCheck"))...)
 
 	return allErrs
 }
@@ -103,6 +104,18 @@ func validateSyncPeriod(val *metav1.Duration, fldPath *field.Path) field.ErrorLi
 
 	if val == nil || val.Duration < 15*time.Second {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("syncPeriod"), val, "must be at least 15s"))
+	}
+
+	return allErrs
+}
+
+func validateSystemdUnitCheckControllerConfiguration(conf nodeagentconfigv1alpha1.SystemdUnitCheckControllerConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateSyncPeriod(conf.SyncPeriod, fldPath)...)
+
+	if conf.StuckThreshold != nil && conf.StuckThreshold.Duration < 30*time.Second {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("stuckThreshold"), conf.StuckThreshold.Duration, "must be at least 30s"))
 	}
 
 	return allErrs

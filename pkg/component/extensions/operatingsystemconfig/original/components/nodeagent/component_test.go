@@ -153,6 +153,7 @@ controllers:
   operatingSystemConfig:
     kubernetesVersion: null
     secretName: ` + oscSecretName + `
+  systemdUnitCheck: {}
   token:
     syncConfigs:
     - path: /var/lib/valitail/auth-token

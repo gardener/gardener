@@ -99,6 +99,7 @@ controllers:
   operatingSystemConfig:
     kubernetesVersion: ` + kubernetesVersion.String() + `
     secretName: ` + oscSecretName + `
+  systemdUnitCheck: {}
   token:
     syncPeriod: 12h0m0s
 kind: NodeAgentConfiguration
@@ -200,6 +201,7 @@ controllers:
   operatingSystemConfig:
     kubernetesVersion: ` + kubernetesVersion.String() + `
     secretName: ` + oscSecretName + `
+  systemdUnitCheck: {}
   token:
     syncPeriod: 12h0m0s
 kind: NodeAgentConfiguration

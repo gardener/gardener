@@ -86,6 +86,29 @@ var _ = Describe("Defaults", func() {
 					Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
 				})
 			})
+
+			Describe("Systemd Unit Check controller", func() {
+				It("should default the object", func() {
+					obj := &SystemdUnitCheckControllerConfig{}
+
+					SetDefaults_SystemdUnitCheckControllerConfig(obj)
+
+					Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
+					Expect(obj.StuckThreshold).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
+				})
+
+				It("should not overwrite existing values", func() {
+					obj := &SystemdUnitCheckControllerConfig{
+						SyncPeriod:     &metav1.Duration{Duration: 30 * time.Second},
+						StuckThreshold: &metav1.Duration{Duration: time.Minute},
+					}
+
+					SetDefaults_SystemdUnitCheckControllerConfig(obj)
+
+					Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Second})))
+					Expect(obj.StuckThreshold).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
+				})
+			})
 		})
 
 		Describe("Server configuration", func() {

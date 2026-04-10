@@ -1099,6 +1099,105 @@ var _ = Describe("health check", func() {
 		)
 	})
 
+	Describe("#CheckSystemdUnitsReady", func() {
+		It("should return nil when no nodes have the condition", func() {
+			nodes := []*corev1.Node{
+				{ObjectMeta: metav1.ObjectMeta{Name: "node1"}},
+			}
+
+			Expect(CheckSystemdUnitsReady(nodes)).To(Succeed())
+		})
+
+		It("should return nil when all nodes report healthy systemd units", func() {
+			nodes := []*corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Conditions: []corev1.NodeCondition{
+							{
+								Type:   "SystemdUnitsReady",
+								Status: corev1.ConditionTrue,
+							},
+						},
+					},
+				},
+			}
+
+			Expect(CheckSystemdUnitsReady(nodes)).To(Succeed())
+		})
+
+		It("should return error when a node reports unhealthy systemd units", func() {
+			nodes := []*corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Conditions: []corev1.NodeCondition{
+							{
+								Type:    "SystemdUnitsReady",
+								Status:  corev1.ConditionFalse,
+								Message: "bad.service: failed",
+							},
+						},
+					},
+				},
+			}
+
+			Expect(CheckSystemdUnitsReady(nodes)).To(MatchError(ContainSubstring("bad.service: failed")))
+		})
+
+		It("should return error when a node reports unknown systemd units status", func() {
+			nodes := []*corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Conditions: []corev1.NodeCondition{
+							{
+								Type:    "SystemdUnitsReady",
+								Status:  corev1.ConditionUnknown,
+								Message: "unable to determine status",
+							},
+						},
+					},
+				},
+			}
+
+			Expect(CheckSystemdUnitsReady(nodes)).To(MatchError(ContainSubstring("unable to determine status")))
+		})
+
+		It("should aggregate all unhealthy nodes", func() {
+			nodes := []*corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Conditions: []corev1.NodeCondition{
+							{
+								Type:    "SystemdUnitsReady",
+								Status:  corev1.ConditionFalse,
+								Message: "bad.service: failed",
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node2"},
+					Status: corev1.NodeStatus{
+						Conditions: []corev1.NodeCondition{
+							{
+								Type:    "SystemdUnitsReady",
+								Status:  corev1.ConditionFalse,
+								Message: "other.service: inactive but should be enabled",
+							},
+						},
+					},
+				},
+			}
+
+			err := CheckSystemdUnitsReady(nodes)
+			Expect(err).To(MatchError(ContainSubstring("node1")))
+			Expect(err).To(MatchError(ContainSubstring("node2")))
+		})
+	})
+
 	Describe("ShootConditions", func() {
 		Describe("#NewShootConditions", func() {
 			It("should initialize all conditions", func() {

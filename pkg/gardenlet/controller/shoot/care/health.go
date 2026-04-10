@@ -32,6 +32,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -693,6 +694,11 @@ func (h *Health) CheckClusterNodes(
 		return &c, nil
 	}
 
+	if err := CheckSystemdUnitsReady(nodesManagedByMCM); err != nil {
+		c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "SystemdUnitsNotReady", err.Error())
+		return &c, nil
+	}
+
 	if !h.shoot.IsWorkerless && v1beta1helper.SeedSettingDependencyWatchdogProberEnabled(h.seed.GetInfo().Spec.Settings) {
 		leaseList := &coordinationv1.LeaseList{}
 		if err := shootClient.Client().List(ctx, leaseList, client.InNamespace(corev1.NamespaceNodeLease)); err != nil {
@@ -726,6 +732,27 @@ func CheckNodeAgentLeases(nodeList []*corev1.Node, leaseList *coordinationv1.Lea
 		if lease.Spec.RenewTime.Add(time.Second * time.Duration(*lease.Spec.LeaseDurationSeconds)).Before(clock.Now()) {
 			return fmt.Errorf("gardener-node-agent stopped running on node %q", node.Name)
 		}
+	}
+
+	return nil
+}
+
+// CheckSystemdUnitsReady checks if all nodes report healthy systemd units.
+// TODO(rfranzke): Make the condition mandatory after Gardener v1.143 has been released.
+// Nodes without the SystemdUnitsReady condition are skipped for backward compatibility.
+func CheckSystemdUnitsReady(nodes []*corev1.Node) error {
+	var unhealthyNodes []string
+
+	for _, node := range nodes {
+		for _, condition := range node.Status.Conditions {
+			if condition.Type == nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady && condition.Status != corev1.ConditionTrue {
+				unhealthyNodes = append(unhealthyNodes, fmt.Sprintf("node %q: %s", node.Name, condition.Message))
+			}
+		}
+	}
+
+	if len(unhealthyNodes) > 0 {
+		return fmt.Errorf("systemd units are not healthy on %s", strings.Join(unhealthyNodes, "; "))
 	}
 
 	return nil
