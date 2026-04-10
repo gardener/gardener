@@ -48,7 +48,19 @@ var _ = Describe("Pod", func() {
 		Entry("OutOfDisk", "OutOfDisk", BeTrue()),
 		Entry("NodeAffinity", "NodeAffinity", BeTrue()),
 		Entry("NodeLost", "NodeLost", BeTrue()),
+		Entry("Preempting", "Preempting", BeTrue()),
 		Entry("Foo", "Foo", BeFalse()),
+	)
+
+	DescribeTable("#IsPodDisrupted",
+		func(conditions []corev1.PodCondition, matcher types.GomegaMatcher) {
+			Expect(health.IsPodDisrupted(conditions)).To(matcher)
+		},
+
+		Entry("no conditions", nil, BeFalse()),
+		Entry("no DisruptionTarget condition", []corev1.PodCondition{{Type: "Ready", Status: "True"}}, BeFalse()),
+		Entry("DisruptionTarget condition is False", []corev1.PodCondition{{Type: "DisruptionTarget", Status: "False"}}, BeFalse()),
+		Entry("DisruptionTarget condition is True", []corev1.PodCondition{{Type: "DisruptionTarget", Status: "True"}}, BeTrue()),
 	)
 
 	DescribeTable("#IsPodCompleted",

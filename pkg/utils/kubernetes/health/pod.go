@@ -64,7 +64,16 @@ func IsPodStale(reason string) bool {
 	return strings.Contains(reason, "Evicted") ||
 		strings.HasPrefix(reason, "OutOf") ||
 		strings.Contains(reason, "NodeAffinity") ||
-		strings.Contains(reason, "NodeLost")
+		strings.Contains(reason, "NodeLost") ||
+		strings.Contains(reason, "Preempting")
+}
+
+// IsPodDisrupted returns true when the pod has a DisruptionTarget condition set to True, indicating
+// that the pod was disrupted (e.g., preempted by the kubelet or scheduler).
+func IsPodDisrupted(conditions []corev1.PodCondition) bool {
+	return slices.ContainsFunc(conditions, func(condition corev1.PodCondition) bool {
+		return condition.Type == corev1.DisruptionTarget && condition.Status == corev1.ConditionTrue
+	})
 }
 
 // IsPodCompleted returns true when the pod ready condition indicates completeness.

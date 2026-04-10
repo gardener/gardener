@@ -203,15 +203,6 @@ func DeleteStalePods(ctx context.Context, log logr.Logger, c client.Client, pods
 	for _, pod := range pods {
 		logger := log.WithValues("pod", client.ObjectKeyFromObject(&pod))
 
-		if health.IsPodStale(pod.Status.Reason) {
-			logger.V(1).Info("Deleting stale pod", "reason", pod.Status.Reason)
-			if err := c.Delete(ctx, &pod); client.IgnoreNotFound(err) != nil {
-				result = multierror.Append(result, err)
-			}
-
-			continue
-		}
-
 		if shouldObjectBeRemoved(&pod) {
 			logger.V(1).Info("Deleting stuck terminating pod")
 			forceDeleteOptions := []client.DeleteOption{
@@ -219,6 +210,15 @@ func DeleteStalePods(ctx context.Context, log logr.Logger, c client.Client, pods
 				client.GracePeriodSeconds(0),
 			}
 			if err := c.Delete(ctx, &pod, forceDeleteOptions...); client.IgnoreNotFound(err) != nil {
+				result = multierror.Append(result, err)
+			}
+
+			continue
+		}
+
+		if health.IsPodStale(pod.Status.Reason) || health.IsPodDisrupted(pod.Status.Conditions) {
+			logger.V(1).Info("Deleting stale or disrupted pod", "reason", pod.Status.Reason)
+			if err := c.Delete(ctx, &pod); client.IgnoreNotFound(err) != nil {
 				result = multierror.Append(result, err)
 			}
 		}
