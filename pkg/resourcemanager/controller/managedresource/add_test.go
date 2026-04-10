@@ -10,35 +10,33 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
 	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("#MapSecretToManagedResources", func() {
 	var (
-		ctx    = context.TODO()
-		c      *mockclient.MockClient
-		ctrl   *gomock.Controller
-		m      handler.MapFunc
-		secret *corev1.Secret
-		filter *predicate.ClassFilter
+		ctx        = context.TODO()
+		fakeClient client.Client
+		m          handler.MapFunc
+		secret     *corev1.Secret
+		filter     *predicate.ClassFilter
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -49,11 +47,7 @@ var _ = Describe("#MapSecretToManagedResources", func() {
 
 		filter = predicate.NewClassFilter("seed")
 
-		m = (&Reconciler{SourceClient: c}).MapSecretToManagedResources(filter)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
+		m = (&Reconciler{SourceClient: fakeClient}).MapSecretToManagedResources(filter)
 	})
 
 	It("should do nothing, if Object is nil", func() {
@@ -67,37 +61,39 @@ var _ = Describe("#MapSecretToManagedResources", func() {
 	})
 
 	It("should do nothing, if list fails", func() {
-		c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
-			Return(errors.New("fake"))
+		fakeErr := errors.New("fake")
+		listFakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
+			List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+				return fakeErr
+			},
+		}).Build()
+		m = (&Reconciler{SourceClient: listFakeClient}).MapSecretToManagedResources(filter)
 
 		requests := m(ctx, secret)
 		Expect(requests).To(BeEmpty())
 	})
 
 	It("should do nothing, if there are no ManagedResources", func() {
-		c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace))
-
 		requests := m(ctx, secret)
 		Expect(requests).To(BeEmpty())
 	})
 
 	It("should do nothing, if there are no ManagedResources we are responsible for", func() {
-		mr := resourcesv1alpha1.ManagedResource{
+		mr := &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "other-mr",
+				Namespace: secret.Namespace,
+			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{Class: ptr.To("other")},
 		}
-
-		c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
-			DoAndReturn(func(_ context.Context, list runtime.Object, _ ...client.ListOption) error {
-				list.(*resourcesv1alpha1.ManagedResourceList).Items = []resourcesv1alpha1.ManagedResource{mr}
-				return nil
-			})
+		Expect(fakeClient.Create(ctx, mr)).To(Succeed())
 
 		requests := m(ctx, secret)
 		Expect(requests).To(BeEmpty())
 	})
 
 	It("should correctly map to ManagedResources that reference the secret", func() {
-		mr := resourcesv1alpha1.ManagedResource{
+		mr := &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mr",
 				Namespace: secret.Namespace,
@@ -107,12 +103,7 @@ var _ = Describe("#MapSecretToManagedResources", func() {
 				SecretRefs: []corev1.LocalObjectReference{{Name: secret.Name}},
 			},
 		}
-
-		c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
-			DoAndReturn(func(_ context.Context, list runtime.Object, _ ...client.ListOption) error {
-				list.(*resourcesv1alpha1.ManagedResourceList).Items = []resourcesv1alpha1.ManagedResource{mr}
-				return nil
-			})
+		Expect(fakeClient.Create(ctx, mr)).To(Succeed())
 
 		requests := m(ctx, secret)
 		Expect(requests).To(ConsistOf(

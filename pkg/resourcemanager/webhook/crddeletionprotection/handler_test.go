@@ -16,7 +16,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
-	"go.uber.org/mock/gomock"
 	admissionv1 "k8s.io/api/admission/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -25,6 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -34,8 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("handler", func() {
@@ -47,16 +46,10 @@ var _ = Describe("handler", func() {
 			request admission.Request
 			decoder admission.Decoder
 			handler admission.Handler
-
-			ctrl *gomock.Controller
-			c    *mockclient.MockClient
 		)
 
 		BeforeEach(func() {
 			log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
-
-			ctrl = gomock.NewController(GinkgoT())
-			c = mockclient.NewMockClient(ctrl)
 
 			request = admission.Request{}
 			request.Operation = admissionv1.Delete
@@ -65,11 +58,7 @@ var _ = Describe("handler", func() {
 			decoder = admission.NewDecoder(kubernetes.SeedScheme)
 			Expect(err).NotTo(HaveOccurred())
 
-			handler = &Handler{Logger: log, SourceReader: c, Decoder: decoder}
-		})
-
-		AfterEach(func() {
-			ctrl.Finish()
+			handler = &Handler{Logger: log, SourceReader: fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build(), Decoder: decoder}
 		})
 
 		var (
@@ -266,9 +255,12 @@ var _ = Describe("handler", func() {
 					request.Resource = resource
 					obj.SetKind("List")
 
-					listOp := getListOptions(resource.Resource, request.Namespace)
-
-					c.EXPECT().List(gomock.Any(), obj, listOp).Return(fakeErr)
+					c := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
+						List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+							return fakeErr
+						},
+					}).Build()
+					handler = &Handler{Logger: log, SourceReader: c, Decoder: decoder}
 
 					expectErrored(handler.Handle(ctx, request), BeEquivalentTo(http.StatusInternalServerError), Equal(fakeErr.Error()), resourceToId(resource))
 				}
@@ -280,9 +272,12 @@ var _ = Describe("handler", func() {
 					request.Resource = resource
 					obj.SetKind("List")
 
-					listOp := getListOptions(resource.Resource, request.Namespace)
-
-					c.EXPECT().List(gomock.Any(), obj, listOp).Return(apierrors.NewNotFound(core.Resource(resource.Resource), "name"))
+					c := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
+						List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+							return apierrors.NewNotFound(core.Resource(resource.Resource), "name")
+						},
+					}).Build()
+					handler = &Handler{Logger: log, SourceReader: c, Decoder: decoder}
 
 					expectAllowed(handler.Handle(ctx, request), ContainSubstring("object was not found"), resourceToId(resource))
 				}
@@ -293,12 +288,13 @@ var _ = Describe("handler", func() {
 					prepareRequestAndObjectWithResource(&request, obj, resource)
 					obj.SetKind(obj.GetKind() + "List")
 
-					listOp := getListOptions(resource.Resource, request.Namespace)
-
-					c.EXPECT().List(gomock.Any(), obj, listOp).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
-						prepareObjectWithLabelsAnnotations(list, resource, nil, nil)
-						return nil
-					})
+					c := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
+						List: func(_ context.Context, _ client.WithWatch, list client.ObjectList, _ ...client.ListOption) error {
+							prepareObjectWithLabelsAnnotations(list, resource, nil, nil)
+							return nil
+						},
+					}).Build()
+					handler = &Handler{Logger: log, SourceReader: c, Decoder: decoder}
 
 					testDeletionUnconfirmed(ctx, request, resource)
 				}
@@ -309,12 +305,13 @@ var _ = Describe("handler", func() {
 					prepareRequestAndObjectWithResource(&request, obj, resource)
 					obj.SetKind(obj.GetKind() + "List")
 
-					listOp := getListOptions(resource.Resource, request.Namespace)
-
-					c.EXPECT().List(gomock.Any(), obj, listOp).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
-						prepareObjectWithLabelsAnnotations(list, resource, nil, deletionConfirmedAnnotations)
-						return nil
-					})
+					c := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
+						List: func(_ context.Context, _ client.WithWatch, list client.ObjectList, _ ...client.ListOption) error {
+							prepareObjectWithLabelsAnnotations(list, resource, nil, deletionConfirmedAnnotations)
+							return nil
+						},
+					}).Build()
+					handler = &Handler{Logger: log, SourceReader: c, Decoder: decoder}
 
 					testDeletionConfirmed(ctx, request, resource)
 				}
@@ -338,11 +335,4 @@ func expectErrored(response admission.Response, code, err gomegatypes.GomegaMatc
 	Expect(response.Allowed).To(BeFalse(), optionalDescription...)
 	Expect(response.Result.Code).To(code, optionalDescription...)
 	Expect(response.Result.Message).To(err, optionalDescription...)
-}
-
-func getListOptions(resource, namespace string) client.ListOption {
-	if resource == "customresourcedefinitions" {
-		return client.MatchingLabels{gardenerutils.DeletionProtected: "true"}
-	}
-	return client.InNamespace(namespace)
 }

@@ -12,17 +12,17 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("admission", func() {
@@ -30,24 +30,14 @@ var _ = Describe("admission", func() {
 		ctx     = context.Background()
 		request admission.Request
 		decoder admission.Decoder
-
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
-
 		request = admission.Request{}
 
 		var err error
 		decoder = admission.NewDecoder(kubernetes.SeedScheme)
 		Expect(err).NotTo(HaveOccurred())
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
 	})
 
 	Describe("#getRequestObject", func() {
@@ -67,6 +57,7 @@ var _ = Describe("admission", func() {
 			It("should return an error because the old object cannot be decoded", func() {
 				request.OldObject = runtime.RawExtension{Raw: []byte("foo")}
 
+				c := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 				_, err := ExtractRequestObject(ctx, c, decoder, request, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("invalid character"))
@@ -78,6 +69,7 @@ var _ = Describe("admission", func() {
 
 				request.OldObject = runtime.RawExtension{Raw: objJSON}
 
+				c := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 				result, err := ExtractRequestObject(ctx, c, decoder, request, nil)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.GetObjectKind().GroupVersionKind().Kind).To(Equal(resource.Resource))
@@ -98,6 +90,7 @@ var _ = Describe("admission", func() {
 			It("should return an error because the new object cannot be decoded", func() {
 				request.Object = runtime.RawExtension{Raw: []byte("foo")}
 
+				c := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 				_, err := ExtractRequestObject(ctx, c, decoder, request, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("invalid character"))
@@ -109,6 +102,7 @@ var _ = Describe("admission", func() {
 
 				request.Object = runtime.RawExtension{Raw: objJSON}
 
+				c := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 				result, err := ExtractRequestObject(ctx, c, decoder, request, nil)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.GetObjectKind().GroupVersionKind().Kind).To(Equal(resource.Resource))
@@ -130,6 +124,7 @@ var _ = Describe("admission", func() {
 			})
 
 			It("should return an error because the GET call failed", func() {
+				c := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 				_, err := ExtractRequestObject(ctx, c, decoder, request, nil)
 				Expect(err).Should(MatchError("no object found in admission request"))
 			})
@@ -158,7 +153,11 @@ var _ = Describe("admission", func() {
 
 				listOp := client.InNamespace(request.Namespace)
 
-				c.EXPECT().List(ctx, obj, listOp).Return(fakeErr)
+				c := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
+					List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+						return fakeErr
+					},
+				}).Build()
 
 				_, err := ExtractRequestObject(ctx, c, decoder, request, listOp)
 				Expect(err).To(HaveOccurred())
@@ -168,15 +167,17 @@ var _ = Describe("admission", func() {
 			It("should return the looked up resource", func() {
 				listOp := client.InNamespace(request.Namespace)
 
-				c.EXPECT().List(ctx, obj, listOp).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
-					ob, ok := list.(*unstructured.UnstructuredList)
-					if !ok {
-						return fmt.Errorf("Error casting %v to UnstructuredList object", list)
-					}
-					ob.SetAPIVersion(request.Kind.Group + "/" + request.Kind.Version)
-					ob.SetKind(request.Kind.Kind + "List")
-					return nil
-				})
+				c := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
+					List: func(_ context.Context, _ client.WithWatch, list client.ObjectList, _ ...client.ListOption) error {
+						ob, ok := list.(*unstructured.UnstructuredList)
+						if !ok {
+							return fmt.Errorf("Error casting %v to UnstructuredList object", list)
+						}
+						ob.SetAPIVersion(request.Kind.Group + "/" + request.Kind.Version)
+						ob.SetKind(request.Kind.Kind + "List")
+						return nil
+					},
+				}).Build()
 
 				result, err := ExtractRequestObject(ctx, c, decoder, request, listOp)
 				Expect(err).ToNot(HaveOccurred())

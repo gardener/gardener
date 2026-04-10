@@ -11,27 +11,24 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/resourcemanager/controller/node/criticalcomponents"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/test"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var (
@@ -421,12 +418,21 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should patch the node even if it doesn't have the taint", func() {
-			mockClient := mockclient.NewMockClient(gomock.NewController(GinkgoT()))
 			node.Spec.Taints = nil
 
-			test.EXPECTPatchWithOptimisticLock(ctx, mockClient, node.DeepCopy(), node, types.MergePatchType)
+			patchCalled := false
+			c := fakeclient.NewClientBuilder().WithObjects(node).WithInterceptorFuncs(interceptor.Funcs{
+				Patch: func(ctx context.Context, c client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					patchCalled = true
+					return c.Patch(ctx, obj, patch, opts...)
+				},
+			}).Build()
 
-			Expect(RemoveTaint(ctx, mockClient, node)).To(Succeed())
+			Expect(RemoveTaint(ctx, c, node)).To(Succeed())
+			Expect(patchCalled).To(BeTrue())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+			Expect(node.Spec.Taints).To(BeEmpty())
 		})
 	})
 })
