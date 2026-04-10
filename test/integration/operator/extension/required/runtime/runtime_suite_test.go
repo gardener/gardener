@@ -53,6 +53,7 @@ var (
 	restConfig *rest.Config
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
+	mgrClient  client.Client
 
 	testRunID       string
 	testNamespace   *corev1.Namespace
@@ -134,6 +135,7 @@ var _ = BeforeSuite(func() {
 	})
 
 	Expect(err).NotTo(HaveOccurred())
+	mgrClient = mgr.GetClient()
 
 	By("Register controller")
 	DeferCleanup(test.WithVar(&requiredruntime.RequeueExtensionKindNotCalculated, 10*time.Millisecond))

@@ -290,6 +290,10 @@ var _ = Describe("Extension Required Runtime controller tests", Ordered, func() 
 			Expect(testClient.Delete(ctx, backupBucket)).To(Succeed())
 		})
 
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)
+		}).Should(Succeed())
+
 		Expect(testClient.Delete(ctx, garden)).To(Succeed())
 
 		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
