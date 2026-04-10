@@ -130,18 +130,14 @@ var (
 	availableWorkerCRINames = sets.New(
 		string(core.CRINameContainerD),
 	)
-	availableClusterAutoscalerExpanderModes = sets.New(
-		string(core.ClusterAutoscalerExpanderLeastWaste),
-		string(core.ClusterAutoscalerExpanderMostPods),
-		string(core.ClusterAutoscalerExpanderPriority),
-		string(core.ClusterAutoscalerExpanderRandom),
-		string(core.ClusterAutoscalerExpanderLeastNodes),
-	)
 	availableClusterAutoscalerExpanderModesWithK8s130 = sets.New(
 		string(core.ClusterAutoscalerExpanderLeastWaste),
 		string(core.ClusterAutoscalerExpanderMostPods),
 		string(core.ClusterAutoscalerExpanderPriority),
 		string(core.ClusterAutoscalerExpanderRandom),
+	)
+	availableClusterAutoscalerExpanderModes = availableClusterAutoscalerExpanderModesWithK8s130.Clone().Insert(
+		string(core.ClusterAutoscalerExpanderLeastNodes),
 	)
 	availableCoreDNSAutoscalingModes = sets.New(
 		string(core.CoreDNSAutoscalingModeClusterProportional),
@@ -1497,7 +1493,7 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, kubernetesVers
 	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.ScanInterval, fldPath.Child("scanInterval"))...)
 
 	expanderModes := availableClusterAutoscalerExpanderModes
-	if !versionutils.ConstraintK8sGreaterEqual131.CheckVersion(kubernetesVersion) {
+	if versionutils.ConstraintK8sLess131.CheckVersion(kubernetesVersion) {
 		expanderModes = availableClusterAutoscalerExpanderModesWithK8s130
 	}
 	if expander := autoScaler.Expander; expander != nil {
