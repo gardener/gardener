@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"slices"
 	"time"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
@@ -266,6 +267,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			}
 
 			log.Info("Adding controllers to manager")
+			// Use the Apply functionality to convey parameters to the controller configs.
 			bastionCtrlOpts.Completed().Apply(&localbastion.DefaultAddOptions.Controller)
 			controlPlaneCtrlOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.Controller)
 			dnsRecordCtrlOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions)
@@ -276,23 +278,15 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			operatingSystemConfigCtrlOpts.Completed().Apply(&localoperatingsystemconfig.DefaultAddOptions.Controller)
 			serviceCtrlOpts.Completed().Apply(&localservice.DefaultAddOptions)
 			workerCtrlOpts.Completed().Apply(&localworker.DefaultAddOptions.Controller)
-			localworker.DefaultAddOptions.GardenCluster = gardenCluster
-			localworker.DefaultAddOptions.SelfHostedShootCluster = generalOpts.Completed().SelfHostedShootCluster
 			localBackupBucketOptions.Completed().Apply(&localbackupbucket.DefaultAddOptions)
 			localBackupBucketOptions.Completed().Apply(&localbackupentry.DefaultAddOptions)
 			heartbeatCtrlOptions.Completed().Apply(&heartbeat.DefaultAddOptions)
 			prometheusWebhookOptions.Completed().Apply(&prometheuswebhook.DefaultAddOptions)
 
-			reconcileOpts.Completed().Apply(&localbackupbucket.DefaultAddOptions.IgnoreOperationAnnotation, &localbackupbucket.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&localbastion.DefaultAddOptions.IgnoreOperationAnnotation, &localbastion.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation, &localcontrolplane.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&localextensionseedcontroller.DefaultAddOptions.IgnoreOperationAnnotation, &localextensionseedcontroller.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&localextensionshootcontroller.DefaultAddOptions.IgnoreOperationAnnotation, &localextensionshootcontroller.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation, &localdnsrecord.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&localinfrastructure.DefaultAddOptions.IgnoreOperationAnnotation, &localinfrastructure.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&localoperatingsystemconfig.DefaultAddOptions.IgnoreOperationAnnotation, &localoperatingsystemconfig.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(&localworker.DefaultAddOptions.IgnoreOperationAnnotation, &localworker.DefaultAddOptions.ExtensionClasses)
-			reconcileOpts.Completed().Apply(nil, &localhealthcheck.DefaultAddOptions.ExtensionClasses)
+			// Apply remaining configs manually.
+			localworker.DefaultAddOptions.GardenCluster = gardenCluster
+			applyGeneralOptions(generalOpts)
+			applyReconcileOptions(reconcileOpts)
 
 			if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
 				return fmt.Errorf("could not add healthcheck: %w", err)
@@ -331,6 +325,37 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 	aggOption.AddFlags(cmd.Flags())
 
 	return cmd
+}
+
+func applyReconcileOptions(reconcileOpts *extensionscmdcontroller.ReconcilerOptions) {
+	config := reconcileOpts.Completed()
+
+	localbackupbucket.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
+	localbastion.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
+	localcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
+	localextensionseedcontroller.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
+	localextensionshootcontroller.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
+	localdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
+	localinfrastructure.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
+	localoperatingsystemconfig.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
+	localworker.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
+}
+
+func applyGeneralOptions(generalOpts *extensionscmdcontroller.GeneralOptions) {
+	config := generalOpts.Completed()
+
+	localworker.DefaultAddOptions.SelfHostedShootCluster = config.SelfHostedShootCluster
+
+	localbackupbucket.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
+	localbastion.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
+	localcontrolplane.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
+	localextensionseedcontroller.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
+	localextensionshootcontroller.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
+	localdnsrecord.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
+	localinfrastructure.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
+	localoperatingsystemconfig.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
+	localworker.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
+	localhealthcheck.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
 }
 
 // verifyGardenAccess uses the extension's access to the garden cluster to request objects related to the seed it is

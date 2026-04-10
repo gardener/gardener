@@ -6,8 +6,6 @@ package cmd
 
 import (
 	"github.com/spf13/pflag"
-
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 const (
@@ -22,8 +20,6 @@ const (
 type ReconcilerOptions struct {
 	// IgnoreOperationAnnotation defines whether to ignore the operation annotation or not.
 	IgnoreOperationAnnotation bool
-	// ExtensionClasses defines the extension classes this controller is responsible for.
-	ExtensionClasses []string
 
 	config *ReconcilerConfig
 }
@@ -31,17 +27,12 @@ type ReconcilerOptions struct {
 // AddFlags implements Flagger.AddFlags.
 func (c *ReconcilerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&c.IgnoreOperationAnnotation, IgnoreOperationAnnotationFlag, c.IgnoreOperationAnnotation, "Ignore the operation annotation or not.")
-	fs.StringSliceVar(&c.ExtensionClasses, ExtensionClassesFlag, c.ExtensionClasses, "Extension classes this extension is responsible for.")
 }
 
 // Complete implements Completer.Complete.
 func (c *ReconcilerOptions) Complete() error {
 	c.config = &ReconcilerConfig{
 		IgnoreOperationAnnotation: c.IgnoreOperationAnnotation,
-	}
-
-	for _, class := range c.ExtensionClasses {
-		c.config.ExtensionClasses = append(c.config.ExtensionClasses, extensionsv1alpha1.ExtensionClass(class))
 	}
 
 	return nil
@@ -56,16 +47,11 @@ func (c *ReconcilerOptions) Completed() *ReconcilerConfig {
 type ReconcilerConfig struct {
 	// IgnoreOperationAnnotation defines whether to ignore the operation annotation or not.
 	IgnoreOperationAnnotation bool
-	// ExtensionClasses defines the extension classes this controller is responsible for.
-	ExtensionClasses []extensionsv1alpha1.ExtensionClass
 }
 
 // Apply sets the values of this ReconcilerConfig in the given controller.Options.
-func (c *ReconcilerConfig) Apply(ignore *bool, classes *[]extensionsv1alpha1.ExtensionClass) {
+func (c *ReconcilerConfig) Apply(ignore *bool) {
 	if ignore != nil {
 		*ignore = c.IgnoreOperationAnnotation
-	}
-	if classes != nil {
-		*classes = append(*classes, c.ExtensionClasses...)
 	}
 }

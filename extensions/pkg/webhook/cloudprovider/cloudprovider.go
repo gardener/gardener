@@ -50,7 +50,6 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	webhook := &extensionswebhook.Webhook{
 		Name:              WebhookName,
 		Target:            extensionswebhook.TargetSeed,
-		Provider:          args.Provider,
 		Types:             types,
 		Webhook:           &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)},
 		Path:              WebhookName,

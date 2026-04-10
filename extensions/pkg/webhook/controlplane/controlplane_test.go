@@ -44,7 +44,6 @@ var _ = Describe("ControlPlane", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(webhook).NotTo(BeNil())
 				Expect(webhook.Name).To(Equal(expectedName))
-				Expect(webhook.Provider).To(Equal(provider))
 				Expect(webhook.Target).To(Equal(extensionswebhook.TargetSeed))
 				Expect(webhook.Path).To(Equal(expectedName))
 				Expect(webhook.Types).To(Equal(types))

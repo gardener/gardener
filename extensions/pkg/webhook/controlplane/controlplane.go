@@ -70,7 +70,6 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 
 	return &extensionswebhook.Webhook{
 		Name:              getName(args.Kind),
-		Provider:          args.Provider,
 		Types:             args.Types,
 		Target:            extensionswebhook.TargetSeed,
 		Path:              getName(args.Kind),

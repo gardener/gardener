@@ -50,12 +50,11 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 	logger.Info("Creating webhook", "name", name)
 
 	return &extensionswebhook.Webhook{
-		Name:     name,
-		Provider: provider,
-		Types:    types,
-		Target:   extensionswebhook.TargetSeed,
-		Path:     name,
-		Webhook:  &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)},
+		Name:    name,
+		Types:   types,
+		Target:  extensionswebhook.TargetSeed,
+		Path:    name,
+		Webhook: &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)},
 		NamespaceSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
 			{Key: v1beta1constants.LabelSeedProvider, Operator: metav1.LabelSelectorOpIn, Values: []string{provider}},
 		}},

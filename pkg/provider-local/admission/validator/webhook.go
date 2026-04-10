@@ -30,9 +30,8 @@ func New(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 	logger.Info("Setting up webhook", "name", Name)
 
 	return extensionswebhook.New(mgr, extensionswebhook.Args{
-		Provider: local.Type,
-		Name:     Name,
-		Path:     "/webhooks/validate",
+		Name: Name,
+		Path: "/webhooks/validate",
 		Validators: map[extensionswebhook.Validator][]extensionswebhook.Type{
 			NewCloudProfileValidator(mgr):           {{Obj: &core.CloudProfile{}}},
 			NewNamespacedCloudProfileValidator(mgr): {{Obj: &core.NamespacedCloudProfile{}}},
@@ -51,9 +50,8 @@ func NewSecretsWebhook(mgr manager.Manager) (*extensionswebhook.Webhook, error) 
 	logger.Info("Setting up webhook", "name", SecretsValidatorName)
 
 	return extensionswebhook.New(mgr, extensionswebhook.Args{
-		Provider: local.Type,
-		Name:     SecretsValidatorName,
-		Path:     "/webhooks/validate/secrets",
+		Name: SecretsValidatorName,
+		Path: "/webhooks/validate/secrets",
 		Validators: map[extensionswebhook.Validator][]extensionswebhook.Type{
 			NewSecretValidator(): {{Obj: &corev1.Secret{}}},
 		},
