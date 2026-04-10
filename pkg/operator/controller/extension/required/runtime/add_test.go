@@ -48,7 +48,6 @@ var _ = Describe("Add", func() {
 		Describe("#MapGardenToExtensions", func() {
 			var (
 				fakeClient client.Client
-				garden     *operatorv1alpha1.Garden
 				mapperFunc handler.MapFunc
 			)
 
@@ -56,41 +55,18 @@ var _ = Describe("Add", func() {
 				fakeClient = fake.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
 				reconciler.Client = fakeClient
 
-				garden = &operatorv1alpha1.Garden{
-					Spec: operatorv1alpha1.GardenSpec{
-						DNS: &operatorv1alpha1.DNSManagement{
-							Providers: []operatorv1alpha1.DNSProvider{
-								{Type: "local-dns"},
-							},
-						},
-						Extensions: []operatorv1alpha1.GardenExtension{
-							{Type: "local-extension-1"},
-							{Type: "local-extension-2"},
-						},
-						VirtualCluster: operatorv1alpha1.VirtualCluster{
-							ETCD: &operatorv1alpha1.ETCD{
-								Main: &operatorv1alpha1.ETCDMain{
-									Backup: &operatorv1alpha1.Backup{
-										Provider: "local-infrastructure",
-									},
-								},
-							},
-						},
-					},
-				}
-
 				mapperFunc = reconciler.MapGardenToExtensions(log)
 			})
 
 			Context("without extensions", func() {
 				It("should not return any requests", func() {
-					Expect(mapperFunc(ctx, garden)).To(BeEmpty())
+					Expect(mapperFunc(ctx, nil)).To(BeEmpty())
 				})
 			})
 
 			Context("with extensions", func() {
 				var (
-					infraExtension, dnsExtension *operatorv1alpha1.Extension
+					infraExtension, dnsExtension, genericExtension *operatorv1alpha1.Extension
 				)
 
 				BeforeEach(func() {
@@ -116,14 +92,27 @@ var _ = Describe("Add", func() {
 						},
 					}
 
+					genericExtension = &operatorv1alpha1.Extension{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "local-generic",
+						},
+						Spec: operatorv1alpha1.ExtensionSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{Kind: "Extension", Type: "local-extension"},
+							},
+						},
+					}
+
 					Expect(fakeClient.Create(ctx, infraExtension)).To(Succeed())
 					Expect(fakeClient.Create(ctx, dnsExtension)).To(Succeed())
+					Expect(fakeClient.Create(ctx, genericExtension)).To(Succeed())
 				})
 
-				It("should return the expected extensions", func() {
-					Expect(mapperFunc(ctx, garden)).To(ConsistOf(
+				It("should return all extensions", func() {
+					Expect(mapperFunc(ctx, nil)).To(ConsistOf(
 						Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: infraExtension.Name}}),
 						Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: dnsExtension.Name}}),
+						Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: genericExtension.Name}}),
 					))
 				})
 			})
