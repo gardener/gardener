@@ -96,6 +96,16 @@ var _ = Describe("ShootState", func() {
 				Expect(fakeSeedClient.Create(ctx, newSecret("secret1", controlPlaneNamespace, true, true))).To(Succeed())
 				Expect(fakeSeedClient.Create(ctx, newSecret("secret2", controlPlaneNamespace, false, true))).To(Succeed())
 				Expect(fakeSeedClient.Create(ctx, newSecret("secret3", controlPlaneNamespace, true, false))).To(Succeed())
+				Expect(fakeSeedClient.Create(ctx, newSecret("secret4", controlPlaneNamespace, true, false, func(s *corev1.Secret) {
+					s.Immutable = ptr.To(true)
+				}))).To(Succeed())
+				Expect(fakeSeedClient.Create(ctx, newSecret("secret5", controlPlaneNamespace, true, false, func(s *corev1.Secret) {
+					s.Type = corev1.SecretTypeTLS
+				}))).To(Succeed())
+				Expect(fakeSeedClient.Create(ctx, newSecret("secret6", controlPlaneNamespace, true, false, func(s *corev1.Secret) {
+					s.Immutable = ptr.To(true)
+					s.Type = corev1.SecretTypeTLS
+				}))).To(Succeed())
 
 				By("Creating extensions data")
 				createExtensionObject(ctx, fakeSeedClient, "backupentry", controlPlaneNamespace, &extensionsv1alpha1.BackupEntry{}, &runtime.RawExtension{Raw: []byte(`{"name":"backupentry"}`)})
@@ -120,13 +130,31 @@ var _ = Describe("ShootState", func() {
 						{
 							Name:   "secret1",
 							Type:   "secret",
-							Data:   runtime.RawExtension{Raw: []byte(`{"secret1":"c29tZS1kYXRh"}`)},
+							Data:   runtime.RawExtension{Raw: []byte(`{"data":{"secret1":"c29tZS1kYXRh"},"type":"Opaque"}`)},
 							Labels: map[string]string{"managed-by": "secrets-manager", "persist": "true"},
 						},
 						{
 							Name:   "secret3",
 							Type:   "secret",
-							Data:   runtime.RawExtension{Raw: []byte(`{"secret3":"c29tZS1kYXRh"}`)},
+							Data:   runtime.RawExtension{Raw: []byte(`{"data":{"secret3":"c29tZS1kYXRh"},"type":"Opaque"}`)},
+							Labels: map[string]string{"persist": "true"},
+						},
+						{
+							Name:   "secret4",
+							Type:   "secret",
+							Data:   runtime.RawExtension{Raw: []byte(`{"data":{"secret4":"c29tZS1kYXRh"},"immutable":true,"type":"Opaque"}`)},
+							Labels: map[string]string{"persist": "true"},
+						},
+						{
+							Name:   "secret5",
+							Type:   "secret",
+							Data:   runtime.RawExtension{Raw: []byte(`{"data":{"secret5":"c29tZS1kYXRh"},"type":"kubernetes.io/tls"}`)},
+							Labels: map[string]string{"persist": "true"},
+						},
+						{
+							Name:   "secret6",
+							Type:   "secret",
+							Data:   runtime.RawExtension{Raw: []byte(`{"data":{"secret6":"c29tZS1kYXRh"},"immutable":true,"type":"kubernetes.io/tls"}`)},
 							Labels: map[string]string{"persist": "true"},
 						},
 						{
@@ -265,7 +293,7 @@ var _ = Describe("ShootState", func() {
 	})
 })
 
-func newSecret(name, namespace string, withPersistLabel bool, withManagedByLabel bool) *corev1.Secret {
+func newSecret(name, namespace string, withPersistLabel bool, withManagedByLabel bool, opts ...func(*corev1.Secret)) *corev1.Secret {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -281,6 +309,10 @@ func newSecret(name, namespace string, withPersistLabel bool, withManagedByLabel
 	}
 	if withPersistLabel {
 		metav1.SetMetaDataLabel(&secret.ObjectMeta, "persist", "true")
+	}
+
+	for _, opt := range opts {
+		opt(secret)
 	}
 
 	return secret

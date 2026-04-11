@@ -30,6 +30,13 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
+// SecretState stores the data, immutability and type of a secret to be persisted in the ShootState.
+type SecretState struct {
+	Data      map[string][]byte `json:"data"`
+	Immutable *bool             `json:"immutable,omitempty"`
+	Type      corev1.SecretType `json:"type,omitempty"`
+}
+
 // Deploy deploys the ShootState resource with the effective state for the given shoot into the garden
 // cluster.
 func Deploy(ctx context.Context, clock clock.Clock, gardenClient, seedClient client.Client, shoot *gardencorev1beta1.Shoot, controlPlaneNamespace string, overwriteSpec bool) error {
@@ -167,7 +174,13 @@ func computeSecretsToPersist(
 	dataList := make([]gardencorev1beta1.GardenerResourceData, 0, len(secretList.Items))
 
 	for _, secret := range secretList.Items {
-		dataJSON, err := json.Marshal(secret.Data)
+		secretInfo := SecretState{
+			Data:      secret.Data,
+			Immutable: secret.Immutable,
+			Type:      secret.Type,
+		}
+
+		dataJSON, err := json.Marshal(secretInfo)
 		if err != nil {
 			return nil, fmt.Errorf("failed marshalling secret data to JSON for secret %s: %w", client.ObjectKeyFromObject(&secret), err)
 		}
