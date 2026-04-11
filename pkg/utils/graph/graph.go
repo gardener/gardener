@@ -79,6 +79,7 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 			resourceSetup{&gardencorev1beta1.ControllerInstallation{}, g.setupControllerInstallationWatch},
 			resourceSetup{&seedmanagementv1alpha1.Gardenlet{}, g.setupGardenletWatch},
 			resourceSetup{&seedmanagementv1alpha1.ManagedSeed{}, g.setupManagedSeedWatch},
+			resourceSetup{&gardencorev1beta1.Project{}, g.setupProjectWatch},
 			resourceSetup{&corev1.ServiceAccount{}, g.setupServiceAccountWatch},
 			resourceSetup{&gardencorev1beta1.Shoot{}, g.setupShootWatch},
 			resourceSetup{&securityv1alpha1.CredentialsBinding{}, g.setupCredentialsBindingWatch},

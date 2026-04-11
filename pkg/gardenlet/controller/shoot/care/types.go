@@ -14,6 +14,7 @@ import (
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -160,6 +161,17 @@ var defaultNewOperationFunc NewOperationFunc = func(
 	*operation.Operation,
 	error,
 ) {
+	if v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
+		return operation.
+			NewBuilder().
+			WithLogger(log).
+			WithConfig(config).
+			WithGardenerInfo(gardenerInfo).
+			WithGardenClusterIdentity(gardenClusterIdentity).
+			WithGardenFrom(gardenClient, shoot.Namespace).
+			WithShootFromCluster(seedClientSet, shoot).
+			Build(ctx, gardenClient, seedClientSet, shootClientMap, shoot)
+	}
 	return operation.
 		NewBuilder().
 		WithLogger(log).
@@ -172,5 +184,5 @@ var defaultNewOperationFunc NewOperationFunc = func(
 		WithGardenFrom(gardenClient, shoot.Namespace).
 		WithSeedFrom(gardenClient, *shoot.Status.SeedName).
 		WithShootFromCluster(seedClientSet, shoot).
-		Build(ctx, gardenClient, seedClientSet, shootClientMap)
+		Build(ctx, gardenClient, seedClientSet, shootClientMap, shoot)
 }

@@ -73,13 +73,16 @@ var (
 	shootClientMap clientmap.ClientMap
 	mgrClient      client.Client
 
-	project       *gardencorev1beta1.Project
-	seed          *gardencorev1beta1.Seed
-	testNamespace *corev1.Namespace
-	testRunID     string
-	projectName   string
-	seedName      string
-	shootName     string
+	project               *gardencorev1beta1.Project
+	seed                  *gardencorev1beta1.Seed
+	testNamespace         *corev1.Namespace
+	gardenNamespace       *corev1.Namespace
+	selfHostedCPNamespace *corev1.Namespace
+	testRunID             string
+	projectName           string
+	selfHostedProjectName string
+	seedName              string
+	shootName             string
 )
 
 var _ = BeforeSuite(func() {
@@ -151,6 +154,7 @@ var _ = BeforeSuite(func() {
 
 	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 	projectName = "p-" + testRunID
+	selfHostedProjectName = "p-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 	seedName = "seed-" + testRunID
 	shootName = "shoot-" + testRunID
 
@@ -170,6 +174,69 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(func() {
 		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
+	// Self-hosted shoots must be in the "garden" namespace.
+	// The namespace must also carry a ProjectName label so the operation builder can resolve it to a Project.
+	By("Create garden Namespace")
+	gardenNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: v1beta1constants.GardenNamespace,
+			Labels: map[string]string{
+				testID:                       testRunID,
+				v1beta1constants.ProjectName: selfHostedProjectName,
+			},
+		},
+	}
+	// The garden namespace may already exist in the envtest environment; ignore AlreadyExists.
+	if err := testClient.Create(ctx, gardenNamespace); client.IgnoreAlreadyExists(err) != nil {
+		Expect(err).NotTo(HaveOccurred())
+	}
+	// Ensure the labels are present for cache selector and project lookup.
+	Eventually(func(g Gomega) {
+		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenNamespace), gardenNamespace)).To(Succeed())
+		patch := client.MergeFrom(gardenNamespace.DeepCopy())
+		if gardenNamespace.Labels == nil {
+			gardenNamespace.Labels = map[string]string{}
+		}
+		gardenNamespace.Labels[testID] = testRunID
+		gardenNamespace.Labels[v1beta1constants.ProjectName] = selfHostedProjectName
+		g.Expect(testClient.Patch(ctx, gardenNamespace, patch)).To(Succeed())
+	}).Should(Succeed())
+
+	gardenNamespaceName := gardenNamespace.Name
+	By("Create self-hosted Project")
+	selfHostedProject := &gardencorev1beta1.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   selfHostedProjectName,
+			Labels: map[string]string{testID: testRunID},
+		},
+		Spec: gardencorev1beta1.ProjectSpec{
+			Namespace: &gardenNamespaceName,
+		},
+	}
+	Expect(testClient.Create(ctx, selfHostedProject)).To(Succeed())
+	log.Info("Created self-hosted Project for test", "project", selfHostedProject.Name)
+
+	DeferCleanup(func() {
+		By("Delete self-hosted Project")
+		Expect(client.IgnoreNotFound(testClient.Delete(ctx, selfHostedProject))).To(Succeed())
+	})
+
+	selfHostedCPNamespaceName := "cp-" + testRunID
+	By("Create self-hosted control plane Namespace")
+	selfHostedCPNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   selfHostedCPNamespaceName,
+			Labels: map[string]string{testID: testRunID},
+		},
+	}
+	Expect(testClient.Create(ctx, selfHostedCPNamespace)).To(Succeed())
+	log.Info("Created self-hosted control plane Namespace for test", "namespaceName", selfHostedCPNamespace.Name)
+
+	DeferCleanup(func() {
+		By("Delete self-hosted control plane Namespace")
+		Expect(testClient.Delete(ctx, selfHostedCPNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
 	project = &gardencorev1beta1.Project{
@@ -284,6 +351,7 @@ var _ = BeforeSuite(func() {
 	By("Setup field indexes")
 	Expect(indexer.AddManagedSeedShootName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 	Expect(indexer.AddControllerInstallationSeedRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+	Expect(indexer.AddControllerInstallationShootRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 	By("Create test clientset")
 	testClientSet, err = kubernetes.NewWithConfig(
@@ -294,7 +362,10 @@ var _ = BeforeSuite(func() {
 	)
 	Expect(err).NotTo(HaveOccurred())
 
-	shootClientMap = fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForShoot(&gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: testNamespace.Name}}), testClientSet).Build()
+	shootClientMap = fakeclientmap.NewClientMapBuilder().
+		WithClientSetForKey(keys.ForShoot(&gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: testNamespace.Name}}), testClientSet).
+		WithClientSetForKey(keys.ForShoot(&gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: v1beta1constants.GardenNamespace}}), testClientSet).
+		Build()
 	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
 
 	By("Register controller")
