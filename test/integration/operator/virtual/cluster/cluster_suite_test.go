@@ -11,7 +11,6 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
@@ -30,8 +29,8 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	virtualcluster "github.com/gardener/gardener/pkg/operator/controller/virtual/cluster"
+	testutils "github.com/gardener/gardener/pkg/utils/test"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
-	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )
 
 func TestCluster(t *testing.T) {
@@ -47,12 +46,11 @@ var (
 
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	restConfig *rest.Config
-	ctrl       *gomock.Controller
 	testRunID  string
 
 	channel chan event.TypedGenericEvent[*rest.Config]
 
-	mockManager             *mockmanager.MockManager
+	fakeManager             *testutils.FakeManager
 	virtualCluster          cluster.Cluster
 	virtualClientConnection componentbaseconfigv1alpha1.ClientConnectionConfiguration
 )
@@ -78,7 +76,6 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(func() {
 		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
-		ctrl.Finish()
 	})
 
 	By("Setup manager")
@@ -100,8 +97,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	channel = make(chan event.TypedGenericEvent[*rest.Config])
-	ctrl = gomock.NewController(GinkgoT())
-	mockManager = mockmanager.NewMockManager(ctrl)
+	fakeManager = &testutils.FakeManager{}
 	virtualClientConnection = componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 		AcceptContentTypes: "application/json",
 		ContentType:        "application/json",
@@ -111,7 +107,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	Expect((&virtualcluster.Reconciler{
-		Manager: mockManager,
+		Manager: fakeManager,
 		StoreCluster: func(cluster cluster.Cluster) {
 			virtualCluster = cluster
 		},

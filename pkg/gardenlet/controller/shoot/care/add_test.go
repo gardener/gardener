@@ -10,7 +10,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -23,7 +22,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	"github.com/gardener/gardener/pkg/utils/test"
-	mockworkqueue "github.com/gardener/gardener/third_party/mock/client-go/util/workqueue"
 )
 
 var _ = Describe("Add", func() {
@@ -50,13 +48,13 @@ var _ = Describe("Add", func() {
 		var (
 			ctx   = context.TODO()
 			hdlr  handler.EventHandler
-			queue *mockworkqueue.MockTypedRateLimitingInterface[reconcile.Request]
+			queue *test.FakeQueue[reconcile.Request]
 			req   reconcile.Request
 		)
 
 		BeforeEach(func() {
 			hdlr = reconciler.EventHandler()
-			queue = mockworkqueue.NewMockTypedRateLimitingInterface[reconcile.Request](gomock.NewController(GinkgoT()))
+			queue = &test.FakeQueue[reconcile.Request]{}
 			req = reconcile.Request{NamespacedName: types.NamespacedName{Name: shoot.Name, Namespace: shoot.Namespace}}
 		})
 
@@ -64,23 +62,30 @@ var _ = Describe("Add", func() {
 			DeferCleanup(test.WithVar(&RandomDurationWithMetaDuration, func(max *metav1.Duration) time.Duration {
 				return max.Duration
 			}))
-			queue.EXPECT().AddAfter(req, reconciler.Config.Controllers.ShootCare.SyncPeriod.Duration)
 
 			hdlr.Create(ctx, event.CreateEvent{Object: shoot}, queue)
+
+			Expect(queue.AddedAfter).To(ConsistOf(test.AddAfterArgs[reconcile.Request]{Item: req, Duration: reconciler.Config.Controllers.ShootCare.SyncPeriod.Duration}))
 		})
 
 		It("should enqueue the object for Update events", func() {
-			queue.EXPECT().Add(req)
-
 			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: shoot, ObjectOld: shoot}, queue)
+
+			Expect(queue.Added).To(ConsistOf(req))
 		})
 
 		It("should not enqueue the object for Delete events", func() {
 			hdlr.Delete(ctx, event.DeleteEvent{Object: shoot}, queue)
+
+			Expect(queue.Added).To(BeEmpty())
+			Expect(queue.AddedAfter).To(BeEmpty())
 		})
 
 		It("should not enqueue the object for Generic events", func() {
 			hdlr.Generic(ctx, event.GenericEvent{Object: shoot}, queue)
+
+			Expect(queue.Added).To(BeEmpty())
+			Expect(queue.AddedAfter).To(BeEmpty())
 		})
 	})
 

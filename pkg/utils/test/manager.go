@@ -5,6 +5,7 @@
 package test
 
 import (
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -21,6 +22,9 @@ type FakeManager struct {
 	EventRecorder events.EventRecorder
 	APIReader     client.Reader
 	Scheme        *runtime.Scheme
+	Logger        logr.Logger
+	// AddFunc is an optional callback invoked by Add. If nil, Add is a no-op.
+	AddFunc func(manager.Runnable) error
 }
 
 // GetClient returns the client of the FakeManager.
@@ -46,4 +50,17 @@ func (f FakeManager) GetAPIReader() client.Reader {
 // GetScheme returns the Scheme of the FakeManager.
 func (f FakeManager) GetScheme() *runtime.Scheme {
 	return f.Scheme
+}
+
+// GetLogger returns the Logger of the FakeManager.
+func (f FakeManager) GetLogger() logr.Logger {
+	return f.Logger
+}
+
+// Add calls AddFunc if set, otherwise is a no-op.
+func (f FakeManager) Add(runnable manager.Runnable) error {
+	if f.AddFunc != nil {
+		return f.AddFunc(runnable)
+	}
+	return nil
 }

@@ -35,8 +35,8 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockkubelet "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet/mock"
 	mockutils "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils/mock"
+	"github.com/gardener/gardener/pkg/utils/test"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )
 
 const (
@@ -70,7 +70,7 @@ var _ = Describe("Mutator", func() {
 	var (
 		ctrl   *gomock.Controller
 		logger = log.Log.WithName("test")
-		mgr    *mockmanager.MockManager
+		mgr    test.FakeManager
 		c      *mockclient.MockClient
 
 		kubernetesVersion       = "1.33.3"
@@ -108,9 +108,8 @@ var _ = Describe("Mutator", func() {
 		ctrl = gomock.NewController(GinkgoT())
 
 		// Create fake manager and client
-		mgr = mockmanager.NewMockManager(ctrl)
 		c = mockclient.NewMockClient(ctrl)
-		mgr.EXPECT().GetClient().Return(c)
+		mgr = test.FakeManager{Client: c}
 	})
 
 	AfterEach(func() {

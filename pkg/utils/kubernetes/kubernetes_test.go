@@ -5,6 +5,7 @@
 package kubernetes_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"testing/iotest"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -42,7 +44,6 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/kubernetes"
 	mockcorev1 "github.com/gardener/gardener/third_party/mock/client-go/core/v1"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-	mockio "github.com/gardener/gardener/third_party/mock/go/io"
 )
 
 var _ = Describe("kubernetes", func() {
@@ -1023,9 +1024,7 @@ var _ = Describe("kubernetes", func() {
 
 	Describe("#MostRecentCompleteLogs", func() {
 		var (
-			pods   *mockcorev1.MockPodInterface
-			body   *mockio.MockReadCloser
-			client *http.Client
+			pods *mockcorev1.MockPodInterface
 
 			pod           *corev1.Pod
 			podName       = "pod"
@@ -1034,20 +1033,16 @@ var _ = Describe("kubernetes", func() {
 
 		BeforeEach(func() {
 			pods = mockcorev1.NewMockPodInterface(ctrl)
-			body = mockio.NewMockReadCloser(ctrl)
-			client = fakerestclient.CreateHTTPClient(func(_ *http.Request) (*http.Response, error) {
-				return &http.Response{StatusCode: http.StatusOK, Body: body}, nil
-			})
 
 			pod = &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: podName}}
 		})
 
 		It("should return an error if the log retrieval failed", func() {
-			gomock.InOrder(
-				pods.EXPECT().GetLogs(podName, gomock.AssignableToTypeOf(&corev1.PodLogOptions{})).Return(rest.NewRequestWithClient(&url.URL{}, "", rest.ClientContentConfig{}, client)),
-				body.EXPECT().Read(gomock.Any()).Return(0, fakeErr),
-				body.EXPECT().Close(),
-			)
+			client := fakerestclient.CreateHTTPClient(func(_ *http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(iotest.ErrReader(fakeErr))}, nil
+			})
+
+			pods.EXPECT().GetLogs(podName, gomock.AssignableToTypeOf(&corev1.PodLogOptions{})).Return(rest.NewRequestWithClient(&url.URL{}, "", rest.ClientContentConfig{}, client))
 
 			actual, err := MostRecentCompleteLogs(ctx, pods, pod, containerName, nil, nil)
 			Expect(err).To(MatchError(fakeErr))
@@ -1061,6 +1056,10 @@ var _ = Describe("kubernetes", func() {
 					tailLines int64 = 1337
 					logs            = []byte("logs")
 				)
+
+				client := fakerestclient.CreateHTTPClient(func(_ *http.Request) (*http.Response, error) {
+					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(logs))}, nil
+				})
 
 				pod.Status.ContainerStatuses = containerStatuses
 
@@ -1078,18 +1077,7 @@ var _ = Describe("kubernetes", func() {
 
 				gomock.InOrder(
 					pods.EXPECT().GetLogs(podName, tailLineOptions).Return(rest.NewRequestWithClient(&url.URL{}, "", rest.ClientContentConfig{}, client)),
-					body.EXPECT().Read(gomock.Any()).DoAndReturn(func(data []byte) (int, error) {
-						copy(data, logs)
-						return len(logs), io.EOF
-					}),
-					body.EXPECT().Close(),
-
 					pods.EXPECT().GetLogs(podName, bytesLimitOptions).Return(rest.NewRequestWithClient(&url.URL{}, "", rest.ClientContentConfig{}, client)),
-					body.EXPECT().Read(gomock.Any()).DoAndReturn(func(data []byte) (int, error) {
-						copy(data, logs)
-						return len(logs), io.EOF
-					}),
-					body.EXPECT().Close(),
 				)
 
 				actual, err := MostRecentCompleteLogs(ctx, pods, pod, containerName, &tailLines, &headBytes)

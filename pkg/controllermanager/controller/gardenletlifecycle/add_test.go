@@ -8,7 +8,7 @@ import (
 	"context"
 
 	. "github.com/onsi/ginkgo/v2"
-	"go.uber.org/mock/gomock"
+	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,7 +18,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/gardenletlifecycle"
-	mockworkqueue "github.com/gardener/gardener/third_party/mock/client-go/util/workqueue"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Add", func() {
@@ -32,46 +32,52 @@ var _ = Describe("Add", func() {
 		var (
 			ctx   = context.Background()
 			hdlr  handler.TypedEventHandler[client.Object, Request]
-			queue *mockworkqueue.MockTypedRateLimitingInterface[Request]
+			queue *test.FakeQueue[Request]
 		)
 
 		BeforeEach(func() {
 			hdlr = reconciler.EventHandler()
-			queue = mockworkqueue.NewMockTypedRateLimitingInterface[Request](gomock.NewController(GinkgoT()))
+			queue = &test.FakeQueue[Request]{}
 		})
 
 		It("should correctly enqueue Seeds", func() {
 			obj := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "seed"}}
 
-			queue.EXPECT().Add(Request{
+			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
+
+			Expect(queue.Added).To(ConsistOf(Request{
 				Request:           reconcile.Request{NamespacedName: types.NamespacedName{Name: "seed"}},
 				IsSelfHostedShoot: false,
-			})
-
-			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
+			}))
 		})
 
 		It("should correctly enqueue Shoots", func() {
 			obj := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "shoot", Namespace: "shoot-namespace"}}
 
-			queue.EXPECT().Add(Request{
+			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
+
+			Expect(queue.Added).To(ConsistOf(Request{
 				Request:           reconcile.Request{NamespacedName: types.NamespacedName{Name: "shoot", Namespace: "shoot-namespace"}},
 				IsSelfHostedShoot: true,
-			})
-
-			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
+			}))
 		})
 
 		It("should not enqueue the object for Update events", func() {
 			hdlr.Update(ctx, event.UpdateEvent{}, queue)
+
+			Expect(queue.Added).To(BeEmpty())
 		})
 
 		It("should not enqueue the object for Delete events", func() {
 			hdlr.Delete(ctx, event.DeleteEvent{}, queue)
+
+			Expect(queue.Added).To(BeEmpty())
 		})
 
 		It("should not enqueue the object for Generic events", func() {
 			hdlr.Generic(ctx, event.GenericEvent{}, queue)
+
+			Expect(queue.Added).To(BeEmpty())
 		})
 	})
 })

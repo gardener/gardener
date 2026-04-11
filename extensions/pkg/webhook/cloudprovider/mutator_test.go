@@ -19,8 +19,8 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
 	extensionsmockcloudprovider "github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider/mock"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils/test"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
-	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )
 
 func TestCloudProvider(t *testing.T) {
@@ -30,7 +30,7 @@ func TestCloudProvider(t *testing.T) {
 
 var _ = Describe("Mutator", func() {
 	var (
-		mgr    *mockmanager.MockManager
+		mgr    test.FakeManager
 		ctrl   *gomock.Controller
 		logger = log.Log.WithName("test")
 	)
@@ -38,10 +38,7 @@ var _ = Describe("Mutator", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c := mockclient.NewMockClient(ctrl)
-
-		// Create fake manager
-		mgr = mockmanager.NewMockManager(ctrl)
-		mgr.EXPECT().GetClient().Return(c)
+		mgr = test.FakeManager{Client: c}
 	})
 
 	AfterEach(func() {

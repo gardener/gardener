@@ -5,6 +5,7 @@
 package kubernetes_test
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"net/http"
@@ -32,7 +33,6 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockcorev1 "github.com/gardener/gardener/third_party/mock/client-go/core/v1"
-	mockio "github.com/gardener/gardener/third_party/mock/go/io"
 )
 
 var _ = Describe("Pod Utils", func() {
@@ -555,20 +555,12 @@ var _ = Describe("Pod Utils", func() {
 			var (
 				options = &corev1.PodLogOptions{}
 				logs    = []byte("logs")
-				body    = mockio.NewMockReadCloser(ctrl)
 				client  = fakerestclient.CreateHTTPClient(func(_ *http.Request) (*http.Response, error) {
-					return &http.Response{StatusCode: http.StatusOK, Body: body}, nil
+					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(logs))}, nil
 				})
 			)
 
-			gomock.InOrder(
-				pods.EXPECT().GetLogs(name, options).Return(rest.NewRequestWithClient(&url.URL{}, "", rest.ClientContentConfig{}, client)),
-				body.EXPECT().Read(gomock.Any()).DoAndReturn(func(data []byte) (int, error) {
-					copy(data, logs)
-					return len(logs), io.EOF
-				}),
-				body.EXPECT().Close(),
-			)
+			pods.EXPECT().GetLogs(name, options).Return(rest.NewRequestWithClient(&url.URL{}, "", rest.ClientContentConfig{}, client))
 
 			actual, err := GetPodLogs(ctx, pods, name, options.DeepCopy())
 			Expect(err).NotTo(HaveOccurred())
