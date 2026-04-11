@@ -16,4 +16,4 @@ components:
 
 resources:
 - https://raw.githubusercontent.com/gardener/gardener-extension-networking-cilium/v1.47.0/example/controller-registration.yaml
-- https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.57.0/example/controller-registration.yaml
+- https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.58.0/example/controller-registration.yaml
