@@ -249,9 +249,6 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 										corev1.ResourceCPU:    resource.MustParse("20m"),
 										corev1.ResourceMemory: resource.MustParse("20Mi"),
 									},
-									Limits: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("500Mi"),
-									},
 								},
 							},
 						},
