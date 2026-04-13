@@ -112,4 +112,20 @@ var _ = Describe("Monitoring", func() {
 			})
 		})
 	})
+
+	Describe("#WaitForAlertmanager", func() {
+		It("should successfully wait for the alertmanager to become healthy", func() {
+			alertManager.EXPECT().Wait(ctx).Return(nil)
+
+			Expect(botanist.WaitForAlertManager(ctx)).To(Succeed())
+		})
+
+		It("should successfully wait for the alertmanager to be deleted", func() {
+			botanist.Shoot.WantsAlertmanager = false
+
+			alertManager.EXPECT().WaitCleanup(ctx).Return(nil)
+
+			Expect(botanist.WaitForAlertManager(ctx)).To(Succeed())
+		})
+	})
 })

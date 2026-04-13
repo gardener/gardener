@@ -32,6 +32,11 @@ func (b *Botanist) DefaultAlertmanager() (alertmanager.Interface, error) {
 		emailReceivers = monitoring.Alerting.EmailReceivers
 	}
 
+	var istioLabels map[string]string
+	if !b.Shoot.IsSelfHosted() {
+		istioLabels = b.WildcardIstioLabels()
+	}
+
 	return sharedcomponent.NewAlertmanager(b.Logger, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, alertmanager.Values{
 		Name:               "shoot",
 		ClusterType:        component.ClusterTypeShoot,
@@ -41,9 +46,10 @@ func (b *Botanist) DefaultAlertmanager() (alertmanager.Interface, error) {
 		AlertingSMTPSecret: b.LoadSecret(v1beta1constants.GardenRoleAlerting),
 		EmailReceivers:     emailReceivers,
 		Ingress: &alertmanager.IngressValues{
-			Host:           b.ComputeAlertManagerHost(),
-			SecretsManager: b.SecretsManager,
-			SigningCA:      v1beta1constants.SecretNameCACluster,
+			Host:                      b.ComputeAlertManagerHost(),
+			SecretsManager:            b.SecretsManager,
+			SigningCA:                 v1beta1constants.SecretNameCACluster,
+			IstioIngressGatewayLabels: istioLabels,
 		},
 	})
 }
@@ -63,6 +69,14 @@ func (b *Botanist) DeployAlertManager(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.Alertmanager.SetIngressWildcardCertSecret(b.ControlPlaneWildcardCert)
 
 	return b.Shoot.Components.ControlPlane.Alertmanager.Deploy(ctx)
+}
+
+// WaitForAlertManager waits for the shoot alert manager to be ready.
+func (b *Botanist) WaitForAlertManager(ctx context.Context) error {
+	if !b.Shoot.WantsAlertmanager || !b.IsShootMonitoringEnabled() {
+		return b.Shoot.Components.ControlPlane.Alertmanager.WaitCleanup(ctx)
+	}
+	return b.Shoot.Components.ControlPlane.Alertmanager.Wait(ctx)
 }
 
 // DefaultPrometheus creates a new prometheus deployer.
