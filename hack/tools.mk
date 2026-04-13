@@ -161,8 +161,10 @@ $(GOIMPORTSREVISER): $(call tool_version_file,$(GOIMPORTSREVISER),$(GOIMPORTSREV
 $(GOLANGCI_LINT): $(call tool_version_file,$(GOLANGCI_LINT),$(GOLANGCI_LINT_VERSION))
 	@# CGO_ENABLED has to be set to 1 in order for golangci-lint to be able to load plugins
 	@# see https://github.com/golangci/golangci-lint/issues/1276
-	@# cd'ing to logcheck to ensure golangci-lint is compiled with the same go version as logcheck (required for loading golangci-lint plugins)
-	cd $(TOOLS_PKG_PATH)/logcheck; GOBIN=$(abspath $(TOOLS_BIN_DIR)) CGO_ENABLED=1 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	@# We don't specify the GOTOOLCHAIN here, as we want to use the main module's go version to build golangci-lint.
+	@# Note, that the main module might not be the gardener/gardener module, if this Makefile is used in another
+	@# project, e.g., an extension.
+	GOBIN=$(abspath $(TOOLS_BIN_DIR)) CGO_ENABLED=1 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 $(GOSEC): $(call tool_version_file,$(GOSEC),$(GOSEC_VERSION))
 	@GOSEC_VERSION=$(GOSEC_VERSION) bash $(TOOLS_PKG_PATH)/install-gosec.sh
@@ -196,12 +198,14 @@ $(KUSTOMIZE): $(call tool_version_file,$(KUSTOMIZE),$(KUSTOMIZE_VERSION))
 	tar zxvf - -C $(abspath $(TOOLS_BIN_DIR))
 	touch $(KUSTOMIZE) && chmod +x $(KUSTOMIZE)
 
+# Explicitly specify the toolchain version to ensure logcheck is compiled with the same go version as golangci-lint,
+# i.e., the go toolchain version of the main module (required for loading golangci-lint plugins).
 ifeq ($(IS_GARDENER),true)
-$(LOGCHECK): $(TOOLS_PKG_PATH)/logcheck/go.* $(shell find $(TOOLS_PKG_PATH)/logcheck -type f -name '*.go')
-	cd $(TOOLS_PKG_PATH)/logcheck;GOTOOLCHAIN=auto CGO_ENABLED=1 go build -o $(abspath $(LOGCHECK)) -buildmode=plugin ./plugin
+$(LOGCHECK): $(TOOLS_PKG_PATH)/logcheck/go.* $(shell find $(TOOLS_PKG_PATH)/logcheck -type f -name '*.go') $(GOLANGCI_LINT)
+	cd $(TOOLS_PKG_PATH)/logcheck; GOTOOLCHAIN=$(shell go version -m -json $(GOLANGCI_LINT) | jq -r .GoVersion) CGO_ENABLED=1 go build -o $(abspath $(LOGCHECK)) -buildmode=plugin ./plugin
 else
-$(LOGCHECK): go.mod
-	cd $(shell go list -f '{{ .Dir }}' github.com/gardener/gardener/hack/tools/logcheck); GOTOOLCHAIN=auto CGO_ENABLED=1 go build -o $(LOGCHECK) -buildmode=plugin ./plugin
+$(LOGCHECK): go.mod $(GOLANGCI_LINT)
+	GOTOOLCHAIN=$(shell go version -m -json $(GOLANGCI_LINT) | jq -r .GoVersion) CGO_ENABLED=1 go build -o $(LOGCHECK) -buildmode=plugin github.com/gardener/gardener/hack/tools/logcheck/plugin
 endif
 
 $(MOCKGEN): $(call tool_version_file,$(MOCKGEN),$(MOCKGEN_VERSION))
