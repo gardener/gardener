@@ -230,6 +230,18 @@ spec:
                     - RSA
                     - ECDSA
                     type: string
+                  encoding:
+                    description: |-
+                      The private key cryptography standards (PKCS) encoding for this
+                      certificate's private key to be encoded in.
+
+                      If provided, allowed values are `PKCS1` and `PKCS8` standing for PKCS#1
+                      and PKCS#8, respectively.
+                      Defaults to `PKCS1` if not specified.
+                    enum:
+                    - PKCS1
+                    - PKCS8
+                    type: string
                   size:
                     description: |-
                       Size is the key bit size of the corresponding private key for this certificate.
