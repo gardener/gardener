@@ -256,7 +256,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.vali, err = r.newVali()
+	c.vali, err = r.newVali(c.istioDefaultLabels)
 	if err != nil {
 		return
 	}
@@ -566,7 +566,7 @@ func (r *Reconciler) newSystem(seed *gardencorev1beta1.Seed) (component.DeployWa
 	), nil
 }
 
-func (r *Reconciler) newVali() (component.Deployer, error) {
+func (r *Reconciler) newVali(istioIngressGatewayLabels map[string]string) (component.Deployer, error) {
 	var storage *resource.Quantity
 	if r.Config.Logging != nil && r.Config.Logging.Vali != nil && r.Config.Logging.Vali.Garden != nil {
 		storage = r.Config.Logging.Vali.Garden.Storage
@@ -583,6 +583,7 @@ func (r *Reconciler) newVali() (component.Deployer, error) {
 		storage,
 		"",
 		false,
+		istioIngressGatewayLabels,
 	)
 	if err != nil {
 		return nil, err
