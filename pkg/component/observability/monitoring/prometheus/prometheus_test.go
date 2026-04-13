@@ -6,6 +6,7 @@ package prometheus_test
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -15,9 +16,12 @@ import (
 	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
+	istionetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -36,6 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
+	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -99,7 +104,10 @@ honor_labels: true`
 		gardenRoleBinding                   *rbacv1.RoleBinding
 		prometheusFor                       func([]alertmanager, bool) *monitoringv1.Prometheus
 		vpa                                 *vpaautoscalingv1.VerticalPodAutoscaler
-		ingress                             *networkingv1.Ingress
+		gateway                             *istionetworkingv1beta1.Gateway
+		virtualService                      *istionetworkingv1beta1.VirtualService
+		destinationRule                     *istionetworkingv1beta1.DestinationRule
+		tlsSecret                           *corev1.Secret
 		prometheusRule                      *monitoringv1.PrometheusRule
 		serviceMonitor                      *monitoringv1.ServiceMonitor
 		podMonitor                          *monitoringv1.PodMonitor
@@ -139,7 +147,7 @@ honor_labels: true`
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
 		))
 
-		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient, comptest.CmpOptsForIstio()...)
 		contain = NewManagedResourceContainsObjectsMatcher(fakeClient)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -177,6 +185,7 @@ honor_labels: true`
 					"name": name,
 				},
 				Annotations: map[string]string{
+					"networking.istio.io/exportTo": "*",
 					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9090}]`,
 					"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports":   `[{"protocol":"TCP","port":9090}]`,
 					"networking.resources.gardener.cloud/namespace-selectors":                          `[{"matchLabels":{"gardener.cloud/role":"shoot"}}]`,
@@ -418,7 +427,7 @@ honor_labels: true`
 				},
 			},
 		}
-		ingress = &networkingv1.Ingress{
+		gateway = &istionetworkingv1beta1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "prometheus-" + name,
 				Namespace: namespace,
@@ -427,35 +436,95 @@ honor_labels: true`
 					"role": "monitoring",
 					"name": name,
 				},
-				Annotations: map[string]string{
-					"nginx.ingress.kubernetes.io/auth-type":   "basic",
-					"nginx.ingress.kubernetes.io/auth-realm":  "Authentication Required",
-					"nginx.ingress.kubernetes.io/auth-secret": ingressAuthSecretName,
-				},
 			},
-			Spec: networkingv1.IngressSpec{
-				IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
-				TLS: []networkingv1.IngressTLS{{
-					SecretName: ingressWildcardSecretName,
-					Hosts:      []string{ingressHost},
-				}},
-				Rules: []networkingv1.IngressRule{{
-					Host: ingressHost,
-					IngressRuleValue: networkingv1.IngressRuleValue{
-						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{{
-								Backend: networkingv1.IngressBackend{
-									Service: &networkingv1.IngressServiceBackend{
-										Name: "prometheus-" + name,
-										Port: networkingv1.ServiceBackendPort{Number: 80},
-									},
-								},
-								Path:     "/",
-								PathType: ptr.To(networkingv1.PathTypePrefix),
-							}},
-						},
+
+			Spec: istionetworkingv1alpha3.Gateway{
+				Servers: []*istionetworkingv1alpha3.Server{{
+					Port: &istionetworkingv1alpha3.Port{
+						Name:     "tls",
+						Number:   443,
+						Protocol: "HTTPS",
+					},
+					Hosts: []string{"some-host.example.com"},
+					Tls: &istionetworkingv1alpha3.ServerTLSSettings{
+						CredentialName: "some-namespace-prometheus-test-bar",
+						Mode:           istionetworkingv1alpha3.ServerTLSSettings_SIMPLE,
 					},
 				}},
+			},
+		}
+		virtualService = &istionetworkingv1beta1.VirtualService{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-" + name,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "prometheus",
+					"role": "monitoring",
+					"name": name,
+					"reference.gardener.cloud/basic-auth-secret-name": "foo",
+				},
+			},
+			Spec: istionetworkingv1alpha3.VirtualService{
+				ExportTo: []string{"*"},
+				Gateways: []string{
+					"prometheus-" + name,
+				},
+				Hosts: []string{"some-host.example.com"},
+				Http: []*istionetworkingv1alpha3.HTTPRoute{{
+					Route: []*istionetworkingv1alpha3.HTTPRouteDestination{{
+						Destination: &istionetworkingv1alpha3.Destination{
+							Host: "prometheus-test.some-namespace.svc.cluster.local",
+							Port: &istionetworkingv1alpha3.PortSelector{Number: 80},
+						},
+					}},
+				}},
+			},
+		}
+		destinationRule = &istionetworkingv1beta1.DestinationRule{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-" + name,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "prometheus",
+					"role": "monitoring",
+					"name": name,
+				},
+			},
+			Spec: istionetworkingv1alpha3.DestinationRule{
+				Host: "prometheus-test.some-namespace.svc.cluster.local",
+				TrafficPolicy: &istionetworkingv1alpha3.TrafficPolicy{
+					LoadBalancer: &istionetworkingv1alpha3.LoadBalancerSettings{
+						LocalityLbSetting: &istionetworkingv1alpha3.LocalityLoadBalancerSetting{
+							FailoverPriority: []string{"topology.kubernetes.io/zone"},
+							Enabled: &wrapperspb.BoolValue{
+								Value: true,
+							},
+						},
+					},
+					ConnectionPool: &istionetworkingv1alpha3.ConnectionPoolSettings{
+						Tcp: &istionetworkingv1alpha3.ConnectionPoolSettings_TCPSettings{
+							TcpKeepalive: &istionetworkingv1alpha3.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
+								Time:     &durationpb.Duration{Seconds: 7200},
+								Interval: &durationpb.Duration{Seconds: 75},
+							},
+							MaxConnectionDuration: &durationpb.Duration{Seconds: 86400},
+						},
+					},
+					OutlierDetection: &istionetworkingv1alpha3.OutlierDetection{},
+					Tls:              &istionetworkingv1alpha3.ClientTLSSettings{},
+				},
+				ExportTo: []string{"*"},
+			},
+		}
+		tlsSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      namespace + "-prometheus-" + name + "-" + ingressWildcardSecretName,
+				Namespace: "istio-ingress",
+				Labels: map[string]string{
+					"app":  "prometheus",
+					"role": "monitoring",
+					"name": name,
+				},
 			},
 		}
 		prometheusRule = &monitoringv1.PrometheusRule{
@@ -617,6 +686,9 @@ honor_labels: true`
 					},
 					Status: healthyManagedResourceStatus,
 				})).To(Succeed())
+
+				tlsSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ingressWildcardSecretName, Namespace: namespace}}
+				Expect(fakeClient.Create(ctx, tlsSecret)).To(Succeed())
 			})
 
 			JustBeforeEach(func() {
@@ -720,6 +792,7 @@ honor_labels: true`
 
 				It("should successfully deploy all resources", func() {
 					service.Annotations = map[string]string{
+						"networking.istio.io/exportTo":                                           "*",
 						"networking.resources.gardener.cloud/pod-label-selector-namespace-alias": "all-shoots",
 						"networking.resources.gardener.cloud/namespace-selectors":                `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
 					}
@@ -772,7 +845,10 @@ honor_labels: true`
 							podMonitor,
 							secretAdditionalScrapeConfigs,
 							additionalConfigMap,
-							ingress,
+							gateway,
+							virtualService,
+							destinationRule,
+							tlsSecret,
 						))
 					})
 				}
@@ -797,15 +873,29 @@ honor_labels: true`
 						It("should successfully deploy all resources", func() {
 							prometheusObj := prometheusFor(nil, false)
 							prometheusObj.Spec.ExternalURL = "https://" + ingressHost
-							ingress.Annotations["nginx.ingress.kubernetes.io/server-snippet"] = `location /-/reload {
-  return 403;
-}
-location /-/quit {
-  return 403;
-}
-location /api/v1/targets {
-  return 403;
-}`
+							virtualService.Spec.Http = append([]*istionetworkingv1alpha3.HTTPRoute{{
+								Name: "disabled-endpoints",
+								Match: []*istionetworkingv1alpha3.HTTPMatchRequest{
+									{
+										Uri: &istionetworkingv1alpha3.StringMatch{
+											MatchType: &istionetworkingv1alpha3.StringMatch_Prefix{Prefix: "/-/reload"},
+										},
+									},
+									{
+										Uri: &istionetworkingv1alpha3.StringMatch{
+											MatchType: &istionetworkingv1alpha3.StringMatch_Prefix{Prefix: "/-/quit"},
+										},
+									},
+									{
+										Uri: &istionetworkingv1alpha3.StringMatch{
+											MatchType: &istionetworkingv1alpha3.StringMatch_Prefix{Prefix: "/api/v1/targets"},
+										},
+									},
+								},
+								DirectResponse: &istionetworkingv1alpha3.HTTPDirectResponse{
+									Status: http.StatusForbidden,
+								},
+							}}, virtualService.Spec.Http...)
 
 							prometheusRule.Namespace = namespace
 							metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
@@ -825,7 +915,10 @@ location /api/v1/targets {
 								podMonitor,
 								secretAdditionalScrapeConfigs,
 								additionalConfigMap,
-								ingress,
+								gateway,
+								virtualService,
+								destinationRule,
+								tlsSecret,
 							))
 						})
 					})

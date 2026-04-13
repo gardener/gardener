@@ -22,9 +22,10 @@ func (p *prometheus) service() *corev1.Service {
 	var port = servicePorts.Web.TargetPort.IntVal
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      p.name(),
-			Namespace: p.namespace,
-			Labels:    p.getLabels(),
+			Name:        p.name(),
+			Namespace:   p.namespace,
+			Labels:      p.getLabels(),
+			Annotations: map[string]string{"networking.istio.io/exportTo": "*"},
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeClusterIP,
