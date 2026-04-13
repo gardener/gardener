@@ -2191,14 +2191,14 @@ integer
 </tr>
 <tr>
 <td>
-<code>emitPerNodeGroupMetrics</code></br>
+<code>EmitPerNodeGroupMetrics</code></br>
 <em>
 boolean
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>EmitPerNodeGroupMetrics emits additional per node group metrics</p>
+<p>EmitPerNodeGroupMetrics emits additional per node group metrics (default: false).</p>
 </td>
 </tr>
 

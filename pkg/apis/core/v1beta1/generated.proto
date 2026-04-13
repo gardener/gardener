@@ -605,7 +605,7 @@ message ClusterAutoscaler {
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration nodeGroupBackoffResetTimeout = 21;
 
-  // EmitPerNodeGroupMetrics emits additional per node group metrics
+  // EmitPerNodeGroupMetrics emits additional per node group metrics (default: false).
   // +optional
   optional bool emitPerNodeGroupMetrics = 22;
 }

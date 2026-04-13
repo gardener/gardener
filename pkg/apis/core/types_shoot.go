@@ -608,7 +608,7 @@ type ClusterAutoscaler struct {
 	MaxDrainParallelism *int32
 	// IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down.
 	IgnoreDaemonsetsUtilization *bool
-	// EmitPerNodeGroupMetrics emits additional per node group metrics
+	// EmitPerNodeGroupMetrics emits additional per node group metrics (default: false).
 	EmitPerNodeGroupMetrics *bool
 	// Verbosity allows CA to modify its log level.
 	Verbosity *int32
