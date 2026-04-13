@@ -130,6 +130,14 @@ var _ = BeforeSuite(func() {
 		return checker(&http.Request{})
 	}).Should(Succeed())
 
+	By("Create nodes so that hasMoreThanOneNode returns true")
+	for _, name := range []string{"node1", "node2"} {
+		Expect(testClient.Create(ctx, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: name}})).To(Succeed())
+		DeferCleanup(func(name string) {
+			Expect(testClient.Delete(ctx, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: name}})).To(Succeed())
+		}, name)
+	}
+
 	DeferCleanup(func() {
 		By("Stop manager")
 		mgrCancel()
