@@ -740,7 +740,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Shoot APIServer Availablity",
+      "title": "Shoot APIServer Availability",
       "tooltip": {
         "shared": true,
         "sort": 0,
