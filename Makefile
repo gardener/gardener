@@ -481,7 +481,7 @@ ci-e2e-kind-operator: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-operator.sh
 ci-e2e-kind-gardenadm-unmanaged-infra: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-gardenadm-unmanaged-infra.sh
-ci-e2e-kind-gardenadm-unmanaged-infra-external-gardener.sh: $(KIND) $(YQ)
+ci-e2e-kind-gardenadm-unmanaged-infra-external-gardener: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-gardenadm-unmanaged-infra-external-gardener.sh
 ci-e2e-kind-gardenadm-managed-infra: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-gardenadm-managed-infra.sh
