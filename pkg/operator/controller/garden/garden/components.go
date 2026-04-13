@@ -347,7 +347,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.alertManager, err = r.newAlertmanager(log, garden, secretsManager, primaryIngressDomain.Name, wildcardCertSecretName)
+	c.alertManager, err = r.newAlertmanager(log, garden, secretsManager, primaryIngressDomain.Name, wildcardCertSecretName, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -1503,7 +1503,21 @@ func (r *Reconciler) newPrometheusOperator() (component.DeployWaiter, error) {
 	)
 }
 
-func (r *Reconciler) newAlertmanager(log logr.Logger, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressDomain string, wildcardCertSecretName *string) (alertmanager.Interface, error) {
+func (r *Reconciler) newAlertmanager(
+	log logr.Logger,
+	garden *operatorv1alpha1.Garden,
+	secretsManager secretsmanager.Interface,
+	ingressDomain string,
+	wildcardCertSecretName *string,
+	ingressGatewayValues []istio.IngressGatewayValues,
+) (
+	alertmanager.Interface,
+	error,
+) {
+	if len(ingressGatewayValues) != 1 {
+		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the alertmanager config")
+	}
+
 	return sharedcomponent.NewAlertmanager(log, r.RuntimeClientSet.Client(), r.GardenNamespace, alertmanager.Values{
 		Name:              "garden",
 		ClusterType:       component.ClusterTypeSeed,
@@ -1512,10 +1526,12 @@ func (r *Reconciler) newAlertmanager(log logr.Logger, garden *operatorv1alpha1.G
 		Replicas:          2,
 		RuntimeVersion:    r.RuntimeVersion,
 		Ingress: &alertmanager.IngressValues{
-			Host:                   "alertmanager-garden." + ingressDomain,
-			SecretsManager:         secretsManager,
-			SigningCA:              operatorv1alpha1.SecretNameCARuntime,
-			WildcardCertSecretName: wildcardCertSecretName,
+			Host:                      "alertmanager-garden." + ingressDomain,
+			IsGardenCluster:           true,
+			IstioIngressGatewayLabels: ingressGatewayValues[0].Labels,
+			SecretsManager:            secretsManager,
+			SigningCA:                 operatorv1alpha1.SecretNameCARuntime,
+			WildcardCertSecretName:    wildcardCertSecretName,
 		},
 	})
 }

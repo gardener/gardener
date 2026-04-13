@@ -604,7 +604,7 @@ func (r *Reconciler) reconcile(
 			Name: "Deploying OpenTelemetry Operator",
 			Fn:   c.openTelemetryOperator.Deploy,
 		})
-		_ = g.Add(flow.Task{
+		deployAlertmanager = g.Add(flow.Task{
 			Name: "Deploying Alertmanager",
 			Fn: func(ctx context.Context) error {
 				credentialsSecret, found := secretsManager.Get(v1beta1constants.SecretNameObservabilityIngress)
@@ -616,6 +616,11 @@ func (r *Reconciler) reconcile(
 				return c.alertManager.Deploy(ctx)
 			},
 			Dependencies: flow.NewTaskIDs(generateObservabilityIngressPassword),
+		})
+		waitUntilAlertmanagerReady = g.Add(flow.Task{
+			Name:         "Waiting until Alertmanager is ready",
+			Fn:           c.alertManager.Wait,
+			Dependencies: flow.NewTaskIDs(deployAlertmanager),
 		})
 		deployPrometheusGarden = g.Add(flow.Task{
 			Name: "Deploying Garden Prometheus",
@@ -681,7 +686,7 @@ func (r *Reconciler) reconcile(
 		_ = g.Add(flow.Task{
 			Name:         "Deploying istio-basic-auth-server",
 			Fn:           c.istioBasicAuthServer.Deploy,
-			Dependencies: flow.NewTaskIDs(waitUntilPrometheusGardenReady, waitUntilPrometheusLongTermReady, waitUntilPlutonoReady),
+			Dependencies: flow.NewTaskIDs(waitUntilAlertmanagerReady, waitUntilPrometheusGardenReady, waitUntilPrometheusLongTermReady, waitUntilPlutonoReady),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying perses-operator",
