@@ -122,7 +122,7 @@ func (r *Reconciler) delete(
 		_ = g.Add(flow.Task{
 			Name:         "Destroying istio-basic-auth-server",
 			Fn:           component.OpDestroyAndWait(c.istioBasicAuthServer).Destroy,
-			Dependencies: flow.NewTaskIDs(destroyPrometheusLongTerm, destroyPrometheusGarden, deletePlutono),
+			Dependencies: flow.NewTaskIDs(destroyAlertmanager, destroyPrometheusLongTerm, destroyPrometheusGarden, deletePlutono),
 		})
 		destroyOpenTelemetryCollector = g.Add(flow.Task{
 			Name: "Destroying OpenTelemetry Collector",
