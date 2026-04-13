@@ -284,7 +284,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.aggregatePrometheus, err = r.newAggregatePrometheus(log, seed, seedIsGarden, secretsManager, globalMonitoringSecretSeed, wildCardCertSecret, alertingSMTPSecret)
+	c.aggregatePrometheus, err = r.newAggregatePrometheus(log, seed, seedIsGarden, secretsManager, globalMonitoringSecretSeed, wildCardCertSecret, alertingSMTPSecret, c.istioDefaultLabels)
 	if err != nil {
 		return
 	}
@@ -724,7 +724,17 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 	})
 }
 
-func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed, seedIsGarden bool, secretsManager secretsmanager.Interface, globalMonitoringSecret, wildcardCertSecret, alertingSMTPSecret *corev1.Secret) (component.DeployWaiter, error) {
+func (r *Reconciler) newAggregatePrometheus(
+	log logr.Logger,
+	seed *seedpkg.Seed,
+	seedIsGarden bool,
+	secretsManager secretsmanager.Interface,
+	globalMonitoringSecret, wildcardCertSecret, alertingSMTPSecret *corev1.Secret,
+	istioIngressGatewayLabels map[string]string,
+) (
+	component.DeployWaiter,
+	error,
+) {
 	values := prometheus.Values{
 		Name:              "aggregate",
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
@@ -747,9 +757,10 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed,
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-prometheus-shoot", 9090):                                                     v1beta1constants.LabelNetworkPolicyAllowed,
 		},
 		Ingress: &prometheus.IngressValues{
-			Host:           seed.GetIngressFQDN(v1beta1constants.IngressDomainPrefixPrometheusAggregate),
-			SecretsManager: secretsManager,
-			SigningCA:      v1beta1constants.SecretNameCASeed,
+			Host:                      seed.GetIngressFQDN(v1beta1constants.IngressDomainPrefixPrometheusAggregate),
+			SecretsManager:            secretsManager,
+			SigningCA:                 v1beta1constants.SecretNameCASeed,
+			IstioIngressGatewayLabels: istioIngressGatewayLabels,
 		},
 	}
 
