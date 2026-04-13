@@ -98,11 +98,6 @@ func (r *Reconciler) delete(
 			Fn:   component.OpDestroyAndWait(c.plutono).Destroy,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Destroying istio-basic-auth-server",
-			Fn:           component.OpDestroyAndWait(c.istioBasicAuthServer).Destroy,
-			Dependencies: flow.NewTaskIDs(deletePlutono),
-		})
-		_ = g.Add(flow.Task{
 			Name: "Destroying Gardener Metrics Exporter",
 			Fn:   component.OpDestroyAndWait(c.gardenerMetricsExporter).Destroy,
 		})
@@ -123,6 +118,11 @@ func (r *Reconciler) delete(
 			Fn: func(ctx context.Context) error {
 				return r.destroyGardenPrometheus(ctx, c.prometheusGarden)
 			},
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying istio-basic-auth-server",
+			Fn:           component.OpDestroyAndWait(c.istioBasicAuthServer).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyPrometheusLongTerm, destroyPrometheusGarden, deletePlutono),
 		})
 		destroyOpenTelemetryCollector = g.Add(flow.Task{
 			Name: "Destroying OpenTelemetry Collector",

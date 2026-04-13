@@ -351,11 +351,11 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.prometheusGarden, err = r.newPrometheusGarden(log, garden, secretsManager, primaryIngressDomain.Name, wildcardCertSecretName)
+	c.prometheusGarden, err = r.newPrometheusGarden(log, garden, secretsManager, primaryIngressDomain.Name, wildcardCertSecretName, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
-	c.prometheusLongTerm, err = r.newPrometheusLongTerm(log, garden, secretsManager, primaryIngressDomain.Name, wildcardCertSecretName)
+	c.prometheusLongTerm, err = r.newPrometheusLongTerm(log, garden, secretsManager, primaryIngressDomain.Name, wildcardCertSecretName, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -1489,7 +1489,21 @@ func (r *Reconciler) newAlertmanager(log logr.Logger, garden *operatorv1alpha1.G
 	})
 }
 
-func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressDomain string, wildcardCertSecretName *string) (prometheus.Interface, error) {
+func (r *Reconciler) newPrometheusGarden(
+	log logr.Logger,
+	garden *operatorv1alpha1.Garden,
+	secretsManager secretsmanager.Interface,
+	ingressDomain string,
+	wildcardCertSecretName *string,
+	ingressGatewayValues []istio.IngressGatewayValues,
+) (
+	prometheus.Interface,
+	error,
+) {
+	if len(ingressGatewayValues) != 1 {
+		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the prometheus config")
+	}
+
 	return sharedcomponent.NewPrometheus(log, r.RuntimeClientSet.Client(), r.GardenNamespace, prometheus.Values{
 		Name:              "garden",
 		PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
@@ -1515,16 +1529,32 @@ func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alph
 		},
 		Alerting: &prometheus.AlertingValues{Alertmanagers: []*prometheus.Alertmanager{{Name: "alertmanager-garden"}}},
 		Ingress: &prometheus.IngressValues{
-			Host:                   "prometheus-garden." + ingressDomain,
-			SecretsManager:         secretsManager,
-			SigningCA:              operatorv1alpha1.SecretNameCARuntime,
-			WildcardCertSecretName: wildcardCertSecretName,
+			Host:                      "prometheus-garden." + ingressDomain,
+			SecretsManager:            secretsManager,
+			SigningCA:                 operatorv1alpha1.SecretNameCARuntime,
+			WildcardCertSecretName:    wildcardCertSecretName,
+			IsGardenCluster:           true,
+			IstioIngressGatewayLabels: ingressGatewayValues[0].Labels,
 		},
 		TargetCluster: &prometheus.TargetClusterValues{ServiceAccountName: gardenprometheus.ServiceAccountName},
 	})
 }
 
-func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressDomain string, wildcardCertSecretName *string) (prometheus.Interface, error) {
+func (r *Reconciler) newPrometheusLongTerm(
+	log logr.Logger,
+	garden *operatorv1alpha1.Garden,
+	secretsManager secretsmanager.Interface,
+	ingressDomain string,
+	wildcardCertSecretName *string,
+	ingressGatewayValues []istio.IngressGatewayValues,
+) (
+	prometheus.Interface,
+	error,
+) {
+	if len(ingressGatewayValues) != 1 {
+		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the prometheus config")
+	}
+
 	imageCortex, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameCortex)
 	if err != nil {
 		return nil, err
@@ -1547,10 +1577,12 @@ func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1al
 			ScrapeConfigs:   longtermprometheus.CentralScrapeConfigs(),
 		},
 		Ingress: &prometheus.IngressValues{
-			Host:                   "prometheus-longterm." + ingressDomain,
-			SecretsManager:         secretsManager,
-			SigningCA:              operatorv1alpha1.SecretNameCARuntime,
-			WildcardCertSecretName: wildcardCertSecretName,
+			Host:                      "prometheus-longterm." + ingressDomain,
+			SecretsManager:            secretsManager,
+			SigningCA:                 operatorv1alpha1.SecretNameCARuntime,
+			WildcardCertSecretName:    wildcardCertSecretName,
+			IsGardenCluster:           true,
+			IstioIngressGatewayLabels: ingressGatewayValues[0].Labels,
 		},
 		Cortex: &prometheus.CortexValues{
 			Image:         imageCortex.String(),
