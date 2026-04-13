@@ -135,6 +135,7 @@ var (
 		string(core.ClusterAutoscalerExpanderMostPods),
 		string(core.ClusterAutoscalerExpanderPriority),
 		string(core.ClusterAutoscalerExpanderRandom),
+		string(core.ClusterAutoscalerExpanderLeastNodes),
 	)
 	availableCoreDNSAutoscalingModes = sets.New(
 		string(core.CoreDNSAutoscalingModeClusterProportional),
