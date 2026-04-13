@@ -15,7 +15,7 @@
   "description": "This dashboard shows data for the reversed vpn seed server envoy-proxy.",
   "editable": true,
   "gnetId": null,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "links": [],
   "panels": [
     {

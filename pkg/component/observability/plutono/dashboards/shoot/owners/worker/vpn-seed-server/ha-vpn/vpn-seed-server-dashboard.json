@@ -15,7 +15,7 @@
   "description": "OpenVPN Server status using Prometheus and OpenVPN exporter (High availability only)",
   "editable": true,
   "gnetId": null,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "links": [],
   "panels": [
     {
