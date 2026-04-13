@@ -2191,7 +2191,7 @@ integer
 </tr>
 <tr>
 <td>
-<code>EmitPerNodeGroupMetrics</code></br>
+<code>emitPerNodeGroupMetrics</code></br>
 <em>
 boolean
 </em>
