@@ -83,6 +83,11 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		externalLabels = utils.MergeStringMaps(externalLabels, b.Config.Monitoring.Shoot.ExternalLabels)
 	}
 
+	var istioLabels map[string]string
+	if !b.Shoot.IsSelfHosted() {
+		istioLabels = b.WildcardIstioLabels()
+	}
+
 	values := prometheus.Values{
 		Name:                "shoot",
 		PriorityClassName:   v1beta1constants.PriorityClassNameShootControlPlane100,
@@ -116,6 +121,7 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 			SecretsManager:                    b.SecretsManager,
 			SigningCA:                         v1beta1constants.SecretNameCACluster,
 			BlockManagementAndTargetAPIAccess: true,
+			IstioIngressGatewayLabels:         istioLabels,
 		},
 		TargetCluster: &prometheus.TargetClusterValues{
 			ServiceAccountName: shootprometheus.ServiceAccountName,
