@@ -26,6 +26,7 @@ type managedResourceObjectsMatcher struct {
 	decoder           runtime.Decoder
 	expectedObjects   map[string]client.Object
 	extraObjectsCheck bool
+	compareOptions    []cmp.Option
 
 	extraObjects             []string
 	missingObjects           []string
@@ -98,7 +99,7 @@ func (m *managedResourceObjectsMatcher) Match(actual any) (bool, error) {
 	}
 
 	// Use early returns for the following checks to not overwhelm Gomega output.
-	m.mismatchExpectedToActual = findMismatchObjects(availableObjects, m.expectedObjects)
+	m.mismatchExpectedToActual = findMismatchObjects(availableObjects, m.expectedObjects, m.compareOptions...)
 	if len(m.mismatchExpectedToActual) > 0 {
 		return false, nil
 	}
@@ -118,13 +119,13 @@ func (m *managedResourceObjectsMatcher) Match(actual any) (bool, error) {
 	return true, nil
 }
 
-func findMismatchObjects(availableObjects map[string]client.Object, expectedObjects map[string]client.Object) map[client.Object]*mismatch {
+func findMismatchObjects(availableObjects map[string]client.Object, expectedObjects map[string]client.Object, compareOptions ...cmp.Option) map[client.Object]*mismatch {
 	mismatches := make(map[client.Object]*mismatch)
 
 	for expectedObjKey, expectedObj := range expectedObjects {
 		actualObject, ok := availableObjects[expectedObjKey]
 		if ok {
-			diff := cmp.Diff(actualObject, expectedObj, cmpopts.EquateEmpty())
+			diff := cmp.Diff(actualObject, expectedObj, append(compareOptions, cmpopts.EquateEmpty())...)
 			if diff != "" {
 				mismatches[expectedObj] = &mismatch{diff: diff, obj: actualObject}
 			}
