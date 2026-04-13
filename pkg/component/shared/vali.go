@@ -26,6 +26,7 @@ func NewVali(
 	storage *resource.Quantity,
 	ingressHost string,
 	isGardenCluster bool,
+	istioIngressGatewayLabels map[string]string,
 ) (
 	vali.Interface,
 	error,
@@ -56,18 +57,19 @@ func NewVali(
 	}
 
 	deployer := vali.New(c, namespace, secretsManager, vali.Values{
-		ValiImage:               valiImage.String(),
-		CuratorImage:            curatorImage.String(),
-		InitLargeDirImage:       tune2fsImage.String(),
-		KubeRBACProxyImage:      kubeRBACProxyImage.String(),
-		TelegrafImage:           telegrafImage.String(),
-		Replicas:                replicas,
-		ShootNodeLoggingEnabled: isShootNodeLoggingEnabled,
-		PriorityClassName:       priorityClassName,
-		Storage:                 storage,
-		ClusterType:             clusterType,
-		IngressHost:             ingressHost,
-		IsGardenCluster:         isGardenCluster,
+		ValiImage:                 valiImage.String(),
+		CuratorImage:              curatorImage.String(),
+		InitLargeDirImage:         tune2fsImage.String(),
+		KubeRBACProxyImage:        kubeRBACProxyImage.String(),
+		TelegrafImage:             telegrafImage.String(),
+		Replicas:                  replicas,
+		ShootNodeLoggingEnabled:   isShootNodeLoggingEnabled,
+		PriorityClassName:         priorityClassName,
+		Storage:                   storage,
+		ClusterType:               clusterType,
+		IngressHost:               ingressHost,
+		IsGardenCluster:           isGardenCluster,
+		IstioIngressGatewayLabels: istioIngressGatewayLabels,
 	})
 
 	return deployer, nil
