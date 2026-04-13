@@ -11,8 +11,9 @@ import (
 	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +33,7 @@ import (
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	collectorconstants "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/constants"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -67,6 +69,8 @@ type Values struct {
 	ShootNodeLoggingEnabled bool
 	// IngressHost is the name for the ingress to access the OpenTelemetry Collector.
 	IngressHost string
+	// IstioIngressGatewayLabels are the labels for identifying the used istio ingress gateway.
+	IstioIngressGatewayLabels map[string]string
 	// SecretNameServerCA is the name of the server CA secret.
 	SecretNameServerCA string
 	// PriorityClassName is the priority class name for the OpenTelemetry Collector pods.
@@ -152,7 +156,12 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		}
 		genericTokenKubeconfigSecretName = genericTokenKubeconfigSecret.Name
 
-		objects = append(objects, o.getIngress(ingressTLSSecret.Name))
+		istioResources, err := o.getIstioResources(ingressTLSSecret)
+		if err != nil {
+			return fmt.Errorf("failed to get istio resources: %w", err)
+		}
+
+		objects = append(objects, istioResources...)
 
 		kubeRBACProxyClusterRoleBinding := o.getKubeRBACProxyClusterRoleBinding(kubeRBACProxyShootAccessSecret.ServiceAccountName)
 		loggingAgentClusterRole := o.getLoggingAgentClusterRole()
@@ -627,6 +636,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix+v1beta1constants.LabelNetworkPolicyScrapeTargets+resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort))
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingNamespaceSelectors, `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`)
+		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
 	}
 
 	return obj
@@ -639,60 +649,86 @@ func (o *otelCollector) newLoggingAgentShootAccessSecret() *gardenerutils.Access
 		WithTargetSecret(collectorconstants.OpenTelemetryCollectorSecretName, metav1.NamespaceSystem)
 }
 
-func (o *otelCollector) getIngress(secretName string) *networkingv1.Ingress {
-	return &networkingv1.Ingress{
+func (o *otelCollector) getIstioResources(tlsSecret *corev1.Secret) ([]client.Object, error) {
+	var (
+		// Currently, all observability components are exposed via the same istio ingress gateway.
+		// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
+		// See https://github.com/gardener/gardener/issues/11860 for details.
+		ingressNamespace = v1beta1constants.DefaultSNIIngressNamespace
+		name             = "logging"
+	)
+
+	// Istio expects the secret in the istio ingress gateway namespace => copy certificate to istio namespace
+	tlsSecretInIstioNamespace := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "logging",
-			Namespace: o.namespace,
-			// TODO(rrrhubenov): Research whether this annotation is required before promoting the `OpenTelemetryCollector` feature gate to GA.
-			Annotations: map[string]string{"nginx.ingress.kubernetes.io/backend-protocol": "GRPC"},
-			Labels:      getLabels(),
+			Name:      fmt.Sprintf("%s-%s-%s", o.namespace, name, tlsSecret.Name),
+			Namespace: ingressNamespace,
+			Labels:    getLabels(),
 		},
-		Spec: networkingv1.IngressSpec{
-			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
-			TLS: []networkingv1.IngressTLS{{
-				SecretName: secretName,
-				Hosts:      []string{o.values.IngressHost, o.values.ValiHost},
-			}},
-			Rules: []networkingv1.IngressRule{
-				{
-					Host: o.values.IngressHost,
-					IngressRuleValue: networkingv1.IngressRuleValue{
-						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{{
-								Backend: networkingv1.IngressBackend{
-									Service: &networkingv1.IngressServiceBackend{
-										Name: collectorconstants.ServiceName,
-										Port: networkingv1.ServiceBackendPort{Number: collectorconstants.KubeRBACProxyOTLPReceiverPort},
-									},
-								},
-								Path:     collectorconstants.PushEndpoint,
-								PathType: ptr.To(networkingv1.PathTypePrefix),
-							}},
-						},
-					},
+		Data: tlsSecret.Data,
+	}
+
+	gateway := &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: o.namespace}}
+	if err := istio.GatewayWithTLSTermination(
+		gateway,
+		getLabels(),
+		o.values.IstioIngressGatewayLabels,
+		[]string{o.values.IngressHost},
+		kubeapiserverconstants.Port,
+		tlsSecretInIstioNamespace.Name,
+	)(); err != nil {
+		return nil, fmt.Errorf("failed to create gateway resource: %w", err)
+	}
+
+	destinationHost := kubernetesutils.FQDNForService(collectorconstants.ServiceName, o.namespace)
+	virtualService := &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: o.namespace}}
+	if err := istio.VirtualServiceForTLSTermination(
+		virtualService,
+		getLabels(),
+		[]string{o.values.IngressHost},
+		name,
+		uint32(collectorconstants.KubeRBACProxyOTLPReceiverPort),
+		destinationHost,
+		"",
+		"",
+	)(); err != nil {
+		return nil, fmt.Errorf("failed to create virtual service resource: %w", err)
+	}
+	if len(virtualService.Spec.Http) < 1 {
+		return nil, fmt.Errorf("unexpected number of HTTP routes in virtual service: got %d, want at least 1", len(virtualService.Spec.Http))
+	}
+	virtualService.Spec.Http[0].Match = []*istioapinetworkingv1beta1.HTTPMatchRequest{{
+		Uri: &istioapinetworkingv1beta1.StringMatch{
+			MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+				Prefix: collectorconstants.PushEndpoint,
+			},
+		},
+	}}
+	// TODO(rrhubenov): Clean up the vali Ingress rule when the `OpenTelemetryCollector` feature gate is promoted to GA.
+	virtualService.Spec.Http = append(virtualService.Spec.Http, &istioapinetworkingv1beta1.HTTPRoute{
+		Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{{
+			Uri: &istioapinetworkingv1beta1.StringMatch{
+				MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+					Prefix: valiconstants.PushEndpoint,
 				},
-				// TODO(rrhubenov): Clean up the vali Ingress rule when the `OpenTelemetryCollector` feature gate is promoted to GA.
-				{
-					Host: o.values.ValiHost,
-					IngressRuleValue: networkingv1.IngressRuleValue{
-						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{{
-								Backend: networkingv1.IngressBackend{
-									Service: &networkingv1.IngressServiceBackend{
-										Name: collectorconstants.ServiceName,
-										Port: networkingv1.ServiceBackendPort{Number: collectorconstants.KubeRBACProxyValiPort},
-									},
-								},
-								Path:     valiconstants.PushEndpoint,
-								PathType: ptr.To(networkingv1.PathTypePrefix),
-							}},
-						},
-					},
+			},
+		}},
+		Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
+			{
+				Destination: &istioapinetworkingv1beta1.Destination{
+					Host: destinationHost,
+					Port: &istioapinetworkingv1beta1.PortSelector{Number: uint32(collectorconstants.KubeRBACProxyValiPort)},
 				},
 			},
 		},
+	})
+
+	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: o.namespace}}
+	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), destinationHost)(); err != nil {
+		return nil, fmt.Errorf("failed to create destination rule resource: %w", err)
 	}
+
+	return []client.Object{tlsSecretInIstioNamespace, gateway, virtualService, destinationRule}, nil
 }
 
 func (o *otelCollector) getLoggingAgentClusterRole() *rbacv1.ClusterRole {
