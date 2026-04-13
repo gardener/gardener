@@ -65,7 +65,14 @@ func (p *Provider) createLoadBalancerContainer(ctx context.Context, name string,
 			NetworkMode:   kindNetwork,
 			Privileged:    true,
 			RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyOnFailure},
-			Sysctls:       map[string]string{"net.ipv4.ip_forward": "1"},
+			Sysctls: map[string]string{
+				// explicitly enable IPv4 forwarding for all interfaces by default if not enabled by the OS image already
+				"net.ipv4.conf.all.forwarding":     "1",
+				"net.ipv4.conf.default.forwarding": "1",
+				// explicitly enable IPv6 forwarding for all interfaces by default if not enabled by the OS image already
+				"net.ipv6.conf.all.forwarding":     "1",
+				"net.ipv6.conf.default.forwarding": "1",
+			},
 		},
 		&network.NetworkingConfig{
 			EndpointsConfig: map[string]*network.EndpointSettings{
