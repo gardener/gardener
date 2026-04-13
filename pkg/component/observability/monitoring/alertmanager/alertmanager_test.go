@@ -6,6 +6,7 @@ package alertmanager_test
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
@@ -14,9 +15,12 @@ import (
 	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
+	istionetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -34,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
+	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -87,7 +92,10 @@ var _ = Describe("Alertmanager", func() {
 		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
 		config              *monitoringv1alpha1.AlertmanagerConfig
 		smtpSecret          *corev1.Secret
-		ingress             *networkingv1.Ingress
+		gateway             *istionetworkingv1beta1.Gateway
+		virtualService      *istionetworkingv1beta1.VirtualService
+		destinationRule     *istionetworkingv1beta1.DestinationRule
+		tlsSecret           *corev1.Secret
 		podDisruptionBudget *policyv1.PodDisruptionBudget
 	)
 
@@ -113,7 +121,7 @@ var _ = Describe("Alertmanager", func() {
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
 		))
 
-		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient, comptest.CmpOptsForIstio()...)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -138,6 +146,7 @@ var _ = Describe("Alertmanager", func() {
 					"alertmanager": name,
 				},
 				Annotations: map[string]string{
+					"networking.istio.io/exportTo": "*",
 					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9093}]`,
 					"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports":   `[{"protocol":"TCP","port":9093}]`,
 					"networking.resources.gardener.cloud/namespace-selectors":                          `[{"matchLabels":{"gardener.cloud/role":"shoot"}}]`,
@@ -321,7 +330,7 @@ var _ = Describe("Alertmanager", func() {
 			Type: alertingSMTPSecret.Type,
 			Data: map[string][]byte{"auth_password": alertingSMTPSecret.Data["auth_password"]},
 		}
-		ingress = &networkingv1.Ingress{
+		gateway = &istionetworkingv1beta1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "alertmanager-" + name,
 				Namespace: namespace,
@@ -330,38 +339,107 @@ var _ = Describe("Alertmanager", func() {
 					"role":         "monitoring",
 					"alertmanager": name,
 				},
-				Annotations: map[string]string{
-					"nginx.ingress.kubernetes.io/auth-type":   "basic",
-					"nginx.ingress.kubernetes.io/auth-realm":  "Authentication Required",
-					"nginx.ingress.kubernetes.io/auth-secret": ingressAuthSecretName,
-					"nginx.ingress.kubernetes.io/server-snippet": `location /-/reload {
-  return 403;
-}`,
-				},
 			},
-			Spec: networkingv1.IngressSpec{
-				IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
-				TLS: []networkingv1.IngressTLS{{
-					SecretName: ingressWildcardSecretName,
-					Hosts:      []string{ingressHost},
-				}},
-				Rules: []networkingv1.IngressRule{{
-					Host: ingressHost,
-					IngressRuleValue: networkingv1.IngressRuleValue{
-						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{{
-								Backend: networkingv1.IngressBackend{
-									Service: &networkingv1.IngressServiceBackend{
-										Name: "alertmanager-" + name,
-										Port: networkingv1.ServiceBackendPort{Number: 9093},
-									},
-								},
-								Path:     "/",
-								PathType: ptr.To(networkingv1.PathTypePrefix),
-							}},
-						},
+			Spec: istionetworkingv1alpha3.Gateway{
+				Servers: []*istionetworkingv1alpha3.Server{{
+					Port: &istionetworkingv1alpha3.Port{
+						Name:     "tls",
+						Number:   443,
+						Protocol: "HTTPS",
+					},
+					Hosts: []string{"some-host.example.com"},
+					Tls: &istionetworkingv1alpha3.ServerTLSSettings{
+						CredentialName: "some-namespace-alertmanager-test-bar",
+						Mode:           istionetworkingv1alpha3.ServerTLSSettings_SIMPLE,
 					},
 				}},
+			},
+		}
+		virtualService = &istionetworkingv1beta1.VirtualService{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "alertmanager-" + name,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"component":    "alertmanager",
+					"role":         "monitoring",
+					"alertmanager": name,
+					"reference.gardener.cloud/basic-auth-secret-name": "foo",
+				},
+			},
+			Spec: istionetworkingv1alpha3.VirtualService{
+				ExportTo: []string{"*"},
+				Gateways: []string{
+					"alertmanager-" + name,
+				},
+				Hosts: []string{"some-host.example.com"},
+				Http: []*istionetworkingv1alpha3.HTTPRoute{
+					{
+						Name: "reload-endpoint",
+						Match: []*istionetworkingv1alpha3.HTTPMatchRequest{{
+							Uri: &istionetworkingv1alpha3.StringMatch{
+								MatchType: &istionetworkingv1alpha3.StringMatch_Prefix{Prefix: "/-/reload"},
+							},
+						}},
+						DirectResponse: &istionetworkingv1alpha3.HTTPDirectResponse{
+							Status: http.StatusForbidden,
+						},
+					},
+					{
+						Route: []*istionetworkingv1alpha3.HTTPRouteDestination{{
+							Destination: &istionetworkingv1alpha3.Destination{
+								Host: "alertmanager-test.some-namespace.svc.cluster.local",
+								Port: &istionetworkingv1alpha3.PortSelector{Number: 9093},
+							},
+						}},
+					},
+				},
+			},
+		}
+		destinationRule = &istionetworkingv1beta1.DestinationRule{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "alertmanager-" + name,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"component":    "alertmanager",
+					"role":         "monitoring",
+					"alertmanager": name,
+				},
+			},
+			Spec: istionetworkingv1alpha3.DestinationRule{
+				Host: "alertmanager-test.some-namespace.svc.cluster.local",
+				TrafficPolicy: &istionetworkingv1alpha3.TrafficPolicy{
+					LoadBalancer: &istionetworkingv1alpha3.LoadBalancerSettings{
+						LocalityLbSetting: &istionetworkingv1alpha3.LocalityLoadBalancerSetting{
+							FailoverPriority: []string{"topology.kubernetes.io/zone"},
+							Enabled: &wrapperspb.BoolValue{
+								Value: true,
+							},
+						},
+					},
+					ConnectionPool: &istionetworkingv1alpha3.ConnectionPoolSettings{
+						Tcp: &istionetworkingv1alpha3.ConnectionPoolSettings_TCPSettings{
+							TcpKeepalive: &istionetworkingv1alpha3.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
+								Time:     &durationpb.Duration{Seconds: 7200},
+								Interval: &durationpb.Duration{Seconds: 75},
+							},
+							MaxConnectionDuration: &durationpb.Duration{Seconds: 86400},
+						},
+					},
+					OutlierDetection: &istionetworkingv1alpha3.OutlierDetection{},
+					Tls:              &istionetworkingv1alpha3.ClientTLSSettings{},
+				},
+				ExportTo: []string{"*"},
+			},
+		}
+		tlsSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      namespace + "-alertmanager-" + name + "-" + ingressWildcardSecretName,
+				Namespace: "istio-ingress",
+				Labels: map[string]string{
+					"component":    "alertmanager",
+					"role":         "monitoring",
+					"alertmanager": name,
+				},
 			},
 		}
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
@@ -403,6 +481,9 @@ var _ = Describe("Alertmanager", func() {
 				},
 				Status: healthyManagedResourceStatus,
 			})).To(Succeed())
+
+			tlsSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ingressWildcardSecretName, Namespace: namespace}}
+			Expect(fakeClient.Create(ctx, tlsSecret)).To(Succeed())
 		})
 
 		JustBeforeEach(func() {
@@ -467,7 +548,10 @@ var _ = Describe("Alertmanager", func() {
 						vpa,
 						config,
 						smtpSecret,
-						ingress,
+						gateway,
+						virtualService,
+						destinationRule,
+						tlsSecret,
 					))
 				})
 			})
@@ -556,7 +640,10 @@ var _ = Describe("Alertmanager", func() {
 			BeforeEach(func() {
 				values.ClusterType = component.ClusterTypeShoot
 
-				service.Annotations = map[string]string{"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9093}]`}
+				service.Annotations = map[string]string{
+					"networking.istio.io/exportTo":                                              "*",
+					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9093}]`,
+				}
 				alertManager.Labels["gardener.cloud/role"] = "monitoring"
 				alertManager.Spec.PodMetadata.Labels["gardener.cloud/role"] = "monitoring"
 				config.Spec.Route.Routes[0].Raw = []byte(`{"matchers":[{"matchType":"=~","name":"visibility","value":"all|owner"}],"receiver":"email-kubernetes-ops"}`)
