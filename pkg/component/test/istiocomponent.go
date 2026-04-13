@@ -59,3 +59,8 @@ func CmpOptsForVirtualService() cmp.Option {
 		istioapimetav1alpha1.IstioStatus{},
 	)
 }
+
+// CmpOptsForIstio returns a slice of compare options to ignore unexported fields in types related to istio resources
+func CmpOptsForIstio() []cmp.Option {
+	return []cmp.Option{CmpOptsForDestinationRule(), CmpOptsForGateway(), CmpOptsForVirtualService()}
+}
