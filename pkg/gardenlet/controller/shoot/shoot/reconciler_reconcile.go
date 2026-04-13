@@ -939,6 +939,11 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.DeployAlertManager).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady).InsertIf(!hasNodesCIDR, waitUntilInfrastructureReady),
 		})
+		waitUntilAlertmanagerReady = g.Add(flow.Task{
+			Name:         "Waiting until Shoot Alertmanager is ready",
+			Fn:           o.Shoot.Components.ControlPlane.Alertmanager.Wait,
+			Dependencies: flow.NewTaskIDs(deployAlertmanager),
+		})
 		deployPrometheus = g.Add(flow.Task{
 			Name:         "Reconciling Shoot Prometheus",
 			Fn:           flow.TaskFn(botanist.DeployPrometheus).RetryUntilTimeout(defaultInterval, 2*time.Minute),
@@ -973,7 +978,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		_ = g.Add(flow.Task{
 			Name:         "Deploying istio-basic-auth-server",
 			Fn:           flow.TaskFn(o.Shoot.Components.ControlPlane.IstioBasicAuthServer.Deploy).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(waitUntilPrometheusReady, waitUntilPlutonoReady),
+			Dependencies: flow.NewTaskIDs(waitUntilAlertmanagerReady, waitUntilPrometheusReady, waitUntilPlutonoReady),
 		})
 
 		hibernateControlPlane = g.Add(flow.Task{
