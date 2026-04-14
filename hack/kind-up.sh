@@ -353,6 +353,22 @@ check_shell_dependencies() {
   fi
 }
 
+docker_socket() {
+  # Find the Docker socket path from the current Docker context. This also respects the DOCKER_HOST environment variable
+  # if set. This should support setups with non-standard Docker socket paths, e.g., when using Lima or Colima as Docker
+  # backend on macOS, without requiring users to explicitly configure the socket path.
+  socket=$(docker context inspect "$(docker context show)" -f json | jq -r '.[].Endpoints.docker.Host' | sed 's|unix://||')
+
+  # If the socket path contains .lima or .colima, we assume that Lima/Colima is used as Docker backend.
+  # In this case, the socket on the host is a forward to /var/run/docker.sock in the guest VM.
+  # Instead of mounting the socket on the host back into the VM, we directly use /var/run/docker.sock in the VM.
+  if [[ "$socket" == *"/.lima/"* || "$socket" == *"/.colima/"* ]]; then
+    socket="/var/run/docker.sock"
+  fi
+
+  echo "$socket"
+}
+
 check_shell_dependencies
 
 parse_flags "$@"
@@ -389,7 +405,7 @@ fi
 
 kind create cluster \
   --name "$CLUSTER_NAME" \
-  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "gardener.repositoryRoot"=$(dirname "$0")/.. --set "containerRuntimeSocket=$(docker context inspect $(docker context show) -f json | jq -r '.[].Endpoints.docker.Host' | sed 's|unix://||')")
+  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "gardener.repositoryRoot"=$(dirname "$0")/.. --set "dockerSocket=$(docker_socket)")
 
 nodes=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}')
 

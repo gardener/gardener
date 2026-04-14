@@ -24,7 +24,7 @@
   containerPath: /etc/resolv.conf
 {{- end -}}
 
-{{- define "extraMounts.containerRuntimeSocket" -}}
-- hostPath: {{ .Values.containerRuntimeSocket | default "/var/run/docker.sock" }}
+{{- define "extraMounts.dockerSocket" -}}
+- hostPath: {{ .Values.dockerSocket | default "/var/run/docker.sock" }}
   containerPath: /var/run/docker.sock
 {{- end -}}
