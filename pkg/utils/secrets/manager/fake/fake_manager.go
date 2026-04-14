@@ -69,7 +69,7 @@ func (m *fakeManager) Generate(ctx context.Context, config secretsutils.ConfigIn
 		return nil, err
 	}
 
-	objectMeta, err := secretsmanager.ObjectMeta(m.namespace, nil, ManagerIdentity, config, true, "", nil, &options.Persist, nil)
+	objectMeta, err := secretsmanager.ObjectMeta(m.namespace, options.Labels, ManagerIdentity, config, true, "", nil, &options.Persist, nil)
 	if err != nil {
 		return nil, err
 	}

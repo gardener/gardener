@@ -37,7 +37,7 @@ var _ = Describe("TLS", func() {
 
 	Describe("#GenerateServerCertificate", func() {
 		It("should generate a server certificate without IP", func() {
-			secret, err := GenerateServerCertificate(ctx, sm, testRole, []string{"etcd-main-local"}, nil)
+			secret, err := GenerateServerCertificate(ctx, sm, testRole, []string{"etcd-main-local"}, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret).NotTo(BeNil())
 			Expect(secret.Name).To(HavePrefix("etcd-server-" + testRole))
@@ -46,17 +46,34 @@ var _ = Describe("TLS", func() {
 
 		It("should generate a server certificate with IP suffix", func() {
 			ip := net.ParseIP("10.0.0.1")
-			secret, err := GenerateServerCertificate(ctx, sm, testRole, []string{"etcd-main-local"}, ip)
+			secret, err := GenerateServerCertificate(ctx, sm, testRole, []string{"etcd-main-local"}, ip, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret).NotTo(BeNil())
 			Expect(secret.Name).To(HavePrefix("etcd-server-" + testRole + "-10.0.0.1"))
 		})
 
 		It("should not include IP suffix when IP is nil", func() {
-			secret, err := GenerateServerCertificate(ctx, sm, testRole, []string{"etcd-main-local"}, nil)
+			secret, err := GenerateServerCertificate(ctx, sm, testRole, []string{"etcd-main-local"}, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret.Name).To(HavePrefix("etcd-server-" + testRole))
 			Expect(secret.Name).NotTo(ContainSubstring("-10."))
+		})
+
+		It("should label the secret with etcd-role and etcd-secret-type", func() {
+			secret, err := GenerateServerCertificate(ctx, sm, testRole, []string{"etcd-main-local"}, nil, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(secret.Labels).To(HaveKeyWithValue("etcd-role", testRole))
+			Expect(secret.Labels).To(HaveKeyWithValue("etcd-secret-type", "server"))
+			Expect(secret.Labels).NotTo(HaveKey("hostName"))
+		})
+
+		It("should label the secret with hostName when provided", func() {
+			hostName := "node1"
+			secret, err := GenerateServerCertificate(ctx, sm, testRole, []string{"etcd-main-local"}, nil, &hostName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(secret.Labels).To(HaveKeyWithValue("etcd-role", testRole))
+			Expect(secret.Labels).To(HaveKeyWithValue("etcd-secret-type", "server"))
+			Expect(secret.Labels).To(HaveKeyWithValue("hostName", "node1"))
 		})
 	})
 
@@ -80,7 +97,7 @@ var _ = Describe("TLS", func() {
 			})
 
 			It("should return CA, server, and client secrets", func() {
-				caSecret, serverSecret, clientSecret, err := GenerateServerAndClientCertificates(ctx, sm, testRole, []string{"etcd-main-local"}, nil)
+				caSecret, serverSecret, clientSecret, err := GenerateServerAndClientCertificates(ctx, sm, testRole, []string{"etcd-main-local"}, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(caSecret).NotTo(BeNil())
 				Expect(caSecret.Name).To(Equal(v1beta1constants.SecretNameCAETCD))
@@ -91,7 +108,7 @@ var _ = Describe("TLS", func() {
 
 		When("etcd CA secret is missing", func() {
 			It("should return an error", func() {
-				_, _, _, err := GenerateServerAndClientCertificates(ctx, sm, testRole, []string{"etcd-main-local"}, nil)
+				_, _, _, err := GenerateServerAndClientCertificates(ctx, sm, testRole, []string{"etcd-main-local"}, nil, nil)
 				Expect(err).To(MatchError(ContainSubstring(v1beta1constants.SecretNameCAETCD)))
 			})
 		})
@@ -99,7 +116,7 @@ var _ = Describe("TLS", func() {
 
 	Describe("#GeneratePeerCertificate", func() {
 		It("should generate a peer certificate without IP", func() {
-			secret, err := GeneratePeerCertificate(ctx, sm, testRole, []string{"etcd-main-peer"}, nil)
+			secret, err := GeneratePeerCertificate(ctx, sm, testRole, []string{"etcd-main-peer"}, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret).NotTo(BeNil())
 			Expect(secret.Name).To(HavePrefix("etcd-peer-server-" + testRole))
@@ -108,10 +125,27 @@ var _ = Describe("TLS", func() {
 
 		It("should generate a peer certificate with IP suffix", func() {
 			ip := net.ParseIP("192.168.1.1")
-			secret, err := GeneratePeerCertificate(ctx, sm, testRole, []string{"etcd-main-peer"}, ip)
+			secret, err := GeneratePeerCertificate(ctx, sm, testRole, []string{"etcd-main-peer"}, ip, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret).NotTo(BeNil())
 			Expect(secret.Name).To(HavePrefix("etcd-peer-server-" + testRole + "-192.168.1.1"))
+		})
+
+		It("should label the secret with etcd-role and etcd-secret-type", func() {
+			secret, err := GeneratePeerCertificate(ctx, sm, testRole, []string{"etcd-main-peer"}, nil, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(secret.Labels).To(HaveKeyWithValue("etcd-role", testRole))
+			Expect(secret.Labels).To(HaveKeyWithValue("etcd-secret-type", "peer"))
+			Expect(secret.Labels).NotTo(HaveKey("hostName"))
+		})
+
+		It("should label the secret with hostName when provided", func() {
+			hostName := "node1"
+			secret, err := GeneratePeerCertificate(ctx, sm, testRole, []string{"etcd-main-peer"}, nil, &hostName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(secret.Labels).To(HaveKeyWithValue("etcd-role", testRole))
+			Expect(secret.Labels).To(HaveKeyWithValue("etcd-secret-type", "peer"))
+			Expect(secret.Labels).To(HaveKeyWithValue("hostName", "node1"))
 		})
 	})
 
