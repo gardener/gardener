@@ -15,6 +15,21 @@ patches:
 - target:
     kind: Shoot
   patch: |
+    # The base Shoot is configured for HA (3 control plane nodes). The managed-infra scenario only
+    # supports single-node control planes for now, so we override the HA settings back to single-node.
+    - op: remove
+      path: /spec/controlPlane
+    - op: replace
+      path: /spec/provider/workers/0/minimum
+      value: 1
+    - op: replace
+      path: /spec/provider/workers/0/maximum
+      value: 1
+    - op: remove
+      path: /spec/provider/workers/0/maxSurge
+    - op: remove
+      path: /spec/provider/workers/0/maxUnavailable
+
     - op: add
       path: /spec/provider/workers/0/machine/image/version
       value: 1.0.0
