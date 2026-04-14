@@ -68,6 +68,7 @@ type GardenadmBotanist struct {
 	operatingSystemConfigSecret       *corev1.Secret
 	gardenerResourceManagerServiceIPs []string
 	useEtcdManagedByDruid             bool
+	staticControlPlaneComponents      []staticControlPlaneComponent
 
 	// controlPlaneMachines is set by ListControlPlaneMachines during `gardenadm bootstrap`.
 	controlPlaneMachines []machinev1alpha1.Machine
