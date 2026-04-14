@@ -8,6 +8,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -24,11 +26,15 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
 	nodeagentcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	nodeagentcontainerd "github.com/gardener/gardener/pkg/nodeagent/containerd"
 	operatingsystemconfigcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
@@ -44,7 +50,7 @@ func (b *GardenadmBotanist) DeployOperatingSystemConfigSecretForBootstrap(ctx co
 		return fmt.Errorf("failed deploying control plane deployments: %w", err)
 	}
 
-	oscData, controlPlaneWorkerPoolName, err := b.deployOperatingSystemConfig(ctx)
+	oscData, controlPlaneWorkerPoolName, err := b.deployOperatingSystemConfig(ctx, true)
 	if err != nil {
 		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
 	}
@@ -76,7 +82,46 @@ func (b *GardenadmBotanist) appendAdminKubeconfigToFiles(files []extensionsv1alp
 	}), nil
 }
 
-func (b *GardenadmBotanist) deployOperatingSystemConfig(ctx context.Context) (*operatingsystemconfig.Data, string, error) {
+func (b *GardenadmBotanist) appendEtcdNodeSpecificAssetsToFiles(ctx context.Context, files []extensionsv1alpha1.File, controlPlaneHostNames []string) ([]extensionsv1alpha1.File, error) {
+	// The etcd cert/config volumes are node-specific, but their corresponding files don't use `.spec.files[].hostName`
+	// yet. Remove them here and re-add them with the correct `hostName` below.
+	out := slices.DeleteFunc(slices.Clone(files), func(file extensionsv1alpha1.File) bool {
+		for _, role := range []string{
+			v1beta1constants.ETCDRoleEvents,
+			v1beta1constants.ETCDRoleMain,
+		} {
+			for _, volumeName := range []string{
+				etcdconstants.VolumeNameServerTLS,
+				etcdconstants.VolumeNamePeerTLS,
+				etcdconstants.VolumeNameConfiguration,
+			} {
+				if strings.HasPrefix(file.Path, staticpod.HostPath(etcd.Name(role), volumeName)) {
+					return true
+				}
+			}
+		}
+		return false
+	})
+
+	hostNameToETCDAssetsMap := make(HostNameToETCDAssets, len(controlPlaneHostNames))
+
+	for _, hostName := range controlPlaneHostNames {
+		etcdRoleToAssetsMap := ETCDRoleToAssets{v1beta1constants.ETCDRoleMain: {}, v1beta1constants.ETCDRoleEvents: {}}
+
+		if err := etcdRoleToAssetsMap.FetchSecrets(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, hostName, v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo())); err != nil {
+			return nil, fmt.Errorf("failed fetching etcd ConfigMaps: %w", err)
+		}
+		if err := etcdRoleToAssetsMap.FetchConfigMaps(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace); err != nil {
+			return nil, fmt.Errorf("failed fetching etcd ConfigMaps: %w", err)
+		}
+
+		hostNameToETCDAssetsMap[hostName] = etcdRoleToAssetsMap
+	}
+
+	return hostNameToETCDAssetsMap.AppendToFiles(out), nil
+}
+
+func (b *GardenadmBotanist) deployOperatingSystemConfig(ctx context.Context, useBootstrapEtcd bool) (*operatingsystemconfig.Data, string, error) {
 	pods, err := b.staticControlPlanePods(ctx)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed computing files for static control plane pods: %w", err)
@@ -85,6 +130,17 @@ func (b *GardenadmBotanist) deployOperatingSystemConfig(ctx context.Context) (*o
 	files, err := b.appendAdminKubeconfigToFiles(pods.allFiles())
 	if err != nil {
 		return nil, "", fmt.Errorf("failed appending admin kubeconfig to list of files: %w", err)
+	}
+
+	if !useBootstrapEtcd {
+		controlPlaneHostNames, err := b.getControlPlaneHostNames(ctx)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed getting hostnames for all control plane node: %w", err)
+		}
+		files, err = b.appendEtcdNodeSpecificAssetsToFiles(ctx, files, controlPlaneHostNames)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed appending etcd's node-specific assets to list of files: %w", err)
+		}
 	}
 
 	if err := b.DeployOperatingSystemConfig(ctx); err != nil {
@@ -250,4 +306,23 @@ func (b *GardenadmBotanist) ControlPlaneBootstrapOperatingSystemConfig() (operat
 		operatingsystemconfig.DefaultSevereThreshold,
 		operatingsystemconfig.DefaultTimeout,
 	), nil
+}
+
+func (b *GardenadmBotanist) getControlPlaneHostNames(ctx context.Context) ([]string, error) {
+	controlPlaneNodeList := &corev1.NodeList{}
+	if err := b.SeedClientSet.Client().List(ctx, controlPlaneNodeList, client.MatchingLabels{"node-role.kubernetes.io/control-plane": ""}); err != nil {
+		return nil, fmt.Errorf("failed to list control plane nodes: %w", err)
+	}
+
+	var controlPlaneHostNames []string
+
+	for _, node := range controlPlaneNodeList.Items {
+		hostName := node.Labels[corev1.LabelHostname]
+		if hostName == "" {
+			return nil, fmt.Errorf("control plane node %q does not have any %s label", node.Name, corev1.LabelHostname)
+		}
+		controlPlaneHostNames = append(controlPlaneHostNames, hostName)
+	}
+
+	return controlPlaneHostNames, nil
 }
