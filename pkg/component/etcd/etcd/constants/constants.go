@@ -40,6 +40,8 @@ var (
 	VolumeNameServerTLS = "etcd-server-tls"
 	// VolumeNamePeerTLS is the name of the volume in the ETCD pod spec used for the peer TLS.
 	VolumeNamePeerTLS = "etcd-peer-server-tls"
+	// VolumeNameConfiguration is the name of the volume in the ETCD pod spec used for the configuration.
+	VolumeNameConfiguration = "etcd-config-file"
 
 	// LabelKeyRole is the label key for the etcd role (main or events).
 	LabelKeyRole = "etcd-role"
