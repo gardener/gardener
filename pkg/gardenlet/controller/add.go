@@ -31,10 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/lease"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/state"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/status"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/tokenrequestor/workloadidentity"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/vpaevictionrequirements"
 	"github.com/gardener/gardener/pkg/healthz"
@@ -75,41 +71,6 @@ func AddToManager(
 		if !ok {
 			return fmt.Errorf("cluster-identity ConfigMap data does not have %q key", v1beta1constants.ClusterIdentity)
 		}
-	}
-
-	if gardenletutils.IsResponsibleForSelfHostedShoot() {
-		mgr.GetLogger().Info("Running in self-hosted shoot, registering minimal set of controllers")
-
-		// TODO(rfranzke): Remove this once all shoot reconcilers are added via `shoot.AddToManager`.
-		if err := lease.AddToManager(mgr, gardenCluster, seedClientSet.RESTClient(), healthManager, nil); err != nil {
-			return fmt.Errorf("failed adding shoot-lease reconciler: %w", err)
-		}
-
-		// TODO(tobschli): Remove this once all shoot reconcilers are added via `shoot.AddToManager`.
-		if err := (&state.Reconciler{
-			Config: *cfg.Controllers.ShootState,
-		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
-			return fmt.Errorf("failed adding ShootState controller: %w", err)
-		}
-		// TODO(tobschli): Remove this once all shoot reconcilers are added via `shoot.AddToManager`.
-		if err := (&care.Reconciler{
-			SeedClientSet:         seedClientSet,
-			ShootClientMap:        shootClientMap,
-			Config:                *cfg,
-			Identity:              identity,
-			GardenClusterIdentity: gardenClusterIdentity,
-		}).AddToManager(mgr, gardenCluster); err != nil {
-			return fmt.Errorf("failed adding care reconciler: %w", err)
-		}
-
-		// TODO(tobschli): Remove this once all shoot reconcilers are added via `shoot.AddToManager`.
-		if err := (&status.Reconciler{
-			Config: *cfg.Controllers.ShootStatus,
-		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
-			return fmt.Errorf("failed adding status reconciler: %w", err)
-		}
-
-		return nil
 	}
 
 	seedIsSelfHostedShoot, err := gardenletutils.SeedIsSelfHostedShoot(ctx, seedCluster.GetAPIReader())
@@ -179,7 +140,7 @@ func AddToManager(
 		return fmt.Errorf("failed adding Seed controller: %w", err)
 	}
 
-	if err := shoot.AddToManager(ctx, mgr, gardenCluster, seedCluster, seedClientSet, shootClientMap, *cfg, identity, gardenClusterIdentity, healthManager); err != nil {
+	if err := shoot.AddToManager(ctx, mgr, gardenCluster, seedCluster, seedClientSet, shootClientMap, *cfg, identity, gardenClusterIdentity, healthManager, seedName(cfg)); err != nil {
 		return fmt.Errorf("failed adding Shoot controller: %w", err)
 	}
 
