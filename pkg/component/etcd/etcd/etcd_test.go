@@ -372,7 +372,10 @@ var _ = Describe("Etcd", func() {
 			}
 
 			if staticPodConfig != nil {
-				obj.Annotations["druid.gardener.cloud/disable-etcd-runtime-component-creation"] = ""
+				for _, ip := range staticPodConfig.ControlPlaneNodesIPAddresses {
+					obj.Spec.ExternallyManagedMemberAddresses = append(obj.Spec.ExternallyManagedMemberAddresses, ip.String())
+				}
+				obj.Spec.Replicas = int32(len(obj.Spec.ExternallyManagedMemberAddresses))
 				obj.Spec.RunAsRoot = ptr.To(true)
 
 				if role == "events" {
@@ -736,6 +739,10 @@ var _ = Describe("Etcd", func() {
 
 		secretNameServer = "etcd-server-" + role
 		secretNameServerPeer = "etcd-peer-server-" + role
+		if staticPodConfig != nil && len(staticPodConfig.ControlPlaneNodesIPAddresses) > 0 {
+			secretNameServer += "-" + staticPodConfig.ControlPlaneNodesIPAddresses[0].String()
+			secretNameServerPeer += "-" + staticPodConfig.ControlPlaneNodesIPAddresses[0].String()
+		}
 		etcdName = "etcd-" + role
 		vpaName = etcdName
 
@@ -1360,7 +1367,7 @@ var _ = Describe("Etcd", func() {
 
 		When("etcd should run as static pod", func() {
 			BeforeEach(func() {
-				staticPodConfig = &StaticPodConfig{}
+				staticPodConfig = &StaticPodConfig{ControlPlaneNodesIPAddresses: []net.IP{net.ParseIP("1.2.3.4")}}
 			})
 
 			Describe("main etcd", func() {
@@ -1370,6 +1377,8 @@ var _ = Describe("Etcd", func() {
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-access-" + etcdName}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(etcdObjFor(
 								class,
@@ -1422,6 +1431,8 @@ var _ = Describe("Etcd", func() {
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-access-" + etcdName}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(etcdObjFor(
 								class,

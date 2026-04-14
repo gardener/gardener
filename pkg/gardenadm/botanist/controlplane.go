@@ -20,6 +20,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,6 +30,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	bootstrapetcd "github.com/gardener/gardener/pkg/component/etcd/bootstrap"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	resourcemanagerconstants "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/constants"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
@@ -111,13 +113,18 @@ func (b *GardenadmBotanist) allStaticControlPlaneComponents() []staticControlPla
 			}
 		}
 		mutateETCDPodFn = func(pod *corev1.Pod) {
-			// The pod name of the etcd pod must match `etcd-<role>-0`. However, when running as static pod, its pod name is
-			// `etcd-<role>-<node-name>`. Hence, let's mutate it here for now (this might not be the final solution
-			// depending on how support for highly-available etcd clusters will be implemented in the future).
-			pod.Spec.Hostname = pod.Name + "-0"
-			for i := range pod.Spec.Containers {
-				kubernetesutils.AddEnvVar(&pod.Spec.Containers[i], corev1.EnvVar{Name: "POD_NAME", Value: pod.Spec.Hostname}, true)
-			}
+			// TODO(rfranzke): Currently, the Etcd API does not allow to specify additional volumes/mounts/env vars, so
+			//  we are forced to inject the generic kubeconfig here (see https://github.com/gardener/etcd-druid/issues/1317).
+			//  Once this is supported, remove this code and address the TODO in pkg/component/etcd/etcd/etcd.go.
+			genericTokenKubeconfigSecret, _ := b.SecretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+			utilruntime.Must(gardenerutils.InjectGenericKubeconfig(pod, genericTokenKubeconfigSecret.Name, gardenerutils.NewShootAccessSecret(pod.Name, pod.Namespace).Secret.Name, etcd.ContainerNameBackupRestore))
+			utilruntime.Must(kubernetesutils.VisitPodSpec(pod, func(podSpec *corev1.PodSpec) {
+				kubernetesutils.VisitContainers(podSpec, func(container *corev1.Container) {
+					if container.Name == etcd.ContainerNameBackupRestore {
+						kubernetesutils.AddEnvVar(container, corev1.EnvVar{Name: "KUBECONFIG", Value: gardenerutils.PathGenericKubeconfig}, true)
+					}
+				})
+			}))
 		}
 	)
 
@@ -181,10 +188,6 @@ func (b *GardenadmBotanist) deployControlPlaneComponent(ctx context.Context, dep
 		return fmt.Errorf("failed deploying component %q: %w", componentName, err)
 	}
 
-	if err := b.populateStaticAdminTokenToAccessTokenSecret(ctx, componentName); err != nil {
-		return fmt.Errorf("failed populating static admin token to access token secret for %q: %w", componentName, err)
-	}
-
 	targetObject.SetName(componentName)
 	targetObject.SetNamespace(b.Shoot.ControlPlaneNamespace)
 	return b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(targetObject), targetObject)
@@ -241,6 +244,10 @@ func (b *GardenadmBotanist) staticControlPlanePods(ctx context.Context) (staticP
 	var pods staticPods
 
 	for _, component := range b.allStaticControlPlaneComponents() {
+		if err := b.populateStaticAdminTokenToAccessTokenSecret(ctx, component.name); err != nil {
+			return nil, fmt.Errorf("failed populating static admin token to access token secret for %q: %w", component.name, err)
+		}
+
 		files, _, err := staticpod.Translate(ctx, b.SeedClientSet.Client(), component.targetObject, component.mutate)
 		if err != nil {
 			return nil, fmt.Errorf("failed translating object of type %T for %q: %w", component.targetObject, component.name, err)

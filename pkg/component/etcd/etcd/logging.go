@@ -44,16 +44,16 @@ func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   fmt.Sprintf("%s--%s", statefulSetNamePrefix, containerNameBackupRestore),
+				Name:   fmt.Sprintf("%s--%s", statefulSetNamePrefix, ContainerNameBackupRestore),
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.FilterSpec{
-				Match: fmt.Sprintf("kubernetes.*%s*%s*", statefulSetNamePrefix, containerNameBackupRestore),
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", statefulSetNamePrefix, ContainerNameBackupRestore),
 				FilterItems: []fluentbitv1alpha2.FilterItem{
 					{
 						Parser: &fluentbitv1alpha2filter.Parser{
 							KeyName:     "log",
-							Parser:      containerNameBackupRestore + "-parser",
+							Parser:      ContainerNameBackupRestore + "-parser",
 							ReserveData: ptr.To(true),
 						},
 					},
@@ -80,7 +80,7 @@ func generateClusterParsers() []*fluentbitv1alpha2.ClusterParser {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   containerNameBackupRestore + "-parser",
+				Name:   ContainerNameBackupRestore + "-parser",
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.ParserSpec{
