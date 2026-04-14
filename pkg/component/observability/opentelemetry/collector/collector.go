@@ -162,16 +162,6 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 
 		shootObjects = append(shootObjects, o.getLoggingAgentClusterRole())
 		shootObjects = append(shootObjects, o.getLoggingAgentClusterRoleBinding(loggingAgentShootAccessSecret.ServiceAccountName, o.getLoggingAgentClusterRole().Name))
-
-		shootRegistry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
-		resourcesTarget, err := shootRegistry.AddAllAndSerialize(shootObjects...)
-		if err != nil {
-			return err
-		}
-
-		if err := managedresources.CreateForShoot(ctx, o.client, o.namespace, managedResourceNameTarget, managedresources.LabelValueGardener, false, resourcesTarget); err != nil {
-			return err
-		}
 	} else {
 		if err := managedresources.DeleteForShoot(ctx, o.client, o.namespace, managedResourceNameTarget); err != nil {
 			return err
@@ -182,13 +172,17 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		); err != nil {
 			return err
 		}
+	}
 
-		if hasClusterRoleBinding(shootObjects, kubeRBACProxyClusterRoleBindingName) {
-			if err := kubernetesutils.DeleteObjects(ctx, o.client,
-				kubeRBACProxyShootAccessSecret.Secret,
-			); err != nil {
-				return err
-			}
+	if len(shootObjects) != 0 {
+		shootRegistry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+		resourcesTarget, err := shootRegistry.AddAllAndSerialize(shootObjects...)
+		if err != nil {
+			return err
+		}
+
+		if err := managedresources.CreateForShoot(ctx, o.client, o.namespace, managedResourceNameTarget, managedresources.LabelValueGardener, false, resourcesTarget); err != nil {
+			return err
 		}
 	}
 
@@ -203,20 +197,6 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 	}
 
 	return managedresources.CreateForSeedWithLabels(ctx, o.client, o.namespace, managedResourceName, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, serializedResources)
-}
-
-func hasClusterRoleBinding(objs []client.Object, name string) bool {
-	for _, obj := range objs {
-		crb, ok := obj.(*rbacv1.ClusterRoleBinding)
-		if !ok {
-			continue
-		}
-
-		if crb.Name == name {
-			return true
-		}
-	}
-	return false
 }
 
 func (o *otelCollector) getKubeRBACProxyClusterRoleBinding(serviceAccountName string) *rbacv1.ClusterRoleBinding {

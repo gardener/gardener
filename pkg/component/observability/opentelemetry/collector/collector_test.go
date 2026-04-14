@@ -695,6 +695,9 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Expect(customResourcesManagedResource).To(consistOf(openTelemetryCollector, getIngress(), serviceMonitor, serviceAccount))
 			Expect(c.Get(ctx, client.ObjectKey{Name: "logging-tls", Namespace: namespace}, &corev1.Secret{})).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: kubeRBACProxyShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(Succeed())
+			Expect(managedResourceTarget).To(consistOf(
+				getKubeRBACProxyClusterRoleBinding(),
+			))
 		})
 	})
 
