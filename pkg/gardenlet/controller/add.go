@@ -10,7 +10,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -27,9 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
-	controllerinstallationcare "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/care"
-	controllerinstallationreconciler "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
-	controllerinstallationrequired "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/required"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
@@ -83,34 +79,6 @@ func AddToManager(
 
 	if gardenletutils.IsResponsibleForSelfHostedShoot() {
 		mgr.GetLogger().Info("Running in self-hosted shoot, registering minimal set of controllers")
-
-		// TODO(rfranzke): Remove this once all ControllerInstallation reconcilers are added via `shoot.AddToManager`.
-		if err := (&controllerinstallationcare.Reconciler{
-			Config:                   *cfg.Controllers.ControllerInstallationCare,
-			ManagedResourceNamespace: metav1.NamespaceSystem,
-		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
-			return fmt.Errorf("failed adding ControllerInstallation care controller: %w", err)
-		}
-
-		// TODO(rfranzke): Remove this once all ControllerInstallation reconcilers are added via `shoot.AddToManager`.
-		if err := (&controllerinstallationreconciler.Reconciler{
-			SeedClientSet:         seedClientSet,
-			Config:                *cfg,
-			Identity:              identity,
-			GardenClusterIdentity: gardenClusterIdentity,
-			GardenNamespace:       metav1.NamespaceSystem,
-			SelfHostedShootMeta:   &types.NamespacedName{Name: selfHostedShoot.Name, Namespace: selfHostedShoot.Namespace},
-		}).AddToManager(ctx, mgr, gardenCluster); err != nil {
-			return fmt.Errorf("failed adding ControllerInstallation controller: %w", err)
-		}
-
-		// TODO(rfranzke): Remove this once all ControllerInstallation reconcilers are added via `shoot.AddToManager`.
-		if err := (&controllerinstallationrequired.Reconciler{
-			Config:              *cfg.Controllers.ControllerInstallationRequired,
-			SelfHostedShootMeta: &types.NamespacedName{Name: selfHostedShoot.Name, Namespace: selfHostedShoot.Namespace},
-		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
-			return fmt.Errorf("failed adding ControllerInstallation required controller: %w", err)
-		}
 
 		// TODO(rfranzke): Remove this once all shoot reconcilers are added via `shoot.AddToManager`.
 		if err := lease.AddToManager(mgr, gardenCluster, seedClientSet.RESTClient(), healthManager, nil); err != nil {
@@ -171,7 +139,7 @@ func AddToManager(
 		return fmt.Errorf("failed adding Bastion controller: %w", err)
 	}
 
-	if err := controllerinstallation.AddToManager(ctx, mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, gardenClusterIdentity); err != nil {
+	if err := controllerinstallation.AddToManager(ctx, mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, gardenClusterIdentity, seedIsSelfHostedShoot, selfHostedShoot, seedName(cfg), gardenNamespace()); err != nil {
 		return fmt.Errorf("failed adding ControllerInstallation controller: %w", err)
 	}
 
