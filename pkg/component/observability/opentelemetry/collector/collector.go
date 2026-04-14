@@ -127,7 +127,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		genericTokenKubeconfigSecretName string
 		loggingAgentShootAccessSecret    = o.newLoggingAgentShootAccessSecret()
 		kubeRBACProxyShootAccessSecret   = o.newKubeRBACProxyShootAccessSecret()
-		objects                          = []client.Object{}
+		seedObjects                      = []client.Object{}
 	)
 
 	if o.values.ClusterType == component.ClusterTypeShoot {
@@ -153,7 +153,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		}
 		genericTokenKubeconfigSecretName = genericTokenKubeconfigSecret.Name
 
-		objects = append(objects, o.getIngress(ingressTLSSecret.Name))
+		seedObjects = append(seedObjects, o.getIngress(ingressTLSSecret.Name))
 	}
 
 	if o.values.ShootNodeLoggingEnabled {
@@ -193,8 +193,8 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		loggingAgentClusterRole := o.getLoggingAgentClusterRole()
 		loggingAgentClusterRoleBinding := o.getLoggingAgentClusterRoleBinding(loggingAgentShootAccessSecret.ServiceAccountName, loggingAgentClusterRole.Name)
 
-		resourcesTarget, err := managedresources.
-			NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).
+		shootRegistry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+		resourcesTarget, err := shootRegistry.
 			AddAllAndSerialize(
 				kubeRBACProxyClusterRoleBinding,
 				loggingAgentClusterRole,
@@ -219,12 +219,12 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		}
 	}
 
-	objects = append(objects, o.openTelemetryCollector(o.namespace, o.values.LokiEndpoint, genericTokenKubeconfigSecretName))
-	objects = append(objects, o.serviceMonitor())
-	objects = append(objects, o.serviceAccount())
+	seedObjects = append(seedObjects, o.openTelemetryCollector(o.namespace, o.values.LokiEndpoint, genericTokenKubeconfigSecretName))
+	seedObjects = append(seedObjects, o.serviceMonitor())
+	seedObjects = append(seedObjects, o.serviceAccount())
 
-	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-	serializedResources, err := registry.AddAllAndSerialize(objects...)
+	seedRegistry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	serializedResources, err := seedRegistry.AddAllAndSerialize(seedObjects...)
 	if err != nil {
 		return err
 	}
