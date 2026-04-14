@@ -6,10 +6,12 @@ package join
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
 
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -182,6 +184,20 @@ func run(ctx context.Context, opts *Options) error {
 			},
 		})
 
+		ensureShootIsConfiguredForHA = g.Add(flow.Task{
+			Name: "Ensuring shoot is configured correctly for a highly-available control plane",
+			Fn: func(_ context.Context) error {
+				if !v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
+					return errors.New(".spec.controlPlane.highAvailability must be set in the Shoot for joining control plane nodes")
+				}
+				if pool := v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo().Spec.Provider.Workers); pool == nil ||
+					pool.Minimum != 3 || pool.Maximum != 3 {
+					return errors.New("the Shoot must have a control plane worker pool with minimum=maximum=3")
+				}
+				return nil
+			},
+			SkipIf: !opts.ControlPlane,
+		})
 		generateETCDCertificates = g.Add(flow.Task{
 			Name: "Generating ETCD certificates",
 			Fn: func(ctx context.Context) error {
@@ -202,18 +218,62 @@ func run(ctx context.Context, opts *Options) error {
 				}
 				return nil
 			},
-			SkipIf: !opts.ControlPlane,
+			SkipIf:       !opts.ControlPlane,
+			Dependencies: flow.NewTaskIDs(ensureShootIsConfiguredForHA),
+		})
+		updateEtcdResource = g.Add(flow.Task{
+			Name: "Updating Etcd resource with new member address",
+			Fn: func(ctx context.Context) error {
+				for _, role := range []string{v1beta1constants.ETCDRoleMain, v1beta1constants.ETCDRoleEvents} {
+					etcdObj := &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: etcd.Name(role), Namespace: b.Shoot.ControlPlaneNamespace}}
+					if err := b.ShootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(etcdObj), etcdObj); err != nil {
+						return err
+					}
+
+					if !slices.Contains(etcdObj.Spec.ExternallyManagedMemberAddresses, machineIP.String()) {
+						patch := client.MergeFrom(etcdObj.DeepCopy())
+						metav1.SetMetaDataAnnotation(&etcdObj.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+						metav1.SetMetaDataAnnotation(&etcdObj.ObjectMeta, v1beta1constants.GardenerTimestamp, etcd.TimeNow().UTC().Format(time.RFC3339Nano))
+						etcdObj.Spec.Replicas++
+						etcdObj.Spec.ExternallyManagedMemberAddresses = append(etcdObj.Spec.ExternallyManagedMemberAddresses, machineIP.String())
+						if err := b.ShootClientSet.Client().Patch(ctx, etcdObj, patch); err != nil {
+							return err
+						}
+					}
+
+					if err := gardenerextensions.WaitUntilObjectReadyWithHealthFunction(
+						ctx,
+						b.ShootClientSet.Client(),
+						b.Logger,
+						etcd.CheckEtcdObject,
+						etcdObj,
+						"Etcd",
+						etcd.DefaultInterval,
+						etcd.DefaultSevereThreshold,
+						etcd.DefaultTimeout,
+						nil,
+					); err != nil {
+						return err
+					}
+				}
+
+				return etcdRoleToAssetsMap.FetchConfigMaps(ctx, b.ShootClientSet.Client(), b.Shoot.ControlPlaneNamespace)
+			},
+			SkipIf:       !opts.ControlPlane,
+			Dependencies: flow.NewTaskIDs(ensureShootIsConfiguredForHA),
 		})
 		writeETCDFilesToDisk = g.Add(flow.Task{
 			Name:         "Writing ETCD files to disk",
-			Fn:           func(ctx context.Context) error { return etcdRoleToAssetsMap.WriteToDisk(b.FS) },
+			Fn:           func(_ context.Context) error { return etcdRoleToAssetsMap.WriteToDisk(b.FS) },
 			SkipIf:       !opts.ControlPlane,
-			Dependencies: flow.NewTaskIDs(generateETCDCertificates),
+			Dependencies: flow.NewTaskIDs(generateETCDCertificates, updateEtcdResource),
 		})
+
 		syncPointReadyForGardenerNodeInit = flow.NewTaskIDs(
 			determineGardenerNodeAgentSecretName,
 			ensureNoActiveShootReconciliation,
 			determineZone,
+			ensureShootIsConfiguredForHA,
 			writeETCDFilesToDisk,
 		)
 

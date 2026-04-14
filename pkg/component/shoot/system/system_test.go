@@ -600,6 +600,16 @@ var _ = Describe("ShootSystem", func() {
 								Resources: []string{"secrets"},
 								Verbs:     []string{"get", "list", "watch", "create", "patch", "update"},
 							},
+							{
+								APIGroups: []string{""},
+								Resources: []string{"configmaps"},
+								Verbs:     []string{"get", "list", "watch"},
+							},
+							{
+								APIGroups: []string{"druid.gardener.cloud"},
+								Resources: []string{"etcds"},
+								Verbs:     []string{"get", "list", "watch", "update", "patch"},
+							},
 						},
 					}
 
