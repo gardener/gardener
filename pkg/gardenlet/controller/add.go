@@ -136,8 +136,10 @@ func AddToManager(
 		}
 	}
 
-	if err := seed.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, healthManager); err != nil {
-		return fmt.Errorf("failed adding Seed controller: %w", err)
+	if !gardenletutils.IsResponsibleForSelfHostedShoot() {
+		if err := seed.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, healthManager); err != nil {
+			return fmt.Errorf("failed adding Seed controller: %w", err)
+		}
 	}
 
 	if err := shoot.AddToManager(ctx, mgr, gardenCluster, seedCluster, seedClientSet, shootClientMap, *cfg, identity, gardenClusterIdentity, healthManager, seedName(cfg)); err != nil {
