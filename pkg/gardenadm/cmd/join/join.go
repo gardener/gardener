@@ -7,13 +7,10 @@ package join
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"slices"
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,11 +24,9 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
-	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
-	staticpodtranslator "github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -148,7 +143,7 @@ func run(ctx context.Context, opts *Options) error {
 	var (
 		g                       = flow.NewGraph("join")
 		gardenerNodeAgentSecret *corev1.Secret
-		etcdRoleToTLSSecretsMap = make(etcdRoleToTLSSecrets, 2)
+		etcdRoleToAssetsMap     = botanist.ETCDRoleToAssets{v1beta1constants.ETCDRoleMain: {}, v1beta1constants.ETCDRoleEvents: {}}
 
 		ensureNoActiveShootReconciliation = g.Add(flow.Task{
 			Name: "Ensuring shoot is not concurrently reconciled by gardenlet when joining control plane node",
@@ -194,30 +189,24 @@ func run(ctx context.Context, opts *Options) error {
 					var (
 						etcdName = etcd.Name(role)
 						dnsNames = etcd.ClientServiceDNSNames(etcdName, b.Shoot.ControlPlaneNamespace, true)
-						tls      = etcdTLSSecrets{}
 					)
 
-					tls.server, err = etcd.GenerateServerCertificate(ctx, b.SecretsManager, role, dnsNames, machineIP, &b.HostName)
+					etcdRoleToAssetsMap[role].ServerSecret, err = etcd.GenerateServerCertificate(ctx, b.SecretsManager, role, dnsNames, machineIP, &b.HostName)
 					if err != nil {
 						return fmt.Errorf("failed to generate server secret for %s: %w", etcdName, err)
 					}
-
-					tls.peer, err = etcd.GeneratePeerCertificate(ctx, b.SecretsManager, role, dnsNames, machineIP, &b.HostName)
+					etcdRoleToAssetsMap[role].PeerSecret, err = etcd.GeneratePeerCertificate(ctx, b.SecretsManager, role, dnsNames, machineIP, &b.HostName)
 					if err != nil {
 						return fmt.Errorf("failed to generate peer secret for %s: %w", etcdName, err)
 					}
-
-					etcdRoleToTLSSecretsMap[role] = tls
 				}
 				return nil
 			},
 			SkipIf: !opts.ControlPlane,
 		})
 		writeETCDFilesToDisk = g.Add(flow.Task{
-			Name: "Writing ETCD files to disk",
-			Fn: func(_ context.Context) error {
-				return etcdRoleToTLSSecretsMap.writeToDisk(b.FS)
-			},
+			Name:         "Writing ETCD files to disk",
+			Fn:           func(ctx context.Context) error { return etcdRoleToAssetsMap.WriteToDisk(b.FS) },
 			SkipIf:       !opts.ControlPlane,
 			Dependencies: flow.NewTaskIDs(generateETCDCertificates),
 		})
@@ -446,33 +435,4 @@ func waitForNodeReadiness(ctx context.Context, log logr.Logger, c client.Client,
 
 		return retry.Ok()
 	})
-}
-
-type etcdTLSSecrets struct {
-	server, peer *corev1.Secret
-}
-
-type etcdRoleToTLSSecrets map[string]etcdTLSSecrets
-
-func (e etcdRoleToTLSSecrets) writeToDisk(fs afero.Afero) error {
-	for role, tlsSecrets := range e {
-		for volumeName, secret := range map[string]*corev1.Secret{
-			etcdconstants.VolumeNameServerTLS: tlsSecrets.server,
-			etcdconstants.VolumeNamePeerTLS:   tlsSecrets.peer,
-		} {
-			dir := staticpodtranslator.HostPath(etcd.Name(role), volumeName)
-			if err := fs.MkdirAll(dir, os.ModeDir); err != nil {
-				return fmt.Errorf("failed creating directory %s: %w", dir, err)
-			}
-
-			for key, value := range secret.Data {
-				path := filepath.Join(dir, key)
-				if err := fs.WriteFile(path, value, 0640); err != nil {
-					return fmt.Errorf("failed to write file to %s: %w", path, err)
-				}
-			}
-		}
-	}
-
-	return nil
 }
