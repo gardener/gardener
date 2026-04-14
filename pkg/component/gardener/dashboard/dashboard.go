@@ -86,6 +86,8 @@ type IngressValues struct {
 	Enabled bool
 	// Domains is the list of ingress domains.
 	Domains []string
+	// IstioIngressGatewayLabels are the labels for identifying the used istio ingress gateway.
+	IstioIngressGatewayLabels map[string]string
 	// WildcardCertSecretName is name of a secret containing the wildcard TLS certificate which is issued for the
 	// ingress domains. If not provided, a self-signed server certificate will be created.
 	WildcardCertSecretName *string
@@ -151,12 +153,12 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 	}
 
 	if g.values.Ingress.Enabled {
-		ingress, err := g.ingress(ctx)
+		istioResources, err := g.istioResources(ctx)
 		if err != nil {
 			return err
 		}
 
-		if err := runtimeRegistry.Add(ingress); err != nil {
+		if err := runtimeRegistry.Add(istioResources...); err != nil {
 			return err
 		}
 	}

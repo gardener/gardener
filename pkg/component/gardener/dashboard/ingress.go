@@ -6,13 +6,19 @@ package dashboard
 
 import (
 	"context"
+	"fmt"
 
-	networkingv1 "k8s.io/api/networking/v1"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
+	"github.com/gardener/gardener/pkg/utils/istio"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -25,8 +31,13 @@ func (g *gardenerDashboard) ingressHosts() []string {
 	return hosts
 }
 
-func (g *gardenerDashboard) ingress(ctx context.Context) (*networkingv1.Ingress, error) {
-	tlsSecretName := ptr.Deref(g.values.Ingress.WildcardCertSecretName, "")
+func (g *gardenerDashboard) istioResources(ctx context.Context) ([]client.Object, error) {
+	var (
+		gatewayName   = deploymentName
+		tlsSecretName = ptr.Deref(g.values.Ingress.WildcardCertSecretName, "")
+		tlsSecret     *corev1.Secret
+	)
+
 	if tlsSecretName == "" {
 		ingressTLSSecret, err := g.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 			Name:                        deploymentName + "-tls",
@@ -39,47 +50,56 @@ func (g *gardenerDashboard) ingress(ctx context.Context) (*networkingv1.Ingress,
 		if err != nil {
 			return nil, err
 		}
-		tlsSecretName = ingressTLSSecret.Name
+		tlsSecret = ingressTLSSecret
+	} else {
+		ingressTLSSecret, found := g.secretsManager.Get(tlsSecretName)
+		if !found {
+			return nil, fmt.Errorf("secret %q not found", tlsSecretName)
+		}
+		tlsSecret = ingressTLSSecret
 	}
 
-	obj := &networkingv1.Ingress{
+	// Istio expects the secret in the istio ingress gateway namespace => copy certificate to istio namespace
+	tlsSecretInIstioNamespace := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploymentName,
-			Namespace: g.namespace,
+			Name:      fmt.Sprintf("%s-%s-%s", g.namespace, deploymentName, tlsSecret.Name),
+			Namespace: operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace,
 			Labels:    GetLabels(),
-			Annotations: map[string]string{
-				"nginx.ingress.kubernetes.io/ssl-redirect":          "true",
-				"nginx.ingress.kubernetes.io/use-port-in-redirects": "true",
-			},
 		},
-		Spec: networkingv1.IngressSpec{
-			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
-			TLS: []networkingv1.IngressTLS{{
-				SecretName: tlsSecretName,
-				Hosts:      g.ingressHosts(),
-			}},
-		},
+		Data: tlsSecret.Data,
 	}
 
-	for _, host := range g.ingressHosts() {
-		obj.Spec.Rules = append(obj.Spec.Rules, networkingv1.IngressRule{
-			Host: host,
-			IngressRuleValue: networkingv1.IngressRuleValue{
-				HTTP: &networkingv1.HTTPIngressRuleValue{
-					Paths: []networkingv1.HTTPIngressPath{{
-						Backend: networkingv1.IngressBackend{
-							Service: &networkingv1.IngressServiceBackend{
-								Name: serviceName,
-								Port: networkingv1.ServiceBackendPort{Number: portServer},
-							},
-						},
-						Path:     "/",
-						PathType: ptr.To(networkingv1.PathTypePrefix),
-					}},
-				},
-			},
-		})
+	gateway := &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: g.namespace}}
+	if err := istio.GatewayWithTLSTermination(
+		gateway,
+		GetLabels(),
+		g.values.Ingress.IstioIngressGatewayLabels,
+		g.ingressHosts(),
+		kubeapiserverconstants.Port,
+		tlsSecretInIstioNamespace.Name,
+	)(); err != nil {
+		return nil, fmt.Errorf("failed to create gateway resource: %w", err)
 	}
 
-	return obj, nil
+	destinationHost := kubernetesutils.FQDNForService(serviceName, g.namespace)
+	virtualService := &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: g.namespace}}
+	if err := istio.VirtualServiceForTLSTermination(
+		virtualService,
+		GetLabels(),
+		g.ingressHosts(),
+		gatewayName,
+		portServer,
+		destinationHost,
+		"",
+		"",
+	)(); err != nil {
+		return nil, fmt.Errorf("failed to create virtual service resource: %w", err)
+	}
+
+	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: g.namespace}}
+	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, GetLabels(), destinationHost)(); err != nil {
+		return nil, fmt.Errorf("failed to create destination rule resource: %w", err)
+	}
+
+	return []client.Object{tlsSecretInIstioNamespace, gateway, virtualService, destinationRule}, nil
 }
