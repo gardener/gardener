@@ -7,11 +7,13 @@ package etcd
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net"
 
 	corev1 "k8s.io/api/core/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -24,6 +26,7 @@ func GenerateServerCertificate(
 	role string,
 	dnsNames []string,
 	ip net.IP,
+	hostName *string,
 ) (
 	*corev1.Secret,
 	error,
@@ -39,6 +42,10 @@ func GenerateServerCertificate(
 		},
 		secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD, secretsmanager.LoadMissingCAFromCluster(ctx)),
 		secretsmanager.Rotate(secretsmanager.InPlace),
+		secretsmanager.WithLabels(injectHostNameLabelIfSet(map[string]string{
+			etcdconstants.LabelKeySecretType: etcdconstants.LabelValueSecretTypeServer,
+			etcdconstants.LabelKeyRole:       role,
+		}, hostName)),
 	)
 }
 
@@ -63,6 +70,7 @@ func GenerateServerAndClientCertificates(
 	role string,
 	dnsNames []string,
 	ip net.IP,
+	hostName *string,
 ) (
 	etcdCASecret *corev1.Secret,
 	serverSecret *corev1.Secret,
@@ -75,7 +83,7 @@ func GenerateServerAndClientCertificates(
 		return nil, nil, nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
 	}
 
-	serverSecret, err = GenerateServerCertificate(ctx, secretsManager, role, dnsNames, ip)
+	serverSecret, err = GenerateServerCertificate(ctx, secretsManager, role, dnsNames, ip, hostName)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to generate server certificate: %w", err)
 	}
@@ -95,6 +103,7 @@ func GeneratePeerCertificate(
 	role string,
 	dnsNames []string,
 	ip net.IP,
+	hostName *string,
 ) (
 	*corev1.Secret,
 	error,
@@ -110,6 +119,10 @@ func GeneratePeerCertificate(
 		},
 		secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.UseCurrentCA, secretsmanager.LoadMissingCAFromCluster(ctx)),
 		secretsmanager.Rotate(secretsmanager.InPlace),
+		secretsmanager.WithLabels(injectHostNameLabelIfSet(map[string]string{
+			etcdconstants.LabelKeySecretType: etcdconstants.LabelValueSecretTypePeer,
+			etcdconstants.LabelKeyRole:       role,
+		}, hostName)),
 	)
 }
 
@@ -151,4 +164,14 @@ func (e *etcd) peerServiceDNSNames() []string {
 		kubernetesutils.DNSNamesForService(fmt.Sprintf("%s-peer", e.etcd.Name), e.namespace),
 		kubernetesutils.DNSNamesForService(fmt.Sprintf("*.%s-peer", e.etcd.Name), e.namespace)...,
 	)
+}
+
+func injectHostNameLabelIfSet(labels map[string]string, hostName *string) map[string]string {
+	if hostName == nil {
+		return labels
+	}
+
+	out := maps.Clone(labels)
+	out[etcdconstants.LabelKeyHostName] = *hostName
+	return out
 }

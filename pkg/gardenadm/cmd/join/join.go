@@ -197,12 +197,12 @@ func run(ctx context.Context, opts *Options) error {
 						tls      = etcdTLSSecrets{}
 					)
 
-					tls.server, err = etcd.GenerateServerCertificate(ctx, b.SecretsManager, role, dnsNames, machineIP)
+					tls.server, err = etcd.GenerateServerCertificate(ctx, b.SecretsManager, role, dnsNames, machineIP, &b.HostName)
 					if err != nil {
 						return fmt.Errorf("failed to generate server secret for %s: %w", etcdName, err)
 					}
 
-					tls.peer, err = etcd.GeneratePeerCertificate(ctx, b.SecretsManager, role, dnsNames, machineIP)
+					tls.peer, err = etcd.GeneratePeerCertificate(ctx, b.SecretsManager, role, dnsNames, machineIP, &b.HostName)
 					if err != nil {
 						return fmt.Errorf("failed to generate peer secret for %s: %w", etcdName, err)
 					}
