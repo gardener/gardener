@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -509,6 +510,16 @@ func (s *shootSystem) selfHostedShootResources() []client.Object {
 					APIGroups: []string{corev1.SchemeGroupVersion.Group},
 					Resources: []string{"secrets"},
 					Verbs:     []string{"get", "list", "watch", "create", "patch", "update"},
+				},
+				{
+					APIGroups: []string{corev1.SchemeGroupVersion.Group},
+					Resources: []string{"configmaps"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{druidcorev1alpha1.SchemeGroupVersion.Group},
+					Resources: []string{"etcds"},
+					Verbs:     []string{"get", "list", "watch", "update", "patch"},
 				},
 			},
 		}
