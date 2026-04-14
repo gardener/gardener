@@ -96,10 +96,12 @@ type staticControlPlaneComponent struct {
 	mutate       func(*corev1.Pod)
 }
 
-func (b *GardenadmBotanist) staticControlPlaneComponents() []staticControlPlaneComponent {
-	var (
-		components []staticControlPlaneComponent
+func (b *GardenadmBotanist) allStaticControlPlaneComponents() []staticControlPlaneComponent {
+	if len(b.staticControlPlaneComponents) > 0 {
+		return b.staticControlPlaneComponents
+	}
 
+	var (
 		mutateAPIServerPodFn = func(pod *corev1.Pod) {
 			for _, ip := range b.gardenerResourceManagerServiceIPs {
 				pod.Spec.HostAliases = append(pod.Spec.HostAliases, corev1.HostAlias{
@@ -120,22 +122,24 @@ func (b *GardenadmBotanist) staticControlPlaneComponents() []staticControlPlaneC
 	)
 
 	if !b.useEtcdManagedByDruid {
-		components = append(components,
+		b.staticControlPlaneComponents = append(b.staticControlPlaneComponents,
 			staticControlPlaneComponent{b.deployETCD(v1beta1constants.ETCDRoleMain), bootstrapetcd.Name(v1beta1constants.ETCDRoleMain), &appsv1.StatefulSet{}, nil},
 			staticControlPlaneComponent{b.deployETCD(v1beta1constants.ETCDRoleEvents), bootstrapetcd.Name(v1beta1constants.ETCDRoleEvents), &appsv1.StatefulSet{}, nil},
 		)
 	} else {
-		components = append(components,
+		b.staticControlPlaneComponents = append(b.staticControlPlaneComponents,
 			staticControlPlaneComponent{func(_ context.Context) error { return nil }, "etcd-" + v1beta1constants.ETCDRoleMain, &appsv1.StatefulSet{}, mutateETCDPodFn},
 			staticControlPlaneComponent{func(_ context.Context) error { return nil }, "etcd-" + v1beta1constants.ETCDRoleEvents, &appsv1.StatefulSet{}, mutateETCDPodFn},
 		)
 	}
 
-	return append(components,
+	b.staticControlPlaneComponents = append(b.staticControlPlaneComponents,
 		staticControlPlaneComponent{b.deployKubeAPIServer, v1beta1constants.DeploymentNameKubeAPIServer, &appsv1.Deployment{}, mutateAPIServerPodFn},
 		staticControlPlaneComponent{b.DeployKubeControllerManager, v1beta1constants.DeploymentNameKubeControllerManager, &appsv1.Deployment{}, nil},
 		staticControlPlaneComponent{b.Shoot.Components.ControlPlane.KubeScheduler.Deploy, v1beta1constants.DeploymentNameKubeScheduler, &appsv1.Deployment{}, nil},
 	)
+
+	return b.staticControlPlaneComponents
 }
 
 // DeployControlPlaneDeployments deploys the deployments for the static control plane components. It also updates the
@@ -163,7 +167,7 @@ func (b *GardenadmBotanist) DeployControlPlaneDeployments(ctx context.Context) e
 }
 
 func (b *GardenadmBotanist) deployControlPlaneDeployments(ctx context.Context) error {
-	for _, component := range b.staticControlPlaneComponents() {
+	for _, component := range b.allStaticControlPlaneComponents() {
 		if err := b.deployControlPlaneComponent(ctx, component.deploy, component.targetObject, component.name); err != nil {
 			return fmt.Errorf("failed deploying %q: %w", component.name, err)
 		}
@@ -236,11 +240,7 @@ func (s staticPods) allFiles() []extensionsv1alpha1.File {
 func (b *GardenadmBotanist) staticControlPlanePods(ctx context.Context) (staticPods, error) {
 	var pods staticPods
 
-	for _, component := range b.staticControlPlaneComponents() {
-		if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: component.name, Namespace: b.Shoot.ControlPlaneNamespace}, component.targetObject); err != nil {
-			return nil, fmt.Errorf("failed reading object for %q: %w", component.name, err)
-		}
-
+	for _, component := range b.allStaticControlPlaneComponents() {
 		files, _, err := staticpod.Translate(ctx, b.SeedClientSet.Client(), component.targetObject, component.mutate)
 		if err != nil {
 			return nil, fmt.Errorf("failed translating object of type %T for %q: %w", component.targetObject, component.name, err)
