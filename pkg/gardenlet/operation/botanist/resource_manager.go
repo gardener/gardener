@@ -74,7 +74,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 			newFunc = shared.NewRuntimeGardenerResourceManager
 			values.HighAvailabilityConfigWebhookEnabled = false
 			values.PriorityClassName = v1beta1constants.PriorityClassNameSeedSystemCritical
-			// When GRM does not run inside the self hosted shoot cluster, we remove the `node-role.kubernetes.io/control-plane` toleration
+			// When GRM does not run inside the self-hosted shoot cluster, we remove the `node-role.kubernetes.io/control-plane` toleration
 			// as it is not required.
 			values.SystemComponentTolerations = slices.DeleteFunc(values.SystemComponentTolerations, func(t corev1.Toleration) bool {
 				return t.Key == "node-role.kubernetes.io/control-plane"

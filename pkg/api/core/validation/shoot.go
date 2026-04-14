@@ -387,21 +387,6 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 		if meta.Namespace != v1beta1constants.GardenNamespace {
 			allErrs = append(allErrs, field.Invalid(field.NewPath("metadata", "namespace"), meta.Namespace, fmt.Sprintf("self-hosted shoots must be in the %q namespace", v1beta1constants.GardenNamespace)))
 		}
-
-		controlPlaneWorkersZonesSet := sets.New[string]()
-		for _, worker := range spec.Provider.Workers {
-			if worker.ControlPlane != nil {
-				controlPlaneWorkersZonesSet.Insert(worker.Zones...)
-			}
-		}
-
-		for i, worker := range spec.Provider.Workers {
-			if worker.ControlPlane == nil && helper.SystemComponentsAllowed(&worker) {
-				if !controlPlaneWorkersZonesSet.HasAll(worker.Zones...) {
-					allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "workers").Index(i).Child("systemComponents"), *worker.SystemComponents, "workers that enable systemComponents must have the same zones as control plane workers"))
-				}
-			}
-		}
 	}
 
 	if spec.SchedulerName != nil {
@@ -2764,6 +2749,21 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 				allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("controlPlane"), worker.ControlPlane, "cannot have more than one worker pool marked for control plane components"))
 			}
 			foundControlPlanePool = true
+		}
+	}
+
+	if helper.IsShootSelfHosted(workers) {
+		controlPlaneWorkersZonesSet := sets.New[string]()
+		for _, worker := range workers {
+			if worker.ControlPlane != nil {
+				controlPlaneWorkersZonesSet.Insert(worker.Zones...)
+			}
+		}
+
+		for i, worker := range workers {
+			if worker.ControlPlane == nil && helper.SystemComponentsAllowed(&worker) && !controlPlaneWorkersZonesSet.HasAll(worker.Zones...) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("systemComponents"), *worker.SystemComponents, "workers that enable systemComponents must use a subset of the zones of control plane worker"))
+			}
 		}
 	}
 

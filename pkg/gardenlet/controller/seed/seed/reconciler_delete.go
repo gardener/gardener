@@ -105,7 +105,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 	seedIsSelfHostedShoot bool,
 ) error {
 	log.Info("Instantiating component deployers")
-	c, err := r.instantiateComponents(ctx, log, seed, nil, seedIsGarden, nil, nil, nil, seedIsShoot)
+	c, err := r.instantiateComponents(ctx, log, seed, nil, seedIsGarden, nil, nil, nil, seedIsShoot, seedIsSelfHostedShoot)
 	if err != nil {
 		return err
 	}
