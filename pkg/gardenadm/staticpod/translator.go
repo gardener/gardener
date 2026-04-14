@@ -64,13 +64,13 @@ func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav
 
 	translateSpec(&pod.Spec)
 
+	if mutate != nil {
+		mutate(pod)
+	}
+
 	filesFromVolumes, err := translateVolumes(ctx, c, pod, objectMeta.Namespace)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed translating volumes for static pod %s: %w", client.ObjectKeyFromObject(pod), err)
-	}
-
-	if mutate != nil {
-		mutate(pod)
 	}
 
 	hash := utils.ComputeChecksum(pod)
