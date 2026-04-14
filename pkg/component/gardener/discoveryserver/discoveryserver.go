@@ -48,6 +48,8 @@ type Values struct {
 	Image string
 	// Domain will be used by the discovery server to serve metadata on.
 	Domain string
+	// IstioIngressGatewayLabels are the labels for identifying the used istio ingress gateway.
+	IstioIngressGatewayLabels map[string]string
 	// TLSSecretName is the name of the secret that will be used by the discovery server to handle TLS.
 	// If not provided then self-signed certificate will be generated.
 	TLSSecretName *string
@@ -112,15 +114,20 @@ func (g *gardenerDiscoveryServer) Deploy(ctx context.Context) error {
 		tlsSecretName = ingressTLSSecret.Name
 	}
 
-	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
+	istioResources, err := g.istioResources()
+	if err != nil {
+		return fmt.Errorf("failed to get istio resources: %w", err)
+	}
+
+	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(append(
+		istioResources,
 		g.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, tlsSecretName, secretWorkloadIdentityDiscoveryDocuments.GetName()),
 		g.service(),
 		g.podDisruptionBudget(),
 		g.verticalPodAutoscaler(),
-		g.ingress(),
 		g.serviceMonitor(),
 		secretWorkloadIdentityDiscoveryDocuments,
-	)
+	)...)
 	if err != nil {
 		return err
 	}

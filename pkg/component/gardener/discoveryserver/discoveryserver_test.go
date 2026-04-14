@@ -13,10 +13,13 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
+	istioapinetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -32,6 +35,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/gardener/discoveryserver"
+	comptest "github.com/gardener/gardener/pkg/component/test"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -79,7 +83,9 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 		service                   *corev1.Service
 		podDisruptionBudget       *policyv1.PodDisruptionBudget
 		vpa                       *vpaautoscalingv1.VerticalPodAutoscaler
-		ingress                   *networkingv1.Ingress
+		gateway                   *istionetworkingv1beta1.Gateway
+		virtualService            *istionetworkingv1beta1.VirtualService
+		destinationRule           *istionetworkingv1beta1.DestinationRule
 		serviceMonitor            *monitoringv1.ServiceMonitor
 		workloadIdentitySecret    *corev1.Secret
 
@@ -110,7 +116,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
 		))
 
-		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient, comptest.CmpOptsForIstio()...)
 
 		managedResourceRuntime = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -333,6 +339,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 				},
 				Annotations: map[string]string{
 					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8080}]`,
+					"networking.istio.io/exportTo": "*",
 				},
 			},
 			Spec: corev1.ServiceSpec{
@@ -418,8 +425,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 				},
 			},
 		}
-
-		ingress = &networkingv1.Ingress{
+		gateway = &istionetworkingv1beta1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-discovery-server",
 				Namespace: namespace,
@@ -427,28 +433,76 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 					"app":  "gardener",
 					"role": "discovery-server",
 				},
-				Annotations: map[string]string{
-					"nginx.ingress.kubernetes.io/ssl-passthrough": "true",
+			},
+			Spec: istioapinetworkingv1alpha3.Gateway{
+				Servers: []*istioapinetworkingv1alpha3.Server{{
+					Hosts: []string{"discovery.local.gardener.cloud"},
+					Port: &istioapinetworkingv1alpha3.Port{
+						Number:   443,
+						Name:     "tls",
+						Protocol: "TLS",
+					},
+					Tls: &istioapinetworkingv1alpha3.ServerTLSSettings{},
+				}},
+			},
+		}
+		virtualService = &istionetworkingv1beta1.VirtualService{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-discovery-server",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "discovery-server",
 				},
 			},
-			Spec: networkingv1.IngressSpec{
-				IngressClassName: ptr.To("nginx-ingress-gardener"),
-				Rules: []networkingv1.IngressRule{{
-					Host: "discovery.local.gardener.cloud",
-					IngressRuleValue: networkingv1.IngressRuleValue{
-						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{{
-								Backend: networkingv1.IngressBackend{
-									Service: &networkingv1.IngressServiceBackend{
-										Name: "gardener-discovery-server",
-										Port: networkingv1.ServiceBackendPort{Number: 10443},
-									},
-								},
-								Path:     "/",
-								PathType: ptr.To(networkingv1.PathTypePrefix),
-							}},
+			Spec: istioapinetworkingv1alpha3.VirtualService{
+				ExportTo: []string{"*"},
+				Hosts:    []string{"discovery.local.gardener.cloud"},
+				Gateways: []string{"gardener-discovery-server"},
+				Tls: []*istioapinetworkingv1alpha3.TLSRoute{{
+					Match: []*istioapinetworkingv1alpha3.TLSMatchAttributes{{
+						Port:     10443,
+						SniHosts: []string{"discovery.local.gardener.cloud"},
+					}},
+					Route: []*istioapinetworkingv1alpha3.RouteDestination{{
+						Destination: &istioapinetworkingv1alpha3.Destination{
+							Host: "gardener-discovery-server.some-namespace.svc.cluster.local",
+							Port: &istioapinetworkingv1alpha3.PortSelector{Number: 10443},
 						},
 					}},
+				}},
+			},
+		}
+		destinationRule = &istionetworkingv1beta1.DestinationRule{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-discovery-server",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "discovery-server",
+				},
+			},
+			Spec: istioapinetworkingv1alpha3.DestinationRule{
+				ExportTo: []string{"*"},
+				Host:     "gardener-discovery-server.some-namespace.svc.cluster.local",
+				TrafficPolicy: &istioapinetworkingv1alpha3.TrafficPolicy{
+					LoadBalancer: &istioapinetworkingv1alpha3.LoadBalancerSettings{
+						LocalityLbSetting: &istioapinetworkingv1alpha3.LocalityLoadBalancerSetting{
+							FailoverPriority: []string{"topology.kubernetes.io/zone"},
+							Enabled:          wrapperspb.Bool(true),
+						},
+					},
+					ConnectionPool: &istioapinetworkingv1alpha3.ConnectionPoolSettings{
+						Tcp: &istioapinetworkingv1alpha3.ConnectionPoolSettings_TCPSettings{
+							TcpKeepalive: &istioapinetworkingv1alpha3.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
+								Time:     &durationpb.Duration{Seconds: 7200},
+								Interval: &durationpb.Duration{Seconds: 75},
+							},
+							MaxConnectionDuration: &durationpb.Duration{Seconds: 86400},
+						},
+					},
+					OutlierDetection: &istioapinetworkingv1alpha3.OutlierDetection{},
+					Tls:              &istioapinetworkingv1alpha3.ClientTLSSettings{},
 				},
 			},
 		}
@@ -676,7 +730,9 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 					service,
 					podDisruptionBudget,
 					vpa,
-					ingress,
+					gateway,
+					virtualService,
+					destinationRule,
 					serviceMonitor,
 					workloadIdentitySecret,
 				}
@@ -745,7 +801,9 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 					service,
 					podDisruptionBudget,
 					vpa,
-					ingress,
+					gateway,
+					virtualService,
+					destinationRule,
 					serviceMonitor,
 					workloadIdentitySecret,
 				))
