@@ -17,6 +17,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
@@ -346,11 +347,13 @@ func run(ctx context.Context, opts *Options) error {
 			Fn: func(ctx context.Context) error {
 				machineIP, err := b.MachineIP()
 				if err != nil {
-					return fmt.Errorf("failed determining the machine IP address")
+					return fmt.Errorf("failed determining the machine IP address: %w", err)
 				}
 
-				b.Shoot.Components.ControlPlane.EtcdMain.SetStaticPodControlPlaneNodesIPAddresses(machineIP)
-				b.Shoot.Components.ControlPlane.EtcdEvents.SetStaticPodControlPlaneNodesIPAddresses(machineIP)
+				controlPlaneNodes := []etcd.ControlPlaneNode{{HostName: b.HostName, IPAddress: machineIP}}
+
+				b.Shoot.Components.ControlPlane.EtcdMain.SetStaticPodControlPlaneNodes(controlPlaneNodes...)
+				b.Shoot.Components.ControlPlane.EtcdEvents.SetStaticPodControlPlaneNodes(controlPlaneNodes...)
 				return b.DeployEtcd(ctx)
 			},
 			SkipIf:       opts.UseBootstrapEtcd,

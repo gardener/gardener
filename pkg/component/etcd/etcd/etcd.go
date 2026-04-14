@@ -263,6 +263,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		controlPlaneNodeHostName = &e.values.StaticPodConfig.ControlPlaneNodes[0].HostName
 		controlPlaneNodeIP = e.values.StaticPodConfig.ControlPlaneNodes[0].IPAddress
 	}
+	_ = controlPlaneNodeHostName // will be used for certificates generation in subsequent commits
 
 	etcdCASecret, serverSecret, clientSecret, err := GenerateServerAndClientCertificates(
 		ctx,

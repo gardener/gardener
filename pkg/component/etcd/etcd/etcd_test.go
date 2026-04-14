@@ -372,8 +372,8 @@ var _ = Describe("Etcd", func() {
 			}
 
 			if staticPodConfig != nil {
-				for _, ip := range staticPodConfig.ControlPlaneNodesIPAddresses {
-					obj.Spec.ExternallyManagedMemberAddresses = append(obj.Spec.ExternallyManagedMemberAddresses, ip.String())
+				for _, node := range staticPodConfig.ControlPlaneNodes {
+					obj.Spec.ExternallyManagedMemberAddresses = append(obj.Spec.ExternallyManagedMemberAddresses, node.IPAddress.String())
 				}
 				obj.Spec.Replicas = int32(len(obj.Spec.ExternallyManagedMemberAddresses))
 				obj.Spec.RunAsRoot = ptr.To(true)
@@ -739,9 +739,9 @@ var _ = Describe("Etcd", func() {
 
 		secretNameServer = "etcd-server-" + role
 		secretNameServerPeer = "etcd-peer-server-" + role
-		if staticPodConfig != nil && len(staticPodConfig.ControlPlaneNodesIPAddresses) > 0 {
-			secretNameServer += "-" + staticPodConfig.ControlPlaneNodesIPAddresses[0].String()
-			secretNameServerPeer += "-" + staticPodConfig.ControlPlaneNodesIPAddresses[0].String()
+		if staticPodConfig != nil && len(staticPodConfig.ControlPlaneNodes) > 0 {
+			secretNameServer += "-" + staticPodConfig.ControlPlaneNodes[0].IPAddress.String()
+			secretNameServerPeer += "-" + staticPodConfig.ControlPlaneNodes[0].IPAddress.String()
 		}
 		etcdName = "etcd-" + role
 		vpaName = etcdName
@@ -1367,7 +1367,7 @@ var _ = Describe("Etcd", func() {
 
 		When("etcd should run as static pod", func() {
 			BeforeEach(func() {
-				staticPodConfig = &StaticPodConfig{ControlPlaneNodesIPAddresses: []net.IP{net.ParseIP("1.2.3.4")}}
+				staticPodConfig = &StaticPodConfig{ControlPlaneNodes: []ControlPlaneNode{{HostName: "node1", IPAddress: net.ParseIP("1.2.3.4")}}}
 			})
 
 			Describe("main etcd", func() {
