@@ -26,7 +26,8 @@ func NewEtcdDruid(
 	secretsManager secretsmanager.Interface,
 	secretNameServerCA string,
 	priorityClassName string,
-	managedBy etcd.ManagedBy,
+	clusterIsGarden bool,
+	clusterIsSelfHostedShoot bool,
 ) (
 	component.DeployWaiter,
 	error,
@@ -50,6 +51,7 @@ func NewEtcdDruid(
 		secretsManager,
 		secretNameServerCA,
 		priorityClassName,
-		managedBy,
+		clusterIsGarden,
+		clusterIsSelfHostedShoot,
 	), nil
 }

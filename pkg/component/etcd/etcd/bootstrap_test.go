@@ -63,8 +63,8 @@ var _ = Describe("Etcd", func() {
 
 		priorityClassName = "some-priority-class"
 
-		featureGates map[string]bool
-		managedBy    ManagedBy
+		featureGates      map[string]bool
+		isSelfHostedShoot bool
 
 		managedResourceSecret *corev1.Secret
 		managedResource       *resourcesv1alpha1.ManagedResource
@@ -135,7 +135,7 @@ webhooks:
 	)
 
 	BeforeEach(func() {
-		managedBy = ManagedBySeed
+		isSelfHostedShoot = false
 	})
 
 	JustBeforeEach(func() {
@@ -163,7 +163,7 @@ webhooks:
 		// Create CA secret for etcd-components webhook handler
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretNameCA, Namespace: namespace}})).To(Succeed())
 
-		bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwrite, sm, secretNameCA, priorityClassName, managedBy)
+		bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwrite, sm, secretNameCA, priorityClassName, false, isSelfHostedShoot)
 
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -863,7 +863,7 @@ webhooks:
 			})
 
 			It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
-				bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwriteFull, sm, secretNameCA, priorityClassName, ManagedBySeed)
+				bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwriteFull, sm, secretNameCA, priorityClassName, false, isSelfHostedShoot)
 
 				expectedResources = append(expectedResources,
 					deploymentWithImageVectorOverwrite,
@@ -874,7 +874,7 @@ webhooks:
 
 		Context("managed by self-hosted shoot", func() {
 			BeforeEach(func() {
-				managedBy = ManagedBySelfHostedShoot
+				isSelfHostedShoot = true
 			})
 
 			It("should successfully deploy all the resources with node selector", func() {

@@ -1931,14 +1931,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Expect(ValidateShoot(shoot)).To(BeEmpty())
 					})
 
-					It("should allow systemComponents on non control-plane worker pool if it zones match control plane worker pool zones", func() {
+					It("should allow systemComponents on non control-plane worker pool if its zones are equal to the control-plane worker pool zones", func() {
 						shoot.Spec.Provider.Workers[0].Zones = []string{"1"}
 						shoot.Spec.Provider.Workers[1].Zones = []string{"1"}
 						shoot.Spec.Provider.Workers[1].SystemComponents.Allow = true
 						Expect(ValidateShoot(shoot)).To(BeEmpty())
 					})
 
-					It("should forbid systemComponents on non control-plane worker pool", func() {
+					It("should forbid systemComponents on worker pools whose zones are not a subset of the control-plane worker pool zones", func() {
 						shoot.Spec.Provider.Workers[0].Zones = []string{"1"}
 						shoot.Spec.Provider.Workers[1].Zones = []string{"1", "2"}
 						shoot.Spec.Provider.Workers[1].Maximum = 2
@@ -1947,7 +1947,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("spec.provider.workers[1].systemComponents"),
-							"Detail": ContainSubstring("workers that enable systemComponents must have the same zones as control plane workers"),
+							"Detail": ContainSubstring("workers that enable systemComponents must use a subset of the zones of control plane worker"),
 						}))))
 					})
 				})

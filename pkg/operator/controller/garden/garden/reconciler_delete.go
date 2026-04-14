@@ -41,7 +41,6 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -53,7 +52,7 @@ func (r *Reconciler) delete(
 	garden *operatorv1alpha1.Garden,
 	secretsManager secretsmanager.Interface,
 	targetVersion *semver.Version,
-	isRuntimeSelfHostedShoot bool,
+	runtimeIsSelfHostedShoot bool,
 ) (
 	reconcile.Result,
 	error,
@@ -73,7 +72,7 @@ func (r *Reconciler) delete(
 		nil,
 		false,
 		extensionList,
-		isRuntimeSelfHostedShoot,
+		runtimeIsSelfHostedShoot,
 	)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -82,7 +81,7 @@ func (r *Reconciler) delete(
 	// When the runtime cluster is a self-hosted shoot, etcd-druid and the runtime gardener-resource-manager are also
 	// serving the shoot's control plane. They must not be destroyed during Garden deletion — the gardenlet will continue
 	// managing them.
-	runtimeClusterIsSelfHostedShoot, err := gardenletutils.SeedIsSelfHostedShoot(ctx, r.RuntimeClientSet.Client())
+	runtimeClusterIsSelfHostedShoot, err := gardenerutils.ClusterIsSelfHostedShoot(ctx, r.RuntimeClientSet.Client())
 	if err != nil {
 		return reconcile.Result{}, err
 	}

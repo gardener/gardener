@@ -245,10 +245,10 @@ type Values struct {
 	ClusterIdentity *string
 	// ConcurrentSyncs are the number of worker threads for concurrent reconciliation of resources
 	ConcurrentSyncs *int
-	// ForSelfHostedShoot defines if this gardener-resource-manager is deployed to manage a self-hosted shoot cluster.
-	ForSelfHostedShoot bool
 	// HighAvailabilityConfigWebhookEnabled controls whether the high availability config webhook is enabled.
 	HighAvailabilityConfigWebhookEnabled bool
+	// SystemComponentsConfigWebhookEnabled defines if the SystemComponentsConfigWebhook should be enabled.
+	SystemComponentsConfigWebhookEnabled bool
 	// DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
 	DefaultNotReadyToleration *int64
 	// DefaultUnreachableTolerationSeconds indicates the tolerationSeconds of the toleration for unreachable:NoExecute
@@ -681,7 +681,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 		config.Controllers.NodeCriticalComponents.Enabled = true
 	}
 
-	if r.values.ResponsibilityMode == ForShootOrVirtualGarden || r.values.ForSelfHostedShoot {
+	if r.values.SystemComponentsConfigWebhookEnabled {
 		config.Webhooks.SystemComponentsConfig = resourcemanagerconfigv1alpha1.SystemComponentsConfigWebhookConfig{
 			Enabled: true,
 			NodeSelector: map[string]string{
@@ -1360,9 +1360,9 @@ func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 		}
 	}
 
-	if r.values.ResponsibilityMode == ForShootOrVirtualGarden || r.values.ForSelfHostedShoot {
+	if r.values.SystemComponentsConfigWebhookEnabled {
 		systemComponentsNamespaceSelector := namespaceSelector.DeepCopy()
-		if r.values.ForSelfHostedShoot {
+		if r.values.ResponsibilityMode == ForRuntime {
 			if systemComponentsNamespaceSelector.MatchLabels == nil {
 				systemComponentsNamespaceSelector.MatchLabels = map[string]string{}
 			}

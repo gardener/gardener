@@ -51,18 +51,6 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-// ManagedBy describes which Gardener component manages this etcd-druid.
-type ManagedBy uint8
-
-const (
-	// ManagedByOperator means that gardener-operator manages this etcd-druid.
-	ManagedByOperator ManagedBy = iota
-	// ManagedBySeed means that the seed manages this etcd-druid.
-	ManagedBySeed
-	// ManagedBySelfHostedShoot means that a self-hosted shoot manages this etcd-druid.
-	ManagedBySelfHostedShoot
-)
-
 const (
 	// Druid is a constant for the name of the etcd-druid.
 	Druid = "etcd-druid"
@@ -118,31 +106,34 @@ func NewBootstrapper(
 	secretsManager secretsmanager.Interface,
 	secretNameServerCA string,
 	priorityClassName string,
-	managedBy ManagedBy,
+	clusterIsGarden bool,
+	clusterIsSelfHostedShoot bool,
 ) component.DeployWaiter {
 	return &bootstrapper{
-		client:               c,
-		namespace:            namespace,
-		etcdConfig:           etcdConfig,
-		image:                image,
-		imageVectorOverwrite: imageVectorOverwrite,
-		secretsManager:       secretsManager,
-		secretNameServerCA:   secretNameServerCA,
-		priorityClassName:    priorityClassName,
-		managedBy:            managedBy,
+		client:                   c,
+		namespace:                namespace,
+		etcdConfig:               etcdConfig,
+		image:                    image,
+		imageVectorOverwrite:     imageVectorOverwrite,
+		secretsManager:           secretsManager,
+		secretNameServerCA:       secretNameServerCA,
+		priorityClassName:        priorityClassName,
+		clusterIsGarden:          clusterIsGarden,
+		clusterIsSelfHostedShoot: clusterIsSelfHostedShoot,
 	}
 }
 
 type bootstrapper struct {
-	client               client.Client
-	namespace            string
-	etcdConfig           *gardenletconfigv1alpha1.ETCDConfig
-	image                string
-	imageVectorOverwrite *string
-	secretsManager       secretsmanager.Interface
-	secretNameServerCA   string
-	priorityClassName    string
-	managedBy            ManagedBy
+	client                   client.Client
+	namespace                string
+	etcdConfig               *gardenletconfigv1alpha1.ETCDConfig
+	image                    string
+	imageVectorOverwrite     *string
+	secretsManager           secretsmanager.Interface
+	secretNameServerCA       string
+	priorityClassName        string
+	clusterIsGarden          bool
+	clusterIsSelfHostedShoot bool
 }
 
 func (b *bootstrapper) Deploy(ctx context.Context) error {
@@ -183,11 +174,11 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, webhookServerPort))
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, portMetrics))
 
-	if b.managedBy == ManagedByOperator {
+	if b.clusterIsGarden {
 		deployment.Spec.Template.Labels["networking.resources.gardener.cloud/to-virtual-garden-etcd-main-client-tcp-8080"] = v1beta1constants.LabelNetworkPolicyAllowed
 	}
 
-	if b.managedBy == ManagedBySelfHostedShoot {
+	if b.clusterIsSelfHostedShoot {
 		deployment.Spec.Template.Spec.NodeSelector = map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}
 	}
 

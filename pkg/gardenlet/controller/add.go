@@ -203,7 +203,7 @@ func AddToManager(
 		return nil
 	}
 
-	seedIsSelfHostedShoot, err := gardenletutils.SeedIsSelfHostedShoot(ctx, seedCluster.GetAPIReader())
+	seedIsSelfHostedShoot, err := gardenerutils.ClusterIsSelfHostedShoot(ctx, seedCluster.GetAPIReader())
 	if err != nil {
 		return fmt.Errorf("failed checking whether the seed is a self-hosted shoot cluster: %w", err)
 	}

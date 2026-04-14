@@ -38,7 +38,7 @@ import (
 var _ = Describe("ResourceManager", func() {
 	var (
 		ctx       = context.TODO()
-		namespace = "fake-ns"
+		namespace string
 		sm        secretsmanager.Interface
 		ctrl      *gomock.Controller
 	)
@@ -47,7 +47,11 @@ var _ = Describe("ResourceManager", func() {
 		var fakeClient client.Client
 
 		BeforeEach(func() {
+			namespace = "fake-ns"
 			fakeClient = fakeclient.NewClientBuilder().Build()
+		})
+
+		JustBeforeEach(func() {
 			sm = fakesecretsmanager.New(fakeClient, namespace)
 		})
 
@@ -80,17 +84,17 @@ var _ = Describe("ResourceManager", func() {
 
 		It("should set ForSelfHostedShoot in the values for runtime resource managers deployed to a self-hosted shoot cluster", func() {
 			resourceManager, err := NewRuntimeGardenerResourceManager(fakeClient, namespace, sm, resourcemanager.Values{
-				ClusterIdentity:    ptr.To("foo"),
-				ForSelfHostedShoot: true,
+				ClusterIdentity:                      ptr.To("foo"),
+				SystemComponentsConfigWebhookEnabled: true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resourceManager.GetValues()).To(Equal(resourcemanager.Values{
-				ClusterIdentity:                   ptr.To("foo"),
-				ConcurrentSyncs:                   ptr.To(20),
-				ForSelfHostedShoot:                true,
-				HealthSyncPeriod:                  &metav1.Duration{Duration: time.Minute},
-				Image:                             "europe-docker.pkg.dev/gardener-project/releases/gardener/resource-manager:v0.0.0-master+$Format:%H$",
-				MaxConcurrentNetworkPolicyWorkers: ptr.To(20),
+				ClusterIdentity:                      ptr.To("foo"),
+				ConcurrentSyncs:                      ptr.To(20),
+				SystemComponentsConfigWebhookEnabled: true,
+				HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
+				Image:                                "europe-docker.pkg.dev/gardener-project/releases/gardener/resource-manager:v0.0.0-master+$Format:%H$",
+				MaxConcurrentNetworkPolicyWorkers:    ptr.To(20),
 				NetworkPolicyControllerIngressControllerSelector: &resourcemanagerconfigv1alpha1.IngressControllerSelector{
 					Namespace: "garden",
 					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{
@@ -113,18 +117,47 @@ var _ = Describe("ResourceManager", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resourceManager.GetValues()).To(Equal(resourcemanager.Values{
-				AlwaysUpdate:                       ptr.To(true),
-				ClusterIdentity:                    ptr.To("foo"),
-				ConcurrentSyncs:                    ptr.To(20),
-				HealthSyncPeriod:                   &metav1.Duration{Duration: time.Minute},
-				Image:                              "europe-docker.pkg.dev/gardener-project/releases/gardener/resource-manager:v0.0.0-master+$Format:%H$",
-				MaxConcurrentCSRApproverWorkers:    ptr.To(5),
-				MaxConcurrentHealthWorkers:         ptr.To(10),
-				MaxConcurrentTokenRequestorWorkers: ptr.To(5),
-				ResponsibilityMode:                 resourcemanager.ForShootOrVirtualGarden,
-				TargetNamespaces:                   []string{},
-				WatchedNamespace:                   &namespace,
+				AlwaysUpdate:                         ptr.To(true),
+				ClusterIdentity:                      ptr.To("foo"),
+				ConcurrentSyncs:                      ptr.To(20),
+				HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
+				Image:                                "europe-docker.pkg.dev/gardener-project/releases/gardener/resource-manager:v0.0.0-master+$Format:%H$",
+				MaxConcurrentCSRApproverWorkers:      ptr.To(5),
+				MaxConcurrentHealthWorkers:           ptr.To(10),
+				MaxConcurrentTokenRequestorWorkers:   ptr.To(5),
+				ResponsibilityMode:                   resourcemanager.ForShootOrVirtualGarden,
+				TargetNamespaces:                     []string{},
+				WatchedNamespace:                     &namespace,
+				SystemComponentsConfigWebhookEnabled: true,
 			}))
+		})
+
+		Context("namespace is garden", func() {
+			BeforeEach(func() {
+				namespace = "garden"
+			})
+
+			It("should apply the defaults for new target resource managers", func() {
+				resourceManager, err := NewTargetGardenerResourceManager(fakeClient, namespace, sm, resourcemanager.Values{
+					ClusterIdentity:  ptr.To("foo"),
+					TargetNamespaces: []string{},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resourceManager.GetValues()).To(Equal(resourcemanager.Values{
+					AlwaysUpdate:                         ptr.To(true),
+					ClusterIdentity:                      ptr.To("foo"),
+					ConcurrentSyncs:                      ptr.To(20),
+					HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
+					Image:                                "europe-docker.pkg.dev/gardener-project/releases/gardener/resource-manager:v0.0.0-master+$Format:%H$",
+					MaxConcurrentCSRApproverWorkers:      ptr.To(5),
+					MaxConcurrentHealthWorkers:           ptr.To(10),
+					MaxConcurrentTokenRequestorWorkers:   ptr.To(5),
+					ResponsibilityMode:                   resourcemanager.ForShootOrVirtualGarden,
+					TargetNamespaces:                     []string{},
+					WatchedNamespace:                     &namespace,
+					SystemComponentsConfigWebhookEnabled: false,
+				}))
+			})
 		})
 	})
 
@@ -147,6 +180,8 @@ var _ = Describe("ResourceManager", func() {
 		)
 
 		BeforeEach(func() {
+			namespace = "fake-ns"
+
 			ctrl = gomock.NewController(GinkgoT())
 			resourceManager = mockresourcemanager.NewMockInterface(ctrl)
 
