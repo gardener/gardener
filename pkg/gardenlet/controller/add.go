@@ -100,12 +100,6 @@ func AddToManager(
 			return fmt.Errorf("failed adding BackupEntry controller: %w", err)
 		}
 
-		if err := (&bastion.Reconciler{
-			Config: *cfg.Controllers.Bastion,
-		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
-			return fmt.Errorf("failed adding Bastion controller: %w", err)
-		}
-
 		// TODO(rfranzke): Remove this once all ControllerInstallation reconcilers are added via `shoot.AddToManager`.
 		if err := (&controllerinstallationcare.Reconciler{
 			Config:                   *cfg.Controllers.ControllerInstallationCare,
@@ -134,12 +128,6 @@ func AddToManager(
 			return fmt.Errorf("failed adding ControllerInstallation required controller: %w", err)
 		}
 
-		if err := (&gardenlet.Reconciler{
-			Config: *cfg,
-		}).AddToManager(mgr, gardenCluster, seedClientSet); err != nil {
-			return fmt.Errorf("failed adding Gardenlet controller: %w", err)
-		}
-
 		// TODO(rfranzke): Remove this once all shoot reconcilers are added via `shoot.AddToManager`.
 		if err := lease.AddToManager(mgr, gardenCluster, seedClientSet.RESTClient(), healthManager, nil); err != nil {
 			return fmt.Errorf("failed adding shoot-lease reconciler: %w", err)
@@ -151,10 +139,6 @@ func AddToManager(
 			GardenNamespaceSeed: metav1.NamespaceSystem,
 		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 			return fmt.Errorf("failed adding ManagedSeed controller: %w", err)
-		}
-
-		if err := networkpolicy.AddToManager(ctx, mgr, gardenletCancel, seedCluster, *cfg.Controllers.NetworkPolicy, seedNetworks, nil); err != nil {
-			return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
 		}
 
 		// TODO(tobschli): Remove this once all shoot reconcilers are added via `shoot.AddToManager`.
@@ -188,16 +172,6 @@ func AddToManager(
 			Class:           ptr.To(resourcesv1alpha1.ResourceManagerClassGarden),
 		}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
 			return fmt.Errorf("failed adding TokenRequestorServiceAccount controller: %w", err)
-		}
-
-		if err := vpaevictionrequirements.AddToManager(ctx, mgr, gardenletCancel, *cfg.Controllers.VPAEvictionRequirements, seedCluster); err != nil {
-			return fmt.Errorf("failed adding VPAEvictionRequirements controller: %w", err)
-		}
-
-		if err := (&workloadidentity.Reconciler{
-			Config: cfg.Controllers.TokenRequestorWorkloadIdentity,
-		}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
-			return fmt.Errorf("failed adding TokenRequestorWorkloadIdentity controller: %w", err)
 		}
 
 		return nil
