@@ -72,7 +72,7 @@ var _ = Describe("ETCD Assets", func() {
 					})).To(Succeed())
 				}
 
-				Expect(assets.FetchSecrets(ctx, fakeClient, namespace, "node1")).To(Succeed())
+				Expect(assets.FetchSecrets(ctx, fakeClient, namespace, "node1", true)).To(Succeed())
 
 				Expect(assets["main"].ServerSecret.Data).To(HaveKeyWithValue("tls.crt", []byte("server-cert-main")))
 				Expect(assets["main"].PeerSecret.Data).To(HaveKeyWithValue("tls.crt", []byte("peer-cert-main")))
@@ -123,8 +123,29 @@ var _ = Describe("ETCD Assets", func() {
 				})).To(Succeed())
 
 				singleRoleAssets := ETCDRoleToAssets{"main": {}}
-				Expect(singleRoleAssets.FetchSecrets(ctx, fakeClient, namespace, "node1")).To(Succeed())
+				Expect(singleRoleAssets.FetchSecrets(ctx, fakeClient, namespace, "node1", true)).To(Succeed())
 				Expect(singleRoleAssets["main"].ServerSecret.Name).To(Equal("server-main-node1"))
+			})
+
+			It("should not fetch peer secrets when high availability is not enabled", func() {
+				Expect(fakeClient.Create(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "server-main",
+						Namespace: namespace,
+						Labels: map[string]string{
+							"managed-by":       "secrets-manager",
+							"etcd-secret-type": "server",
+							"etcd-role":        "main",
+							"hostName":         "node1",
+						},
+					},
+					Data: map[string][]byte{"tls.crt": []byte("server-cert-main")},
+				})).To(Succeed())
+
+				singleRoleAssets := ETCDRoleToAssets{"main": {}}
+				Expect(singleRoleAssets.FetchSecrets(ctx, fakeClient, namespace, "node1", false)).To(Succeed())
+				Expect(singleRoleAssets["main"].ServerSecret.Data).To(HaveKeyWithValue("tls.crt", []byte("server-cert-main")))
+				Expect(singleRoleAssets["main"].PeerSecret).To(BeNil())
 			})
 
 			It("should panic if no server secret is found", func() {
@@ -143,7 +164,7 @@ var _ = Describe("ETCD Assets", func() {
 
 				singleRoleAssets := ETCDRoleToAssets{"main": {}}
 				Expect(func() {
-					_ = singleRoleAssets.FetchSecrets(ctx, fakeClient, namespace, "node1")
+					_ = singleRoleAssets.FetchSecrets(ctx, fakeClient, namespace, "node1", true)
 				}).To(Panic())
 			})
 		})

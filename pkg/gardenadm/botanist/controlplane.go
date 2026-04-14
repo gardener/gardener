@@ -157,7 +157,7 @@ func (b *GardenadmBotanist) DeployControlPlaneDeployments(ctx context.Context) e
 		return fmt.Errorf("failed deploying control plane deployments: %w", err)
 	}
 
-	if _, _, err := b.deployOperatingSystemConfig(ctx); err != nil {
+	if _, _, err := b.deployOperatingSystemConfig(ctx, false); err != nil {
 		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
 	}
 

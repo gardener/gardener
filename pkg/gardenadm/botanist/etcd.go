@@ -206,8 +206,9 @@ type ETCDAssets struct {
 // ETCDRoleToAssets is a map whose keys are ETCD roles and whose values are the specific assets.
 type ETCDRoleToAssets map[string]*ETCDAssets
 
-// FetchSecrets fetches the etcd secrets and assigns it to the assets.
-func (e ETCDRoleToAssets) FetchSecrets(ctx context.Context, c client.Client, namespace, hostName string) error {
+// FetchSecrets fetches the etcd secrets and assigns them to the assets. Peer secrets are only
+// fetched when highAvailabilityEnabled is true since they are only generated for multi-member etcd clusters.
+func (e ETCDRoleToAssets) FetchSecrets(ctx context.Context, c client.Client, namespace, hostName string, highAvailabilityEnabled bool) error {
 	for role := range e {
 		findNewestObject := func(secretType string) (client.Object, error) {
 			return kubernetes.NewestObject(ctx, c, &corev1.SecretList{}, nil, client.InNamespace(namespace), client.MatchingLabels{
@@ -224,11 +225,13 @@ func (e ETCDRoleToAssets) FetchSecrets(ctx context.Context, c client.Client, nam
 		}
 		e[role].ServerSecret = serverSecret.(*corev1.Secret)
 
-		peerSecret, err := findNewestObject(etcdconstants.LabelValueSecretTypePeer)
-		if err != nil {
-			return fmt.Errorf("failed to find peer secret for role %q: %w", role, err)
+		if highAvailabilityEnabled {
+			peerSecret, err := findNewestObject(etcdconstants.LabelValueSecretTypePeer)
+			if err != nil {
+				return fmt.Errorf("failed to find peer secret for role %q: %w", role, err)
+			}
+			e[role].PeerSecret = peerSecret.(*corev1.Secret)
 		}
-		e[role].PeerSecret = peerSecret.(*corev1.Secret)
 	}
 
 	return nil
@@ -249,11 +252,15 @@ func (e ETCDRoleToAssets) FetchConfigMaps(ctx context.Context, c client.Client, 
 
 func (e ETCDRoleToAssets) loop(fnVolume func(dir string) error, fnAssetData func(path, key string, value []byte) error) error {
 	for role, assets := range e {
-		for volumeName, data := range map[string]map[string][]byte{
+		volumes := map[string]map[string][]byte{
 			etcdconstants.VolumeNameServerTLS:     assets.ServerSecret.Data,
-			etcdconstants.VolumeNamePeerTLS:       assets.PeerSecret.Data,
 			etcdconstants.VolumeNameConfiguration: toBinaryData(assets.Config.Data),
-		} {
+		}
+		if assets.PeerSecret != nil {
+			volumes[etcdconstants.VolumeNamePeerTLS] = assets.PeerSecret.Data
+		}
+
+		for volumeName, data := range volumes {
 			dir := staticpod.HostPath(etcd.Name(role), volumeName)
 
 			if fnVolume != nil {
