@@ -929,11 +929,6 @@ func (r *Reconciler) newKubeStateMetrics() (component.DeployWaiter, error) {
 }
 
 func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Garden) (istio.Interface, error) {
-	var annotations map[string]string
-	if settings := garden.Spec.RuntimeCluster.Settings; settings != nil && settings.LoadBalancerServices != nil {
-		annotations = settings.LoadBalancerServices.Annotations
-	}
-
 	return sharedcomponent.NewIstio(
 		ctx,
 		r.RuntimeClientSet.Client(),
@@ -946,14 +941,14 @@ func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Gard
 		[]string{
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameIstioBasicAuthServer, istiobasicauthserver.Port),
 		},
-		annotations,
+		getLoadBalancerServiceAnnotations(garden),
 		nil,
-		nil,
+		getLoadBalancerServiceExternalTrafficPolicy(garden),
 		nil,
 		[]corev1.ServicePort{
 			{Name: "tcp", Port: 443, TargetPort: intstr.FromInt32(9443)},
 		},
-		nil,
+		getLoadBalancerServiceProxyProtocol(garden),
 		false,
 		garden.Spec.RuntimeCluster.Provider.Zones,
 		len(garden.Spec.RuntimeCluster.Networking.IPFamilies) == 2,
@@ -1172,7 +1167,25 @@ func getNginxIngressConfig(garden *operatorv1alpha1.Garden) (map[string]string, 
 	return utils.InterfaceMapToStringMap(utils.MergeMaps(defaultConfig, providerConfig)), nil
 }
 
-// GetLoadBalancerServiceAnnotations returns the load balancer annotations set for the garden if any.
+// getLoadBalancerServiceExternalTrafficPolicy returns the external traffic policy for the garden's load balancer services.
+func getLoadBalancerServiceExternalTrafficPolicy(garden *operatorv1alpha1.Garden) *corev1.ServiceExternalTrafficPolicy {
+	if garden.Spec.RuntimeCluster.Settings != nil && garden.Spec.RuntimeCluster.Settings.LoadBalancerServices != nil {
+		return garden.Spec.RuntimeCluster.Settings.LoadBalancerServices.ExternalTrafficPolicy
+	}
+	return nil
+}
+
+// getLoadBalancerServiceProxyProtocol returns whether proxy protocol termination is enabled for the garden's load balancer services.
+func getLoadBalancerServiceProxyProtocol(garden *operatorv1alpha1.Garden) *bool {
+	if garden.Spec.RuntimeCluster.Settings != nil && garden.Spec.RuntimeCluster.Settings.LoadBalancerServices != nil {
+		if pp := garden.Spec.RuntimeCluster.Settings.LoadBalancerServices.ProxyProtocol; pp != nil {
+			return &pp.Allowed
+		}
+	}
+	return nil
+}
+
+// getLoadBalancerServiceAnnotations returns the load balancer annotations set for the garden if any.
 func getLoadBalancerServiceAnnotations(garden *operatorv1alpha1.Garden) map[string]string {
 	if garden.Spec.RuntimeCluster.Settings != nil && garden.Spec.RuntimeCluster.Settings.LoadBalancerServices != nil {
 		// return copy of annotations to prevent any accidental mutation by components

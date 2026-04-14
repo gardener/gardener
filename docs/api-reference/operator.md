@@ -2842,6 +2842,43 @@ string
 </table>
 
 
+<h3 id="loadbalancerservicesproxyprotocol">LoadBalancerServicesProxyProtocol
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#settingloadbalancerservices">SettingLoadBalancerServices</a>)
+</p>
+
+<p>
+LoadBalancerServicesProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>allowed</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<p>Allowed controls whether the ProxyProtocol is optionally allowed for the load balancer services.<br />This should only be enabled if the load balancer services are already using ProxyProtocol or will be reconfigured to use it soon.<br />Until the load balancers are configured with ProxyProtocol, enabling this setting may allow clients to spoof their source IP addresses.<br />The option allows a migration from non-ProxyProtocol to ProxyProtocol without downtime (depending on the infrastructure).<br />Defaults to false.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
 <h3 id="maintenance">Maintenance
 </h3>
 
@@ -3424,6 +3461,30 @@ object (keys:string, values:string)
 <td>
 <em>(Optional)</em>
 <p>Annotations is a map of annotations that will be injected/merged into every load balancer service object.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>externalTrafficPolicy</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#serviceexternaltrafficpolicy-v1-core">ServiceExternalTrafficPolicy</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExternalTrafficPolicy specifies how nodes distribute service traffic they receive on one of the service's<br />externally-facing addresses.<br />Defaults to "Cluster". Can be set to "Local" when the load balancer is transparent (preserves client IP).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>proxyProtocol</code></br>
+<em>
+<a href="#loadbalancerservicesproxyprotocol">LoadBalancerServicesProxyProtocol</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.<br />Defaults to nil, which is equivalent to not allowing ProxyProtocol.</p>
 </td>
 </tr>
 

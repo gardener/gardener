@@ -39,6 +39,9 @@ In most cases, the `cloud-controller-manager` (responsible for managing these lo
 
 By setting the `.spec.runtimeCluster.settings.loadBalancerServices.annotations` field the Gardener administrator can specify a list of annotations which will be injected into the `Service`s of type `LoadBalancer`.
 
+For detailed information on external traffic policy, proxy protocol, and migration guidance, refer to the [Seed Settings - Load Balancer Services](../operations/seed_settings.md#load-balancer-services) documentation. The settings work the same way for the Garden cluster, with the following difference:
+- The Garden cluster does not support per-zone load balancer settings (no `zones` field) — all settings apply globally via `.spec.runtimeCluster.settings.loadBalancerServices.*`
+
 ##### Vertical Pod Autoscaler
 
 `gardener-operator` heavily relies on the Kubernetes [`vertical-pod-autoscaler` component](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler).

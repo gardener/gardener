@@ -63,6 +63,9 @@ spec:
     # loadBalancerServices:
     #   annotations:
     #     foo: bar
+    #   externalTrafficPolicy: Local
+    #   proxyProtocol:
+    #     allowed: true
       verticalPodAutoscaler:
         enabled: true
       # featureGates:

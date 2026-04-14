@@ -340,6 +340,15 @@ func validateRuntimeClusterSettings(runtimeCluster operatorv1alpha1.RuntimeClust
 		return allErrs
 	}
 
+	if runtimeCluster.Settings.LoadBalancerServices != nil {
+		if policy := runtimeCluster.Settings.LoadBalancerServices.ExternalTrafficPolicy; policy != nil {
+			validPolicies := sets.New(string(corev1.ServiceExternalTrafficPolicyCluster), string(corev1.ServiceExternalTrafficPolicyLocal))
+			if !validPolicies.Has(string(*policy)) {
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child("loadBalancerServices", "externalTrafficPolicy"), *policy, sets.List(validPolicies)))
+			}
+		}
+	}
+
 	if runtimeCluster.Settings.VerticalPodAutoscaler != nil {
 		allErrs = append(allErrs, featuresvalidation.ValidateVpaFeatureGates(runtimeCluster.Settings.VerticalPodAutoscaler.FeatureGates, fldPath.Child("verticalPodAutoscaler", "featureGates"))...)
 		allErrs = append(allErrs, gardencorevalidation.ValidateVerticalPodAutoscalerMaxAllowed(runtimeCluster.Settings.VerticalPodAutoscaler.MaxAllowed, fldPath.Child("verticalPodAutoscaler"))...)
