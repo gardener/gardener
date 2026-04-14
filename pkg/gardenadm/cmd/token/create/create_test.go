@@ -13,11 +13,15 @@ import (
 	. "github.com/onsi/gomega/gbytes"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
@@ -97,7 +101,13 @@ var _ = Describe("Create", func() {
 				Expect(command.Flags().Set("print-join-command", "true")).To(Succeed())
 			})
 
+			It("should return an error because the cluster is not a Shoot", func() {
+				Expect(command.RunE(command, []string{token})).To(MatchError(ContainSubstring("`--print-join-command` can only be used when the kubeconfig points to a Shoot cluster")))
+			})
+
 			It("should successfully print the join command", func() {
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ConfigMapNameShootInfo, Namespace: metav1.NamespaceSystem}})).To(Succeed())
+
 				Expect(command.RunE(command, []string{token})).To(Succeed())
 				Eventually(stdOut).Should(Say(`gardenadm join --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" some-host
 `))
@@ -111,7 +121,17 @@ var _ = Describe("Create", func() {
 				Expect(command.Flags().Set("shoot-namespace", "namespace")).To(Succeed())
 			})
 
+			It("should return an error because the cluster is not a garden", func() {
+				Expect(command.RunE(command, []string{token})).To(MatchError(ContainSubstring("`--print-connect-command` can only be used when the kubeconfig points to the garden cluster")))
+			})
+
 			It("should successfully print the connect command", func() {
+				restMapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{gardencorev1beta1.SchemeGroupVersion})
+				restMapper.Add(gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"), meta.RESTScopeNamespace)
+
+				fakeClient = fakeclient.NewClientBuilder().WithRESTMapper(restMapper).Build()
+				clientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).WithRESTConfig(restConfig).Build()
+
 				Expect(command.RunE(command, []string{token})).To(Succeed())
 				Eventually(stdOut).Should(Say(`gardenadm connect --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" some-host
 `))
