@@ -301,7 +301,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.gardenerDiscoveryServer, err = r.newGardenerDiscoveryServer(garden, secretsManager, wildcardCertSecretName, workloadIdentityTokenIssuer)
+	c.gardenerDiscoveryServer, err = r.newGardenerDiscoveryServer(garden, secretsManager, wildcardCertSecretName, workloadIdentityTokenIssuer, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -1641,7 +1641,12 @@ func (r *Reconciler) newGardenerDiscoveryServer(
 	secretsManager secretsmanager.Interface,
 	wildcardCertSecretName *string,
 	workloadIdentityTokenIssuer string,
+	ingressGatewayValues []istio.IngressGatewayValues,
 ) (component.DeployWaiter, error) {
+	if len(ingressGatewayValues) != 1 {
+		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the discovery server config")
+	}
+
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerDiscoveryServer)
 	if err != nil {
 		return nil, err
@@ -1654,6 +1659,7 @@ func (r *Reconciler) newGardenerDiscoveryServer(
 		gardenerdiscoveryserver.Values{
 			Image:                       image.String(),
 			Domain:                      helper.DiscoveryServerDomain(garden),
+			IstioIngressGatewayLabels:   ingressGatewayValues[0].Labels,
 			TLSSecretName:               discoveryServerTLSSecretName(garden, wildcardCertSecretName),
 			WorkloadIdentityTokenIssuer: workloadIdentityTokenIssuer,
 		},
