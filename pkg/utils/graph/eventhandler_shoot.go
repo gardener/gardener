@@ -256,6 +256,9 @@ func (g *graph) HandleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 	}
 
 	if g.forSelfHostedShoots {
+		configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, metav1.NamespaceSystem, v1beta1constants.ClusterIdentity)
+		g.addEdge(configMapVertex, shootVertex)
+
 		leaseVertex := g.getOrCreateVertex(VertexTypeLease, shoot.Namespace, gardenlet.ResourcePrefixSelfHostedShoot+shoot.Name)
 		g.addEdge(leaseVertex, shootVertex)
 	}

@@ -57,20 +57,13 @@ func AddToManager(
 		return err
 	}
 
-	// TODO(rfranzke): Remove this code again once the Shoot object gets registered in the garden cluster - then we can
-	//  adapt the shoot authorizer (via the resource dependency graph) to allow 'read' access to this ConfigMap (similar
-	//  to how it's done for seeds).
-	gardenClusterIdentity := ""
-	if !gardenletutils.IsResponsibleForSelfHostedShoot() {
-		configMap := &corev1.ConfigMap{}
-		if err := gardenCluster.GetClient().Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: v1beta1constants.ClusterIdentity}, configMap); err != nil {
-			return fmt.Errorf("failed getting cluster-identity ConfigMap in garden cluster: %w", err)
-		}
-		var ok bool
-		gardenClusterIdentity, ok = configMap.Data[v1beta1constants.ClusterIdentity]
-		if !ok {
-			return fmt.Errorf("cluster-identity ConfigMap data does not have %q key", v1beta1constants.ClusterIdentity)
-		}
+	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ClusterIdentity, Namespace: metav1.NamespaceSystem}}
+	if err := gardenCluster.GetClient().Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
+		return fmt.Errorf("failed getting cluster-identity ConfigMap in garden cluster: %w", err)
+	}
+	gardenClusterIdentity, ok := configMap.Data[v1beta1constants.ClusterIdentity]
+	if !ok {
+		return fmt.Errorf("cluster-identity ConfigMap data does not have %q key", v1beta1constants.ClusterIdentity)
 	}
 
 	seedIsSelfHostedShoot, err := gardenletutils.SeedIsSelfHostedShoot(ctx, seedCluster.GetAPIReader())
