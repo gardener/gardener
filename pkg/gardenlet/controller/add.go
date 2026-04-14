@@ -81,24 +81,8 @@ func AddToManager(
 		}
 	}
 
-	seedNetworks := networkConfigForNetworkPolicyController(cfg, selfHostedShoot)
-
 	if gardenletutils.IsResponsibleForSelfHostedShoot() {
 		mgr.GetLogger().Info("Running in self-hosted shoot, registering minimal set of controllers")
-
-		if err := (&backupbucket.Reconciler{
-			Config:          *cfg.Controllers.BackupBucket,
-			GardenNamespace: metav1.NamespaceSystem,
-		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
-			return fmt.Errorf("failed adding BackupBucket controller: %w", err)
-		}
-
-		if err := (&backupentry.Reconciler{
-			Config:          *cfg.Controllers.BackupEntry,
-			GardenNamespace: metav1.NamespaceSystem,
-		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
-			return fmt.Errorf("failed adding BackupEntry controller: %w", err)
-		}
 
 		// TODO(rfranzke): Remove this once all ControllerInstallation reconcilers are added via `shoot.AddToManager`.
 		if err := (&controllerinstallationcare.Reconciler{
@@ -133,14 +117,6 @@ func AddToManager(
 			return fmt.Errorf("failed adding shoot-lease reconciler: %w", err)
 		}
 
-		if err := (&managedseed.Reconciler{
-			Config:              *cfg,
-			ShootClientMap:      shootClientMap,
-			GardenNamespaceSeed: metav1.NamespaceSystem,
-		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
-			return fmt.Errorf("failed adding ManagedSeed controller: %w", err)
-		}
-
 		// TODO(tobschli): Remove this once all shoot reconcilers are added via `shoot.AddToManager`.
 		if err := (&state.Reconciler{
 			Config: *cfg.Controllers.ShootState,
@@ -165,15 +141,6 @@ func AddToManager(
 			return fmt.Errorf("failed adding status reconciler: %w", err)
 		}
 
-		// TargetNamespace is intentionally left empty: the SA namespace is provided via the
-		// serviceaccount.resources.gardener.cloud/namespace annotation set by AccessSecret.Reconcile().
-		if err := (&tokenrequestor.Reconciler{
-			ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs, 0),
-			Class:           ptr.To(resourcesv1alpha1.ResourceManagerClassGarden),
-		}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
-			return fmt.Errorf("failed adding TokenRequestorServiceAccount controller: %w", err)
-		}
-
 		return nil
 	}
 
@@ -183,15 +150,17 @@ func AddToManager(
 	}
 
 	if err := (&backupbucket.Reconciler{
-		Config:   *cfg.Controllers.BackupBucket,
-		SeedName: cfg.SeedConfig.Name,
+		Config:          *cfg.Controllers.BackupBucket,
+		SeedName:        seedName(cfg),
+		GardenNamespace: gardenNamespace(),
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding BackupBucket controller: %w", err)
 	}
 
 	if err := (&backupentry.Reconciler{
-		Config:   *cfg.Controllers.BackupEntry,
-		SeedName: cfg.SeedConfig.Name,
+		Config:          *cfg.Controllers.BackupEntry,
+		SeedName:        seedName(cfg),
+		GardenNamespace: gardenNamespace(),
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding BackupEntry controller: %w", err)
 	}
@@ -213,23 +182,26 @@ func AddToManager(
 	}
 
 	if err := (&managedseed.Reconciler{
-		Config:         *cfg,
-		ShootClientMap: shootClientMap,
+		Config:              *cfg,
+		ShootClientMap:      shootClientMap,
+		GardenNamespaceSeed: gardenNamespace(),
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding ManagedSeed controller: %w", err)
 	}
 
-	if err := networkpolicy.AddToManager(ctx, mgr, gardenletCancel, seedCluster, *cfg.Controllers.NetworkPolicy, seedNetworks, nil); err != nil {
+	if err := networkpolicy.AddToManager(ctx, mgr, gardenletCancel, seedCluster, *cfg.Controllers.NetworkPolicy, networkConfigForNetworkPolicyController(cfg, selfHostedShoot), nil); err != nil {
 		return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
 	}
 
-	// When the seed is a self-hosted shoot cluster, the gardenlet responsible for the self-hosted shoot in the
-	// kube-system namespace runs this controller.
-	if !seedIsSelfHostedShoot {
+	if gardenletutils.IsResponsibleForSelfHostedShoot() || !seedIsSelfHostedShoot {
+		// The token requestor controller is only added when:
+		// (a) the gardenlet is responsible for a self-hosted shoot, or
+		// (b) the gardenlet is responsible for a seed that is not a self-hosted shoot (since here the shoot gardenlet already
+		//     runs the controller, see (a)).
 		if err := (&tokenrequestor.Reconciler{
 			ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs, 0),
 			Class:           ptr.To(resourcesv1alpha1.ResourceManagerClassGarden),
-			TargetNamespace: gardenerutils.ComputeGardenNamespace(cfg.SeedConfig.Name),
+			TargetNamespace: targetNamespaceForTokenRequestorController(cfg),
 		}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
 			return fmt.Errorf("failed adding TokenRequestorServiceAccount controller: %w", err)
 		}
@@ -254,6 +226,30 @@ func AddToManager(
 	}
 
 	return nil
+}
+
+func gardenNamespace() string {
+	if gardenletutils.IsResponsibleForSelfHostedShoot() {
+		return metav1.NamespaceSystem
+	}
+	return v1beta1constants.GardenNamespace
+}
+
+func seedName(cfg *gardenletconfigv1alpha1.GardenletConfiguration) string {
+	if gardenletutils.IsResponsibleForSelfHostedShoot() {
+		return ""
+	}
+	return cfg.SeedConfig.Name
+}
+
+func targetNamespaceForTokenRequestorController(cfg *gardenletconfigv1alpha1.GardenletConfiguration) string {
+	if gardenletutils.IsResponsibleForSelfHostedShoot() {
+		// TargetNamespace is intentionally left empty when gardenlet is responsible for a self-hosted shoot: the
+		// ServiceAccount namespace is provided via the serviceaccount.resources.gardener.cloud/namespace annotation on the
+		// access token Secrets set by the AccessSecret.Reconcile() function.
+		return ""
+	}
+	return gardenerutils.ComputeGardenNamespace(cfg.SeedConfig.Name)
 }
 
 func networkConfigForNetworkPolicyController(cfg *gardenletconfigv1alpha1.GardenletConfiguration, selfHostedShoot *gardencorev1beta1.Shoot) gardencorev1beta1.SeedNetworks {
