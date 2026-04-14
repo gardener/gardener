@@ -259,7 +259,7 @@ func (b *GardenadmBotanist) staticControlPlanePods(ctx context.Context) (staticP
 func NewClientSetFromFile(kubeconfigPath string, scheme *runtime.Scheme) (kubernetes.Interface, error) {
 	return kubernetes.NewClientFromFile("", kubeconfigPath,
 		kubernetes.WithClientOptions(client.Options{Scheme: scheme}),
-		kubernetes.WithClientConnectionOptions(componentbaseconfigv1alpha1.ClientConnectionConfiguration{QPS: 100, Burst: 130}),
+		kubernetes.WithClientConnectionOptions(componentbaseconfigv1alpha1.ClientConnectionConfiguration{QPS: -1}),
 		kubernetes.WithDisabledCachedClient(),
 	)
 }
