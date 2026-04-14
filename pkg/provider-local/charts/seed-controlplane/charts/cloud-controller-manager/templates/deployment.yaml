@@ -33,9 +33,13 @@ spec:
         role: cloud-controller-manager
         networking.gardener.cloud/to-dns: allowed
         {{- if (include "is-shoot" .) }}
+        {{- if hasPrefix "shoot-" .Release.Namespace }}
         networking.resources.gardener.cloud/to-kube-apiserver-tcp-443: allowed
         # Needed for looking up where machine pods are running for setting up routes on the load balancer containers.
         networking.gardener.cloud/to-runtime-apiserver: allowed
+        {{- else }}
+        networking.gardener.cloud/to-apiserver: allowed
+        {{- end }}
         {{- end }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
@@ -99,9 +103,11 @@ spec:
         - name: kubeconfig
           mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
           readOnly: true
+        {{- if .Values.hasManagedInfrastructure }}
         - name: cloudprovider
           mountPath: /var/run/secrets/gardener.cloud/cloudprovider
           readOnly: true
+        {{- end }}
         {{- end }}
         - name: cloud-provider-config
           mountPath: /etc/kubernetes/cloudprovider
@@ -129,9 +135,11 @@ spec:
               - key: token
                 path: token
               optional: false
+      {{- if .Values.hasManagedInfrastructure }}
       - name: cloudprovider
         secret:
           secretName: cloudprovider
+      {{- end }}
       {{- end }}
       - name: cloud-provider-config
         configMap:

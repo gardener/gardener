@@ -1,6 +1,8 @@
 gardener:
   selfHostedShoot:
     listenAddress: fd00:ff::4
+    virtualGarden:
+      listenAddress: fd00:ff::3
 
 networking:
   ipFamily: dual

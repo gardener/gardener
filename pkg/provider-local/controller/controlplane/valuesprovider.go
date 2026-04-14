@@ -163,18 +163,21 @@ func (vp *valuesProvider) GetConfigChartValues(
 		return nil, err
 	}
 
-	// Use cloud-controller-manager's in-cluster credentials by default. Use the kind kubeconfig from the cloudprovider
-	// secret for self-hosted shoots with managed infrastructure.
-	runtimeKubeconfig := ""
-	if v1beta1helper.IsShootSelfHosted(cluster.Shoot.Spec.Provider.Workers) && v1beta1helper.HasManagedInfrastructure(cluster.Shoot) {
-		runtimeKubeconfig = "/var/run/secrets/gardener.cloud/cloudprovider/kubeconfig"
+	var runtimeCluster map[string]any
+	if v1beta1helper.HasManagedInfrastructure(cluster.Shoot) {
+		runtimeCluster = map[string]any{
+			"namespace": cluster.Shoot.Status.TechnicalID,
+		}
+
+		// Use cloud-controller-manager's in-cluster credentials by default. Use the kind kubeconfig from the cloudprovider
+		// secret for self-hosted shoots with managed infrastructure.
+		if v1beta1helper.IsShootSelfHosted(cluster.Shoot.Spec.Provider.Workers) {
+			runtimeCluster["kubeconfig"] = "/var/run/secrets/gardener.cloud/cloudprovider/kubeconfig"
+		}
 	}
 
 	return map[string]any{
-		"runtimeCluster": map[string]any{
-			"namespace":  cluster.Shoot.Status.TechnicalID,
-			"kubeconfig": runtimeKubeconfig,
-		},
+		"runtimeCluster": runtimeCluster,
 		"loadBalancer": map[string]any{
 			"image": config.LoadBalancer.Image,
 		},
@@ -200,8 +203,9 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 			"genericTokenKubeconfigSecretName": extensionscontroller.GenericTokenKubeconfigSecretNameFromCluster(cluster),
 		},
 		local.CloudControllerManagerName: map[string]any{
-			"replicas":    extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
-			"clusterName": cluster.Shoot.Status.TechnicalID,
+			"replicas":                 extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
+			"clusterName":              cluster.Shoot.Status.TechnicalID,
+			"hasManagedInfrastructure": v1beta1helper.HasManagedInfrastructure(cluster.Shoot),
 			"podAnnotations": map[string]interface{}{
 				"checksum/configmap-" + local.CloudProviderConfigName: checksums[local.CloudProviderConfigName],
 			},

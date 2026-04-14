@@ -35,9 +35,9 @@ parse_flags() {
 
 parse_flags "$@"
 
-LOOPBACK_IP_ADDRESSES=(172.18.255.4 172.18.255.53 fd00:ff::53)
+LOOPBACK_IP_ADDRESSES=(172.18.255.3 172.18.255.4 172.18.255.53 fd00:ff::53)
 if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-  LOOPBACK_IP_ADDRESSES+=(fd00:ff::4)
+  LOOPBACK_IP_ADDRESSES+=(fd00:ff::3 fd00:ff::4)
 fi
 
 # load balancer range (172.18.255.240/28)

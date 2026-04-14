@@ -1,0 +1,14 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+metadata:
+  name: root
+  namespace: garden
+spec:
+  kubernetes:
+    kubeAPIServer:
+      # Enable feature gate and runtime config to be able to use MutatingAdmissionPolicy in the shoot cluster.
+      # This is used by the resources in dev-setup/gardenadm/loadbalancer-services.
+      featureGates:
+        MutatingAdmissionPolicy: true
+      runtimeConfig:
+        admissionregistration.k8s.io/v1beta1: true

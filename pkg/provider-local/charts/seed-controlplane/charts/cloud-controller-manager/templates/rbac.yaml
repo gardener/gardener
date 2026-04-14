@@ -13,7 +13,7 @@ metadata:
     app: kubernetes
     role: cloud-controller-manager
 ---
-{{- if (include "is-shoot" .) }}
+{{- if and (include "is-shoot" .) .Values.hasManagedInfrastructure }}
 # For running the cloud-controller-manager for a shoot cluster, we need permissions to look up where shoot machine pods
 # are running in the runtime cluster. This is needed for the cloud-controller-manager to program routes in the load
 # balancer containers, as shoot nodes (machine pods) are not directly reachable by load balancer containers in the kind

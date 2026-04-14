@@ -3,6 +3,7 @@ images:
 
 replicas: 1
 clusterName: ""
+hasManagedInfrastructure: true
 podAnnotations: {}
 podLabels: {}
 priorityClassName: system-cluster-critical

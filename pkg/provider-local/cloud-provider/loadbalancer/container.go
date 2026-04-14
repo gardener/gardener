@@ -119,7 +119,7 @@ func (p *Provider) ensureImage(ctx context.Context, imageName string) error {
 // This is not needed if cloud-controller-manager-local runs for the kind cluster itself, as the kind node IPs are
 // directly reachable within the kind network.
 func (p *Provider) ensureIPRoutes(ctx context.Context, containerName string, nodes []*corev1.Node) error {
-	if p.Config.RuntimeCluster == nil {
+	if p.RuntimeClient == nil {
 		return nil
 	}
 
@@ -206,7 +206,7 @@ func getLoadBalancerStatusFromContainer(service *corev1.Service, networkSettings
 		return nil, fmt.Errorf("failed to get external IPs for container: %w", err)
 	}
 
-	return loadBalancerStatusWithIPs(service, ips.external), nil
+	return loadBalancerStatusWithIPs(service, ips.external, corev1.LoadBalancerIPModeProxy), nil
 }
 
 func getLoadBalancerIPsFromContainer(networkSettings *container.NetworkSettings) (*loadBalancerIPs, error) {
@@ -260,20 +260,20 @@ func getLoadBalancerIPsFromContainer(networkSettings *container.NetworkSettings)
 	return ips, nil
 }
 
-func loadBalancerStatusWithIPs(service *corev1.Service, externalIPs ipSet) *corev1.LoadBalancerStatus {
+func loadBalancerStatusWithIPs(service *corev1.Service, externalIPs ipSet, ipMode corev1.LoadBalancerIPMode) *corev1.LoadBalancerStatus {
 	ingresses := make([]corev1.LoadBalancerIngress, 0, externalIPs.Len())
 
 	if slices.Contains(service.Spec.IPFamilies, corev1.IPv4Protocol) {
 		ingresses = append(ingresses, corev1.LoadBalancerIngress{
 			IP:     externalIPs.ipv4.String(),
-			IPMode: ptr.To(corev1.LoadBalancerIPModeProxy),
+			IPMode: ptr.To(ipMode),
 		})
 	}
 
 	if slices.Contains(service.Spec.IPFamilies, corev1.IPv6Protocol) {
 		ingresses = append(ingresses, corev1.LoadBalancerIngress{
 			IP:     externalIPs.ipv6.String(),
-			IPMode: ptr.To(corev1.LoadBalancerIPModeProxy),
+			IPMode: ptr.To(ipMode),
 		})
 	}
 

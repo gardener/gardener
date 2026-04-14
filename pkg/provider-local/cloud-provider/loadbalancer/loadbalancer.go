@@ -43,6 +43,10 @@ func (p *Provider) GetLoadBalancerName(_ context.Context, _ string, service *cor
 // Implementations must treat the *v1.Service parameter as read-only and not modify it.
 // Parameter 'clusterName' is the name of the cluster as presented to cloud-controller-manager.
 func (p *Provider) GetLoadBalancer(ctx context.Context, clusterName string, service *corev1.Service) (status *corev1.LoadBalancerStatus, exists bool, err error) {
+	if status, isUnmanaged := p.getLoadBalancerStatusForUnmanagedInfra(service, clusterName); isUnmanaged {
+		return status, true, nil
+	}
+
 	name := p.GetLoadBalancerName(ctx, clusterName, service)
 
 	info, err := p.DockerClient.ContainerInspect(ctx, name)
@@ -77,6 +81,10 @@ func (p *Provider) GetLoadBalancer(ctx context.Context, clusterName string, serv
 // be used for cases like when the load balancer is not ready yet (e.g., it is still being provisioned) and polling at a
 // fixed rate is preferred over backing off exponentially in order to minimize latency.
 func (p *Provider) EnsureLoadBalancer(ctx context.Context, clusterName string, service *corev1.Service, nodes []*corev1.Node) (*corev1.LoadBalancerStatus, error) {
+	if status, isUnmanaged := p.getLoadBalancerStatusForUnmanagedInfra(service, clusterName); isUnmanaged {
+		return status, nil
+	}
+
 	name := p.GetLoadBalancerName(ctx, clusterName, service)
 
 	info, err := p.DockerClient.ContainerInspect(ctx, name)
@@ -175,6 +183,10 @@ func (p *Provider) EnsureLoadBalancer(ctx context.Context, clusterName string, s
 // Implementations must treat the *v1.Service and []*v1.Node parameters as read-only and not modify them.
 // Parameter 'clusterName' is the name of the cluster as presented to cloud-controller-manager
 func (p *Provider) UpdateLoadBalancer(ctx context.Context, clusterName string, service *corev1.Service, nodes []*corev1.Node) error {
+	if _, isUnmanaged := p.getLoadBalancerStatusForUnmanagedInfra(service, clusterName); isUnmanaged {
+		return nil
+	}
+
 	name := p.GetLoadBalancerName(ctx, clusterName, service)
 
 	klog.V(2).InfoS("Updating load balancer", "container", name, "service", client.ObjectKeyFromObject(service), "nodes", len(nodes))
@@ -196,6 +208,10 @@ func (p *Provider) UpdateLoadBalancer(ctx context.Context, clusterName string, s
 // Implementations must treat the *v1.Service parameter as read-only and not modify it.
 // Parameter 'clusterName' is the name of the cluster as presented to cloud-controller-manager
 func (p *Provider) EnsureLoadBalancerDeleted(ctx context.Context, clusterName string, service *corev1.Service) error {
+	if _, isUnmanaged := p.getLoadBalancerStatusForUnmanagedInfra(service, clusterName); isUnmanaged {
+		return nil
+	}
+
 	name := p.GetLoadBalancerName(ctx, clusterName, service)
 
 	klog.V(2).InfoS("Deleting load balancer container", "container", name, "service", client.ObjectKeyFromObject(service))
