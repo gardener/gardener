@@ -683,7 +683,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
 		})
 
-		It("should still create ingress and secrets when ShootNodeLoggingEnabled is false", func() {
+		It("should create ingress and kubeRBACProxy resources when ShootNodeLoggingEnabled is false", func() {		  
 			values.ShootNodeLoggingEnabled = false
 			component = New(c, namespace, values, fakeSecretManager)
 
