@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -740,8 +741,8 @@ var _ = Describe("Etcd", func() {
 		secretNameServer = "etcd-server-" + role
 		secretNameServerPeer = "etcd-peer-server-" + role
 		if staticPodConfig != nil && len(staticPodConfig.ControlPlaneNodes) > 0 {
-			secretNameServer += "-" + staticPodConfig.ControlPlaneNodes[0].IPAddress.String()
-			secretNameServerPeer += "-" + staticPodConfig.ControlPlaneNodes[0].IPAddress.String()
+			secretNameServer += "-" + strings.ReplaceAll(staticPodConfig.ControlPlaneNodes[0].IPAddress.String(), ":", "-")
+			secretNameServerPeer += "-" + strings.ReplaceAll(staticPodConfig.ControlPlaneNodes[0].IPAddress.String(), ":", "-")
 		}
 		etcdName = "etcd-" + role
 		vpaName = etcdName

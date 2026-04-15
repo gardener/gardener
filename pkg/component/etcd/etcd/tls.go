@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -123,7 +124,8 @@ func ipSuffix(ip net.IP) string {
 	if len(ip) == 0 {
 		return ""
 	}
-	return "-" + ip.String()
+	// Replace colons with dashes so that IPv6 addresses produce valid Kubernetes object names.
+	return "-" + strings.ReplaceAll(ip.String(), ":", "-")
 }
 
 // ClientServiceDNSNames returns the DNS names for the ETCD.
