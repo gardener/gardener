@@ -5,13 +5,18 @@
 package imagevector_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/yaml"
 
 	. "github.com/gardener/gardener/pkg/utils/imagevector"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("validation", func() {
@@ -138,6 +143,65 @@ var _ = Describe("validation", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("components[].imageVectorOverwrite"),
+				})),
+			))
+		})
+	})
+
+	Describe("#ValidateCABundle", func() {
+		var (
+			fldPath      *field.Path
+			validCertPEM string
+		)
+
+		BeforeEach(func() {
+			fldPath = field.NewPath("caBundle")
+
+			ca, err := (&secretsutils.CertificateSecretConfig{
+				Name:       "test-ca",
+				CommonName: "TestCA",
+				CertType:   secretsutils.CACert,
+			}).GenerateCertificate()
+			Expect(err).NotTo(HaveOccurred())
+			validCertPEM = string(ca.SecretData()[secretsutils.DataKeyCertificateCA])
+		})
+
+		It("should allow nil", func() {
+			Expect(ValidateCABundle(nil, fldPath)).To(BeEmpty())
+			Expect(ValidateCABundle(&CABundle{Inline: nil}, fldPath)).To(BeEmpty())
+		})
+
+		It("should allow a valid CABundle", func() {
+			Expect(ValidateCABundle(&CABundle{Inline: &validCertPEM}, fldPath)).To(BeEmpty())
+		})
+
+		It("should forbid non-PEM inline", func() {
+			inline := "not-a-certificate"
+			errs := ValidateCABundle(&CABundle{Inline: &inline}, fldPath)
+			Expect(errs).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("caBundle.inline"),
+				"Detail": ContainSubstring("not a valid PEM-encoded certificate"),
+			}))))
+		})
+
+		It("should fail when inline certificate is already expired", func() {
+			DeferCleanup(test.WithVar(&secretsutils.Clock, testclock.NewFakeClock(time.Now().Add(-8*24*time.Hour))))
+
+			cert, err := (&secretsutils.CertificateSecretConfig{
+				Name:       "test",
+				CommonName: "test",
+				CertType:   secretsutils.CACert,
+				Validity:   new(24 * time.Hour),
+			}).GenerateCertificate()
+			Expect(err).NotTo(HaveOccurred())
+			expired := string(cert.CertificatePEM)
+
+			Expect(ValidateCABundle(&CABundle{Inline: &expired}, fldPath)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("caBundle.inline"),
+					"Detail": Equal("certificate has expired"),
 				})),
 			))
 		})

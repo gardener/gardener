@@ -5,6 +5,7 @@
 package imagevector_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/onsi/gomega/types"
 
 	. "github.com/gardener/gardener/pkg/utils/imagevector"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -298,13 +300,13 @@ images:
 
 		Describe("#Read", func() {
 			It("should successfully read a JSON image vector", func() {
-				vector, err := Read([]byte(image1Src1VectorJSON))
+				vector, _, err := Read([]byte(image1Src1VectorJSON))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vector).To(Equal(image1Src1Vector))
 			})
 
 			It("should successfully read a YAML image vector", func() {
-				vector, err := Read([]byte(image1Src1VectorYAML))
+				vector, _, err := Read([]byte(image1Src1VectorYAML))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vector).To(Equal(image1Src1Vector))
 			})
@@ -315,15 +317,15 @@ images:
 				tmpFile, cleanup := withTempFile("imagevector", []byte(image1Src1VectorJSON))
 				defer cleanup()
 
-				vector, err := ReadFile(tmpFile.Name())
+				vector, _, err := ReadFile(tmpFile.Name())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vector).To(Equal(image1Src1Vector))
 			})
 		})
 
-		DescribeTable("#Merge",
+		DescribeTable("#MergeImageVectors",
 			func(v1, v2, expected ImageVector) {
-				Expect(Merge(v1, v2)).To(Equal(expected))
+				Expect(MergeImageVectors(v1, v2)).To(Equal(expected))
 			},
 
 			Entry("no override", ImageVector{image1Src1}, ImageVector{image1Src2}, ImageVector{image1Src1, image1Src2}),
@@ -346,13 +348,65 @@ images:
 				defer cleanup()
 				defer test.WithEnvVar(OverrideEnv, file.Name())()
 
-				Expect(WithEnvOverride(vector, "IMAGEVECTOR_OVERWRITE")).To(Equal(ImageVector{image1Src1, image2Src1}))
+				resultVector, _, err := WithEnvOverride(vector, nil, "IMAGEVECTOR_OVERWRITE")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resultVector).To(Equal(ImageVector{image1Src1, image2Src1}))
 			})
 
 			It("should keep the vector as-is if the env variable is not set", func() {
-				Expect(WithEnvOverride(image1Src1Vector, "IMAGEVECTOR_OVERWRITE")).To(Equal(image1Src1Vector))
+				resultVector, _, err := WithEnvOverride(image1Src1Vector, nil, "IMAGEVECTOR_OVERWRITE")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resultVector).To(Equal(image1Src1Vector))
 			})
 		})
+
+		Describe("#Read with caBundle", func() {
+			It("should read a vector without caBundle", func() {
+				_, caBundle, err := Read([]byte(image1Src1VectorYAML))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(caBundle).To(BeNil())
+			})
+
+			It("should read a vector with an inline caBundle", func() {
+				ca, err := (&secretsutils.CertificateSecretConfig{
+					Name:       "test-ca",
+					CommonName: "TestCA",
+					CertType:   secretsutils.CACert,
+				}).GenerateCertificate()
+				Expect(err).NotTo(HaveOccurred())
+				certPEM := string(ca.SecretData()[secretsutils.DataKeyCertificateCA])
+
+				certPEMJSON, err := json.Marshal(certPEM)
+				Expect(err).NotTo(HaveOccurred())
+				vectorWithCA := fmt.Sprintf(`{"images":[{"name":"test","repository":"registry.example.com/test","tag":"v1.0"}],"caBundle":{"inline":%s}}`, string(certPEMJSON))
+				_, caBundle, err := Read([]byte(vectorWithCA))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(caBundle).NotTo(BeNil())
+				Expect(caBundle.Inline).To(Equal(&certPEM))
+			})
+		})
+
+		DescribeTable("#MergeCABundle",
+			func(base, override, expected *CABundle) {
+				Expect(MergeCABundle(base, override)).To(Equal(expected))
+			},
+			Entry("both nil returns nil", nil, nil, nil),
+			Entry("override wins over base",
+				&CABundle{Inline: new("base")},
+				&CABundle{Inline: new("override")},
+				&CABundle{Inline: new("override")},
+			),
+			Entry("nil override keeps base",
+				&CABundle{Inline: new("base")},
+				nil,
+				&CABundle{Inline: new("base")},
+			),
+			Entry("nil base with override returns override",
+				nil,
+				&CABundle{Inline: new("override")},
+				&CABundle{Inline: new("override")},
+			),
+		)
 
 		DescribeTable("#FindImage",
 			func(vec ImageVector, name string, opts []FindOptionFunc, imageMatcher, errorMatcher types.GomegaMatcher) {
