@@ -31,12 +31,19 @@ func NewPrometheusOperator(
 		return nil, err
 	}
 
+	// Thanos sidecar image is optional and available only when provided via IMAGEVECTOR_OVERWRITE.
+	var imageThanosSidecar string
+	if thanosImage, err := imagevector.Containers().FindImage("thanos"); err == nil {
+		imageThanosSidecar = thanosImage.String()
+	}
+
 	return prometheusoperator.New(
 		c,
 		gardenNamespaceName,
 		prometheusoperator.Values{
 			Image:               operatorImage.String(),
 			ImageConfigReloader: reloaderImage.String(),
+			ImageThanosSidecar:  imageThanosSidecar,
 			PriorityClassName:   priorityClassName,
 		},
 	), nil

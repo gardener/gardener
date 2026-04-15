@@ -31,8 +31,11 @@ var TimeoutWaitForManagedResource = 5 * time.Minute
 type Values struct {
 	// Image defines the container image of prometheus-operator.
 	Image string
-	// Image defines the container image of config-reloader.
+	// ImageConfigReloader defines the container image of config-reloader.
 	ImageConfigReloader string
+	// ImageThanosSidecar optionally defines the default base image for Thanos sidecars.
+	// When non-empty, prometheus-operator is started with --thanos-default-base-image.
+	ImageThanosSidecar string
 	// PriorityClassName is the name of the priority class for the deployment.
 	PriorityClassName string
 }

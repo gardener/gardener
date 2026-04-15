@@ -23,6 +23,19 @@ const (
 )
 
 func (p *prometheusOperator) deployment() *appsv1.Deployment {
+	args := []string{
+		fmt.Sprintf("--prometheus-config-reloader=%s", p.values.ImageConfigReloader),
+		"--config-reloader-cpu-request=0",
+		"--config-reloader-cpu-limit=0",
+		"--config-reloader-memory-request=20M",
+		"--config-reloader-memory-limit=0",
+		"--enable-config-reloader-probes=false",
+	}
+
+	if p.values.ImageThanosSidecar != "" {
+		args = append(args, fmt.Sprintf("--thanos-default-base-image=%s", p.values.ImageThanosSidecar))
+	}
+
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deploymentName,
@@ -53,14 +66,7 @@ func (p *prometheusOperator) deployment() *appsv1.Deployment {
 							Name:            containerName,
 							Image:           p.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
-							Args: []string{
-								fmt.Sprintf("--prometheus-config-reloader=%s", p.values.ImageConfigReloader),
-								"--config-reloader-cpu-request=0",
-								"--config-reloader-cpu-limit=0",
-								"--config-reloader-memory-request=20M",
-								"--config-reloader-memory-limit=0",
-								"--enable-config-reloader-probes=false",
-							},
+							Args:            args,
 							Env: []corev1.EnvVar{{
 								Name:  "GOGC",
 								Value: "30",

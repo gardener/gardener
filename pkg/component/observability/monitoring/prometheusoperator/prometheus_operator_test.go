@@ -435,6 +435,29 @@ var _ = Describe("PrometheusOperator", func() {
 					rolePrometheusShoot,
 				))
 			})
+
+			Context("with thanos sidecar image", func() {
+				BeforeEach(func() {
+					values.ImageThanosSidecar = "thanos-image:v0.35.0"
+					deployment.Spec.Template.Spec.Containers[0].Args = append(
+						deployment.Spec.Template.Spec.Containers[0].Args,
+						"--thanos-default-base-image=thanos-image:v0.35.0",
+					)
+				})
+
+				It("should successfully deploy all resources with thanos flag", func() {
+					Expect(managedResource).To(consistOf(
+						serviceAccount,
+						service,
+						deployment,
+						vpa,
+						clusterRole,
+						clusterRoleBinding,
+						clusterRolePrometheus,
+						rolePrometheusShoot,
+					))
+				})
+			})
 		})
 	})
 
