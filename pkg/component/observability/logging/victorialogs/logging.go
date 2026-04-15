@@ -15,7 +15,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/observability/logging/victorialogs/constants"
 )
 
 const (
@@ -31,11 +30,11 @@ func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 	return []*fluentbitv1alpha2.ClusterFilter{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   fmt.Sprintf("%s--%s", constants.VLSingleResourceName, vlsingleName),
+				Name:   fmt.Sprintf("%s--%s", v1beta1constants.StatefulSetNameVictoriaLogs, vlsingleName),
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.FilterSpec{
-				Match: fmt.Sprintf("kubernetes.*%s*%s*", vlsingleName, constants.VLSingleResourceName),
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", vlsingleName, v1beta1constants.StatefulSetNameVictoriaLogs),
 				FilterItems: []fluentbitv1alpha2.FilterItem{
 					{
 						Parser: &fluentbitv1alpha2filter.Parser{
