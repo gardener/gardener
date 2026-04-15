@@ -273,7 +273,6 @@ func run(ctx context.Context, opts *Options) error {
 			determineGardenerNodeAgentSecretName,
 			ensureNoActiveShootReconciliation,
 			determineZone,
-			ensureShootIsConfiguredForHA,
 			writeETCDFilesToDisk,
 		)
 
