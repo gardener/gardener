@@ -28,16 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
-const (
-	// OperatorManagedResourceName is the name of the OpenTelemetry Operator managed resource.
-	OperatorManagedResourceName = name
-
-	name               = "opentelemetry-operator"
-	serviceAccountName = name
-	roleName           = name
-	clusterRoleName    = name
-)
-
 // Values keeps values for the OpenTelemetry Operator.
 type Values struct {
 	// Image is the image of the OpenTelemetry Operator.
@@ -93,11 +83,11 @@ func (o *openTelemetryOperator) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, o.client, o.namespace, OperatorManagedResourceName, false, serializedResources)
+	return managedresources.CreateForSeed(ctx, o.client, o.namespace, v1beta1constants.DeploymentNameOpenTelemetryOperator, false, serializedResources)
 }
 
 func (o *openTelemetryOperator) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, o.client, o.namespace, OperatorManagedResourceName)
+	return managedresources.DeleteForSeed(ctx, o.client, o.namespace, v1beta1constants.DeploymentNameOpenTelemetryOperator)
 }
 
 var timeoutWaitForManagedResources = 2 * time.Minute
@@ -106,19 +96,19 @@ func (o *openTelemetryOperator) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, o.client, o.namespace, OperatorManagedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, o.client, o.namespace, v1beta1constants.DeploymentNameOpenTelemetryOperator)
 }
 
 func (o *openTelemetryOperator) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, o.client, o.namespace, OperatorManagedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, o.client, o.namespace, v1beta1constants.DeploymentNameOpenTelemetryOperator)
 }
 
 func getLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp:   name,
+		v1beta1constants.LabelApp:   v1beta1constants.DeploymentNameOpenTelemetryOperator,
 		v1beta1constants.LabelRole:  v1beta1constants.LabelObservability,
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleObservability,
 	}
@@ -127,7 +117,7 @@ func getLabels() map[string]string {
 func (o *openTelemetryOperator) serviceAccount() *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      v1beta1constants.DeploymentNameOpenTelemetryOperator,
 			Namespace: o.namespace,
 			Labels:    getLabels(),
 		},
@@ -138,7 +128,7 @@ func (o *openTelemetryOperator) serviceAccount() *corev1.ServiceAccount {
 func (*openTelemetryOperator) clusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   clusterRoleName,
+			Name:   v1beta1constants.DeploymentNameOpenTelemetryOperator,
 			Labels: getLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{
@@ -229,17 +219,17 @@ func (*openTelemetryOperator) clusterRole() *rbacv1.ClusterRole {
 func (o *openTelemetryOperator) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   clusterRoleName,
+			Name:   v1beta1constants.DeploymentNameOpenTelemetryOperator,
 			Labels: getLabels(),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     clusterRoleName,
+			Name:     v1beta1constants.DeploymentNameOpenTelemetryOperator,
 		},
 		Subjects: []rbacv1.Subject{{
 			Kind:      rbacv1.ServiceAccountKind,
-			Name:      serviceAccountName,
+			Name:      v1beta1constants.DeploymentNameOpenTelemetryOperator,
 			Namespace: o.namespace,
 		}},
 	}
@@ -248,7 +238,7 @@ func (o *openTelemetryOperator) clusterRoleBinding() *rbacv1.ClusterRoleBinding 
 func (o *openTelemetryOperator) role() *rbacv1.Role {
 	return &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      roleName,
+			Name:      v1beta1constants.DeploymentNameOpenTelemetryOperator,
 			Namespace: o.namespace,
 			Labels:    getLabels(),
 		},
@@ -270,21 +260,21 @@ func (o *openTelemetryOperator) role() *rbacv1.Role {
 func (o *openTelemetryOperator) roleBinding() *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      roleName,
+			Name:      v1beta1constants.DeploymentNameOpenTelemetryOperator,
 			Namespace: o.namespace,
 			Labels:    getLabels(),
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      name,
+				Name:      v1beta1constants.DeploymentNameOpenTelemetryOperator,
 				Namespace: o.namespace,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "Role",
-			Name:     roleName,
+			Name:     v1beta1constants.DeploymentNameOpenTelemetryOperator,
 		},
 	}
 }
@@ -312,7 +302,7 @@ func (o *openTelemetryOperator) deployment() *appsv1.Deployment {
 					}),
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: name,
+					ServiceAccountName: v1beta1constants.DeploymentNameOpenTelemetryOperator,
 					PriorityClassName:  o.values.PriorityClassName,
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: ptr.To(true),
@@ -322,7 +312,7 @@ func (o *openTelemetryOperator) deployment() *appsv1.Deployment {
 					},
 					Containers: []corev1.Container{
 						{
-							Name:            name,
+							Name:            v1beta1constants.DeploymentNameOpenTelemetryOperator,
 							Image:           o.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
@@ -376,7 +366,7 @@ func (o *openTelemetryOperator) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 	vpaUpdateMode := vpaautoscalingv1.UpdateModeRecreate
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      v1beta1constants.DeploymentNameOpenTelemetryOperator,
 			Namespace: o.namespace,
 			Labels:    getLabels(),
 		},
@@ -392,7 +382,7 @@ func (o *openTelemetryOperator) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
-						ContainerName: name,
+						ContainerName: v1beta1constants.DeploymentNameOpenTelemetryOperator,
 						MinAllowed: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("64Mi"),
 						},

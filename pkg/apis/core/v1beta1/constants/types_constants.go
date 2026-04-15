@@ -164,7 +164,6 @@ const (
 	// DeploymentNamePrometheusOperator is a constant for the name of a Kubernetes deployment object that contains
 	// the prometheus-operator pod.
 	DeploymentNamePrometheusOperator = "prometheus-operator"
-	// DaemonSetNameFluentBit is a constant for the name of a Kubernetes Daemonset object that contains
 	// MonitoringNamePrometheus is a constant for the name of a Prometheus object.
 	MonitoringNamePrometheus = "prometheus"
 	// DeploymentNameBlackBoxExporter is a constant for the name of a Kubernetes deployment object that contains
@@ -172,6 +171,12 @@ const (
 	DeploymentNameBlackBoxExporter = "blackbox-exporter"
 	// ConfigMapNameBlackBoxExporter is a constant for the name of a Kubernetes Configmap which holds the blackbox-exporter config.
 	ConfigMapNameBlackBoxExporter = "blackbox-exporter-config"
+	// DeploymentNameKubeStateMetrics is a constant for the name of a Kubernetes deployment object that contains
+	// the kube-state-metrics pod.
+	DeploymentNameKubeStateMetrics = "kube-state-metrics"
+	// DeploymentNameGardenerMetricsExporter is a constant for the name of a Kubernetes deployment object that contains
+	// the gardener-metrics-exporter pod.
+	DeploymentNameGardenerMetricsExporter = "gardener-metrics-exporter"
 	// DeploymentNameEventLogger is a constant for the name of a Kubernetes deployment object that contains
 	// the event-logger pod.
 	DeploymentNameEventLogger = "event-logger"
@@ -183,12 +188,21 @@ const (
 	DaemonSetNameFluentBit = "fluent-bit"
 	// ConfigMapNameFluentBitLua is a constant for the name of a Kubernetes Configmap which holds the lua scripts for fluent-bit.
 	ConfigMapNameFluentBitLua = "fluent-bit-lua-config"
-	// DeploymentNameKubeStateMetrics is a constant for the name of a Kubernetes deployment object that contains
-	// the kube-state-metrics pod.
-	DeploymentNameKubeStateMetrics = "kube-state-metrics"
-	// DeploymentNameGardenerMetricsExporter is a constant for the name of a Kubernetes deployment object that contains
-	// the gardener-metrics-exporter pod.
-	DeploymentNameGardenerMetricsExporter = "gardener-metrics-exporter"
+	// DeploymentNameOpenTelemetryOperator is a constant for the name of a Kubernetes deployment object that contains
+	// the opentelemetry-operator pod.
+	DeploymentNameOpenTelemetryOperator = "opentelemetry-operator"
+	// DeploymentNameOpenTelemetryCollector is a constant for the name of a Kubernetes deployment object that contains
+	// the opentelemetry-collector pod.
+	DeploymentNameOpenTelemetryCollector = "opentelemetry-collector"
+	// StatefulSetNameVali is a constant for the name of a Kubernetes stateful set object that contains
+	// the vali pod.
+	StatefulSetNameVali = "vali"
+	// DeploymentNameVictoriaOperator is a constant for the name of a Kubernetes deployment object that contains
+	// the victoria-operator pod.
+	DeploymentNameVictoriaOperator = "victoria-operator"
+	// StatefulSetNameVictoriaLogs is a constant for the name of a Kubernetes stateful set object that contains
+	// the victoria-logs pod.
+	StatefulSetNameVictoriaLogs = "victoria-logs"
 
 	// DeploymentNameVPAAdmissionController is a constant for the name of the VPA admission controller deployment.
 	DeploymentNameVPAAdmissionController = "vpa-admission-controller"
@@ -209,10 +223,6 @@ const (
 	// the machine-controller-manager pod.
 	DeploymentNameMachineControllerManager = "machine-controller-manager"
 
-	// DeploymentNameOpenTelemetryOperator is a constant for the name of a Kubernetes deployment object that contains
-	// the opentelemetry-operator pod.
-	DeploymentNameOpenTelemetryOperator = "opentelemetry-operator"
-
 	// ConfigMapNameShootInfo is the name of a ConfigMap in the kube-system namespace of shoot clusters which contains
 	// information about the shoot cluster.
 	ConfigMapNameShootInfo = "shoot-info"
@@ -228,9 +238,6 @@ const (
 	ETCDMain = "etcd-" + ETCDRoleMain
 	// ETCDEvents is a constant for the name of etcd-events Etcd object.
 	ETCDEvents = "etcd-" + ETCDRoleEvents
-	// StatefulSetNameVali is a constant for the name of a Kubernetes stateful set object that contains
-	// the vali pod.
-	StatefulSetNameVali = "vali"
 
 	// GardenerPurpose is a constant for the key in a label describing the purpose of the respective object.
 	GardenerPurpose = "gardener.cloud/purpose"
