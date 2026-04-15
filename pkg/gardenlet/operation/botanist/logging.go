@@ -161,7 +161,7 @@ func (b *Botanist) DefaultEventLogger() (component.Deployer, error) {
 
 // DefaultVali returns a deployer for Vali.
 func (b *Botanist) DefaultVali() (vali.Interface, error) {
-	istioLabels := map[string]string{}
+	var istioLabels map[string]string
 	if !b.Shoot.IsSelfHosted() {
 		istioLabels = b.WildcardIstioLabels()
 	}

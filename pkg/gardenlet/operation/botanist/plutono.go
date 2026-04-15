@@ -17,7 +17,7 @@ import (
 
 // DefaultPlutono returns a deployer for Plutono.
 func (b *Botanist) DefaultPlutono() (plutono.Interface, error) {
-	istioLabels := map[string]string{}
+	var istioLabels map[string]string
 	if !b.Shoot.IsSelfHosted() {
 		istioLabels = b.WildcardIstioLabels()
 	}
