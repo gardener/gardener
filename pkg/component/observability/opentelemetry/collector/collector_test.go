@@ -60,18 +60,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		kubeRBACProxyImage                          = "kube-rbac-proxy:latest"
 		kubeRBACProxyShootAccessSecretName          = "shoot-access-rbac-proxy"
 		opentelemetryCollectorShootAccessSecretName = "shoot-access-opentelemetry-collector"
-		values                                      = Values{
-			Image:                   image,
-			KubeRBACProxyImage:      kubeRBACProxyImage,
-			LokiEndpoint:            lokiEndpoint,
-			Replicas:                1,
-			ShootNodeLoggingEnabled: true,
-			IngressHost:             ingressHost,
-			ValiHost:                valiHost,
-			SecretNameServerCA:      v1beta1constants.SecretNameCACluster,
-			PriorityClassName:       "gardener-system-100",
-			ClusterType:             "shoot",
-		}
+		values                                      Values
 
 		c         client.Client
 		component Interface
@@ -100,6 +89,18 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		format.MaxLength = 100000
 		format.TruncateThreshold = 100000
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		values = Values{
+			Image:                   image,
+			KubeRBACProxyImage:      kubeRBACProxyImage,
+			LokiEndpoint:            lokiEndpoint,
+			Replicas:                1,
+			ShootNodeLoggingEnabled: true,
+			IngressHost:             ingressHost,
+			ValiHost:                valiHost,
+			SecretNameServerCA:      v1beta1constants.SecretNameCACluster,
+			PriorityClassName:       "gardener-system-100",
+			ClusterType:             "shoot",
+		}
 		fakeSecretManager = fakesecretsmanager.New(c, namespace)
 		component = New(c, namespace, values, fakeSecretManager)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
@@ -654,12 +655,10 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		})
 
 		It("should use custom CA secret name for certificate signing", func() {
-			customValues := values
-			customValues.SecretNameServerCA = "custom-ca-secret"
-			customValues.ShootNodeLoggingEnabled = false // Disable node logging for simpler test
-			customValues.PriorityClassName = "gardener-system-100"
+			values.SecretNameServerCA = "custom-ca-secret"
+			values.ShootNodeLoggingEnabled = false // Disable node logging for simpler test
 
-			component = New(c, namespace, customValues, fakeSecretManager)
+			component = New(c, namespace, values, fakeSecretManager)
 
 			// The main test is that deploy succeeds with a custom CA secret name
 			Expect(component.Deploy(ctx)).To(Succeed())
@@ -669,12 +668,10 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		})
 
 		It("should use seed CA secret when SecretNameServerCA is set to SecretNameCASeed", func() {
-			customValues := values
-			customValues.SecretNameServerCA = v1beta1constants.SecretNameCASeed
-			customValues.ShootNodeLoggingEnabled = false // Disable node logging for simpler test
-			customValues.PriorityClassName = "gardener-system-100"
+			values.SecretNameServerCA = v1beta1constants.SecretNameCASeed
+			values.ShootNodeLoggingEnabled = false // Disable node logging for simpler test
 
-			component = New(c, namespace, customValues, fakeSecretManager)
+			component = New(c, namespace, values, fakeSecretManager)
 
 			// The main test is that deploy succeeds with the seed CA secret
 			Expect(component.Deploy(ctx)).To(Succeed())
@@ -683,7 +680,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
 		})
 
-		It("should create ingress and kubeRBACProxy resources when ShootNodeLoggingEnabled is false", func() {		  
+		It("should create ingress and kubeRBACProxy resources when ShootNodeLoggingEnabled is false", func() {
 			values.ShootNodeLoggingEnabled = false
 			component = New(c, namespace, values, fakeSecretManager)
 
