@@ -93,6 +93,6 @@ func (p *prometheusOperator) WaitCleanup(ctx context.Context) error {
 // GetLabels returns the labels for the prometheus-operator.
 func GetLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp: "prometheus-operator",
+		v1beta1constants.LabelApp: v1beta1constants.DeploymentNamePrometheusOperator,
 	}
 }
