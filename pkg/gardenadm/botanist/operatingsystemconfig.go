@@ -83,8 +83,8 @@ func (b *GardenadmBotanist) appendAdminKubeconfigToFiles(files []extensionsv1alp
 }
 
 func (b *GardenadmBotanist) appendEtcdNodeSpecificAssetsToFiles(ctx context.Context, files []extensionsv1alpha1.File, controlPlaneHostNames []string) ([]extensionsv1alpha1.File, error) {
-	// The etcd cert/config volumes are node-specific, but their corresponding files don't use `.spec.files[].hostName`
-	// yet. Remove them here and re-add them with the correct `hostName` below.
+	// The etcd cert/config volumes are node-specific, but their corresponding files may not use
+	// `.spec.files[].hostName` yet. Remove them here and re-add them with the correct `hostName` below.
 	out := slices.DeleteFunc(slices.Clone(files), func(file extensionsv1alpha1.File) bool {
 		for _, role := range []string{
 			v1beta1constants.ETCDRoleEvents,

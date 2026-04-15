@@ -7,7 +7,6 @@ package etcd
 import (
 	"context"
 	"fmt"
-	"maps"
 	"net"
 
 	corev1 "k8s.io/api/core/v1"
@@ -42,10 +41,7 @@ func GenerateServerCertificate(
 		},
 		secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD, secretsmanager.LoadMissingCAFromCluster(ctx)),
 		secretsmanager.Rotate(secretsmanager.InPlace),
-		secretsmanager.WithLabels(injectHostNameLabelIfSet(map[string]string{
-			etcdconstants.LabelKeySecretType: etcdconstants.LabelValueSecretTypeServer,
-			etcdconstants.LabelKeyRole:       role,
-		}, hostName)),
+		secretsmanager.WithLabels(tlsSecretLabels(role, etcdconstants.LabelValueSecretTypeServer, hostName)),
 	)
 }
 
@@ -119,10 +115,7 @@ func GeneratePeerCertificate(
 		},
 		secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.UseCurrentCA, secretsmanager.LoadMissingCAFromCluster(ctx)),
 		secretsmanager.Rotate(secretsmanager.InPlace),
-		secretsmanager.WithLabels(injectHostNameLabelIfSet(map[string]string{
-			etcdconstants.LabelKeySecretType: etcdconstants.LabelValueSecretTypePeer,
-			etcdconstants.LabelKeyRole:       role,
-		}, hostName)),
+		secretsmanager.WithLabels(tlsSecretLabels(role, etcdconstants.LabelValueSecretTypePeer, hostName)),
 	)
 }
 
@@ -166,12 +159,15 @@ func (e *etcd) peerServiceDNSNames() []string {
 	)
 }
 
-func injectHostNameLabelIfSet(labels map[string]string, hostName *string) map[string]string {
-	if hostName == nil {
-		return labels
+func tlsSecretLabels(role, secretType string, hostName *string) map[string]string {
+	out := map[string]string{
+		etcdconstants.LabelKeySecretType: secretType,
+		etcdconstants.LabelKeyRole:       role,
 	}
 
-	out := maps.Clone(labels)
-	out[etcdconstants.LabelKeyHostName] = *hostName
+	if hostName != nil {
+		out[etcdconstants.LabelKeyHostName] = *hostName
+	}
+
 	return out
 }

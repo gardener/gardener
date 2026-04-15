@@ -250,7 +250,7 @@ func (e ETCDRoleToAssets) FetchConfigMaps(ctx context.Context, c client.Client, 
 	return nil
 }
 
-func (e ETCDRoleToAssets) loop(fnVolume func(dir string) error, fnAssetData func(path, key string, value []byte) error) error {
+func (e ETCDRoleToAssets) walkAssets(fnVolume func(dir string) error, fnAssetData func(path, key string, value []byte) error) error {
 	for role, assets := range e {
 		volumes := map[string]map[string][]byte{
 			etcdconstants.VolumeNameServerTLS:     assets.ServerSecret.Data,
@@ -295,7 +295,7 @@ func toBinaryData(data map[string]string) map[string][]byte {
 func (e ETCDRoleToAssets) allFiles(hostName string) []extensionsv1alpha1.File {
 	out := make([]extensionsv1alpha1.File, 0, 3*len(e))
 
-	_ = e.loop(nil, func(path, _ string, value []byte) error {
+	_ = e.walkAssets(nil, func(path, _ string, value []byte) error {
 		out = append(out, extensionsv1alpha1.File{
 			Path:        path,
 			Permissions: ptr.To[uint32](0600),
@@ -310,13 +310,13 @@ func (e ETCDRoleToAssets) allFiles(hostName string) []extensionsv1alpha1.File {
 
 // WriteToDisk writes all node-specific ETCD assets to the disk.
 func (e ETCDRoleToAssets) WriteToDisk(fs afero.Afero) error {
-	return e.loop(
+	return e.walkAssets(
 		func(dir string) error { return fs.MkdirAll(dir, os.ModeDir) },
 		func(path, _ string, value []byte) error { return fs.WriteFile(path, value, 0640) },
 	)
 }
 
-// HostNameToETCDAssets maps a control plane nodes to their ETCD assets. The keys are the hostnames, the values are the
+// HostNameToETCDAssets maps control plane nodes to their ETCD assets. The keys are the hostnames, the values are the
 // ETCD assets.
 type HostNameToETCDAssets map[string]ETCDRoleToAssets
 
