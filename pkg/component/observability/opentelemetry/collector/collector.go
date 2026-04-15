@@ -160,8 +160,9 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		shootObjects = append(shootObjects, o.getLoggingAgentClusterRole())
-		shootObjects = append(shootObjects, o.getLoggingAgentClusterRoleBinding(loggingAgentShootAccessSecret.ServiceAccountName, o.getLoggingAgentClusterRole().Name))
+		loggingAgentClusterRole := o.getLoggingAgentClusterRole()
+		shootObjects = append(shootObjects, loggingAgentClusterRole)
+		shootObjects = append(shootObjects, o.getLoggingAgentClusterRoleBinding(loggingAgentShootAccessSecret.ServiceAccountName, loggingAgentClusterRole.Name))
 	} else {
 		if err := managedresources.DeleteForShoot(ctx, o.client, o.namespace, managedResourceNameTarget); err != nil {
 			return err
