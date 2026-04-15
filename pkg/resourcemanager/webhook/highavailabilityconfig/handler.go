@@ -83,7 +83,7 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
-	hasMultipleNodes, err := h.hasMoreThanOneNode(ctx)
+	hasMultipleNodes, err := kubernetesutils.HasMoreThanOneNode(ctx, h.TargetClient)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
@@ -346,15 +346,6 @@ func (h *Handler) isHorizontallyScaled(ctx context.Context, namespace, targetAPI
 	}
 
 	return false, 0, nil
-}
-
-func (h *Handler) hasMoreThanOneNode(ctx context.Context) (bool, error) {
-	nodeList := &metav1.PartialObjectMetadataList{}
-	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
-	if err := h.TargetClient.List(ctx, nodeList, client.Limit(2)); err != nil {
-		return false, fmt.Errorf("failed to list nodes: %w", err)
-	}
-	return len(nodeList.Items) > 1, nil
 }
 
 func (h *Handler) mutateNodeAffinity(

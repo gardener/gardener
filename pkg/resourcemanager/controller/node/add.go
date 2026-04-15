@@ -13,6 +13,7 @@ import (
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/resourcemanager/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/agentreconciliationdelay"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/criticalcomponents"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/highavailabilityconfig"
 )
 
 // AddToManager adds all node controllers to the given manager.
@@ -30,6 +31,12 @@ func AddToManager(mgr manager.Manager, targetCluster cluster.Cluster, cfg resour
 			Config: cfg.Controllers.NodeAgentReconciliationDelay,
 		}).AddToManager(mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding node-agent-reconciliation-delay controller: %w", err)
+		}
+	}
+
+	if cfg.Webhooks.HighAvailabilityConfig.Enabled {
+		if err := (&highavailabilityconfig.Reconciler{}).AddToManager(mgr, targetCluster); err != nil {
+			return fmt.Errorf("failed adding node-high-availability-config controller: %w", err)
 		}
 	}
 

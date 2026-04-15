@@ -5,11 +5,26 @@
 package kubernetes
 
 import (
+	"context"
+	"fmt"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeletapis "k8s.io/kubelet/pkg/apis"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// HasMoreThanOneNode returns true if the cluster has more than one node. It uses a metadata-only list with limit 2 to
+// minimize the amount of data transferred.
+func HasMoreThanOneNode(ctx context.Context, reader client.Reader) (bool, error) {
+	nodeList := &metav1.PartialObjectMetadataList{}
+	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
+	if err := reader.List(ctx, nodeList, client.Limit(2)); err != nil {
+		return false, fmt.Errorf("failed to list nodes: %w", err)
+	}
+	return len(nodeList.Items) > 1, nil
+}
 
 // IsNodeLabelAllowedForKubelet determines whether kubelet is allowed by the NodeRestriction admission plugin to set a
 // label on its own Node object with the given key.
