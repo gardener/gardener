@@ -247,6 +247,8 @@ type Values struct {
 	ConcurrentSyncs *int
 	// HighAvailabilityConfigWebhookEnabled controls whether the high availability config webhook is enabled.
 	HighAvailabilityConfigWebhookEnabled bool
+	// SystemComponentsConfigWebhookEnabled defines if the SystemComponentsConfigWebhook should be enabled.
+	SystemComponentsConfigWebhookEnabled bool
 	// DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
 	DefaultNotReadyToleration *int64
 	// DefaultUnreachableTolerationSeconds indicates the tolerationSeconds of the toleration for unreachable:NoExecute
@@ -676,6 +678,10 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	}
 
 	if r.values.ResponsibilityMode == ForShootOrVirtualGarden {
+		config.Controllers.NodeCriticalComponents.Enabled = true
+	}
+
+	if r.values.SystemComponentsConfigWebhookEnabled {
 		config.Webhooks.SystemComponentsConfig = resourcemanagerconfigv1alpha1.SystemComponentsConfigWebhookConfig{
 			Enabled: true,
 			NodeSelector: map[string]string{
@@ -686,8 +692,6 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			},
 			PodTolerations: r.values.SystemComponentTolerations,
 		}
-
-		config.Controllers.NodeCriticalComponents.Enabled = true
 	}
 
 	// this function should be called at the last to make sure we disable
@@ -829,6 +833,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 	}
 
 	var (
+		nodeSelectors     map[string]string
 		tolerations       []corev1.Toleration
 		env               []corev1.EnvVar
 		replicas          = r.values.Replicas
@@ -840,6 +845,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 	for _, toleration := range r.values.SystemComponentTolerations {
 		if toleration.Key == "node-role.kubernetes.io/control-plane" {
 			tolerations = append(tolerations, toleration)
+			nodeSelectors = map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}
 			break
 		}
 	}
@@ -976,7 +982,8 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 						},
 					},
 				},
-				Tolerations: tolerations,
+				NodeSelector: nodeSelectors,
+				Tolerations:  tolerations,
 				Volumes: []corev1.Volume{
 					{
 						Name: volumeNameAPIServerAccess,
@@ -1353,8 +1360,16 @@ func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 		}
 	}
 
-	if r.values.ResponsibilityMode == ForShootOrVirtualGarden {
-		webhooks = append(webhooks, NewSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
+	if r.values.SystemComponentsConfigWebhookEnabled {
+		systemComponentsNamespaceSelector := namespaceSelector.DeepCopy()
+		if r.values.ResponsibilityMode == ForRuntime {
+			if systemComponentsNamespaceSelector.MatchLabels == nil {
+				systemComponentsNamespaceSelector.MatchLabels = map[string]string{}
+			}
+			systemComponentsNamespaceSelector.MatchLabels[resourcesv1alpha1.SystemComponentsConfigConsider] = "true"
+		}
+
+		webhooks = append(webhooks, NewSystemComponentsConfigMutatingWebhook(systemComponentsNamespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
 	if r.values.EndpointSliceHintsEnabled {

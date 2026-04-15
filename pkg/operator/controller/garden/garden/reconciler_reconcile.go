@@ -87,6 +87,7 @@ func (r *Reconciler) reconcile(
 	garden *operatorv1alpha1.Garden,
 	secretsManager secretsmanager.Interface,
 	targetVersion *semver.Version,
+	runtimeIsSelfHostedShoot bool,
 ) (
 	reconcile.Result,
 	error,
@@ -148,6 +149,7 @@ func (r *Reconciler) reconcile(
 		wildcardCert,
 		enableAdmissionControllerAuthorizers,
 		extensionList,
+		runtimeIsSelfHostedShoot,
 	)
 	if err != nil {
 		return reconcile.Result{}, err

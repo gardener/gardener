@@ -32,6 +32,7 @@ import (
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
@@ -62,7 +63,8 @@ var _ = Describe("Etcd", func() {
 
 		priorityClassName = "some-priority-class"
 
-		featureGates map[string]bool
+		featureGates      map[string]bool
+		isSelfHostedShoot bool
 
 		managedResourceSecret *corev1.Secret
 		managedResource       *resourcesv1alpha1.ManagedResource
@@ -132,6 +134,10 @@ webhooks:
 `)
 	)
 
+	BeforeEach(func() {
+		isSelfHostedShoot = false
+	})
+
 	JustBeforeEach(func() {
 		etcdConfig = &gardenletconfigv1alpha1.ETCDConfig{
 			ETCDController: &gardenletconfigv1alpha1.ETCDController{
@@ -157,7 +163,7 @@ webhooks:
 		// Create CA secret for etcd-components webhook handler
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretNameCA, Namespace: namespace}})).To(Succeed())
 
-		bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwrite, sm, secretNameCA, priorityClassName, false)
+		bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwrite, sm, secretNameCA, priorityClassName, false, isSelfHostedShoot)
 
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -857,12 +863,25 @@ webhooks:
 			})
 
 			It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
-				bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwriteFull, sm, secretNameCA, priorityClassName, false)
+				bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwriteFull, sm, secretNameCA, priorityClassName, false, isSelfHostedShoot)
 
 				expectedResources = append(expectedResources,
 					deploymentWithImageVectorOverwrite,
 					configMapImageVectorOverwrite,
 				)
+			})
+		})
+
+		Context("managed by self-hosted shoot", func() {
+			BeforeEach(func() {
+				isSelfHostedShoot = true
+			})
+
+			It("should successfully deploy all the resources with node selector", func() {
+				deploymentForSelfHostedShoot := deploymentWithoutImageVectorOverwriteFor.DeepCopy()
+				deploymentForSelfHostedShoot.Spec.Template.Spec.NodeSelector = map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}
+
+				expectedResources = append(expectedResources, deploymentForSelfHostedShoot)
 			})
 		})
 	})

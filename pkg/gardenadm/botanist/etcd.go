@@ -59,6 +59,7 @@ func (b *GardenadmBotanist) DeployEtcdDruid(ctx context.Context) error {
 		v1beta1constants.SecretNameCACluster,
 		v1beta1constants.PriorityClassNameSeedSystem800,
 		false,
+		true,
 	)
 	if err != nil {
 		return fmt.Errorf("failed creating etcd-druid deployer: %w", err)

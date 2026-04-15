@@ -171,7 +171,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	log.Info("Instantiating component deployers")
-	c, err := r.instantiateComponents(ctx, log, seed, secretsManager, seedIsGarden, globalMonitoringSecretSeed, alertingSMTPSecret, wildcardCertSecret, seedIsShoot)
+	c, err := r.instantiateComponents(ctx, log, seed, secretsManager, seedIsGarden, globalMonitoringSecretSeed, alertingSMTPSecret, wildcardCertSecret, seedIsShoot, seedIsSelfHostedShoot)
 	if err != nil {
 		return err
 	}

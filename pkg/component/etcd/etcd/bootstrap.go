@@ -106,31 +106,34 @@ func NewBootstrapper(
 	secretsManager secretsmanager.Interface,
 	secretNameServerCA string,
 	priorityClassName string,
-	managedbyGardenerOperator bool,
+	clusterIsGarden bool,
+	clusterIsSelfHostedShoot bool,
 ) component.DeployWaiter {
 	return &bootstrapper{
-		client:                    c,
-		namespace:                 namespace,
-		etcdConfig:                etcdConfig,
-		image:                     image,
-		imageVectorOverwrite:      imageVectorOverwrite,
-		secretsManager:            secretsManager,
-		secretNameServerCA:        secretNameServerCA,
-		priorityClassName:         priorityClassName,
-		managedbyGardenerOperator: managedbyGardenerOperator,
+		client:                   c,
+		namespace:                namespace,
+		etcdConfig:               etcdConfig,
+		image:                    image,
+		imageVectorOverwrite:     imageVectorOverwrite,
+		secretsManager:           secretsManager,
+		secretNameServerCA:       secretNameServerCA,
+		priorityClassName:        priorityClassName,
+		clusterIsGarden:          clusterIsGarden,
+		clusterIsSelfHostedShoot: clusterIsSelfHostedShoot,
 	}
 }
 
 type bootstrapper struct {
-	client                    client.Client
-	namespace                 string
-	etcdConfig                *gardenletconfigv1alpha1.ETCDConfig
-	image                     string
-	imageVectorOverwrite      *string
-	secretsManager            secretsmanager.Interface
-	secretNameServerCA        string
-	priorityClassName         string
-	managedbyGardenerOperator bool
+	client                   client.Client
+	namespace                string
+	etcdConfig               *gardenletconfigv1alpha1.ETCDConfig
+	image                    string
+	imageVectorOverwrite     *string
+	secretsManager           secretsmanager.Interface
+	secretNameServerCA       string
+	priorityClassName        string
+	clusterIsGarden          bool
+	clusterIsSelfHostedShoot bool
 }
 
 func (b *bootstrapper) Deploy(ctx context.Context) error {
@@ -171,8 +174,12 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, webhookServerPort))
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, portMetrics))
 
-	if b.managedbyGardenerOperator {
+	if b.clusterIsGarden {
 		deployment.Spec.Template.Labels["networking.resources.gardener.cloud/to-virtual-garden-etcd-main-client-tcp-8080"] = v1beta1constants.LabelNetworkPolicyAllowed
+	}
+
+	if b.clusterIsSelfHostedShoot {
+		deployment.Spec.Template.Spec.NodeSelector = map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}
 	}
 
 	resourcesToAdd := []client.Object{

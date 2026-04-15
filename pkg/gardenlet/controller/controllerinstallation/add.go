@@ -17,7 +17,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/care"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/required"
-	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // AddToManager adds all ControllerInstallation controllers to the given manager.
@@ -40,7 +40,7 @@ func AddToManager(
 	// When the seed is a self-hosted shoot, all ControllerInstallations have .spec.shootRef instead of .spec.seedRef.
 	// The self-hosted gardenlet already runs the required controller with ShootRef-based filtering, so the SeedRef-based
 	// instance here would find no ControllerInstallations.
-	if seedIsSelfHostedShoot, err := gardenletutils.SeedIsSelfHostedShoot(ctx, seedCluster.GetAPIReader()); err != nil {
+	if seedIsSelfHostedShoot, err := gardenerutils.ClusterIsSelfHostedShoot(ctx, seedCluster.GetAPIReader()); err != nil {
 		return fmt.Errorf("failed checking whether the seed is a self-hosted shoot cluster: %w", err)
 	} else if !seedIsSelfHostedShoot {
 		if err := (&controllerinstallation.Reconciler{

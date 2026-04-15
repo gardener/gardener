@@ -111,7 +111,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, r.updateStatusOperationError(ctx, seed, err, operationType)
 	}
 
-	seedIsSelfHostedShoot, err := gardenletutils.SeedIsSelfHostedShoot(ctx, r.SeedClientSet.Client())
+	seedIsSelfHostedShoot, err := gardenerutils.ClusterIsSelfHostedShoot(ctx, r.SeedClientSet.Client())
 	if err != nil {
 		return reconcile.Result{}, r.updateStatusOperationError(ctx, seed, err, operationType)
 	}

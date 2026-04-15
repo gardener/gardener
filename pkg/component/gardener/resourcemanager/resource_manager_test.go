@@ -119,7 +119,7 @@ var _ = Describe("ResourceManager", func() {
 		deployment                                           *appsv1.Deployment
 		defaultNotReadyTolerationSeconds                     *int64
 		defaultUnreachableTolerationSeconds                  *int64
-		configMapFor                                         func(watchedNamespace *string, responsibilityMode ResponsibilityMode, isWorkerless, bootstrapControlPlaneNode bool) *corev1.ConfigMap
+		configMapFor                                         func(watchedNamespace *string, responsibilityMode ResponsibilityMode, isWorkerless, bootstrapControlPlaneNode, systemComponentsConfigWebhookEnabled bool) *corev1.ConfigMap
 		deploymentFor                                        func(configMapName string, targetClusterDiffersFromSourceCluster bool, secretNameBootstrapKubeconfig *string, bootstrapControlPlaneNode bool) *appsv1.Deployment
 		defaultLabels                                        map[string]string
 		roleBinding                                          *rbacv1.RoleBinding
@@ -309,6 +309,7 @@ var _ = Describe("ResourceManager", func() {
 			ClusterIdentity:                                  &clusterIdentity,
 			ConcurrentSyncs:                                  &concurrentSyncs,
 			HighAvailabilityConfigWebhookEnabled:             true,
+			SystemComponentsConfigWebhookEnabled:             true,
 			DefaultNotReadyToleration:                        defaultNotReadyTolerationSeconds,
 			DefaultUnreachableToleration:                     defaultUnreachableTolerationSeconds,
 			NetworkPolicyAdditionalNamespaceSelectors:        additionalNetworkPolicyNamespaceSelectors,
@@ -380,7 +381,7 @@ var _ = Describe("ResourceManager", func() {
 			AutomountServiceAccountToken: ptr.To(false),
 		}
 
-		configMapFor = func(watchedNamespace *string, responsibilityMode ResponsibilityMode, isWorkerless, bootstrapControlPlaneNode bool) *corev1.ConfigMap {
+		configMapFor = func(watchedNamespace *string, responsibilityMode ResponsibilityMode, isWorkerless, bootstrapControlPlaneNode, systemComponentsConfigWebhookEnabled bool) *corev1.ConfigMap {
 			configMap := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gardener-resource-manager",
@@ -516,7 +517,7 @@ var _ = Describe("ResourceManager", func() {
 				config.Webhooks.PodKubeAPIServerLoadBalancing.Enabled = true
 			}
 
-			if responsibilityMode == ForShootOrVirtualGarden {
+			if systemComponentsConfigWebhookEnabled {
 				config.Webhooks.SystemComponentsConfig = resourcemanagerconfigv1alpha1.SystemComponentsConfigWebhookConfig{
 					Enabled: !isWorkerless,
 					NodeSelector: map[string]string{
@@ -588,6 +589,7 @@ var _ = Describe("ResourceManager", func() {
 								},
 							},
 							ServiceAccountName: "gardener-resource-manager",
+							NodeSelector:       map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"},
 							Containers: []corev1.Container{
 								{
 									Args:            []string{"--config=/etc/gardener-resource-manager-config/config.yaml"},
@@ -2126,7 +2128,7 @@ subjects:
 		Context("target cluster != source cluster; watched namespace is set", func() {
 			JustBeforeEach(func() {
 				role.Namespace = watchedNamespace
-				configMap = configMapFor(&watchedNamespace, ForShootOrVirtualGarden, false, false)
+				configMap = configMapFor(&watchedNamespace, ForShootOrVirtualGarden, false, false, true)
 				deployment = deploymentFor(configMap.Name, true, nil, false)
 				cfg.TargetNamespaces = targetNamespaces
 				resourceManager = New(c, deployNamespace, sm, cfg)
@@ -2195,7 +2197,7 @@ subjects:
 					JustBeforeEach(func() {
 						matchLabelKeysInPodTopologySpreadFeatureGateDisabled = true
 						cfg.PodTopologySpreadConstraintsEnabled = true
-						configMap = configMapFor(&watchedNamespace, ForShootOrVirtualGarden, false, false)
+						configMap = configMapFor(&watchedNamespace, ForShootOrVirtualGarden, false, false, true)
 						deployment = deploymentFor(configMap.Name, true, nil, false)
 
 						resourceManager = New(c, deployNamespace, sm, cfg)
@@ -2244,7 +2246,7 @@ subjects:
 						matchLabelKeysInPodTopologySpreadFeatureGateDisabled = false
 						cfg.PodTopologySpreadConstraintsEnabled = false
 
-						configMap = configMapFor(&watchedNamespace, ForShootOrVirtualGarden, false, false)
+						configMap = configMapFor(&watchedNamespace, ForShootOrVirtualGarden, false, false, true)
 						deployment = deploymentFor(configMap.Name, true, nil, false)
 
 						resourceManager = New(c, deployNamespace, sm, cfg)
@@ -2374,7 +2376,7 @@ subjects:
 				cfg.ResponsibilityMode = ForShootOrVirtualGarden
 				cfg.TargetNamespaces = targetNamespaces
 				cfg.WatchedNamespace = nil
-				configMap = configMapFor(nil, ForShootOrVirtualGarden, false, false)
+				configMap = configMapFor(nil, ForShootOrVirtualGarden, false, false, true)
 				deployment = deploymentFor(configMap.Name, true, nil, false)
 
 				resourceManager = New(c, deployNamespace, sm, cfg)
@@ -2491,7 +2493,7 @@ subjects:
 				cfg.TargetNamespaces = targetNamespaces
 				cfg.WatchedNamespace = nil
 				cfg.IsWorkerless = true
-				configMap = configMapFor(nil, ForShootOrVirtualGarden, true, false)
+				configMap = configMapFor(nil, ForShootOrVirtualGarden, true, false, true)
 				deployment = deploymentFor(configMap.Name, true, nil, false)
 
 				resourceManager = New(c, deployNamespace, sm, cfg)
@@ -2572,7 +2574,7 @@ subjects:
 				delete(service.Annotations, "networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports")
 				service.Annotations["networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports"] = `[{"protocol":"TCP","port":8080}]`
 				service.Annotations["networking.resources.gardener.cloud/from-world-to-ports"] = `[{"protocol":"TCP","port":10250}]`
-				configMap = configMapFor(&watchedNamespace, ForRuntime, false, false)
+				configMap = configMapFor(&watchedNamespace, ForRuntime, false, false, false)
 				deployment = deploymentFor(configMap.Name, false, nil, false)
 
 				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-1]
@@ -2602,6 +2604,7 @@ subjects:
 				cfg.ResponsibilityMode = ForRuntime
 				cfg.PodKubeAPIServerLoadBalancingWebhook.Enabled = true
 				cfg.VPAInPlaceUpdatesEnabled = true
+				cfg.SystemComponentsConfigWebhookEnabled = false
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
 			})
@@ -2901,7 +2904,7 @@ subjects:
 
 		Context("responsibility mode is ForShootOrVirtualGarden", func() {
 			BeforeEach(func() {
-				configMap = configMapFor(&watchedNamespace, ForShootOrVirtualGarden, false, false)
+				configMap = configMapFor(&watchedNamespace, ForShootOrVirtualGarden, false, false, true)
 				deployment = deploymentFor(configMap.Name, true, nil, false)
 				resourceManager = New(fakeClient, deployNamespace, nil, cfg)
 			})
@@ -2998,7 +3001,7 @@ subjects:
 				))
 
 				cfg.ResponsibilityMode = ForRuntime
-				configMap = configMapFor(nil, ForRuntime, false, false)
+				configMap = configMapFor(nil, ForRuntime, false, false, false)
 				deployment = deploymentFor(configMap.Name, false, nil, false)
 				resourceManager = New(fakeClient, deployNamespace, nil, cfg)
 

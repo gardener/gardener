@@ -81,7 +81,7 @@ func NewRuntimeGardenerResourceManager(
 	return resourcemanager.New(c, gardenNamespaceName, secretsManager, values), nil
 }
 
-func targetGardenerResourceManagerDefaultValues(namespaceName *string) resourcemanager.Values {
+func targetGardenerResourceManagerDefaultValues(namespaceName string) resourcemanager.Values {
 	return resourcemanager.Values{
 		AlwaysUpdate:                       ptr.To(true),
 		ConcurrentSyncs:                    ptr.To(20),
@@ -90,7 +90,9 @@ func targetGardenerResourceManagerDefaultValues(namespaceName *string) resourcem
 		MaxConcurrentHealthWorkers:         ptr.To(10),
 		MaxConcurrentTokenRequestorWorkers: ptr.To(5),
 		ResponsibilityMode:                 resourcemanager.ForShootOrVirtualGarden,
-		WatchedNamespace:                   namespaceName,
+		WatchedNamespace:                   &namespaceName,
+		// The webhook should be enabled only if the target is a shoot not if it is the virtual garden.
+		SystemComponentsConfigWebhookEnabled: namespaceName != v1beta1constants.GardenNamespace,
 	}
 }
 
@@ -111,7 +113,7 @@ func NewTargetGardenerResourceManager(
 	}
 	image.WithOptionalTag(version.Get().GitVersion)
 
-	defaultValues := targetGardenerResourceManagerDefaultValues(&namespaceName)
+	defaultValues := targetGardenerResourceManagerDefaultValues(namespaceName)
 	defaultValues.Image = image.String()
 
 	applyDefaults(&values, defaultValues)
