@@ -19,7 +19,6 @@ require (
 	github.com/gardener/cert-management v0.22.0
 	github.com/gardener/dependency-watchdog v1.7.0
 	github.com/gardener/etcd-druid/api v0.36.2
-	github.com/gardener/gardener/pkg/apis v1.140.0
 	github.com/gardener/machine-controller-manager v0.61.3
 	github.com/gardener/terminal-controller-manager v0.35.0
 	github.com/go-jose/go-jose/v4 v4.1.4
@@ -89,6 +88,10 @@ require (
 	sigs.k8s.io/controller-tools v0.20.1
 	sigs.k8s.io/yaml v1.6.0
 )
+
+require github.com/gardener/gardener/pkg/apis v1.140.0 // overwritten by replace directive below
+
+replace github.com/gardener/gardener/pkg/apis => ./pkg/apis
 
 tool github.com/joelanford/go-apidiff
 
@@ -334,5 +337,3 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 )
-
-replace github.com/gardener/gardener/pkg/apis => ./pkg/apis
