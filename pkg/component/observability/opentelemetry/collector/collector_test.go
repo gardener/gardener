@@ -26,7 +26,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	. "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -927,11 +926,12 @@ func getValitailClusterRoleBinding(name, appName, roleName, subjectName string) 
 
 func getLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelRole:  v1beta1constants.LabelObservability,
-		v1beta1constants.GardenRole: v1beta1constants.GardenRoleObservability,
-		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
-		gardenerutils.NetworkPolicyLabel("logging-vl", 9428):                                v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToDNS:                                            v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelObservabilityApplication:                                      "opentelemetry-collector",
+		v1beta1constants.LabelApp:                            "opentelemetry-collector",
+		v1beta1constants.LabelRole:                           "observability",
+		v1beta1constants.GardenRole:                          "observability",
+		gardenerutils.NetworkPolicyLabel("logging", 3100):    "allowed",
+		gardenerutils.NetworkPolicyLabel("logging-vl", 9428): "allowed",
+		v1beta1constants.LabelNetworkPolicyToDNS:             "allowed",
+		v1beta1constants.LabelObservabilityApplication:       "opentelemetry-collector",
 	}
 }
