@@ -61,7 +61,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 var (
 	gardenRoleReq      = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
-	gardenRoleSelector = labels.NewSelector().Add(gardenRoleReq).Add(gardenerutils.NoControlPlaneSecretsReq)
+	gardenRoleSelector = labels.NewSelector().Add(gardenRoleReq).Add(gardenerutils.NoControlPlaneSecretsReq, gardenerutils.NoPullOrCABundleSecretsReq)
+	// TODO(shafeeqes): Remove this after gardener v1.145
+	// This selector is used to cleanup already copied secrets with role oci-ca-bundle or oci-pull-secret, which are not needed anymore because now gardenlet can read them from garden namespace directly.
+	deprecatedGardenRoleSelector = labels.NewSelector().Add(gardenRoleReq).Add(gardenerutils.NoControlPlaneSecretsReq)
 )
 
 // GardenSecretPredicate returns true for all events when the respective secret is in the garden namespace and has a
