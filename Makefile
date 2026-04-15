@@ -139,6 +139,7 @@ docker-push:
 
 .PHONY: tidy
 tidy:
+	@unset GOWORK; go work use
 	@GO111MODULE=on go mod tidy
 	@cd $(LOGCHECK_DIR); go mod tidy
 	@cd $(PKG_APIS_DIR); go mod tidy
