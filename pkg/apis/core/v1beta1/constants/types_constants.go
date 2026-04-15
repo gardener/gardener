@@ -158,6 +158,20 @@ const (
 	DeploymentNameGardenerResourceManager = "gardener-resource-manager"
 	// DeploymentNamePlutono is a constant for the name of a Kubernetes deployment object that contains the plutono pod.
 	DeploymentNamePlutono = "plutono"
+	// DeploymentNamePersesOperator is a constant for the name of a Kubernetes deployment object that contains
+	// the perses-operator pod.
+	DeploymentNamePersesOperator = "perses-operator"
+	// DeploymentNamePrometheusOperator is a constant for the name of a Kubernetes deployment object that contains
+	// the prometheus-operator pod.
+	DeploymentNamePrometheusOperator = "prometheus-operator"
+	// DaemonSetNameFluentBit is a constant for the name of a Kubernetes Daemonset object that contains
+	// MonitoringNamePrometheus is a constant for the name of a Prometheus object.
+	MonitoringNamePrometheus = "prometheus"
+	// DeploymentNameBlackBoxExporter is a constant for the name of a Kubernetes deployment object that contains
+	// the blackbox-exporter pod.
+	DeploymentNameBlackBoxExporter = "blackbox-exporter"
+	// ConfigMapNameBlackBoxExporter is a constant for the name of a Kubernetes Configmap which holds the blackbox-exporter config.
+	ConfigMapNameBlackBoxExporter = "blackbox-exporter-config"
 	// DeploymentNameEventLogger is a constant for the name of a Kubernetes deployment object that contains
 	// the event-logger pod.
 	DeploymentNameEventLogger = "event-logger"

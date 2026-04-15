@@ -16,11 +16,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
-const (
-	// managedResourceName is the name of the ManagedResource for the perses-operator resources.
-	managedResourceName = "perses-operator"
-)
-
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy or
 // deleted.
 var TimeoutWaitForManagedResource = 5 * time.Minute
@@ -62,30 +57,30 @@ func (p *persesOperator) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeedWithLabels(ctx, p.client, p.namespace, managedResourceName, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, resources)
+	return managedresources.CreateForSeedWithLabels(ctx, p.client, p.namespace, v1beta1constants.DeploymentNamePersesOperator, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, resources)
 }
 
 func (p *persesOperator) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, p.client, p.namespace, managedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, p.client, p.namespace, v1beta1constants.DeploymentNamePersesOperator)
 }
 
 func (p *persesOperator) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, managedResourceName)
+	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, v1beta1constants.DeploymentNamePersesOperator)
 }
 
 func (p *persesOperator) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, managedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, v1beta1constants.DeploymentNamePersesOperator)
 }
 
 // GetLabels returns the labels for the perses-operator.
 func GetLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp: "perses-operator",
+		v1beta1constants.LabelApp: v1beta1constants.DeploymentNamePersesOperator,
 	}
 }
