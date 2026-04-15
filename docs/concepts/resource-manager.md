@@ -983,6 +983,17 @@ The controller adds the `node-agent.gardener.cloud/reconciliation-delay` annotat
 > Nodes which should never be updated in parallel and are marked for 'serial reconciliation' (e.g., control plane nodes for self-hosted shoot clusters) are excluded by this controller.
 > Read more about it [here](node-agent.md#serial-reconciliation).
 
+#### [High Availability Config Controller](../../pkg/resourcemanager/controller/node/highavailabilityconfig)
+
+The [high availability config webhook](#high-availability-config) uses `ScheduleAnyway` instead of `DoNotSchedule` for the hostname topology spread constraint when there is at most one node in the cluster.
+This prevents multi-replica pods from being stuck `Pending` during initial bootstrapping before additional nodes have joined.
+
+However, when additional nodes join later, nothing re-triggers the webhook to tighten the constraint.
+This controller watches `Node` `create` and `delete` events and, when the node count crosses the single-node threshold (in either direction), empty-patches all HA-relevant `Deployment`s and `StatefulSet`s.
+This re-triggers the webhook, which then applies the correct topology spread constraints based on the current node count.
+
+The controller is enabled automatically when the high availability config webhook is enabled.
+
 ## Webhooks
 
 ### Mutating Webhooks
