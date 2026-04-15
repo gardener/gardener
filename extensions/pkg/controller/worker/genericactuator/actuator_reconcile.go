@@ -188,7 +188,7 @@ func deployMachineDeployments(
 	log.Info("Deploying machine deployments")
 
 	// If the Shoot is hibernated, then mark all machines for forceful deletion to avoid respecting of PDBs/SLAs.
-	var isHibernated = extensionscontroller.IsHibernationEnabled(cluster)
+	isHibernated := extensionscontroller.IsHibernationEnabled(cluster)
 	if isHibernated {
 		if err := markAllMachinesForcefulDeletion(ctx, log, cl, worker.Namespace); err != nil {
 			return fmt.Errorf("marking all machines for forceful deletion failed: %w", err)

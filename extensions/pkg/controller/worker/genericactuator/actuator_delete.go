@@ -124,9 +124,8 @@ func markAllMachinesForcefulDeletion(ctx context.Context, log logr.Logger, cl cl
 
 	var tasks = make([]flow.TaskFn, 0, len(existingMachines.Items))
 	for _, machine := range existingMachines.Items {
-		m := machine
 		tasks = append(tasks, func(ctx context.Context) error {
-			return markMachineForcefulDeletion(ctx, cl, &m)
+			return markMachineForcefulDeletion(ctx, cl, &machine)
 		})
 	}
 
