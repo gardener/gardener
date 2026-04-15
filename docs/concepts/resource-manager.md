@@ -989,7 +989,7 @@ The [high availability config webhook](#high-availability-config) uses `Schedule
 This prevents multi-replica pods from being stuck `Pending` during initial bootstrapping before additional nodes have joined.
 
 However, when additional nodes join later, nothing re-triggers the webhook to tighten the constraint.
-This controller watches `Node` `create` and `delete` events and, when the node count crosses the single-node threshold (in either direction), empty-patches all HA-relevant `Deployment`s and `StatefulSet`s.
+This controller watches `Node` `create` and `delete` events and, when the node count crosses the single-node threshold (in either direction), empty-patches HA-relevant `Deployment`s and `StatefulSet`s whose hostname topology spread constraint requires adaptation.
 This re-triggers the webhook, which then applies the correct topology spread constraints based on the current node count.
 
 The controller is enabled automatically when the high availability config webhook is enabled.

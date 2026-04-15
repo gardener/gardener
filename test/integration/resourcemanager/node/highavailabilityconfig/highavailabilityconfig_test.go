@@ -145,4 +145,90 @@ var _ = Describe("Node HighAvailabilityConfig controller", func() {
 			return sts.Spec.Template.Spec.TopologySpreadConstraints
 		})
 	})
+
+	It("should not patch Deployments without topology spread constraints", func() {
+		By("Create first node")
+		node1 := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: testIDPrefix + "-node-1-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]}}
+		Expect(testClient.Create(ctx, node1)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, node1)).To(Succeed())
+		})
+
+		By("Create Deployment without HA type label (webhook does not add TSCs)")
+		noTSCLabels := map[string]string{"app": "test-no-tsc"}
+		noTSCDeployment := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "deploy-no-tsc-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8],
+				Namespace: namespace.Name,
+			},
+			Spec: appsv1.DeploymentSpec{
+				Selector: &metav1.LabelSelector{MatchLabels: noTSCLabels},
+				Replicas: ptr.To[int32](1),
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{Labels: noTSCLabels},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{
+							Name:  "test",
+							Image: "test",
+						}},
+					},
+				},
+			},
+		}
+		Expect(testClient.Create(ctx, noTSCDeployment)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, noTSCDeployment)).To(Succeed())
+		})
+
+		By("Create multi-replica Deployment with HA type (webhook adds TSCs with ScheduleAnyway for single-node)")
+		multiReplicaLabels := map[string]string{"app": "test-multi"}
+		multiReplicaDeployment := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "deploy-multi-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8],
+				Namespace: namespace.Name,
+				Labels: map[string]string{
+					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+				},
+			},
+			Spec: appsv1.DeploymentSpec{
+				Selector: &metav1.LabelSelector{MatchLabels: multiReplicaLabels},
+				Replicas: ptr.To[int32](2),
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{Labels: multiReplicaLabels},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{
+							Name:  "test",
+							Image: "test",
+						}},
+					},
+				},
+			},
+		}
+		Expect(testClient.Create(ctx, multiReplicaDeployment)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, multiReplicaDeployment)).To(Succeed())
+		})
+
+		By("Record ResourceVersion of no-TSC Deployment")
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(noTSCDeployment), noTSCDeployment)).To(Succeed())
+		resourceVersionBefore := noTSCDeployment.ResourceVersion
+
+		By("Create second node (controller should only patch multi-replica Deployment)")
+		node2 := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: testIDPrefix + "-node-2-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]}}
+		Expect(testClient.Create(ctx, node2)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, node2)).To(Succeed())
+		})
+
+		By("Wait for multi-replica Deployment to be updated (proves controller has reconciled)")
+		Eventually(func(g Gomega) {
+			deploy := &appsv1.Deployment{}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(multiReplicaDeployment), deploy)).To(Succeed())
+			g.Expect(deploy.Spec.Template.Spec.TopologySpreadConstraints).To(ContainElement(HaveField("WhenUnsatisfiable", corev1.DoNotSchedule)))
+		}).Should(Succeed())
+
+		By("Verify no-TSC Deployment was not patched")
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(noTSCDeployment), noTSCDeployment)).To(Succeed())
+		Expect(noTSCDeployment.ResourceVersion).To(Equal(resourceVersionBefore))
+	})
 })
