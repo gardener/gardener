@@ -10,10 +10,14 @@ import (
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	tokenutils "github.com/gardener/gardener/pkg/gardenadm/cmd/token/utils"
@@ -75,6 +79,18 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed creating client set: %w", err)
 	}
 
+	if opts.PrintJoinCommand {
+		if err := validateIsShootCluster(ctx, clientSet.Client()); err != nil {
+			return fmt.Errorf("failed validating that the cluster is a Shoot: %w", err)
+		}
+	}
+
+	if opts.PrintConnectCommand {
+		if err := validateIsGardenCluster(clientSet.Client()); err != nil {
+			return fmt.Errorf("failed validating that the cluster is the garden: %w", err)
+		}
+	}
+
 	if err := clientSet.Client().Get(ctx, client.ObjectKey{Name: bootstraptokenutil.BootstrapTokenSecretName(opts.Token.ID), Namespace: metav1.NamespaceSystem}, &corev1.Secret{}); client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("failed checking if bootstrap token with ID %q already exists: %w", opts.Token.ID, err)
 	} else if err == nil {
@@ -116,4 +132,26 @@ func printConnectCommand(clientSet kubernetes.Interface, bootstrapTokenSecret *c
 		utils.EncodeBase64(clientSet.RESTConfig().CAData),
 		clientSet.RESTConfig().Host,
 	)
+}
+
+func validateIsShootCluster(ctx context.Context, c client.Client) error {
+	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ConfigMapNameShootInfo, Namespace: metav1.NamespaceSystem}}
+	if err := c.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed checking whether cluster is a Shoot: %w", err)
+		}
+		return fmt.Errorf("`--print-join-command` can only be used when the kubeconfig points to a Shoot cluster (the %q ConfigMap was not found in the %q namespace)", v1beta1constants.ConfigMapNameShootInfo, metav1.NamespaceSystem)
+	}
+	return nil
+}
+
+func validateIsGardenCluster(c client.Client) error {
+	shootGVK := gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot")
+	if _, err := c.RESTMapper().RESTMapping(shootGVK.GroupKind(), shootGVK.Version); err != nil {
+		if !meta.IsNoMatchError(err) {
+			return fmt.Errorf("failed checking whether cluster is the garden: %w", err)
+		}
+		return fmt.Errorf("`--print-connect-command` can only be used when the kubeconfig points to the garden cluster (the %q API is not available)", gardencorev1beta1.SchemeGroupVersion)
+	}
+	return nil
 }
