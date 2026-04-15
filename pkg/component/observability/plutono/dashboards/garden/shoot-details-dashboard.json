@@ -688,7 +688,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Shows APIServer availability for shoots hosted on seed $shoot across regions.",
+      "description": "Shows APIServer availability for shoots hosted on seed $shoot across regions. \nDisplay: \nShoot Name: (Shoot IaaS, Shoot Region)/(Seed IaaS, Seed Region)",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -730,9 +730,9 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "shoot:availability * on(name, project) group_left(region, iaas, seed_region, seed_iaas) (garden_shoot_info{seed=\"$shoot\", is_seed=\"false\"} * 0 + 1)",
+          "expr": "min by(name, project) (shoot:availability) * on(name, project) group_left(region, iaas, seed_region, seed_iaas) (garden_shoot_info{seed=\"$shoot\", is_seed=\"false\"} * 0 + 1)",
           "interval": "",
-          "legendFormat": "{{name}}: {{kind}} ({{iaas}}, {{region}})/({{seed_iaas}}, {{seed_region}})",
+          "legendFormat": "{{name}}: ({{iaas}}, {{region}})/({{seed_iaas}}, {{seed_region}})",
           "refId": "A"
         }
       ],
