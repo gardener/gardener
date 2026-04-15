@@ -261,7 +261,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
-										Name:      v1beta1constants.DeploymentNameBlackBoxExporter,
+										Name:      v1beta1constants.ConfigMapNameBlackBoxExporter,
 										MountPath: volumeMountPathConfig,
 									},
 								},
@@ -277,7 +277,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 						},
 						Volumes: []corev1.Volume{
 							{
-								Name: v1beta1constants.DeploymentNameBlackBoxExporter,
+								Name: v1beta1constants.ConfigMapNameBlackBoxExporter,
 								VolumeSource: corev1.VolumeSource{
 									ConfigMap: &corev1.ConfigMapVolumeSource{
 										LocalObjectReference: corev1.LocalObjectReference{
