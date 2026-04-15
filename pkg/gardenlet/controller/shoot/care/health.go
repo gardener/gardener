@@ -240,9 +240,24 @@ func (h *Health) getAllExtensionConditions(ctx context.Context) ([]healthchecker
 		return nil, nil, nil, nil, err
 	}
 
+	// Fetch ControllerRegistrations by getting each one referenced by the scoped installations.
+	// This avoids a global list, which is not permitted for the shoot gardenlet in self-hosted mode.
 	controllerRegistrations := &gardencorev1beta1.ControllerRegistrationList{}
-	if err := h.gardenClient.List(ctx, controllerRegistrations); err != nil {
-		return nil, nil, nil, nil, err
+	seen := sets.New[string]()
+	for _, inst := range controllerInstallations.Items {
+		name := inst.Spec.RegistrationRef.Name
+		if seen.Has(name) {
+			continue
+		}
+		seen.Insert(name)
+		reg := gardencorev1beta1.ControllerRegistration{}
+		if err := h.gardenClient.Get(ctx, client.ObjectKey{Name: name}, &reg); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, nil, nil, nil, err
+			}
+			continue
+		}
+		controllerRegistrations.Items = append(controllerRegistrations.Items, reg)
 	}
 
 	var (

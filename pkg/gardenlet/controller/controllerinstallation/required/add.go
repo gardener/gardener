@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/go-logr/logr"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -202,28 +203,11 @@ func (r *Reconciler) MapObjectKindToControllerInstallations(log logr.Logger, obj
 		r.KindToRequiredTypes[objectKind] = newRequiredTypes
 		r.Lock.Unlock()
 
-		// Step 2: List all existing controller registrations and filter for those that are supporting resources for the
-		// extension kind this particular reconciler is responsible for.
-
-		controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
-		if err := r.GardenClient.List(ctx, controllerRegistrationList); err != nil {
-			log.Error(err, "Failed to list ControllerRegistrations")
-			return nil
-		}
-
-		controllerRegistrationNamesForKind := sets.New[string]()
-		for _, controllerRegistration := range controllerRegistrationList.Items {
-			for _, resource := range controllerRegistration.Spec.Resources {
-				if resource.Kind == objectKind {
-					controllerRegistrationNamesForKind.Insert(controllerRegistration.Name)
-					break
-				}
-			}
-		}
-
-		// Step 3: List all existing controller installation objects for the seed cluster this controller is responsible
-		// for and filter for those that reference registrations collected above. Then requeue those installations for
-		// the other reconciler to decide whether it is required or not.
+		// Step 2: List all existing controller installation objects for the seed cluster this controller is responsible
+		// for, then get each referenced ControllerRegistration to check if it handles the extension kind. Requeue those
+		// installations for the other reconciler to decide whether it is required or not.
+		// Note: we use Get instead of List for ControllerRegistrations to avoid requiring list permission, which is
+		// intentionally not granted to the shoot gardenlet in self-hosted shoot mode.
 
 		controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 
@@ -242,11 +226,20 @@ func (r *Reconciler) MapObjectKindToControllerInstallations(log logr.Logger, obj
 		var requests []reconcile.Request
 
 		for _, obj := range controllerInstallationList.Items {
-			if !controllerRegistrationNamesForKind.Has(obj.Spec.RegistrationRef.Name) {
+			controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
+			if err := r.GardenClient.Get(ctx, client.ObjectKey{Name: obj.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
+				if !apierrors.IsNotFound(err) {
+					log.Error(err, "Failed to get ControllerRegistration", "controllerRegistration", obj.Spec.RegistrationRef.Name)
+				}
 				continue
 			}
 
-			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: obj.Name}})
+			for _, resource := range controllerRegistration.Spec.Resources {
+				if resource.Kind == objectKind {
+					requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: obj.Name}})
+					break
+				}
+			}
 		}
 
 		return requests
