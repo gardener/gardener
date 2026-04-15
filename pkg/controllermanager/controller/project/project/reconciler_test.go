@@ -9,35 +9,28 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 var _ = Describe("Default Resource Quota", func() {
 	var (
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
-		ctx  = context.TODO()
+		fakeClient client.Client
+		ctx        = context.TODO()
 
 		namespace   = "namespace"
 		projectName = "name"
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 	})
 
 	Describe("#quotaConfigurationForProject", func() {
@@ -201,19 +194,16 @@ var _ = Describe("Default Resource Quota", func() {
 				Config: resourceQuota,
 			}
 
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: ResourceQuotaName}, gomock.AssignableToTypeOf(&corev1.ResourceQuota{})).
-				Return(apierrors.NewNotFound(corev1.Resource("resourcequota"), "resourcequota"))
+			Expect(createOrUpdateResourceQuota(ctx, fakeClient, namespace, ownerRef, config)).To(Succeed())
 
-			expectedResourceQuota := resourceQuota.DeepCopy()
-			expectedResourceQuota.SetOwnerReferences([]metav1.OwnerReference{*ownerRef})
-			expectedResourceQuota.Labels = map[string]string{"bar": "baz"}
-			expectedResourceQuota.Annotations = map[string]string{"foo": "bar"}
-			expectedResourceQuota.SetName(ResourceQuotaName)
-			expectedResourceQuota.SetNamespace(namespace)
-
-			c.EXPECT().Create(gomock.Any(), expectedResourceQuota).Return(nil)
-
-			Expect(createOrUpdateResourceQuota(ctx, c, namespace, ownerRef, config)).To(Succeed())
+			// Verify the ResourceQuota was created
+			created := &corev1.ResourceQuota{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: ResourceQuotaName}, created)).To(Succeed())
+			Expect(created.OwnerReferences).To(ConsistOf(*ownerRef))
+			Expect(created.Labels).To(Equal(map[string]string{"bar": "baz"}))
+			Expect(created.Annotations).To(Equal(map[string]string{"foo": "bar"}))
+			Expect(created.Spec.Hard[shoots]).To(Equal(quantity))
+			Expect(created.Spec.Hard[secrets]).To(Equal(quantity))
 		})
 
 		It("should update a existing ResourceQuota", func() {
@@ -234,22 +224,20 @@ var _ = Describe("Default Resource Quota", func() {
 					},
 				},
 			}
+			Expect(fakeClient.Create(ctx, existingResourceQuota)).To(Succeed())
 
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: ResourceQuotaName}, gomock.AssignableToTypeOf(&corev1.ResourceQuota{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, resourceQuota *corev1.ResourceQuota, _ ...client.GetOption) error {
-					*resourceQuota = *existingResourceQuota
-					return nil
-				})
+			Expect(createOrUpdateResourceQuota(ctx, fakeClient, namespace, ownerRef, config)).To(Succeed())
 
-			expectedResourceQuota := existingResourceQuota.DeepCopy()
-			expectedResourceQuota.SetOwnerReferences([]metav1.OwnerReference{existingOwnerRef, *ownerRef})
-			expectedResourceQuota.Labels = map[string]string{"bar": "baz"}
-			expectedResourceQuota.Annotations = map[string]string{"foo": "bar"}
-			expectedResourceQuota.Spec.Hard[secrets] = quantity
-
-			c.EXPECT().Patch(gomock.Any(), expectedResourceQuota, gomock.Any()).Return(nil)
-
-			Expect(createOrUpdateResourceQuota(ctx, c, namespace, ownerRef, config)).To(Succeed())
+			// Verify the ResourceQuota was updated
+			updated := &corev1.ResourceQuota{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: ResourceQuotaName}, updated)).To(Succeed())
+			Expect(updated.OwnerReferences).To(ConsistOf(existingOwnerRef, *ownerRef))
+			Expect(updated.Labels).To(Equal(map[string]string{"bar": "baz"}))
+			Expect(updated.Annotations).To(Equal(map[string]string{"foo": "bar"}))
+			// The existing quota value for shoots should be preserved (not overwritten)
+			Expect(updated.Spec.Hard[shoots]).To(Equal(resource.MustParse("50")))
+			// The new quota for secrets should be added
+			Expect(updated.Spec.Hard[secrets]).To(Equal(quantity))
 		})
 	})
 })

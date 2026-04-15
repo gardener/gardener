@@ -16,16 +16,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	mockmanagedseedset "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset/mock"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	mockevents "github.com/gardener/gardener/third_party/mock/client-go/tools/events"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 const (
@@ -39,7 +40,7 @@ var _ = Describe("Actuator", func() {
 	var (
 		ctrl *gomock.Controller
 
-		gc       *mockclient.MockClient
+		gc       client.Client
 		rg       *mockmanagedseedset.MockReplicaGetter
 		rf       *mockmanagedseedset.MockReplicaFactory
 		r0       *mockmanagedseedset.MockReplica
@@ -60,7 +61,7 @@ var _ = Describe("Actuator", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
-		gc = mockclient.NewMockClient(ctrl)
+		gc = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		rg = mockmanagedseedset.NewMockReplicaGetter(ctrl)
 		rf = mockmanagedseedset.NewMockReplicaFactory(ctrl)
 		r0 = mockmanagedseedset.NewMockReplica(ctrl)

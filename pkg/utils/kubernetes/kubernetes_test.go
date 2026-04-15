@@ -36,6 +36,8 @@ import (
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -43,7 +45,6 @@ import (
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes"
 	mockcorev1 "github.com/gardener/gardener/third_party/mock/client-go/core/v1"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("kubernetes", func() {
@@ -54,7 +55,9 @@ var _ = Describe("kubernetes", func() {
 
 	var (
 		ctrl *gomock.Controller
-		c    *mockclient.MockClient
+
+		fakeClient client.Client
+		scheme     *runtime.Scheme
 
 		ctx     = context.TODO()
 		fakeErr = fmt.Errorf("fake error")
@@ -62,7 +65,12 @@ var _ = Describe("kubernetes", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
+
+		scheme = runtime.NewScheme()
+		Expect(corev1.AddToScheme(scheme)).To(Succeed())
+		Expect(appsv1.AddToScheme(scheme)).To(Succeed())
+		Expect(gardencorev1beta1.AddToScheme(scheme)).To(Succeed())
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 	})
 
 	AfterEach(func() {
@@ -137,7 +145,6 @@ var _ = Describe("kubernetes", func() {
 		var (
 			namespace = "bar"
 			name      = "foo"
-			key       = client.ObjectKey{Namespace: namespace, Name: name}
 			configMap = &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
@@ -147,35 +154,49 @@ var _ = Describe("kubernetes", func() {
 		)
 
 		It("should wait until the resource is deleted", func() {
-			gomock.InOrder(
-				c.EXPECT().Get(ctx, key, configMap),
-				c.EXPECT().Get(ctx, key, configMap),
-				c.EXPECT().Get(ctx, key, configMap).Return(apierrors.NewNotFound(schema.GroupResource{}, name)),
-			)
+			Expect(fakeClient.Create(ctx, configMap.DeepCopy())).To(Succeed())
+			// Delete after two iterations: use interceptor to return the object twice, then not-found
+			callCount := 0
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					callCount++
+					if callCount <= 2 {
+						return cl.Get(ctx, key, obj, opts...)
+					}
+					return apierrors.NewNotFound(schema.GroupResource{}, name)
+				},
+			}).WithObjects(configMap.DeepCopy()).Build()
 
-			Expect(WaitUntilResourceDeleted(ctx, c, configMap, time.Microsecond)).To(Succeed())
+			Expect(WaitUntilResourceDeleted(ctx, c, configMap.DeepCopy(), time.Microsecond)).To(Succeed())
 		})
 
 		It("should timeout", func() {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			gomock.InOrder(
-				c.EXPECT().Get(ctx, key, configMap),
-				c.EXPECT().Get(ctx, key, configMap).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
-					cancel()
-					return nil
-				}),
-			)
+			callCount := 0
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					callCount++
+					if callCount >= 2 {
+						cancel()
+					}
+					return cl.Get(ctx, key, obj, opts...)
+				},
+			}).WithObjects(configMap.DeepCopy()).Build()
 
-			Expect(WaitUntilResourceDeleted(ctx, c, configMap, time.Microsecond)).To(HaveOccurred())
+			Expect(WaitUntilResourceDeleted(ctx, c, configMap.DeepCopy(), time.Microsecond)).To(HaveOccurred())
 		})
 
 		It("return an unexpected error", func() {
 			expectedErr := fmt.Errorf("unexpected")
-			c.EXPECT().Get(ctx, key, configMap).Return(expectedErr)
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+					return expectedErr
+				},
+			}).Build()
 
-			err := WaitUntilResourceDeleted(ctx, c, configMap, time.Microsecond)
+			err := WaitUntilResourceDeleted(ctx, c, configMap.DeepCopy(), time.Microsecond)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeIdenticalTo(expectedErr))
 		})
@@ -197,27 +218,32 @@ var _ = Describe("kubernetes", func() {
 		})
 
 		It("should wait until the resources are deleted w/ empty list", func() {
-			c.EXPECT().List(ctx, configMapList).Return(nil)
-
-			Expect(WaitUntilResourcesDeleted(ctx, c, configMapList, time.Microsecond)).To(Succeed())
+			Expect(WaitUntilResourcesDeleted(ctx, fakeClient, configMapList, time.Microsecond)).To(Succeed())
 		})
 
 		It("should timeout w/ remaining elements", func() {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			c.EXPECT().List(ctx, configMapList).DoAndReturn(func(_ context.Context, _ client.ObjectList, _ ...client.ListOption) error {
-				cancel()
-				configMapList.Items = append(configMapList.Items, configMap)
-				return nil
-			})
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				List: func(_ context.Context, _ client.WithWatch, list client.ObjectList, _ ...client.ListOption) error {
+					cancel()
+					cmList := list.(*corev1.ConfigMapList)
+					cmList.Items = append(cmList.Items, configMap)
+					return nil
+				},
+			}).Build()
 
 			Expect(WaitUntilResourcesDeleted(ctx, c, configMapList, time.Microsecond)).To(HaveOccurred())
 		})
 
 		It("return an unexpected error", func() {
 			expectedErr := fmt.Errorf("unexpected")
-			c.EXPECT().List(ctx, configMapList).Return(expectedErr)
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+					return expectedErr
+				},
+			}).Build()
 
 			Expect(WaitUntilResourcesDeleted(ctx, c, configMapList, time.Microsecond)).To(BeIdenticalTo(expectedErr))
 		})
@@ -233,19 +259,26 @@ var _ = Describe("kubernetes", func() {
 
 	Describe("#GetLoadBalancerIngress", func() {
 		var (
-			key     = client.ObjectKey{Namespace: namespace, Name: name}
+			service *corev1.Service
+		)
+
+		BeforeEach(func() {
 			service = &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
 				},
 			}
-		)
+		})
 
 		It("should return an unexpected client error", func() {
 			expectedErr := fmt.Errorf("unexpected")
 
-			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).Return(expectedErr)
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+					return expectedErr
+				},
+			}).Build()
 
 			_, err := GetLoadBalancerIngress(ctx, c, service)
 
@@ -254,54 +287,43 @@ var _ = Describe("kubernetes", func() {
 		})
 
 		It("should return an error because no ingresses found", func() {
-			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{}))
+			Expect(fakeClient.Create(ctx, service.DeepCopy())).To(Succeed())
 
-			_, err := GetLoadBalancerIngress(ctx, c, service)
+			_, err := GetLoadBalancerIngress(ctx, fakeClient, service)
 
 			Expect(err).To(MatchError("`.status.loadBalancer.ingress[]` has no elements yet, i.e. external load balancer has not been created"))
 		})
 
 		It("should return an ip address", func() {
-			var (
-				ctx        = context.TODO()
-				expectedIP = "1.2.3.4"
-			)
+			expectedIP := "1.2.3.4"
+			svc := service.DeepCopy()
+			svc.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{IP: expectedIP}}
+			Expect(fakeClient.Create(ctx, svc)).To(Succeed())
 
-			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, service *corev1.Service, _ ...client.GetOption) error {
-				service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{IP: expectedIP}}
-				return nil
-			})
-
-			ingress, err := GetLoadBalancerIngress(ctx, c, service)
+			ingress, err := GetLoadBalancerIngress(ctx, fakeClient, service)
 
 			Expect(ingress).To(Equal(expectedIP))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should return an hostname address", func() {
-			var (
-				ctx              = context.TODO()
-				expectedHostname = "cluster.local"
-			)
+		It("should return a hostname address", func() {
+			expectedHostname := "cluster.local"
+			svc := service.DeepCopy()
+			svc.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{Hostname: expectedHostname}}
+			Expect(fakeClient.Create(ctx, svc)).To(Succeed())
 
-			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, service *corev1.Service, _ ...client.GetOption) error {
-				service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{Hostname: expectedHostname}}
-				return nil
-			})
-
-			ingress, err := GetLoadBalancerIngress(ctx, c, service)
+			ingress, err := GetLoadBalancerIngress(ctx, fakeClient, service)
 
 			Expect(ingress).To(Equal(expectedHostname))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should return an error if neither ip nor hostname were set", func() {
-			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, service *corev1.Service, _ ...client.GetOption) error {
-				service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{}}
-				return nil
-			})
+			svc := service.DeepCopy()
+			svc.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{}}
+			Expect(fakeClient.Create(ctx, svc)).To(Succeed())
 
-			_, err := GetLoadBalancerIngress(ctx, c, service)
+			_, err := GetLoadBalancerIngress(ctx, fakeClient, service)
 
 			Expect(err).To(MatchError("`.status.loadBalancer.ingress[]` has an element which does neither contain `.ip` nor `.hostname`"))
 		})
@@ -309,41 +331,49 @@ var _ = Describe("kubernetes", func() {
 
 	Describe("#LookupObject", func() {
 		var (
-			key       = client.ObjectKey{Namespace: namespace, Name: name}
+			key       client.ObjectKey
+			configMap *corev1.ConfigMap
+		)
+
+		BeforeEach(func() {
+			key = client.ObjectKey{Namespace: namespace, Name: name}
 			configMap = &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
 					Name:      name,
 				},
 			}
-
-			apiReader *mockclient.MockClient
-		)
-
-		BeforeEach(func() {
-			apiReader = mockclient.NewMockClient(ctrl)
 		})
 
 		It("should retrieve the obj when cached client can retrieve it", func() {
-			c.EXPECT().Get(ctx, key, configMap)
+			Expect(fakeClient.Create(ctx, configMap.DeepCopy())).To(Succeed())
 
-			err := LookupObject(context.TODO(), c, apiReader, key, configMap)
+			err := LookupObject(context.TODO(), fakeClient, fakeClient, key, configMap)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should return error when cached client fails with error other than NotFound error", func() {
 			expectedErr := fmt.Errorf("unexpected")
-			c.EXPECT().Get(ctx, key, configMap).Return(expectedErr)
+			cachedClient := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+					return expectedErr
+				},
+			}).Build()
 
-			err := LookupObject(context.TODO(), c, apiReader, key, configMap)
+			err := LookupObject(context.TODO(), cachedClient, fakeClient, key, configMap)
 			Expect(err).To(BeIdenticalTo(expectedErr))
 		})
 
 		It("should retrieve the obj using the apiReader when cached client fails with NotFound error", func() {
-			c.EXPECT().Get(ctx, key, configMap).Return(apierrors.NewNotFound(schema.GroupResource{}, name))
-			apiReader.EXPECT().Get(ctx, key, configMap)
+			// cached client returns not-found, apiReader succeeds (has the object)
+			cachedClient := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+					return apierrors.NewNotFound(schema.GroupResource{}, name)
+				},
+			}).Build()
+			Expect(fakeClient.Create(ctx, configMap.DeepCopy())).To(Succeed())
 
-			err := LookupObject(context.TODO(), c, apiReader, key, configMap)
+			err := LookupObject(context.TODO(), cachedClient, fakeClient, key, configMap)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -404,18 +434,11 @@ var _ = Describe("kubernetes", func() {
 	Describe("#WaitUntilLoadBalancerIsReady", func() {
 		var (
 			k8sShootClient kubernetes.Interface
-			key            = client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: "load-balancer"}
 			logger         = logr.Discard()
-			scheme         *runtime.Scheme
 		)
 
 		BeforeEach(func() {
-			scheme = runtime.NewScheme()
-			Expect(corev1.AddToScheme(scheme)).To(Succeed())
-			c.EXPECT().Scheme().Return(scheme).AnyTimes()
-			k8sShootClient = fakekubernetes.NewClientSetBuilder().
-				WithClient(c).
-				Build()
+			k8sShootClient = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 		})
 
 		It("should return nil when the Service has .status.loadBalancer.ingress[]", func() {
@@ -436,14 +459,7 @@ var _ = Describe("kubernetes", func() {
 					},
 				}
 			)
-
-			gomock.InOrder(
-				c.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, obj *corev1.Service, _ ...client.GetOption) error {
-						*obj = *svc
-						return nil
-					}),
-			)
+			Expect(fakeClient.Create(ctx, svc)).To(Succeed())
 
 			actual, err := WaitUntilLoadBalancerIsReady(ctx, logger, k8sShootClient.Client(), metav1.NamespaceSystem, "load-balancer", 1*time.Second)
 			Expect(err).NotTo(HaveOccurred())
@@ -461,9 +477,9 @@ var _ = Describe("kubernetes", func() {
 						Name:      "load-balancer",
 						Namespace: metav1.NamespaceSystem,
 					},
-					Status: corev1.ServiceStatus{},
 				}
-				event = corev1.Event{
+				event = &corev1.Event{
+					ObjectMeta:     *svc.ObjectMeta.DeepCopy(),
 					Source:         corev1.EventSource{Component: "service-controller"},
 					Message:        "Error syncing load balancer: an error occurred",
 					FirstTimestamp: metav1.NewTime(time.Date(2020, time.January, 15, 0, 0, 0, 0, time.UTC)),
@@ -473,20 +489,19 @@ var _ = Describe("kubernetes", func() {
 				}
 			)
 
-			gomock.InOrder(
-				c.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, obj *corev1.Service, _ ...client.GetOption) error {
-						*obj = *svc
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+					if el, ok := list.(*corev1.EventList); ok {
+						el.Items = append(el.Items, *event)
 						return nil
-					}),
-				c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
-					func(_ context.Context, list *corev1.EventList, _ ...client.ListOption) error {
-						list.Items = append(list.Items, event)
-						return nil
-					}),
-			)
+					}
+					return c.List(ctx, list, opts...)
+				},
+			}).Build()
 
-			actual, err := WaitUntilLoadBalancerIsReady(ctx, logger, k8sShootClient.Client(), metav1.NamespaceSystem, "load-balancer", 1*time.Second)
+			Expect(fakeClient.Create(ctx, svc)).To(Succeed())
+
+			actual, err := WaitUntilLoadBalancerIsReady(ctx, logger, fakeClient, metav1.NamespaceSystem, "load-balancer", 1*time.Second)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("-> Events:\n* service-controller reported"))
 			Expect(err.Error()).To(ContainSubstring("Error syncing load balancer: an error occurred"))
@@ -496,15 +511,11 @@ var _ = Describe("kubernetes", func() {
 
 	Describe("#FetchEventMessages", func() {
 		var (
-			reader     *mockclient.MockReader
 			events     []corev1.Event
 			serviceObj *corev1.Service
-			scheme     *runtime.Scheme
 		)
 
 		BeforeEach(func() {
-			reader = mockclient.NewMockReader(ctrl)
-
 			events = []corev1.Event{
 				{
 					Source:         corev1.EventSource{Component: "service-controller"},
@@ -544,14 +555,15 @@ var _ = Describe("kubernetes", func() {
 
 			It("should return an event message with only the latest event", func() {
 				var listOpts []client.ListOption
-				gomock.InOrder(
-					reader.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
-						func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
-							list.Items = append(list.Items, events...)
-							listOpts = listOptions
-							return nil
-						}),
-				)
+				reader := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+					List: func(_ context.Context, _ client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+						if el, ok := list.(*corev1.EventList); ok {
+							el.Items = append(el.Items, events...)
+							listOpts = opts
+						}
+						return nil
+					},
+				}).Build()
 
 				msg, err := FetchEventMessages(ctx, scheme, reader, serviceObj, corev1.EventTypeWarning, 1)
 
@@ -569,14 +581,15 @@ var _ = Describe("kubernetes", func() {
 
 			It("should return an event message with all events", func() {
 				var listOpts []client.ListOption
-				gomock.InOrder(
-					reader.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
-						func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
-							list.Items = append(list.Items, events...)
-							listOpts = listOptions
-							return nil
-						}),
-				)
+				reader := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+					List: func(_ context.Context, _ client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+						if el, ok := list.(*corev1.EventList); ok {
+							el.Items = append(el.Items, events...)
+							listOpts = opts
+						}
+						return nil
+					},
+				}).Build()
 
 				msg, err := FetchEventMessages(ctx, scheme, reader, serviceObj, corev1.EventTypeWarning, len(events))
 
@@ -595,13 +608,12 @@ var _ = Describe("kubernetes", func() {
 
 			It("should not return a message because no events exist", func() {
 				var listOpts []client.ListOption
-				gomock.InOrder(
-					reader.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
-						func(_ context.Context, _ *corev1.EventList, listOptions ...client.ListOption) error {
-							listOpts = listOptions
-							return nil
-						}),
-				)
+				reader := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+					List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, opts ...client.ListOption) error {
+						listOpts = opts
+						return nil
+					},
+				}).Build()
 
 				msg, err := FetchEventMessages(ctx, scheme, reader, serviceObj, corev1.EventTypeWarning, len(events))
 
@@ -618,13 +630,12 @@ var _ = Describe("kubernetes", func() {
 
 			It("should not return a message because an error occurred", func() {
 				var listOpts []client.ListOption
-				gomock.InOrder(
-					reader.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
-						func(_ context.Context, _ *corev1.EventList, listOptions ...client.ListOption) error {
-							listOpts = listOptions
-							return errors.New("foo")
-						}),
-				)
+				reader := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+					List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, opts ...client.ListOption) error {
+						listOpts = opts
+						return errors.New("foo")
+					},
+				}).Build()
 
 				msg, err := FetchEventMessages(ctx, scheme, reader, serviceObj, corev1.EventTypeWarning, len(events))
 
@@ -647,7 +658,7 @@ var _ = Describe("kubernetes", func() {
 			})
 
 			It("should not return a message because type kind is not in scheme", func() {
-				msg, err := FetchEventMessages(ctx, scheme, reader, &corev1.Service{}, corev1.EventTypeWarning, len(events))
+				msg, err := FetchEventMessages(ctx, scheme, fakeclient.NewClientBuilder().WithScheme(scheme).Build(), &corev1.Service{}, corev1.EventTypeWarning, len(events))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to identify GVK for object"))
@@ -695,7 +706,11 @@ var _ = Describe("kubernetes", func() {
 		})
 
 		It("should return an error because the List() call failed", func() {
-			c.EXPECT().List(ctx, podList).Return(fakeErr)
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+					return fakeErr
+				},
+			}).Build()
 
 			obj, err := NewestObject(ctx, c, podList, nil)
 			Expect(err).To(MatchError(fakeErr))
@@ -703,9 +718,7 @@ var _ = Describe("kubernetes", func() {
 		})
 
 		It("should return nil because the list does not contain items", func() {
-			c.EXPECT().List(ctx, podList)
-
-			obj, err := NewestObject(ctx, c, podList, nil)
+			obj, err := NewestObject(ctx, fakeClient, podList, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(obj).To(BeNil())
 		})
@@ -717,10 +730,12 @@ var _ = Describe("kubernetes", func() {
 		)
 
 		It("should return the newest object w/o filter func", func() {
-			c.EXPECT().List(ctx, podList).DoAndReturn(func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {
-				*list = corev1.PodList{Items: []corev1.Pod{*obj1, *obj2, *obj3}}
-				return nil
-			})
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				List: func(_ context.Context, _ client.WithWatch, list client.ObjectList, _ ...client.ListOption) error {
+					*list.(*corev1.PodList) = corev1.PodList{Items: []corev1.Pod{*obj1, *obj2, *obj3}}
+					return nil
+				},
+			}).Build()
 
 			obj, err := NewestObject(ctx, c, podList, nil)
 			Expect(err).NotTo(HaveOccurred())
@@ -734,10 +749,12 @@ var _ = Describe("kubernetes", func() {
 				return obj.Name != "obj2"
 			}
 
-			c.EXPECT().List(ctx, podList).DoAndReturn(func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {
-				*list = corev1.PodList{Items: []corev1.Pod{*obj1, *obj2, *obj3}}
-				return nil
-			})
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				List: func(_ context.Context, _ client.WithWatch, list client.ObjectList, _ ...client.ListOption) error {
+					*list.(*corev1.PodList) = corev1.PodList{Items: []corev1.Pod{*obj1, *obj2, *obj3}}
+					return nil
+				},
+			}).Build()
 
 			obj, err := NewestObject(ctx, c, podList, filterFn)
 			Expect(err).NotTo(HaveOccurred())
@@ -770,12 +787,6 @@ var _ = Describe("kubernetes", func() {
 				podTemplatehashKey: rs3PodTemplateHash,
 			}
 
-			rsListOptions = []any{
-				client.InNamespace(namespace),
-				client.MatchingLabels(labels),
-			}
-			podListOptions []any
-
 			deployment = &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -792,6 +803,7 @@ var _ = Describe("kubernetes", func() {
 			replicaSet1 = &appsv1.ReplicaSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              name + "-" + rs1PodTemplateHash,
+					Namespace:         namespace,
 					Labels:            rs1Labels,
 					UID:               "replicaset1",
 					CreationTimestamp: metav1.Now(),
@@ -811,6 +823,7 @@ var _ = Describe("kubernetes", func() {
 			replicaSet2 = &appsv1.ReplicaSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              name + "-" + rs2PodTemplateHash,
+					Namespace:         namespace,
 					Labels:            rs2Labels,
 					UID:               "replicaset2",
 					CreationTimestamp: metav1.Time{Time: time.Now().Add(+time.Hour)},
@@ -830,6 +843,7 @@ var _ = Describe("kubernetes", func() {
 			replicaSet3 = &appsv1.ReplicaSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              name + "-" + rs3PodTemplateHash,
+					Namespace:         namespace,
 					Labels:            rs3Labels,
 					UID:               "replicaset3",
 					CreationTimestamp: metav1.Time{Time: time.Now().Add(-time.Hour)},
@@ -849,6 +863,7 @@ var _ = Describe("kubernetes", func() {
 
 			pod1 = &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
 				Name:              "pod1",
+				Namespace:         namespace,
 				UID:               "pod1",
 				Labels:            rs1Labels,
 				CreationTimestamp: metav1.Now(),
@@ -861,6 +876,7 @@ var _ = Describe("kubernetes", func() {
 			}}
 			pod2 = &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
 				Name:              "pod2",
+				Namespace:         namespace,
 				UID:               "pod2",
 				Labels:            rs1Labels,
 				CreationTimestamp: metav1.Time{Time: time.Now().Add(-time.Hour)},
@@ -873,14 +889,12 @@ var _ = Describe("kubernetes", func() {
 			}}
 		)
 
-		BeforeEach(func() {
-			podSelector, err := metav1.LabelSelectorAsSelector(replicaSet1.Spec.Selector)
-			Expect(err).NotTo(HaveOccurred())
-			podListOptions = append(rsListOptions, client.MatchingLabelsSelector{Selector: podSelector})
-		})
-
 		It("should return an error because the newest ReplicaSet determination failed", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&appsv1.ReplicaSetList{}), rsListOptions...).Return(fakeErr)
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+					return fakeErr
+				},
+			}).Build()
 
 			pod, err := NewestPodForDeployment(ctx, c, deployment)
 			Expect(err).To(MatchError(fakeErr))
@@ -888,19 +902,25 @@ var _ = Describe("kubernetes", func() {
 		})
 
 		It("should return nil because no replica set found", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&appsv1.ReplicaSetList{}), rsListOptions...)
-
-			pod, err := NewestPodForDeployment(ctx, c, deployment)
+			pod, err := NewestPodForDeployment(ctx, fakeClient, deployment)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(pod).To(BeNil())
 		})
 
 		It("should return an error because listing pods failed", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&appsv1.ReplicaSetList{}), rsListOptions...).DoAndReturn(func(_ context.Context, list *appsv1.ReplicaSetList, _ ...client.ListOption) error {
-				*list = appsv1.ReplicaSetList{Items: []appsv1.ReplicaSet{*replicaSet1, *replicaSet2, *replicaSet3}}
-				return nil
-			})
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PodList{}), podListOptions...).Return(fakeErr)
+			rsList := []appsv1.ReplicaSet{*replicaSet1, *replicaSet2, *replicaSet3}
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				List: func(_ context.Context, c client.WithWatch, list client.ObjectList, _ ...client.ListOption) error {
+					if _, ok := list.(*corev1.PodList); ok {
+						return fakeErr
+					}
+					return c.List(ctx, list)
+				},
+			}).Build()
+
+			for _, rs := range rsList {
+				Expect(c.Create(ctx, rs.DeepCopy())).To(Succeed())
+			}
 
 			pod, err := NewestPodForDeployment(ctx, c, deployment)
 			Expect(err).To(MatchError(fakeErr))
@@ -910,6 +930,7 @@ var _ = Describe("kubernetes", func() {
 		It("should return an error because the replicasSet has no pod selector", func() {
 			rs := &appsv1.ReplicaSet{ObjectMeta: metav1.ObjectMeta{
 				Name:              "rs",
+				Namespace:         namespace,
 				Labels:            rs1Labels,
 				UID:               "rs",
 				CreationTimestamp: metav1.Now(),
@@ -922,12 +943,9 @@ var _ = Describe("kubernetes", func() {
 			}}
 			rsError := fmt.Errorf("no pod selector specified in replicaSet %s/%s", rs.Namespace, rs.Name)
 
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&appsv1.ReplicaSetList{}), rsListOptions...).DoAndReturn(func(_ context.Context, list *appsv1.ReplicaSetList, _ ...client.ListOption) error {
-				*list = appsv1.ReplicaSetList{Items: []appsv1.ReplicaSet{*rs}}
-				return nil
-			})
+			Expect(fakeClient.Create(ctx, rs)).To(Succeed())
 
-			pod, err := NewestPodForDeployment(ctx, c, deployment)
+			pod, err := NewestPodForDeployment(ctx, fakeClient, deployment)
 			Expect(err).To(MatchError(rsError))
 			Expect(pod).To(BeNil())
 		})
@@ -936,6 +954,7 @@ var _ = Describe("kubernetes", func() {
 			rs := &appsv1.ReplicaSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              "rs",
+					Namespace:         namespace,
 					Labels:            rs1Labels,
 					UID:               "rs",
 					CreationTimestamp: metav1.Now(),
@@ -954,12 +973,9 @@ var _ = Describe("kubernetes", func() {
 			}
 			rsError := fmt.Errorf("no matchLabels or matchExpressions specified in replicaSet %s/%s", rs.Namespace, rs.Name)
 
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&appsv1.ReplicaSetList{}), rsListOptions...).DoAndReturn(func(_ context.Context, list *appsv1.ReplicaSetList, _ ...client.ListOption) error {
-				*list = appsv1.ReplicaSetList{Items: []appsv1.ReplicaSet{*rs}}
-				return nil
-			})
+			Expect(fakeClient.Create(ctx, rs)).To(Succeed())
 
-			pod, err := NewestPodForDeployment(ctx, c, deployment)
+			pod, err := NewestPodForDeployment(ctx, fakeClient, deployment)
 			Expect(err).To(MatchError(rsError))
 			Expect(pod).To(BeNil())
 		})
@@ -968,6 +984,7 @@ var _ = Describe("kubernetes", func() {
 			rs := &appsv1.ReplicaSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              "rs",
+					Namespace:         namespace,
 					Labels:            rs1Labels,
 					UID:               "rs",
 					CreationTimestamp: metav1.Now(),
@@ -984,37 +1001,39 @@ var _ = Describe("kubernetes", func() {
 					}},
 			}
 
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&appsv1.ReplicaSetList{}), rsListOptions...).DoAndReturn(func(_ context.Context, list *appsv1.ReplicaSetList, _ ...client.ListOption) error {
-				*list = appsv1.ReplicaSetList{Items: []appsv1.ReplicaSet{*rs}}
-				return nil
-			})
+			Expect(fakeClient.Create(ctx, rs)).To(Succeed())
 
-			pod, err := NewestPodForDeployment(ctx, c, deployment)
+			pod, err := NewestPodForDeployment(ctx, fakeClient, deployment)
 			Expect(err).To(MatchError(ContainSubstring("for 'in', 'notin' operators, values set can't be empty")))
 			Expect(pod).To(BeNil())
 		})
 
 		It("should return nil because no pod was found", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&appsv1.ReplicaSetList{}), rsListOptions...).DoAndReturn(func(_ context.Context, list *appsv1.ReplicaSetList, _ ...client.ListOption) error {
-				*list = appsv1.ReplicaSetList{Items: []appsv1.ReplicaSet{*replicaSet1, *replicaSet2, *replicaSet3}}
-				return nil
-			})
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PodList{}), podListOptions...)
+			rsList := []appsv1.ReplicaSet{*replicaSet1, *replicaSet2, *replicaSet3}
+			for _, rs := range rsList {
+				Expect(fakeClient.Create(ctx, rs.DeepCopy())).To(Succeed())
+			}
 
-			pod, err := NewestPodForDeployment(ctx, c, deployment)
+			pod, err := NewestPodForDeployment(ctx, fakeClient, deployment)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(pod).To(BeNil())
 		})
 
 		It("should return the newest pod", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&appsv1.ReplicaSetList{}), rsListOptions...).DoAndReturn(func(_ context.Context, list *appsv1.ReplicaSetList, _ ...client.ListOption) error {
-				*list = appsv1.ReplicaSetList{Items: []appsv1.ReplicaSet{*replicaSet1, *replicaSet2, *replicaSet3}}
-				return nil
-			})
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PodList{}), podListOptions...).DoAndReturn(func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {
-				*list = corev1.PodList{Items: []corev1.Pod{*pod1, *pod2}}
-				return nil
-			})
+			rsList := []appsv1.ReplicaSet{*replicaSet1, *replicaSet2, *replicaSet3}
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				List: func(_ context.Context, c client.WithWatch, list client.ObjectList, _ ...client.ListOption) error {
+					if podList, ok := list.(*corev1.PodList); ok {
+						podList.Items = []corev1.Pod{*pod1, *pod2}
+						return nil
+					}
+					return c.List(ctx, list)
+				},
+			}).Build()
+
+			for _, rs := range rsList {
+				Expect(c.Create(ctx, rs.DeepCopy())).To(Succeed())
+			}
 
 			pod, err := NewestPodForDeployment(ctx, c, deployment)
 			Expect(err).NotTo(HaveOccurred())

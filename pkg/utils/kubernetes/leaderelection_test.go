@@ -12,22 +12,20 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	. "github.com/gardener/gardener/pkg/utils/kubernetes"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("LeaderElection", func() {
 	var (
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
-
 		ctx       = context.TODO()
 		fakeErr   = errors.New("fake err")
 		namespace = "namespace"
@@ -36,26 +34,34 @@ var _ = Describe("LeaderElection", func() {
 
 		holderIdentity             = "leader1"
 		leaseDurationSeconds int32 = 42
-		acquireTime                = metav1.Time{Time: time.Date(2020, 12, 14, 13, 18, 29, 176023, time.Local)}
-		renewTime                  = metav1.Time{Time: time.Date(2020, 12, 14, 13, 18, 29, 176023, time.Local)}
-		acquireTimeMicro           = metav1.MicroTime{Time: time.Date(2020, 12, 14, 13, 18, 29, 176023, time.Local)}
-		renewTimeMicro             = metav1.MicroTime{Time: time.Date(2020, 12, 14, 13, 18, 29, 176023, time.Local)}
+		acquireTime                = metav1.Time{Time: time.Date(2020, 12, 14, 13, 18, 29, 176023000, time.Local)}
+		renewTime                  = metav1.Time{Time: time.Date(2020, 12, 14, 13, 18, 29, 176023000, time.Local)}
+		acquireTimeMicro           = metav1.MicroTime{Time: time.Date(2020, 12, 14, 13, 18, 29, 176023000, time.Local)}
+		renewTimeMicro             = metav1.MicroTime{Time: time.Date(2020, 12, 14, 13, 18, 29, 176023000, time.Local)}
 		leaderTransitions    int32 = 24
 
-		objectMetaInvalid = metav1.ObjectMeta{Annotations: map[string]string{"control-plane.alpha.kubernetes.io/leader": "[foo]"}}
-		objectMetaValid   = metav1.ObjectMeta{Annotations: map[string]string{"control-plane.alpha.kubernetes.io/leader": fmt.Sprintf(`{
+		objectMetaInvalid = metav1.ObjectMeta{
+			Name:        name,
+			Namespace:   namespace,
+			Annotations: map[string]string{"control-plane.alpha.kubernetes.io/leader": "[foo]"},
+		}
+		objectMetaValid = metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Annotations: map[string]string{"control-plane.alpha.kubernetes.io/leader": fmt.Sprintf(`{
   "holderIdentity":%q,
   "leaseDurationSeconds":%d,
   "acquireTime":%q,
   "renewTime":%q,
   "leaderTransitions":%d
 }`,
-			holderIdentity,
-			leaseDurationSeconds,
-			acquireTime.Format(time.RFC3339Nano),
-			renewTime.Format(time.RFC3339Nano),
-			leaderTransitions,
-		)}}
+				holderIdentity,
+				leaseDurationSeconds,
+				acquireTime.Format(time.RFC3339Nano),
+				renewTime.Format(time.RFC3339Nano),
+				leaderTransitions,
+			)},
+		}
 		leaseSpecValid = coordinationv1.LeaseSpec{
 			HolderIdentity:       &holderIdentity,
 			LeaseDurationSeconds: &leaseDurationSeconds,
@@ -65,55 +71,60 @@ var _ = Describe("LeaderElection", func() {
 		}
 	)
 
-	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
-	})
-
 	Describe("#ReadLeaderElectionRecord", func() {
+		var fakeClient client.Client
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+		})
+
 		Context("endpoints lock", func() {
 			BeforeEach(func() {
 				lock = "endpoints"
 			})
 
 			It("should fail if the object cannot be retrieved", func() {
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Endpoints{})).Return(fakeErr)
+				fakeClient = fakeclient.NewClientBuilder().
+					WithScheme(kubernetesscheme.Scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+							return fakeErr
+						},
+					}).
+					Build()
 
-				lock, err := ReadLeaderElectionRecord(ctx, c, lock, namespace, name)
+				lock, err := ReadLeaderElectionRecord(ctx, fakeClient, lock, namespace, name)
 				Expect(lock).To(BeNil())
 				Expect(err).To(MatchError(fakeErr))
 			})
 
 			It("should fail if the object has no leader election annotation", func() {
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Endpoints{}))
+				endpoints := &corev1.Endpoints{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name,
+						Namespace: namespace,
+					},
+				}
 
-				lock, err := ReadLeaderElectionRecord(ctx, c, lock, namespace, name)
+				Expect(fakeClient.Create(ctx, endpoints)).To(Succeed())
+
+				lock, err := ReadLeaderElectionRecord(ctx, fakeClient, lock, namespace, name)
 				Expect(lock).To(BeNil())
 				Expect(err).To(MatchError(ContainSubstring("could not find key \"control-plane.alpha.kubernetes.io/leader\" in annotations")))
 			})
 
 			It("should fail if the leader election annotation cannot be unmarshalled", func() {
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Endpoints{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Endpoints, _ ...client.GetOption) error {
-					(&corev1.Endpoints{ObjectMeta: objectMetaInvalid}).DeepCopyInto(obj)
-					return nil
-				})
+				Expect(fakeClient.Create(ctx, &corev1.Endpoints{ObjectMeta: objectMetaInvalid})).To(Succeed())
 
-				lock, err := ReadLeaderElectionRecord(ctx, c, lock, namespace, name)
+				lock, err := ReadLeaderElectionRecord(ctx, fakeClient, lock, namespace, name)
 				Expect(lock).To(BeNil())
 				Expect(err).To(MatchError(ContainSubstring("failed to unmarshal leader election record")))
 			})
 
 			It("should successfully return the leader election record", func() {
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Endpoints{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Endpoints, _ ...client.GetOption) error {
-					(&corev1.Endpoints{ObjectMeta: objectMetaValid}).DeepCopyInto(obj)
-					return nil
-				})
+				Expect(fakeClient.Create(ctx, &corev1.Endpoints{ObjectMeta: objectMetaValid})).To(Succeed())
 
-				lock, err := ReadLeaderElectionRecord(ctx, c, lock, namespace, name)
+				lock, err := ReadLeaderElectionRecord(ctx, fakeClient, lock, namespace, name)
 				Expect(lock).To(Equal(&resourcelock.LeaderElectionRecord{
 					HolderIdentity:       holderIdentity,
 					LeaseDurationSeconds: int(leaseDurationSeconds),
@@ -131,39 +142,47 @@ var _ = Describe("LeaderElection", func() {
 			})
 
 			It("should fail if the object cannot be retrieved", func() {
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).Return(fakeErr)
+				fakeClient = fakeclient.NewClientBuilder().
+					WithScheme(kubernetesscheme.Scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+							return fakeErr
+						},
+					}).
+					Build()
 
-				lock, err := ReadLeaderElectionRecord(ctx, c, lock, namespace, name)
+				lock, err := ReadLeaderElectionRecord(ctx, fakeClient, lock, namespace, name)
 				Expect(lock).To(BeNil())
 				Expect(err).To(MatchError(fakeErr))
 			})
 
 			It("should fail if the object has no leader election annotation", func() {
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.ConfigMap{}))
+				configMap := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name,
+						Namespace: namespace,
+					},
+				}
 
-				lock, err := ReadLeaderElectionRecord(ctx, c, lock, namespace, name)
+				Expect(fakeClient.Create(ctx, configMap)).To(Succeed())
+
+				lock, err := ReadLeaderElectionRecord(ctx, fakeClient, lock, namespace, name)
 				Expect(lock).To(BeNil())
 				Expect(err).To(MatchError(ContainSubstring("could not find key \"control-plane.alpha.kubernetes.io/leader\" in annotations")))
 			})
 
 			It("should fail if the leader election annotation cannot be unmarshalled", func() {
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.ConfigMap, _ ...client.GetOption) error {
-					(&corev1.ConfigMap{ObjectMeta: objectMetaInvalid}).DeepCopyInto(obj)
-					return nil
-				})
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{ObjectMeta: objectMetaInvalid})).To(Succeed())
 
-				lock, err := ReadLeaderElectionRecord(ctx, c, lock, namespace, name)
+				lock, err := ReadLeaderElectionRecord(ctx, fakeClient, lock, namespace, name)
 				Expect(lock).To(BeNil())
 				Expect(err).To(MatchError(ContainSubstring("failed to unmarshal leader election record")))
 			})
 
 			It("should successfully return the leader election record", func() {
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.ConfigMap, _ ...client.GetOption) error {
-					(&corev1.ConfigMap{ObjectMeta: objectMetaValid}).DeepCopyInto(obj)
-					return nil
-				})
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{ObjectMeta: objectMetaValid})).To(Succeed())
 
-				lock, err := ReadLeaderElectionRecord(ctx, c, lock, namespace, name)
+				lock, err := ReadLeaderElectionRecord(ctx, fakeClient, lock, namespace, name)
 				Expect(lock).To(Equal(&resourcelock.LeaderElectionRecord{
 					HolderIdentity:       holderIdentity,
 					LeaseDurationSeconds: int(leaseDurationSeconds),
@@ -181,20 +200,32 @@ var _ = Describe("LeaderElection", func() {
 			})
 
 			It("should fail if the object cannot be retrieved", func() {
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&coordinationv1.Lease{})).Return(fakeErr)
+				fakeClient = fakeclient.NewClientBuilder().
+					WithScheme(kubernetesscheme.Scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+							return fakeErr
+						},
+					}).
+					Build()
 
-				lock, err := ReadLeaderElectionRecord(ctx, c, lock, namespace, name)
+				lock, err := ReadLeaderElectionRecord(ctx, fakeClient, lock, namespace, name)
 				Expect(lock).To(BeNil())
 				Expect(err).To(MatchError(fakeErr))
 			})
 
 			It("should successfully return the leader election record", func() {
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&coordinationv1.Lease{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *coordinationv1.Lease, _ ...client.GetOption) error {
-					(&coordinationv1.Lease{Spec: leaseSpecValid}).DeepCopyInto(obj)
-					return nil
-				})
+				lease := &coordinationv1.Lease{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name,
+						Namespace: namespace,
+					},
+					Spec: leaseSpecValid,
+				}
 
-				lock, err := ReadLeaderElectionRecord(ctx, c, lock, namespace, name)
+				Expect(fakeClient.Create(ctx, lease)).To(Succeed())
+
+				lock, err := ReadLeaderElectionRecord(ctx, fakeClient, lock, namespace, name)
 				Expect(lock).To(Equal(&resourcelock.LeaderElectionRecord{
 					HolderIdentity:       holderIdentity,
 					LeaseDurationSeconds: int(leaseDurationSeconds),

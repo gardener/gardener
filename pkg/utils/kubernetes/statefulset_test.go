@@ -6,26 +6,25 @@ package kubernetes_test
 
 import (
 	"context"
-	"errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	. "github.com/gardener/gardener/pkg/utils/kubernetes"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Statefulset.", func() {
 	Describe("#GetContainerResourcesInStatefulSet", func() {
 		var (
-			ctrl              *gomock.Controller
-			c                 *mockclient.MockClient
+			ctx               = context.TODO()
+			fakeClient        client.Client
 			testNamespace     string
 			testStatefulset   string
 			statefulSet       *appsv1.StatefulSet
@@ -33,6 +32,8 @@ var _ = Describe("Statefulset.", func() {
 		)
 
 		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+
 			expectedResources = &corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("100m"),
@@ -44,8 +45,6 @@ var _ = Describe("Statefulset.", func() {
 				},
 			}
 
-			ctrl = gomock.NewController(GinkgoT())
-			c = mockclient.NewMockClient(ctrl)
 			testNamespace = "test-namespace"
 			testStatefulset = "test-vali"
 
@@ -62,35 +61,22 @@ var _ = Describe("Statefulset.", func() {
 			}
 		})
 
-		AfterEach(func() {
-			ctrl.Finish()
-		})
-
 		It("should return container resources when statefulset contains one container", func() {
-			var (
-				ctx = context.TODO()
-			)
-
 			statefulSet.Spec.Template.Spec.Containers = []corev1.Container{
 				{
 					Name:      "container-1",
 					Resources: *expectedResources,
 				},
 			}
+			Expect(fakeClient.Create(ctx, statefulSet)).To(Succeed())
 
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: testStatefulset}, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).SetArg(2, *statefulSet).Return(nil)
-
-			rr, err := GetContainerResourcesInStatefulSet(ctx, c, client.ObjectKey{Namespace: testNamespace, Name: testStatefulset})
+			rr, err := GetContainerResourcesInStatefulSet(ctx, fakeClient, client.ObjectKeyFromObject(statefulSet))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(rr).To(HaveLen(len(statefulSet.Spec.Template.Spec.Containers)))
+			Expect(rr).To(HaveLen(1))
 			Expect(rr["container-1"]).To(Equal(expectedResources))
 		})
 
 		It("should return all container resources when statefulset contains two containers", func() {
-			var (
-				ctx = context.TODO()
-			)
-
 			statefulSet.Spec.Template.Spec.Containers = []corev1.Container{
 				{
 					Name:      "container-1",
@@ -101,25 +87,19 @@ var _ = Describe("Statefulset.", func() {
 					Resources: *expectedResources,
 				},
 			}
+			Expect(fakeClient.Create(ctx, statefulSet)).To(Succeed())
 
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: testStatefulset}, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).SetArg(2, *statefulSet).Return(nil)
-
-			rr, err := GetContainerResourcesInStatefulSet(ctx, c, client.ObjectKey{Namespace: testNamespace, Name: testStatefulset})
+			rr, err := GetContainerResourcesInStatefulSet(ctx, fakeClient, client.ObjectKeyFromObject(statefulSet))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(rr).To(HaveLen(len(statefulSet.Spec.Template.Spec.Containers)))
+			Expect(rr).To(HaveLen(2))
 			Expect(rr["container-1"]).To(Equal(expectedResources))
 			Expect(rr["container-2"]).To(Equal(expectedResources))
 		})
 
-		It("should return error if statefulSet is not found", func() {
-			var (
-				ctx = context.TODO()
-			)
-
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: testStatefulset}, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).Return(errors.New("error"))
-
-			_, err := GetContainerResourcesInStatefulSet(ctx, c, client.ObjectKey{Namespace: testNamespace, Name: testStatefulset})
-			Expect(err).To(HaveOccurred())
+		It("should return nil if statefulSet is not found", func() {
+			rr, err := GetContainerResourcesInStatefulSet(ctx, fakeClient, client.ObjectKeyFromObject(statefulSet))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rr).To(BeNil())
 		})
 	})
 })

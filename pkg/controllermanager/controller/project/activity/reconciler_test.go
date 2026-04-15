@@ -7,21 +7,21 @@ package activity_test
 import (
 	"context"
 	"errors"
-	"reflect"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/project/activity"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Project Activity", func() {
@@ -36,17 +36,11 @@ var _ = Describe("Project Activity", func() {
 
 		fakeClock *testclock.FakeClock
 
-		ctrl                   *gomock.Controller
-		k8sGardenRuntimeClient *mockclient.MockClient
-		mockStatusWriter       *mockclient.MockStatusWriter
-		ctx                    context.Context
+		fakeClient client.Client
+		ctx        context.Context
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
-		mockStatusWriter = mockclient.NewMockStatusWriter(ctrl)
-
 		ctx = context.TODO()
 
 		projectName = "name"
@@ -65,54 +59,51 @@ var _ = Describe("Project Activity", func() {
 		}
 	})
 
-	AfterEach(func() {
-		ctrl.Finish()
-	})
-
 	Describe("Reconciler", func() {
 		BeforeEach(func() {
 			fakeClock = testclock.NewFakeClock(time.Now())
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.GardenScheme).
+				WithStatusSubresource(&gardencorev1beta1.Project{}).
+				Build()
 			reconciler = &Reconciler{
-				Client: k8sGardenRuntimeClient,
+				Client: fakeClient,
 				Clock:  fakeClock,
 			}
 
-			k8sGardenRuntimeClient.EXPECT().Get(
-				gomock.Any(),
-				gomock.Any(),
-				gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}),
-			).DoAndReturn(func(_ context.Context, namespacedName client.ObjectKey, obj *gardencorev1beta1.Project, _ ...client.GetOption) error {
-				if reflect.DeepEqual(namespacedName.Namespace, namespaceName) {
-					project.DeepCopyInto(obj)
-					return nil
-				}
-				return errors.New("error retrieving object from store")
-			})
-
-			k8sGardenRuntimeClient.EXPECT().Status().Return(mockStatusWriter).AnyTimes()
-
-			mockStatusWriter.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, prj *gardencorev1beta1.Project, _ client.Patch, _ ...client.PatchOption) error {
-					*project = *prj
-					return nil
-				},
-			).AnyTimes()
+			Expect(fakeClient.Create(ctx, project)).To(Succeed())
 		})
 
 		Context("#Reconcile", func() {
 			It("should update the lastActivityTimestamp to now", func() {
-				request = reconcile.Request{NamespacedName: types.NamespacedName{Name: project.Name, Namespace: namespaceName}}
+				request = reconcile.Request{NamespacedName: types.NamespacedName{Name: project.Name}}
 				_, err := reconciler.Reconcile(ctx, request)
 				Expect(err).ToNot(HaveOccurred())
 
-				now := &metav1.Time{Time: fakeClock.Now()}
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Name: projectName}, project)).To(Succeed())
+				// JSON serialization of metav1.Time truncates to second precision, so compare with truncated time
+				now := &metav1.Time{Time: fakeClock.Now().Truncate(time.Second)}
 				Expect(project.Status.LastActivityTimestamp).To(Equal(now))
 			})
 
 			It("should fail reconcile because the project can't be retrieved", func() {
+				fakeErr := errors.New("error retrieving object from store")
+				fakeClient = fakeclient.NewClientBuilder().
+					WithScheme(kubernetes.GardenScheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+							return fakeErr
+						},
+					}).
+					Build()
+				reconciler = &Reconciler{
+					Client: fakeClient,
+					Clock:  fakeClock,
+				}
+
 				request = reconcile.Request{NamespacedName: types.NamespacedName{Name: project.Name, Namespace: namespaceName + "other"}}
 				_, err := reconciler.Reconcile(ctx, request)
-				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(fakeErr))
 			})
 		})
 	})

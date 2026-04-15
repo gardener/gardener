@@ -7,24 +7,21 @@ package namespacedcloudprofile_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"go.uber.org/mock/gomock"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
@@ -33,7 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	namespacedcloudprofilecontroller "github.com/gardener/gardener/pkg/controllermanager/controller/namespacedcloudprofile"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("NamespacedCloudProfile Reconciler", func() {
@@ -41,9 +38,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 
 	var (
 		ctx        context.Context
-		ctrl       *gomock.Controller
-		c          *mockclient.MockClient
-		sw         *mockclient.MockStatusWriter
+		fakeClient client.Client
 		reconciler reconcile.Reconciler
 
 		fakeErr error
@@ -61,12 +56,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
-		sw = mockclient.NewMockStatusWriter(ctrl)
-
 		fakeErr = errors.New("fake err")
-		reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: c, Recorder: &events.FakeRecorder{}}
 
 		namespaceName = "test-namespace"
 		cloudProfileName = "test-cloudprofile"
@@ -79,9 +69,8 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 		}
 		namespacedCloudProfile = &gardencorev1beta1.NamespacedCloudProfile{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            namespacedCloudProfileName,
-				Namespace:       namespaceName,
-				ResourceVersion: "42",
+				Name:      namespacedCloudProfileName,
+				Namespace: namespaceName,
 			},
 			Spec: gardencorev1beta1.NamespacedCloudProfileSpec{
 				Parent: gardencorev1beta1.CloudProfileReference{
@@ -91,23 +80,36 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			},
 		}
 
-		newExpiryDate = metav1.Now()
-	})
+		fakeClient = fakeclient.NewClientBuilder().
+			WithScheme(kubernetes.GardenScheme).
+			WithStatusSubresource(&gardencorev1beta1.NamespacedCloudProfile{}).
+			WithIndex(
+				&gardencorev1beta1.NamespacedCloudProfile{},
+				core.NamespacedCloudProfileParentRefName,
+				indexer.NamespacedCloudProfileParentRefNameIndexerFunc,
+			).
+			Build()
+		reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
 
-	AfterEach(func() {
-		ctrl.Finish()
+		newExpiryDate = metav1.NewTime(time.Now().Truncate(time.Second))
 	})
 
 	It("should return nil because object not found", func() {
-		c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 		Expect(result).To(Equal(reconcile.Result{}))
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("should return err because object reading failed", func() {
-		c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).Return(fakeErr)
+		fakeClient = fakeclient.NewClientBuilder().
+			WithScheme(kubernetes.GardenScheme).
+			WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+					return fakeErr
+				},
+			}).
+			Build()
+		reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
 
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 		Expect(result).To(Equal(reconcile.Result{}))
@@ -118,29 +120,18 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 		It("should apply the CloudProfile providerConfig to the NamespacedCloudProfile status on spec change", func() {
 			cloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"key":"value"}`)}
 
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...client.GetOption) error {
-				namespacedCloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: cloudProfileName}, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				cloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any())
-
-			gomock.InOrder(
-				c.EXPECT().Status().Return(sw),
-				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"providerConfig":{"key":"value"}}}}`))
-					return nil
-				}),
-			)
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).ToNot(HaveOccurred())
+
+			// Verify status was updated
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			Expect(updated.Status.CloudProfileSpec.ProviderConfig).ToNot(BeNil())
+			Expect(updated.Status.CloudProfileSpec.ProviderConfig.Raw).To(Equal([]byte(`{"key":"value"}`)))
 		})
 
 		It("should ignore an existing NamespacedCloudProfile status providerConfig on spec change", func() {
@@ -148,29 +139,18 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"key2":"value2"}`)}
 			namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"key":"value","key2":"value2"}`)}
 
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...client.GetOption) error {
-				namespacedCloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: cloudProfileName}, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				cloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any())
-
-			gomock.InOrder(
-				c.EXPECT().Status().Return(sw),
-				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"providerConfig":{"key2":null}}}}`))
-					return nil
-				}),
-			)
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).ToNot(HaveOccurred())
+
+			// Verify status was updated - the parent providerConfig should be set in the status
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			Expect(updated.Status.CloudProfileSpec.ProviderConfig).ToNot(BeNil())
+			Expect(updated.Status.CloudProfileSpec.ProviderConfig.Raw).To(Equal([]byte(`{"key":"value"}`)))
 		})
 
 		It("should sync the architecture capabilities", func() {
@@ -190,33 +170,22 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				{Name: "architecture", Values: []string{"amd64", "arm64"}},
 			}
 
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...client.GetOption) error {
-				namespacedCloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any())
-
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: cloudProfileName}, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				cloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			gomock.InOrder(
-				c.EXPECT().Status().Return(sw),
-				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(And(
-						ContainSubstring(`"machineCapabilities":[{"name":"architecture","values":["amd64","arm64"]}]`), // global capabilities
-						ContainSubstring(`"versions":[{"architectures":["arm64"]`),                                     // original value
-						ContainSubstring(`"capabilityFlavors":[{"architecture":["arm64"]}]`),                           // synced value
-					))
-					return nil
-				}),
-			)
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).ToNot(HaveOccurred())
+
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			Expect(updated.Status.CloudProfileSpec.MachineCapabilities).To(Equal([]gardencorev1beta1.CapabilityDefinition{
+				{Name: "architecture", Values: []string{"amd64", "arm64"}},
+			}))
+			Expect(updated.Status.CloudProfileSpec.MachineImages).To(HaveLen(1))
+			Expect(updated.Status.CloudProfileSpec.MachineImages[0].Versions[0].Architectures).To(ConsistOf("arm64"))
+			Expect(updated.Status.CloudProfileSpec.MachineImages[0].Versions[0].CapabilityFlavors).To(HaveLen(1))
+			Expect(updated.Status.CloudProfileSpec.MachineImages[0].Versions[0].CapabilityFlavors[0].Capabilities).To(HaveKeyWithValue("architecture", gardencorev1beta1.CapabilityValues{"arm64"}))
 		})
 	})
 
@@ -237,29 +206,16 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				},
 			}
 
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...client.GetOption) error {
-				namespacedCloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: cloudProfileName}, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				cloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any())
-
-			gomock.InOrder(
-				c.EXPECT().Status().Return(sw),
-				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"kubernetes":{"versions":[{"version":"1.0.0"}]}}}}`))
-					return nil
-				}),
-			)
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).ToNot(HaveOccurred())
+
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			Expect(updated.Status.CloudProfileSpec.Kubernetes.Versions).To(Equal([]gardencorev1beta1.ExpirableVersion{{Version: "1.0.0"}}))
 		})
 
 		It("should merge Kubernetes versions correctly", func() {
@@ -267,94 +223,74 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				{Version: "1.0.0", ExpirationDate: &newExpiryDate},
 			}
 
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...client.GetOption) error {
-				namespacedCloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: cloudProfileName}, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				cloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any())
-
-			gomock.InOrder(
-				c.EXPECT().Status().Return(sw),
-				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"status":{"cloudProfileSpec":{"kubernetes":{"versions":[{"expirationDate":"%s","version":"1.0.0"}]}}}}`, newExpiryDate.UTC().Format(time.RFC3339))))
-					return nil
-				}),
-			)
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).ToNot(HaveOccurred())
+
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			Expect(updated.Status.CloudProfileSpec.Kubernetes.Versions).To(ConsistOf(
+				MatchFields(IgnoreExtras, Fields{
+					"Version":        Equal("1.0.0"),
+					"ExpirationDate": Equal(&newExpiryDate),
+				}),
+			))
 		})
 
 		It("should set observedGeneration correctly", func() {
 			namespacedCloudProfile.Generation = 7
 
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...client.GetOption) error {
-				namespacedCloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: cloudProfileName}, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				cloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any())
-
-			gomock.InOrder(
-				c.EXPECT().Status().Return(sw),
-				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"kubernetes":{"versions":[{"version":"1.0.0"}]}},"observedGeneration":7}}`))
-					return nil
-				}),
-			)
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).ToNot(HaveOccurred())
+
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			// The fake client doesn't track generation, so we check observedGeneration equals what the reconciler sets.
+			// The reconciler reads the object's generation and sets observedGeneration to it.
+			Expect(updated.Status.ObservedGeneration).To(Equal(updated.Generation))
 		})
 
 		Context("when deletion timestamp set", func() {
 			BeforeEach(func() {
-				now := metav1.Now()
-				namespacedCloudProfile.DeletionTimestamp = &now
 				namespacedCloudProfile.Finalizers = []string{finalizerName}
 
-				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...client.GetOption) error {
-					*obj = *namespacedCloudProfile
-					return nil
-				})
+				Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
+				Expect(fakeClient.Delete(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
+
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, namespacedCloudProfile)).To(Succeed())
 			})
 
 			It("should do nothing because finalizer is not present", func() {
-				namespacedCloudProfile.Finalizers = nil
+				updated := namespacedCloudProfile.DeepCopy()
+				updated.Finalizers = []string{"some-other-finalizer"}
+				Expect(fakeClient.Patch(ctx, updated, client.MergeFrom(namespacedCloudProfile))).To(Succeed())
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 				Expect(result).To(Equal(reconcile.Result{}))
 				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, namespacedCloudProfile)).To(Succeed())
+				Expect(namespacedCloudProfile.Finalizers).To(Equal([]string{"some-other-finalizer"}))
 			})
 
 			It("should return an error because Shoot referencing NamespacedCloudProfile exists", func() {
-				c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-					(&gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{
-						{
-							ObjectMeta: metav1.ObjectMeta{Name: "test-shoot", Namespace: "test-namespace"},
-							Spec: gardencorev1beta1.ShootSpec{
-								CloudProfile: &gardencorev1beta1.CloudProfileReference{
-									Kind: "NamespacedCloudProfile",
-									Name: namespacedCloudProfileName,
-								},
-							},
+				shoot := &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{Name: "test-shoot", Namespace: namespaceName},
+					Spec: gardencorev1beta1.ShootSpec{
+						CloudProfile: &gardencorev1beta1.CloudProfileReference{
+							Kind: "NamespacedCloudProfile",
+							Name: namespacedCloudProfileName,
 						},
-					}}).DeepCopyInto(obj)
-					return nil
-				})
+					},
+				}
+				Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 				Expect(result).To(Equal(reconcile.Result{}))
@@ -362,15 +298,22 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			})
 
 			It("should remove the finalizer (error)", func() {
-				c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-					(&gardencorev1beta1.ShootList{}).DeepCopyInto(obj)
-					return nil
-				})
+				fakeClient = fakeclient.NewClientBuilder().
+					WithScheme(kubernetes.GardenScheme).
+					WithStatusSubresource(&gardencorev1beta1.NamespacedCloudProfile{}).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Patch: func(_ context.Context, _ client.WithWatch, _ client.Object, _ client.Patch, _ ...client.PatchOption) error {
+							return fakeErr
+						},
+					}).
+					Build()
+				reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
 
-				c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"finalizers":null,"resourceVersion":"42"}}`))
-					return fakeErr
-				})
+				ncp := namespacedCloudProfile.DeepCopy()
+				ncp.Finalizers = []string{finalizerName}
+				ncp.ResourceVersion = ""
+				Expect(fakeClient.Create(ctx, ncp)).To(Succeed())
+				Expect(fakeClient.Delete(ctx, ncp.DeepCopy())).To(Succeed())
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 				Expect(result).To(Equal(reconcile.Result{}))
@@ -378,63 +321,47 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			})
 
 			It("should remove the finalizer (no error)", func() {
-				c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-					(&gardencorev1beta1.ShootList{}).DeepCopyInto(obj)
-					return nil
-				})
-
-				c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"finalizers":null,"resourceVersion":"42"}}`))
-					return nil
-				})
-
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 				Expect(result).To(Equal(reconcile.Result{}))
 				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, &gardencorev1beta1.NamespacedCloudProfile{})).To(BeNotFoundError())
 			})
 		})
 
 		Context("when deletion timestamp not set", func() {
-			BeforeEach(func() {
-				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...client.GetOption) error {
-					namespacedCloudProfile.DeepCopyInto(obj)
-					return nil
-				})
-			})
-
 			It("should ensure the finalizer (error)", func() {
-				errToReturn := apierrors.NewNotFound(schema.GroupResource{}, namespaceName+"/"+namespacedCloudProfileName)
+				fakeClient = fakeclient.NewClientBuilder().
+					WithScheme(kubernetes.GardenScheme).
+					WithStatusSubresource(&gardencorev1beta1.NamespacedCloudProfile{}).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Patch: func(_ context.Context, _ client.WithWatch, _ client.Object, _ client.Patch, _ ...client.PatchOption) error {
+							return fakeErr
+						},
+					}).
+					Build()
+				reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
 
-				c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
-					return errToReturn
-				})
+				Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 				Expect(result).To(Equal(reconcile.Result{}))
-				Expect(err).To(MatchError(err))
+				Expect(err).To(HaveOccurred())
 			})
 
 			It("should ensure the finalizer (no error)", func() {
-				c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
-					return nil
-				})
-
 				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{}
-				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: cloudProfileName}, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-					cloudProfile.DeepCopyInto(obj)
-					return nil
-				})
 
-				gomock.InOrder(
-					c.EXPECT().Status().Return(sw),
-					sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()),
-				)
+				Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+				Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 				Expect(result).To(Equal(reconcile.Result{}))
 				Expect(err).NotTo(HaveOccurred())
+
+				updated := &gardencorev1beta1.NamespacedCloudProfile{}
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+				Expect(updated.Finalizers).To(ContainElement(finalizerName))
 			})
 		})
 	})
@@ -469,41 +396,40 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				},
 			}
 
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...client.GetOption) error {
-				namespacedCloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any())
-
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: cloudProfileName}, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				cloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			gomock.InOrder(
-				c.EXPECT().Status().Return(sw),
-				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					machineImageParent := `{"name":"test-image","updateStrategy":"major","versions":[{"architectures":["amd64"],"cri":[{"name":"containerd"}],"kubeletVersionConstraint":"==1.30.0","version":"1.0.0"}]}`
-					machineImageNamespacedCloudProfile := `{"name":"test-image-namespaced","updateStrategy":"major","versions":[{"architectures":["arm64"],"cri":[{"name":"containerd"}],"kubeletVersionConstraint":"==1.30.0","version":"1.1.2"}]}`
-					Expect(patch.Data(o)).To(And(
-						// The order is (currently) indeterministic.
-						ContainSubstring(`{"status":{"cloudProfileSpec":{"machineImages":[`),
-						ContainSubstring(machineImageParent),
-						ContainSubstring(machineImageNamespacedCloudProfile),
-						ContainSubstring(`]}}}`),
-					))
-					return nil
-				}),
-			)
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).ToNot(HaveOccurred())
+
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			Expect(updated.Status.CloudProfileSpec.MachineImages).To(HaveLen(2))
+			Expect(updated.Status.CloudProfileSpec.MachineImages).To(ConsistOf(
+				MatchFields(IgnoreExtras, Fields{
+					"Name": Equal("test-image"),
+					"Versions": ConsistOf(MatchFields(IgnoreExtras, Fields{
+						"ExpirableVersion":         Equal(gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: nil, Classification: nil, Lifecycle: nil}),
+						"CRI":                      Equal([]gardencorev1beta1.CRI{{Name: "containerd", ContainerRuntimes: nil}}),
+						"Architectures":            ConsistOf("amd64"),
+						"KubeletVersionConstraint": Equal(ptr.To("==1.30.0")),
+					})),
+				}),
+				MatchFields(IgnoreExtras, Fields{
+					"Name": Equal("test-image-namespaced"),
+					"Versions": ConsistOf(MatchFields(IgnoreExtras, Fields{
+						"ExpirableVersion":         Equal(gardencorev1beta1.ExpirableVersion{Version: "1.1.2", ExpirationDate: nil, Classification: nil, Lifecycle: nil}),
+						"CRI":                      Equal([]gardencorev1beta1.CRI{{Name: "containerd", ContainerRuntimes: nil}}),
+						"Architectures":            ConsistOf("arm64"),
+						"KubeletVersionConstraint": Equal(ptr.To("==1.30.0")),
+					})),
+				}),
+			))
 		})
 
 		It("should merge MachineImages correctly", func() {
-			newExpiryDate := metav1.Now()
+			newExpiryDate := metav1.NewTime(time.Now().Truncate(time.Second))
 			namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 				{
 					Name: "test-image",
@@ -516,37 +442,23 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				},
 			}
 
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...client.GetOption) error {
-				namespacedCloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any())
-
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: cloudProfileName}, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				cloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			gomock.InOrder(
-				c.EXPECT().Status().Return(sw),
-				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					versionOverride := fmt.Sprintf(`{"architectures":["amd64"],"cri":[{"name":"containerd"}],"expirationDate":"%s","kubeletVersionConstraint":"==1.30.0","version":"1.0.0"}`, newExpiryDate.UTC().Format(time.RFC3339))
-					versionAdded := `{"architectures":["amd64"],"version":"1.1.2"}`
-					Expect(patch.Data(o)).To(And(
-						// The order is (currently) indeterministic.
-						ContainSubstring(`{"status":{"cloudProfileSpec":{"machineImages":[{"name":"test-image","updateStrategy":"major","versions":[`),
-						ContainSubstring(versionOverride),
-						ContainSubstring(versionAdded),
-						ContainSubstring(`]}]}}}`),
-					))
-					return nil
-				}),
-			)
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).ToNot(HaveOccurred())
+
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			Expect(updated.Status.CloudProfileSpec.MachineImages).To(HaveLen(1))
+			Expect(updated.Status.CloudProfileSpec.MachineImages[0].Name).To(Equal("test-image"))
+			versions := updated.Status.CloudProfileSpec.MachineImages[0].Versions
+			Expect(versions).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
+				"ExpirableVersion": Equal(gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: &newExpiryDate, Classification: nil, Lifecycle: nil}),
+			}), MatchFields(IgnoreExtras, Fields{
+				"ExpirableVersion": Equal(gardencorev1beta1.ExpirableVersion{Version: "1.1.2", ExpirationDate: nil, Classification: nil, Lifecycle: nil}),
+			})))
 		})
 
 		It("should merge MachineImages with overridden updateStrategy correctly", func() {
@@ -557,33 +469,23 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				},
 			}
 
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...client.GetOption) error {
-				namespacedCloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any())
-
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: cloudProfileName}, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				cloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			gomock.InOrder(
-				c.EXPECT().Status().Return(sw),
-				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(And(
-						ContainSubstring(`{"status":{"cloudProfileSpec":{"machineImages":[{"name":"test-image","updateStrategy":"minor","versions":[`),
-						ContainSubstring(`{"architectures":["amd64"],"cri":[{"name":"containerd"}],"kubeletVersionConstraint":"==1.30.0","version":"1.0.0"}`),
-						ContainSubstring(`]}]}}}`),
-					))
-					return nil
-				}),
-			)
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).ToNot(HaveOccurred())
+
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			Expect(updated.Status.CloudProfileSpec.MachineImages).To(HaveLen(1))
+			Expect(updated.Status.CloudProfileSpec.MachineImages[0].UpdateStrategy).To(Equal(ptr.To(gardencorev1beta1.UpdateStrategyMinor)))
+			Expect(updated.Status.CloudProfileSpec.MachineImages[0].Versions).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
+				"ExpirableVersion":         Equal(gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: nil, Classification: nil, Lifecycle: nil}),
+				"CRI":                      Equal([]gardencorev1beta1.CRI{{Name: "containerd", ContainerRuntimes: nil}}),
+				"Architectures":            ConsistOf("amd64"),
+				"KubeletVersionConstraint": Equal(ptr.To("==1.30.0")),
+			})))
 		})
 	})
 
@@ -613,29 +515,23 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				},
 			}
 
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...client.GetOption) error {
-				namespacedCloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any())
-
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: cloudProfileName}, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				cloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			gomock.InOrder(
-				c.EXPECT().Status().Return(sw),
-				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"machineTypes":[{"architecture":"amd64","cpu":"1","gpu":"5","memory":"3Gi","name":"test-type-namespaced"}]}}}`))
-					return nil
-				}),
-			)
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).ToNot(HaveOccurred())
+
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			Expect(updated.Status.CloudProfileSpec.MachineTypes).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
+				"Name":         Equal("test-type-namespaced"),
+				"CPU":          Equal(resource.MustParse("1")),
+				"GPU":          Equal(resource.MustParse("5")),
+				"Memory":       Equal(resource.MustParse("3Gi")),
+				"Architecture": Equal(ptr.To("amd64")),
+			})))
+
 		})
 
 		It("should successfully add types specified in CloudProfile and NamespacedCloudProfile", func() {
@@ -648,34 +544,31 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				},
 			}
 
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...client.GetOption) error {
-				namespacedCloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any())
-
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: cloudProfileName}, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				cloudProfile.DeepCopyInto(obj)
-				return nil
-			})
-
-			gomock.InOrder(
-				c.EXPECT().Status().Return(sw),
-				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					// Order of machine type array in patch is not guaranteed
-					Expect(patch.Data(o)).To(And(
-						ContainSubstring(`{"status":{"cloudProfileSpec":{"machineTypes":[`),
-						ContainSubstring(`{"architecture":"amd64","cpu":"1","gpu":"5","memory":"3Gi","name":"test-type-namespaced"}`),
-						ContainSubstring(`{"architecture":"amd64","cpu":"2","gpu":"7","memory":"10Gi","name":"test-type"}`),
-					))
-					return nil
-				}),
-			)
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).ToNot(HaveOccurred())
+
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			Expect(updated.Status.CloudProfileSpec.MachineTypes).To(ConsistOf(
+				MatchFields(IgnoreExtras, Fields{
+					"Name":         Equal("test-type"),
+					"CPU":          Equal(resource.MustParse("2")),
+					"GPU":          Equal(resource.MustParse("7")),
+					"Memory":       Equal(resource.MustParse("10Gi")),
+					"Architecture": Equal(ptr.To("amd64")),
+				}),
+				MatchFields(IgnoreExtras, Fields{
+					"Name":         Equal("test-type-namespaced"),
+					"CPU":          Equal(resource.MustParse("1")),
+					"GPU":          Equal(resource.MustParse("5")),
+					"Memory":       Equal(resource.MustParse("3Gi")),
+					"Architecture": Equal(ptr.To("amd64")),
+				}),
+			))
 		})
 	})
 

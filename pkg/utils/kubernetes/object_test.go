@@ -11,10 +11,8 @@ import (
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,93 +20,121 @@ import (
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	. "github.com/gardener/gardener/pkg/utils/kubernetes"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Object", func() {
 	var (
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
-
-		ctx     = context.TODO()
-		fakeErr = errors.New("fake err")
-
-		obj1 = &corev1.Secret{}
-		obj2 = &appsv1.Deployment{}
-		objs = []client.Object{obj1, obj2}
+		ctx        = context.TODO()
+		fakeErr    = errors.New("fake err")
+		fakeClient client.Client
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 	})
 
 	Describe("#DeleteObjects", func() {
 		It("should fail because an object fails to delete", func() {
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, obj1).Return(fakeErr),
-			)
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetesscheme.Scheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Delete: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.DeleteOption) error {
+						return fakeErr
+					},
+				}).
+				Build()
 
-			Expect(DeleteObjects(ctx, c, objs...)).To(MatchError(fakeErr))
+			obj1 := &corev1.Secret{}
+			obj2 := &appsv1.Deployment{}
+			Expect(DeleteObjects(ctx, fakeClient, obj1, obj2)).To(MatchError(fakeErr))
 		})
 
-		It("should fail because an object fails to delete", func() {
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, obj1),
-				c.EXPECT().Delete(ctx, obj2).Return(fakeErr),
-			)
+		It("should fail because the second object fails to delete", func() {
+			callCount := 0
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetesscheme.Scheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Delete: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+						callCount++
+						if callCount == 2 {
+							return fakeErr
+						}
+						return cl.Delete(ctx, obj, opts...)
+					},
+				}).
+				Build()
 
-			Expect(DeleteObjects(ctx, c, objs...)).To(MatchError(fakeErr))
+			obj1 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "s1", Namespace: "default"}}
+			obj2 := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "d1", Namespace: "default"}}
+			Expect(fakeClient.Create(ctx, obj1)).To(Succeed())
+			Expect(fakeClient.Create(ctx, obj2)).To(Succeed())
+
+			Expect(DeleteObjects(ctx, fakeClient, obj1, obj2)).To(MatchError(fakeErr))
 		})
 
 		It("should successfully delete all objects", func() {
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, obj1),
-				c.EXPECT().Delete(ctx, obj2),
-			)
+			obj1 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "s1", Namespace: "default"}}
+			obj2 := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "d1", Namespace: "default"}}
+			Expect(fakeClient.Create(ctx, obj1)).To(Succeed())
+			Expect(fakeClient.Create(ctx, obj2)).To(Succeed())
 
-			Expect(DeleteObjects(ctx, c, objs...)).To(Succeed())
+			Expect(DeleteObjects(ctx, fakeClient, obj1, obj2)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(obj1), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(obj2), &appsv1.Deployment{})).To(BeNotFoundError())
 		})
 	})
 
 	Describe("#DeleteObject", func() {
 		It("should fail to delete the object", func() {
-			c.EXPECT().Delete(ctx, obj1).Return(fakeErr)
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetesscheme.Scheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Delete: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.DeleteOption) error {
+						return fakeErr
+					},
+				}).
+				Build()
 
-			Expect(DeleteObject(ctx, c, obj1)).To(MatchError(fakeErr))
+			Expect(DeleteObject(ctx, fakeClient, &corev1.Secret{})).To(MatchError(fakeErr))
 		})
 
 		It("should not fail to delete the object (not found error)", func() {
-			c.EXPECT().Delete(ctx, obj1).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-
-			Expect(DeleteObject(ctx, c, obj1)).To(Succeed())
+			Expect(DeleteObject(ctx, fakeClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "nonexistent", Namespace: "default"}})).To(Succeed())
 		})
 
 		It("should not fail to delete the object (no match error)", func() {
-			c.EXPECT().Delete(ctx, obj1).Return(&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}})
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetesscheme.Scheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Delete: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.DeleteOption) error {
+						return &meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}}
+					},
+				}).
+				Build()
 
-			Expect(DeleteObject(ctx, c, obj1)).To(Succeed())
+			Expect(DeleteObject(ctx, fakeClient, &corev1.Secret{})).To(Succeed())
 		})
 
 		It("should successfully delete the object", func() {
-			c.EXPECT().Delete(ctx, obj1)
+			obj := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "s1", Namespace: "default"}}
+			Expect(fakeClient.Create(ctx, obj)).To(Succeed())
 
-			Expect(DeleteObject(ctx, c, obj1)).To(Succeed())
+			Expect(DeleteObject(ctx, fakeClient, obj)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(obj), &corev1.Secret{})).To(BeNotFoundError())
 		})
 	})
 
 	Describe("#DeleteObjectsFromListConditionally", func() {
 		var (
-			obj1       = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "1"}}
-			obj2       = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "2"}}
-			obj3       = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "3"}}
-			listObject = &corev1.NamespaceList{Items: []corev1.Namespace{*obj1, *obj2, *obj3}}
+			obj1 = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "1"}}
+			obj2 = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "2"}}
+			obj3 = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "3"}}
 
 			predicateFn = func(obj runtime.Object) bool {
 				acc, _ := meta.Accessor(obj)
@@ -117,19 +143,39 @@ var _ = Describe("Object", func() {
 		)
 
 		It("should return an error if deleting an object failed", func() {
-			c.EXPECT().Delete(ctx, obj1)
-			c.EXPECT().Delete(ctx, obj3).Return(fakeErr)
+			Expect(fakeClient.Create(ctx, obj1.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, obj3.DeepCopy())).To(Succeed())
 
-			err := DeleteObjectsFromListConditionally(ctx, c, listObject, predicateFn)
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetesscheme.Scheme).
+				WithObjects(obj1.DeepCopy(), obj3.DeepCopy()).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Delete: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+						if obj.GetName() == "3" {
+							return fakeErr
+						}
+						return cl.Delete(ctx, obj, opts...)
+					},
+				}).
+				Build()
+
+			listObject := &corev1.NamespaceList{Items: []corev1.Namespace{*obj1, *obj2, *obj3}}
+
+			err := DeleteObjectsFromListConditionally(ctx, fakeClient, listObject, predicateFn)
 			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
 			Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(fakeErr)))
 		})
 
 		It("should successfully delete the relevant objects", func() {
-			c.EXPECT().Delete(ctx, obj1)
-			c.EXPECT().Delete(ctx, obj3)
+			Expect(fakeClient.Create(ctx, obj1.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, obj2.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, obj3.DeepCopy())).To(Succeed())
 
-			Expect(DeleteObjectsFromListConditionally(ctx, c, listObject, predicateFn)).To(Succeed())
+			Expect(DeleteObjectsFromListConditionally(ctx, fakeClient, &corev1.NamespaceList{Items: []corev1.Namespace{*obj1, *obj2, *obj3}}, predicateFn)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(obj1), &corev1.Namespace{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(obj2), &corev1.Namespace{})).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(obj3), &corev1.Namespace{})).To(BeNotFoundError())
 		})
 	})
 
@@ -147,36 +193,41 @@ var _ = Describe("Object", func() {
 		})
 
 		It("should return an error because the listing failed", func() {
-			c.EXPECT().List(ctx, gomock.Any(), client.InNamespace(namespace), client.Limit(1)).Return(fakeErr)
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetesscheme.Scheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+						return fakeErr
+					},
+				}).
+				Build()
 
-			inUse, err := ResourcesExist(ctx, c, objList, scheme, listOpts...)
+			inUse, err := ResourcesExist(ctx, fakeClient, objList, scheme, listOpts...)
 			Expect(err).To(MatchError(fakeErr))
 			Expect(inUse).To(BeTrue())
 		})
 
 		Context("with partialObjectMetadataList", func() {
-			var partialObjectMetadataList *metav1.PartialObjectMetadataList
-
 			BeforeEach(func() {
-				partialObjectMetadataList = &metav1.PartialObjectMetadataList{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "SecretList"}}
 				listOpts = append(listOpts, client.MatchingFields{"metadata.name": "foo"})
+				fakeClient = fakeclient.NewClientBuilder().
+					WithScheme(kubernetesscheme.Scheme).
+					WithIndex(&corev1.Secret{}, "metadata.name", func(obj client.Object) []string {
+						return []string{obj.GetName()}
+					}).
+					Build()
 			})
 
 			It("should return true because objects found", func() {
-				c.EXPECT().List(ctx, partialObjectMetadataList, client.InNamespace(namespace), client.MatchingFields{"metadata.name": "foo"}, client.Limit(1)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
-					(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list)
-					return nil
-				})
+				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: namespace}})).To(Succeed())
 
-				inUse, err := ResourcesExist(ctx, c, objList, scheme, listOpts...)
+				inUse, err := ResourcesExist(ctx, fakeClient, objList, scheme, listOpts...)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(inUse).To(BeTrue())
 			})
 
 			It("should return false because no objects found", func() {
-				c.EXPECT().List(ctx, partialObjectMetadataList, client.InNamespace(namespace), client.MatchingFields{"metadata.name": "foo"}, client.Limit(1))
-
-				inUse, err := ResourcesExist(ctx, c, objList, scheme, listOpts...)
+				inUse, err := ResourcesExist(ctx, fakeClient, objList, scheme, listOpts...)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(inUse).To(BeFalse())
 			})
@@ -185,23 +236,38 @@ var _ = Describe("Object", func() {
 		Context("with objectList", func() {
 			BeforeEach(func() {
 				listOpts = append(listOpts, client.MatchingFields{"data.foo": "bar"})
+
+				fakeClient = fakeclient.NewClientBuilder().
+					WithScheme(kubernetesscheme.Scheme).
+					WithIndex(&corev1.Secret{}, "data.foo", func(obj client.Object) []string {
+						s, ok := obj.(*corev1.Secret)
+						if !ok {
+							return nil
+						}
+						if v, ok := s.Data["foo"]; ok {
+							return []string{string(v)}
+						}
+						return nil
+					}).
+					Build()
 			})
 
 			It("should return true because objects found", func() {
-				c.EXPECT().List(ctx, objList, client.InNamespace(namespace), client.MatchingFields{"data.foo": "bar"}, client.Limit(1)).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
-					list.Items = []corev1.Secret{{}}
-					return nil
-				})
+				Expect(fakeClient.Create(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo",
+						Namespace: namespace,
+					},
+					Data: map[string][]byte{"foo": []byte("bar")},
+				})).To(Succeed())
 
-				inUse, err := ResourcesExist(ctx, c, objList, scheme, listOpts...)
+				inUse, err := ResourcesExist(ctx, fakeClient, objList, scheme, listOpts...)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(inUse).To(BeTrue())
 			})
 
 			It("should return false because no objects found", func() {
-				c.EXPECT().List(ctx, objList, client.InNamespace(namespace), client.MatchingFields{"data.foo": "bar"}, client.Limit(1))
-
-				inUse, err := ResourcesExist(ctx, c, objList, scheme, listOpts...)
+				inUse, err := ResourcesExist(ctx, fakeClient, objList, scheme, listOpts...)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(inUse).To(BeFalse())
 			})

@@ -11,7 +11,6 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,53 +18,57 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
+	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Gardenlet", func() {
 	Describe("#ClusterIsGarden", func() {
 		var (
 			ctx        context.Context
-			mockReader *mockclient.MockReader
-			ctrl       *gomock.Controller
+			fakeClient client.Client
 		)
 
 		BeforeEach(func() {
 			ctx = context.Background()
-			ctrl = gomock.NewController(GinkgoT())
-			mockReader = mockclient.NewMockReader(ctrl)
-		})
-
-		AfterEach(func() {
-			ctrl.Finish()
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(operatorclient.RuntimeScheme).
+				Build()
 		})
 
 		It("should return that seed is a garden cluster", func() {
-			mockReader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.Limit(1)).DoAndReturn(
-				func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
-					list.Items = []metav1.PartialObjectMetadata{{}}
-					return nil
-				})
-			Expect(ClusterIsGarden(ctx, mockReader)).To(BeTrue())
+			garden := &operatorv1alpha1.Garden{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "garden",
+				},
+			}
+			Expect(fakeClient.Create(ctx, garden)).To(Succeed())
+
+			Expect(ClusterIsGarden(ctx, fakeClient)).To(BeTrue())
 		})
 
 		It("should return that seed is a not a garden cluster because no garden object found", func() {
-			mockReader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.Limit(1))
-			Expect(ClusterIsGarden(ctx, mockReader)).To(BeFalse())
+			Expect(ClusterIsGarden(ctx, fakeClient)).To(BeFalse())
 		})
 
 		It("should return that seed is a not a garden cluster because of a no match error", func() {
-			mockReader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.Limit(1)).DoAndReturn(
-				func(_ context.Context, _ *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
-					return &meta.NoResourceMatchError{}
-				})
-			Expect(ClusterIsGarden(ctx, mockReader)).To(BeFalse())
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(operatorclient.RuntimeScheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+						return &meta.NoResourceMatchError{}
+					},
+				}).
+				Build()
+
+			Expect(ClusterIsGarden(ctx, fakeClient)).To(BeFalse())
 		})
 	})
 
@@ -76,7 +79,7 @@ var _ = Describe("Gardenlet", func() {
 		)
 
 		BeforeEach(func() {
-			fakeClient = fake.NewClientBuilder().Build()
+			fakeClient = fakeclient.NewClientBuilder().Build()
 		})
 
 		It("should return that the seed is a self-hosted shoot", func() {
@@ -182,7 +185,7 @@ var _ = Describe("Gardenlet", func() {
 		)
 
 		BeforeEach(func() {
-			fakeClient = fake.NewClientBuilder().Build()
+			fakeClient = fakeclient.NewClientBuilder().Build()
 
 			bootstrapTokenSecretName = "bootstrap-token-123456"
 			expectedShootNamespace = "garden-my-project"

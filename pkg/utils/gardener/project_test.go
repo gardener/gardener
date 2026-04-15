@@ -10,35 +10,40 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Project", func() {
 	var (
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
+		fakeClient client.Client
 
 		ctx     = context.TODO()
 		fakeErr = errors.New("fake err")
 
 		namespaceName = "foo"
-		namespace     = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: namespaceName,
-			},
-		}
 
 		projectName = "bar"
-		project     = &gardencorev1beta1.Project{
+		project     *gardencorev1beta1.Project
+	)
+
+	BeforeEach(func() {
+		fakeClient = fakeclient.NewClientBuilder().
+			WithScheme(kubernetes.GardenScheme).
+			WithIndex(&gardencorev1beta1.Project{}, gardencore.ProjectNamespace, indexer.ProjectNamespaceIndexerFunc).
+			Build()
+
+		project = &gardencorev1beta1.Project{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: projectName,
 			},
@@ -46,99 +51,113 @@ var _ = Describe("Project", func() {
 				Namespace: &namespaceName,
 			},
 		}
-	)
-
-	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
 	})
 
 	Describe("#ProjectForNamespaceFromReader", func() {
 		It("should return an error because the listing failed", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{}), client.MatchingFields{gardencore.ProjectNamespace: namespaceName}).Return(fakeErr)
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.GardenScheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+						return fakeErr
+					},
+				}).
+				Build()
 
-			projectResult, err := ProjectForNamespaceFromReader(ctx, c, namespaceName)
+			projectResult, err := ProjectForNamespaceFromReader(ctx, fakeClient, namespaceName)
 			Expect(err).To(MatchError(fakeErr))
 			Expect(projectResult).To(BeNil())
 		})
 
 		It("should return an error because the listing yielded no results", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{}), client.MatchingFields{gardencore.ProjectNamespace: namespaceName})
-
-			projectResult, err := ProjectForNamespaceFromReader(ctx, c, namespaceName)
+			projectResult, err := ProjectForNamespaceFromReader(ctx, fakeClient, namespaceName)
 			Expect(err).To(BeNotFoundError())
 			Expect(projectResult).To(BeNil())
 		})
 
 		It("should return the project", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{}), client.MatchingFields{gardencore.ProjectNamespace: namespaceName}).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ProjectList, _ ...client.ListOption) error {
-				(&gardencorev1beta1.ProjectList{Items: []gardencorev1beta1.Project{*project}}).DeepCopyInto(list)
-				return nil
-			})
+			Expect(fakeClient.Create(ctx, project)).To(Succeed())
 
-			projectResult, err := ProjectForNamespaceFromReader(ctx, c, namespaceName)
+			projectResult, err := ProjectForNamespaceFromReader(ctx, fakeClient, namespaceName)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(projectResult).To(Equal(project))
+			Expect(projectResult.Name).To(Equal(projectName))
+			Expect(projectResult.Spec.Namespace).To(Equal(&namespaceName))
 		})
 	})
 
 	Describe("#ProjectAndNamespaceFromReader", func() {
 		It("should return an error because getting the namespace failed", func() {
-			c.EXPECT().Get(ctx, client.ObjectKey{Name: namespaceName}, gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(fakeErr)
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.GardenScheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+						return fakeErr
+					},
+				}).
+				Build()
 
-			projectResult, namespaceResult, err := ProjectAndNamespaceFromReader(ctx, c, namespaceName)
+			projectResult, namespaceResult, err := ProjectAndNamespaceFromReader(ctx, fakeClient, namespaceName)
 			Expect(err).To(MatchError(fakeErr))
 			Expect(namespaceResult).To(BeNil())
 			Expect(projectResult).To(BeNil())
 		})
 
 		It("should return the namespace but no project because labels missing", func() {
-			c.EXPECT().Get(ctx, client.ObjectKey{Name: namespaceName}, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
-				namespace.DeepCopyInto(obj)
-				return nil
-			})
+			namespace := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespaceName,
+				},
+			}
+			Expect(fakeClient.Create(ctx, namespace)).To(Succeed())
 
-			projectResult, namespaceResult, err := ProjectAndNamespaceFromReader(ctx, c, namespaceName)
+			projectResult, namespaceResult, err := ProjectAndNamespaceFromReader(ctx, fakeClient, namespaceName)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(namespaceResult).To(Equal(namespace))
+			Expect(namespaceResult.Name).To(Equal(namespaceName))
 			Expect(projectResult).To(BeNil())
 		})
 
 		It("should return an error because getting the project failed", func() {
-			namespace.Labels = map[string]string{"project.gardener.cloud/name": projectName}
+			namespace := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   namespaceName,
+					Labels: map[string]string{"project.gardener.cloud/name": projectName},
+				},
+			}
+			Expect(fakeClient.Create(ctx, namespace)).To(Succeed())
 
-			c.EXPECT().Get(ctx, client.ObjectKey{Name: namespaceName}, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
-				namespace.DeepCopyInto(obj)
-				return nil
-			})
-			c.EXPECT().Get(ctx, client.ObjectKey{Name: projectName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).Return(fakeErr)
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.GardenScheme).
+				WithObjects(namespace).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						if _, ok := obj.(*gardencorev1beta1.Project); ok {
+							return fakeErr
+						}
+						return cl.Get(ctx, key, obj, opts...)
+					},
+				}).
+				Build()
 
-			projectResult, namespaceResult, err := ProjectAndNamespaceFromReader(ctx, c, namespaceName)
+			projectResult, namespaceResult, err := ProjectAndNamespaceFromReader(ctx, fakeClient, namespaceName)
 			Expect(err).To(MatchError(fakeErr))
-			Expect(namespaceResult).To(Equal(namespace))
+			Expect(namespaceResult.Name).To(Equal(namespaceName))
 			Expect(projectResult).To(BeNil())
 		})
 
 		It("should return both namespace and project", func() {
-			namespace.Labels = map[string]string{"project.gardener.cloud/name": projectName}
+			namespace := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   namespaceName,
+					Labels: map[string]string{"project.gardener.cloud/name": projectName},
+				},
+			}
+			Expect(fakeClient.Create(ctx, namespace)).To(Succeed())
+			Expect(fakeClient.Create(ctx, project)).To(Succeed())
 
-			c.EXPECT().Get(ctx, client.ObjectKey{Name: namespaceName}, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
-				namespace.DeepCopyInto(obj)
-				return nil
-			})
-			c.EXPECT().Get(ctx, client.ObjectKey{Name: projectName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project, _ ...client.GetOption) error {
-				project.DeepCopyInto(obj)
-				return nil
-			})
-
-			projectResult, namespaceResult, err := ProjectAndNamespaceFromReader(ctx, c, namespaceName)
+			projectResult, namespaceResult, err := ProjectAndNamespaceFromReader(ctx, fakeClient, namespaceName)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(namespaceResult).To(Equal(namespace))
-			Expect(projectResult).To(Equal(project))
+			Expect(namespaceResult.Name).To(Equal(namespaceName))
+			Expect(projectResult.Name).To(Equal(projectName))
 		})
 	})
 })
