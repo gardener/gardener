@@ -67,7 +67,7 @@ HELM_VERSION ?= v3.20.2
 # renovate: datasource=github-releases depName=kubernetes-sigs/kind
 KIND_VERSION ?= v0.31.0
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
-KUBECTL_VERSION ?= v1.35.3
+KUBECTL_VERSION ?= v1.35.4
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize extractVersion=^kustomize\/(?<version>.*)$
 KUSTOMIZE_VERSION ?= v5.8.1
 # renovate: datasource=github-releases depName=prometheus/prometheus
