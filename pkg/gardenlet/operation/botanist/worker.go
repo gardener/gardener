@@ -196,17 +196,23 @@ func (b *Botanist) WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx co
 	timeoutCtx, cancel := context.WithTimeout(ctx, GetTimeoutWaitOperatingSystemConfigUpdated(b.Shoot))
 	defer cancel()
 
-	if err := managedresources.WaitUntilHealthy(timeoutCtx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, GardenerNodeAgentManagedResourceName); err != nil {
-		return fmt.Errorf("the operating system configs for the worker nodes were not populated yet: %w", err)
-	}
-
-	timeoutCtx2, cancel2 := context.WithTimeout(ctx, GetTimeoutWaitOperatingSystemConfigUpdated(b.Shoot))
-	defer cancel2()
-
 	retryFn := retry.SevereError
 	if tolerateErrors {
 		retryFn = retry.MinorError
 	}
+
+	if err := retry.Until(timeoutCtx, IntervalWaitOperatingSystemConfigUpdated, func(ctx context.Context) (done bool, err error) {
+		if err := managedresources.WaitUntilHealthy(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, GardenerNodeAgentManagedResourceName); err != nil {
+			return retryFn(fmt.Errorf("the operating system configs for the worker nodes were not populated yet: %w", err))
+		}
+
+		return retry.Ok()
+	}); err != nil {
+		return err
+	}
+
+	timeoutCtx2, cancel2 := context.WithTimeout(ctx, GetTimeoutWaitOperatingSystemConfigUpdated(b.Shoot))
+	defer cancel2()
 
 	return retry.Until(timeoutCtx2, IntervalWaitOperatingSystemConfigUpdated, func(ctx context.Context) (done bool, err error) {
 		workerPoolToNodes, err := WorkerPoolToNodesMap(ctx, b.ShootClientSet.Client())
