@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
@@ -2121,15 +2120,14 @@ var _ = Describe("Shoot", func() {
 	})
 
 	DescribeTable("#IsAuthorizeWithSelectorsEnabled",
-		func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, kubernetesVersion *semver.Version, match gomegatypes.GomegaMatcher) {
-			Expect(IsAuthorizeWithSelectorsEnabled(kubeAPIServerConfig, kubernetesVersion)).To(match)
+		func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, match gomegatypes.GomegaMatcher) {
+			Expect(IsAuthorizeWithSelectorsEnabled(kubeAPIServerConfig)).To(match)
 		},
 
-		Entry("version is >= 1.32 and kubeAPIServerConfig is nil",
+		Entry("feature gate not specified",
 			&gardencorev1beta1.KubeAPIServerConfig{},
-			semver.MustParse("1.32.0"),
 			BeTrue()),
-		Entry("version is >= 1.32 and AuthorizeWithSelectors feature is true",
+		Entry("AuthorizeWithSelectors feature is true",
 			&gardencorev1beta1.KubeAPIServerConfig{
 				KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 					FeatureGates: map[string]bool{
@@ -2137,9 +2135,8 @@ var _ = Describe("Shoot", func() {
 					},
 				},
 			},
-			semver.MustParse("1.32.0"),
 			BeTrue()),
-		Entry("version is >= 1.32 and AuthorizeWithSelectors feature is false",
+		Entry("AuthorizeWithSelectors feature is false",
 			&gardencorev1beta1.KubeAPIServerConfig{
 				KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 					FeatureGates: map[string]bool{
@@ -2147,31 +2144,6 @@ var _ = Describe("Shoot", func() {
 					},
 				},
 			},
-			semver.MustParse("1.32.0"),
-			BeFalse()),
-		Entry("version is 1.31 and kubeAPIServerConfig is nil",
-			&gardencorev1beta1.KubeAPIServerConfig{},
-			semver.MustParse("1.31.0"),
-			BeFalse()),
-		Entry("version is 1.31 and AuthorizeWithSelectors feature is true",
-			&gardencorev1beta1.KubeAPIServerConfig{
-				KubernetesConfig: gardencorev1beta1.KubernetesConfig{
-					FeatureGates: map[string]bool{
-						"AuthorizeWithSelectors": true,
-					},
-				},
-			},
-			semver.MustParse("1.31.0"),
-			BeTrue()),
-		Entry("version is 1.31 and AuthorizeWithSelectors feature is false",
-			&gardencorev1beta1.KubeAPIServerConfig{
-				KubernetesConfig: gardencorev1beta1.KubernetesConfig{
-					FeatureGates: map[string]bool{
-						"AuthorizeWithSelectors": false,
-					},
-				},
-			},
-			semver.MustParse("1.31.0"),
 			BeFalse()),
 	)
 

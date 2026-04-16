@@ -89,7 +89,7 @@ func (w *withSelectorsChecker) isAuthorizeWithSelectorsFeatureEnabled() (enabled
 		// a dry-run call with a label selector field. If it is still present in the output, then the
 		// 'AuthorizeWithSelectors' feature is enabled. If it was disabled, kube-apiserver would have removed it in its
 		// response.
-		w.log.Info("Kubernetes version is between 1.31 and 1.33 -> feature gate is alpha/beta and may be disabled, must check")
+		w.log.Info("Kubernetes version is between 1.32 and 1.33 -> feature gate is alpha/beta and may be disabled, must check")
 
 		sar := &authorizationv1.SubjectAccessReview{
 			Spec: authorizationv1.SubjectAccessReviewSpec{
