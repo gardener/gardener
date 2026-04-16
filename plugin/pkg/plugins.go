@@ -53,10 +53,6 @@ const (
 	PluginNameShootManagedSeed = "ShootManagedSeed"
 	// PluginNameShootNodeLocalDNSEnabledByDefault is the name of the ShootNodeLocalDNSEnabledByDefault admission plugin.
 	PluginNameShootNodeLocalDNSEnabledByDefault = "ShootNodeLocalDNSEnabledByDefault"
-	// PluginNameClusterOpenIDConnectPreset is the name of the ClusterOpenIDConnectPreset admission plugin.
-	PluginNameClusterOpenIDConnectPreset = "ClusterOpenIDConnectPreset"
-	// PluginNameOpenIDConnectPreset is the name of the OpenIDConnectPreset admission plugin.
-	PluginNameOpenIDConnectPreset = "OpenIDConnectPreset"
 	// PluginNameShootQuotaValidator is the name of the ShootQuotaValidator admission plugin.
 	PluginNameShootQuotaValidator = "ShootQuotaValidator"
 	// PluginNameShootTolerationRestriction is the name of the ShootTolerationRestriction admission plugin.
@@ -96,8 +92,6 @@ func AllOrderedPluginNames() []string {
 		PluginNameProjectMutator,                    // ProjectMutator
 		PluginNameDeletionConfirmation,              // DeletionConfirmation
 		PluginNameFinalizerRemoval,                  // FinalizerRemoval
-		PluginNameOpenIDConnectPreset,               // OpenIDConnectPreset
-		PluginNameClusterOpenIDConnectPreset,        // ClusterOpenIDConnectPreset
 		PluginNameCustomVerbAuthorizer,              // CustomVerbAuthorizer
 		PluginNameShootVPAEnabledByDefault,          // ShootVPAEnabledByDefault
 		PluginNameShootResourceReservation,          // ShootResourceReservation
@@ -143,8 +137,6 @@ func DefaultOnPlugins() sets.Set[string] {
 		PluginNameProjectMutator,                  // ProjectMutator
 		PluginNameDeletionConfirmation,            // DeletionConfirmation
 		PluginNameFinalizerRemoval,                // FinalizerRemoval
-		PluginNameOpenIDConnectPreset,             // OpenIDConnectPreset
-		PluginNameClusterOpenIDConnectPreset,      // ClusterOpenIDConnectPreset
 		PluginNameCustomVerbAuthorizer,            // CustomVerbAuthorizer
 		PluginNameManagedSeed,                     // ManagedSeed
 		PluginNameManagedSeedShoot,                // ManagedSeedShoot

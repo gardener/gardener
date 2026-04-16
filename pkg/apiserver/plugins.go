@@ -29,8 +29,6 @@ import (
 	shootmanagedseed "github.com/gardener/gardener/plugin/pkg/shoot/managedseed"
 	shootmutator "github.com/gardener/gardener/plugin/pkg/shoot/mutator"
 	shootnodelocaldns "github.com/gardener/gardener/plugin/pkg/shoot/nodelocaldns"
-	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/clusteropenidconnectpreset"
-	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 	shootresourcereservation "github.com/gardener/gardener/plugin/pkg/shoot/resourcereservation"
 	shoottolerationrestriction "github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction"
@@ -60,8 +58,6 @@ func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	controllerregistrationresources.Register(plugins)
 	namespacedcloudprofilevalidator.Register(plugins)
 	projectmutator.Register(plugins)
-	openidconnectpreset.Register(plugins)
-	clusteropenidconnectpreset.Register(plugins)
 	customverbauthorizer.Register(plugins)
 	managedseedvalidator.Register(plugins)
 	managedseedshoot.Register(plugins)
