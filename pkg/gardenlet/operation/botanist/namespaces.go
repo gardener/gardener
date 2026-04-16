@@ -139,7 +139,7 @@ func calculateShootZones(
 		zonesToSelect = 1
 
 		if zoneSelectionMode != "" {
-			if intersection := sets.New[string](seedZones...).Intersection(sets.New[string](shootZones...)); intersection.Len() == 0 {
+			if intersection := sets.New(seedZones...).Intersection(sets.New(shootZones...)); intersection.Len() == 0 {
 				switch zoneSelectionMode {
 				case gardencorev1beta1.ZoneSelectionModePrefer:
 					log.Info("Shoot zones are not part of the seed zones, but selection mode allows continuation", "zoneSelectionMode", zoneSelectionMode, "seedZones", seedZones, "shootZones", shootZones)
