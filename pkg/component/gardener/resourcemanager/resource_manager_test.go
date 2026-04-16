@@ -336,7 +336,6 @@ var _ = Describe("ResourceManager", func() {
 			WatchedNamespace:                          &watchedNamespace,
 			SchedulingProfile:                         &binPackingSchedulingProfile,
 			DefaultSeccompProfileEnabled:              false,
-			EndpointSliceHintsEnabled:                 false,
 			PodTopologySpreadConstraintsEnabled:       true,
 			VPAInPlaceUpdatesEnabled:                  true,
 			LogLevel:                                  "info",
@@ -513,7 +512,6 @@ var _ = Describe("ResourceManager", func() {
 			}
 
 			if responsibilityMode == ForRuntime {
-				config.Webhooks.EndpointSliceHints.Enabled = true
 				config.Webhooks.PodKubeAPIServerLoadBalancing.Enabled = true
 			}
 
@@ -1197,35 +1195,6 @@ var _ = Describe("ResourceManager", func() {
 						AdmissionReviewVersions: []string{"v1beta1", "v1"},
 						FailurePolicy:           &failurePolicyFail,
 						MatchPolicy:             &matchPolicyExact,
-						SideEffects:             &sideEffect,
-						TimeoutSeconds:          ptr.To[int32](10),
-					},
-					admissionregistrationv1.MutatingWebhook{
-						Name: "endpoint-slice-hints.resources.gardener.cloud",
-						Rules: []admissionregistrationv1.RuleWithOperations{{
-							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{"discovery.k8s.io"},
-								APIVersions: []string{"v1"},
-								Resources:   []string{"endpointslices"},
-							},
-							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
-						}},
-						NamespaceSelector: &metav1.LabelSelector{MatchExpressions: namespaceSelectorMatchExpressions},
-						ObjectSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								"endpoint-slice-hints.resources.gardener.cloud/consider": "true",
-							},
-						},
-						ClientConfig: admissionregistrationv1.WebhookClientConfig{
-							Service: &admissionregistrationv1.ServiceReference{
-								Name:      "gardener-resource-manager",
-								Namespace: deployNamespace,
-								Path:      ptr.To("/webhooks/endpoint-slice-hints"),
-							},
-						},
-						AdmissionReviewVersions: []string{"v1beta1", "v1"},
-						FailurePolicy:           &failurePolicyFail,
-						MatchPolicy:             &matchPolicyEquivalent,
 						SideEffects:             &sideEffect,
 						TimeoutSeconds:          ptr.To[int32](10),
 					},
@@ -2599,7 +2568,6 @@ subjects:
 				utilruntime.Must(references.InjectAnnotations(deployment))
 
 				cfg.DefaultSeccompProfileEnabled = true
-				cfg.EndpointSliceHintsEnabled = true
 				cfg.SchedulingProfile = nil
 				cfg.ResponsibilityMode = ForRuntime
 				cfg.PodKubeAPIServerLoadBalancingWebhook.Enabled = true
