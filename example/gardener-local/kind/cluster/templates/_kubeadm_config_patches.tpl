@@ -34,6 +34,11 @@
 {{- else }}
       hostPath: /etc/gardener-local/kube-apiserver/authz-config-without-seedauthorizer.yaml
 {{- end }}
+  controllerManager:
+    extraArgs:
+      # TODO(LucaBernstein): Remove once kind uses a Kubernetes version that includes the fix for
+      # https://github.com/kubernetes/kubernetes/issues/137409 (MaxUnavailableStatefulSet deadlock).
+      feature-gates: "MaxUnavailableStatefulSet=false"
 - |
   apiVersion: kubelet.config.k8s.io/v1beta1
   kind: KubeletConfiguration
