@@ -71,20 +71,6 @@ var _ = Describe("Shoot", func() {
 		})
 	})
 
-	Describe("OIDCConfig", func() {
-		It("should not allow to reuse protobuf numbers of already removed fields", func() {
-			obj := reflect.ValueOf(OIDCConfig{}).Type()
-			for i := 0; i < obj.NumField(); i++ {
-				f := obj.Field(i)
-
-				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
-				if protobufNum == "2" {
-					Fail("protobuf 2 in OIDCConfig is reserved for removed clientAuthentication field")
-				}
-			}
-		})
-	})
-
 	Describe("KubeletConfig", func() {
 		It("should not allow to reuse protobuf numbers of already removed fields", func() {
 			obj := reflect.ValueOf(KubeletConfig{}).Type()

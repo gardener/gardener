@@ -662,24 +662,16 @@ func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardC
 	if oidc := config.OIDCConfig; oidc != nil {
 		oidcPath := fldPath.Child("oidcConfig")
 
-		if kubeAPIServerConfig == nil || (kubeAPIServerConfig.OIDCConfig == nil && kubeAPIServerConfig.StructuredAuthentication == nil) {
-			allErrs = append(allErrs, field.Invalid(oidcPath, config.OIDCConfig, "must set OIDC configuration in .spec.virtualCluster.kubernetes.kubeAPIServer when configuring OIDC config for dashboard"))
+		if kubeAPIServerConfig == nil || kubeAPIServerConfig.StructuredAuthentication == nil {
+			allErrs = append(allErrs, field.Invalid(oidcPath, config.OIDCConfig, "must configure structured authentication in .spec.virtualCluster.kubernetes.kubeAPIServer when configuring OIDC config for dashboard"))
 		}
 
 		if oidc.IssuerURL == nil {
-			if oidc.ClientIDPublic != nil {
-				allErrs = append(allErrs, field.Required(oidcPath.Child("issuerURL"), "must provide Issuer URL when ClientIDPublic is set"))
-			} else if kubeAPIServerConfig == nil || kubeAPIServerConfig.OIDCConfig == nil || kubeAPIServerConfig.OIDCConfig.IssuerURL == nil {
-				allErrs = append(allErrs, field.Required(oidcPath.Child("issuerURL"), "must provide Issuer URL"))
-			}
+			allErrs = append(allErrs, field.Required(oidcPath.Child("issuerURL"), "must provide Issuer URL"))
 		}
 
 		if oidc.ClientIDPublic == nil {
-			if oidc.IssuerURL != nil {
-				allErrs = append(allErrs, field.Required(oidcPath.Child("clientIDPublic"), "must provide a public client ID when Issuer URL is set"))
-			} else if kubeAPIServerConfig == nil || kubeAPIServerConfig.OIDCConfig == nil || kubeAPIServerConfig.OIDCConfig.ClientID == nil {
-				allErrs = append(allErrs, field.Required(oidcPath.Child("clientIDPublic"), "must provide a public client ID"))
-			}
+			allErrs = append(allErrs, field.Required(oidcPath.Child("clientIDPublic"), "must provide a public client ID"))
 		}
 
 		if oidc.IssuerURL != nil {
