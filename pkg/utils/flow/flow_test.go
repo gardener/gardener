@@ -7,6 +7,7 @@ package flow_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -112,6 +113,21 @@ var _ = Describe("Flow", func() {
 			Expect(err).To(HaveOccurred())
 			causes := flow.Causes(err)
 			Expect(causes.Errors).To(ConsistOf(err1, err2))
+		})
+
+		It("should recover from a panic and yield the correct errors", func() {
+			var (
+				panicErr = errors.New("panic error")
+
+				g      = flow.NewGraph("foo")
+				taskId = g.Add(flow.Task{Name: "x", Fn: func(_ context.Context) error { panic(panicErr) }})
+				f      = g.Compile()
+			)
+
+			err := f.Run(ctx, flow.Opts{})
+			Expect(err).To(HaveOccurred())
+			causes := flow.Causes(err)
+			Expect(causes.Errors).To(ConsistOf(fmt.Errorf("task %q recovered panic: %v", taskId, panicErr)))
 		})
 
 		It("should not process any function due to a canceled context", func() {

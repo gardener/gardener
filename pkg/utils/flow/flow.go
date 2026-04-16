@@ -229,6 +229,14 @@ func (e *execution) runNode(ctx context.Context, id TaskID) {
 	e.stats.Running.Insert(id)
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				err := fmt.Errorf("task %q recovered panic: %v", id, r)
+				log.Error(err, "Error")
+				e.done <- &nodeResult{TaskID: id, Error: err}
+			}
+		}()
+
 		start := e.flow.clock.Now().UTC()
 		log.V(1).Info("Started")
 		err := node.fn(ctx)
