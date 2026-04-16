@@ -116,8 +116,6 @@ type Values struct {
 	IsWorkerless bool
 	// NamePrefix is the prefix for the resource names.
 	NamePrefix string
-	// OIDC contains information for configuring OIDC settings for the kube-apiserver.
-	OIDC *gardencorev1beta1.OIDCConfig
 	// PriorityClassName is the name of the priority class.
 	PriorityClassName string
 	// ResourcesToStoreInETCDEvents is a list of resources which should be stored in the etcd-events instead of the
@@ -287,7 +285,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		horizontalPodAutoscaler                = k.emptyHorizontalPodAutoscaler()
 		verticalPodAutoscaler                  = k.emptyVerticalPodAutoscaler()
 		secretETCDEncryptionConfiguration      = k.emptySecret(v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration)
-		secretOIDCCABundle                     = k.emptySecret(secretOIDCCABundleNamePrefix)
 		secretAuditWebhookKubeconfig           = k.emptySecret(secretAuditWebhookKubeconfigNamePrefix)
 		secretAuthenticationWebhookKubeconfig  = k.emptySecret(secretAuthenticationWebhookKubeconfigNamePrefix)
 		secretAuthorizationWebhooksKubeconfigs = k.emptySecret(secretAuthorizationWebhooksKubeconfigsNamePrefix)
@@ -313,10 +310,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if err := k.reconcileSecretETCDEncryptionConfiguration(ctx, secretETCDEncryptionConfiguration); err != nil {
-		return err
-	}
-
-	if err := k.reconcileSecretOIDCCABundle(ctx, secretOIDCCABundle); err != nil {
 		return err
 	}
 
@@ -441,7 +434,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		configMapEgressSelector,
 		configMapEnvoyConfig,
 		secretETCDEncryptionConfiguration,
-		secretOIDCCABundle,
 		secretServiceAccountKey,
 		secretStaticToken,
 		secretServer,

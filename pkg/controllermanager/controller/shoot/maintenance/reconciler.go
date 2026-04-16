@@ -146,21 +146,6 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		return err
 	}
 
-	// Set the .spec.kubernetes.kubeAPIServer.oidcConfig field to nil, when Shoot cluster is being forcefully updated to K8s >= 1.32.
-	// Gardener forbids setting the field for Shoots with K8s 1.32+. See https://github.com/gardener/gardener/pull/10666
-	{
-		oldK8sLess132, _ := versionutils.CheckVersionMeetsConstraint(oldShootKubernetesVersion.String(), "< 1.32")
-		newK8sGreaterEqual132, _ := versionutils.CheckVersionMeetsConstraint(shootKubernetesVersion.String(), ">= 1.32")
-		if oldK8sLess132 && newK8sGreaterEqual132 {
-			if maintainedShoot.Spec.Kubernetes.KubeAPIServer != nil && maintainedShoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig != nil {
-				maintainedShoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
-
-				reason := ".spec.kubernetes.kubeAPIServer.oidcConfig is set to nil. Reason: The field has been deprecated in favor of structured authentication and can no longer be enabled for Shoot clusters using Kubernetes version 1.32+"
-				operations = append(operations, reason)
-			}
-		}
-	}
-
 	// Set the .spec.kubernetes.kubeControllerManager.podEvictionTimeout field to nil, when Shoot cluster is being forcefully updated to K8s >= 1.33.
 	// Gardener forbids setting the field for Shoots with K8s 1.33+. See https://github.com/gardener/gardener/pull/12343
 	{

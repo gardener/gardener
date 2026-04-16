@@ -1027,37 +1027,6 @@ authorizers:
 			})
 		})
 
-		Describe("OIDCConfig", func() {
-			DescribeTable("should have the expected OIDC config",
-				func(prepTest func(), expectedConfig *gardencorev1beta1.OIDCConfig) {
-					if prepTest != nil {
-						prepTest()
-					}
-
-					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, runsAsStaticPod, istioTLSTerminationEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(kubeAPIServer.GetValues().OIDC).To(Equal(expectedConfig))
-				},
-
-				Entry("KubeAPIServerConfig is nil",
-					nil,
-					nil,
-				),
-				Entry("OIDCConfig is nil",
-					func() {
-						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{}
-					},
-					nil,
-				),
-				Entry("OIDCConfig is not nil",
-					func() {
-						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{OIDCConfig: &gardencorev1beta1.OIDCConfig{}}
-					},
-					&gardencorev1beta1.OIDCConfig{},
-				),
-			)
-		})
-
 		Describe("Requests", func() {
 			It("should set the field to nil by default", func() {
 				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, runsAsStaticPod, istioTLSTerminationEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)

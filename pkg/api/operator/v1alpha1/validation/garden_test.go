@@ -2519,38 +2519,10 @@ var _ = Describe("Validation Tests", func() {
 							}))))
 						})
 
-						It("should complain when clientID is missing in OIDC config but given in kube-apiserver config", func() {
-							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{OIDCConfig: &operatorv1alpha1.DashboardOIDC{
-								IssuerURL: ptr.To("https://example.com"),
-							}}
-							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{OIDCConfig: &gardencorev1beta1.OIDCConfig{
-								ClientID: ptr.To("my-client-id"),
-							}}}
-
-							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-								"Type":  Equal(field.ErrorTypeRequired),
-								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidcConfig.clientIDPublic"),
-							}))))
-						})
-
 						It("should complain when issuerURL is missing in OIDC config", func() {
 							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{OIDCConfig: &operatorv1alpha1.DashboardOIDC{
 								ClientIDPublic: ptr.To("my-client-id"),
 							}}
-
-							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-								"Type":  Equal(field.ErrorTypeRequired),
-								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidcConfig.issuerURL"),
-							}))))
-						})
-
-						It("should complain when issuerURL is missing in OIDC config but given in kube-apiserver config", func() {
-							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{OIDCConfig: &operatorv1alpha1.DashboardOIDC{
-								ClientIDPublic: ptr.To("my-client-id"),
-							}}
-							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{OIDCConfig: &gardencorev1beta1.OIDCConfig{
-								IssuerURL: ptr.To("https://example.com"),
-							}}}
 
 							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeRequired),

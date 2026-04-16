@@ -111,7 +111,6 @@ func NewKubeAPIServer(
 		defaultUnreachableTolerationSeconds      *int64
 		eventTTL                                 *metav1.Duration
 		featureGates                             map[string]bool
-		oidcConfig                               *gardencorev1beta1.OIDCConfig
 		requests                                 *gardencorev1beta1.APIServerRequests
 		runtimeConfig                            map[string]bool
 		watchCacheSizes                          *gardencorev1beta1.WatchCacheSizes
@@ -155,7 +154,6 @@ func NewKubeAPIServer(
 		eventTTL = apiServerConfig.EventTTL
 		featureGates = apiServerConfig.FeatureGates
 		logging = apiServerConfig.Logging
-		oidcConfig = apiServerConfig.OIDCConfig
 		requests = apiServerConfig.Requests
 		runtimeConfig = apiServerConfig.RuntimeConfig
 		watchCacheSizes = apiServerConfig.WatchCacheSizes
@@ -208,7 +206,6 @@ func NewKubeAPIServer(
 			Images:                              images,
 			IsWorkerless:                        isWorkerless,
 			NamePrefix:                          namePrefix,
-			OIDC:                                oidcConfig,
 			PriorityClassName:                   priorityClassName,
 			ResourcesToStoreInETCDEvents:        resourcesToStoreInETCDEvents,
 			RuntimeConfig:                       runtimeConfig,
