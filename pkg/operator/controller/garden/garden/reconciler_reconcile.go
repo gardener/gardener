@@ -34,7 +34,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
 
 	"github.com/gardener/gardener/imagevector"
@@ -87,14 +86,11 @@ func (r *Reconciler) reconcile(
 	garden *operatorv1alpha1.Garden,
 	secretsManager secretsmanager.Interface,
 	targetVersion *semver.Version,
-) (
-	reconcile.Result,
-	error,
-) {
+) error {
 	if !controllerutil.ContainsFinalizer(garden, operatorv1alpha1.FinalizerName) {
 		log.Info("Adding finalizer")
 		if err := controllerutils.AddFinalizers(ctx, r.RuntimeClientSet.Client(), garden, operatorv1alpha1.FinalizerName); err != nil {
-			return reconcile.Result{}, err
+			return err
 		}
 	}
 
@@ -102,41 +98,37 @@ func (r *Reconciler) reconcile(
 	// the flow. However, when it's disabled then we check whether it is indeed available (and fail, otherwise).
 	if !vpaEnabled(garden.Spec.RuntimeCluster.Settings) {
 		if _, err := r.RuntimeClientSet.Client().RESTMapper().RESTMapping(schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}); err != nil {
-			return reconcile.Result{}, fmt.Errorf("VPA is required for runtime cluster but CRD is not installed: %s", err)
+			return fmt.Errorf("VPA is required for runtime cluster but CRD is not installed: %s", err)
 		}
 	}
 
 	log.Info("Labeling and annotating namespace", "namespaceName", r.GardenNamespace)
 	if err := gardenerutils.ReconcileGardenNamespace(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace, garden.Spec.RuntimeCluster.Provider.Zones, true, nil); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to reconcile garden namespace %q: %w", r.GardenNamespace, err)
+		return fmt.Errorf("failed to reconcile garden namespace %q: %w", r.GardenNamespace, err)
 	}
 
 	log.Info("Generating CA certificates for runtime and virtual clusters")
 	for _, config := range caCertConfigurations() {
 		if _, err := secretsManager.Generate(ctx, config, caCertGenerateOptionsFor(config.GetName(), helper.GetCARotationPhase(garden.Status.Credentials))...); err != nil {
-			return reconcile.Result{}, err
+			return err
 		}
 	}
 
 	wildcardCert, err := gardenerutils.GetGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace)
 	if err != nil {
-		return reconcile.Result{}, err
+		return err
 	}
 
 	log.Info("Instantiating component deployers")
-	enableAdmissionControllerAuthorizers, err := r.enableAdmissionControllerAuthorizers(ctx, targetVersion)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
 
 	enableVali, err := valiEnabled(garden.Spec.RuntimeCluster.Networking)
 	if err != nil {
-		return reconcile.Result{}, err
+		return err
 	}
 
 	extensionList := &operatorv1alpha1.ExtensionList{}
 	if err := r.RuntimeClientSet.Client().List(ctx, extensionList); err != nil {
-		return reconcile.Result{}, err
+		return err
 	}
 
 	c, err := r.instantiateComponents(
@@ -146,15 +138,15 @@ func (r *Reconciler) reconcile(
 		secretsManager,
 		targetVersion,
 		wildcardCert,
-		enableAdmissionControllerAuthorizers,
+		true,
 		extensionList,
 	)
 	if err != nil {
-		return reconcile.Result{}, err
+		return err
 	}
 
 	if err := r.runRuntimeSetupFlow(ctx, log, garden, c, extensionList); err != nil {
-		return reconcile.Result{}, err
+		return err
 	}
 
 	const (
@@ -688,20 +680,15 @@ func (r *Reconciler) reconcile(
 		Log:              log,
 		ProgressReporter: r.reportProgress(log, gardenCopy, true),
 	}); err != nil {
-		return reconcile.Result{}, flow.Errors(err)
+		return flow.Errors(err)
 	}
 	*garden = *gardenCopy
 
-	if !enableAdmissionControllerAuthorizers {
-		log.Info("Triggering a second reconciliation to enable authorizers in gardener-admission-controller")
-		return reconcile.Result{RequeueAfter: controllerutils.DefaultRequeueAfterDuration}, nil
-	}
-
 	if err := r.updateHelmChartRefForGardenlets(ctx, log, virtualClusterClient); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed updating the Helm chart references in Gardenlet resources: %w", err)
+		return fmt.Errorf("failed updating the Helm chart references in Gardenlet resources: %w", err)
 	}
 
-	return reconcile.Result{}, secretsManager.Cleanup(ctx)
+	return secretsManager.Cleanup(ctx)
 }
 
 // runRuntimeSetupFlow deploys the most basic components and resources in the garden runtime cluster, which are later required by the reconciliation flow.

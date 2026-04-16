@@ -45,7 +45,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 			LogFormat:                                 logger.FormatJSON,
 			NodeAgentReconciliationMaxDelay:           b.Shoot.OSCSyncJitterPeriod,
 			NodeAgentAuthorizerEnabled:                true,
-			NodeAgentAuthorizerAuthorizeWithSelectors: ptr.To(gardenerutils.IsAuthorizeWithSelectorsEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer, b.Shoot.KubernetesVersion)),
+			NodeAgentAuthorizerAuthorizeWithSelectors: ptr.To(gardenerutils.IsAuthorizeWithSelectorsEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer)),
 			// TODO(shafeeqes): Remove PodTopologySpreadConstraints webhook once the
 			// MatchLabelKeysInPodTopologySpread feature gate is locked to true.
 			PodTopologySpreadConstraintsEnabled: gardenerutils.IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(b.Shoot.GetInfo()),

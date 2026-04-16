@@ -16,9 +16,7 @@ import (
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -91,7 +89,6 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 type components struct {
@@ -379,38 +376,6 @@ func (r *Reconciler) instantiateComponents(
 	return c, nil
 }
 
-func (r *Reconciler) enableAdmissionControllerAuthorizers(ctx context.Context, version *semver.Version) (bool, error) {
-	// The reconcile flow deploys the kube-apiserver of the virtual garden cluster before the gardener-apiserver and
-	// gardener-admission-controller (it has to be this way, otherwise the Gardener components cannot start). However,
-	// GAC serves authorization webhooks for the Seed/ShootAuthorizer features. We can only configure kube-apiserver to
-	// consult this webhook when GAC runs, obviously. This is not possible in the initial Garden deployment (due to
-	// above order). Hence, we have to run the flow as second time after the initial Garden creation - this time with
-	// the authorizer features getting enabled. From then on, all subsequent reconciliations can always enable it and
-	// only one reconciliation is needed.
-	// TODO(rfranzke): Consider removing this two-step deployment once we only support Kubernetes 1.32+ (in this
-	//  version, the structured authorization feature has been promoted to GA). We already use structured authz for
-	//  1.30+ clusters. See https://github.com/gardener/gardener/pull/10682#discussion_r1816324389 for more information.
-	if versionutils.ConstraintK8sGreaterEqual132.Check(version) {
-		return true, nil
-	}
-
-	if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: gardenerapiserver.DeploymentName, Namespace: r.GardenNamespace}, &appsv1.Deployment{}); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return false, err
-		}
-		return false, nil
-	}
-
-	if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: gardeneradmissioncontroller.DeploymentName, Namespace: r.GardenNamespace}, &appsv1.Deployment{}); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return false, err
-		}
-		return false, nil
-	}
-
-	return true, nil
-}
-
 func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	var defaultNotReadyTolerationSeconds, defaultUnreachableTolerationSeconds *int64
 	if nodeToleration := r.Config.NodeToleration; nodeToleration != nil {
@@ -418,7 +383,8 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		defaultUnreachableTolerationSeconds = nodeToleration.DefaultUnreachableTolerationSeconds
 	}
 
-	endpointSliceHintsEnabled := helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings) && versionutils.ConstraintK8sLess132.Check(r.RuntimeVersion)
+	// EndpointSliceHints are only needed for Kubernetes < 1.32. Since minimum version is now 1.32, this is always false.
+	endpointSliceHintsEnabled := false
 
 	return sharedcomponent.NewRuntimeGardenerResourceManager(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, resourcemanager.Values{
 		DefaultSeccompProfileEnabled:              features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
@@ -1346,20 +1312,10 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 		}
 
 		if config.OIDCConfig != nil {
-			issuerURL := config.OIDCConfig.IssuerURL
-			if issuerURL == nil {
-				issuerURL = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL
-			}
-
-			clientIDPublic := config.OIDCConfig.ClientIDPublic
-			if clientIDPublic == nil {
-				clientIDPublic = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.OIDCConfig.ClientID
-			}
-
 			values.OIDC = &gardenerdashboard.OIDCValues{
 				DashboardOIDC:  *config.OIDCConfig,
-				IssuerURL:      *issuerURL,
-				ClientIDPublic: *clientIDPublic,
+				IssuerURL:      *config.OIDCConfig.IssuerURL,
+				ClientIDPublic: *config.OIDCConfig.ClientIDPublic,
 			}
 		}
 
