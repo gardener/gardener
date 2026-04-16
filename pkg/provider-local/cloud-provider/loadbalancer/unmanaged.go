@@ -27,11 +27,11 @@ func (p *Provider) getLoadBalancerStatusForUnmanagedInfra(service *corev1.Servic
 		return nil, false
 	}
 
-	var externalIPs ipSet
+	var externalIPs ipPair
 
 	switch {
 	case service.Namespace == "virtual-garden-istio-ingress" && service.Name == "istio-ingressgateway":
-		externalIPs = ipSet{
+		externalIPs = ipPair{
 			ipv4: netip.MustParseAddr("172.18.255.3"),
 			ipv6: netip.MustParseAddr("fd00:ff::3"),
 		}

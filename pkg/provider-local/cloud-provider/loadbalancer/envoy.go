@@ -30,29 +30,30 @@ const (
 
 	// envoyAdminSocket is the path to the unix domain socket in the load balancer container where Envoy listens for admin
 	// API requests. We don't expose the admin API on a port as usual to prevent blocking load balancer ports.
+	// For now, we only use the admin API for health checks (configured in the container).
 	envoyAdminSocket = envoyDir + "admin.sock"
 )
 
-func (p *Provider) writeBootstrapConfig(ctx context.Context, name string) error {
+func (p *Provider) writeEnvoyStaticConfig(ctx context.Context, name string) error {
 	if err := p.copyFilesToContainer(ctx, name, envoyDir, map[string][]byte{
-		envoyConfigFileName: []byte(dynamicFilesystemConfig),
+		envoyConfigFileName: []byte(envoyConfig),
 	}); err != nil {
-		return fmt.Errorf("failed to write bootstrap config to %s: %w", name, err)
+		return fmt.Errorf("failed to write static envoy config to %s: %w", name, err)
 	}
 	return nil
 }
 
-func (p *Provider) writeLoadBalancerConfig(ctx context.Context, name string, service *corev1.Service, nodes []*corev1.Node) error {
-	ldsConfig, cdsConfig, err := generateProxyConfig(service, nodes)
+func (p *Provider) writeEnvoyDynamicConfig(ctx context.Context, name string, service *corev1.Service, nodes []*corev1.Node) error {
+	ldsConfig, cdsConfig, err := generateEnvoyDynamicConfig(service, nodes)
 	if err != nil {
-		return fmt.Errorf("failed to generate proxy config: %w", err)
+		return fmt.Errorf("failed to generate dynamic envoy config for %s: %w", name, err)
 	}
 
 	if err := p.copyFilesToContainer(ctx, name, envoyDir, map[string][]byte{
 		ldsConfigFileName: ldsConfig,
 		cdsConfigFileName: cdsConfig,
 	}); err != nil {
-		return fmt.Errorf("failed to write proxy config to %s: %w", name, err)
+		return fmt.Errorf("failed to write dynamic envoy config to %s: %w", name, err)
 	}
 
 	return nil
@@ -78,7 +79,7 @@ func (p *Provider) copyFilesToContainer(ctx context.Context, containerID, destDi
 	return p.DockerClient.CopyToContainer(ctx, containerID, destDir, &buf, container.CopyToContainerOptions{})
 }
 
-const dynamicFilesystemConfig = `node:
+const envoyConfig = `node:
   cluster: cloud-controller-manager-local
   id: cloud-controller-manager-local-id
 dynamic_resources:
@@ -203,7 +204,7 @@ var (
 	cdsTemplateParsed = template.Must(template.New("cds").Parse(cdsTemplate))
 )
 
-type proxyConfigData struct {
+type envoyConfigData struct {
 	ServicePorts map[string]servicePort
 }
 
@@ -222,7 +223,7 @@ type endpoint struct {
 	Port    int32
 }
 
-func generateProxyConfig(service *corev1.Service, nodes []*corev1.Node) (ldsConfig, cdsConfig []byte, err error) {
+func generateEnvoyDynamicConfig(service *corev1.Service, nodes []*corev1.Node) (ldsConfig, cdsConfig []byte, err error) {
 	allNodeIPs := make([]netip.Addr, 0, len(nodes))
 	for _, node := range nodes {
 		nodeIPs, err := getInternalNodeIPs(node)
@@ -233,7 +234,7 @@ func generateProxyConfig(service *corev1.Service, nodes []*corev1.Node) (ldsConf
 		allNodeIPs = append(allNodeIPs, nodeIPs.AsSlice()...)
 	}
 
-	data := &proxyConfigData{
+	data := &envoyConfigData{
 		ServicePorts: make(map[string]servicePort, len(service.Spec.Ports)),
 	}
 

@@ -43,14 +43,14 @@ func init() {
 }
 
 type loadBalancerIPs struct {
-	internal, external ipSet
+	internal, external ipPair
 }
 
-type ipSet struct {
+type ipPair struct {
 	ipv4, ipv6 netip.Addr
 }
 
-func (s ipSet) Len() int {
+func (s ipPair) Len() int {
 	var l int
 	if s.ipv4.IsValid() {
 		l++
@@ -61,7 +61,7 @@ func (s ipSet) Len() int {
 	return l
 }
 
-func (s ipSet) AsSlice() []netip.Addr {
+func (s ipPair) AsSlice() []netip.Addr {
 	out := make([]netip.Addr, 0, s.Len())
 	if s.ipv4.IsValid() {
 		out = append(out, s.ipv4)
@@ -72,7 +72,7 @@ func (s ipSet) AsSlice() []netip.Addr {
 	return out
 }
 
-func (s ipSet) PreferredAddr(ipFamilies []corev1.IPFamily) netip.Addr {
+func (s ipPair) PreferredAddr(ipFamilies []corev1.IPFamily) netip.Addr {
 	if slices.Contains(ipFamilies, corev1.IPv6Protocol) && s.ipv6.IsValid() {
 		return s.ipv6
 	}
@@ -103,7 +103,7 @@ func (p *Provider) allocateLoadBalancerIPs(ctx context.Context, service *corev1.
 		}
 	}
 
-	ips := new(loadBalancerIPs)
+	ips := &loadBalancerIPs{}
 
 	if slices.Contains(service.Spec.IPFamilies, corev1.IPv4Protocol) {
 		ips.internal.ipv4, err = nextFree(internalPrefixV4, allocatedIPs)

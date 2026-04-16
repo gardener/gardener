@@ -11,8 +11,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func getInternalNodeIPs(node *corev1.Node) (ipSet, error) {
-	var out ipSet
+func getInternalNodeIPs(node *corev1.Node) (ipPair, error) {
+	var out ipPair
 
 	for _, addr := range node.Status.Addresses {
 		if addr.Type != corev1.NodeInternalIP {
@@ -44,8 +44,8 @@ func getInternalNodeIPs(node *corev1.Node) (ipSet, error) {
 	return out, nil
 }
 
-func getHostIPs(pod *corev1.Pod) (ipSet, error) {
-	var out ipSet
+func getHostIPs(pod *corev1.Pod) (ipPair, error) {
+	var out ipPair
 
 	for _, addr := range pod.Status.HostIPs {
 		ip, err := netip.ParseAddr(addr.IP)

@@ -18,7 +18,7 @@ function detect_kind_cluster_name() {
   CLUSTER_NAME=${CLUSTER_NAME%%/*}
   export CLUSTER_NAME
 
-  echo "DETECTED CLUSTER_NAME: $CLUSTER_NAME"
+  echo "Detected cluster name: $CLUSTER_NAME"
 }
 
 function detect_scenario() {
@@ -52,7 +52,7 @@ function detect_scenario() {
     export SCENARIO="${SCENARIO}-gardenadm"
   fi
 
-  echo "DETECTED SCENARIO: $SCENARIO"
+  echo "Detected scenario: $SCENARIO"
 }
 
 function skaffold_profile() {
@@ -87,6 +87,6 @@ function skaffold_profile() {
   esac
 
   if [[ -n "$SKAFFOLD_PROFILE" ]]; then
-    echo "USING SKAFFOLD PROFILE: $SKAFFOLD_PROFILE"
+    echo "Using skaffold profile: $SKAFFOLD_PROFILE"
   fi
 }

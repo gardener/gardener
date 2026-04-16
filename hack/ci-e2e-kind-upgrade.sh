@@ -102,7 +102,7 @@ function install_previous_release() {
   popd >/dev/null
 }
 
-# TODO(timebertt): remove this after v1.140 has been released.
+# TODO(timebertt): remove this after v1.141 has been released.
 # In the upgrade tests, `make kind-up` is executed with the new version of Gardener, which includes deploying cloud-controller-manager-local to the kind cluster.
 # However, `make gardener-up` is executed with the old version of Gardener, which still includes the service controller in gardener-extension-provider-local.
 # This leads to a conflict between cloud-controller-manager-local and service controller, as they both try to reconcile LoadBalancer services.

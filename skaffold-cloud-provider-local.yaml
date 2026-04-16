@@ -77,8 +77,6 @@ deploy:
       - name: cloud-controller-manager-application
         chartPath: pkg/provider-local/charts/shoot-system-components/charts/cloud-controller-manager
         namespace: kube-system
-        valuesFiles:
-          - pkg/provider-local/charts/shoot-system-components/charts/cloud-controller-manager/values.yaml
       # This release deploys the ConfigMap with the cloud provider configuration for the cloud-controller-manager
       - name: cloud-provider-config
         chartPath: pkg/provider-local/charts/cloud-provider-config

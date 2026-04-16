@@ -101,6 +101,9 @@ To confirm that all your seed clusters are updated, check the following for each
 
 Finally, check the health conditions (`.status.conditions[]`) in the `Seed` resources to ensure they all report `True`.
 
+After upgrading all gardener components (operator, control plane, gardenlet's, and extensions), i.e., after completing the first 3 steps, you are ready to use new API fields and features introduced in the new Gardener/extension version.
+Note that before that applying new API fields or using new features might fail, e.g., because admission components are not yet aware of them.
+
 ## 4. Shoot Reconciliations
 
 By default, after a `gardenlet` is upgraded, it immediately starts reconciling the `Shoot` clusters it manages. While this is suitable for small setups, it's often better to perform these reconciliations only during a predefined maintenance window.

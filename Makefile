@@ -352,14 +352,8 @@ export SKAFFOLD_LABEL = "skaffold.dev/run-id=gardener-local"
 
 # cloud-provider-local-{up,dev,debug,down}
 cloud-provider-local-%: export SKAFFOLD_FILENAME = skaffold-cloud-provider-local.yaml
-cloud-provider-local-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./dev-setup/cloud-provider-local.sh up
-cloud-provider-local-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./dev-setup/cloud-provider-local.sh dev
-cloud-provider-local-debug: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./dev-setup/cloud-provider-local.sh debug
-cloud-provider-local-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./dev-setup/cloud-provider-local.sh down
+cloud-provider-local-%: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	./dev-setup/cloud-provider-local.sh $*
 
 # gardener-{up,dev,debug,down}
 gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)

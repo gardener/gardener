@@ -60,13 +60,13 @@ func (p *Provider) GetLoadBalancer(ctx context.Context, clusterName string, serv
 
 	if !info.State.Running {
 		// container exists but is not running, return "unhealthy" status
-		return nil, true, nil
+		return &corev1.LoadBalancerStatus{}, true, nil
 	}
 
 	// Only report the load balancer status once the container's Docker health check passes.
 	// This prevents publishing the LB status before envoy is ready to serve traffic.
 	if info.State.Health == nil || info.State.Health.Status != container.Healthy {
-		return nil, true, nil
+		return &corev1.LoadBalancerStatus{}, true, nil
 	}
 
 	loadBalancerStatus, err := getLoadBalancerStatusFromContainer(service, info.NetworkSettings)
@@ -109,7 +109,7 @@ func (p *Provider) EnsureLoadBalancer(ctx context.Context, clusterName string, s
 			// You can't dynamically update the port bindings of a container, so we need to recreate it if the service ports
 			// have changed.
 			if err := p.EnsureLoadBalancerDeleted(ctx, clusterName, service); err != nil {
-				return nil, fmt.Errorf("failed to recreate container %s due to port changes: %w", name, err)
+				return nil, fmt.Errorf("failed to delete container %s for recreation due to port changes: %w", name, err)
 			}
 
 			needsCreation = true
@@ -132,23 +132,30 @@ func (p *Provider) EnsureLoadBalancer(ctx context.Context, clusterName string, s
 		)
 
 		// Write the static envoy bootstrap config only on container creation.
-		if err := p.writeBootstrapConfig(ctx, name); err != nil {
+		if err := p.writeEnvoyStaticConfig(ctx, name); err != nil {
 			return nil, fmt.Errorf("failed to write bootstrap config for container %s: %w", name, err)
 		}
 	}
 
-	// Write the dynamic listener and cluster discovery configs (lds.yaml, cds.yaml).
-	// Envoy watches these files via path_config_source (inotify) and reloads automatically.
-	if err := p.writeLoadBalancerConfig(ctx, name, service, nodes); err != nil {
+	// Write the dynamic listener and cluster discovery configs (lds.yaml, cds.yaml, i.e., the LoadBalancer ports and
+	// backends). Envoy watches these files via path_config_source (inotify) and reloads automatically.
+	if err := p.writeEnvoyDynamicConfig(ctx, name, service, nodes); err != nil {
 		return nil, fmt.Errorf("failed to write config for container %s: %w", name, err)
 	}
 
 	if err := p.DockerClient.ContainerStart(ctx, name, container.StartOptions{}); err != nil {
-		// If we allocate multiple IPs concurrently, we can run into conflicts (between multiple services or even between
-		// multiple cloud-controller-manager-local instances) where we try to start multiple containers with the same IPs:
+		// When starting new load balancer containers, we instruct Docker to use the next free IP address in the internal
+		// load balancer range (the last addresses of kind network range) as the container IP. Together with the mapping
+		// to the external IP range, this is used as the IPAM for load balancer IPs (see ipam.go).
+		// However, when creating multiple load balancers concurrently, we might try to start multiple containers with the
+		// internal IP. Docker refuses to start containers with IPs that are already allocated in the same network and
+		// returns an error like:
 		//   failed to set up container networking: Address already in use
-		// If this happens, Docker refuses to start another container with the same IP in the kind network and deletes the
-		// container. We simply retry the IP allocation with exponential backoff.
+		// The container with the conflicting IP is automatically deleted by Docker.
+		// If this happens, it means we also tried to use an external IP for the new load balancer that has already been
+		// allocated. To handle the IP conflict, we simply need to retry (with exponential backoff) until we read all
+		// existing allocated IPs and use the next free IP instead.
+		// We return an explicit error message to make this situation visible in the logs.
 		if strings.Contains(err.Error(), "Address already in use") {
 			return nil, fmt.Errorf("recreating container %s due to IP conflict: %w", name, err)
 		}
@@ -168,7 +175,7 @@ func (p *Provider) EnsureLoadBalancer(ctx context.Context, clusterName string, s
 		return nil, fmt.Errorf("failed to inspect container %s: %w", name, err)
 	}
 
-	// Wait for Docker's health check to confirm envoy is ready before publishing the LB status.
+	// Only publish the LB status once Docker's health check confirms envoy is ready.
 	if info.State.Health == nil {
 		return nil, fmt.Errorf("envoy proxy container %s is missing health status", name)
 	}
@@ -190,7 +197,7 @@ func (p *Provider) UpdateLoadBalancer(ctx context.Context, clusterName string, s
 	name := p.GetLoadBalancerName(ctx, clusterName, service)
 
 	klog.V(2).InfoS("Updating load balancer", "container", name, "service", client.ObjectKeyFromObject(service), "nodes", len(nodes))
-	if err := p.writeLoadBalancerConfig(ctx, name, service, nodes); err != nil {
+	if err := p.writeEnvoyDynamicConfig(ctx, name, service, nodes); err != nil {
 		return fmt.Errorf("failed to write config for container %s: %w", name, err)
 	}
 

@@ -181,7 +181,7 @@ Load balancer IPs are allocated from dedicated CIDR ranges:
 
 The external IPs are added to the loopback interface of the host machine by `hack/kind-up.sh`, making `LoadBalancer` services (e.g., `istio-ingressgateway` and bastion services) reachable from the host.
 
-The cloud-controller-manager is used both for the kind cluster (started automatically during `make kind*-up`) and for the shoot clusters (deployed by provider-local's [`ControlPlane` controller](#controlplane)).
+The cloud-controller-manager is used for both the kind cluster (started automatically during `make kind*-up`) and for the shoot clusters (deployed by provider-local's [`ControlPlane` controller](#controlplane)).
 For the shoot clusters, the cloud-controller-manager is configured to talk to the shoot's API server using a shoot access secret.
 Additionally, it also uses the in-cluster credentials (ServiceAccount in the seed cluster) to look up the machine pods corresponding to the shoot `Node` objects.
 This is needed, because the shoot node IPs are pod IPs in the kind cluster, which are not directly reachable from load balancer containers in the `kind` network.

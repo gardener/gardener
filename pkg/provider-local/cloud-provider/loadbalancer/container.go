@@ -29,7 +29,7 @@ const kindNetwork = "kind"
 
 func (p *Provider) createLoadBalancerContainer(ctx context.Context, name string, service *corev1.Service, clusterName string) (*loadBalancerIPs, error) {
 	if err := p.ensureImage(ctx, p.Config.LoadBalancer.Image); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to ensure load balancer image: %v", err)
 	}
 
 	ips, err := p.allocateLoadBalancerIPs(ctx, service)
@@ -39,7 +39,7 @@ func (p *Provider) createLoadBalancerContainer(ctx context.Context, name string,
 
 	portBindings, err := portBindingsForService(service, ips.external.AsSlice())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to determine port bindings for service: %w", err)
 	}
 
 	_, err = p.DockerClient.ContainerCreate(
@@ -95,8 +95,7 @@ func (p *Provider) createLoadBalancerContainer(ctx context.Context, name string,
 }
 
 func (p *Provider) ensureImage(ctx context.Context, imageName string) error {
-	_, err := p.DockerClient.ImageInspect(ctx, imageName)
-	if err == nil {
+	if _, err := p.DockerClient.ImageInspect(ctx, imageName); err == nil {
 		return nil
 	}
 
@@ -139,7 +138,6 @@ func (p *Provider) ensureIPRoutes(ctx context.Context, containerName string, nod
 		}
 		machinePod := machinePods.Items[podIndex]
 
-		// get the node's internal IPs (machine pod IPs)
 		shootNodeIPs, err := getInternalNodeIPs(shootNode)
 		if err != nil {
 			return fmt.Errorf("could not get internal IPs of node %s: %w", shootNode.Name, err)
@@ -219,7 +217,7 @@ func getLoadBalancerIPsFromContainer(networkSettings *container.NetworkSettings)
 		return nil, fmt.Errorf("container is missing network settings for network %s", kindNetwork)
 	}
 
-	ips := new(loadBalancerIPs)
+	ips := &loadBalancerIPs{}
 
 	if containerIPs.IPAddress != "" {
 		parsedIPv4, err := netip.ParseAddr(containerIPs.IPAddress)
@@ -260,7 +258,7 @@ func getLoadBalancerIPsFromContainer(networkSettings *container.NetworkSettings)
 	return ips, nil
 }
 
-func loadBalancerStatusWithIPs(service *corev1.Service, externalIPs ipSet, ipMode corev1.LoadBalancerIPMode) *corev1.LoadBalancerStatus {
+func loadBalancerStatusWithIPs(service *corev1.Service, externalIPs ipPair, ipMode corev1.LoadBalancerIPMode) *corev1.LoadBalancerStatus {
 	ingresses := make([]corev1.LoadBalancerIngress, 0, externalIPs.Len())
 
 	if slices.Contains(service.Spec.IPFamilies, corev1.IPv4Protocol) {
@@ -312,7 +310,7 @@ func portBindingsForService(service *corev1.Service, externalIPs []netip.Addr) (
 func containerHasDesiredPortBindings(service *corev1.Service, networkSettings *container.NetworkSettings) (bool, error) {
 	desiredPortBindings, err := portBindingsForService(service, nil)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to determine port bindings for service: %w", err)
 	}
 	desiredPorts := slices.Sorted(maps.Keys(desiredPortBindings))
 

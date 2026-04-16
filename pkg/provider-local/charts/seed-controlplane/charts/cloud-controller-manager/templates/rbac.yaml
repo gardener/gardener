@@ -12,6 +12,9 @@ metadata:
   labels:
     app: kubernetes
     role: cloud-controller-manager
+{{- if (include "is-shoot" .) }}
+automountServiceAccountToken: false
+{{- end }}
 ---
 {{- if and (include "is-shoot" .) .Values.hasManagedInfrastructure }}
 # For running the cloud-controller-manager for a shoot cluster, we need permissions to look up where shoot machine pods
