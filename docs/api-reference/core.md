@@ -2189,6 +2189,18 @@ integer
 <p>NodeGroupBackoffResetTimeout is the time after last failed scale-up when the backoff duration is reset (default: 3h).</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>emitPerNodeGroupMetrics</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EmitPerNodeGroupMetrics emits additional per node group metrics (default: false).</p>
+</td>
+</tr>
 
 </tbody>
 </table>

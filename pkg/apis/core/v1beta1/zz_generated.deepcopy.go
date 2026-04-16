@@ -1099,6 +1099,11 @@ func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.EmitPerNodeGroupMetrics != nil {
+		in, out := &in.EmitPerNodeGroupMetrics, &out.EmitPerNodeGroupMetrics
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

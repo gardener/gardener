@@ -1094,6 +1094,11 @@ func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.EmitPerNodeGroupMetrics != nil {
+		in, out := &in.EmitPerNodeGroupMetrics, &out.EmitPerNodeGroupMetrics
+		*out = new(bool)
+		**out = **in
+	}
 	if in.Verbosity != nil {
 		in, out := &in.Verbosity, &out.Verbosity
 		*out = new(int32)
