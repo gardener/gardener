@@ -14,7 +14,6 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -30,11 +29,6 @@ var _ = Describe("GardenerTestEnvironment", func() {
 	It("should be able to manipulate resource from seedmanagement.gardener.cloud/v1alpha1", func() {
 		managedSeed := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: "garden"}}
 		Expect(testClient.Create(ctx, managedSeed)).To(MatchError(MatchRegexp("ManagedSeed.seedmanagement.gardener.cloud \"test-.+\" is invalid")))
-	})
-
-	It("should be able to manipulate resource from settings.gardener.cloud/v1alpha1", func() {
-		openIDConnectPreset := &settingsv1alpha1.OpenIDConnectPreset{ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: testNamespace.Name}}
-		Expect(testClient.Create(ctx, openIDConnectPreset)).To(MatchError(MatchRegexp("OpenIDConnectPreset.settings.gardener.cloud \"test-.+\" is invalid")))
 	})
 
 	It("should be able to manipulate resource from operations.gardener.cloud/v1alpha1", func() {

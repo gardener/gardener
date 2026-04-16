@@ -24,7 +24,6 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e"
@@ -48,7 +47,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		It("Verify Gardener APIs availability", func(ctx SpecContext) {
 			Eventually(ctx, s.VirtualClusterKomega.List(&gardencorev1beta1.ShootList{})).Should(Succeed())
 			Eventually(ctx, s.VirtualClusterKomega.List(&seedmanagementv1alpha1.ManagedSeedList{})).Should(Succeed())
-			Eventually(ctx, s.VirtualClusterKomega.List(&settingsv1alpha1.ClusterOpenIDConnectPresetList{})).Should(Succeed())
 			Eventually(ctx, s.VirtualClusterKomega.List(&operationsv1alpha1.BastionList{})).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 

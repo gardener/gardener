@@ -17,7 +17,6 @@ import (
 	operationsinstall "github.com/gardener/gardener/pkg/apis/operations/install"
 	securityinstall "github.com/gardener/gardener/pkg/apis/security/install"
 	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
-	settingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
 )
 
 var (
@@ -32,7 +31,6 @@ func init() {
 	gardencoreinstall.Install(Scheme)
 	securityinstall.Install(Scheme)
 	seedmanagementinstall.Install(Scheme)
-	settingsinstall.Install(Scheme)
 	operationsinstall.Install(Scheme)
 
 	utilruntime.Must(autoscalingv1.AddToScheme(Scheme))

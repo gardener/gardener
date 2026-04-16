@@ -25,7 +25,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/security"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	"github.com/gardener/gardener/pkg/apis/settings"
 	"github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
@@ -39,7 +38,6 @@ func IsServedByGardenerAPIServer(resource string) bool {
 		gardencore.GroupName,
 		operations.GroupName,
 		security.GroupName,
-		settings.GroupName,
 		seedmanagement.GroupName,
 	}, groupResource.Group)
 }
