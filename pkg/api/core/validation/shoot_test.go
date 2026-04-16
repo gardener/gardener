@@ -191,16 +191,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 							},
 						},
 						KubeAPIServer: &core.KubeAPIServerConfig{
-							OIDCConfig: &core.OIDCConfig{
-								CABundle:       ptr.To("-----BEGIN CERTIFICATE-----\nMIICRzCCAfGgAwIBAgIJALMb7ecMIk3MMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\nBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE\nCgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRswGQYD\nVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwIBcNMTcwNDI2MjMyNjUyWhgPMjExNzA0\nMDIyMzI2NTJaMH4xCzAJBgNVBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNV\nBAcMBkxvbmRvbjEYMBYGA1UECgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1J\nVCBEZXBhcnRtZW50MRswGQYDVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwXDANBgkq\nhkiG9w0BAQEFAANLADBIAkEAtBMa7NWpv3BVlKTCPGO/LEsguKqWHBtKzweMY2CV\ntAL1rQm913huhxF9w+ai76KQ3MHK5IVnLJjYYA5MzP2H5QIDAQABo1AwTjAdBgNV\nHQ4EFgQU22iy8aWkNSxv0nBxFxerfsvnZVMwHwYDVR0jBBgwFoAU22iy8aWkNSxv\n0nBxFxerfsvnZVMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAEOefGbV\nNcHxklaW06w6OBYJPwpIhCVozC1qdxGX1dg8VkEKzjOzjgqVD30m59OFmSlBmHsl\nnkVA6wyOSDYBf3o=\n-----END CERTIFICATE-----"),
-								ClientID:       ptr.To("client-id"),
-								GroupsClaim:    ptr.To("groups-claim"),
-								GroupsPrefix:   ptr.To("groups-prefix"),
-								IssuerURL:      ptr.To("https://some-endpoint.com"),
-								UsernameClaim:  ptr.To("user-claim"),
-								UsernamePrefix: ptr.To("user-prefix"),
-								RequiredClaims: map[string]string{"foo": "bar"},
-							},
 							AdmissionPlugins: []core.AdmissionPlugin{
 								{
 									Name: "PodNodeSelector",
@@ -2502,113 +2492,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("KubeAPIServer validation", func() {
-			Context("OIDC validation", func() {
-				It("should forbid setting OIDC configuration from kubernetes version 1.32", func() {
-					shoot.Spec.Kubernetes.Version = "1.32"
-
-					errorList := ValidateShoot(shoot)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig"),
-					}))))
-				})
-
-				It("should forbid unsupported OIDC configuration", func() {
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.CABundle = ptr.To("")
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("")
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.GroupsClaim = ptr.To("")
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.GroupsPrefix = ptr.To("")
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = ptr.To("")
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.UsernameClaim = ptr.To("")
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.UsernamePrefix = ptr.To("")
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.RequiredClaims = map[string]string{}
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.SigningAlgs = []string{"foo"}
-
-					errorList := ValidateShoot(shoot)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
-					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.clientID"),
-					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.caBundle"),
-					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.groupsClaim"),
-					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.groupsPrefix"),
-					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeNotSupported),
-						"Field":  Equal("spec.kubernetes.kubeAPIServer.oidcConfig.signingAlgs[0]"),
-						"Detail": Equal("supported values: \"ES256\", \"ES384\", \"ES512\", \"PS256\", \"PS384\", \"PS512\", \"RS256\", \"RS384\", \"RS512\", \"none\""),
-					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.usernameClaim"),
-					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.usernamePrefix"),
-					}))))
-				})
-
-				DescribeTable("should forbid issuerURL to be empty string or nil", func(errorListSize int, issuerURL *string, detail string) {
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("someClientID")
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = issuerURL
-
-					errorList := ValidateShoot(shoot)
-					Expect(errorList).To(HaveLen(errorListSize))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeRequired),
-						"Field":  Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
-						"Detail": Equal(detail),
-					}))
-				},
-					Entry("should add error if issuerURL is nil", 1, nil, "issuerURL must be set when oidcConfig is provided"),
-					Entry("should add error if issuerURL is empty string", 1, ptr.To(""), "issuerURL cannot be empty"),
-				)
-
-				It("should not fail if both clientID and issuerURL are set", func() {
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = ptr.To("https://issuer.com")
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("someClientID")
-
-					errorList := ValidateShoot(shoot)
-
-					Expect(errorList).To(BeEmpty())
-				})
-
-				DescribeTable("should forbid clientID to be empty string or nil", func(errorListSize int, clientID *string, detail string) {
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = clientID
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = ptr.To("https://issuer.com")
-
-					errorList := ValidateShoot(shoot)
-					Expect(errorList).To(HaveLen(errorListSize))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeRequired),
-						"Field":  Equal("spec.kubernetes.kubeAPIServer.oidcConfig.clientID"),
-						"Detail": Equal(detail),
-					}))
-				},
-					Entry("should add error if clientID is nil", 1, nil, "clientID must be set when oidcConfig is provided"),
-					Entry("should add error if clientID is empty string", 1, ptr.To(""), "clientID cannot be empty"),
-				)
-
-				It("should forbid setting clientAuthentication from kubernetes version 1.31", func() {
-					shoot.Spec.Kubernetes.Version = "1.31"
-
-					errorList := ValidateShoot(shoot)
-
-					Expect(errorList).To(BeEmpty())
-				})
-			})
-
 			DescribeTable("EnableAnonymousAuthentication validation",
 				func(k8sVersion string, enableAnonymousAuth *bool, expectError bool) {
 					shoot.Spec.Kubernetes.Version = k8sVersion
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
 					shoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = enableAnonymousAuth
 					shoot.Spec.CloudProfileName = nil
 					shoot.Spec.CloudProfile = &core.CloudProfileReference{
@@ -3730,7 +3616,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should prevent setting the pod eviction timeout for kubernetes versions >= 1.33", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
 				shoot.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = &metav1.Duration{Duration: time.Minute}
 				shoot.Spec.Kubernetes.Version = "1.33.0"
 
@@ -4522,7 +4407,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("Authentication validation", func() {
 			It("should forbid empty name", func() {
 				shoot.Spec.Kubernetes.Version = "v1.31.0"
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
 				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication = &core.StructuredAuthentication{}
 				errorList := ValidateShoot(shoot)
 
@@ -4536,7 +4420,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid setting structured authentication when feature gate is disabled", func() {
 				shoot.Spec.Kubernetes.Version = "v1.31.0"
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
 				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication = &core.StructuredAuthentication{
 					ConfigMapName: "foo",
 				}
@@ -4553,24 +4436,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should forbid setting both oidcConfig and structured authentication", func() {
-				shoot.Spec.Kubernetes.Version = "v1.31.0"
-				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication = &core.StructuredAuthentication{
-					ConfigMapName: "foo",
-				}
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).ToNot(BeEmpty())
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.kubernetes.kubeAPIServer.oidcConfig"),
-					"Detail": Equal("is incompatible with structuredAuthentication"),
-				}))))
-			})
-
 			It("should allow when config is valid", func() {
 				shoot.Spec.Kubernetes.Version = "v1.31.0"
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
 				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication = &core.StructuredAuthentication{
 					ConfigMapName: "foo",
 				}
@@ -6461,7 +6328,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should allow to complete credentials rotation when etcd rotation is not prepared and k8s version is >= 1.34", func() {
 				shoot.Spec.Kubernetes.Version = "1.34.0"
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
 				shoot.Spec.CloudProfileName = nil
 				shoot.Spec.CloudProfile = &core.CloudProfileReference{
 					Kind: "CloudProfile",

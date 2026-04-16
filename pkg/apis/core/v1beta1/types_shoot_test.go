@@ -64,6 +64,9 @@ var _ = Describe("Shoot", func() {
 				if protobufNum == "5" {
 					Fail("protobuf 5 in KubeAPIServerConfig is reserved for removed enableBasicAuthentication field")
 				}
+				if protobufNum == "6" {
+					Fail("protobuf 6 in KubeAPIServerConfig is reserved for removed oidcConfig field")
+				}
 			}
 		})
 	})

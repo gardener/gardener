@@ -159,20 +159,6 @@ var (
 	)
 	availableUpdateStrategies = sets.New(core.AutoRollingUpdate, core.AutoInPlaceUpdate, core.ManualInPlaceUpdate)
 
-	// asymmetric algorithms from https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
-	availableOIDCSigningAlgs = sets.New(
-		"RS256",
-		"RS384",
-		"RS512",
-		"ES256",
-		"ES384",
-		"ES512",
-		"PS256",
-		"PS384",
-		"PS512",
-		"none",
-	)
-
 	availableEncryptionAtRestProviders = sets.New(
 		core.EncryptionProviderTypeAESCBC,
 	)
@@ -1732,50 +1718,6 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, kubernetesVe
 		return allErrs
 	}
 
-	// TODO(AleksandarSavchev): Remove this check as soon as v1.32 is the least supported Kubernetes version in Gardener.
-	if oidc := kubeAPIServer.OIDCConfig; versionutils.ConstraintK8sGreaterEqual132.CheckVersion(kubernetesVersion) && oidc != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("oidcConfig"), *oidc, "for Kubernetes versions >= 1.32, oidcConfig field is no longer supported"))
-	} else if oidc != nil {
-		oidcPath := fldPath.Child("oidcConfig")
-
-		if oidc.ClientID == nil {
-			allErrs = append(allErrs, field.Required(oidcPath.Child("clientID"), "clientID must be set when oidcConfig is provided"))
-		} else if len(*oidc.ClientID) == 0 {
-			allErrs = append(allErrs, field.Required(oidcPath.Child("clientID"), "clientID cannot be empty"))
-		}
-
-		if oidc.IssuerURL == nil {
-			allErrs = append(allErrs, field.Required(oidcPath.Child("issuerURL"), "issuerURL must be set when oidcConfig is provided"))
-		} else if len(*oidc.IssuerURL) == 0 {
-			allErrs = append(allErrs, field.Required(oidcPath.Child("issuerURL"), "issuerURL cannot be empty"))
-		} else {
-			allErrs = append(allErrs, ValidateOIDCIssuerURL(*oidc.IssuerURL, oidcPath.Child("issuerURL"))...)
-		}
-
-		if oidc.CABundle != nil {
-			if _, err := utils.DecodeCertificate([]byte(*oidc.CABundle)); err != nil {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("caBundle"), *oidc.CABundle, "caBundle is not a valid PEM-encoded certificate"))
-			}
-		}
-		if oidc.GroupsClaim != nil && len(*oidc.GroupsClaim) == 0 {
-			allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsClaim"), *oidc.GroupsClaim, "groupsClaim cannot be empty when key is provided"))
-		}
-		if oidc.GroupsPrefix != nil && len(*oidc.GroupsPrefix) == 0 {
-			allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsPrefix"), *oidc.GroupsPrefix, "groupsPrefix cannot be empty when key is provided"))
-		}
-		for i, alg := range oidc.SigningAlgs {
-			if !availableOIDCSigningAlgs.Has(alg) {
-				allErrs = append(allErrs, field.NotSupported(oidcPath.Child("signingAlgs").Index(i), alg, sets.List(availableOIDCSigningAlgs)))
-			}
-		}
-		if oidc.UsernameClaim != nil && len(*oidc.UsernameClaim) == 0 {
-			allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernameClaim"), *oidc.UsernameClaim, "usernameClaim cannot be empty when key is provided"))
-		}
-		if oidc.UsernamePrefix != nil && len(*oidc.UsernamePrefix) == 0 {
-			allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernamePrefix"), *oidc.UsernamePrefix, "usernamePrefix cannot be empty when key is provided"))
-		}
-	}
-
 	if kubeAPIServer.EnableAnonymousAuthentication != nil && versionutils.ConstraintK8sGreaterEqual135.CheckVersion(kubernetesVersion) {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("enableAnonymousAuthentication"), "for Kubernetes versions >= 1.35, enableAnonymousAuthentication field is no longer supported"))
 	}
@@ -1794,9 +1736,6 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, kubernetesVe
 		structAuthPath := fldPath.Child("structuredAuthentication")
 		if value, ok := kubeAPIServer.FeatureGates["StructuredAuthenticationConfiguration"]; ok && !value {
 			allErrs = append(allErrs, field.Forbidden(structAuthPath, "requires feature gate StructuredAuthenticationConfiguration to be enabled"))
-		}
-		if kubeAPIServer.OIDCConfig != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("oidcConfig"), "is incompatible with structuredAuthentication"))
 		}
 		if len(structuredAuthentication.ConfigMapName) == 0 {
 			allErrs = append(allErrs, field.Forbidden(structAuthPath.Child("configMapName"), "must provide a name"))

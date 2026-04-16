@@ -965,14 +965,9 @@ type KubeAPIServerConfig struct {
 	// EnableBasicAuthentication is tombstoned to show why 5 is reserved protobuf tag.
 	// EnableBasicAuthentication *bool `json:"enableBasicAuthentication,omitempty" protobuf:"varint,5,opt,name=enableBasicAuthentication"`
 
-	// OIDCConfig contains configuration settings for the OIDC provider.
-	//
-	// Deprecated: This field is deprecated and will be forbidden starting from Kubernetes 1.32.
-	// Please configure and use structured authentication instead of oidc flags.
-	// For more information check https://github.com/gardener/gardener/issues/9858
-	// TODO(AleksandarSavchev): Drop this field after support for Kubernetes 1.31 is dropped.
-	// +optional
-	OIDCConfig *OIDCConfig `json:"oidcConfig,omitempty" protobuf:"bytes,6,opt,name=oidcConfig"`
+	// OIDCConfig is tombstoned to show why 6 is reserved protobuf tag.
+	// OIDCConfig *OIDCConfig `json:"oidcConfig,omitempty" protobuf:"bytes,6,opt,name=oidcConfig"`
+
 	// RuntimeConfig contains information about enabled or disabled APIs.
 	// +optional
 	RuntimeConfig map[string]bool `json:"runtimeConfig,omitempty" protobuf:"bytes,7,rep,name=runtimeConfig"`

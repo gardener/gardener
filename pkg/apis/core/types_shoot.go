@@ -725,13 +725,6 @@ type KubeAPIServerConfig struct {
 	APIAudiences []string
 	// AuditConfig contains configuration settings for the audit of the kube-apiserver.
 	AuditConfig *AuditConfig
-	// OIDCConfig contains configuration settings for the OIDC provider.
-	//
-	// Deprecated: This field is deprecated and will be forbidden starting from Kubernetes 1.32.
-	// Please configure and use structured authentication instead of oidc flags.
-	// For more information check https://github.com/gardener/gardener/issues/9858
-	// TODO(AleksandarSavchev): Drop this field after support for Kubernetes 1.31 is dropped.
-	OIDCConfig *OIDCConfig
 	// RuntimeConfig contains information about enabled or disabled APIs.
 	RuntimeConfig map[string]bool
 	// ServiceAccountConfig contains configuration settings for the service account handling
