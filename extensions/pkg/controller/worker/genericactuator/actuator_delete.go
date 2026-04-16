@@ -13,6 +13,7 @@ import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -121,11 +122,10 @@ func markAllMachinesForcefulDeletion(ctx context.Context, log logr.Logger, cl cl
 		return err
 	}
 
-	var tasks []flow.TaskFn
+	var tasks = make([]flow.TaskFn, 0, len(existingMachines.Items))
 	for _, machine := range existingMachines.Items {
-		m := machine
 		tasks = append(tasks, func(ctx context.Context) error {
-			return markMachineForcefulDeletion(ctx, cl, &m)
+			return markMachineForcefulDeletion(ctx, cl, &machine)
 		})
 	}
 
@@ -138,16 +138,13 @@ func markAllMachinesForcefulDeletion(ctx context.Context, log logr.Logger, cl cl
 
 // markMachineForcefulDeletion labels a machine object to become forcefully deleted.
 func markMachineForcefulDeletion(ctx context.Context, cl client.Client, machine *machinev1alpha1.Machine) error {
-	if machine.Labels == nil {
-		machine.Labels = map[string]string{}
-	}
-
 	if val, ok := machine.Labels[forceDeletionLabelKey]; ok && val == forceDeletionLabelValue {
 		return nil
 	}
 
-	machine.Labels[forceDeletionLabelKey] = forceDeletionLabelValue
-	return cl.Update(ctx, machine)
+	patch := client.MergeFrom(machine.DeepCopy())
+	metav1.SetMetaDataLabel(&machine.ObjectMeta, forceDeletionLabelKey, forceDeletionLabelValue)
+	return cl.Patch(ctx, machine, patch)
 }
 
 func (a *genericActuator) waitUntilCredentialsSecretAcquiredOrReleased(ctx context.Context, acquired bool, worker *extensionsv1alpha1.Worker) error {
