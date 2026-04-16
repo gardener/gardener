@@ -25,6 +25,12 @@ The minimum version of a garden cluster that can be used to run Gardener is **`1
 
 The minimum version of a seed cluster that can be connected to Gardener is **`1.31.x`** up to **`1.35.x`**.
 
+> [!WARNING]
+> Kubernetes `v1.35.x` with `x` in `0..3` has a [regression](https://github.com/kubernetes/kubernetes/issues/137409) where the `MaxUnavailableStatefulSet` feature gate (enabled by default in `v1.35`) can cause StatefulSet rolling updates to deadlock when readiness probes fail.
+> This affects seed clusters and can prevent components like `vpn-seed-server` from being updated.
+> If you run a seed cluster with `v1.35.0` to `v1.35.3`, disable the feature gate in `kube-controller-manager` (`--feature-gates=MaxUnavailableStatefulSet=false`).
+> This is fixed in `v1.35.4` and beyond.
+
 ## Shoot Clusters
 
 Gardener itself is capable of spinning up clusters with Kubernetes versions **`1.31`** up to **`1.35`**.
