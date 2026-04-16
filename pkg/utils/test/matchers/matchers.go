@@ -7,6 +7,7 @@ package matchers
 import (
 	"context"
 
+	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
@@ -97,13 +98,15 @@ func ShareSameReferenceAs(expected any) types.GomegaMatcher {
 // NewManagedResourceContainsObjectsMatcher returns a function for a matcher that checks
 // if the given objects are handled by the given managed resource.
 // It is expected that the data keys of referenced secret(s) follow the semantics of `managedresources.Registry`.
-func NewManagedResourceContainsObjectsMatcher(c client.Client) func(...client.Object) types.GomegaMatcher {
+// It allows to pass additional options to the underlying comparison, e.g. to ignore certain fields.
+func NewManagedResourceContainsObjectsMatcher(c client.Client, compareOptions ...cmp.Option) func(...client.Object) types.GomegaMatcher {
 	return func(objs ...client.Object) types.GomegaMatcher {
 		return &managedResourceObjectsMatcher{
 			ctx:             context.Background(),
 			client:          c,
 			decoder:         serializer.NewCodecFactory(c.Scheme()).UniversalDeserializer(),
 			expectedObjects: expectedObjects(objs, c.Scheme()),
+			compareOptions:  compareOptions,
 		}
 	}
 }
@@ -112,7 +115,8 @@ func NewManagedResourceContainsObjectsMatcher(c client.Client) func(...client.Ob
 // if the exact list of given objects are handled by the given managed resource.
 // Any extra objects found through the ManagedResource let the matcher fail.
 // It is expected that the data keys of referenced secret(s) follow the semantics of `managedresources.Registry`.
-func NewManagedResourceConsistOfObjectsMatcher(c client.Client) func(...client.Object) types.GomegaMatcher {
+// It allows to pass additional options to the underlying comparison, e.g. to ignore certain fields.
+func NewManagedResourceConsistOfObjectsMatcher(c client.Client, compareOptions ...cmp.Option) func(...client.Object) types.GomegaMatcher {
 	return func(objs ...client.Object) types.GomegaMatcher {
 		return &managedResourceObjectsMatcher{
 			ctx:               context.Background(),
@@ -120,6 +124,7 @@ func NewManagedResourceConsistOfObjectsMatcher(c client.Client) func(...client.O
 			decoder:           serializer.NewCodecFactory(c.Scheme()).UniversalDeserializer(),
 			expectedObjects:   expectedObjects(objs, c.Scheme()),
 			extraObjectsCheck: true,
+			compareOptions:    compareOptions,
 		}
 	}
 }

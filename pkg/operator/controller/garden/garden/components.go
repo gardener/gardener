@@ -327,7 +327,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.vali, err = r.newVali()
+	c.vali, err = r.newVali(c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -1430,7 +1430,11 @@ func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) 
 	)
 }
 
-func (r *Reconciler) newVali() (component.Deployer, error) {
+func (r *Reconciler) newVali(ingressGatewayValues []istio.IngressGatewayValues) (component.Deployer, error) {
+	if len(ingressGatewayValues) != 1 {
+		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the vali config")
+	}
+
 	deployer, err := sharedcomponent.NewVali(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -1442,6 +1446,7 @@ func (r *Reconciler) newVali() (component.Deployer, error) {
 		nil,
 		"",
 		true,
+		ingressGatewayValues[0].Labels,
 	)
 	if err != nil {
 		return nil, err

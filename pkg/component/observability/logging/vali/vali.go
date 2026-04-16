@@ -13,6 +13,8 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -28,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
@@ -40,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -116,12 +120,13 @@ type Values struct {
 	InitLargeDirImage  string
 	IsGardenCluster    bool
 
-	ClusterType             component.ClusterType
-	Replicas                int32
-	PriorityClassName       string
-	IngressHost             string
-	ShootNodeLoggingEnabled bool
-	Storage                 *resource.Quantity
+	ClusterType               component.ClusterType
+	Replicas                  int32
+	PriorityClassName         string
+	IngressHost               string
+	IstioIngressGatewayLabels map[string]string
+	ShootNodeLoggingEnabled   bool
+	Storage                   *resource.Quantity
 }
 
 // Interface is the interface for the Vali deployer.
@@ -208,10 +213,12 @@ func (v *vali) Deploy(ctx context.Context) error {
 		}
 		genericTokenKubeconfigSecretName = genericTokenKubeconfigSecret.Name
 
-		resources = append(resources,
-			v.getIngress(ingressTLSSecret.Name),
-			telegrafConfigMap,
-		)
+		istioResources, err := v.getIstioResources(ingressTLSSecret)
+		if err != nil {
+			return fmt.Errorf("failed to get istio resources: %w", err)
+		}
+
+		resources = append(append(resources, telegrafConfigMap), istioResources...)
 
 		kubeRBACProxyClusterRoleBinding := v.getKubeRBACProxyClusterRoleBinding(kubeRBACProxyShootAccessSecret.ServiceAccountName)
 		loggingAgentClusterRole := v.getLoggingAgentClusterRole()
@@ -329,60 +336,87 @@ func (v *vali) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return vpa
 }
 
-func (v *vali) getIngress(secretName string) *networkingv1.Ingress {
+func (v *vali) getIstioResources(tlsSecret *corev1.Secret) ([]client.Object, error) {
 	var (
-		pathType = networkingv1.PathTypePrefix
-
-		serviceName = valiServiceName
-		endpoint    = valiconstants.PushEndpoint
-		port        = kubeRBACProxyPort
-		annotations = map[string]string{}
+		// Currently, all observability components are exposed via the same istio ingress gateway.
+		// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
+		// See https://github.com/gardener/gardener/issues/11860 for details.
+		ingressNamespace = v1beta1constants.DefaultSNIIngressNamespace
+		gatewayName      = valiName
+		endpoint         = valiconstants.PushEndpoint
+		port             = kubeRBACProxyPort
 	)
 
-	ingress := &networkingv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        valiName,
-			Namespace:   v.namespace,
-			Annotations: annotations,
-			Labels:      getLabels(),
-		},
-		Spec: networkingv1.IngressSpec{
-			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
-			TLS: []networkingv1.IngressTLS{{
-				SecretName: secretName,
-				Hosts:      []string{v.values.IngressHost},
-			}},
-			Rules: []networkingv1.IngressRule{{
-				Host: v.values.IngressHost,
-				IngressRuleValue: networkingv1.IngressRuleValue{
-					HTTP: &networkingv1.HTTPIngressRuleValue{
-						Paths: []networkingv1.HTTPIngressPath{{
-							Backend: networkingv1.IngressBackend{
-								Service: &networkingv1.IngressServiceBackend{
-									Name: serviceName,
-									Port: networkingv1.ServiceBackendPort{Number: port},
-								},
-							},
-							Path:     endpoint,
-							PathType: &pathType,
-						}},
-					},
-				},
-			}},
-		},
+	if v.values.IsGardenCluster {
+		ingressNamespace = operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace
+		gatewayName = fmt.Sprintf("%s%s-%s", operatorv1alpha1.VirtualGardenNamePrefix, gatewayName, v1beta1constants.GardenNamespace)
 	}
 
-	return ingress
+	// Istio expects the secret in the istio ingress gateway namespace => copy certificate to istio namespace
+	tlsSecretInIstioNamespace := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-%s-%s", v.namespace, valiName, tlsSecret.Name),
+			Namespace: ingressNamespace,
+			Labels:    getLabels(),
+		},
+		Data: tlsSecret.Data,
+	}
+
+	gateway := &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: v.namespace}}
+	if err := istio.GatewayWithTLSTermination(
+		gateway,
+		getLabels(),
+		v.values.IstioIngressGatewayLabels,
+		[]string{v.values.IngressHost},
+		kubeapiserverconstants.Port,
+		tlsSecretInIstioNamespace.Name,
+	)(); err != nil {
+		return nil, fmt.Errorf("failed to create gateway resource: %w", err)
+	}
+
+	destinationHost := kubernetesutils.FQDNForService(valiconstants.ServiceName, v.namespace)
+	virtualService := &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: v.namespace}}
+	if err := istio.VirtualServiceForTLSTermination(
+		virtualService,
+		getLabels(),
+		[]string{v.values.IngressHost},
+		gatewayName,
+		uint32(port),
+		destinationHost,
+		"",
+		"",
+	)(); err != nil {
+		return nil, fmt.Errorf("failed to create virtual service resource: %w", err)
+	}
+	if len(virtualService.Spec.Http) < 1 {
+		return nil, fmt.Errorf("unexpected number of HTTP routes in virtual service: got %d, want at least 1", len(virtualService.Spec.Http))
+	}
+	virtualService.Spec.Http[0].Match = []*istioapinetworkingv1beta1.HTTPMatchRequest{{
+		Uri: &istioapinetworkingv1beta1.StringMatch{
+			MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+				Prefix: endpoint,
+			},
+		},
+	}}
+
+	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: v.namespace}}
+	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), destinationHost)(); err != nil {
+		return nil, fmt.Errorf("failed to create destination rule resource: %w", err)
+	}
+
+	return []client.Object{tlsSecretInIstioNamespace, gateway, virtualService, destinationRule}, nil
 }
 
 func (v *vali) getService() *corev1.Service {
 	var (
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        valiconstants.ServiceName,
-				Namespace:   v.namespace,
-				Labels:      getLabels(),
-				Annotations: map[string]string{},
+				Name:      valiconstants.ServiceName,
+				Namespace: v.namespace,
+				Labels:    getLabels(),
+				Annotations: map[string]string{
+					"networking.istio.io/exportTo": "*",
+				},
 			},
 			Spec: corev1.ServiceSpec{
 				Type:     corev1.ServiceTypeClusterIP,

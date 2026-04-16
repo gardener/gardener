@@ -161,6 +161,11 @@ func (b *Botanist) DefaultEventLogger() (component.Deployer, error) {
 
 // DefaultVali returns a deployer for Vali.
 func (b *Botanist) DefaultVali() (vali.Interface, error) {
+	var istioLabels map[string]string
+	if !b.Shoot.IsSelfHosted() {
+		istioLabels = b.WildcardIstioLabels()
+	}
+
 	return shared.NewVali(
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
@@ -172,6 +177,7 @@ func (b *Botanist) DefaultVali() (vali.Interface, error) {
 		nil,
 		b.ComputeValiHost(),
 		false,
+		istioLabels,
 	)
 }
 

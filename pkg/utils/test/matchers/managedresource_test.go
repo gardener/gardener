@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -134,7 +135,7 @@ var _ = Describe("ManagedResource Object Matcher", func() {
 		ExpectWithOffset(1, fakeClient.Create(ctx, managedResourceSecret2)).To(Succeed())
 	}
 
-	commonTests := func(matcherFn func(client.Client) func(...client.Object) types.GomegaMatcher) {
+	commonTests := func(matcherFn func(client.Client, ...cmp.Option) func(...client.Object) types.GomegaMatcher) {
 		var matcher func(...client.Object) types.GomegaMatcher
 
 		BeforeEach(func() {
