@@ -1397,7 +1397,6 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						apiServiceFor("core.gardener.cloud", "v1beta1"),
 						apiServiceFor("seedmanagement.gardener.cloud", "v1alpha1"),
 						apiServiceFor("operations.gardener.cloud", "v1alpha1"),
-						apiServiceFor("settings.gardener.cloud", "v1alpha1"),
 						apiServiceFor("security.gardener.cloud", "v1alpha1"),
 						serviceVirtual,
 						clusterRole,
@@ -1426,31 +1425,6 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						)
 
 						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
-					})
-				})
-
-				Context("Kubernetes version >= 1.31", func() {
-					BeforeEach(func() {
-						values.RuntimeVersion = semver.MustParse("1.31.0")
-						deployer = New(fakeClient, namespace, fakeSecretManager, values)
-					})
-
-					It("should successfully deploy all resources", func() {
-						serviceRuntime.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
-						metav1.SetMetaDataLabel(&serviceRuntime.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
-
-						expectedRuntimeObjects = append(
-							expectedRuntimeObjects,
-							podDisruptionBudget,
-							serviceRuntime,
-						)
-
-						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
-					})
-
-					AfterEach(func() {
-						delete(serviceRuntime.Labels, "endpoint-slice-hints.resources.gardener.cloud/consider")
-						serviceRuntime.Spec.TrafficDistribution = nil
 					})
 				})
 			})

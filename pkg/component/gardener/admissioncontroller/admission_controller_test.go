@@ -160,17 +160,6 @@ var _ = Describe("GardenerAdmissionController", func() {
 					verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues)
 				})
 			})
-
-			When("runtime Kubernetes version is 1.31", func() {
-				BeforeEach(func() {
-					testValues.RuntimeVersion = semver.MustParse("1.31.2")
-				})
-
-				It("should successfully deploy", func() {
-					Expect(deployer.Deploy(ctx)).To(Succeed())
-					verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues)
-				})
-			})
 		})
 
 		Context("without ResourceAdmissionConfiguration", func() {
@@ -751,11 +740,9 @@ func service(namespace string, testValues Values) *corev1.Service {
 	if testValues.TopologyAwareRoutingEnabled {
 		if versionutils.ConstraintK8sGreaterEqual134.Check(testValues.RuntimeVersion) {
 			svc.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferSameZone)
-		} else if versionutils.ConstraintK8sGreaterEqual132.Check(testValues.RuntimeVersion) {
-			svc.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
 		} else {
+			// For Kubernetes >= 1.32 (minimum supported version), use PreferClose
 			svc.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
-			metav1.SetMetaDataLabel(&svc.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
 		}
 	}
 

@@ -185,11 +185,9 @@ var _ = Describe("Etcd", func() {
 			if topologyAwareRoutingEnabled {
 				if versionutils.ConstraintK8sGreaterEqual134.Check(runtimeKubernetesVersion) {
 					clientService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferSameZone)
-				} else if versionutils.ConstraintK8sGreaterEqual132.Check(runtimeKubernetesVersion) {
-					clientService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
 				} else {
+					// For Kubernetes >= 1.32 (minimum supported version), use PreferClose
 					clientService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
-					metav1.SetMetaDataLabel(&clientService.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
 				}
 			}
 

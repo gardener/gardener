@@ -2340,30 +2340,6 @@ var _ = Describe("VPA", func() {
 						Expect(actual.Spec.TrafficDistribution).To(PointTo(Equal(corev1.ServiceTrafficDistributionPreferClose)))
 					})
 				})
-
-				When("runtime Kubernetes version is 1.31", func() {
-					BeforeEach(func() {
-						runtimeKubernetesVersion = semver.MustParse("1.31.2")
-					})
-
-					It("should successfully deploy with expected vpa-webhook service annotation, label and spec field", func() {
-						vpa = New(c, namespace, sm, Values{
-							ClusterType:              component.ClusterTypeShoot,
-							SecretNameServerCA:       secretNameCA,
-							RuntimeKubernetesVersion: runtimeKubernetesVersion,
-							AdmissionController:      valuesAdmissionController,
-							Recommender:              valuesRecommender,
-							Updater:                  valuesUpdater,
-						})
-						Expect(vpa.Deploy(ctx)).To(Succeed())
-
-						actual := &corev1.Service{}
-						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-webhook"}, actual)).To(Succeed())
-
-						Expect(actual.Spec.TrafficDistribution).To(PointTo(Equal(corev1.ServiceTrafficDistributionPreferClose)))
-						Expect(actual.Labels).To(HaveKeyWithValue("endpoint-slice-hints.resources.gardener.cloud/consider", "true"))
-					})
-				})
 			})
 		})
 	})
