@@ -136,7 +136,10 @@ EOF
       ${SUDO}mkdir -p /etc/resolver
       echo "$desired_resolver_config" | ${SUDO}tee /etc/resolver/local.gardener.cloud
     fi
-  elif [[ "$OSTYPE" == "linux"* && -d /etc/systemd/resolved.conf.d ]]; then
+  elif [[ "$OSTYPE" == "linux"* && -f /etc/systemd/resolved.conf ]]; then
+    if [[ ! -d /etc/systemd/resolved.conf.d ]]; then
+            ${SUDO}mkdir -p /etc/systemd/resolved.conf.d
+    fi
     if ! grep -q "$dns_ip" /etc/systemd/resolved.conf.d/gardener-local.conf || ! grep -q "$dns_ipv6" /etc/systemd/resolved.conf.d/gardener-local.conf ; then
       echo "Configuring systemd-resolved to resolve the local.gardener.cloud zone using the local setup's DNS server"
       cat <<EOF | ${SUDO}tee /etc/systemd/resolved.conf.d/gardener-local.conf
