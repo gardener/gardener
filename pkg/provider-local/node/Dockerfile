@@ -1,8 +1,14 @@
-# TODO(rfranzke): Update to v1.35 once https://github.com/gardener/gardener/pull/13651 is resolved.
-FROM kindest/node:v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a
+FROM kindest/node:v1.35.1@sha256:05d7bcdefbda08b4e038f644c4df690cdac3fba8b06f8289f30e10026720a1ab
 
 RUN apt-get update -yq && \
     apt-get install -yq --no-install-recommends wget apparmor apparmor-utils jq openssh-server sudo logrotate
+
+# TODO(LucaBernstein): kindest/node:v1.35.1 ships containerd v2.2.1 which has a broken `ctr images mount` command
+# (https://github.com/containerd/containerd/issues/12549, fixed in v2.2.2). Override with v2.2.2 until a new
+# kindest/node image is available that includes the fix.
+RUN arch="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')" && \
+    wget -qO- "https://github.com/containerd/containerd/releases/download/v2.2.2/containerd-2.2.2-linux-${arch}.tar.gz" | \
+    tar -xz -C /usr/local/bin --strip-components=1 bin/containerd bin/ctr
 
 # remove kind's kubelet unit
 RUN rm -f /etc/systemd/system/kubelet.service && \
