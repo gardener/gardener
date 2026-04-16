@@ -1190,42 +1190,6 @@ Both is required to ensure system component `Pod`s can be _scheduled_ or _execut
 
 > You can opt-out of this behaviour for `Pod`s by labeling them with `system-components-config.resources.gardener.cloud/skip=true`.
 
-#### EndpointSlice Hints
-
-This webhook mutates [`EndpointSlice`s](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/). For each endpoint in the EndpointSlice, it sets the endpoint's hints to the endpoint's zone.
-
-```yaml
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
-metadata:
-  name: example-hints
-endpoints:
-- addresses:
-  - "10.1.2.3"
-  conditions:
-    ready: true
-  hostname: pod-1
-  zone: zone-a
-  hints:
-    forZones:
-    - name: "zone-a" # added by webhook
-- addresses:
-  - "10.1.2.4"
-  conditions:
-    ready: true
-  hostname: pod-2
-  zone: zone-b
-  hints:
-    forZones:
-    - name: "zone-b" # added by webhook
-```
-
-The webhook aims to circumvent issues with the Kubernetes `TopologyAwareHints` feature that currently does not allow to achieve a deterministic topology-aware traffic routing. For more details, see the following issue [kubernetes/kubernetes#113731](https://github.com/kubernetes/kubernetes/issues/113731) that describes drawbacks of the `TopologyAwareHints` feature for our use case.
-If the above-mentioned issue gets resolved and there is a native support for deterministic topology-aware traffic routing in Kubernetes, then this webhook can be dropped in favor of the native Kubernetes feature.
-
-> [!NOTE]  
-> The EndpointSlice Hints webhook is disabled when the runtime Kubernetes version is >= 1.32. Instead, the `ServiceTrafficDistribution` feature is used. See more details in [Topology-Aware Traffic Routing](../operations/topology_aware_routing.md).
-
 #### Pod Kube API Server Load Balancing
 
 This webhook is used in the context of [L7 load balancing for kube-apiservers](../operations/kube_apiserver_loadbalancing.md).

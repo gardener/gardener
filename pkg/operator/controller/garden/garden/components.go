@@ -383,15 +383,11 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		defaultUnreachableTolerationSeconds = nodeToleration.DefaultUnreachableTolerationSeconds
 	}
 
-	// EndpointSliceHints are only needed for Kubernetes < 1.32. Since minimum version is now 1.32, this is always false.
-	endpointSliceHintsEnabled := false
-
 	return sharedcomponent.NewRuntimeGardenerResourceManager(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, resourcemanager.Values{
 		DefaultSeccompProfileEnabled:              features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
 		HighAvailabilityConfigWebhookEnabled:      true,
 		DefaultNotReadyToleration:                 defaultNotReadyTolerationSeconds,
 		DefaultUnreachableToleration:              defaultUnreachableTolerationSeconds,
-		EndpointSliceHintsEnabled:                 endpointSliceHintsEnabled,
 		LogLevel:                                  r.Config.LogLevel,
 		LogFormat:                                 r.Config.LogFormat,
 		ManagedResourceLabels:                     map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)},

@@ -23,7 +23,6 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
-	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -58,7 +57,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/endpointslicehints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/extensionvalidation"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/kubernetesservicehost"
@@ -302,8 +300,6 @@ type Values struct {
 	SchedulingProfile *gardencorev1beta1.SchedulingProfile
 	// DefaultSeccompProfileEnabled specifies if the defaulting seccomp profile webhook of GRM should be enabled or not.
 	DefaultSeccompProfileEnabled bool
-	// EndpointSliceHintsEnabled specifies if the EndpointSlice hints webhook of GRM should be enabled or not.
-	EndpointSliceHintsEnabled bool
 	// KubernetesServiceHost specifies the FQDN of the API server of the target cluster. If it is non-nil, the GRM's
 	// kubernetes-service-host webhook will be enabled.
 	KubernetesServiceHost *string
@@ -588,9 +584,6 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			},
 		},
 		Webhooks: resourcemanagerconfigv1alpha1.ResourceManagerWebhookConfiguration{
-			EndpointSliceHints: resourcemanagerconfigv1alpha1.EndpointSliceHintsWebhookConfig{
-				Enabled: r.values.EndpointSliceHintsEnabled,
-			},
 			HighAvailabilityConfig: resourcemanagerconfigv1alpha1.HighAvailabilityConfigWebhookConfig{
 				Enabled:                             r.values.HighAvailabilityConfigWebhookEnabled,
 				DefaultNotReadyTolerationSeconds:    r.values.DefaultNotReadyToleration,
@@ -1357,10 +1350,6 @@ func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 		webhooks = append(webhooks, NewSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
-	if r.values.EndpointSliceHintsEnabled {
-		webhooks = append(webhooks, NewEndpointSliceHintsMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
-	}
-
 	if r.values.PodTopologySpreadConstraintsEnabled {
 		webhooks = append(webhooks, NewPodTopologySpreadConstraintsMutatingWebhook(r.values.NamePrefix, namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
@@ -1954,41 +1943,6 @@ func NewInPlaceUpdatesWebhook(
 		ClientConfig:            buildClientConfigFn(secretServerCA, vpainplaceupdates.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 		ReinvocationPolicy:      ptr.To(admissionregistrationv1.NeverReinvocationPolicy),
-		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-		MatchPolicy:             ptr.To(admissionregistrationv1.Equivalent),
-		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
-		TimeoutSeconds:          ptr.To[int32](10),
-	}
-}
-
-// NewEndpointSliceHintsMutatingWebhook returns the EndpointSlice hints mutating webhook for the resourcemanager component for reuse
-// between the component and integration tests.
-func NewEndpointSliceHintsMutatingWebhook(
-	namespaceSelector *metav1.LabelSelector,
-	secretServerCA *corev1.Secret,
-	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
-) admissionregistrationv1.MutatingWebhook {
-	return admissionregistrationv1.MutatingWebhook{
-		Name: "endpoint-slice-hints.resources.gardener.cloud",
-		Rules: []admissionregistrationv1.RuleWithOperations{{
-			Rule: admissionregistrationv1.Rule{
-				APIGroups:   []string{discoveryv1.GroupName},
-				APIVersions: []string{discoveryv1.SchemeGroupVersion.Version},
-				Resources:   []string{"endpointslices"},
-			},
-			Operations: []admissionregistrationv1.OperationType{
-				admissionregistrationv1.Create,
-				admissionregistrationv1.Update,
-			},
-		}},
-		NamespaceSelector: namespaceSelector,
-		ObjectSelector: &metav1.LabelSelector{
-			MatchLabels: map[string]string{
-				resourcesv1alpha1.EndpointSliceHintsConsider: "true",
-			},
-		},
-		ClientConfig:            buildClientConfigFn(secretServerCA, endpointslicehints.WebhookPath),
-		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
 		MatchPolicy:             ptr.To(admissionregistrationv1.Equivalent),
 		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
