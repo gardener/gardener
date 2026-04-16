@@ -17,7 +17,7 @@ import (
 var _ = Describe("AgentReconciliationDelay tests", func() {
 	When("#nodes = 1", func() {
 		BeforeEach(func() {
-			prepareNodes(1, false)
+			prepareNodes(1, nil)
 
 			By("Wait until manager has observed all nodes")
 			Eventually(func(g Gomega) int {
@@ -39,7 +39,7 @@ var _ = Describe("AgentReconciliationDelay tests", func() {
 
 	When("1 < #nodes <= max-delay-seconds", func() {
 		BeforeEach(func() {
-			prepareNodes(10, false)
+			prepareNodes(10, nil)
 
 			By("Wait until manager has observed all nodes")
 			Eventually(func(g Gomega) int {
@@ -70,7 +70,7 @@ var _ = Describe("AgentReconciliationDelay tests", func() {
 
 	When("#nodes > max-delay-seconds", func() {
 		BeforeEach(func() {
-			prepareNodes(31, false)
+			prepareNodes(31, nil)
 
 			By("Wait until manager has observed all nodes")
 			Eventually(func(g Gomega) int {
@@ -121,16 +121,15 @@ var _ = Describe("AgentReconciliationDelay tests", func() {
 
 	Context("ignore nodes with serial operating system config rollout", func() {
 		BeforeEach(func() {
-			prepareNodes(5, true)   // first group of nodes should be excluded
-			prepareNodes(10, false) // second group of nodes should be considered
-			prepareNodes(5, true)   // third group of nodes should be excluded
+			serial1 := prepareSecret() // first group of nodes should be excluded
+			serial2 := prepareSecret() // third group of nodes should be excluded
 
-			By("Wait until manager has observed all objects")
+			prepareNodes(5, serial1)
+			prepareNodes(10, nil) // second group of nodes should be considered
+			prepareNodes(5, serial2)
+
+			By("Wait until manager has observed all nodes")
 			Eventually(func(g Gomega) {
-				secretList := &corev1.SecretList{}
-				g.Expect(mgrClient.List(ctx, secretList)).To(Succeed())
-				g.Expect(secretList.Items).To(HaveLen(2))
-
 				nodeList := &corev1.NodeList{}
 				g.Expect(mgrClient.List(ctx, nodeList)).To(Succeed())
 				g.Expect(nodeList.Items).To(HaveLen(20))
@@ -173,26 +172,35 @@ var _ = Describe("AgentReconciliationDelay tests", func() {
 	})
 })
 
-func prepareNodes(count int, withSerialOSCReconciliation bool) {
+func prepareSecret() *corev1.Secret {
 	GinkgoHelper()
 
-	var gardenerNodeAgentSecret *corev1.Secret
-	if withSerialOSCReconciliation {
-		gardenerNodeAgentSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "gardener-node-agent-",
-			Namespace:    "kube-system",
-			Annotations:  map[string]string{"reconciliation.osc.node-agent.gardener.cloud/serial": "true"},
-			Labels:       map[string]string{"gardener.cloud/role": "operating-system-config"},
-		}}
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		GenerateName: "gardener-node-agent-",
+		Namespace:    "kube-system",
+		Annotations:  map[string]string{"reconciliation.osc.node-agent.gardener.cloud/serial": "true"},
+		Labels:       map[string]string{"gardener.cloud/role": "operating-system-config", testID: testRunID},
+	}}
 
-		Expect(testClient.Create(ctx, gardenerNodeAgentSecret)).To(Succeed())
-		By("Created gardener-node-agent Secret " + gardenerNodeAgentSecret.Name + " with serial OSC reconciliation for test")
+	Expect(testClient.Create(ctx, secret)).To(Succeed())
+	By("Created gardener-node-agent Secret " + secret.Name + " with serial OSC reconciliation for test")
 
-		DeferCleanup(func() {
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, gardenerNodeAgentSecret))).To(Succeed())
-			By("Deleted gardener-node-agent Secret " + gardenerNodeAgentSecret.Name + " with serial OSC reconciliation")
-		})
-	}
+	DeferCleanup(func() {
+		Expect(client.IgnoreNotFound(testClient.Delete(ctx, secret))).To(Succeed())
+		By("Deleted gardener-node-agent Secret " + secret.Name + " with serial OSC reconciliation")
+	})
+
+	By("Wait until manager has observed Secret " + secret.Name)
+	Eventually(func(g Gomega) {
+		s := &corev1.Secret{}
+		g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(secret), s)).To(Succeed())
+	}).Should(Succeed())
+
+	return secret
+}
+
+func prepareNodes(count int, gardenerNodeAgentSecret *corev1.Secret) {
+	GinkgoHelper()
 
 	for suffix := range count {
 		node := newNode(suffix, gardenerNodeAgentSecret)

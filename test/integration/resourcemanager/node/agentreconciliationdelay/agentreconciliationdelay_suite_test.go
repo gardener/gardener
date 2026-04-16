@@ -84,6 +84,9 @@ var _ = BeforeSuite(func() {
 				&corev1.Node{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
+				&corev1.Secret{}: {
+					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+				},
 			},
 		},
 		Controller: controllerconfig.Controller{
