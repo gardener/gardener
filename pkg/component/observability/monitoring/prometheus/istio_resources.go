@@ -104,7 +104,7 @@ func (p *prometheus) istioResources(ctx context.Context) ([]client.Object, error
 		utils.MergeStringMaps(p.getLabels(), map[string]string{v1beta1constants.LabelBasicAuthSecretName: p.values.Ingress.AuthSecretName}),
 		[]string{p.values.Ingress.Host},
 		gatewayName,
-		uint32(backendPort),
+		uint32(backendPort), // #nosec: G115 -- only constants 80 and 81 are used, whose conversion is safe
 		destinationHost,
 		"",
 		"",
