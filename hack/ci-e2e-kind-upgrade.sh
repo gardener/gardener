@@ -97,32 +97,9 @@ function kind_down() {
 function install_previous_release() {
   pushd $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_PREVIOUS_RELEASE >/dev/null
   copy_kubeconfig_from_kubeconfig_env_var
-  configure_node_mirror_new_local_registry
-  patch_helmregistry_registry_url_port
   remove_provider_local_service_controller
   gardener_up
   popd >/dev/null
-}
-
-# TODO(LucaBernstein,timebertt): Remove this after v1.135 has been released.
-# See https://prow.gardener.cloud/view/gs/gardener-prow/pr-logs/pull/gardener_gardener/13551/pull-gardener-e2e-kind-upgrade/1994379234188988416
-# and https://gcsweb.prow.gardener.cloud/gcs/gardener-prow/pr-logs/pull/gardener_gardener/13551/pull-gardener-e2e-kind-upgrade/1994379234188988416/artifacts/shoot--local--e2e-upgrade/machine-shoot--local--e2e-upgrade-local-68bbd-8wwvp/journal.log
-function configure_node_mirror_new_local_registry() {
-  # Get the directory of the new gardener version from the directory stack
-  # (the original directory of the job before doing pushd)
-  next_version_dir="$(dirs -l +1)"
-  # copy the new registry mirror config in the node image to the previous version's source code
-  # this is necessary because we already push the images to the new local registry (see the SKAFFOLD_DEFAULT_REPO hack above)
-  # and need to configure containerd to use HTTP for pulling from the local registry
-  cp "$next_version_dir/pkg/provider-local/node/Dockerfile" "$PWD/pkg/provider-local/node"
-  cp -r "$next_version_dir/pkg/provider-local/node/containerd/registry.local.gardener.cloud_5001" "$PWD/pkg/provider-local/node/containerd"
-}
-
-# TODO(LucaBernstein): remove this after v1.135 has been released.
-# To avoid issues in the upgrade test where the registry is already listening on port 5001 instead of 5000, but the helmregistry only disables tls for registry on port 5000.
-# see: https://prow.gardener.cloud/view/gs/gardener-prow/pr-logs/pull/gardener_gardener/13661/pull-gardener-e2e-kind-upgrade/2000837721429381120
-function patch_helmregistry_registry_url_port() {
-  sed -i 's|registry.local.gardener.cloud:5000|registry.local.gardener.cloud:5001|g' "$PWD/pkg/utils/oci/helmregistry.go"
 }
 
 # TODO(timebertt): remove this after v1.140 has been released.
