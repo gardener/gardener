@@ -129,9 +129,12 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 	)
 
 	if o.values.ClusterType == component.ClusterTypeShoot {
-		if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, o.client); err != nil {
-			return err
+		if o.values.WithRBACProxy {
+			if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, o.client); err != nil {
+				return err
+			}
 		}
+
 		ingressTLSSecret, err := o.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 			Name:                        "logging-tls",
 			CommonName:                  o.values.IngressHost,

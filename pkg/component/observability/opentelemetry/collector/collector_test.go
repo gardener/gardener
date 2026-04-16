@@ -95,6 +95,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			LokiEndpoint:            lokiEndpoint,
 			Replicas:                1,
 			ShootNodeLoggingEnabled: true,
+			WithRBACProxy:           true,
 			IngressHost:             ingressHost,
 			ValiHost:                valiHost,
 			SecretNameServerCA:      v1beta1constants.SecretNameCACluster,
@@ -521,6 +522,16 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			},
 		}
 
+		openTelemetryCollector.Spec.AdditionalContainers = []corev1.Container{kubeRBACProxyValiContainer, kubeRBACProxyOTLPContainer}
+		openTelemetryCollector.Spec.Volumes = []corev1.Volume{volume}
+		openTelemetryCollector.Spec.Ports = append(openTelemetryCollector.Spec.Ports, otelv1beta1.PortsSpec{
+			ServicePort: kubeRBACValiServicePort,
+		})
+		openTelemetryCollector.Spec.Ports = append(openTelemetryCollector.Spec.Ports, otelv1beta1.PortsSpec{
+			ServicePort: kubeRBACOTLPServicePort,
+		})
+		metav1.SetMetaDataLabel(&openTelemetryCollector.ObjectMeta, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443", "allowed")
+
 	})
 
 	Describe("#Deploy", func() {
@@ -555,6 +566,10 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Expect(customResourcesManagedResource).To(DeepEqual(expectedMr))
 
 			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
+			openTelemetryCollector.Spec.AdditionalContainers = nil
+			openTelemetryCollector.Spec.Volumes = nil
+			openTelemetryCollector.Spec.Ports = nil
+			delete(openTelemetryCollector.Labels, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443")
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
 				getIngress(),
@@ -601,15 +616,6 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Expect(customResourcesManagedResource).To(DeepEqual(expectedMr))
 
 			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
-			openTelemetryCollector.Spec.AdditionalContainers = []corev1.Container{kubeRBACProxyValiContainer, kubeRBACProxyOTLPContainer}
-			openTelemetryCollector.Spec.Volumes = []corev1.Volume{volume}
-			openTelemetryCollector.Spec.Ports = append(openTelemetryCollector.Spec.Ports, otelv1beta1.PortsSpec{
-				ServicePort: kubeRBACValiServicePort,
-			})
-			openTelemetryCollector.Spec.Ports = append(openTelemetryCollector.Spec.Ports, otelv1beta1.PortsSpec{
-				ServicePort: kubeRBACOTLPServicePort,
-			})
-			metav1.SetMetaDataLabel(&openTelemetryCollector.ObjectMeta, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443", "allowed")
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
 				getIngress(),
