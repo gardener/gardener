@@ -18,16 +18,16 @@ import (
 const (
 	// InternalRangeV4 is the IPv4 CIDR range from which internal load balancer IPs are allocated.
 	// It must be a subset of the kind network.
-	InternalRangeV4 = "172.18.0.240/28"
+	InternalRangeV4 = "172.18.0.224/27"
 	// ExternalRangeV4 is the IPv4 CIDR range from which load balancer IPs are allocated.
 	// It must not overlap with the kind network.
-	ExternalRangeV4 = "172.18.255.240/28"
+	ExternalRangeV4 = "172.18.255.224/27"
 	// InternalRangeV6 is the IPv6 CIDR range from which internal load balancer IPs are allocated.
 	// It must be a subset of the kind network.
-	InternalRangeV6 = "fd00:10::f0/124"
+	InternalRangeV6 = "fd00:10::e0/123"
 	// ExternalRangeV6 is the IPv6 CIDR range from which load balancer IPs are allocated.
 	// It must not overlap with the kind network.
-	ExternalRangeV6 = "fd00:ff::f0/124"
+	ExternalRangeV6 = "fd00:ff::e0/123"
 )
 
 var (
@@ -140,14 +140,14 @@ func toExternalIP(internalIP netip.Addr) netip.Addr {
 	ip := internalIP.AsSlice()
 	lastByte := ip[len(ip)-1]
 
-	// Map 172.18.0.240/28 to 172.18.255.240/28 by keeping the last byte
+	// Map 172.18.0.224/27 to 172.18.255.224/27 by keeping the last byte
 	if internalIP.Is4() {
 		externalIP := externalPrefixV4.Addr().As4()
 		externalIP[3] = lastByte
 		return netip.AddrFrom4(externalIP)
 	}
 
-	// Map fd00:10::f0/124 to fd00:ff::f0/124 by keeping the last byte
+	// Map fd00:10::e0/123 to fd00:ff::e0/123 by keeping the last byte
 	externalIP := externalPrefixV6.Addr().As16()
 	externalIP[15] = lastByte
 	return netip.AddrFrom16(externalIP)

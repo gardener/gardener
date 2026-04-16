@@ -20,7 +20,7 @@ spec:
         cidr: fd00:10::/64
     # range for "load balancer" IPs (added to loopback interface on host), including:
     # - local DNS server (bind9): 172.18.255.53 / fd00:ff::53
-    # - dynamically allocated IPs for LoadBalancer services: 172.18.255.240/28 / fd00:ff::f0/124
+    # - dynamically allocated IPs for LoadBalancer services: 172.18.255.224/27 / fd00:ff::e0/123
     - ipBlock:
         cidr: 172.18.255.0/24
     - ipBlock:

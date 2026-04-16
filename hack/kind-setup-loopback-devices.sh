@@ -40,10 +40,11 @@ if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
   LOOPBACK_IP_ADDRESSES+=(fd00:ff::3 fd00:ff::4)
 fi
 
-# load balancer range (172.18.255.240/28)
-LOOPBACK_IP_ADDRESSES+=( $(printf "172.18.255.%d\n" {240..255}) )
+# load balancer range IPv4 (172.18.255.224/27)
+LOOPBACK_IP_ADDRESSES+=( $(printf "172.18.255.%d\n" {224..255}) )
 if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-  LOOPBACK_IP_ADDRESSES+=( $(printf "fd00:ff::f%x\n" {0..15}) )
+  # load balancer range IPv6 (fd00:ff::e0/123)
+  LOOPBACK_IP_ADDRESSES+=( $(printf "fd00:ff::e%x\n" {0..15}) $(printf "fd00:ff::f%x\n" {0..15}) )
 fi
 
 if ! command -v ip &>/dev/null; then

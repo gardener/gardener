@@ -176,8 +176,8 @@ For each `LoadBalancer` service, the cloud controller manager creates a Docker c
 The envoy container is connected to the `kind` Docker network and proxies traffic from external IPs to the Kubernetes node ports of the service.
 
 Load balancer IPs are allocated from dedicated CIDR ranges:
-- Internal IPs (within the `kind` network): `172.18.0.240/28` (IPv4), `fd00:10::f0/124` (IPv6)
-- External IPs (bound on the host): `172.18.255.240/28` (IPv4), `fd00:ff::f0/124` (IPv6)
+- Internal IPs (within the `kind` network): `172.18.0.224/27` (IPv4), `fd00:10::e0/123` (IPv6)
+- External IPs (bound on the host): `172.18.255.224/27` (IPv4), `fd00:ff::e0/123` (IPv6)
 
 The external IPs are added to the loopback interface of the host machine by `hack/kind-up.sh`, making `LoadBalancer` services (e.g., `istio-ingressgateway` and bastion services) reachable from the host.
 
