@@ -90,7 +90,7 @@ var _ = Describe("Validation Tests", func() {
 							Domains: []operatorv1alpha1.DNSDomain{{Name: "foo.bar.com", Provider: ptr.To("primary")}},
 						},
 						Kubernetes: operatorv1alpha1.Kubernetes{
-							Version: "1.31.3",
+							Version: "1.32.3",
 							KubeAPIServer: &operatorv1alpha1.KubeAPIServerConfig{
 								KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{},
 							},
@@ -2570,33 +2570,6 @@ var _ = Describe("Validation Tests", func() {
 
 							Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 						})
-
-						It("should not complain when OIDC config is configured in both gardener-dashboard and kube-apiserver via OIDC config", func() {
-							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{OIDCConfig: &operatorv1alpha1.DashboardOIDC{
-								IssuerURL:      ptr.To("https://example.com"),
-								ClientIDPublic: ptr.To("my-client-id"),
-							}}
-							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{
-								KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
-									OIDCConfig: &gardencorev1beta1.OIDCConfig{
-										ClientID:  ptr.To("someClientID"),
-										IssuerURL: ptr.To("https://issuer.com"),
-									},
-								},
-							}
-
-							Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
-						})
-
-						It("should not complain when OIDC config is configured in both gardener-dashboard and kube-apiserver via OIDC config IssuerURL and ClientID", func() {
-							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{OIDCConfig: &operatorv1alpha1.DashboardOIDC{}}
-							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{OIDCConfig: &gardencorev1beta1.OIDCConfig{
-								IssuerURL: ptr.To("https://example.com"),
-								ClientID:  ptr.To("my-client-id"),
-							}}}
-
-							Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
-						})
 					})
 				})
 			})
@@ -2788,7 +2761,7 @@ var _ = Describe("Validation Tests", func() {
 					},
 					VirtualCluster: operatorv1alpha1.VirtualCluster{
 						Kubernetes: operatorv1alpha1.Kubernetes{
-							Version: "1.31.0",
+							Version: "1.32.0",
 							KubeAPIServer: &operatorv1alpha1.KubeAPIServerConfig{
 								KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
 									EncryptionConfig: &gardencorev1beta1.EncryptionConfig{},
