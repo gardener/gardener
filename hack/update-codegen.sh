@@ -18,7 +18,6 @@ AVAILABLE_CODEGEN_OPTIONS=(
   "operator_groups"
   "seedmanagement_groups"
   "operations_groups"
-  "settings_groups"
   "security_groups"
   "operatorconfig_groups"
   "controllermanager_groups"
@@ -145,28 +144,6 @@ seedmanagement_groups() {
   popd > /dev/null
 }
 export -f seedmanagement_groups
-
-# settings.gardener.cloud APIs
-
-settings_groups() {
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
-  echo "Generating API groups for pkg/apis/settings"
-  pushd "${PROJECT_ROOT}/pkg/apis" > /dev/null
-
-  kube::codegen::gen_helpers \
-    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
-    "${PROJECT_ROOT}/pkg/apis/settings"
-  
-  kube::codegen::gen_client \
-    --with-watch \
-    --one-input-api "settings" \
-    --output-dir "${PROJECT_ROOT}/pkg/client/settings" \
-    --output-pkg "github.com/gardener/gardener/pkg/client/settings" \
-    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
-    "${PROJECT_ROOT}/pkg/apis"
-  popd > /dev/null
-}
-export -f settings_groups
 
 # security.gardener.cloud APIs
 
@@ -433,7 +410,6 @@ openapi_definitions() {
     "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1" \
     "github.com/gardener/gardener/pkg/apis/core/v1" \
     "github.com/gardener/gardener/pkg/apis/core/v1beta1" \
-    "github.com/gardener/gardener/pkg/apis/settings/v1alpha1" \
     "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1" \
     "github.com/gardener/gardener/pkg/apis/security/v1alpha1" \
     "github.com/gardener/gardener/pkg/apis/operations/v1alpha1" \
@@ -536,7 +512,6 @@ HELPERS_ONLY_GROUPS=(
 CLIENT_GROUPS=(
   "core_groups"
   "seedmanagement_groups"
-  "settings_groups"
   "security_groups"
 )
 

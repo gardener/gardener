@@ -21,7 +21,6 @@ import (
 	operationsrest "github.com/gardener/gardener/pkg/apiserver/registry/operations/rest"
 	securityrest "github.com/gardener/gardener/pkg/apiserver/registry/security/rest"
 	seedmanagementrest "github.com/gardener/gardener/pkg/apiserver/registry/seedmanagement/rest"
-	settingsrest "github.com/gardener/gardener/pkg/apiserver/registry/settings/rest"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/workloadidentity"
@@ -110,7 +109,6 @@ func (c completedConfig) New() (*GardenerServer, error) {
 			SubjectAccessReviewer:         c.subjectAccessReviewer,
 		}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		seedManagementAPIGroupInfo = (seedmanagementrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
-		settingsAPIGroupInfo       = (settingsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		operationsAPIGroupInfo     = (operationsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		securityAPIGroupInfo       = (securityrest.StorageProvider{
 			TokenIssuer:         tokenIssuer,
@@ -118,7 +116,7 @@ func (c completedConfig) New() (*GardenerServer, error) {
 		}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 	)
 
-	if err := s.GenericAPIServer.InstallAPIGroups(&coreAPIGroupInfo, &settingsAPIGroupInfo, &seedManagementAPIGroupInfo, &operationsAPIGroupInfo, &securityAPIGroupInfo); err != nil {
+	if err := s.GenericAPIServer.InstallAPIGroups(&coreAPIGroupInfo, &seedManagementAPIGroupInfo, &operationsAPIGroupInfo, &securityAPIGroupInfo); err != nil {
 		return nil, err
 	}
 

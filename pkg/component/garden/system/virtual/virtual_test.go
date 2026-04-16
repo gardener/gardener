@@ -176,7 +176,6 @@ var _ = Describe("Virtual", func() {
 					APIGroups: []string{
 						"seedmanagement.gardener.cloud",
 						"dashboard.gardener.cloud",
-						"settings.gardener.cloud",
 						"operations.gardener.cloud",
 					},
 					Resources: []string{"*"},
@@ -294,7 +293,6 @@ var _ = Describe("Virtual", func() {
 					APIGroups: []string{
 						"seedmanagement.gardener.cloud",
 						"dashboard.gardener.cloud",
-						"settings.gardener.cloud",
 						"operations.gardener.cloud",
 					},
 					Resources: []string{"*"},
@@ -478,11 +476,6 @@ var _ = Describe("Virtual", func() {
 					Verbs: []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
-					APIGroups: []string{"settings.gardener.cloud"},
-					Resources: []string{"openidconnectpresets"},
-					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
-				},
-				{
 					APIGroups: []string{"operations.gardener.cloud"},
 					Resources: []string{"bastions"},
 					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
@@ -589,11 +582,6 @@ var _ = Describe("Virtual", func() {
 				{
 					APIGroups: []string{"security.gardener.cloud"},
 					Resources: []string{"credentialsbindings"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
-				{
-					APIGroups: []string{"settings.gardener.cloud"},
-					Resources: []string{"openidconnectpresets"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{

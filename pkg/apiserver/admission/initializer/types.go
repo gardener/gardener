@@ -18,7 +18,6 @@ import (
 	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
-	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 )
 
 // WantsCoreInformerFactory defines a function which sets Core InformerFactory for admission plugins that need it.
@@ -63,12 +62,6 @@ type WantsSecurityClientSet interface {
 	admission.InitializationValidator
 }
 
-// WantsSettingsInformerFactory defines a function which sets InformerFactory for admission plugins that need it.
-type WantsSettingsInformerFactory interface {
-	SetSettingsInformerFactory(settingsinformers.SharedInformerFactory)
-	admission.InitializationValidator
-}
-
 // WantsKubeClientset defines a function which sets Kubernetes Clientset for admission plugins that need it.
 type WantsKubeClientset interface {
 	SetKubeClientset(kubernetes.Interface)
@@ -99,8 +92,6 @@ type pluginInitializer struct {
 
 	seedManagementInformers seedmanagementinformers.SharedInformerFactory
 	seedManagementClient    seedmanagementclientset.Interface
-
-	settingsInformers settingsinformers.SharedInformerFactory
 
 	securityInformers securityinformers.SharedInformerFactory
 	securityClient    securityclientset.Interface
