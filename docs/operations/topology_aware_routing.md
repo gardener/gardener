@@ -8,7 +8,7 @@ The enablement of [highly available shoot control-planes](../usage/high-availabi
 
 The topology-aware routing feature relies on the Kubernetes features [`TopologyAwareHints`](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/) or [`ServiceTrafficDistribution`](https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution) based on the runtime cluster's Kubernetes versions.
 
-For Kubernetes versions >= 1.31, the `ServiceTrafficDistribution` feature is being used on.
+For Kubernetes versions >= 1.32, the `ServiceTrafficDistribution` feature is being used on.
 
 ### How `TopologyAwareHints` works
 

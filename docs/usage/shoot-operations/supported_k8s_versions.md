@@ -8,7 +8,6 @@ Currently, Gardener supports the following Kubernetes versions:
 
 | Kubernetes version                                                         | Since Gardener version                                                   | Support added | Supported until |
 |----------------------------------------------------------------------------|--------------------------------------------------------------------------|---------------|-----------------|
-| [`v1.31`](https://kubernetes.io/blog/2024/08/13/kubernetes-v1-31-release/) | [`v1.106.0`](https://github.com/gardener/gardener/releases/tag/v1.106.0) | `2024-10-21`  | `2025-12-21`    |
 | [`v1.32`](https://kubernetes.io/blog/2024/12/11/kubernetes-v1-32-release/) | [`v1.113.0`](https://github.com/gardener/gardener/releases/tag/v1.113.0) | `2025-02-24`  | `2026-04-24`    |
 | [`v1.33`](https://kubernetes.io/blog/2025/04/23/kubernetes-v1-33-release/) | [`v1.122.0`](https://github.com/gardener/gardener/releases/tag/v1.122.0) | `2025-06-27`  | `2026-08-27`    |
 | [`v1.34`](https://kubernetes.io/blog/2025/08/27/kubernetes-v1-34-release/) | [`v1.132.0`](https://github.com/gardener/gardener/releases/tag/v1.132.0) | `2025-11-13`  | `2027-01-13`    |
@@ -19,11 +18,11 @@ Currently, Gardener supports the following Kubernetes versions:
 
 ## Garden Clusters
 
-The minimum version of a garden cluster that can be used to run Gardener is **`1.31.x`** up to **`1.35.x`**.
+The minimum version of a garden cluster that can be used to run Gardener is **`1.32.x`** up to **`1.35.x`**.
 
 ## Seed Clusters
 
-The minimum version of a seed cluster that can be connected to Gardener is **`1.31.x`** up to **`1.35.x`**.
+The minimum version of a seed cluster that can be connected to Gardener is **`1.32.x`** up to **`1.35.x`**.
 
 > [!WARNING]
 > Kubernetes `v1.35.x` with `x` in `0..3` has a [regression](https://github.com/kubernetes/kubernetes/issues/137409) where the `MaxUnavailableStatefulSet` feature gate (enabled by default in `v1.35`) can cause StatefulSet rolling updates to deadlock when readiness probes fail.
@@ -33,7 +32,7 @@ The minimum version of a seed cluster that can be connected to Gardener is **`1.
 
 ## Shoot Clusters
 
-Gardener itself is capable of spinning up clusters with Kubernetes versions **`1.31`** up to **`1.35`**.
+Gardener itself is capable of spinning up clusters with Kubernetes versions **`1.32`** up to **`1.35`**.
 However, the concrete versions that can be used for shoot clusters depend on the installed provider extension.
 Consequently, please consult the documentation of your provider extension to see which Kubernetes versions are supported for shoot clusters.
 

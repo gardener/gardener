@@ -73,7 +73,6 @@
 
 * [Default Seccomp Profile](usage/security/default_seccomp_profile.md)
 * [ETCD Encryption Config](usage/security/etcd_encryption_config.md)
-* [OpenIDConnect presets](usage/security/openidconnect-presets.md)
 * [Admission Configuration for the `PodSecurity` Admission Plugin](usage/security/pod-security.md)
 * [Audit a Kubernetes cluster](usage/security/shoot_auditpolicy.md)
 * [Shoot `ServiceAccount` Configurations](usage/security/shoot_serviceaccounts.md)
@@ -122,7 +121,6 @@
 * [`resources.gardener.cloud` API Group](api-reference/resources.md)
 * [`security.gardener.cloud` API Group](api-reference/security.md)
 * [`seedmanagement.gardener.cloud` API Group](api-reference/seedmanagement.md)
-* [`settings.gardener.cloud` API Group](api-reference/settings.md)
 
 ## [CLI Reference](cli-reference/README.md)
 

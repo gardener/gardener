@@ -48,7 +48,7 @@ Please see [this](../../example/11-internal-secret.yaml) example manifest.
 ## `Seed`s
 
 `Seed`s are resources that represent seed clusters.
-Gardener does not care about how a seed cluster got created - the only requirement is that it is of at least Kubernetes v1.31 and passes the Kubernetes conformance tests.
+Gardener does not care about how a seed cluster got created - the only requirement is that it is of at least Kubernetes v1.32 and passes the Kubernetes conformance tests.
 The Gardener operator has to either deploy the gardenlet into the cluster they want to use as seed (recommended, then the gardenlet will create the `Seed` object itself after bootstrapping) or provide the kubeconfig to the cluster inside a secret (that is referenced by the `Seed` resource) and create the `Seed` resource themselves.
 
 Please see [this](../../example/45-secret-seed-backup.yaml), [this](../../example/50-seed.yaml), and optionally [this](../../example/40-secret-seed.yaml) example manifests.
@@ -90,10 +90,6 @@ Such configurations are not evaluated by Gardener (because it doesn't know/under
 :warning: This means that any configuration issues/mistake on the end-user side that relates to a provider-specific flag or setting cannot be caught during the update request itself but only later during the reconciliation (unless a validator webhook has been registered in the garden cluster by an operator).
 
 Please see [this](../../example/90-shoot.yaml) example manifest and consult the documentation of the provider extension controller to get information about its `spec.provider.controlPlaneConfig`, `.spec.provider.infrastructureConfig`, and `.spec.provider.workers[].providerConfig`.
-
-## `(Cluster)OpenIDConnectPreset`s
-
-Please see [this](../usage/security/openidconnect-presets.md) separate documentation file.
 
 ## Overview Data Model
 
