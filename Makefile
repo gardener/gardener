@@ -373,8 +373,6 @@ gardener-up: SKAFFOLD_MODE=run
 gardener-dev: SKAFFOLD_MODE=dev
 gardener-dev: export SKAFFOLD_PROFILE=dev
 gardener-up gardener-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) operator-up garden-up seed-up
-	kubectl annotate garden local gardener.cloud/operation=reconcile
-	TIMEOUT=900 ./hack/usage/wait-for.sh garden local VirtualGardenAPIServerAvailable RuntimeComponentsHealthy VirtualComponentsHealthy ObservabilityComponentsHealthy
 gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL) seed-down garden-down
 
 # gardenadm
