@@ -1,7 +1,0 @@
-apiVersion: scheduling.k8s.io/v1
-kind: PriorityClass
-metadata:
-  name: gardener-controlplane
-value: 1000000000
-globalDefault: false
-description: "This class is used to ensure that the gardener controlplane components have a high priority and are not preempted in favor of other pods."

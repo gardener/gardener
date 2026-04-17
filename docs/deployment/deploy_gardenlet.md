@@ -14,10 +14,6 @@ The following sections describe the scenarios.
 
 If you have not registered a seed cluster yet (thus, you need to deploy a first, so-called "unmanaged seed"), your approach depends on how you deployed the Gardener control plane.
 
-#### Gardener Control Plane Deployed Via [`gardener/controlplane` Helm chart](../../charts/gardener/controlplane)
-
-You can follow [Deploy a gardenlet Manually](deploy_gardenlet_manually.md).
-
 #### Gardener Control Plane Deployed Via [`gardener-operator`](../concepts/operator.md)
 
 1. If you want to register the same cluster in which `gardener-operator` runs, or if you want to register another cluster that is reachable (network-wise) for `gardener-operator`, you can follow [Deploy gardenlet via `gardener-operator`](deploy_gardenlet_via_operator.md).
