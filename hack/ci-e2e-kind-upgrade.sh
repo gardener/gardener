@@ -59,7 +59,7 @@ function install_previous_release() {
   pushd "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_PREVIOUS_RELEASE" >/dev/null
   copy_kubeconfig_files_to_old_gardener_version_folder
   remove_provider_local_service_controller
-  make operator-seed-up
+  make gardener-up
   popd >/dev/null
 }
 
@@ -81,11 +81,11 @@ function upgrade_to_next_release() {
     export GARDENER_NEXT_VERSION="$(cat "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_NEXT_RELEASE/VERSION")"
     pushd "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_NEXT_RELEASE" >/dev/null
     copy_kubeconfig_files_to_old_gardener_version_folder
-    make operator-seed-up
+    make gardener-up
     popd >/dev/null
   else
     export GARDENER_NEXT_VERSION=$VERSION
-    make operator-seed-up
+    make gardener-up
   fi
 }
 
@@ -168,7 +168,7 @@ trap "
   ( export_artifacts_host_services; export_artifacts_infra; export_artifacts_load_balancers )
   ( export KUBECONFIG=$KUBECONFIG_RUNTIME_CLUSTER; export_artifacts 'gardener-local'; export_resource_yamls_for garden extop )
   ( export KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER; export cluster_name='virtual-garden'; export_resource_yamls_for gardenlet seeds shoots; export_events_for_shoots )
-  ( make operator-seed-down )
+  ( make gardener-down )
   ( kind_down )
 " EXIT
 

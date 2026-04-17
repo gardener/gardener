@@ -89,7 +89,7 @@ ip6tables -t nat -A POSTROUTING -o $(ip route | grep '^default') -s fd00:10::/64
 make gardener-up
 ```
 
-> If you want to set up an IPv6 ready Gardener, use `make operator-seed-up IPFAMILY=ipv6` instead.
+> If you want to set up an IPv6 ready Gardener, use `make gardener-up IPFAMILY=ipv6` instead.
 
 This will first build the base images (which might take a bit if you do it for the first time).
 Afterwards, the Gardener resources will be deployed into the cluster.
@@ -316,7 +316,7 @@ make kind-multi-zone-up operator-up
 Afterwards, you can create your local `Garden` and install `gardenlet` into the KinD cluster with this command:
 
 ```shell
-make operator-seed-up
+make gardener-up
 ```
 
 You find the kubeconfig for the KinD cluster at `./dev-setup/kubeconfigs/runtime/kubeconfig`.
@@ -324,7 +324,7 @@ The one for the virtual garden is accessible at `./dev-setup/kubeconfigs/virtual
 
 Similar as in the section _[Developing Gardener](#developing-gardener)_ it's possible to run a [Skaffold development loop](https://skaffold.dev/docs/workflows/dev/) as well using:
 ```shell
-make operator-seed-dev
+make gardener-dev
 ```
 
 > :information_source: Please note that in this setup Skaffold is only watching for changes in the following components:

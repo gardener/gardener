@@ -256,7 +256,7 @@ For testing purposes, create a local `kind` cluster and deploy a Garden cluster 
 The recommended way is to use the `gardener-operator` and its respective `make` targets. At the time of writing this, the following commands can be used:
 
 ```console
-make kind-multi-zone-up operator-up operator-seed-up
+make kind-multi-zone-up gardener-up
 ```
 
 Once everything is up and running, create a couple of resources (`Project`, `Secret`, ...) in the virtual Garden cluster used to validate and restore procedure.
