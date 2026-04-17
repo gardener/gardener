@@ -1,0 +1,61 @@
+networks:
+  kind:
+    external: true
+
+x-machine: &machine
+  image: gind-machine:local
+  build:
+    context: ../../pkg/provider-local/machine-provider/node
+    dockerfile: Dockerfile
+  entrypoint: /init-machine-state.sh
+  environment:
+    PATH: /gardenadm:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    IMAGEVECTOR_OVERWRITE: /gardenadm/imagevector-overwrite.yaml
+    IMAGEVECTOR_OVERWRITE_CHARTS: /gardenadm/imagevector-overwrite-charts.yaml
+  privileged: true
+  security_opt:
+  - seccomp=unconfined
+  - apparmor=unconfined
+  tmpfs:
+  - /tmp
+  - /run
+  volumes:
+  - /lib/modules:/lib/modules:ro
+  - ./init-machine-state.sh:/init-machine-state.sh:ro
+  - /var/run/docker.sock:/var/run/docker.sock
+  - /gardenadm
+  - ../../dev/local-backupbuckets:/etc/gardener/local-backupbuckets
+  - /var/lib/containerd
+  - /mnt/containerd
+  - /mnt/cni-net-d
+  - /mnt/kubernetes
+  - /mnt/systemd-system
+  - /mnt/static-pods
+  - /mnt/kubelet
+  - /mnt/gardenadm-state
+  - /mnt/gardener-node-agent
+  - /mnt/opt-bin
+  - /mnt/root-home
+  networks:
+    kind: {}
+
+services:
+  # Machines are defined explicitly (instead of using `deploy.replicas`) because we want stable, predictable container
+  # and host names (e.g. `gind-machine-0`) for usability/user experience, and for the envoy load balancer config (will
+  # be introduced in subsequent commit).
+  machine-0:
+    <<: *machine
+    container_name: gind-machine-0
+    hostname: gind-machine-0
+  machine-1:
+    <<: *machine
+    container_name: gind-machine-1
+    hostname: gind-machine-1
+  machine-2:
+    <<: *machine
+    container_name: gind-machine-2
+    hostname: gind-machine-2
+  machine-3:
+    <<: *machine
+    container_name: gind-machine-3
+    hostname: gind-machine-3

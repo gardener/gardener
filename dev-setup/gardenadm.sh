@@ -48,13 +48,6 @@ case "$COMMAND" in
         --build-artifacts \
         -
 
-      if [[ "$SCENARIO" == "unmanaged-infra" ]]; then
-        skaffold run \
-          -p "$SCENARIO" \
-          -n gardenadm-unmanaged-infra \
-          -m provider-local,machine
-      fi
-
       # Export global resources for `gardenadm connect` scenario in case they will be needed later
       mkdir -p "$(dirname "$0")/gardenadm/resources/generated/connect"
       # We don't need to export Controller{Registration,Deployment}s since they already get registered by
