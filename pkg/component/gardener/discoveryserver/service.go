@@ -18,9 +18,10 @@ import (
 func (g *gardenerDiscoveryServer) service() *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ServiceName,
-			Namespace: g.namespace,
-			Labels:    labels(),
+			Name:        ServiceName,
+			Namespace:   g.namespace,
+			Labels:      labels(),
+			Annotations: map[string]string{"networking.istio.io/exportTo": "*"},
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeClusterIP,
