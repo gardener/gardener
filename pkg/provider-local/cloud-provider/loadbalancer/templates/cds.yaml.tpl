@@ -9,14 +9,15 @@ resources:
     healthy_panic_threshold:
       value: 0
   health_checks:
-  - timeout: 3s
-    interval: 5s
-    unhealthy_threshold: 3
+  - timeout: 5s
+    interval: 3s
+    unhealthy_threshold: 2
     healthy_threshold: 1
+    no_traffic_interval: 5s
+    event_log_path: /dev/stdout
     http_health_check:
       # kube-proxy health check endpoint
       path: /healthz
-      host: healthcheck
   load_assignment:
     cluster_name: cluster_{{ $key }}
     endpoints:
@@ -25,7 +26,9 @@ resources:
       - endpoint:
           health_check_config:
             # kube-proxy health check port
-            port_value: 10256
+            # - defaults to 10256 for externalTrafficPolicy=Cluster
+            # - Service.spec.healthCheckNodePort for externalTrafficPolicy=Local
+            port_value: {{ $.HealthCheckPort }}
           address:
             socket_address:
               address: {{ $endpoint.Address }}

@@ -123,7 +123,8 @@ func (p *Provider) copyFilesToContainer(ctx context.Context, containerID, destDi
 }
 
 type envoyConfigData struct {
-	ServicePorts map[string]servicePort
+	ServicePorts    map[string]servicePort
+	HealthCheckPort int32
 }
 
 type servicePort struct {
@@ -153,7 +154,12 @@ func generateEnvoyDynamicConfig(service *corev1.Service, nodes []*corev1.Node) (
 	}
 
 	data := &envoyConfigData{
-		ServicePorts: make(map[string]servicePort, len(service.Spec.Ports)),
+		ServicePorts:    make(map[string]servicePort, len(service.Spec.Ports)),
+		HealthCheckPort: 10256, // kube-proxy default port
+	}
+
+	if service.Spec.ExternalTrafficPolicy == corev1.ServiceExternalTrafficPolicyTypeLocal {
+		data.HealthCheckPort = service.Spec.HealthCheckNodePort
 	}
 
 	for _, port := range service.Spec.Ports {
