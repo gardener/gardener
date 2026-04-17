@@ -269,12 +269,16 @@ KUBECONFIG_VIRTUAL_GARDEN_CLUSTER := $(REPO_ROOT)/dev-setup/kubeconfigs/virtual-
 KUBECONFIG_SEED_CLUSTER           := $(REPO_ROOT)/dev-setup/kubeconfigs/seed/kubeconfig
 KUBECONFIG_SEED2_CLUSTER          := $(REPO_ROOT)/dev-setup/kubeconfigs/seed2/kubeconfig
 
+export KUBECONFIG_RUNTIME_CLUSTER
+export KUBECONFIG_VIRTUAL_GARDEN_CLUSTER
+export KUBECONFIG_SEED_CLUSTER
+export KUBECONFIG_SEED2_CLUSTER
+
 kind-% kind2-% gardener-% operator-% garden-% seed-% ci-e2e-kind: export IPFAMILY := $(IPFAMILY)
 # KUBECONFIG
 test-e2e-local-simple test-e2e-local-migration test-e2e-local-workerless test-e2e-local ci-e2e-kind ci-e2e-kind-upgrade: export KUBECONFIG = $(KUBECONFIG_RUNTIME_CLUSTER)
 kind-single-node-up kind-single-node-down kind-multi-node-up kind-multi-node-down kind-multi-zone-up kind-multi-zone-down operator%up operator-dev operator-debug operator%down operator-seed-dev test-e2e-local-operator ci-e2e-kind-operator garden-up garden-down gardenadm-up gardenadm-down seed-up seed-down test-e2e-local-gardenadm% ci-e2e-kind-gardenadm% remote-%: export KUBECONFIG = $(KUBECONFIG_RUNTIME_CLUSTER)
 kind-single-node2-up kind-single-node2-down kind-multi-node2-up kind-multi-node2-down: export KUBECONFIG = $(KUBECONFIG_SEED2_CLUSTER)
-garden-up garden-down operator-seed-% test-e2e-local-ha-% ci-e2e-kind-ha-% ci-e2e-kind-ha-%-upgrade test-e2e-local-migration-ha-multi-node test-e2e-local-ha-% test-e2e-local-migration-ha-multi-node ci-e2e-kind-ha-% ci-e2e-kind-ha-%-upgrade seed-% gardenadm-% remote-%: export VIRTUAL_GARDEN_KUBECONFIG = $(KUBECONFIG_VIRTUAL_GARDEN_CLUSTER)
 # KUBECONFIG_SEED_SECRET_PATH (used to create a Secret for Seeds containing the kubeconfig such that gardenctl works)
 kind-single-node-up kind-single-node-down kind-multi-node-up kind-multi-node-down kind-multi-zone-up kind-multi-zone-down ci-e2e-kind-ha-multi-zone-upgrade: export KUBECONFIG_SEED_SECRET_PATH = $(REPO_ROOT)/dev-setup/gardenlet/components/kubeconfigs/seed-local/kubeconfig
 kind-single-node2-up kind-single-node2-down kind-multi-node2-up kind-multi-node2-down: export KUBECONFIG_SEED_SECRET_PATH = $(REPO_ROOT)/dev-setup/gardenlet/components/kubeconfigs/seed-local2/kubeconfig
@@ -441,11 +445,11 @@ test-post-upgrade: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="post-upgrade" ./test/e2e/gardener/...
 
 ci-e2e-kind: $(KIND) $(YQ)
-	KUBECONFIG_RUNTIME_CLUSTER=$(KUBECONFIG_RUNTIME_CLUSTER) ./hack/ci-e2e-kind.sh
+	./hack/ci-e2e-kind.sh
 ci-e2e-kind-migration: $(KIND) $(YQ)
-	KUBECONFIG_RUNTIME_CLUSTER=$(KUBECONFIG_RUNTIME_CLUSTER) KUBECONFIG_SEED2_CLUSTER=$(KUBECONFIG_SEED2_CLUSTER) ./hack/ci-e2e-kind-migration.sh
+	KUBECONFIG_SEED2_CLUSTER=$(KUBECONFIG_SEED2_CLUSTER) ./hack/ci-e2e-kind-migration.sh
 ci-e2e-kind-migration-ha-multi-node: $(KIND) $(YQ)
-	KUBECONFIG_RUNTIME_CLUSTER=$(VIRTUAL_GARDEN_KUBECONFIG) KUBECONFIG_SEED2_CLUSTER=$(KUBECONFIG_SEED2_CLUSTER) SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/ci-e2e-kind-migration-ha-multi-node.sh
+	KUBECONFIG_SEED2_CLUSTER=$(KUBECONFIG_SEED2_CLUSTER) SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/ci-e2e-kind-migration-ha-multi-node.sh
 ci-e2e-kind-ha-multi-node: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-ha-multi-node.sh
 ci-e2e-kind-ha-multi-zone: $(KIND) $(YQ)
@@ -460,7 +464,7 @@ ci-e2e-kind-gardenadm-managed-infra: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-gardenadm-managed-infra.sh
 
 ci-e2e-kind-upgrade: $(KIND) $(YQ)
-	SHOOT_FAILURE_TOLERANCE_TYPE= GARDENER_PREVIOUS_RELEASE=$(GARDENER_PREVIOUS_RELEASE) GARDENER_RELEASE_DOWNLOAD_PATH=$(GARDENER_RELEASE_DOWNLOAD_PATH) GARDENER_NEXT_RELEASE=$(GARDENER_NEXT_RELEASE) KUBECONFIG_RUNTIME_CLUSTER=$(KUBECONFIG_RUNTIME_CLUSTER) ./hack/ci-e2e-kind-upgrade.sh
+	SHOOT_FAILURE_TOLERANCE_TYPE= GARDENER_PREVIOUS_RELEASE=$(GARDENER_PREVIOUS_RELEASE) GARDENER_RELEASE_DOWNLOAD_PATH=$(GARDENER_RELEASE_DOWNLOAD_PATH) GARDENER_NEXT_RELEASE=$(GARDENER_NEXT_RELEASE) ./hack/ci-e2e-kind-upgrade.sh
 ci-e2e-kind-ha-multi-node-upgrade: $(KIND) $(YQ)
 	SHOOT_FAILURE_TOLERANCE_TYPE=node GARDENER_PREVIOUS_RELEASE=$(GARDENER_PREVIOUS_RELEASE) GARDENER_RELEASE_DOWNLOAD_PATH=$(GARDENER_RELEASE_DOWNLOAD_PATH) GARDENER_NEXT_RELEASE=$(GARDENER_NEXT_RELEASE) ./hack/ci-e2e-kind-upgrade.sh
 ci-e2e-kind-ha-multi-zone-upgrade: $(KIND) $(YQ)

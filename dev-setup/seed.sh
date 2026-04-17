@@ -43,12 +43,12 @@ case "$COMMAND" in
     skaffold run \
       -v debug \
       -m garden-config \
-      --kubeconfig "$VIRTUAL_GARDEN_KUBECONFIG" \
+      --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" \
       --status-check=false --platform="linux/$SYSTEM_ARCH" # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
 
     skaffold $skaffold_command \
       -m gardenlet \
-      --kubeconfig "$VIRTUAL_GARDEN_KUBECONFIG" \
+      --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" \
       --cache-artifacts="$($(dirname "$0")/get-skaffold-cache-artifacts.sh)" \
       --status-check=false --platform="linux/$SYSTEM_ARCH" # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
 
@@ -58,8 +58,8 @@ case "$COMMAND" in
     ;;
 
   down)
-    skaffold --kubeconfig "$VIRTUAL_GARDEN_KUBECONFIG" delete -m gardenlet
-    kubectl  --kubeconfig "$VIRTUAL_GARDEN_KUBECONFIG" delete seed/"$gardenlet_name" --ignore-not-found --wait --timeout 5m
+    skaffold --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" delete -m gardenlet
+    kubectl  --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" delete seed/"$gardenlet_name" --ignore-not-found --wait --timeout 5m
     kubectl  -n garden delete deployment gardenlet --ignore-not-found
     kubectl  -n garden delete secret gardenlet-kubeconfig --ignore-not-found
 

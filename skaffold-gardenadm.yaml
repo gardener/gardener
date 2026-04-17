@@ -834,7 +834,7 @@ build:
               - bash
               - -c
               - >
-                kubectl --kubeconfig="$VIRTUAL_GARDEN_KUBECONFIG" -n garden patch gardenlet self-hosted-shoot-root --type=merge -p "$(jq -n \
+                kubectl --kubeconfig="$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" -n garden patch gardenlet self-hosted-shoot-root --type=merge -p "$(jq -n \
                   --arg image "$SKAFFOLD_IMAGE" \
                   --arg imagevector_overwrite "$(cat ./dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml)" \
                   '{
