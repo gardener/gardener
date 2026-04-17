@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -30,31 +31,39 @@ func AddToManager(
 	cfg gardenletconfigv1alpha1.GardenletConfiguration,
 	identity *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
+	seedIsSelfHostedShoot bool,
+	selfHostedShoot *gardencorev1beta1.Shoot,
+	seedName string,
+	gardenNamespace string,
 ) error {
 	if err := (&care.Reconciler{
-		Config: *cfg.Controllers.ControllerInstallationCare,
+		Config:                   *cfg.Controllers.ControllerInstallationCare,
+		ManagedResourceNamespace: gardenNamespace,
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}
 
-	// When the seed is a self-hosted shoot, all ControllerInstallations have .spec.shootRef instead of .spec.seedRef.
-	// The self-hosted gardenlet already runs the required controller with ShootRef-based filtering, so the SeedRef-based
-	// instance here would find no ControllerInstallations.
-	if seedIsSelfHostedShoot, err := gardenletutils.SeedIsSelfHostedShoot(ctx, seedCluster.GetAPIReader()); err != nil {
-		return fmt.Errorf("failed checking whether the seed is a self-hosted shoot cluster: %w", err)
-	} else if !seedIsSelfHostedShoot {
+	if gardenletutils.IsResponsibleForSelfHostedShoot() || !seedIsSelfHostedShoot {
+		var selfHostedShootMeta *types.NamespacedName
+		if selfHostedShoot != nil {
+			selfHostedShootMeta = &types.NamespacedName{Name: selfHostedShoot.Name, Namespace: selfHostedShoot.Namespace}
+		}
+
 		if err := (&controllerinstallation.Reconciler{
 			SeedClientSet:         seedClientSet,
 			Config:                cfg,
 			Identity:              identity,
 			GardenClusterIdentity: gardenClusterIdentity,
+			GardenNamespace:       gardenNamespace,
+			SelfHostedShootMeta:   selfHostedShootMeta,
 		}).AddToManager(ctx, mgr, gardenCluster); err != nil {
 			return fmt.Errorf("failed adding main reconciler: %w", err)
 		}
 
 		if err := (&required.Reconciler{
-			Config:   *cfg.Controllers.ControllerInstallationRequired,
-			SeedName: cfg.SeedConfig.SeedTemplate.Name,
+			Config:              *cfg.Controllers.ControllerInstallationRequired,
+			SeedName:            seedName,
+			SelfHostedShootMeta: selfHostedShootMeta,
 		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 			return fmt.Errorf("failed adding required reconciler: %w", err)
 		}

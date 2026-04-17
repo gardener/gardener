@@ -26,7 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/state"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/status"
 	"github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
 // AddToManager adds all Shoot controllers to the given manager.
@@ -41,29 +41,41 @@ func AddToManager(
 	identity *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
 	healthManager healthz.Manager,
+	seedName string,
 ) error {
-	var responsibleForUnmanagedSeed bool
-	if err := gardenCluster.GetAPIReader().Get(ctx, client.ObjectKey{Name: cfg.SeedConfig.Name, Namespace: v1beta1constants.GardenNamespace}, &seedmanagementv1alpha1.ManagedSeed{}); err != nil {
-		// Forbidden is treated like NotFound because the SeedAuthorizer only grants access to ManagedSeeds
-		// related to this seed via the resource graph. For unmanaged seeds, no ManagedSeed exists and no graph
-		// edge is present, so the authorizer returns Forbidden.
-		if !apierrors.IsNotFound(err) && !apierrors.IsForbidden(err) {
-			return fmt.Errorf("failed checking whether gardenlet is responsible for a managed seed: %w", err)
+	// The ShootState reconciler is only enabled when:
+	// (a) the gardenlet is responsible for a self-hosted shoot (we always want ShootStates for such clusters in the
+	//     garden cluster), or
+	// (b) the gardenlet is responsible for an unmanaged seed and the controller is enabled in its component config (see
+	//     GEP-0022).
+	shootStateControllerEnabled := true
+	if !gardenletutils.IsResponsibleForSelfHostedShoot() {
+		var responsibleForUnmanagedSeed bool
+		if err := gardenCluster.GetAPIReader().Get(ctx, client.ObjectKey{Name: cfg.SeedConfig.Name, Namespace: v1beta1constants.GardenNamespace}, &seedmanagementv1alpha1.ManagedSeed{}); err != nil {
+			// Forbidden is treated like NotFound because the SeedAuthorizer only grants access to ManagedSeeds
+			// related to this seed via the resource graph. For unmanaged seeds, no ManagedSeed exists and no graph
+			// edge is present, so the authorizer returns Forbidden.
+			if !apierrors.IsNotFound(err) && !apierrors.IsForbidden(err) {
+				return fmt.Errorf("failed checking whether gardenlet is responsible for a managed seed: %w", err)
+			}
+			// ManagedSeed was not found, hence gardenlet is responsible for an unmanaged seed.
+			responsibleForUnmanagedSeed = true
 		}
-		// ManagedSeed was not found, hence gardenlet is responsible for an unmanaged seed.
-		responsibleForUnmanagedSeed = true
+		shootStateControllerEnabled = responsibleForUnmanagedSeed && ptr.Deref(cfg.Controllers.ShootState.ConcurrentSyncs, 0) > 0
 	}
-	shootStateControllerEnabled := responsibleForUnmanagedSeed && ptr.Deref(cfg.Controllers.ShootState.ConcurrentSyncs, 0) > 0
 
-	if err := (&shoot.Reconciler{
-		SeedClientSet:               seedClientSet,
-		ShootClientMap:              shootClientMap,
-		Config:                      cfg,
-		Identity:                    identity,
-		GardenClusterIdentity:       gardenClusterIdentity,
-		ShootStateControllerEnabled: shootStateControllerEnabled,
-	}).AddToManager(mgr, gardenCluster); err != nil {
-		return fmt.Errorf("failed adding main reconciler: %w", err)
+	// TODO(rfranzke): Enable this reconciler when the work on GEP-0028 progresses.
+	if !gardenletutils.IsResponsibleForSelfHostedShoot() {
+		if err := (&shoot.Reconciler{
+			SeedClientSet:               seedClientSet,
+			ShootClientMap:              shootClientMap,
+			Config:                      cfg,
+			Identity:                    identity,
+			GardenClusterIdentity:       gardenClusterIdentity,
+			ShootStateControllerEnabled: shootStateControllerEnabled,
+		}).AddToManager(mgr, gardenCluster); err != nil {
+			return fmt.Errorf("failed adding main reconciler: %w", err)
+		}
 	}
 
 	if err := (&care.Reconciler{
@@ -72,32 +84,30 @@ func AddToManager(
 		Config:                cfg,
 		Identity:              identity,
 		GardenClusterIdentity: gardenClusterIdentity,
-		SeedName:              cfg.SeedConfig.Name,
+		SeedName:              seedName,
 	}).AddToManager(mgr, gardenCluster); err != nil {
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}
 
 	if err := (&status.Reconciler{
 		Config:   *cfg.Controllers.ShootStatus,
-		SeedName: cfg.SeedConfig.Name,
+		SeedName: seedName,
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding status reconciler: %w", err)
 	}
 
-	// If gardenlet is responsible for an unmanaged seed we want to add the state reconciler which performs periodic
-	// backups of shoot states (see GEP-0022).
 	if shootStateControllerEnabled {
-		mgr.GetLogger().Info("Adding shoot state reconciler since gardenlet is responsible for an unmanaged seed")
+		mgr.GetLogger().Info("Adding ShootState since gardenlet is responsible for a self-hosted shoot or for an unmanaged seed")
 
 		if err := (&state.Reconciler{
 			Config:   *cfg.Controllers.ShootState,
-			SeedName: cfg.SeedConfig.Name,
+			SeedName: seedName,
 		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 			return fmt.Errorf("failed adding state reconciler: %w", err)
 		}
 	}
 
-	if gardenlet.IsResponsibleForSelfHostedShoot() {
+	if gardenletutils.IsResponsibleForSelfHostedShoot() {
 		if err := lease.AddToManager(mgr, gardenCluster, seedClientSet.RESTClient(), healthManager, nil); err != nil {
 			return fmt.Errorf("failed adding lease reconciler: %w", err)
 		}

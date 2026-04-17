@@ -844,12 +844,7 @@ func (g *garden) overwriteGardenHostWhenDeployedInRuntimeCluster(ctx context.Con
 func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 	fns := []func(context.Context, client.FieldIndexer) error{
 		// core API group
-		indexer.AddShootSeedName,
-		indexer.AddShootStatusSeedName,
-		indexer.AddBackupBucketSeedName,
-		indexer.AddBackupEntrySeedName,
 		indexer.AddBackupEntryBucketName,
-		indexer.AddControllerInstallationSeedRefName,
 		indexer.AddControllerInstallationRegistrationRefName,
 		// operations API group
 		indexer.AddBastionShootName,
@@ -857,18 +852,21 @@ func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 		indexer.AddManagedSeedShootName,
 	}
 
-	// TODO(rfranzke): Revisit this once `gardenadm connect` progresses (currently, this causes informers to be started
-	//  against the API server, but gardenlet does not have the needed permissions).
 	if gardenlet.IsResponsibleForSelfHostedShoot() {
-		fns = []func(context.Context, client.FieldIndexer) error{
+		fns = append(fns,
 			// core API group
-			indexer.AddBackupEntryBucketName,
-			indexer.AddControllerInstallationRegistrationRefName,
 			indexer.AddControllerInstallationShootRefName,
 			indexer.AddControllerInstallationShootRefNamespace,
-			// seedmanagement API group
-			indexer.AddManagedSeedShootName,
-		}
+		)
+	} else {
+		fns = append(fns,
+			// core API group
+			indexer.AddShootSeedName,
+			indexer.AddShootStatusSeedName,
+			indexer.AddBackupBucketSeedName,
+			indexer.AddBackupEntrySeedName,
+			indexer.AddControllerInstallationSeedRefName,
+		)
 	}
 
 	for _, fn := range fns {
