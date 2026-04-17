@@ -24,9 +24,34 @@ case "$COMMAND" in
     kubectl wait --for=condition=Established crd/gardens.operator.gardener.cloud --timeout=60s
 
     kubectl apply -k "$(dirname "$0")/garden/overlays/$SCENARIO"
+
+    # Check whether the current gardener-operator pod(s) already reconciled (or are currently reconciling) the Garden.
+    # If so, we don't need to trigger an explicit reconciliation via the operation annotation. This avoids unnecessary
+    # double reconciliations when the operator was just (re)deployed and already picked up the Garden.
+    garden_status_gardener_name=$(kubectl get garden "$garden_name" -o jsonpath='{.status.gardener.name}' 2>/dev/null || true)
+    garden_last_operation_state=$(kubectl get garden "$garden_name" -o jsonpath='{.status.lastOperation.state}' 2>/dev/null || true)
+    operator_pod_names=$(kubectl get pods -n garden -l app=gardener,role=operator --field-selector=status.phase=Running -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true)
+
+    needs_reconciliation=true
+    if [[ -n "$garden_status_gardener_name" && -n "$operator_pod_names" ]]; then
+      for pod_name in $operator_pod_names; do
+        if [[ "$garden_status_gardener_name" == "$pod_name" && ("$garden_last_operation_state" == "Succeeded" || "$garden_last_operation_state" == "Processing") ]]; then
+          needs_reconciliation=false
+          break
+        fi
+      done
+    fi
+
+    if [[ "$needs_reconciliation" == "true" ]]; then
+      echo "Triggering Garden reconciliation..."
+      kubectl annotate garden "$garden_name" gardener.cloud/operation=reconcile
+    else
+      echo "Garden is already reconciled by the current gardener-operator ($garden_status_gardener_name), skipping reconcile annotation."
+    fi
+
     # We deliberately only wait for the last operation to be 'Reconcile Succeeded' in order to be able to faster deploy
     # the gardenlet.
-    TIMEOUT=900 "$(dirname "$0")"/../hack/usage/wait-for.sh garden $garden_name
+    TIMEOUT=900 "$(dirname "$0")"/../hack/usage/wait-for.sh garden "$garden_name"
     if [[ "$SCENARIO" != "remote" ]]; then
       # Check that the admission component of provider-local extension is healthy - it may run webhooks for the resources
       # that we are about to create in below 'garden-config' Skaffold config. This will fail in case the webhook server is
