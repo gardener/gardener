@@ -289,8 +289,6 @@ func (*NodeLocalDNS) ProtoMessage() {}
 
 func (*OCIRepository) ProtoMessage() {}
 
-func (*OIDCConfig) ProtoMessage() {}
-
 func (*ObservabilityRotation) ProtoMessage() {}
 
 func (*OpenIDConnectClientAuthentication) ProtoMessage() {}

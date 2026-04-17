@@ -2676,11 +2676,6 @@ func (in *KubeAPIServerConfig) DeepCopyInto(out *KubeAPIServerConfig) {
 		*out = new(AuditConfig)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.OIDCConfig != nil {
-		in, out := &in.OIDCConfig, &out.OIDCConfig
-		*out = new(OIDCConfig)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.RuntimeConfig != nil {
 		in, out := &in.RuntimeConfig, &out.RuntimeConfig
 		*out = make(map[string]bool, len(*in))

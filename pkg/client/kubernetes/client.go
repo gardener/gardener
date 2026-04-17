@@ -26,7 +26,6 @@ import (
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	securityinstall "github.com/gardener/gardener/pkg/apis/security/install"
 	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
-	settingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
 )
 
 const (
@@ -51,7 +50,6 @@ func init() {
 	protobufSchemeBuilder := runtime.NewSchemeBuilder(
 		gardencoreinstall.AddToScheme,
 		seedmanagementinstall.AddToScheme,
-		settingsinstall.AddToScheme,
 		securityinstall.AddToScheme,
 	)
 

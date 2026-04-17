@@ -22,7 +22,6 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
@@ -218,7 +217,6 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		g.apiService(secretCAGardener, gardencorev1beta1.SchemeGroupVersion.Group, gardencorev1beta1.SchemeGroupVersion.Version),
 		g.apiService(secretCAGardener, seedmanagementv1alpha1.SchemeGroupVersion.Group, seedmanagementv1alpha1.SchemeGroupVersion.Version),
 		g.apiService(secretCAGardener, operationsv1alpha1.SchemeGroupVersion.Group, operationsv1alpha1.SchemeGroupVersion.Version),
-		g.apiService(secretCAGardener, settingsv1alpha1.SchemeGroupVersion.Group, settingsv1alpha1.SchemeGroupVersion.Version),
 		g.apiService(secretCAGardener, securityv1alpha1.SchemeGroupVersion.Group, securityv1alpha1.SchemeGroupVersion.Version),
 		g.service(),
 		g.clusterRole(),

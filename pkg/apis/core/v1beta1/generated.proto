@@ -1458,15 +1458,6 @@ message KubeAPIServerConfig {
   // +optional
   optional AuditConfig auditConfig = 4;
 
-  // OIDCConfig contains configuration settings for the OIDC provider.
-  //
-  // Deprecated: This field is deprecated and will be forbidden starting from Kubernetes 1.32.
-  // Please configure and use structured authentication instead of oidc flags.
-  // For more information check https://github.com/gardener/gardener/issues/9858
-  // TODO(AleksandarSavchev): Drop this field after support for Kubernetes 1.31 is dropped.
-  // +optional
-  optional OIDCConfig oidcConfig = 6;
-
   // RuntimeConfig contains information about enabled or disabled APIs.
   // +optional
   map<string, bool> runtimeConfig = 7;
@@ -2474,46 +2465,6 @@ message OCIRepository {
   // If not provided, the system's default certificate pool is used.
   // +optional
   optional .k8s.io.api.core.v1.LocalObjectReference caBundleSecretRef = 6;
-}
-
-// OIDCConfig contains configuration settings for the OIDC provider.
-// Note: Descriptions were taken from the Kubernetes documentation.
-message OIDCConfig {
-  // If set, the OpenID server's certificate will be verified by one of the authorities in the oidc-ca-file, otherwise the host's root CA set will be used.
-  // +optional
-  optional string caBundle = 1;
-
-  // The client ID for the OpenID Connect client, must be set.
-  // +optional
-  optional string clientID = 3;
-
-  // If provided, the name of a custom OpenID Connect claim for specifying user groups. The claim value is expected to be a string or array of strings. This flag is experimental, please see the authentication documentation for further details.
-  // +optional
-  optional string groupsClaim = 4;
-
-  // If provided, all groups will be prefixed with this value to prevent conflicts with other authentication strategies.
-  // +optional
-  optional string groupsPrefix = 5;
-
-  // The URL of the OpenID issuer, only HTTPS scheme will be accepted. Used to verify the OIDC JSON Web Token (JWT).
-  // +optional
-  optional string issuerURL = 6;
-
-  // key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.
-  // +optional
-  map<string, string> requiredClaims = 7;
-
-  // List of allowed JOSE asymmetric signing algorithms. JWTs with a 'alg' header value not in this list will be rejected. Values are defined by RFC 7518 https://tools.ietf.org/html/rfc7518#section-3.1
-  // +optional
-  repeated string signingAlgs = 8;
-
-  // The OpenID claim to use as the user name. Note that claims other than the default ('sub') is not guaranteed to be unique and immutable. This flag is experimental, please see the authentication documentation for further details. (default "sub")
-  // +optional
-  optional string usernameClaim = 9;
-
-  // If provided, all usernames will be prefixed with this value. If not provided, username claims other than 'email' are prefixed by the issuer URL to avoid clashes. To skip any prefixing, provide the value '-'.
-  // +optional
-  optional string usernamePrefix = 10;
 }
 
 // ObservabilityRotation contains information about the observability credential rotation.

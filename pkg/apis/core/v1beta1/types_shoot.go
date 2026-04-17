@@ -1152,42 +1152,6 @@ type AuthorizerKubeconfigReference struct {
 	SecretName string `json:"secretName" protobuf:"bytes,2,opt,name=secretName"`
 }
 
-// OIDCConfig contains configuration settings for the OIDC provider.
-// Note: Descriptions were taken from the Kubernetes documentation.
-type OIDCConfig struct {
-	// If set, the OpenID server's certificate will be verified by one of the authorities in the oidc-ca-file, otherwise the host's root CA set will be used.
-	// +optional
-	CABundle *string `json:"caBundle,omitempty" protobuf:"bytes,1,opt,name=caBundle"`
-
-	// ClientAuthentication is tombstoned to show why 2 is reserved protobuf tag.
-	// ClientAuthentication *OpenIDConnectClientAuthentication `json:"clientAuthentication,omitempty" protobuf:"bytes,2,opt,name=clientAuthentication"`
-
-	// The client ID for the OpenID Connect client, must be set.
-	// +optional
-	ClientID *string `json:"clientID,omitempty" protobuf:"bytes,3,opt,name=clientID"`
-	// If provided, the name of a custom OpenID Connect claim for specifying user groups. The claim value is expected to be a string or array of strings. This flag is experimental, please see the authentication documentation for further details.
-	// +optional
-	GroupsClaim *string `json:"groupsClaim,omitempty" protobuf:"bytes,4,opt,name=groupsClaim"`
-	// If provided, all groups will be prefixed with this value to prevent conflicts with other authentication strategies.
-	// +optional
-	GroupsPrefix *string `json:"groupsPrefix,omitempty" protobuf:"bytes,5,opt,name=groupsPrefix"`
-	// The URL of the OpenID issuer, only HTTPS scheme will be accepted. Used to verify the OIDC JSON Web Token (JWT).
-	// +optional
-	IssuerURL *string `json:"issuerURL,omitempty" protobuf:"bytes,6,opt,name=issuerURL"`
-	// key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.
-	// +optional
-	RequiredClaims map[string]string `json:"requiredClaims,omitempty" protobuf:"bytes,7,rep,name=requiredClaims"`
-	// List of allowed JOSE asymmetric signing algorithms. JWTs with a 'alg' header value not in this list will be rejected. Values are defined by RFC 7518 https://tools.ietf.org/html/rfc7518#section-3.1
-	// +optional
-	SigningAlgs []string `json:"signingAlgs,omitempty" protobuf:"bytes,8,rep,name=signingAlgs"`
-	// The OpenID claim to use as the user name. Note that claims other than the default ('sub') is not guaranteed to be unique and immutable. This flag is experimental, please see the authentication documentation for further details. (default "sub")
-	// +optional
-	UsernameClaim *string `json:"usernameClaim,omitempty" protobuf:"bytes,9,opt,name=usernameClaim"`
-	// If provided, all usernames will be prefixed with this value. If not provided, username claims other than 'email' are prefixed by the issuer URL to avoid clashes. To skip any prefixing, provide the value '-'.
-	// +optional
-	UsernamePrefix *string `json:"usernamePrefix,omitempty" protobuf:"bytes,10,opt,name=usernamePrefix"`
-}
-
 // OpenIDConnectClientAuthentication contains configuration for OIDC clients.
 type OpenIDConnectClientAuthentication struct {
 	// Extra configuration added to kubeconfig's auth-provider.
