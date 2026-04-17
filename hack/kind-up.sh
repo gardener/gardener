@@ -11,25 +11,20 @@ set -o pipefail
 WITH_LPP_RESIZE_SUPPORT=${WITH_LPP_RESIZE_SUPPORT:-false}
 USE_PROW_REGISTRY_CACHE=${CI:-false}
 CLUSTER_NAME=""
-PATH_CLUSTER_VALUES=""
+KUSTOMIZE_OVERLAY_BASENAME=""
 # KUBECONFIG_COPY_PATHS is a list of paths to which the kind cluster kubeconfig will be copied.
 KUBECONFIG_COPY_PATHS=()
-MULTI_ZONAL=false
-CHART=$(dirname "$0")/../example/gardener-local/kind/cluster
-ADDITIONAL_ARGS=""
+MULTI_ZONAL=""
 INFRA_COMPOSE_FILE="$(dirname "$0")/../dev-setup/infra/docker-compose.yaml"
 
 parse_flags() {
   while test $# -gt 0; do
     case "$1" in
-    --chart)
-      shift; CHART="$1"
-      ;;
     --cluster-name)
       shift; CLUSTER_NAME="$1"
       ;;
-    --path-cluster-values)
-      shift; PATH_CLUSTER_VALUES="$1"
+    --kustomize-overlay-basename)
+      shift; KUSTOMIZE_OVERLAY_BASENAME="$1"
       ;;
     --path-kubeconfig-copy)
       shift; KUBECONFIG_COPY_PATHS+=("$1")
@@ -378,11 +373,7 @@ mkdir -m 0755 -p \
   "$(dirname "$0")/../dev/local-backupbuckets" \
   "$(dirname "$0")/../dev/local-registry"
 
-additional_params=""
-if [[ ${MULTI_ZONAL} == "true" ]]; then
-  additional_params="--multi-zonal"
-fi
-./hack/kind-setup-loopback-devices.sh --cluster-name "${CLUSTER_NAME}" --ip-family "${IPFAMILY}" "${additional_params}"
+./hack/kind-setup-loopback-devices.sh --cluster-name "${CLUSTER_NAME}" --ip-family "${IPFAMILY}" ${MULTI_ZONAL:+--multi-zonal}
 
 setup_kind_network
 
@@ -393,16 +384,12 @@ docker compose -f "$INFRA_COMPOSE_FILE" up -d
 ensure_local_registry_hosts
 setup_local_dns_resolver
 
-if [[ "$IPFAMILY" == "ipv6" ]]; then
-  ADDITIONAL_ARGS="$ADDITIONAL_ARGS --values $CHART/values-ipv6.yaml"
-fi
-if [[ "$IPFAMILY" == "dual" ]]; then
-  ADDITIONAL_ARGS="$ADDITIONAL_ARGS --values $CHART/values-dual.yaml"
-fi
-
-kind create cluster \
-  --name "$CLUSTER_NAME" \
-  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "repositoryRoot"=$(dirname "$0")/.. --set "dockerSocket=$(docker_socket)")
+kustomize build "$(dirname "$0")/../dev-setup/kind/cluster/overlays/${KUSTOMIZE_OVERLAY_BASENAME}-${IPFAMILY}" | \
+  yq 'del(.metadata)' | \
+  DOCKER_SOCKET="$(docker_socket)" envsubst '${DOCKER_SOCKET}' | \
+  kind create cluster \
+    --name "$CLUSTER_NAME" \
+    --config /dev/stdin
 
 nodes=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}')
 

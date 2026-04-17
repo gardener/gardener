@@ -276,12 +276,12 @@ kind-single-node2-% kind-multi-node2-%: export KUBECONFIG_SEED_SECRET_PATH = $(D
 kind-single-node-% kind-multi-node-% kind-multi-zone-%: export CLUSTER_NAME = gardener-local
 kind-single-node2-% kind-multi-node2-%: export CLUSTER_NAME = gardener-local2
 
-# CLUSTER_VALUES
-kind-single-node-%: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/single-node/values.yaml
-kind-single-node2-%: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/single-node2/values.yaml
-kind-multi-node-%: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/multi-node/values.yaml
-kind-multi-node2-%: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/multi-node2/values.yaml
-kind-multi-zone-%: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/multi-zone/values.yaml
+# KUSTOMIZE_OVERLAY_BASENAME (the basename of the overlay in /dev-setup/kind/cluster/overlays for the scenario)
+kind-single-node-%: export KUSTOMIZE_OVERLAY_BASENAME = single-node
+kind-single-node2-%: export KUSTOMIZE_OVERLAY_BASENAME = single-node2
+kind-multi-node-%: export KUSTOMIZE_OVERLAY_BASENAME = multi-node
+kind-multi-node2-%: export KUSTOMIZE_OVERLAY_BASENAME = multi-node2
+kind-multi-zone-%: export KUSTOMIZE_OVERLAY_BASENAME = multi-zone
 
 # ADDITIONAL_PARAMETERS
 kind-single-node2-down kind-multi-node2-down: export ADDITIONAL_PARAMETERS = --keep-backupbuckets-dir
@@ -290,7 +290,7 @@ kind-multi-zone-up: export ADDITIONAL_PARAMETERS = --multi-zonal
 kind-single-node-up kind-multi-node-up kind-multi-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
 	./hack/kind-up.sh \
 		--cluster-name $(CLUSTER_NAME) \
-		--path-cluster-values $(CLUSTER_VALUES) \
+		--kustomize-overlay-basename $(KUSTOMIZE_OVERLAY_BASENAME) \
 		--path-kubeconfig-copy $(KUBECONFIG_SEED_CLUSTER) \
 		--path-kubeconfig-copy $(KUBECONFIG_SEED_SECRET_PATH) \
 		--with-lpp-resize-support $(DEV_SETUP_WITH_LPP_RESIZE_SUPPORT) \
@@ -307,7 +307,7 @@ kind-single-node-down kind-multi-node-down kind-multi-zone-down: $(KIND)
 kind-single-node2-up kind-multi-node2-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
 	./hack/kind-up.sh \
 		--cluster-name $(CLUSTER_NAME) \
-		--path-cluster-values $(CLUSTER_VALUES) \
+		--kustomize-overlay-basename $(KUSTOMIZE_OVERLAY_BASENAME) \
 		--path-kubeconfig-copy $(KUBECONFIG_SEED2_CLUSTER) \
 		--path-kubeconfig-copy $(KUBECONFIG_SEED_SECRET_PATH) \
 		--with-lpp-resize-support $(DEV_SETUP_WITH_LPP_RESIZE_SUPPORT) \
