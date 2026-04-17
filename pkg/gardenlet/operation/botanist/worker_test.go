@@ -7,6 +7,7 @@ package botanist_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -540,6 +541,77 @@ var _ = Describe("Worker", func() {
 			)
 
 			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, false)).To(Succeed())
+		})
+
+		It("should succeed when tolerating errors and the managed resource becomes healthy after a transient error", func() {
+			DeferCleanup(test.WithVars(
+				&IntervalWaitOperatingSystemConfigUpdated, time.Millisecond,
+				&GetTimeoutWaitOperatingSystemConfigUpdated, func(*shootpkg.Shoot) time.Duration { return time.Second },
+			))
+
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{
+							{Name: "pool1"},
+						},
+					},
+				},
+			})
+
+			seedInterface.EXPECT().Client().Return(seedClient).AnyTimes()
+			gomock.InOrder(
+				// First call: transient error (simulates connection refused during static pod rollout)
+				seedClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: controlPlaneNamespace, Name: "shoot-gardener-node-agent"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
+					Return(fmt.Errorf("dial tcp 10.2.0.99:443: connect: connection refused")),
+				// Second call: ManagedResource is healthy
+				seedClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: controlPlaneNamespace, Name: "shoot-gardener-node-agent"},
+					gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Generation: 1,
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+						Conditions: []gardencorev1beta1.Condition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+						},
+					},
+				})),
+			)
+
+			shootInterface.EXPECT().Client().Return(shootClient).AnyTimes()
+			shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.NodeList{})).DoAndReturn(func(_ context.Context, list *corev1.NodeList, _ ...client.ListOption) error {
+				*list = corev1.NodeList{Items: []corev1.Node{{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"worker.gardener.cloud/pool":                            "pool1",
+							"worker.gardener.cloud/kubernetes-version":              "1.26.0",
+							"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent-pool1-5dcdf",
+						},
+						Annotations: map[string]string{"checksum/cloud-config-data": "foo"},
+					},
+				}}}
+				return nil
+			}).AnyTimes()
+			shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), operatingSystemConfigSecretListOptions).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
+				*list = corev1.SecretList{Items: []corev1.Secret{{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "gardener-node-agent-pool1-5dcdf",
+						Labels:      map[string]string{"worker.gardener.cloud/pool": "pool1"},
+						Annotations: map[string]string{"checksum/data-script": "foo"},
+					},
+				}}}
+				return nil
+			}).AnyTimes()
+
+			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, true)).To(Succeed())
 		})
 	})
 })
