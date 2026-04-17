@@ -54,29 +54,16 @@ TOOLS_BIN_DIR ?= hack/tools/bin/$(go env GOOS)-$(go env GOARCH)
 TOOLS_DIR := hack/tools
 include hack/tools.mk
 
-LOGCHECK_DIR := $(TOOLS_DIR)/logcheck
-PKG_APIS_DIR := $(REPO_ROOT)/pkg/apis
-
-#########################################
-# Rules for local development scenarios #
-#########################################
-
-ENVTEST_TYPE ?= kubernetes
-
-.PHONY: start-envtest
-start-envtest: $(SETUP_ENVTEST)
-	@./hack/start-envtest.sh --environment-type=$(ENVTEST_TYPE)
-
 #################################################################
 # Rules related to binary build, Docker image build and release #
 #################################################################
 
+BUILD_OUTPUT_FILE ?= .
+BUILD_PACKAGES ?= ./...
+
 .PHONY: install
 install:
 	@EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) ./hack/install.sh ./...
-
-BUILD_OUTPUT_FILE ?= .
-BUILD_PACKAGES ?= ./...
 
 .PHONY: build
 build:
@@ -130,6 +117,9 @@ docker-push:
 #####################################################################
 # Rules for verification, formatting, linting, testing and cleaning #
 #####################################################################
+
+LOGCHECK_DIR := $(TOOLS_DIR)/logcheck
+PKG_APIS_DIR := $(REPO_ROOT)/pkg/apis
 
 .PHONY: tidy
 tidy:
@@ -262,34 +252,37 @@ verify-extended: check-generate check format test-cov test-cov-clean test-integr
 # Rules for local environment                                       #
 #####################################################################
 
-KUBECONFIG_RUNTIME_CLUSTER        := $(DEV_SETUP)/kubeconfigs/runtime/kubeconfig
-KUBECONFIG_VIRTUAL_GARDEN_CLUSTER := $(DEV_SETUP)/kubeconfigs/virtual-garden/kubeconfig
-KUBECONFIG_SEED_CLUSTER           := $(DEV_SETUP)/kubeconfigs/seed/kubeconfig
-KUBECONFIG_SEED2_CLUSTER          := $(DEV_SETUP)/kubeconfigs/seed2/kubeconfig
+kind-% operator-% garden-% seed-% ci-e2e-kind: export IPFAMILY := $(IPFAMILY)
 
-export KUBECONFIG_RUNTIME_CLUSTER
-export KUBECONFIG_VIRTUAL_GARDEN_CLUSTER
-export KUBECONFIG_SEED_CLUSTER
-export KUBECONFIG_SEED2_CLUSTER
+export KUBECONFIG_RUNTIME_CLUSTER        := $(DEV_SETUP)/kubeconfigs/runtime/kubeconfig
+export KUBECONFIG_VIRTUAL_GARDEN_CLUSTER := $(DEV_SETUP)/kubeconfigs/virtual-garden/kubeconfig
+export KUBECONFIG_SEED_CLUSTER           := $(DEV_SETUP)/kubeconfigs/seed/kubeconfig
+export KUBECONFIG_SEED2_CLUSTER          := $(DEV_SETUP)/kubeconfigs/seed2/kubeconfig
 
-kind-% kind2-% gardener-% operator-% garden-% seed-% ci-e2e-kind: export IPFAMILY := $(IPFAMILY)
 # KUBECONFIG
-test-e2e-local-simple test-e2e-local-migration test-e2e-local-workerless test-e2e-local ci-e2e-kind ci-e2e-kind-upgrade: export KUBECONFIG = $(KUBECONFIG_RUNTIME_CLUSTER)
-kind-single-node-up kind-single-node-down kind-multi-node-up kind-multi-node-down kind-multi-zone-up kind-multi-zone-down operator%up operator-dev operator-debug operator%down operator-seed-dev test-e2e-local-operator ci-e2e-kind-operator garden-up garden-down gardenadm-up gardenadm-down seed-up seed-down test-e2e-local-gardenadm% ci-e2e-kind-gardenadm% remote-%: export KUBECONFIG = $(KUBECONFIG_RUNTIME_CLUSTER)
-kind-single-node2-up kind-single-node2-down kind-multi-node2-up kind-multi-node2-down: export KUBECONFIG = $(KUBECONFIG_SEED2_CLUSTER)
+kind-single-node-% kind-multi-node-% kind-multi-zone-%: export KUBECONFIG = $(KUBECONFIG_RUNTIME_CLUSTER)
+kind-single-node2-% kind-multi-node2-%: export KUBECONFIG = $(KUBECONFIG_SEED2_CLUSTER)
+
+operator-% garden-% seed-% gardenadm-% remote-%: export KUBECONFIG = $(KUBECONFIG_RUNTIME_CLUSTER)
+
+test-e2e-%: export KUBECONFIG = $(KUBECONFIG_VIRTUAL_GARDEN_CLUSTER)
+test-e2e-local-operator test-e2e-local-gardenadm-%: export KUBECONFIG = $(KUBECONFIG_RUNTIME_CLUSTER)
+
 # KUBECONFIG_SEED_SECRET_PATH (used to create a Secret for Seeds containing the kubeconfig such that gardenctl works)
-kind-single-node-up kind-single-node-down kind-multi-node-up kind-multi-node-down kind-multi-zone-up kind-multi-zone-down ci-e2e-kind-ha-multi-zone-upgrade: export KUBECONFIG_SEED_SECRET_PATH = $(DEV_SETUP)/gardenlet/components/kubeconfigs/seed-local/kubeconfig
-kind-single-node2-up kind-single-node2-down kind-multi-node2-up kind-multi-node2-down: export KUBECONFIG_SEED_SECRET_PATH = $(DEV_SETUP)/gardenlet/components/kubeconfigs/seed-local2/kubeconfig
+kind-single-node-% kind-multi-node-% kind-multi-zone-%: export KUBECONFIG_SEED_SECRET_PATH = $(DEV_SETUP)/gardenlet/components/kubeconfigs/seed-local/kubeconfig
+kind-single-node2-% kind-multi-node2-%: export KUBECONFIG_SEED_SECRET_PATH = $(DEV_SETUP)/gardenlet/components/kubeconfigs/seed-local2/kubeconfig
+
 # CLUSTER_NAME
-kind-single-node-up kind-single-node-down kind-multi-node-up kind-multi-node-down kind-multi-zone-up kind-multi-zone-down: export CLUSTER_NAME = gardener-local
-kind-single-node2-up kind-single-node2-down kind-multi-node2-up kind-multi-node2-down: export CLUSTER_NAME = gardener-local2
+kind-single-node-% kind-multi-node-% kind-multi-zone-%: export CLUSTER_NAME = gardener-local
+kind-single-node2-% kind-multi-node2-%: export CLUSTER_NAME = gardener-local2
 
 # CLUSTER_VALUES
-kind-single-node-up kind-single-node-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/single-node/values.yaml
-kind-multi-node-up kind-multi-node-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/multi-node/values.yaml
-kind-multi-zone-up kind-multi-zone-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/multi-zone/values.yaml
-kind-single-node2-up kind-single-node2-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/single-node2/values.yaml
-kind-multi-node2-up kind-multi-node2-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/multi-node2/values.yaml
+kind-single-node-%: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/single-node/values.yaml
+kind-single-node2-%: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/single-node2/values.yaml
+kind-multi-node-%: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/multi-node/values.yaml
+kind-multi-node2-%: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/multi-node2/values.yaml
+kind-multi-zone-%: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/multi-zone/values.yaml
+
 # ADDITIONAL_PARAMETERS
 kind-single-node2-down kind-multi-node2-down: export ADDITIONAL_PARAMETERS = --keep-backupbuckets-dir
 kind-multi-zone-up: export ADDITIONAL_PARAMETERS = --multi-zonal
@@ -432,22 +425,21 @@ test-e2e-local-gardenadm-unmanaged-infra-initjoin: $(GINKGO)
 test-e2e-local-gardenadm-unmanaged-infra-connect: $(GINKGO)
 	./hack/test-e2e-local.sh gardenadm --procs=1 --label-filter="unmanaged-infra && connect" ./test/e2e/gardenadm/...
 
-test-non-ha-pre-upgrade: $(GINKGO)
+test-e2e-non-ha-pre-upgrade: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="pre-upgrade && !high-availability" ./test/e2e/gardener/...
-test-pre-upgrade: $(GINKGO)
+test-e2e-pre-upgrade: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="pre-upgrade" ./test/e2e/gardener/...
-
-test-non-ha-post-upgrade: $(GINKGO)
+test-e2e-non-ha-post-upgrade: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="post-upgrade && !high-availability" ./test/e2e/gardener/...
-test-post-upgrade: $(GINKGO)
+test-e2e-post-upgrade: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="post-upgrade" ./test/e2e/gardener/...
 
 ci-e2e-kind: $(KIND) $(YQ)
 	./hack/ci-e2e-kind.sh
 ci-e2e-kind-migration: $(KIND) $(YQ)
-	KUBECONFIG_SEED2_CLUSTER=$(KUBECONFIG_SEED2_CLUSTER) ./hack/ci-e2e-kind-migration.sh
+	./hack/ci-e2e-kind-migration.sh
 ci-e2e-kind-migration-ha-multi-node: $(KIND) $(YQ)
-	KUBECONFIG_SEED2_CLUSTER=$(KUBECONFIG_SEED2_CLUSTER) SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/ci-e2e-kind-migration-ha-multi-node.sh
+	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/ci-e2e-kind-migration-ha-multi-node.sh
 ci-e2e-kind-ha-multi-node: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-ha-multi-node.sh
 ci-e2e-kind-ha-multi-zone: $(KIND) $(YQ)
@@ -460,10 +452,15 @@ ci-e2e-kind-gardenadm-unmanaged-infra-external-gardener: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-gardenadm-unmanaged-infra-external-gardener.sh
 ci-e2e-kind-gardenadm-managed-infra: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-gardenadm-managed-infra.sh
-
 ci-e2e-kind-upgrade: $(KIND) $(YQ)
 	SHOOT_FAILURE_TOLERANCE_TYPE= GARDENER_PREVIOUS_RELEASE=$(GARDENER_PREVIOUS_RELEASE) GARDENER_RELEASE_DOWNLOAD_PATH=$(GARDENER_RELEASE_DOWNLOAD_PATH) GARDENER_NEXT_RELEASE=$(GARDENER_NEXT_RELEASE) ./hack/ci-e2e-kind-upgrade.sh
 ci-e2e-kind-ha-multi-node-upgrade: $(KIND) $(YQ)
 	SHOOT_FAILURE_TOLERANCE_TYPE=node GARDENER_PREVIOUS_RELEASE=$(GARDENER_PREVIOUS_RELEASE) GARDENER_RELEASE_DOWNLOAD_PATH=$(GARDENER_RELEASE_DOWNLOAD_PATH) GARDENER_NEXT_RELEASE=$(GARDENER_NEXT_RELEASE) ./hack/ci-e2e-kind-upgrade.sh
 ci-e2e-kind-ha-multi-zone-upgrade: $(KIND) $(YQ)
 	SHOOT_FAILURE_TOLERANCE_TYPE=zone GARDENER_PREVIOUS_RELEASE=$(GARDENER_PREVIOUS_RELEASE) GARDENER_RELEASE_DOWNLOAD_PATH=$(GARDENER_RELEASE_DOWNLOAD_PATH) GARDENER_NEXT_RELEASE=$(GARDENER_NEXT_RELEASE) ./hack/ci-e2e-kind-upgrade.sh
+
+ENVTEST_TYPE ?= kubernetes
+
+.PHONY: start-envtest
+start-envtest: $(SETUP_ENVTEST)
+	@./hack/start-envtest.sh --environment-type=$(ENVTEST_TYPE)
