@@ -651,6 +651,15 @@ profiles:
       kustomize:
         paths:
           - dev-setup/gardenlet/overlays/multi-zone-ipv6
+  - name: single-node2
+    manifests:
+      kustomize:
+        paths:
+          - dev-setup/gardenlet/overlays/single-node2
+    patches:
+      - op: replace
+        path: /deploy/kubectl/hooks/after/0/host/command/2
+        value: "KUBECONFIG=$VIRTUAL_GARDEN_KUBECONFIG hack/usage/wait-for.sh seed local2 GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady"
   - name: multi-node2
     manifests:
       kustomize:
