@@ -9,28 +9,9 @@
     - localhost
     - 127.0.0.1
     - ::1
-{{- if .Values.gardener.controlPlane.kindIsGardenCluster }}
-    - garden.local.gardener.cloud
-{{- end }}
     extraArgs:
-      authorization-config: /etc/gardener-local/kube-apiserver/authz-config.yaml
       feature-gates: "MutatingAdmissionPolicy=true"
       runtime-config: "admissionregistration.k8s.io/v1alpha1=true,admissionregistration.k8s.io/v1beta1=true"
-    extraVolumes:
-    - name: authz-config
-      mountPath: /etc/gardener-local/kube-apiserver/authz-config.yaml
-      readOnly: true
-      pathType: File
-{{- if and .Values.gardener.controlPlane.deployed .Values.gardener.controlPlane.kindIsGardenCluster }}
-      hostPath: /etc/gardener-local/kube-apiserver/authz-config-with-seedauthorizer.yaml
-    - name: authz-webhook-kubeconfig
-      mountPath: /etc/gardener-local/kube-apiserver/authz-webhook-kubeconfig.yaml
-      hostPath: /etc/gardener-local/kube-apiserver/authz-webhook-kubeconfig.yaml
-      readOnly: true
-      pathType: File
-{{- else }}
-      hostPath: /etc/gardener-local/kube-apiserver/authz-config-without-seedauthorizer.yaml
-{{- end }}
   controllerManager:
     extraArgs:
       # TODO(LucaBernstein): Remove once kind uses a Kubernetes version that includes the fix for

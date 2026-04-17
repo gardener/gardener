@@ -399,13 +399,9 @@ if [[ "$IPFAMILY" == "dual" ]]; then
   ADDITIONAL_ARGS="$ADDITIONAL_ARGS --values $CHART/values-dual.yaml"
 fi
 
-if [[ "$IPFAMILY" == "ipv6" ]] && [[ "$MULTI_ZONAL" == "true" ]]; then
-  ADDITIONAL_ARGS="$ADDITIONAL_ARGS --set gardener.seed.istio.listenAddresses={fd00:ff::1,fd00:ff::10,fd00:ff::11,fd00:ff::12}"
-fi
-
 kind create cluster \
   --name "$CLUSTER_NAME" \
-  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "gardener.repositoryRoot"=$(dirname "$0")/.. --set "dockerSocket=$(docker_socket)")
+  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "repositoryRoot"=$(dirname "$0")/.. --set "dockerSocket=$(docker_socket)")
 
 nodes=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}')
 

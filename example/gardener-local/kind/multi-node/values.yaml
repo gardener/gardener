@@ -1,13 +1,3 @@
-gardener:
-  controlPlane:
-    deployed: true
-    kindIsGardenCluster: false
-    customEtcdStatefulSet: false
-  nginxIngress:
-    deployed: true
-  garden:
-    deployed: true
-
 workers:
   - zone: "0"
   - zone: "0"
