@@ -1,6 +1,4 @@
 gardener:
-  controlPlane:
-    deployed: false
   selfHostedShoot:
     deployed: false
 
