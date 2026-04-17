@@ -252,7 +252,7 @@ verify-extended: check-generate check format test-cov test-cov-clean test-integr
 # Rules for local environment                                       #
 #####################################################################
 
-kind-% operator-% garden-% seed-% ci-e2e-kind: export IPFAMILY := $(IPFAMILY)
+kind-% operator-% gardener-% garden-% seed-% ci-e2e-kind: export IPFAMILY := $(IPFAMILY)
 
 export KUBECONFIG_RUNTIME_CLUSTER        := $(DEV_SETUP)/kubeconfigs/runtime/kubeconfig
 export KUBECONFIG_VIRTUAL_GARDEN_CLUSTER := $(DEV_SETUP)/kubeconfigs/virtual-garden/kubeconfig
@@ -263,7 +263,7 @@ export KUBECONFIG_SEED2_CLUSTER          := $(DEV_SETUP)/kubeconfigs/seed2/kubec
 kind-single-node-% kind-multi-node-% kind-multi-zone-%: export KUBECONFIG = $(KUBECONFIG_RUNTIME_CLUSTER)
 kind-single-node2-% kind-multi-node2-%: export KUBECONFIG = $(KUBECONFIG_SEED2_CLUSTER)
 
-operator-% garden-% seed-% gardenadm-% remote-%: export KUBECONFIG = $(KUBECONFIG_RUNTIME_CLUSTER)
+operator-% gardener-% garden-% seed-% gardenadm-% remote-%: export KUBECONFIG = $(KUBECONFIG_RUNTIME_CLUSTER)
 
 test-e2e-%: export KUBECONFIG = $(KUBECONFIG_VIRTUAL_GARDEN_CLUSTER)
 test-e2e-local-operator test-e2e-local-gardenadm-%: export KUBECONFIG = $(KUBECONFIG_RUNTIME_CLUSTER)
@@ -367,15 +367,15 @@ seed-%: export SKAFFOLD_FILENAME = $(DEV_SETUP)/skaffold-seed.yaml
 seed-up seed-dev seed-debug seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./dev-setup/seed.sh $(subst seed-,,$@)
 
-# TODO(rfranzke): Rename `operator-seed-%` to `gardener-%` once the legacy Helm chart-based setup is refactored.
-operator-seed-%: export SKAFFOLD_FILENAME = $(DEV_SETUP)/skaffold-seed.yaml
-operator-seed-up: SKAFFOLD_MODE=run
-operator-seed-dev: SKAFFOLD_MODE=dev
-operator-seed-dev: export SKAFFOLD_PROFILE=dev
-operator-seed-up operator-seed-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) operator-up garden-up seed-up
+# gardener-{up,dev,down}
+gardener-%: export SKAFFOLD_FILENAME = $(DEV_SETUP)/skaffold-seed.yaml
+gardener-up: SKAFFOLD_MODE=run
+gardener-dev: SKAFFOLD_MODE=dev
+gardener-dev: export SKAFFOLD_PROFILE=dev
+gardener-up gardener-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) operator-up garden-up seed-up
 	kubectl annotate garden local gardener.cloud/operation=reconcile
 	TIMEOUT=900 ./hack/usage/wait-for.sh garden local VirtualGardenAPIServerAvailable RuntimeComponentsHealthy VirtualComponentsHealthy ObservabilityComponentsHealthy
-operator-seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL) seed-down garden-down
+gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL) seed-down garden-down
 
 # gardenadm
 gardenadm:

@@ -23,12 +23,12 @@ trap "
   ( export KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER; export cluster_name='virtual-garden'; export_resource_yamls_for seeds shoots bastions.operations.gardener.cloud etcds leases; export_events_for_shoots )
   ( export KUBECONFIG=$KUBECONFIG_SEED2_CLUSTER; export_artifacts "gardener-local2" )
   ( make seed-down KUBECONFIG="$KUBECONFIG_SEED2_CLUSTER" )
-  ( make operator-seed-down )
+  ( make gardener-down )
   ( make kind-single-node2-down )
   ( make kind-down )
 " EXIT
 
-make operator-seed-up
+make gardener-up
 make seed-up KUBECONFIG="$KUBECONFIG_SEED2_CLUSTER"
 
 make test-e2e-local-migration

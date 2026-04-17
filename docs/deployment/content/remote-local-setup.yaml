@@ -120,7 +120,7 @@ spec:
           - '${g}prepare-gardener.sh${n}'                        A basic 'make kind-up gardener-up' setup
           - '${g}prepare-operator.sh${n}'                        A 'make kind-multi-zone-up operator-up' setup
              ${g}                   ${n}                         with several tmux windows
-          - '${g}prepare-operator-complete.sh${n}'               A 'make kind-multi-zone-up operator-up operator-seed-up' setup,
+          - '${g}prepare-operator-complete.sh${n}'               A 'make kind-multi-zone-up gardener-up' setup,
              ${g}                            ${n}                a complete local "development landscape"
           - '${g}IPFAMILY=ipv6 prepare-operator-complete.sh${n}' As 'prepare-operator-complete.sh' but using IPv6. It requires
              ${g}                                          ${n}  a shoot with IPv6 enabled.
@@ -434,9 +434,9 @@ spec:
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/runtime/kubeconfig
             nice make operator-up
           EOF
-          new_pane "make operator-seed-up" <<"EOF"
+          new_pane "make gardener-up" <<"EOF"
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/runtime/kubeconfig
-            nice make operator-seed-up
+            nice make gardener-up
           EOF
           new_window "garden" "garden" Enter <<"EOF"
             watch k get garden

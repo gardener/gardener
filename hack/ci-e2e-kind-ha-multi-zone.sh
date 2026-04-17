@@ -20,9 +20,9 @@ trap "
   ( export_artifacts_host_services; export_artifacts_infra; export_artifacts_load_balancers )
   ( export KUBECONFIG=$KUBECONFIG_RUNTIME_CLUSTER; export_artifacts 'gardener-local'; export_resource_yamls_for garden )
   ( export KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER; export cluster_name='virtual-garden'; export_resource_yamls_for gardenlet seeds shoots; export_events_for_shoots )
-  ( make operator-seed-down )
+  ( make gardener-down )
   ( make kind-multi-zone-down )
 " EXIT
 
-make operator-seed-up
+make gardener-up
 make test-e2e-local-ha-multi-zone
