@@ -34,7 +34,7 @@ case "$COMMAND" in
       TIMEOUT=60 SKIP_LAST_OPERATION_CHECK=true "$(dirname "$0")"/../hack/usage/wait-for.sh extop provider-local AdmissionHealthy
     fi
     # Export kubeconfig for the virtual garden cluster
-    RUNTIME_CLUSTER_KUBECONFIG="$KUBECONFIG" GARDEN_NAME="$garden_name" "$(dirname "$0")"/../hack/usage/generate-admin-kubeconfig-local.sh virtual-garden > "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER"
+    RUNTIME_CLUSTER_KUBECONFIG="$KUBECONFIG" GARDEN_NAME="$garden_name" "$(dirname "$0")"/../hack/usage/generate-kubeconfig.sh virtual-garden > "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER"
     # Rerun registry script to deploy pull secret into virtual garden
     if [[ "$SCENARIO" == "remote" ]]; then
       registry_domain=$(cat "$(dirname "$0")/remote/registry/registrydomain")
