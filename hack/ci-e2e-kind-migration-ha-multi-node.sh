@@ -24,8 +24,8 @@ trap "
   ( export KUBECONFIG=$KUBECONFIG_SEED2_CLUSTER; export_artifacts "gardener-local2" )
   ( make seed-down KUBECONFIG="$KUBECONFIG_SEED2_CLUSTER" )
   ( make operator-seed-down )
-  ( make kind-multi-node-down )
   ( make kind-multi-node2-down )
+  ( make kind-multi-node-down )
 " EXIT
 
 make operator-seed-up
