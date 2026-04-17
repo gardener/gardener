@@ -23,19 +23,6 @@ registry        IN      NS      docker-dns.local.gardener.cloud.
 registry-cache  IN      NS      docker-dns.local.gardener.cloud.
 docker-dns      IN      A       127.0.0.11
 
-; The garden.local.gardener.cloud cluster is used in the non-operator setup for connecting to the kind cluster that
-; acts as the garden cluster. Historically, we injected the kind cluster's control plane IP address (address of the
-; *-control-plane node) as an host alias for garden.local.gardener.cloud into all kind nodes (/etc/hosts).
-; In the operator setup, the garden cluster is accessible at api.virtual-garden.local.gardener.cloud, which is
-; provisioned via a DNSRecord. provider-local pushes this record to bind9 making it resolvable from the host and
-; containers.
-; Until we have migrated all local setup scenarios to the operator setup, we need to keep the old record for
-; garden.local.gardener.cloud. Instead of injecting it into the nodes and coredns, we simply create a CNAME record
-; pointing to the control plane node name, which will be resolved by Docker's built-in DNS server to correct container
-; IP.
-; TODO(rfranzke): Remove this after legacy helm-based dev setup has been dropped.
-garden          IN  CNAME       gardener-local-control-plane.
-
 ; The self-hosted shoot API server is accessible from the host machine via a port mapping through the kind cluster
 ; node. The loopback device for this IP is set up in hack/kind-setup-loopback-devices.sh.
 api.root.garden.external    IN  A       172.18.255.4

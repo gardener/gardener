@@ -33,8 +33,7 @@ KUBECONFIG_FILE="${TMP_DIR}/kubeconfig"
 if [[ "$MODE" == "virtual-garden" ]]; then
   CLUSTER_NAME="virtual-garden"
 
-  # TODO(rfranzke): Remove this once we store the kind/runtime cluster kubeconfig at a fixed location.
-  RUNTIME_CLUSTER_KUBECONFIG="${RUNTIME_CLUSTER_KUBECONFIG:-"$(dirname "$0")/../../dev-setup/kubeconfigs/runtime/kubeconfig"}"
+  RUNTIME_CLUSTER_KUBECONFIG="$(dirname "$0")/../../dev-setup/kubeconfigs/runtime/kubeconfig"
   GARDEN_NAME="${GARDEN_NAME:-local}"
 
   cp "$RUNTIME_CLUSTER_KUBECONFIG" "${KUBECONFIG_FILE}"
