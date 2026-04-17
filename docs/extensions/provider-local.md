@@ -107,7 +107,7 @@ In addition, we had issues with shoot clusters having more than one node (hence,
 
 This controller renders a simple cloud-init template which can later be executed by the shoot worker nodes.
 
-The shoot worker nodes are `Pod`s with a container based on the `kindest/node` image. This is maintained in the [`pkg/provider-local/machine-provider/image`](../../pkg/provider-local/machine-provider/image) directory and has a special `run-userdata` systemd service which executes the cloud-init generated earlier by the `OperatingSystemConfig` controller.
+The shoot worker nodes are `Pod`s with a container based on the `kindest/node` image. This is maintained in the [`pkg/provider-local/machine-provider/node`](../../pkg/provider-local/machine-provider/node) directory and has a special `run-userdata` systemd service which executes the cloud-init generated earlier by the `OperatingSystemConfig` controller.
 
 #### `Worker`
 
@@ -194,7 +194,7 @@ Out of tree (controller-based) implementation for `local` as a new provider.
 The local out-of-tree provider implements the interface defined at [MCM OOT driver](https://github.com/gardener/machine-controller-manager/blob/master/pkg/util/provider/driver/driver.go).
 
 For every `Machine` object, the [local machine provider](../../pkg/provider-local/machine-provider) creates a `Pod` in the shoot control plane namespace.
-A machine pod uses an [image](../../pkg/provider-local/machine-provider/image) based on [kind's](https://github.com/kubernetes-sigs/kind) node image (`kindest/node`).
+A machine pod uses an [image](../../pkg/provider-local/machine-provider/node) based on [kind's](https://github.com/kubernetes-sigs/kind) node image (`kindest/node`).
 The machine's user data is deployed as a `Secret` in the shoot control plane namespace and mounted into the machine pod.
 In contrast to kind, the local machine image doesn't directly run kubelet as a systemd unit. Instead, it has a unit for running the user data script at `/etc/machine/userdata`.
 

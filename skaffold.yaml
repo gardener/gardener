@@ -1044,7 +1044,7 @@ build:
       context: pkg/provider-local/cloud-provider/loadbalancer/image
       docker: {}
     - image: local-skaffold/gardener-extension-provider-local/node
-      context: pkg/provider-local/machine-provider/image
+      context: pkg/provider-local/machine-provider/node
       docker: {}
     - image: local-skaffold/machine-controller-manager-provider-local
       ko:
