@@ -598,10 +598,10 @@ var _ = Describe("Seed controller tests", func() {
 					return test.ObjectNames(crdList)
 				}).WithTimeout(kubernetesutils.WaitTimeout).Should(ContainElements(crdsOnlyForSeedClusters))
 
-				patchPlutonoMRHealth := func(mrName string) {
-					// The seed controller waits for the plutono ManagedResource to be healthy, so
+				patchMRHealth := func(mrName string) {
+					// The seed controller waits for the plutono/prometheus ManagedResources to be healthy, so
 					// let's fake this here.
-					By("Patch plutono deployment to report healthiness")
+					By("Patch " + mrName + " managed resource to report healthiness")
 					Eventually(func(g Gomega) {
 						mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: mrName, Namespace: testNamespace.Name}}
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
@@ -642,7 +642,7 @@ var _ = Describe("Seed controller tests", func() {
 						g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
 					}).Should(Succeed())
 
-					patchPlutonoMRHealth("plutono")
+					patchMRHealth("plutono")
 				} else {
 					By("Verify that the CRDs shared with the garden cluster have not been deployed (gardener-operator deploys them)")
 					Eventually(func(g Gomega) []string {
@@ -711,8 +711,9 @@ var _ = Describe("Seed controller tests", func() {
 						return testClient.Get(ctx, client.ObjectKey{Name: "gardenlet-vpa", Namespace: testNamespace.Name}, &vpaautoscalingv1.VerticalPodAutoscaler{})
 					}).WithTimeout(kubernetesutils.WaitTimeout).Should(Succeed())
 
-					patchPlutonoMRHealth("plutono-seed-config-only")
+					patchMRHealth("plutono-seed-config-only")
 				}
+				patchMRHealth("prometheus-aggregate")
 
 				controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
 				Expect(testClient.List(ctx, controllerRegistrationList)).To(Succeed())

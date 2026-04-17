@@ -50,6 +50,7 @@ func CmpOptsForVirtualService() cmp.Option {
 		istioapinetworkingv1beta1.HTTPMatchRequest{},
 		istioapinetworkingv1beta1.HTTPRoute{},
 		istioapinetworkingv1beta1.HTTPRouteDestination{},
+		istioapinetworkingv1beta1.HTTPDirectResponse{},
 		istioapinetworkingv1beta1.Destination{},
 		istioapinetworkingv1beta1.PortSelector{},
 		istioapinetworkingv1beta1.TLSRoute{},

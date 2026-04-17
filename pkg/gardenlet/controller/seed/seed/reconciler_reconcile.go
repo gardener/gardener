@@ -482,11 +482,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			SkipIf:       seedIsGarden,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying istio-basic-auth-server",
-			Fn:           c.istioBasicAuthServer.Deploy,
-			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents, waitUntilPlutonoReady),
-		})
-		_ = g.Add(flow.Task{
 			Name:         "Deploying Prometheus Operator",
 			Fn:           c.prometheusOperator.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
@@ -502,15 +497,25 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn:           c.seedPrometheus.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})
-		_ = g.Add(flow.Task{
+		deployAggregatePrometheus = g.Add(flow.Task{
 			Name:         "Deploying aggregate Prometheus",
 			Fn:           c.aggregatePrometheus.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+		})
+		waitUntilAggregatePrometheusReady = g.Add(flow.Task{
+			Name:         "Waiting until aggregate Prometheus is ready",
+			Fn:           c.aggregatePrometheus.Wait,
+			Dependencies: flow.NewTaskIDs(deployAggregatePrometheus),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Alertmanager",
 			Fn:           c.alertManager.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying istio-basic-auth-server",
+			Fn:           c.istioBasicAuthServer.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents, waitUntilAggregatePrometheusReady, waitUntilPlutonoReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Perses Operator",

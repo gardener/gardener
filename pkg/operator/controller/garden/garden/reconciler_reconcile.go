@@ -630,12 +630,22 @@ func (r *Reconciler) reconcile(
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady, initializeVirtualClusterClient),
 		})
-		_ = g.Add(flow.Task{
+		waitUntilPrometheusGardenReady = g.Add(flow.Task{
+			Name:         "Waiting until Garden Prometheus is ready",
+			Fn:           c.prometheusGarden.Wait,
+			Dependencies: flow.NewTaskIDs(deployPrometheusGarden),
+		})
+		deployPrometheusLongTerm = g.Add(flow.Task{
 			Name: "Deploying long-term Prometheus",
 			Fn: func(ctx context.Context) error {
 				return r.deployLongTermPrometheus(ctx, secretsManager, c.prometheusLongTerm)
 			},
 			Dependencies: flow.NewTaskIDs(deployPrometheusGarden),
+		})
+		waitUntilPrometheusLongTermReady = g.Add(flow.Task{
+			Name:         "Waiting until long-term Prometheus is ready",
+			Fn:           c.prometheusLongTerm.Wait,
+			Dependencies: flow.NewTaskIDs(deployPrometheusLongTerm),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying OpenTelemetry Collector",
@@ -671,7 +681,7 @@ func (r *Reconciler) reconcile(
 		_ = g.Add(flow.Task{
 			Name:         "Deploying istio-basic-auth-server",
 			Fn:           c.istioBasicAuthServer.Deploy,
-			Dependencies: flow.NewTaskIDs(waitUntilPlutonoReady),
+			Dependencies: flow.NewTaskIDs(waitUntilPrometheusGardenReady, waitUntilPrometheusLongTermReady, waitUntilPlutonoReady),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying perses-operator",

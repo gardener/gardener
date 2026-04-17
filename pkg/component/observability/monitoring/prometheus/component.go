@@ -113,7 +113,7 @@ type Values struct {
 	// CentralConfigs contains configuration for this Prometheus instance that is created together with it. This should
 	// only contain configuration that cannot be directly assigned to another component package.
 	CentralConfigs CentralConfigs
-	// IngressValues contains configuration for exposing this Prometheus instance via an Ingress resource.
+	// IngressValues contains configuration for exposing this Prometheus instance via a VirtualService resource.
 	Ingress *IngressValues
 	// Alerting contains alerting configuration for this Prometheus instance.
 	Alerting *AlertingValues
@@ -179,12 +179,16 @@ type RemoteWriteValues struct {
 	GlobalShootRemoteWriteSecret *corev1.Secret
 }
 
-// IngressValues contains configuration for exposing this Prometheus instance via an Ingress resource.
+// IngressValues contains configuration for exposing this Prometheus instance via a VirtualService resource.
 type IngressValues struct {
 	// AuthSecretName is the name of the auth secret.
 	AuthSecretName string
 	// Host is the hostname under which the Prometheus instance should be exposed.
 	Host string
+	// IsGardenCluster specifies whether the cluster is garden cluster.
+	IsGardenCluster bool
+	// IstioIngressGatewayLabels are the labels identifying the corresponding istio ingress gateway.
+	IstioIngressGatewayLabels map[string]string
 	// SecretsManager is the secrets manager used for generating the TLS certificate if no wildcard certificate is
 	// provided.
 	SecretsManager secretsmanager.Interface
@@ -245,7 +249,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	ingress, err := p.ingress(ctx)
+	istioResources, err := p.istioResources(ctx)
 	if err != nil {
 		return err
 	}
@@ -270,7 +274,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		clusterRoleBinding = p.clusterRoleBinding()
 	}
 
-	resources, err := registry.AddAllAndSerialize(
+	objects := append([]client.Object{
 		p.serviceAccount(),
 		p.service(),
 		clusterRoleBinding,
@@ -284,8 +288,9 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		p.prometheus(cortexConfigMap),
 		p.vpa(),
 		p.podDisruptionBudget(),
-		ingress,
-	)
+	}, istioResources...)
+
+	resources, err := registry.AddAllAndSerialize(objects...)
 	if err != nil {
 		return err
 	}
