@@ -57,6 +57,7 @@ spec:
         featureGates:
           CloudProfileCapabilities: true
           InPlaceNodeUpdates: true
+          VersionClassificationLifecycle: true
       gardenerDashboard: {}
       gardenerDiscoveryServer:
         domain:

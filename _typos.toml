@@ -45,6 +45,5 @@ extend-exclude = [
     "crd-opentelemetry.io*.yaml",
     "crd-operator.victoriametrics.com*.yaml",
     "10-crd-operator.victoriametrics.com*.yaml",
-    "example/gardener-local/controlplane/values.yaml",
     "pkg/component/observability/plutono/dashboards/garden-seed/istio/istio-service-dashboard.json",
 ]
