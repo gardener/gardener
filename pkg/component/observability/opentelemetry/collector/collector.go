@@ -40,10 +40,11 @@ import (
 )
 
 const (
-	managedResourceNameTarget  = "logging-target"
-	managedResourceName        = "opentelemetry-collector"
-	serviceMonitorName         = "opentelemetry-collector"
-	openTelemetryCollectorName = "gardener-opentelemetry-collector"
+	managedResourceNameTarget           = "logging-target"
+	managedResourceName                 = "opentelemetry-collector"
+	serviceMonitorName                  = "opentelemetry-collector"
+	openTelemetryCollectorName          = "gardener-opentelemetry-collector"
+	kubeRBACProxyClusterRoleBindingName = "gardener.cloud:logging:rbac-proxy"
 
 	kubeRBACProxyName = "rbac-proxy"
 
@@ -123,16 +124,17 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		genericTokenKubeconfigSecretName string
 		loggingAgentShootAccessSecret    = o.newLoggingAgentShootAccessSecret()
 		kubeRBACProxyShootAccessSecret   = o.newKubeRBACProxyShootAccessSecret()
-		objects                          = []client.Object{}
+		shootObjects                     = []client.Object{}
+		seedObjects                      = []client.Object{}
 	)
 
-	if o.values.ShootNodeLoggingEnabled {
-		if err := loggingAgentShootAccessSecret.Reconcile(ctx, o.client); err != nil {
-			return err
+	if o.values.ClusterType == component.ClusterTypeShoot {
+		if o.values.WithRBACProxy {
+			if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, o.client); err != nil {
+				return err
+			}
 		}
-		if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, o.client); err != nil {
-			return err
-		}
+
 		ingressTLSSecret, err := o.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 			Name:                        "logging-tls",
 			CommonName:                  o.values.IngressHost,
@@ -152,19 +154,29 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		}
 		genericTokenKubeconfigSecretName = genericTokenKubeconfigSecret.Name
 
-		objects = append(objects, o.getIngress(ingressTLSSecret.Name))
+		seedObjects = append(seedObjects, o.getIngress(ingressTLSSecret.Name))
+		shootObjects = append(shootObjects, o.getKubeRBACProxyClusterRoleBinding(kubeRBACProxyShootAccessSecret.ServiceAccountName))
+	}
 
-		kubeRBACProxyClusterRoleBinding := o.getKubeRBACProxyClusterRoleBinding(kubeRBACProxyShootAccessSecret.ServiceAccountName)
+	if o.values.ShootNodeLoggingEnabled {
+		if err := loggingAgentShootAccessSecret.Reconcile(ctx, o.client); err != nil {
+			return err
+		}
+
 		loggingAgentClusterRole := o.getLoggingAgentClusterRole()
-		loggingAgentClusterRoleBinding := o.getLoggingAgentClusterRoleBinding(loggingAgentShootAccessSecret.ServiceAccountName, loggingAgentClusterRole.Name)
+		shootObjects = append(shootObjects, loggingAgentClusterRole)
+		shootObjects = append(shootObjects, o.getLoggingAgentClusterRoleBinding(loggingAgentShootAccessSecret.ServiceAccountName, loggingAgentClusterRole.Name))
+	} else {
+		if err := kubernetesutils.DeleteObjects(ctx, o.client,
+			loggingAgentShootAccessSecret.Secret,
+		); err != nil {
+			return err
+		}
+	}
 
-		resourcesTarget, err := managedresources.
-			NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).
-			AddAllAndSerialize(
-				kubeRBACProxyClusterRoleBinding,
-				loggingAgentClusterRole,
-				loggingAgentClusterRoleBinding,
-			)
+	if len(shootObjects) != 0 {
+		shootRegistry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+		resourcesTarget, err := shootRegistry.AddAllAndSerialize(shootObjects...)
 		if err != nil {
 			return err
 		}
@@ -172,25 +184,14 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		if err := managedresources.CreateForShoot(ctx, o.client, o.namespace, managedResourceNameTarget, managedresources.LabelValueGardener, false, resourcesTarget); err != nil {
 			return err
 		}
-	} else {
-		if err := managedresources.DeleteForShoot(ctx, o.client, o.namespace, managedResourceNameTarget); err != nil {
-			return err
-		}
-
-		if err := kubernetesutils.DeleteObjects(ctx, o.client,
-			loggingAgentShootAccessSecret.Secret,
-			kubeRBACProxyShootAccessSecret.Secret,
-		); err != nil {
-			return err
-		}
 	}
 
-	objects = append(objects, o.openTelemetryCollector(o.namespace, o.values.LokiEndpoint, genericTokenKubeconfigSecretName))
-	objects = append(objects, o.serviceMonitor())
-	objects = append(objects, o.serviceAccount())
+	seedObjects = append(seedObjects, o.openTelemetryCollector(o.namespace, o.values.LokiEndpoint, genericTokenKubeconfigSecretName))
+	seedObjects = append(seedObjects, o.serviceMonitor())
+	seedObjects = append(seedObjects, o.serviceAccount())
 
-	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-	serializedResources, err := registry.AddAllAndSerialize(objects...)
+	seedRegistry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	serializedResources, err := seedRegistry.AddAllAndSerialize(seedObjects...)
 	if err != nil {
 		return err
 	}
@@ -201,7 +202,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 func (o *otelCollector) getKubeRBACProxyClusterRoleBinding(serviceAccountName string) *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "gardener.cloud:logging:rbac-proxy",
+			Name:   kubeRBACProxyClusterRoleBindingName,
 			Labels: map[string]string{v1beta1constants.LabelApp: kubeRBACProxyName},
 		},
 		RoleRef: rbacv1.RoleRef{
