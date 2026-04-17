@@ -431,7 +431,6 @@ You can also run these tests on your development machine, using the following co
 
 ```bash
 make kind-up
-export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig
 make gardener-up
 make test-e2e-local  # alternatively: make test-e2e-local-simple
 ```

@@ -41,12 +41,14 @@ make kind-up
 
 > If you want to set up an IPv6 KinD cluster, use `make kind-up IPFAMILY=ipv6` instead.
 
-This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/local/kubeconfig` file.
+This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./dev-setup/kubeconfigs/runtime/kubeconfig` file.
 
 > It might be helpful to copy this file to `$HOME/.kube/config`, since you will need to target this KinD cluster multiple times.
-Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/local/kubeconfig` for all future steps via `export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig`.
+Alternatively, make sure to set your `KUBECONFIG` environment variable to `./dev-setup/kubeconfigs/runtime/kubeconfig` for all future steps via `export KUBECONFIG=$PWD/dev-setup/kubeconfigs/runtime/kubeconfig`.
 
-All following steps assume that you are using this kubeconfig.
+After [setting up Gardener](#setting-up-gardener), the kubeconfig for the virtual garden cluster will be available at `./dev-setup/kubeconfigs/virtual-garden/kubeconfig`.
+
+All following steps assume that you are using the runtime cluster kubeconfig.
 
 Additionally, this command also deploys a local container registry to the cluster, as well as a few registry mirrors, that are set up as a pull-through cache for all upstream registries Gardener uses by default.
 This is done to speed up image pulls across local clusters.
@@ -177,6 +179,9 @@ Since the [ko](https://skaffold.dev/docs/builders/builder-types/ko/) builder is 
 
 ## Creating a `Shoot` Cluster
 
+> ![NOTE]
+> The following steps assume that you are using the kubeconfig that points to the virtual garden cluster: `export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig`.
+
 You can wait for the `Seed` to be ready by running:
 
 ```bash
@@ -218,7 +223,7 @@ kubectl apply -f example/provider-local/shoot-workerless.yaml
 (Optional): You could also execute a simple e2e test (creating and deleting a shoot) by running:
 
 ```shell
-make test-e2e-local-simple KUBECONFIG="$PWD/example/gardener-local/kind/local/kubeconfig"
+make test-e2e-local-simple KUBECONFIG=dev-setup/kubeconfigs/virtual-garden/kubeconfig
 ```
 
 ### Accessing the `Shoot` Cluster
@@ -258,18 +263,18 @@ The following steps describe how to do that.
 Start by setting up the second KinD cluster:
 
 ```bash
-make kind2-up
+make kind-single-node2-up
 ```
 
-This command sets up a new KinD cluster named `gardener-local2` and stores its kubeconfig in the `./example/gardener-local/kind/local2/kubeconfig` file.
+This command sets up a new KinD cluster named `gardener-local2` and stores its kubeconfig in the `./dev-setup/kubeconfigs/seed2/kubeconfig` file.
 
 In order to deploy required resources in the KinD cluster that you just created, run:
 
 ```bash
-make gardenlet-kind2-up
+make seed-up KUBECONFIG=dev-setup/kubeconfigs/seed2/kubeconfig
 ```
 
-The following steps assume that you are using the kubeconfig that points to the `gardener-local` cluster (first KinD cluster): `export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig`.
+The following steps assume that you are using the kubeconfig that points to the virtual garden cluster: `export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig`.
 
 You can wait for the `local2` `Seed` to be ready by running:
 
@@ -295,7 +300,7 @@ If you want to perform control plane migration, you can follow the steps outline
 ## (Optional): Tear Down the Second Seed Cluster
 
 ``` shell
-make kind2-down
+make kind-single-node2-down
 ```
 
 ## Tear Down the Gardener Environment
@@ -303,44 +308,6 @@ make kind2-down
 ```shell
 make kind-down
 ```
-
-## Alternative Way to Set Up Garden and Seed Leveraging `gardener-operator`
-
-Instead of starting Garden and Seed via `make kind-up gardener-up`, you can also use `gardener-operator` to create your local dev landscape.
-You can bring up `gardener-operator` with this command:
-
-```shell
-make kind-multi-zone-up operator-up
-```
-
-Afterwards, you can create your local `Garden` and install `gardenlet` into the KinD cluster with this command:
-
-```shell
-make gardener-up
-```
-
-You find the kubeconfig for the KinD cluster at `./dev-setup/kubeconfigs/runtime/kubeconfig`.
-The one for the virtual garden is accessible at `./dev-setup/kubeconfigs/virtual-garden/kubeconfig`.
-
-Similar as in the section _[Developing Gardener](#developing-gardener)_ it's possible to run a [Skaffold development loop](https://skaffold.dev/docs/workflows/dev/) as well using:
-```shell
-make gardener-dev
-```
-
-> :information_source: Please note that in this setup Skaffold is only watching for changes in the following components:
-> - [`gardenlet`](../concepts/gardenlet.md)
-> - `gardenlet/chart`
-> - [`gardener-resource-manager`](../concepts/resource-manager.md)
-> - [`gardener-node-agent`](../concepts/node-agent.md)
-
-Finally, please use this command to tear down your environment:
-
-```shell
-make kind-multi-zone-down
-```
-
-This setup supports creating shoots and managed seeds the same way as explained in the previous chapters.
-However, the development loop has limitations and the debugging setup is not working yet.
 
 ## Remote Local Setup
 
