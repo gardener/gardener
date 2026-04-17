@@ -33,7 +33,7 @@ This also includes the `gardenadm` CLI, which is installed on the machine pods b
 ## Setting Up the KinD Cluster
 
 ```shell
-make kind-single-node-up
+make kind-up
 ```
 
 Please see [this documentation section](getting_started_locally.md#alternative-way-to-set-up-garden-and-seed-leveraging-gardener-operator) for more details.
@@ -262,5 +262,5 @@ make test-e2e-local-gardenadm-managed-infra
 ## Tear Down the KinD Cluster
 
 ```shell
-make kind-single-node-down
+make kind-down
 ```

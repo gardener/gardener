@@ -22,7 +22,7 @@ function kind_up() {
     make kind-multi-zone-up
     ;;
   *)
-    make kind-single-node-up
+    make kind-up
     ;;
   esac
 }
@@ -36,7 +36,7 @@ function kind_down() {
     make kind-multi-zone-down
     ;;
   *)
-    make kind-single-node-down
+    make kind-down
     ;;
   esac
 }

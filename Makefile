@@ -319,6 +319,9 @@ kind-single-node2-down kind-multi-node2-down: $(KIND)
 		--path-kubeconfig-copy $(KUBECONFIG_SEED_SECRET_PATH) \
 		$(ADDITIONAL_PARAMETERS)
 
+kind-up: kind-single-node-up
+kind-down: kind-single-node-down
+
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
 # build the images for the platform matching the nodes of the active kubernetes cluster, even in `skaffold build`, which doesn't enable this by default
@@ -348,37 +351,21 @@ cloud-provider-local-up cloud-provider-local-dev cloud-provider-local-debug clou
 
 # operator-{up,dev,debug,down}
 operator-%: export SKAFFOLD_FILENAME = $(DEV_SETUP)/skaffold-operator.yaml
-operator-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./dev-setup/operator.sh up
-operator-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./dev-setup/operator.sh dev
-operator-debug: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./dev-setup/operator.sh debug
-operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./dev-setup/operator.sh down
+operator-up operator-dev operator-debug operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	./dev-setup/operator.sh $(subst operator-,,$@)
 
 # remote-{up,down}
-remote-up: $(KUBECTL)
-	./dev-setup/remote.sh up $(DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT)
-remote-down: $(KUBECTL)
-	./dev-setup/remote.sh down $(DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT)
+remote-up remote-down: $(KUBECTL)
+	./dev-setup/remote.sh $(subst remote-,,$@) $(DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT)
 
 # garden-{up,down}
-garden-up: $(KUBECTL)
-	./dev-setup/garden.sh up
-garden-down: $(KUBECTL)
-	./dev-setup/garden.sh down
+garden-up garden-down: $(KUBECTL)
+	./dev-setup/garden.sh $(subst garden-,,$@)
 
 # seed-{up,down}
 seed-%: export SKAFFOLD_FILENAME = $(DEV_SETUP)/skaffold-seed.yaml
-seed-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./dev-setup/seed.sh up
-seed-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./dev-setup/seed.sh dev
-seed-debug: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./dev-setup/seed.sh debug
-seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./dev-setup/seed.sh down
+seed-up seed-dev seed-debug seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	./dev-setup/seed.sh $(subst seed-,,$@)
 
 # TODO(rfranzke): Rename `operator-seed-%` to `gardener-%` once the legacy Helm chart-based setup is refactored.
 operator-seed-%: export SKAFFOLD_FILENAME = $(DEV_SETUP)/skaffold-seed.yaml
@@ -395,10 +382,8 @@ gardenadm:
 	BUILD_OUTPUT_FILE=./bin/ BUILD_PACKAGES=./cmd/gardenadm $(MAKE) build
 # gardenadm-{up,down}
 gardenadm-%: export SKAFFOLD_FILENAME = $(DEV_SETUP)/skaffold-gardenadm.yaml
-gardenadm-up: $(SKAFFOLD) $(KUBECTL)
-	./dev-setup/gardenadm.sh up
-gardenadm-down: $(SKAFFOLD) $(KUBECTL)
-	./dev-setup/gardenadm.sh down
+gardenadm-up gardenadm-down: $(SKAFFOLD) $(KUBECTL)
+	./dev-setup/gardenadm.sh $(subst gardenadm-,,$@)
 
 test-e2e-local: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default" ./test/e2e/gardener/...

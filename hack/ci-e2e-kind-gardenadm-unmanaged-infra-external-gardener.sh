@@ -19,10 +19,10 @@ trap "
   ( export KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER; export cluster_name='virtual-garden'; export_resource_yamls_for seeds shoots )
   ( make gardenadm-down SCENARIO=connect-kind )
   ( make gardenadm-down SCENARIO=unmanaged-infra )
-  ( make kind-single-node-down )
+  ( make kind-down )
 " EXIT
 
-make kind-single-node-up
+make kind-up
 make gardenadm-up SCENARIO=unmanaged-infra
 make gardenadm-up SCENARIO=connect-kind
 

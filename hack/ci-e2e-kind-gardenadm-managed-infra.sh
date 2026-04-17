@@ -18,10 +18,10 @@ trap "
   ( export KUBECONFIG=$KUBECONFIG_RUNTIME_CLUSTER; export_artifacts 'gardener-local'; export_resource_yamls_for garden )
   ( export KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER; export cluster_name='virtual-garden'; export_resource_yamls_for seeds shoots )
   ( make gardenadm-down SCENARIO=managed-infra )
-  ( make kind-single-node-down )
+  ( make kind-down )
 " EXIT
 
-make kind-single-node-up
+make kind-up
 make gardenadm-up SCENARIO=managed-infra
 
 make test-e2e-local-gardenadm-managed-infra
