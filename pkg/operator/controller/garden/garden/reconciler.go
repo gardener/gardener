@@ -118,10 +118,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	if result, err := r.reconcile(ctx, log, garden, secretsManager, targetVersion); err != nil {
-		return result, r.updateStatusOperationError(ctx, garden, err, operationType)
-	} else if result.RequeueAfter > 0 {
-		return result, nil
+	if err := r.reconcile(ctx, log, garden, secretsManager, targetVersion); err != nil {
+		return reconcile.Result{}, r.updateStatusOperationError(ctx, garden, err, operationType)
 	}
 
 	if err := r.updateStatusOperationSuccess(ctx, garden, operationType); err != nil {

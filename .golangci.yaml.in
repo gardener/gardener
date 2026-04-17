@@ -196,12 +196,6 @@ linters:
           alias: seedmanagementinformers
         - pkg: github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake
           alias: fakeseedmanagement
-        - pkg: github.com/gardener/gardener/pkg/client/settings/clientset/versioned
-          alias: settingsclientset
-        - pkg: github.com/gardener/gardener/pkg/client/settings/informers/externalversions
-          alias: settingsinformers
-        - pkg: github.com/gardener/gardener/pkg/client/settings/listers/settings/v1alpha1
-          alias: settingsv1alpha1lister
         - pkg: github.com/gardener/gardener/pkg/controllerutils/(\w+)
           alias: ${1}utils
         - pkg: github.com/gardener/gardener/test/envtest

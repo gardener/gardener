@@ -150,11 +150,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
 
-	canEnableNodeAgentAuthorizerWebhook, err := botanist.CanEnableNodeAgentAuthorizerWebhook(ctx)
-	if err != nil {
-		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
-	}
-
 	var (
 		g = flow.NewGraph(fmt.Sprintf("Shoot cluster %s", utils.IifString(isRestoring, "restoration", "reconciliation")))
 
@@ -330,7 +325,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name: "Deploying Kubernetes API server",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.DeployKubeAPIServer(ctx, canEnableNodeAgentAuthorizerWebhook)
+				return botanist.DeployKubeAPIServer(ctx, true)
 			}).RetryUntilTimeout(defaultInterval, deployKubeAPIServerTaskTimeout),
 			Dependencies: flow.NewTaskIDs(
 				initializeSecretsManagement,
@@ -374,24 +369,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			SkipIf:       o.Shoot.HibernationEnabled || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
-		// TODO(oliver-goetz): Consider removing this two-step deployment once we only support Kubernetes 1.32+ (in this
-		//  version, the structured authorization feature has been promoted to GA). We already use structured authz for
-		//  1.30+ clusters. This is similar to kube-apiserver deployment in gardener-operator.
-		//  See https://github.com/gardener/gardener/pull/10682#discussion_r1816324389 for more information.
-		deployKubeAPIServerWithNodeAgentAuthorizer = g.Add(flow.Task{
-			Name: "Deploying Kubernetes API server with node-agent-authorizer",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.DeployKubeAPIServer(ctx, true)
-			}).RetryUntilTimeout(defaultInterval, deployKubeAPIServerTaskTimeout),
-			SkipIf:       canEnableNodeAgentAuthorizerWebhook,
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
-		})
-		waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady = g.Add(flow.Task{
-			Name:         "Waiting until Kubernetes API server with node-agent-authorizer rolled out",
-			Fn:           botanist.Shoot.Components.ControlPlane.KubeAPIServer.Wait,
-			SkipIf:       o.Shoot.HibernationEnabled || canEnableNodeAgentAuthorizerWebhook || skipReadiness,
-			Dependencies: flow.NewTaskIDs(deployKubeAPIServerWithNodeAgentAuthorizer),
-		})
 		_ = g.Add(flow.Task{
 			Name: "Renewing shoot access secrets after creation of new ServiceAccount signing key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
@@ -404,13 +381,13 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				gardencorev1beta1.RotationPreparing,
 				gardencorev1beta1.RotationPreparingWithoutWorkersRollout,
 			).Has(v1beta1helper.GetShootServiceAccountKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials)),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady, waitUntilGardenerResourceManagerReady),
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
 		deployControlPlane = g.Add(flow.Task{
 			Name:         "Deploying shoot control plane components",
 			Fn:           flow.TaskFn(botanist.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady, waitUntilGardenerResourceManagerReady),
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
 		waitUntilControlPlaneReady = g.Add(flow.Task{
 			Name: "Waiting until shoot control plane has been reconciled",
@@ -440,7 +417,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name:         "Deploying vpn-seed-server",
 			Fn:           flow.TaskFn(botanist.DeployVPNServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployNamespace, waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployNamespace, waitUntilGardenerResourceManagerReady),
 		})
 		deployGardenerAccess = g.Add(flow.Task{
 			Name:         "Deploying Gardener shoot access resources",
@@ -450,7 +427,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.TaskFn(botanist.InitializeDesiredShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady, deployInternalDomainDNSRecord, deployGardenerAccess),
+			Dependencies: flow.NewTaskIDs(deployInternalDomainDNSRecord, deployGardenerAccess),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Sync public service account signing keys to Garden cluster",
@@ -551,7 +528,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
 			Fn:           flow.TaskFn(botanist.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, waitUntilGardenerResourceManagerReady),
 		})
 		waitUntilKubeControllerManagerReady = g.Add(flow.Task{
 			Name: "Waiting until kube-controller-manager reports readiness",

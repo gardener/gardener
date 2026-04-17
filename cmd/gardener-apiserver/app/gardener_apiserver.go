@@ -47,7 +47,6 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/apiserver"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/apiserver/openapi"
@@ -59,8 +58,6 @@ import (
 	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
-	settingsclientset "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
-	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 	plugin "github.com/gardener/gardener/plugin/pkg"
@@ -110,7 +107,6 @@ type Options struct {
 	CoreInformerFactory           gardencoreinformers.SharedInformerFactory
 	KubeInformerFactory           kubeinformers.SharedInformerFactory
 	SeedManagementInformerFactory seedmanagementinformers.SharedInformerFactory
-	SettingsInformerFactory       settingsinformers.SharedInformerFactory
 	SecurityInformerFactory       securityinformers.SharedInformerFactory
 
 	Logs *logsv1.LoggingConfiguration
@@ -123,7 +119,6 @@ func NewOptions() *Options {
 			"/registry-gardener",
 			api.Codecs.LegacyCodec(
 				seedmanagementv1alpha1.SchemeGroupVersion,
-				settingsv1alpha1.SchemeGroupVersion,
 				operationsv1alpha1.SchemeGroupVersion,
 				securityv1alpha1.SchemeGroupVersion,
 			),
@@ -209,13 +204,6 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 	}
 	o.SeedManagementInformerFactory = seedmanagementinformers.NewSharedInformerFactory(seedManagementClient, protobufLoopbackConfig.Timeout)
 
-	// settings client
-	settingsClient, err := settingsclientset.NewForConfig(&protobufLoopbackConfig)
-	if err != nil {
-		return nil, err
-	}
-	o.SettingsInformerFactory = settingsinformers.NewSharedInformerFactory(settingsClient, protobufLoopbackConfig.Timeout)
-
 	// security client
 	securityClient, err := securityclientset.NewForConfig(&protobufLoopbackConfig)
 	if err != nil {
@@ -237,7 +225,6 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 				coreClient,
 				o.SeedManagementInformerFactory,
 				seedManagementClient,
-				o.SettingsInformerFactory,
 				o.SecurityInformerFactory,
 				securityClient,
 				o.KubeInformerFactory,
@@ -325,7 +312,6 @@ func (o *Options) Run(ctx context.Context) error {
 		o.KubeInformerFactory.Start(context.Done())
 		o.SeedManagementInformerFactory.Start(context.Done())
 		o.SecurityInformerFactory.Start(context.Done())
-		o.SettingsInformerFactory.Start(context.Done())
 		return nil
 	}); err != nil {
 		return err
@@ -434,7 +420,6 @@ func (o *Options) ApplyTo(config *apiserver.Config, kubeClient kubernetes.Interf
 	resourceConfig := serverstorage.NewResourceConfig()
 	resourceConfig.EnableVersions(
 		seedmanagementv1alpha1.SchemeGroupVersion,
-		settingsv1alpha1.SchemeGroupVersion,
 		operationsv1alpha1.SchemeGroupVersion,
 		securityv1alpha1.SchemeGroupVersion,
 		// Note: "authentication.gardener.cloud/v1alpha1" API is already used for CRD registration and must not be served by the API server.

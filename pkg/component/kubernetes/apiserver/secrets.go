@@ -33,9 +33,6 @@ const (
 	// SecretNameUserKubeconfig is the name for the user kubeconfig.
 	SecretNameUserKubeconfig = "user-kubeconfig" // #nosec G101 -- No credential.
 
-	secretOIDCCABundleNamePrefix   = "kube-apiserver-oidc-cabundle" // #nosec G101 -- No credential.
-	secretOIDCCABundleDataKeyCaCrt = "ca.crt"
-
 	secretAuditWebhookKubeconfigNamePrefix           = "kube-apiserver-audit-webhook-kubeconfig"           // #nosec G101 -- No credential.
 	secretAuthenticationWebhookKubeconfigNamePrefix  = "kube-apiserver-authentication-webhook-kubeconfig"  // #nosec G101 -- No credential.
 	secretAuthorizationWebhooksKubeconfigsNamePrefix = "kube-apiserver-authorization-webhooks-kubeconfigs" // #nosec G101 -- No credential.
@@ -48,21 +45,6 @@ const (
 
 func (k *kubeAPIServer) emptySecret(name string) *corev1.Secret {
 	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: k.namespace}}
-}
-
-func (k *kubeAPIServer) reconcileSecretOIDCCABundle(ctx context.Context, secret *corev1.Secret) error {
-	if k.values.OIDC == nil ||
-		k.values.OIDC.CABundle == nil ||
-		k.structuredAuthenticationFeatureGateEnabled() {
-		// We don't delete the secret here as we don't know its name (as it's unique). Instead, we rely on the usual
-		// garbage collection for unique secrets/configmaps.
-		return nil
-	}
-
-	secret.Data = map[string][]byte{secretOIDCCABundleDataKeyCaCrt: []byte(*k.values.OIDC.CABundle)}
-	utilruntime.Must(kubernetesutils.MakeUnique(secret))
-
-	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, secret))
 }
 
 func (k *kubeAPIServer) reconcileSecretServiceAccountKey(ctx context.Context) (*corev1.Secret, error) {

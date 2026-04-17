@@ -73,7 +73,6 @@ var _ = Describe("Helpers test", func() {
 		Entry("core.gardener.cloud group is found", limit, "core.gardener.cloud", BeTrue()),
 		Entry("extensions.gardener.cloud group is found", limit, "core.gardener.cloud", BeTrue()),
 		Entry("settings.gardener.cloud apiGroup is not found", limit, "settings.gardener.cloud", BeFalse()),
-		Entry("settings.gardener.cloud apiGroup is found because of wildcard", limitWildcard, "settings.gardener.cloud", BeTrue()),
 	)
 
 	DescribeTable("#VersionMatches",

@@ -39,7 +39,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/apiserver"
 	"github.com/gardener/gardener/pkg/apiserver/features"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -399,7 +398,6 @@ func (g *GardenerAPIServer) registerGardenerAPIs(ctx context.Context) error {
 			gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"),
 			operationsv1alpha1.SchemeGroupVersion.WithKind("BastionList"),
 			seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeedList"),
-			settingsv1alpha1.SchemeGroupVersion.WithKind("OpenIDConnectPresetList"),
 		} {
 			objList := &metav1.PartialObjectMetadataList{}
 			objList.SetGroupVersionKind(gvk)

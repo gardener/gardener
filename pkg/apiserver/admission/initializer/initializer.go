@@ -18,7 +18,6 @@ import (
 	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
-	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 )
 
 // New constructs new instance of PluginInitializer
@@ -27,7 +26,6 @@ func New(
 	coreClient gardencoreclientset.Interface,
 	seedManagementInformers seedmanagementinformers.SharedInformerFactory,
 	seedManagementClient seedmanagementclientset.Interface,
-	settingsInformers settingsinformers.SharedInformerFactory,
 	securityInformers securityinformers.SharedInformerFactory,
 	securityClient securityclientset.Interface,
 	kubeInformers kubeinformers.SharedInformerFactory,
@@ -42,8 +40,6 @@ func New(
 
 		seedManagementInformers: seedManagementInformers,
 		seedManagementClient:    seedManagementClient,
-
-		settingsInformers: settingsInformers,
 
 		securityInformers: securityInformers,
 		securityClient:    securityClient,
@@ -81,10 +77,6 @@ func (i pluginInitializer) Initialize(plugin admission.Interface) {
 	}
 	if wants, ok := plugin.(WantsSecurityClientSet); ok {
 		wants.SetSecurityClientSet(i.securityClient)
-	}
-
-	if wants, ok := plugin.(WantsSettingsInformerFactory); ok {
-		wants.SetSettingsInformerFactory(i.settingsInformers)
 	}
 
 	if wants, ok := plugin.(WantsKubeInformerFactory); ok {

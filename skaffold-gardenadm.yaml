@@ -57,9 +57,6 @@ build:
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
             - pkg/apis/seedmanagement/v1alpha1
-            - pkg/apis/settings
-            - pkg/apis/settings/install
-            - pkg/apis/settings/v1alpha1
             - pkg/apis/utils
             - pkg/apis/utils/timewindow
             - pkg/chartrenderer
@@ -216,7 +213,6 @@ build:
             - pkg/operator/client
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/resourcemanager/webhook/crddeletionprotection
-            - pkg/resourcemanager/webhook/endpointslicehints
             - pkg/resourcemanager/webhook/extensionvalidation
             - pkg/resourcemanager/webhook/highavailabilityconfig
             - pkg/resourcemanager/webhook/kubernetesservicehost
@@ -328,9 +324,6 @@ build:
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
             - pkg/apis/seedmanagement/v1alpha1
-            - pkg/apis/settings
-            - pkg/apis/settings/install
-            - pkg/apis/settings/v1alpha1
             - pkg/apis/utils
             - pkg/apis/utils/timewindow
             - pkg/chartrenderer
@@ -453,9 +446,6 @@ build:
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
             - pkg/apis/seedmanagement/v1alpha1
-            - pkg/apis/settings
-            - pkg/apis/settings/install
-            - pkg/apis/settings/v1alpha1
             - pkg/apis/utils
             - pkg/apis/utils/timewindow
             - pkg/chartrenderer
@@ -489,7 +479,6 @@ build:
             - pkg/resourcemanager/predicate
             - pkg/resourcemanager/webhook
             - pkg/resourcemanager/webhook/crddeletionprotection
-            - pkg/resourcemanager/webhook/endpointslicehints
             - pkg/resourcemanager/webhook/extensionvalidation
             - pkg/resourcemanager/webhook/highavailabilityconfig
             - pkg/resourcemanager/webhook/kubernetesservicehost
@@ -586,9 +575,6 @@ build:
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
             - pkg/apis/seedmanagement/v1alpha1
-            - pkg/apis/settings
-            - pkg/apis/settings/install
-            - pkg/apis/settings/v1alpha1
             - pkg/apis/utils
             - pkg/apis/utils/timewindow
             - pkg/chartrenderer
@@ -755,7 +741,6 @@ build:
             - pkg/operator/client
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/resourcemanager/webhook/crddeletionprotection
-            - pkg/resourcemanager/webhook/endpointslicehints
             - pkg/resourcemanager/webhook/extensionvalidation
             - pkg/resourcemanager/webhook/highavailabilityconfig
             - pkg/resourcemanager/webhook/kubernetesservicehost
@@ -835,6 +820,18 @@ build:
               - -c
               - >
                 kubectl --kubeconfig="$VIRTUAL_GARDEN_KUBECONFIG" -n garden patch gardenlet self-hosted-shoot-root --type=merge -p "$(jq -n \
+
+
+
+
+
+
+
+
+
+
+
+
                   --arg image "$SKAFFOLD_IMAGE" \
                   --arg imagevector_overwrite "$(cat ./dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml)" \
                   '{
@@ -962,9 +959,6 @@ build:
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
             - pkg/apis/seedmanagement/v1alpha1
-            - pkg/apis/settings
-            - pkg/apis/settings/install
-            - pkg/apis/settings/v1alpha1
             - pkg/apis/utils
             - pkg/apis/utils/timewindow
             - pkg/chartrenderer
@@ -1088,9 +1082,6 @@ build:
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
             - pkg/apis/seedmanagement/v1alpha1
-            - pkg/apis/settings
-            - pkg/apis/settings/install
-            - pkg/apis/settings/v1alpha1
             - pkg/apis/utils
             - pkg/apis/utils/timewindow
             - pkg/chartrenderer

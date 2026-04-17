@@ -29,7 +29,6 @@ rules:
 - apiGroups:
   - seedmanagement.gardener.cloud
   - dashboard.gardener.cloud
-  - settings.gardener.cloud
   - operations.gardener.cloud
   resources:
   - '*'
@@ -242,7 +241,6 @@ rules:
 - apiGroups:
   - seedmanagement.gardener.cloud
   - dashboard.gardener.cloud
-  - settings.gardener.cloud
   - operations.gardener.cloud
   resources:
   - '*'
@@ -635,19 +633,6 @@ rules:
   - update
   - watch
 - apiGroups:
-  - settings.gardener.cloud
-  resources:
-  - openidconnectpresets
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
   - operations.gardener.cloud
   resources:
   - bastions
@@ -814,14 +799,6 @@ rules:
   - security.gardener.cloud
   resources:
   - credentialsbindings
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - settings.gardener.cloud
-  resources:
-  - openidconnectpresets
   verbs:
   - get
   - list

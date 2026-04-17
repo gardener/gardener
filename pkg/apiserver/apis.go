@@ -12,14 +12,12 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 )
 
 // AllGardenerAPIGroupVersions is the list of all GroupVersions that are served by gardener-apiserver.
 var AllGardenerAPIGroupVersions = []schema.GroupVersion{
 	gardencorev1.SchemeGroupVersion,
 	gardencorev1beta1.SchemeGroupVersion,
-	settingsv1alpha1.SchemeGroupVersion,
 	seedmanagementv1alpha1.SchemeGroupVersion,
 	operationsv1alpha1.SchemeGroupVersion,
 	securityv1alpha1.SchemeGroupVersion,

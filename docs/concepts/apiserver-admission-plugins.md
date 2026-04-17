@@ -36,15 +36,6 @@ It mutates the `Bastion` in the following way:
 - it sets the `gardener.cloud/created-by=<username>` annotation for `CREATE` operations.
 - it adds an owner reference to the `Shoot` to ensure the `Bastion` is deleted when the `Shoot` is deleted.
 
-## `ClusterOpenIDConnectPreset`, `OpenIDConnectPreset`
-
-**Type**: Mutating (for both). **Enabled by default**: Yes (for both).
-
-These admission controllers react on `CREATE` operations for `Shoot`s.
-If the `Shoot` does not specify any OIDC configuration (`.spec.kubernetes.kubeAPIServer.oidcConfig=nil`), then it tries to find a matching `ClusterOpenIDConnectPreset` or `OpenIDConnectPreset`, respectively.
-If there are multiple matches, then the one with the highest weight "wins".
-In this case, the admission controller will default the OIDC configuration in the `Shoot`.
-
 ## `ControllerRegistrationResources`
 
 **Type**: Validating. **Enabled by default**: Yes.

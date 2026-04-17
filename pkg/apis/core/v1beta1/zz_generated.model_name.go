@@ -705,11 +705,6 @@ func (in OCIRepository) OpenAPIModelName() string {
 }
 
 // OpenAPIModelName returns the OpenAPI model name for this type.
-func (in OIDCConfig) OpenAPIModelName() string {
-	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.OIDCConfig"
-}
-
-// OpenAPIModelName returns the OpenAPI model name for this type.
 func (in ObservabilityRotation) OpenAPIModelName() string {
 	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ObservabilityRotation"
 }

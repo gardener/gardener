@@ -92,4 +92,4 @@ As an operator/administrator, you have to configure some of them to make the sys
 As an end-user/stakeholder/customer, you are using a Gardener landscape that has been setup for you by another team.
 You don't need to care about how Gardener itself has to be configured or how it has to be deployed.
 Take a look at [Gardener API Server](../concepts/apiserver.md) - the topic describes which resources are offered by Gardener.
-You may want to have a more detailed look for `Project`s, `SecretBinding`s, `Shoot`s, and `(Cluster)OpenIDConnectPreset`s.
+You may want to have a more detailed look for `Project`s, `SecretBinding`s and `Shoot`s.

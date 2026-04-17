@@ -31,7 +31,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -155,7 +154,6 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 					APIGroups: []string{
 						seedmanagementv1alpha1.GroupName,
 						"dashboard.gardener.cloud",
-						settingsv1alpha1.GroupName,
 						operationsv1alpha1.GroupName,
 					},
 					Resources: []string{"*"},
@@ -274,7 +272,6 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 					APIGroups: []string{
 						seedmanagementv1alpha1.GroupName,
 						"dashboard.gardener.cloud",
-						settingsv1alpha1.GroupName,
 						operationsv1alpha1.GroupName,
 					},
 					Resources: []string{"*"},
@@ -459,11 +456,6 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 					Verbs: []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
-					APIGroups: []string{settingsv1alpha1.GroupName},
-					Resources: []string{"openidconnectpresets"},
-					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
-				},
-				{
 					APIGroups: []string{operationsv1alpha1.GroupName},
 					Resources: []string{"bastions"},
 					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
@@ -572,11 +564,6 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				{
 					APIGroups: []string{securityv1alpha1.GroupName},
 					Resources: []string{"credentialsbindings"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
-				{
-					APIGroups: []string{settingsv1alpha1.GroupName},
-					Resources: []string{"openidconnectpresets"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{

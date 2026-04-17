@@ -12,12 +12,6 @@ import (
 )
 
 var (
-	// ConstraintK8sEqual131 is a version constraint for versions == 1.31.
-	ConstraintK8sEqual131 *Constraints
-	// ConstraintK8sLess132 is a version constraint for versions < 1.32.
-	ConstraintK8sLess132 *Constraints
-	// ConstraintK8sGreaterEqual132 is a version constraint for versions >= 1.32.
-	ConstraintK8sGreaterEqual132 *Constraints
 	// ConstraintK8sLess133 is a version constraint for versions < 1.33.
 	ConstraintK8sLess133 *Constraints
 	// ConstraintK8sGreaterEqual133 is a version constraint for versions >= 1.33.
@@ -33,9 +27,6 @@ var (
 )
 
 func init() {
-	ConstraintK8sEqual131 = MustNewConstraint("~ 1.31.x-0")
-	ConstraintK8sLess132 = MustNewConstraint("< 1.32-0")
-	ConstraintK8sGreaterEqual132 = MustNewConstraint(">= 1.32-0")
 	ConstraintK8sLess133 = MustNewConstraint("< 1.33-0")
 	ConstraintK8sGreaterEqual133 = MustNewConstraint(">= 1.33-0")
 	ConstraintK8sLess134 = MustNewConstraint("< 1.34-0")

@@ -64,19 +64,8 @@ var _ = Describe("Shoot", func() {
 				if protobufNum == "5" {
 					Fail("protobuf 5 in KubeAPIServerConfig is reserved for removed enableBasicAuthentication field")
 				}
-			}
-		})
-	})
-
-	Describe("OIDCConfig", func() {
-		It("should not allow to reuse protobuf numbers of already removed fields", func() {
-			obj := reflect.ValueOf(OIDCConfig{}).Type()
-			for i := 0; i < obj.NumField(); i++ {
-				f := obj.Field(i)
-
-				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
-				if protobufNum == "2" {
-					Fail("protobuf 2 in OIDCConfig is reserved for removed clientAuthentication field")
+				if protobufNum == "6" {
+					Fail("protobuf 6 in KubeAPIServerConfig is reserved for removed oidcConfig field")
 				}
 			}
 		})

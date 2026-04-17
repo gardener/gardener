@@ -66,7 +66,6 @@ const (
 	volumeNameHTTPProxyClient                 = "http-proxy"
 	volumeNameKubeAPIServerToKubelet          = "kubelet-client"
 	volumeNameKubeAggregator                  = "kube-aggregator"
-	volumeNameOIDCCABundle                    = "oidc-cabundle"
 	volumeNameServiceAccountKey               = "service-account-key"
 	volumeNameServiceAccountKeyBundle         = "service-account-key-bundle"
 	volumeNameStaticToken                     = "static-token"
@@ -116,7 +115,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 	configMapEgressSelector *corev1.ConfigMap,
 	configMapEnvoyConfig *corev1.ConfigMap,
 	secretETCDEncryptionConfiguration *corev1.Secret,
-	secretOIDCCABundle *corev1.Secret,
 	secretServiceAccountKey *corev1.Secret,
 	secretStaticToken *corev1.Secret,
 	secretServer *corev1.Secret,
@@ -385,7 +383,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleSNISettings(deployment)
 		k.handleTLSSNISettings(deployment, tlsSNISecrets)
 		k.handleServiceAccountSigningKeySettings(deployment)
-		if err := k.handleAuthenticationSettings(deployment, configMapAuthenticationConfig, secretOIDCCABundle); err != nil {
+		if err := k.handleAuthenticationSettings(deployment, configMapAuthenticationConfig); err != nil {
 			return err
 		}
 		k.handleAuthenticationWebhookSettings(deployment, secretAuthenticationWebhookKubeconfig)

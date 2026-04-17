@@ -111,11 +111,6 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		o.Shoot.Networks = networks
 	}
 
-	canEnableNodeAgentAuthorizerWebhook, err := botanist.CanEnableNodeAgentAuthorizerWebhook(ctx)
-	if err != nil {
-		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
-	}
-
 	var (
 		g = flow.NewGraph("Shoot cluster preparation for migration")
 
@@ -156,9 +151,9 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		})
 		wakeUpKubeAPIServer = g.Add(flow.Task{
 			Name: "Scaling Kubernetes API Server up and waiting until ready",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.WakeUpKubeAPIServer(ctx, canEnableNodeAgentAuthorizerWebhook)
-			}),
+			Fn: func(ctx context.Context) error {
+				return botanist.WakeUpKubeAPIServer(ctx, true)
+			},
 			SkipIf:       !wakeupRequired,
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD, initializeSecretsManagement),
 		})
@@ -176,28 +171,16 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
-		// TODO(oliver-goetz): Consider removing this two-step deployment once we only support Kubernetes 1.32+ (in this
-		//  version, the structured authorization feature has been promoted to GA). We already use structured authz for
-		//  1.30+ clusters. This is similar to kube-apiserver deployment in gardener-operator.
-		//  See https://github.com/gardener/gardener/pull/10682#discussion_r1816324389 for more information.
-		wakeUpKubeAPIServerWithNodeAgentAuthorizer = g.Add(flow.Task{
-			Name: "Scaling Kubernetes API Server with node-agent-authorizer up and waiting until ready",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.WakeUpKubeAPIServer(ctx, true)
-			}),
-			SkipIf:       !wakeupRequired || canEnableNodeAgentAuthorizerWebhook,
-			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
-		})
 		keepManagedResourcesObjectsInShoot = g.Add(flow.Task{
 			Name:         "Configuring Managed Resources objects to be kept in the Shoot",
 			Fn:           botanist.KeepObjectsForManagedResources,
 			SkipIf:       !cleanupShootResources,
-			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp, wakeUpKubeAPIServerWithNodeAgentAuthorizer),
+			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
 		})
 		deleteManagedResources = g.Add(flow.Task{
 			Name:         "Deleting all Managed Resources from the Shoot's namespace",
 			Fn:           botanist.DeleteManagedResources,
-			Dependencies: flow.NewTaskIDs(keepManagedResourcesObjectsInShoot, ensureResourceManagerScaledUp, wakeUpKubeAPIServerWithNodeAgentAuthorizer),
+			Dependencies: flow.NewTaskIDs(keepManagedResourcesObjectsInShoot, ensureResourceManagerScaledUp),
 		})
 		waitForManagedResourcesDeletion = g.Add(flow.Task{
 			Name:         "Waiting until ManagedResources are deleted",
@@ -381,9 +364,9 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		})
 		waitUntilInfrastructureDeleted = g.Add(flow.Task{
 			Name: "Waiting until shoot infrastructure has been deleted",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
+			Fn: func(ctx context.Context) error {
 				return botanist.Shoot.Components.Extensions.Infrastructure.WaitCleanup(ctx)
-			}),
+			},
 			SkipIf:       o.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(deleteInfrastructure),
 		})

@@ -229,8 +229,6 @@ type NodeAgentReconciliationDelayControllerConfig struct {
 type ResourceManagerWebhookConfiguration struct {
 	// CRDDeletionProtection is the configuration for the crd-deletion-protection webhook.
 	CRDDeletionProtection CRDDeletionProtection `json:"crdDeletionProtection"`
-	// EndpointSliceHints is the configuration for the endpoint-slice-hints webhook.
-	EndpointSliceHints EndpointSliceHintsWebhookConfig `json:"endpointSliceHints"`
 	// ExtensionValidation is the configuration for the extension-validation webhook.
 	ExtensionValidation ExtensionValidation `json:"extensionValidation"`
 	// HighAvailabilityConfig is the configuration for the high-availability-config webhook.
@@ -257,12 +255,6 @@ type ResourceManagerWebhookConfiguration struct {
 
 // CRDDeletionProtection is the configuration for the crd-deletion-protection webhook.
 type CRDDeletionProtection struct {
-	// Enabled defines whether this webhook is enabled.
-	Enabled bool `json:"enabled"`
-}
-
-// EndpointSliceHintsWebhookConfig is the configuration for the endpoint-slice-hints webhook.
-type EndpointSliceHintsWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
 	Enabled bool `json:"enabled"`
 }
