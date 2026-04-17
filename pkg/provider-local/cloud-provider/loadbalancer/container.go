@@ -49,7 +49,7 @@ func (p *Provider) createLoadBalancerContainer(ctx context.Context, name string,
 			Image:    p.Config.LoadBalancer.Image,
 			Cmd:      []string{"envoy", "-c", envoyConfigFilePath},
 			Healthcheck: &container.HealthConfig{
-				Test:     []string{"CMD", "curl", "-sf", "--unix-socket", envoyAdminSocket, "http://localhost/ready"},
+				Test:     []string{"CMD", "curl", "-sf", "--unix-socket", envoyAdminSocketPath, "http://localhost/ready"},
 				Interval: time.Second,
 				Timeout:  time.Second,
 				Retries:  3,
