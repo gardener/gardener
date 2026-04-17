@@ -1197,6 +1197,19 @@ profiles:
       kustomize:
         paths:
           - dev-setup/gardenadm/resources/overlays/unmanaged-infra
+    patches:
+      # remove machine-controller-manager-provider-local image (not needed in unmanaged infra scenario)
+      - op: test
+        path: /build/artifacts/4/image
+        value: local-skaffold/machine-controller-manager-provider-local
+      - op: remove
+        path: /build/artifacts/4
+      # remove gardener-extension-provider-local/loadbalancer image (not needed in unmanaged infra scenario)
+      - op: test
+        path: /build/artifacts/2/image
+        value: local-skaffold/gardener-extension-provider-local/loadbalancer
+      - op: remove
+        path: /build/artifacts/2
   - name: managed-infra
     manifests:
       kustomize:

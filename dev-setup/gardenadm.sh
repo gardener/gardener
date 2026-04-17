@@ -50,6 +50,7 @@ case "$COMMAND" in
 
       if [[ "$SCENARIO" == "unmanaged-infra" ]]; then
         skaffold run \
+          -p "$SCENARIO" \
           -n gardenadm-unmanaged-infra \
           -m provider-local,machine
       fi
