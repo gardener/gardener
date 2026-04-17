@@ -48,7 +48,6 @@ run "skaffold-operator.yaml" "machine-controller-manager-provider-local" "provid
 run "skaffold-seed.yaml" "gardener-node-agent"            "gardenlet"
 run "skaffold-seed.yaml" "gardener-resource-manager"      "gardenlet"
 run "skaffold-seed.yaml" "gardenlet"                      "gardenlet"
-run "skaffold-seed.yaml" "cloud-controller-manager-local" "garden-config"
 
 # skaffold-gardenadm.yaml
 run "skaffold-gardenadm.yaml" "gardenadm"                                 "gardenadm"
