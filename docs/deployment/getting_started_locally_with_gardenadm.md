@@ -98,7 +98,7 @@ machine-0   Ready    <none>   4m11s   v1.32.0
 You can also access the cluster's API server directly from your host machine after obtaining a kubeconfig for it:
 
 ```shell
-$ ./hack/usage/generate-admin-kubeconfig-local.sh self-hosted-shoot > dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
+$ ./hack/usage/generate-kubeconfig.sh self-hosted-shoot > dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
 $ export KUBECONFIG=dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
 $ kubectl get no
 NAME        STATUS   ROLES    AGE   VERSION
@@ -170,7 +170,7 @@ machine-shoot--garden--root-control-plane-58ffc-2l6s7   Ready    <none>   4m11s 
 You can also access the cluster's API server directly from your host machine after obtaining a kubeconfig for it:
 
 ```shell
-$ ./hack/usage/generate-admin-kubeconfig-local.sh self-hosted-shoot > dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
+$ ./hack/usage/generate-kubeconfig.sh self-hosted-shoot > dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
 $ export KUBECONFIG=dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
 $ kubectl get no
 NAME        STATUS   ROLES    AGE   VERSION
