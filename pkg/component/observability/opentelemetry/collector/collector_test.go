@@ -12,8 +12,11 @@ import (
 	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
+	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +32,7 @@ import (
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	. "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
+	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -102,7 +106,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(c, namespace)
 		component = New(c, namespace, values, fakeSecretManager)
-		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(c, comptest.CmpOptsForIstio()...)
 
 		By("Create secrets managed outside of this package for which secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
@@ -328,6 +332,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":8888}]`,
 					resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias: v1beta1constants.LabelNetworkPolicyShootNamespaceAlias,
 					resourcesv1alpha1.NetworkingNamespaceSelectors:             `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
+					"networking.istio.io/exportTo":                             "*",
 				},
 			},
 			Spec: otelv1beta1.OpenTelemetryCollectorSpec{
@@ -531,6 +536,14 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			component.WithAuthenticationProxy(false)
 			Expect(component.Deploy(ctx)).To(Succeed())
 
+			tlsSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "logging-tls",
+					Namespace: namespace,
+				},
+			}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(tlsSecret), tlsSecret)).To(Succeed())
+
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -556,7 +569,10 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
-				getIngress(),
+				getGateway(),
+				getVirtualService(),
+				getDestinationRule(),
+				getTLSSecret(tlsSecret),
 				serviceMonitor,
 				serviceAccount,
 			))
@@ -575,6 +591,14 @@ var _ = Describe("OpenTelemetry Collector", func() {
 
 			component.WithAuthenticationProxy(true)
 			Expect(component.Deploy(ctx)).To(Succeed())
+
+			tlsSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "logging-tls",
+					Namespace: namespace,
+				},
+			}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(tlsSecret), tlsSecret)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
@@ -610,7 +634,10 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			metav1.SetMetaDataLabel(&openTelemetryCollector.ObjectMeta, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443", "allowed")
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
-				getIngress(),
+				getGateway(),
+				getVirtualService(),
+				getDestinationRule(),
+				getTLSSecret(tlsSecret),
 				serviceMonitor,
 				serviceAccount,
 			))
@@ -789,70 +816,120 @@ var _ = Describe("OpenTelemetry Collector", func() {
 	})
 })
 
-func getIngress() *networkingv1.Ingress {
-	pathType := networkingv1.PathTypePrefix
-	annotations := map[string]string{"nginx.ingress.kubernetes.io/backend-protocol": "GRPC"}
-
-	return &networkingv1.Ingress{
+func getGateway() *istionetworkingv1beta1.Gateway {
+	return &istionetworkingv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        ingressName,
-			Namespace:   namespace,
-			Annotations: annotations,
-			Labels:      getLabels(),
+			Name:      "logging",
+			Namespace: namespace,
+			Labels:    getLabels(),
 		},
-		Spec: networkingv1.IngressSpec{
-			IngressClassName: ptr.To("nginx-ingress-gardener"),
-			TLS: []networkingv1.IngressTLS{
+		Spec: istioapinetworkingv1beta1.Gateway{
+			Servers: []*istioapinetworkingv1beta1.Server{{
+				Port: &istioapinetworkingv1beta1.Port{
+					Name:     "tls",
+					Number:   443,
+					Protocol: "HTTPS",
+				},
+				Hosts: []string{ingressHost},
+				Tls: &istioapinetworkingv1beta1.ServerTLSSettings{
+					Mode:           istioapinetworkingv1beta1.ServerTLSSettings_SIMPLE,
+					CredentialName: "some-namespace-logging-logging-tls",
+				},
+			}},
+		},
+	}
+}
+
+func getVirtualService() *istionetworkingv1beta1.VirtualService {
+	return &istionetworkingv1beta1.VirtualService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "logging",
+			Namespace: namespace,
+			Labels:    getLabels(),
+		},
+		Spec: istioapinetworkingv1beta1.VirtualService{
+			ExportTo: []string{"*"},
+			Gateways: []string{"logging"},
+			Hosts:    []string{ingressHost},
+			Http: []*istioapinetworkingv1beta1.HTTPRoute{
 				{
-					SecretName: "logging-tls",
-					Hosts:      []string{ingressHost, valiHost},
+					Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{{
+						Uri: &istioapinetworkingv1beta1.StringMatch{
+							MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{Prefix: "/opentelemetry.proto.collector.logs.v1.LogsService/Export"},
+						},
+					}},
+					Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{{
+						Destination: &istioapinetworkingv1beta1.Destination{
+							Host: "opentelemetry-collector-collector.some-namespace.svc.cluster.local",
+							Port: &istioapinetworkingv1beta1.PortSelector{
+								Number: 8080,
+							},
+						},
+					}},
+				},
+				{
+					Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{{
+						Uri: &istioapinetworkingv1beta1.StringMatch{
+							MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{Prefix: "/vali/api/v1/push"},
+						},
+					}},
+					Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{{
+						Destination: &istioapinetworkingv1beta1.Destination{
+							Host: "opentelemetry-collector-collector.some-namespace.svc.cluster.local",
+							Port: &istioapinetworkingv1beta1.PortSelector{
+								Number: 8081,
+							},
+						},
+					}},
 				},
 			},
-			Rules: []networkingv1.IngressRule{
-				{
-					Host: ingressHost,
-					IngressRuleValue: networkingv1.IngressRuleValue{
-						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{
-								{
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
-											Name: "opentelemetry-collector-collector",
-											Port: networkingv1.ServiceBackendPort{
-												Number: 8080,
-											},
-										},
-									},
-									Path:     "/opentelemetry.proto.collector.logs.v1.LogsService/Export",
-									PathType: &pathType,
-								},
-							},
+		},
+	}
+}
+
+func getDestinationRule() *istionetworkingv1beta1.DestinationRule {
+	return &istionetworkingv1beta1.DestinationRule{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "logging",
+			Namespace: namespace,
+			Labels:    getLabels(),
+		},
+		Spec: istioapinetworkingv1beta1.DestinationRule{
+			ExportTo: []string{"*"},
+			Host:     "opentelemetry-collector-collector.some-namespace.svc.cluster.local",
+			TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
+				LoadBalancer: &istioapinetworkingv1beta1.LoadBalancerSettings{
+					LocalityLbSetting: &istioapinetworkingv1beta1.LocalityLoadBalancerSetting{
+						FailoverPriority: []string{"topology.kubernetes.io/zone"},
+						Enabled: &wrapperspb.BoolValue{
+							Value: true,
 						},
 					},
 				},
-				{
-					Host: valiHost,
-					IngressRuleValue: networkingv1.IngressRuleValue{
-						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{
-								{
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
-											Name: "opentelemetry-collector-collector",
-											Port: networkingv1.ServiceBackendPort{
-												Number: 8081,
-											},
-										},
-									},
-									Path:     "/vali/api/v1/push",
-									PathType: &pathType,
-								},
-							},
+				ConnectionPool: &istioapinetworkingv1beta1.ConnectionPoolSettings{
+					Tcp: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
+						TcpKeepalive: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
+							Time:     &durationpb.Duration{Seconds: 7200},
+							Interval: &durationpb.Duration{Seconds: 75},
 						},
+						MaxConnectionDuration: &durationpb.Duration{Seconds: 86400},
 					},
 				},
+				OutlierDetection: &istioapinetworkingv1beta1.OutlierDetection{},
+				Tls:              &istioapinetworkingv1beta1.ClientTLSSettings{},
 			},
 		},
+	}
+}
+
+func getTLSSecret(tlsSecret *corev1.Secret) *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "some-namespace-logging-logging-tls",
+			Namespace: "istio-ingress",
+			Labels:    getLabels(),
+		},
+		Data: tlsSecret.Data,
 	}
 }
 
