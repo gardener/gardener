@@ -32,9 +32,6 @@ build:
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
             - pkg/apis/seedmanagement/v1alpha1
-            - pkg/apis/settings
-            - pkg/apis/settings/install
-            - pkg/apis/settings/v1alpha1
             - pkg/apis/utils
             - pkg/apis/utils/timewindow
             - pkg/chartrenderer
