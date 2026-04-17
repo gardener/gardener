@@ -363,7 +363,7 @@ spec:
           make kind-down kind-multi-zone-down >/dev/null 2>&1
           cd - >/dev/null
           mkdir -p ~/.kube
-          echo '{"current-context": "kind-gardener-operator-local"}' > ~/.kube/config
+          echo '{"current-context": "kind-gardener-local"}' > ~/.kube/config
           source /usr/local/bin/tmux_functions.sh
           tmux new -d -s operator -n make -x 2000 -y 2000
           tmux select-pane -T top; rm -f ~/.config/procps/toprc
@@ -421,7 +421,7 @@ spec:
           make kind-down kind-multi-zone-down >/dev/null 2>&1
           cd - >/dev/null
           mkdir -p ~/.kube
-          echo '{"current-context": "kind-gardener-operator-local"}' > ~/.kube/config
+          echo '{"current-context": "kind-gardener-local"}' > ~/.kube/config
           source /usr/local/bin/tmux_functions.sh
           tmux new -d -s operator-complete -n make -x 2000 -y 2000
           tmux select-pane -T top; rm -f ~/.config/procps/toprc

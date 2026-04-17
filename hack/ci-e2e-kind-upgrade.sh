@@ -11,7 +11,7 @@ set -o errexit
 source $(dirname "${0}")/ci-common.sh
 
 VERSION="$(cat VERSION)"
-CLUSTER_NAME=""
+CLUSTER_NAME="gardener-local"
 SEED_NAME=""
 
 # copy_kubeconfig_from_kubeconfig_env_var copies the kubeconfig to appropriate location based on kind setup
@@ -158,20 +158,6 @@ function set_gardener_upgrade_version_env_variables() {
   fi
 }
 
-function set_cluster_name() {
-  case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
-  node)
-    CLUSTER_NAME="gardener-operator-local"
-    ;;
-  zone)
-    CLUSTER_NAME="gardener-operator-local"
-    ;;
-  *)
-    CLUSTER_NAME="gardener-local"
-    ;;
-  esac
-}
-
 function run_pre_upgrade_test() {
   local test_command
 
@@ -207,7 +193,6 @@ fi
 
 clamp_mss_to_pmtu
 set_gardener_upgrade_version_env_variables
-set_cluster_name
 SEED_NAME="local"
 
 # download gardener previous release to perform gardener upgrade tests
@@ -222,7 +207,7 @@ trap "
   ( rm -rf "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases" )
   ( export_artifacts_host_services; export_artifacts_infra; export_artifacts_load_balancers )
   ( export_artifacts "$CLUSTER_NAME" )
-  ( export KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG; export cluster_name='virtual-garden'; export_resource_yamls_for gardenlet seeds shoots; export_events_for_shoots )
+  ( export KUBECONFIG=$KUBECONFIG_RUNTIME_CLUSTER; export cluster_name='virtual-garden'; export_resource_yamls_for gardenlet seeds shoots; export_events_for_shoots )
   ( gardener_down )
   ( kind_down )
 " EXIT
