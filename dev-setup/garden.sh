@@ -34,16 +34,16 @@ case "$COMMAND" in
       TIMEOUT=60 SKIP_LAST_OPERATION_CHECK=true "$(dirname "$0")"/../hack/usage/wait-for.sh extop provider-local AdmissionHealthy
     fi
     # Export kubeconfig for the virtual garden cluster
-    RUNTIME_CLUSTER_KUBECONFIG="$KUBECONFIG" GARDEN_NAME="$garden_name" "$(dirname "$0")"/../hack/usage/generate-admin-kubeconfig-local.sh virtual-garden > "$VIRTUAL_GARDEN_KUBECONFIG"
+    RUNTIME_CLUSTER_KUBECONFIG="$KUBECONFIG" GARDEN_NAME="$garden_name" "$(dirname "$0")"/../hack/usage/generate-admin-kubeconfig-local.sh virtual-garden > "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER"
     # Rerun registry script to deploy pull secret into virtual garden
     if [[ "$SCENARIO" == "remote" ]]; then
       registry_domain=$(cat "$(dirname "$0")/remote/registry/registrydomain")
-      "$(dirname "$0")"/remote/registry/deploy-registry.sh "$KUBECONFIG" "$registry_domain" "$VIRTUAL_GARDEN_KUBECONFIG"
+      "$(dirname "$0")"/remote/registry/deploy-registry.sh "$KUBECONFIG" "$registry_domain" "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER"
     fi
     ;;
 
   down)
-    kubectl --kubeconfig "$VIRTUAL_GARDEN_KUBECONFIG" annotate projects $garden_name garden confirmation.gardener.cloud/deletion=true || true
+    kubectl --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" annotate projects $garden_name garden confirmation.gardener.cloud/deletion=true || true
     kubectl annotate garden $garden_name confirmation.gardener.cloud/deletion=true || true
     kubectl delete garden $garden_name --wait=false --ignore-not-found
 
@@ -64,9 +64,9 @@ case "$COMMAND" in
     kubectl delete pvc --all -n garden --ignore-not-found --timeout=120s
 
     # cleanup virtual garden kubconfig
-    if [[ -f "$VIRTUAL_GARDEN_KUBECONFIG" ]]; then
-      echo "Deleting virtual garden kubeconfig at $VIRTUAL_GARDEN_KUBECONFIG"
-      rm "$VIRTUAL_GARDEN_KUBECONFIG"
+    if [[ -f "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" ]]; then
+      echo "Deleting virtual garden kubeconfig at $KUBECONFIG_VIRTUAL_GARDEN_CLUSTER"
+      rm "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER"
     fi
     ;;
 

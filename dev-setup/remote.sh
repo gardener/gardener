@@ -312,7 +312,7 @@ case "$command" in
 
     virtual_garden_kubeconfig=""
     if [[ "$existing_gardens" != "" ]]; then
-      virtual_garden_kubeconfig="$VIRTUAL_GARDEN_KUBECONFIG"
+      virtual_garden_kubeconfig="$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER"
     fi
     "$SCRIPT_DIR"/remote/registry/deploy-registry.sh "$KUBECONFIG" "$registry_domain" "$virtual_garden_kubeconfig"
     ;;
