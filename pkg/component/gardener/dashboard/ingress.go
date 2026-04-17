@@ -52,11 +52,10 @@ func (g *gardenerDashboard) istioResources(ctx context.Context) ([]client.Object
 		}
 		tlsSecret = ingressTLSSecret
 	} else {
-		ingressTLSSecret, found := g.secretsManager.Get(tlsSecretName)
-		if !found {
-			return nil, fmt.Errorf("secret %q not found", tlsSecretName)
+		tlsSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: tlsSecretName, Namespace: g.namespace}}
+		if err := g.client.Get(ctx, client.ObjectKeyFromObject(tlsSecret), tlsSecret); err != nil {
+			return nil, fmt.Errorf("failed to get TLS secret %q: %w", tlsSecretName, err)
 		}
-		tlsSecret = ingressTLSSecret
 	}
 
 	// Istio expects the secret in the istio ingress gateway namespace => copy certificate to istio namespace
