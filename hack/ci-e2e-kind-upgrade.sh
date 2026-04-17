@@ -11,60 +11,7 @@ set -o errexit
 source $(dirname "${0}")/ci-common.sh
 
 VERSION="$(cat VERSION)"
-CLUSTER_NAME="gardener-local"
-SEED_NAME=""
-
-# copy_kubeconfig_from_kubeconfig_env_var copies the kubeconfig to appropriate location based on kind setup
-function copy_kubeconfig_from_kubeconfig_env_var() {
-  case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
-  node)
-    cp $KIND_KUBECONFIG dev-setup/gardenlet/components/kubeconfigs/seed-local/kubeconfig
-    cp $KIND_KUBECONFIG dev-setup/kubeconfigs/runtime/kubeconfig
-    ;;
-  zone)
-    cp $KIND_KUBECONFIG dev-setup/gardenlet/components/kubeconfigs/seed-local/kubeconfig
-    cp $KIND_KUBECONFIG dev-setup/kubeconfigs/runtime/kubeconfig
-    ;;
-  *)
-    cp $KUBECONFIG example/provider-local/seed-kind/base/kubeconfig
-    cp $KUBECONFIG example/gardener-local/kind/local/kubeconfig
-    ;;
-  esac
-}
-
-function gardener_up() {
-  # TODO(timebertt): remove sed and SKAFFOLD_DEFAULT_REPO override after v1.134 has been released
-  # see https://prow.gardener.cloud/view/gs/gardener-prow/pr-logs/pull/gardener_gardener/13551/pull-gardener-e2e-kind-upgrade/1993794625793429504
-  sed -i 's|garden.local.gardener.cloud:5001|registry.local.gardener.cloud:5001|g' skaffold*.yaml
-  # TODO(LucaBernstein,timebertt): remove sed override after v1.135 has been released
-  # due to reverting the port of the local registry from 5000 to 5001 again: https://prow.gardener.cloud/view/gs/gardener-prow/pr-logs/pull/gardener_gardener/13661/pull-gardener-e2e-kind-upgrade/2000609122042515456
-  sed -i 's|registry.local.gardener.cloud:5000|registry.local.gardener.cloud:5001|g' skaffold*.yaml
-  case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
-  node)
-    make operator-seed-up SKAFFOLD_DEFAULT_REPO=registry.local.gardener.cloud:5001
-    ;;
-  zone)
-    make operator-seed-up SKAFFOLD_DEFAULT_REPO=registry.local.gardener.cloud:5001
-    ;;
-  *)
-    make gardener-up SKAFFOLD_DEFAULT_REPO=registry.local.gardener.cloud:5001
-    ;;
-  esac
-}
-
-function gardener_down() {
-  case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
-  node)
-    make operator-seed-down
-    ;;
-  zone)
-    make operator-seed-down
-    ;;
-  *)
-    make gardener-down
-    ;;
-  esac
-}
+SEED_NAME="local"
 
 function kind_up() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
@@ -75,7 +22,7 @@ function kind_up() {
     make kind-multi-zone-up
     ;;
   *)
-    make kind-up
+    make kind-single-node-up
     ;;
   esac
 }
@@ -89,16 +36,30 @@ function kind_down() {
     make kind-multi-zone-down
     ;;
   *)
-    make kind-down
+    make kind-single-node-down
     ;;
   esac
 }
 
+# copy_kubeconfig_files_to_old_gardener_version_folder copies the kubeconfig files from Gardener repository folder
+# representing the 'next version' to the Gardener repository folder representing the 'previous version'. This is because
+# `make kind*-up` is executed from the folder of the 'next version' before the 'previous version' is downloaded into
+# another folder. From this other folder, Gardener gets installed into the existing kind cluster, but this requires the
+# kubeconfig files in the worktree.
+# This function mirrors the behaviour of ./hack/kind-up.sh (which also copies the kubeconfig of the kind cluster into
+# various locations).
+function copy_kubeconfig_files_to_old_gardener_version_folder() {
+  cp "$KUBECONFIG_RUNTIME_CLUSTER"  "dev-setup/${KUBECONFIG_RUNTIME_CLUSTER#*/dev-setup/}"
+  cp "$KUBECONFIG_SEED_CLUSTER"     "dev-setup/${KUBECONFIG_SEED_CLUSTER#*/dev-setup/}"
+  cp "$KUBECONFIG_SEED_SECRET_PATH" "dev-setup/${KUBECONFIG_SEED_SECRET_PATH#*/dev-setup/}"
+}
+
+
 function install_previous_release() {
-  pushd $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_PREVIOUS_RELEASE >/dev/null
-  copy_kubeconfig_from_kubeconfig_env_var
+  pushd "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_PREVIOUS_RELEASE" >/dev/null
+  copy_kubeconfig_files_to_old_gardener_version_folder
   remove_provider_local_service_controller
-  gardener_up
+  make operator-seed-up
   popd >/dev/null
 }
 
@@ -116,15 +77,15 @@ function upgrade_to_next_release() {
   # if GARDENER_NEXT_RELEASE is same as version mentioned in VERSION file then it is considered as local release and install gardener from local repo.
   if [[ -n $GARDENER_NEXT_RELEASE && $GARDENER_NEXT_RELEASE != $VERSION ]]; then
     # download gardener next release to perform gardener upgrade tests
-    $(dirname "${0}")/download_gardener_source_code.sh --gardener-version $GARDENER_NEXT_RELEASE --download-path $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases
-    export GARDENER_NEXT_VERSION="$(cat $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_NEXT_RELEASE/VERSION)"
-    pushd $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_NEXT_RELEASE >/dev/null
-    copy_kubeconfig_from_kubeconfig_env_var
-    gardener_up
+    $(dirname "${0}")/download_gardener_source_code.sh --gardener-version "$GARDENER_NEXT_RELEASE" --download-path "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases"
+    export GARDENER_NEXT_VERSION="$(cat "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_NEXT_RELEASE/VERSION")"
+    pushd "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_NEXT_RELEASE" >/dev/null
+    copy_kubeconfig_files_to_old_gardener_version_folder
+    make operator-seed-up
     popd >/dev/null
   else
     export GARDENER_NEXT_VERSION=$VERSION
-    gardener_up
+    make operator-seed-up
   fi
 }
 
@@ -182,9 +143,9 @@ function run_post_upgrade_test() {
   make "$test_command" GARDENER_PREVIOUS_RELEASE="$GARDENER_PREVIOUS_RELEASE" GARDENER_NEXT_RELEASE="$GARDENER_NEXT_RELEASE"
 }
 
-# TODO(rfranzke): Remove this after legacy helm-based dev setup has been dropped.
-if [[ "$SHOOT_FAILURE_TOLERANCE_TYPE" == "zone" ]] || [[ "$SHOOT_FAILURE_TOLERANCE_TYPE" == "node" ]]; then
-  echo "WARNING: The Gardener upgrade tests for the zone/node failure tolerance types are not executed in this release because the dev/e2e test setup is currently reworked."
+# TODO(rfranzke): Remove this after v1.141 is released and the upgrade tests can be enabled again.
+if true; then
+  echo "WARNING: The Gardener upgrade tests are not executed in this release because the dev/e2e test setup is currently reworked."
   echo "See https://github.com/gardener/gardener/issues/11958 for more information."
   echo "Skipping the tests."
   echo "After the rework has been finished, this early exit can be removed again (TODO(rfranzke))."
@@ -193,11 +154,10 @@ fi
 
 clamp_mss_to_pmtu
 set_gardener_upgrade_version_env_variables
-SEED_NAME="local"
 
 # download gardener previous release to perform gardener upgrade tests
-$(dirname "${0}")/download_gardener_source_code.sh --gardener-version $GARDENER_PREVIOUS_RELEASE --download-path $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases
-export GARDENER_PREVIOUS_VERSION="$(cat $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_PREVIOUS_RELEASE/VERSION)"
+$(dirname "${0}")/download_gardener_source_code.sh --gardener-version "$GARDENER_PREVIOUS_RELEASE" --download-path "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases"
+export GARDENER_PREVIOUS_VERSION="$(cat "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_PREVIOUS_RELEASE/VERSION")"
 
 # test setup
 kind_up
@@ -206,9 +166,9 @@ kind_up
 trap "
   ( rm -rf "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases" )
   ( export_artifacts_host_services; export_artifacts_infra; export_artifacts_load_balancers )
-  ( export_artifacts "$CLUSTER_NAME" )
-  ( export KUBECONFIG=$KUBECONFIG_RUNTIME_CLUSTER; export cluster_name='virtual-garden'; export_resource_yamls_for gardenlet seeds shoots; export_events_for_shoots )
-  ( gardener_down )
+  ( export KUBECONFIG=$KUBECONFIG_RUNTIME_CLUSTER; export_artifacts 'gardener-local'; export_resource_yamls_for garden extop )
+  ( export KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER; export cluster_name='virtual-garden'; export_resource_yamls_for gardenlet seeds shoots; export_events_for_shoots )
+  ( make operator-seed-down )
   ( kind_down )
 " EXIT
 
