@@ -5,7 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 data:
   config.yaml: |
-    apiVersion: local.provider.extensions.gardener.cloud/v1alpha1
+    apiVersion: local.provider.gardener.cloud/v1alpha1
     kind: CloudProviderConfig
     {{- with .Values.runtimeCluster }}
     runtimeCluster:

@@ -54,3 +54,9 @@ type MachineImageFlavor struct {
 func (cs MachineImageFlavor) GetCapabilities() gardencorev1beta1.Capabilities {
 	return cs.Capabilities
 }
+
+// LoadBalancer contains the configuration for the service controller of cloud-controller-manager-local.
+type LoadBalancer struct {
+	// Image is the envoy container image used for starting load balancer containers.
+	Image string
+}

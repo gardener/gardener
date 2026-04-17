@@ -11,13 +11,13 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	localinstall "github.com/gardener/gardener/pkg/provider-local/apis/local/install"
-	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
+	cloudproviderv1alpha1 "github.com/gardener/gardener/pkg/provider-local/cloud-provider/api/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/cloud-provider/loadbalancer"
 )
 
@@ -28,7 +28,7 @@ var configDecoder runtime.Decoder
 
 func init() {
 	configScheme := runtime.NewScheme()
-	localinstall.Install(configScheme)
+	utilruntime.Must(cloudproviderv1alpha1.AddToScheme(configScheme))
 	configDecoder = serializer.NewCodecFactory(configScheme, serializer.EnableStrict).UniversalDecoder()
 }
 
@@ -47,13 +47,13 @@ func Register() {
 	})
 }
 
-func readConfig(reader io.Reader) (*localv1alpha1.CloudProviderConfig, error) {
+func readConfig(reader io.Reader) (*cloudproviderv1alpha1.CloudProviderConfig, error) {
 	data, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, fmt.Errorf("error reading config file: %w", err)
 	}
 
-	cfg := &localv1alpha1.CloudProviderConfig{}
+	cfg := &cloudproviderv1alpha1.CloudProviderConfig{}
 	if err = runtime.DecodeInto(configDecoder, data, cfg); err != nil {
 		return nil, fmt.Errorf("error decoding config: %w", err)
 	}
@@ -62,7 +62,7 @@ func readConfig(reader io.Reader) (*localv1alpha1.CloudProviderConfig, error) {
 }
 
 // New returns a new instance of the local cloud provider implementation.
-func New(cfg *localv1alpha1.CloudProviderConfig) (cloudprovider.Interface, error) {
+func New(cfg *cloudproviderv1alpha1.CloudProviderConfig) (cloudprovider.Interface, error) {
 	dockerClient, err := dockerclient.NewClientWithOpts(dockerclient.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Docker client: %w", err)
@@ -82,7 +82,7 @@ func New(cfg *localv1alpha1.CloudProviderConfig) (cloudprovider.Interface, error
 	}, nil
 }
 
-func createRuntimeClient(cfg *localv1alpha1.RuntimeCluster) (client.Client, error) {
+func createRuntimeClient(cfg *cloudproviderv1alpha1.RuntimeCluster) (client.Client, error) {
 	if cfg == nil {
 		return nil, nil
 	}

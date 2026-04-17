@@ -51,3 +51,9 @@ type MachineImageFlavor struct {
 	// Capabilities that are supported by the identifier in this set.
 	Capabilities gardencorev1beta1.Capabilities `json:"capabilities,omitempty"`
 }
+
+// LoadBalancer contains the configuration for the service controller of cloud-controller-manager-local.
+type LoadBalancer struct {
+	// Image is the envoy container image used for starting load balancer containers.
+	Image string `json:"image"`
+}

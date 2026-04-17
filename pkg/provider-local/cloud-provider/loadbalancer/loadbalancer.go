@@ -16,14 +16,14 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
+	cloudproviderv1alpha1 "github.com/gardener/gardener/pkg/provider-local/cloud-provider/api/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
 // Provider implements the cloudprovider.LoadBalancer interface for the cloud-provider-local.
 type Provider struct {
 	// Config is the full config of cloud-controller-manager-local.
-	Config *localv1alpha1.CloudProviderConfig
+	Config *cloudproviderv1alpha1.CloudProviderConfig
 
 	// DockerClient is the client connected to the host's Docker socket.
 	DockerClient *dockerclient.Client

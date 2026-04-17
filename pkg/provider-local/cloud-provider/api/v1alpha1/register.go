@@ -10,7 +10,7 @@ import (
 )
 
 // GroupName is the group name used in this package.
-const GroupName = "local.provider.extensions.gardener.cloud"
+const GroupName = "local.provider.gardener.cloud"
 
 // SchemeGroupVersion is group version used to register these objects
 var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1alpha1"}
@@ -21,7 +21,7 @@ func Resource(resource string) schema.GroupResource {
 }
 
 var (
-	// SchemeBuilder used to register the Shoot resource.
+	// SchemeBuilder used to register the resources.
 	SchemeBuilder      runtime.SchemeBuilder
 	localSchemeBuilder = &SchemeBuilder
 	// AddToScheme is a pointer to SchemeBuilder.AddToScheme.
@@ -38,9 +38,7 @@ func init() {
 // Adds the list of known types to api.Scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&CloudProfileConfig{},
-		&WorkerStatus{},
+		&CloudProviderConfig{},
 	)
-
 	return nil
 }

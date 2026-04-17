@@ -55,58 +55,12 @@ resource.
 </table>
 
 
-<h3 id="cloudproviderconfig">CloudProviderConfig
-</h3>
-
-
-<p>
-CloudProviderConfig contains the configuration API for cloud-controller-manager-local (used by the
-pkg/provider-local/cloud-provider package).
-</p>
-
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-
-<tr>
-<td>
-<code>runtimeCluster</code></br>
-<em>
-<a href="#runtimecluster">RuntimeCluster</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>RuntimeCluster configures how cloud-controller-manager-local connects to the runtime cluster (seed) of the shoot<br />cluster, i.e., the kind cluster where the shoot machine pods run.<br />This is only required if the cloud-controller-manager-local is running for a shoot cluster, not for the kind<br />cluster itself.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>loadBalancer</code></br>
-<em>
-<a href="#loadbalancer">LoadBalancer</a>
-</em>
-</td>
-<td>
-<p>LoadBalancer contains the configuration for the service controller of cloud-controller-manager-local.</p>
-</td>
-</tr>
-
-</tbody>
-</table>
-
-
 <h3 id="loadbalancer">LoadBalancer
 </h3>
 
 
 <p>
-(<em>Appears on:</em><a href="#cloudprofileconfig">CloudProfileConfig</a>, <a href="#cloudproviderconfig">CloudProviderConfig</a>)
+(<em>Appears on:</em><a href="#cloudprofileconfig">CloudProfileConfig</a>)
 </p>
 
 <p>
@@ -357,56 +311,6 @@ string
 </td>
 <td>
 <p>Versions contains versions and a provider-specific identifier.</p>
-</td>
-</tr>
-
-</tbody>
-</table>
-
-
-<h3 id="runtimecluster">RuntimeCluster
-</h3>
-
-
-<p>
-(<em>Appears on:</em><a href="#cloudproviderconfig">CloudProviderConfig</a>)
-</p>
-
-<p>
-RuntimeCluster configures how cloud-controller-manager-local connects to the runtime cluster (seed) of the shoot
-cluster, i.e., the kind cluster where the shoot machine pods run.
-</p>
-
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-
-<tr>
-<td>
-<code>namespace</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Namespace configures the namespace of the runtime cluster where the shoot machine pods run.<br />If RuntimeCluster is set, this field is required.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>kubeconfig</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Kubeconfig configures the path to the kubeconfig file for connecting to the runtime cluster. If not set,<br />cloud-controller-manager-local uses the in-cluster credentials (ServiceAccount).</p>
 </td>
 </tr>
 
