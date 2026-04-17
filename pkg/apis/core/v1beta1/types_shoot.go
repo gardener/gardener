@@ -1088,7 +1088,7 @@ type EncryptionProvider struct {
 	//   - "aescbc"
 	//   - "aesgcm"
 	//   - "secretbox"
-	// Defaults to aesgcm.
+	// Defaults to aescbc.
 	// +optional
 	Type *EncryptionProviderType `json:"type,omitempty" protobuf:"bytes,1,opt,name=type"`
 }

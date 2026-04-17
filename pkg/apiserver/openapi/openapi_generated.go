@@ -3941,7 +3941,7 @@ func schema_pkg_apis_core_v1beta1_EncryptionProvider(ref common.ReferenceCallbac
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type contains the type of the encryption provider.\n\nSupported types:\n  - \"aescbc\"\n  - \"aesgcm\"\n  - \"secretbox\"\nDefaults to aesgcm.",
+							Description: "Type contains the type of the encryption provider.\n\nSupported types:\n  - \"aescbc\"\n  - \"aesgcm\"\n  - \"secretbox\"\nDefaults to aescbc.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

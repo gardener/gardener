@@ -253,7 +253,7 @@ spec:
   #     - configmaps
   #     - customresource.fancyoperator.io
   #     provider:
-  #       type: "aesgcm"
+  #       type: "aescbc"
   #   autoscaling:
   #     minAllowed:
   #       cpu: "1"
