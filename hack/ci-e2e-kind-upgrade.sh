@@ -123,9 +123,9 @@ function run_pre_upgrade_test() {
   local test_command
 
   if [[ "$SHOOT_FAILURE_TOLERANCE_TYPE" == "node" || "$SHOOT_FAILURE_TOLERANCE_TYPE" == "zone" ]]; then
-    test_command="test-pre-upgrade"
+    test_command="test-e2e-pre-upgrade"
   else
-    test_command="test-non-ha-pre-upgrade"
+    test_command="test-e2e-non-ha-pre-upgrade"
   fi
 
   make "$test_command" GARDENER_PREVIOUS_RELEASE="$GARDENER_PREVIOUS_RELEASE" GARDENER_NEXT_RELEASE="$GARDENER_NEXT_RELEASE"
@@ -135,9 +135,9 @@ function run_post_upgrade_test() {
   local test_command
 
   if [[ "$SHOOT_FAILURE_TOLERANCE_TYPE" == "node" || "$SHOOT_FAILURE_TOLERANCE_TYPE" == "zone" ]]; then
-    test_command="test-post-upgrade"
+    test_command="test-e2e-post-upgrade"
   else
-    test_command="test-non-ha-post-upgrade"
+    test_command="test-e2e-non-ha-post-upgrade"
   fi
 
   make "$test_command" GARDENER_PREVIOUS_RELEASE="$GARDENER_PREVIOUS_RELEASE" GARDENER_NEXT_RELEASE="$GARDENER_NEXT_RELEASE"
