@@ -5,7 +5,6 @@ The gardenlet can automatically be deployed by `gardener-operator` into existing
 ## Prerequisites
 
 Using this method only works when [`gardener-operator`](../concepts/operator.md) is managing the garden cluster.
-If you have used the [`gardener/controlplane` Helm chart](../../charts/gardener/controlplane) for the deployment of the Gardener control plane, please refer to [this document](deploy_gardenlet_manually.md).
 
 > [!TIP]
 > The initial seed cluster can be the garden cluster itself, but for better separation of concerns, it is recommended to only register other clusters as seeds.
