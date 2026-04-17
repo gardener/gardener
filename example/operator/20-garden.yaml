@@ -42,7 +42,7 @@ spec:
       # providerConfig:
       #   <some-optional-config-for-the-nginx-ingress-controller>
     networking:
-      # Those CIDRs have been chosen to match with the kind Cluster configuration (see example/gardener-local/kind/cluster/values.yaml).
+      # Those CIDRs have been chosen to match with the kind Cluster configuration (see dev-setup/kind/cluster/base/cluster.yaml).
       # Generally, they have to match the CIDRs of the runtime cluster.
       ipFamilies:
       - IPv4

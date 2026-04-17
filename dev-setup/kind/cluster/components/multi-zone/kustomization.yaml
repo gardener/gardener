@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+patches:
+- patch: |-
+    - op: replace
+      path: /nodes/1/labels/topology.kubernetes.io~1zone
+      value: "1"
+    - op: replace
+      path: /nodes/2/labels/topology.kubernetes.io~1zone
+      value: "2"
+  target:
+    group: kind.x-k8s.io
+    kind: Cluster
+    name: local
