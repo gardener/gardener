@@ -13,7 +13,7 @@ source $(dirname "${0}")/ci-common.sh
 clamp_mss_to_pmtu
 
 # test setup
-make kind-single-node-up
+make kind-up
 make kind-single-node2-up
 
 # export all container logs and events after test execution
@@ -25,7 +25,7 @@ trap "
   ( make seed-down KUBECONFIG="$KUBECONFIG_SEED2_CLUSTER" )
   ( make operator-seed-down )
   ( make kind-single-node2-down )
-  ( make kind-single-node-down )
+  ( make kind-down )
 " EXIT
 
 make operator-seed-up
