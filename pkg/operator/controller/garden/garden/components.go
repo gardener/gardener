@@ -293,7 +293,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.gardenerDashboard, err = r.newGardenerDashboard(garden, secretsManager, wildcardCertSecretName)
+	c.gardenerDashboard, err = r.newGardenerDashboard(garden, secretsManager, wildcardCertSecretName, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -1310,7 +1310,19 @@ func (r *Reconciler) newGardenerScheduler(garden *operatorv1alpha1.Garden, secre
 	return gardenerscheduler.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
 }
 
-func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, wildcardCertSecretName *string) (gardenerdashboard.Interface, error) {
+func (r *Reconciler) newGardenerDashboard(
+	garden *operatorv1alpha1.Garden,
+	secretsManager secretsmanager.Interface,
+	wildcardCertSecretName *string,
+	ingressGatewayValues []istio.IngressGatewayValues,
+) (
+	gardenerdashboard.Interface,
+	error,
+) {
+	if len(ingressGatewayValues) != 1 {
+		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the dashboard config")
+	}
+
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerDashboard)
 	if err != nil {
 		return nil, err
@@ -1322,9 +1334,10 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 		APIServerURL:     v1beta1helper.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name),
 		EnableTokenLogin: true,
 		Ingress: gardenerdashboard.IngressValues{
-			Enabled:                true,
-			Domains:                domainNames(garden.Spec.RuntimeCluster.Ingress.Domains),
-			WildcardCertSecretName: wildcardCertSecretName,
+			Enabled:                   true,
+			Domains:                   domainNames(garden.Spec.RuntimeCluster.Ingress.Domains),
+			IstioIngressGatewayLabels: ingressGatewayValues[0].Labels,
+			WildcardCertSecretName:    wildcardCertSecretName,
 		},
 	}
 

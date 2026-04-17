@@ -15,10 +15,13 @@ import (
 	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"golang.org/x/crypto/bcrypt"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
+	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -36,6 +39,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/gardener/dashboard"
+	comptest "github.com/gardener/gardener/pkg/component/test"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/gardener"
@@ -88,7 +92,10 @@ var _ = Describe("GardenerDashboard", func() {
 		service                   *corev1.Service
 		podDisruptionBudget       *policyv1.PodDisruptionBudget
 		vpa                       *vpaautoscalingv1.VerticalPodAutoscaler
-		ingress                   *networkingv1.Ingress
+		gateway                   *istionetworkingv1beta1.Gateway
+		virtualService            *istionetworkingv1beta1.VirtualService
+		destinationRule           *istionetworkingv1beta1.DestinationRule
+		tlsSecret                 *corev1.Secret
 		serviceMonitor            *monitoringv1.ServiceMonitor
 
 		clusterRole                      *rbacv1.ClusterRole
@@ -120,7 +127,7 @@ var _ = Describe("GardenerDashboard", func() {
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
 		))
 
-		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient, comptest.CmpOptsForIstio()...)
 
 		managedResourceRuntime = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -587,6 +594,7 @@ frontend:
 				},
 				Annotations: map[string]string{
 					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9050}]`,
+					"networking.istio.io/exportTo": "*",
 				},
 			},
 			Spec: corev1.ServiceSpec{
@@ -663,7 +671,7 @@ frontend:
 				},
 			},
 		}
-		ingress = &networkingv1.Ingress{
+		gateway = &istionetworkingv1beta1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-dashboard",
 				Namespace: namespace,
@@ -671,52 +679,89 @@ frontend:
 					"app":  "gardener",
 					"role": "dashboard",
 				},
-				Annotations: map[string]string{
-					"nginx.ingress.kubernetes.io/ssl-redirect":          "true",
-					"nginx.ingress.kubernetes.io/use-port-in-redirects": "true",
+			},
+			Spec: istioapinetworkingv1beta1.Gateway{
+				Servers: []*istioapinetworkingv1beta1.Server{{
+					Port: &istioapinetworkingv1beta1.Port{
+						Name:     "tls",
+						Number:   443,
+						Protocol: "HTTPS",
+					},
+					Hosts: []string{"dashboard.first", "dashboard.second"},
+					Tls: &istioapinetworkingv1beta1.ServerTLSSettings{
+						Mode:           istioapinetworkingv1beta1.ServerTLSSettings_SIMPLE,
+						CredentialName: "some-namespace-gardener-dashboard-gardener-dashboard-tls",
+					},
+				}},
+			},
+		}
+		virtualService = &istionetworkingv1beta1.VirtualService{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-dashboard",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "dashboard",
 				},
 			},
-			Spec: networkingv1.IngressSpec{
-				IngressClassName: ptr.To("nginx-ingress-gardener"),
-				TLS: []networkingv1.IngressTLS{{
-					SecretName: "gardener-dashboard-tls",
-					Hosts:      []string{"dashboard.first", "dashboard.second"},
+			Spec: istioapinetworkingv1beta1.VirtualService{
+				ExportTo: []string{"*"},
+				Gateways: []string{"gardener-dashboard"},
+				Hosts:    []string{"dashboard.first", "dashboard.second"},
+				Http: []*istioapinetworkingv1beta1.HTTPRoute{{
+					Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
+						{
+							Destination: &istioapinetworkingv1beta1.Destination{
+								Host: "gardener-dashboard.some-namespace.svc.cluster.local",
+								Port: &istioapinetworkingv1beta1.PortSelector{
+									Number: 8080,
+								},
+							},
+						},
+					},
 				}},
-				Rules: []networkingv1.IngressRule{
-					{
-						Host: "dashboard.first",
-						IngressRuleValue: networkingv1.IngressRuleValue{
-							HTTP: &networkingv1.HTTPIngressRuleValue{
-								Paths: []networkingv1.HTTPIngressPath{{
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
-											Name: "gardener-dashboard",
-											Port: networkingv1.ServiceBackendPort{Number: 8080},
-										},
-									},
-									Path:     "/",
-									PathType: ptr.To(networkingv1.PathTypePrefix),
-								}},
-							},
+			},
+		}
+		destinationRule = &istionetworkingv1beta1.DestinationRule{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-dashboard",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "dashboard",
+				},
+			},
+			Spec: istioapinetworkingv1beta1.DestinationRule{
+				ExportTo: []string{"*"},
+				Host:     "gardener-dashboard.some-namespace.svc.cluster.local",
+				TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
+					LoadBalancer: &istioapinetworkingv1beta1.LoadBalancerSettings{
+						LocalityLbSetting: &istioapinetworkingv1beta1.LocalityLoadBalancerSetting{
+							FailoverPriority: []string{"topology.kubernetes.io/zone"},
+							Enabled:          wrapperspb.Bool(true),
 						},
 					},
-					{
-						Host: "dashboard.second",
-						IngressRuleValue: networkingv1.IngressRuleValue{
-							HTTP: &networkingv1.HTTPIngressRuleValue{
-								Paths: []networkingv1.HTTPIngressPath{{
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
-											Name: "gardener-dashboard",
-											Port: networkingv1.ServiceBackendPort{Number: 8080},
-										},
-									},
-									Path:     "/",
-									PathType: ptr.To(networkingv1.PathTypePrefix),
-								}},
+					ConnectionPool: &istioapinetworkingv1beta1.ConnectionPoolSettings{
+						Tcp: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
+							TcpKeepalive: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
+								Time:     &durationpb.Duration{Seconds: 7200},
+								Interval: &durationpb.Duration{Seconds: 75},
 							},
+							MaxConnectionDuration: &durationpb.Duration{Seconds: 86400},
 						},
 					},
+					OutlierDetection: &istioapinetworkingv1beta1.OutlierDetection{},
+					Tls:              &istioapinetworkingv1beta1.ClientTLSSettings{},
+				},
+			},
+		}
+		tlsSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "some-namespace-gardener-dashboard-gardener-dashboard-tls",
+				Namespace: "virtual-garden-istio-ingress",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "dashboard",
 				},
 			},
 		}
@@ -940,6 +985,15 @@ frontend:
 			JustBeforeEach(func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
 
+				tlsSecretInGardenNamespace := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gardener-dashboard-tls",
+						Namespace: namespace,
+					},
+				}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(tlsSecretInGardenNamespace), tlsSecretInGardenNamespace)).To(Succeed())
+				tlsSecret.Data = tlsSecretInGardenNamespace.Data
+
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(Succeed())
 				expectedRuntimeMr := &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
@@ -992,7 +1046,10 @@ frontend:
 					service,
 					podDisruptionBudget,
 					vpa,
-					ingress,
+					gateway,
+					virtualService,
+					destinationRule,
+					tlsSecret,
 					serviceMonitor,
 				}
 				expectedVirtualObjects = []client.Object{
