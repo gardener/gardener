@@ -709,6 +709,8 @@ spec:
 
                                       Supported types:
                                         - "aescbc"
+                                        - "aesgcm"
+                                        - "secretbox"
                                       Defaults to aescbc.
                                     type: string
                                 type: object
@@ -1637,6 +1639,8 @@ spec:
 
                                       Supported types:
                                         - "aescbc"
+                                        - "aesgcm"
+                                        - "secretbox"
                                       Defaults to aescbc.
                                     type: string
                                 type: object

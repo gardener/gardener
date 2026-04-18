@@ -3998,7 +3998,7 @@ EncryptionProvider contains information about the encryption provider.
 </td>
 <td>
 <em>(Optional)</em>
-<p>Type contains the type of the encryption provider.<br />Supported types:<br />  - "aescbc"<br />Defaults to aescbc.</p>
+<p>Type contains the type of the encryption provider.<br />Supported types:<br />  - "aescbc"<br />  - "aesgcm"<br />  - "secretbox"<br />Defaults to aescbc.</p>
 </td>
 </tr>
 

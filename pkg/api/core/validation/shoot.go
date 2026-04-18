@@ -175,13 +175,16 @@ var (
 
 	availableEncryptionAtRestProviders = sets.New(
 		core.EncryptionProviderTypeAESCBC,
+		core.EncryptionProviderTypeAESGCM,
+		core.EncryptionProviderTypeSecretbox,
 	)
 
 	workerlessErrorMsg = "this field should not be set for workerless Shoot clusters"
 )
 
 type shootValidationOptions struct {
-	KubeAPIServerValidationOptions
+	// KubeAPIServerValidationOptions are validation options for the KubeAPIServer fields.
+	KubeAPIServerValidationOptions KubeAPIServerValidationOptions
 }
 
 // KubeAPIServerValidationOptions are validation options for the KubeAPIServer fields.
@@ -192,6 +195,16 @@ type KubeAPIServerValidationOptions struct {
 	//
 	// TODO(ialidzhikov): Stop accepting invalid event ttl values for existing Shoots in Gardener v1.142.0.
 	AllowInvalidEventTTL bool
+	// ETCDEncryptionConfigValidationOptions are validation options for the encryption configuration fields.
+	ETCDEncryptionConfigValidationOptions ETCDEncryptionConfigValidationOptions
+}
+
+// ETCDEncryptionConfigValidationOptions are validation options for the encryption configuration fields.
+type ETCDEncryptionConfigValidationOptions struct {
+	// AutoRotationEnabled is true when ETCD encryption key auto rotation is enabled.
+	AutoRotationEnabled bool
+	// SkipAESGCMAutoRotationValidation is true when the AES-GCM auto rotation validation should be skipped.
+	SkipAESGCMAutoRotationValidation bool
 }
 
 // ValidateShoot validates a Shoot object.
@@ -200,6 +213,9 @@ func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 		KubeAPIServerValidationOptions: KubeAPIServerValidationOptions{
 			AllowInvalidAcceptedIssuers: false,
 			AllowInvalidEventTTL:        false,
+			ETCDEncryptionConfigValidationOptions: ETCDEncryptionConfigValidationOptions{
+				AutoRotationEnabled: helper.IsETCDEncryptionKeyAutoRotationEnabled(shoot.Spec.Maintenance),
+			},
 		},
 	}
 
@@ -229,6 +245,9 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 				apiequality.Semantic.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers, newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers),
 			AllowInvalidEventTTL: oldShoot.Spec.Kubernetes.KubeAPIServer != nil && newShoot.Spec.Kubernetes.KubeAPIServer != nil &&
 				apiequality.Semantic.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.EventTTL, newShoot.Spec.Kubernetes.KubeAPIServer.EventTTL),
+			ETCDEncryptionConfigValidationOptions: ETCDEncryptionConfigValidationOptions{
+				AutoRotationEnabled: helper.IsETCDEncryptionKeyAutoRotationEnabled(newShoot.Spec.Maintenance),
+			},
 		},
 	}
 
@@ -241,6 +260,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 		oldEncryptionConfig       *core.EncryptionConfig
 		newEncryptionConfig       *core.EncryptionConfig
 		encryptedResources        = sets.New[schema.GroupResource]()
+		encryptionProviderType    = helper.GetEncryptionProviderTypeInStatus(newShoot.Status)
 		hibernationEnabled        = false
 	)
 
@@ -262,7 +282,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 		}
 	}
 
-	allErrs = append(allErrs, ValidateEncryptionConfigUpdate(newEncryptionConfig, oldEncryptionConfig, encryptedResources, etcdEncryptionKeyRotation, hibernationEnabled, field.NewPath("spec", "kubernetes", "kubeAPIServer", "encryptionConfig"))...)
+	allErrs = append(allErrs, ValidateEncryptionConfigUpdate(newEncryptionConfig, oldEncryptionConfig, encryptedResources, encryptionProviderType, etcdEncryptionKeyRotation, hibernationEnabled, field.NewPath("spec", "kubernetes", "kubeAPIServer", "encryptionConfig"))...)
 	allErrs = append(allErrs, ValidateShootWithOpts(newShoot, opts)...)
 	allErrs = append(allErrs, ValidateShootHAConfigUpdate(newShoot, oldShoot)...)
 	allErrs = append(allErrs, validateHibernationUpdate(newShoot, oldShoot)...)
@@ -729,23 +749,27 @@ func ValidateNodeCIDRMaskWithMaxPod(maxPod int32, nodeCIDRMaskSize int32, networ
 }
 
 // ValidateEncryptionConfigUpdate validates the updates to the KubeAPIServer encryption configuration.
-func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.EncryptionConfig, currentEncryptedResources sets.Set[schema.GroupResource], etcdEncryptionKeyRotation *core.ETCDEncryptionKeyRotation, isClusterInHibernation bool, fldPath *field.Path) field.ErrorList {
+func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.EncryptionConfig, currentEncryptedResources sets.Set[schema.GroupResource], currentEncryptionProviderType core.EncryptionProviderType, etcdEncryptionKeyRotation *core.ETCDEncryptionKeyRotation, isClusterInHibernation bool, fldPath *field.Path) field.ErrorList {
 	var (
-		allErrs               = field.ErrorList{}
-		oldEncryptedResources = sets.New[schema.GroupResource]()
-		newEncryptedResources = sets.New[schema.GroupResource]()
+		allErrs                   = field.ErrorList{}
+		oldEncryptedResources     = sets.New[schema.GroupResource]()
+		newEncryptedResources     = sets.New[schema.GroupResource]()
+		oldEncryptionProviderType core.EncryptionProviderType
+		newEncryptionProviderType core.EncryptionProviderType
 	)
 
 	if oldConfig != nil {
 		for _, r := range oldConfig.Resources {
 			oldEncryptedResources.Insert(schema.ParseGroupResource(r))
 		}
+		oldEncryptionProviderType = ptr.Deref(oldConfig.Provider.Type, "")
 	}
 
 	if newConfig != nil {
 		for _, r := range newConfig.Resources {
 			newEncryptedResources.Insert(schema.ParseGroupResource(r))
 		}
+		newEncryptionProviderType = ptr.Deref(newConfig.Provider.Type, "")
 	}
 
 	if !newEncryptedResources.Equal(oldEncryptedResources) {
@@ -753,7 +777,7 @@ func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.EncryptionConfig,
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("resources"), fmt.Sprintf("resources cannot be changed when .status.credentials.rotation.etcdEncryptionKey.phase is not %q", string(core.RotationCompleted))))
 		}
 
-		if !oldEncryptedResources.Equal(currentEncryptedResources) {
+		if !oldEncryptedResources.Equal(currentEncryptedResources) || oldEncryptionProviderType != currentEncryptionProviderType {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("resources"), "resources cannot be changed because a previous encryption configuration change is currently being rolled out"))
 		}
 
@@ -761,6 +785,9 @@ func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.EncryptionConfig,
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("resources"), "resources cannot be changed when shoot is in hibernation"))
 		}
 	}
+
+	// TODO(AleksandarSavchev): Remove this validation once we have added a gardenlet feature gate to allow changing the encryption provider type.
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newEncryptionProviderType, oldEncryptionProviderType, fldPath.Child("provider", "type"))...)
 
 	return allErrs
 }
@@ -1418,7 +1445,7 @@ func ValidateAPIServerRequests(requests *core.APIServerRequests, fldPath *field.
 
 // validateEncryptionConfig was created by reusing validation from the kubernetes/kubernetes project
 // https://github.com/kubernetes/kubernetes/blob/8adc0f041b8e7ad1d30e29cc59c6ae7a15e19828/staging/src/k8s.io/apiserver/pkg/apis/apiserver/validation/validation_encryption.go#L122-L284
-func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEncryptedResources []schema.GroupResource, fldPath *field.Path) field.ErrorList {
+func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEncryptedResources []schema.GroupResource, encryptionConfigOpts ETCDEncryptionConfigValidationOptions, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs       = field.ErrorList{}
 		seenResources = sets.New[schema.GroupResource]()
@@ -1463,8 +1490,15 @@ func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEn
 		seenResources.Insert(gr)
 	}
 
-	if encryptionConfig.Provider.Type != nil && !availableEncryptionAtRestProviders.Has(*encryptionConfig.Provider.Type) {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("encryptionConfig", "provider", "type"), *encryptionConfig.Provider.Type, sets.List(availableEncryptionAtRestProviders)))
+	if providerType := encryptionConfig.Provider.Type; providerType != nil {
+		providerTypeFldPath := fldPath.Child("encryptionConfig", "provider", "type")
+
+		if !availableEncryptionAtRestProviders.Has(*providerType) {
+			allErrs = append(allErrs, field.NotSupported(providerTypeFldPath, *providerType, sets.List(availableEncryptionAtRestProviders)))
+		}
+		if *providerType == core.EncryptionProviderTypeAESGCM && !encryptionConfigOpts.SkipAESGCMAutoRotationValidation && !encryptionConfigOpts.AutoRotationEnabled {
+			allErrs = append(allErrs, field.Forbidden(providerTypeFldPath, "etcdEncryptionKey auto rotation must be enabled when encryption at rest provider is AES-GCM"))
+		}
 	}
 
 	return allErrs
@@ -1827,7 +1861,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, kubernetesVe
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(*defaultUnreachableTolerationSeconds, fldPath.Child("defaultUnreachableTolerationSeconds"))...)
 	}
 
-	allErrs = append(allErrs, validateEncryptionConfig(kubeAPIServer.EncryptionConfig, defaultEncryptedResources, fldPath)...)
+	allErrs = append(allErrs, validateEncryptionConfig(kubeAPIServer.EncryptionConfig, defaultEncryptedResources, opts.ETCDEncryptionConfigValidationOptions, fldPath)...)
 
 	allErrs = append(allErrs, ValidateAPIServerRequests(kubeAPIServer.Requests, fldPath.Child("requests"))...)
 

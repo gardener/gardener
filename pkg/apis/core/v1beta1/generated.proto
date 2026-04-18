@@ -1096,6 +1096,8 @@ message EncryptionProvider {
   //
   // Supported types:
   //   - "aescbc"
+  //   - "aesgcm"
+  //   - "secretbox"
   // Defaults to aescbc.
   // +optional
   optional string type = 1;

@@ -73,7 +73,7 @@ func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 
 		g.Expect(encryptionConfiguration.Resources[0].Providers).To(DeepEqual([]apiserverconfigv1.ProviderConfiguration{
 			{
-				AESCBC: &apiserverconfigv1.AESConfiguration{
+				AESGCM: &apiserverconfigv1.AESConfiguration{
 					Keys: []apiserverconfigv1.Key{{
 						// old key
 						Name:   string(v.secretsBefore[v.EncryptionKey][0].Data["key"]),
@@ -151,7 +151,7 @@ func (v *ETCDEncryptionKeyVerifier) afterCompleted(ctx context.Context) {
 		g.Expect(encryptionConfiguration.Resources).To(HaveLen(1))
 		g.Expect(encryptionConfiguration.Resources[0].Providers).To(DeepEqual([]apiserverconfigv1.ProviderConfiguration{
 			{
-				AESCBC: &apiserverconfigv1.AESConfiguration{
+				AESGCM: &apiserverconfigv1.AESConfiguration{
 					Keys: []apiserverconfigv1.Key{{
 						// new key
 						Name:   string(newKeySecret.Data["key"]),
