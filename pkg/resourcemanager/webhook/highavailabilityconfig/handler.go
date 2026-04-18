@@ -83,11 +83,16 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
+	hasMultipleNodes, err := kubernetesutils.HasMoreThanOneNode(ctx, h.TargetClient)
+	if err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
 	switch requestGK {
 	case appsv1.SchemeGroupVersion.WithKind("Deployment").GroupKind():
-		obj, err = h.handleDeployment(req, failureToleranceType, zones, isHorizontallyScaled, maxReplicas, isZonePinningEnabled)
+		obj, err = h.handleDeployment(req, failureToleranceType, zones, isHorizontallyScaled, maxReplicas, hasMultipleNodes, isZonePinningEnabled)
 	case appsv1.SchemeGroupVersion.WithKind("StatefulSet").GroupKind():
-		obj, err = h.handleStatefulSet(req, failureToleranceType, zones, isHorizontallyScaled, maxReplicas, isZonePinningEnabled)
+		obj, err = h.handleStatefulSet(req, failureToleranceType, zones, isHorizontallyScaled, maxReplicas, hasMultipleNodes, isZonePinningEnabled)
 	case autoscalingv2.SchemeGroupVersion.WithKind("HorizontalPodAutoscaler").GroupKind():
 		obj, err = h.handleHorizontalPodAutoscaler(req, failureToleranceType)
 	default:
@@ -116,6 +121,7 @@ func (h *Handler) handleDeployment(
 	zones []string,
 	isHorizontallyScaled bool,
 	maxReplicas int32,
+	hasMultipleNodes bool,
 	isZonePinningEnabled bool,
 ) (
 	runtime.Object,
@@ -154,6 +160,7 @@ func (h *Handler) handleDeployment(
 		isHorizontallyScaled,
 		deployment.Spec.Replicas,
 		maxReplicas,
+		hasMultipleNodes,
 		&deployment.Spec.Template,
 		deployment.Annotations,
 		metav1.LabelSelector{MatchLabels: deployment.Spec.Template.Labels},
@@ -172,6 +179,7 @@ func (h *Handler) handleStatefulSet(
 	zones []string,
 	isHorizontallyScaled bool,
 	maxReplicas int32,
+	hasMultipleNodes bool,
 	isZonePinningEnabled bool,
 ) (
 	runtime.Object,
@@ -214,6 +222,7 @@ func (h *Handler) handleStatefulSet(
 		isHorizontallyScaled,
 		statefulSet.Spec.Replicas,
 		maxReplicas,
+		hasMultipleNodes,
 		&statefulSet.Spec.Template,
 		statefulSet.Annotations,
 		*statefulSet.Spec.Selector,
@@ -385,6 +394,7 @@ func (h *Handler) mutateTopologySpreadConstraints(
 	isHorizontallyScaled bool,
 	currentReplicas *int32,
 	maxReplicas int32,
+	hasMultipleNodes bool,
 	podTemplateSpec *corev1.PodTemplateSpec,
 	annotations map[string]string,
 	labelSelector metav1.LabelSelector,
@@ -407,6 +417,7 @@ func (h *Handler) mutateTopologySpreadConstraints(
 		maxReplicas,
 		labelSelector,
 		int32(len(zones)), // #nosec G115 -- `len(zones)` cannot be higher than max int32. Zones come from shoot spec and there is a validation that there cannot be more zones than worker.Maximum which is int32.
+		hasMultipleNodes,
 		failureToleranceType,
 		enforceSpreadAcrossHosts,
 	); constraints != nil {

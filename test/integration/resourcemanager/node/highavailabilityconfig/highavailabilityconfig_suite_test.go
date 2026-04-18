@@ -31,19 +31,16 @@ import (
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/logger"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/highavailabilityconfig"
+	highavailabilityconfigwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 )
 
 func TestHighAvailabilityConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration ResourceManager HighAvailabilityConfig Suite")
+	RunSpecs(t, "Test Integration ResourceManager Node HighAvailabilityConfig Suite")
 }
 
-const (
-	testIDPrefix                              = "high-availability-config-webhook-test"
-	defaultNotReadyTolerationSeconds    int64 = 60
-	defaultUnreachableTolerationSeconds int64 = 120
-)
+const testIDPrefix = "node-ha-config-test"
 
 var (
 	ctx = context.Background()
@@ -63,7 +60,6 @@ var _ = BeforeSuite(func() {
 		ControlPlane: envtest.ControlPlane{
 			APIServer: &envtest.APIServer{},
 		},
-		ErrorIfCRDPathMissing: true,
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
 			MutatingWebhooks: getMutatingWebhookConfigurations(),
 		},
@@ -94,7 +90,6 @@ var _ = BeforeSuite(func() {
 		Client: client.Options{
 			Cache: &client.CacheOptions{
 				DisableFor: []client.Object{
-					// Disable cache for namespaces so that changes applied by tests are seen immediately.
 					&corev1.Namespace{},
 				},
 			},
@@ -106,15 +101,18 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Register webhook")
-	Expect((&highavailabilityconfig.Handler{
+	Expect((&highavailabilityconfigwebhook.Handler{
 		Logger:       log,
 		TargetClient: testClient,
 		Config: resourcemanagerconfigv1alpha1.HighAvailabilityConfigWebhookConfig{
-			DefaultNotReadyTolerationSeconds:    ptr.To(defaultNotReadyTolerationSeconds),
-			DefaultUnreachableTolerationSeconds: ptr.To(defaultUnreachableTolerationSeconds),
+			DefaultNotReadyTolerationSeconds:    ptr.To[int64](60),
+			DefaultUnreachableTolerationSeconds: ptr.To[int64](120),
 		},
 		Decoder: admission.NewDecoder(mgr.GetScheme()),
 	}).AddToManager(mgr)).To(Succeed())
+
+	By("Register controller")
+	Expect((&highavailabilityconfig.Reconciler{}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -124,19 +122,10 @@ var _ = BeforeSuite(func() {
 		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
 
-	// Wait for the webhook server to start
 	Eventually(func() error {
 		checker := mgr.GetWebhookServer().StartedChecker()
 		return checker(&http.Request{})
 	}).Should(Succeed())
-
-	By("Create nodes so that hasMoreThanOneNode returns true")
-	for _, name := range []string{"node1", "node2"} {
-		Expect(testClient.Create(ctx, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: name}})).To(Succeed())
-		DeferCleanup(func(name string) {
-			Expect(testClient.Delete(ctx, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: name}})).To(Succeed())
-		}, name)
-	}
 
 	DeferCleanup(func() {
 		By("Stop manager")
@@ -145,7 +134,7 @@ var _ = BeforeSuite(func() {
 })
 
 func getMutatingWebhookConfigurations() []*admissionregistrationv1.MutatingWebhookConfiguration {
-	webhookConfig := []*admissionregistrationv1.MutatingWebhookConfiguration{
+	return []*admissionregistrationv1.MutatingWebhookConfiguration{
 		{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: admissionregistrationv1.SchemeGroupVersion.String(),
@@ -165,6 +154,4 @@ func getMutatingWebhookConfigurations() []*admissionregistrationv1.MutatingWebho
 			},
 		},
 	}
-
-	return webhookConfig
 }

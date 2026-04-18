@@ -55,6 +55,7 @@ func GetTopologySpreadConstraints(
 	maxReplicas int32,
 	labelSelector metav1.LabelSelector,
 	numberOfZones int32,
+	hasMultipleNodes bool,
 	failureToleranceType *gardencorev1beta1.FailureToleranceType,
 	enforceSpreadAcrossHosts bool,
 ) []corev1.TopologySpreadConstraint {
@@ -79,7 +80,7 @@ func GetTopologySpreadConstraints(
 		whenUnsatisfiable = corev1.ScheduleAnyway
 	)
 
-	if hostSpreadRequired {
+	if hostSpreadRequired && hasMultipleNodes {
 		whenUnsatisfiable = corev1.DoNotSchedule
 		minDomainsHosts = calculateMinDomains(3, maxReplicas)
 	}
