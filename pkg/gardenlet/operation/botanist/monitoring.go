@@ -32,6 +32,11 @@ func (b *Botanist) DefaultAlertmanager() (alertmanager.Interface, error) {
 		emailReceivers = monitoring.Alerting.EmailReceivers
 	}
 
+	var istioLabels map[string]string
+	if !b.Shoot.IsSelfHosted() {
+		istioLabels = b.WildcardIstioLabels()
+	}
+
 	return sharedcomponent.NewAlertmanager(b.Logger, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, alertmanager.Values{
 		Name:               "shoot",
 		ClusterType:        component.ClusterTypeShoot,
@@ -41,9 +46,10 @@ func (b *Botanist) DefaultAlertmanager() (alertmanager.Interface, error) {
 		AlertingSMTPSecret: b.LoadSecret(v1beta1constants.GardenRoleAlerting),
 		EmailReceivers:     emailReceivers,
 		Ingress: &alertmanager.IngressValues{
-			Host:           b.ComputeAlertManagerHost(),
-			SecretsManager: b.SecretsManager,
-			SigningCA:      v1beta1constants.SecretNameCACluster,
+			Host:                      b.ComputeAlertManagerHost(),
+			SecretsManager:            b.SecretsManager,
+			SigningCA:                 v1beta1constants.SecretNameCACluster,
+			IstioIngressGatewayLabels: istioLabels,
 		},
 	})
 }

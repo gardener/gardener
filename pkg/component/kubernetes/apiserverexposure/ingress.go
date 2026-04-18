@@ -93,7 +93,7 @@ func (i *ingress) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, gateway, istio.GatewayWithTLSTermination(gateway, getLabels(), i.values.IstioIngressGatewayLabelsFunc(), []string{i.values.Host}, kubeapiserverconstants.Port, ptr.Deref(i.values.TLSSecretName, ""))); err != nil {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, gateway, istio.GatewayWithTLSTermination(gateway, getLabels(), i.values.IstioIngressGatewayLabelsFunc(), []string{i.values.Host}, ptr.Deref(i.values.TLSSecretName, ""))); err != nil {
 			return err
 		}
 
@@ -121,7 +121,7 @@ func (i *ingress) Deploy(ctx context.Context) error {
 			return err
 		}
 	} else {
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, gateway, istio.GatewayWithTLSPassthrough(gateway, getLabels(), i.values.IstioIngressGatewayLabelsFunc(), []string{i.values.Host}, kubeapiserverconstants.Port)); err != nil {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, gateway, istio.GatewayWithTLSPassthrough(gateway, getLabels(), i.values.IstioIngressGatewayLabelsFunc(), []string{i.values.Host})); err != nil {
 			return err
 		}
 

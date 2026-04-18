@@ -59,16 +59,20 @@ type Values struct {
 	// EmailReceivers is a list of email addresses to which alerts should be sent. If this list is empty, the alerts
 	// will be sent to the email address in `.data.to` in the alerting SMTP secret.
 	EmailReceivers []string
-	// Ingress contains configuration for exposing this AlertManager instance via an Ingress resource.
+	// Ingress contains configuration for exposing this AlertManager instance via a VirtualService resource.
 	Ingress *IngressValues
 }
 
-// IngressValues contains configuration for exposing this AlertManager instance via an Ingress resource.
+// IngressValues contains configuration for exposing this AlertManager instance via a VirtualService resource.
 type IngressValues struct {
 	// AuthSecretName is the name of the auth secret.
 	AuthSecretName string
 	// Host is the hostname under which the AlertManager instance should be exposed.
 	Host string
+	// IsGardenCluster specifies whether the cluster is garden cluster.
+	IsGardenCluster bool
+	// IstioIngressGatewayLabels are the labels identifying the corresponding istio ingress gateway.
+	IstioIngressGatewayLabels map[string]string
 	// SecretsManager is the secrets manager used for generating the TLS certificate if no wildcard certificate is
 	// provided.
 	SecretsManager secretsmanager.Interface
@@ -100,20 +104,21 @@ type alertManager struct {
 func (a *alertManager) Deploy(ctx context.Context) error {
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	ingress, err := a.ingress(ctx)
+	istioResources, err := a.istioResources(ctx)
 	if err != nil {
 		return err
 	}
 
-	resources, err := registry.AddAllAndSerialize(
+	objects := append([]client.Object{
 		a.service(),
 		a.alertManager(),
 		a.vpa(),
 		a.podDisruptionBudget(),
 		a.config(),
 		a.smtpSecret(),
-		ingress,
-	)
+	}, istioResources...)
+
+	resources, err := registry.AddAllAndSerialize(objects...)
 	if err != nil {
 		return err
 	}
