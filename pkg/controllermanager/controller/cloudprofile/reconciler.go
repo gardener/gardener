@@ -13,11 +13,13 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/events"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -29,6 +31,8 @@ type Reconciler struct {
 	Client   client.Client
 	Config   controllermanagerconfigv1alpha1.CloudProfileControllerConfiguration
 	Recorder events.EventRecorder
+
+	Clock clock.Clock
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -97,5 +101,59 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
-	return reconcile.Result{}, nil
+	err := r.patchCloudProfileStatusVersions(ctx, cloudProfile)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to patch CloudProfile status versions: %w", err)
+	}
+
+	return reconcile.Result{
+		RequeueAfter: v1beta1helper.DurationUntilNextVersionTransition(&cloudProfile.Spec, r.Clock),
+	}, nil
+}
+
+// patchCloudProfileStatusVersions generate the cloudProfile status from the given cloudProfile spec.
+func (r *Reconciler) patchCloudProfileStatusVersions(ctx context.Context, cloudProfile *gardencorev1beta1.CloudProfile) error {
+	if cloudProfile == nil {
+		return nil
+	}
+
+	patch := client.MergeFrom(cloudProfile.DeepCopy())
+	cloudProfile.Status.Kubernetes = nil
+	cloudProfile.Status.MachineImages = nil
+
+	// Kubernetes versions
+	k8sVersions := cloudProfile.Spec.Kubernetes.Versions
+	if len(k8sVersions) > 0 {
+		cloudProfile.Status.Kubernetes = &gardencorev1beta1.KubernetesStatus{
+			Versions: make([]gardencorev1beta1.ExpirableVersionStatus, 0, len(k8sVersions)),
+		}
+		for _, v := range k8sVersions {
+			cloudProfile.Status.Kubernetes.Versions = append(cloudProfile.Status.Kubernetes.Versions, gardencorev1beta1.ExpirableVersionStatus{
+				Version:        v.Version,
+				Classification: v1beta1helper.CurrentLifecycleClassification(v),
+			})
+		}
+	}
+
+	// Machine images
+	machineImages := cloudProfile.Spec.MachineImages
+	if len(machineImages) > 0 {
+		cloudProfile.Status.MachineImages = make([]gardencorev1beta1.MachineImageStatus, 0, len(machineImages))
+		for _, image := range machineImages {
+			imageStatus := gardencorev1beta1.MachineImageStatus{
+				Name:     image.Name,
+				Versions: make([]gardencorev1beta1.ExpirableVersionStatus, 0, len(image.Versions)),
+			}
+
+			for _, v := range image.Versions {
+				imageStatus.Versions = append(imageStatus.Versions, gardencorev1beta1.ExpirableVersionStatus{
+					Version:        v.Version,
+					Classification: v1beta1helper.CurrentLifecycleClassification(v.ExpirableVersion),
+				})
+			}
+
+			cloudProfile.Status.MachineImages = append(cloudProfile.Status.MachineImages, imageStatus)
+		}
+	}
+	return r.Client.Status().Patch(ctx, cloudProfile, patch)
 }

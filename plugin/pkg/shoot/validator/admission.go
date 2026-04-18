@@ -1286,7 +1286,7 @@ func validateKubernetesVersionConstraints(a admission.Attributes, constraints []
 		// Disallow usage of an expired Kubernetes version on Shoot creation and new worker pool creation
 		// Updating an existing worker to a higher (ensured by validation) expired Kubernetes version is necessary for consecutive maintenance force updates
 		if a.GetOperation() == admission.Create || isNewWorkerPool {
-			if !v1beta1helper.CurrentLifecycleClassification(versionConstraint).IsActive() {
+			if !v1beta1helper.VersionIsActive(versionConstraint) {
 				continue
 			}
 		}
@@ -1573,9 +1573,9 @@ func validateMachineImagesConstraints(a admission.Attributes, constraints []gard
 			for _, machineVersion := range machineImage.Versions {
 				machineImageVersion := fmt.Sprintf("%s:%s", machineImage.Name, machineVersion.Version)
 
-				if v1beta1helper.CurrentLifecycleClassification(machineVersion.ExpirableVersion).IsActive() {
+				if v1beta1helper.VersionIsActive(machineVersion.ExpirableVersion) {
 					activeMachineImageVersions.Insert(machineImageVersion)
-				} else if a.GetOperation() == admission.Update && !isNewWorkerPool && v1beta1helper.CurrentLifecycleClassification(machineVersion.ExpirableVersion) == gardencorev1beta1.ClassificationExpired {
+				} else if a.GetOperation() == admission.Update && !isNewWorkerPool && v1beta1helper.VersionIsExpired(machineVersion.ExpirableVersion) {
 					// An already expired machine image version is a viable machine image version for the worker pool if-and-only-if:
 					//  - this is an update call (no new Shoot creation)
 					//  - updates an existing worker pool (not for a new worker pool)

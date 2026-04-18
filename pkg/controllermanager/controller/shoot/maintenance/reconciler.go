@@ -784,7 +784,7 @@ func shouldKubernetesVersionBeUpdated(kubernetesVersion string, autoUpdate bool,
 		return true, updateReason, true, nil
 	}
 
-	if v1beta1helper.CurrentLifecycleClassification(version) == gardencorev1beta1.ClassificationExpired {
+	if v1beta1helper.VersionIsExpired(version) {
 		updateReason = "Kubernetes version expired - force update required"
 		return true, updateReason, true, nil
 	}
@@ -849,7 +849,7 @@ func shouldMachineImageVersionBeUpdated(shootMachineImage *gardencorev1beta1.Sho
 		return true, updateReason, true
 	}
 
-	if v1beta1helper.CurrentLifecycleClassification(machineImage.Versions[versionIndex].ExpirableVersion) == gardencorev1beta1.ClassificationExpired {
+	if v1beta1helper.VersionIsExpired(machineImage.Versions[versionIndex].ExpirableVersion) {
 		updateReason = fmt.Sprintf("Machine image version expired - force update required (image update strategy: %s)", *machineImage.UpdateStrategy)
 		return true, updateReason, true
 	}
