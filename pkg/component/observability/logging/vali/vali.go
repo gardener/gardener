@@ -368,7 +368,6 @@ func (v *vali) getIstioResources(tlsSecret *corev1.Secret) ([]client.Object, err
 		getLabels(),
 		v.values.IstioIngressGatewayLabels,
 		[]string{v.values.IngressHost},
-		kubeapiserverconstants.Port,
 		tlsSecretInIstioNamespace.Name,
 	)(); err != nil {
 		return nil, fmt.Errorf("failed to create gateway resource: %w", err)

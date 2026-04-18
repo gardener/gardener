@@ -674,7 +674,6 @@ func (o *otelCollector) getIstioResources(tlsSecret *corev1.Secret) ([]client.Ob
 		getLabels(),
 		o.values.IstioIngressGatewayLabels,
 		[]string{o.values.IngressHost},
-		kubeapiserverconstants.Port,
 		tlsSecretInIstioNamespace.Name,
 	)(); err != nil {
 		return nil, fmt.Errorf("failed to create gateway resource: %w", err)

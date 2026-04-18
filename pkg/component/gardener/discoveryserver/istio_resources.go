@@ -11,7 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -23,7 +22,6 @@ func (g *gardenerDiscoveryServer) istioResources() ([]client.Object, error) {
 		labels(),
 		g.values.IstioIngressGatewayLabels,
 		[]string{g.values.Domain},
-		kubeapiserverconstants.Port,
 	)(); err != nil {
 		return nil, fmt.Errorf("failed to create gateway resource: %w", err)
 	}

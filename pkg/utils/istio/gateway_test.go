@@ -14,10 +14,10 @@ import (
 )
 
 var _ = Describe("Gateway", func() {
-	DescribeTable("#GatewayWithTLSPassthrough", func(labels map[string]string, istioLabels map[string]string, hosts []string, port uint32) {
+	DescribeTable("#GatewayWithTLSPassthrough", func(labels map[string]string, istioLabels map[string]string, hosts []string) {
 		gateway := &istionetworkingv1beta1.Gateway{}
 
-		function := GatewayWithTLSPassthrough(gateway, labels, istioLabels, hosts, port)
+		function := GatewayWithTLSPassthrough(gateway, labels, istioLabels, hosts)
 
 		Expect(function).NotTo(BeNil())
 
@@ -28,17 +28,17 @@ var _ = Describe("Gateway", func() {
 		Expect(gateway.Spec.Selector).To(Equal(istioLabels))
 		Expect(gateway.Spec.Servers).To(HaveLen(1))
 		Expect(gateway.Spec.Servers[0].Hosts).To(Equal(hosts))
-		Expect(gateway.Spec.Servers[0].Port.Number).To(Equal(port))
+		Expect(gateway.Spec.Servers[0].Port.Number).To(Equal(uint32(443)))
 	},
 
-		Entry("Nil values", nil, nil, nil, uint32(0)),
-		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, map[string]string{"app": "istio", "istio": "gateway"}, []string{"host-1", "host-2"}, uint32(123456)),
+		Entry("Nil values", nil, nil, nil),
+		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, map[string]string{"app": "istio", "istio": "gateway"}, []string{"host-1", "host-2"}),
 	)
 
-	DescribeTable("#GatewayWithTLSTermination", func(labels map[string]string, istioLabels map[string]string, hosts []string, port uint32, tlsSecret string) {
+	DescribeTable("#GatewayWithTLSTermination", func(labels map[string]string, istioLabels map[string]string, hosts []string, tlsSecret string) {
 		gateway := &istionetworkingv1beta1.Gateway{}
 
-		function := GatewayWithTLSTermination(gateway, labels, istioLabels, hosts, port, tlsSecret)
+		function := GatewayWithTLSTermination(gateway, labels, istioLabels, hosts, tlsSecret)
 
 		Expect(function).NotTo(BeNil())
 
@@ -49,12 +49,12 @@ var _ = Describe("Gateway", func() {
 		Expect(gateway.Spec.Selector).To(Equal(istioLabels))
 		Expect(gateway.Spec.Servers).To(HaveLen(1))
 		Expect(gateway.Spec.Servers[0].Hosts).To(Equal(hosts))
-		Expect(gateway.Spec.Servers[0].Port.Number).To(Equal(port))
+		Expect(gateway.Spec.Servers[0].Port.Number).To(Equal(uint32(443)))
 		Expect(gateway.Spec.Servers[0].Tls.CredentialName).To(Equal(tlsSecret))
 	},
 
-		Entry("Nil values", nil, nil, nil, uint32(0), ""),
-		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, map[string]string{"app": "istio", "istio": "gateway"}, []string{"host-1", "host-2"}, uint32(123456), "my-secret"),
+		Entry("Nil values", nil, nil, nil, ""),
+		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, map[string]string{"app": "istio", "istio": "gateway"}, []string{"host-1", "host-2"}, "my-secret"),
 	)
 
 	DescribeTable("#GatewayWithMutualTLS", func(labels map[string]string, istioLabels map[string]string, serverConfigs []ServerConfig) {
@@ -72,7 +72,7 @@ var _ = Describe("Gateway", func() {
 		Expect(gateway.Spec.Servers).To(HaveLen(len(serverConfigs)))
 		for i, serverConfig := range serverConfigs {
 			Expect(gateway.Spec.Servers[i].Hosts).To(Equal(serverConfig.Hosts))
-			Expect(gateway.Spec.Servers[i].Port.Number).To(Equal(serverConfig.Port))
+			Expect(gateway.Spec.Servers[i].Port.Number).To(Equal(uint32(443)))
 			Expect(gateway.Spec.Servers[i].Port.Name).To(Equal(serverConfig.PortName))
 			Expect(gateway.Spec.Servers[i].Port.Protocol).To(Equal("HTTPS"))
 			Expect(gateway.Spec.Servers[i].Tls.CredentialName).To(Equal(serverConfig.TLSSecret))
@@ -80,8 +80,8 @@ var _ = Describe("Gateway", func() {
 		}
 	},
 
-		Entry("Nil values", nil, nil, []ServerConfig{{Hosts: nil, Port: uint32(0), PortName: "", TLSSecret: ""}}),
-		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, map[string]string{"app": "istio", "istio": "gateway"}, []ServerConfig{{Hosts: []string{"host-1", "host-2"}, Port: uint32(12345), PortName: "foo", TLSSecret: "my-secret"}}),
-		Entry("Multiple servers", map[string]string{"foo": "bar", "key": "value"}, map[string]string{"app": "istio", "istio": "gateway"}, []ServerConfig{{Hosts: []string{"host-1", "host-2"}, Port: uint32(12345), PortName: "foo", TLSSecret: "my-secret"}, {Hosts: []string{"host-3", "host-4"}, Port: uint32(123456), PortName: "bar", TLSSecret: "my-other-secret"}}),
+		Entry("Nil values", nil, nil, []ServerConfig{{Hosts: nil, PortName: "", TLSSecret: ""}}),
+		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, map[string]string{"app": "istio", "istio": "gateway"}, []ServerConfig{{Hosts: []string{"host-1", "host-2"}, PortName: "foo", TLSSecret: "my-secret"}}),
+		Entry("Multiple servers", map[string]string{"foo": "bar", "key": "value"}, map[string]string{"app": "istio", "istio": "gateway"}, []ServerConfig{{Hosts: []string{"host-1", "host-2"}, PortName: "foo", TLSSecret: "my-secret"}, {Hosts: []string{"host-3", "host-4"}, PortName: "bar", TLSSecret: "my-other-secret"}}),
 	)
 })

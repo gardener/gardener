@@ -19,7 +19,7 @@ func VirtualServiceWithSNIMatch(virtualService *istionetworkingv1beta1.VirtualSe
 			Gateways: []string{gatewayName},
 			Tls: []*istioapinetworkingv1beta1.TLSRoute{{
 				Match: []*istioapinetworkingv1beta1.TLSMatchAttributes{{
-					Port:     443,
+					Port:     httpsPort,
 					SniHosts: hosts,
 				}},
 				Route: []*istioapinetworkingv1beta1.RouteDestination{{

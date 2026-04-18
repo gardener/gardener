@@ -16,7 +16,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -74,7 +73,6 @@ func (g *gardenerDashboard) istioResources(ctx context.Context) ([]client.Object
 		GetLabels(),
 		g.values.Ingress.IstioIngressGatewayLabels,
 		g.ingressHosts(),
-		kubeapiserverconstants.Port,
 		tlsSecretInIstioNamespace.Name,
 	)(); err != nil {
 		return nil, fmt.Errorf("failed to create gateway resource: %w", err)

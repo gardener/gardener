@@ -9,16 +9,17 @@ import (
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 )
 
+const httpsPort = 443
+
 // ServerConfig is a configuration for a server in an Istio Gateway.
 type ServerConfig struct {
 	Hosts     []string
-	Port      uint32
 	PortName  string
 	TLSSecret string
 }
 
 // GatewayWithTLSPassthrough returns a function setting the given attributes to a gateway object.
-func GatewayWithTLSPassthrough(gateway *istionetworkingv1beta1.Gateway, labels map[string]string, istioLabels map[string]string, hosts []string, port uint32) func() error {
+func GatewayWithTLSPassthrough(gateway *istionetworkingv1beta1.Gateway, labels map[string]string, istioLabels map[string]string, hosts []string) func() error {
 	return func() error {
 		gateway.Labels = labels
 		gateway.Spec = istioapinetworkingv1beta1.Gateway{
@@ -26,7 +27,7 @@ func GatewayWithTLSPassthrough(gateway *istionetworkingv1beta1.Gateway, labels m
 			Servers: []*istioapinetworkingv1beta1.Server{{
 				Hosts: hosts,
 				Port: &istioapinetworkingv1beta1.Port{
-					Number:   port,
+					Number:   httpsPort,
 					Name:     "tls",
 					Protocol: "TLS",
 				},
@@ -40,7 +41,7 @@ func GatewayWithTLSPassthrough(gateway *istionetworkingv1beta1.Gateway, labels m
 }
 
 // GatewayWithTLSTermination returns a function setting the given attributes to a gateway object.
-func GatewayWithTLSTermination(gateway *istionetworkingv1beta1.Gateway, labels map[string]string, istioLabels map[string]string, hosts []string, port uint32, tlsSecret string) func() error {
+func GatewayWithTLSTermination(gateway *istionetworkingv1beta1.Gateway, labels map[string]string, istioLabels map[string]string, hosts []string, tlsSecret string) func() error {
 	return func() error {
 		gateway.Labels = labels
 		gateway.Spec = istioapinetworkingv1beta1.Gateway{
@@ -48,7 +49,7 @@ func GatewayWithTLSTermination(gateway *istionetworkingv1beta1.Gateway, labels m
 			Servers: []*istioapinetworkingv1beta1.Server{{
 				Hosts: hosts,
 				Port: &istioapinetworkingv1beta1.Port{
-					Number:   port,
+					Number:   httpsPort,
 					Name:     "tls",
 					Protocol: "HTTPS",
 				},
@@ -75,7 +76,7 @@ func GatewayWithMutualTLS(gateway *istionetworkingv1beta1.Gateway, labels map[st
 			gateway.Spec.Servers = append(gateway.Spec.Servers, &istioapinetworkingv1beta1.Server{
 				Hosts: serverConfig.Hosts,
 				Port: &istioapinetworkingv1beta1.Port{
-					Number:   serverConfig.Port,
+					Number:   httpsPort,
 					Name:     serverConfig.PortName,
 					Protocol: "HTTPS",
 				},

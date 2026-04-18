@@ -356,14 +356,14 @@ func (s *sni) Deploy(ctx context.Context) error {
 			allHosts = append(allHosts, configuration.wildcardConfiguration.Hosts...)
 		}
 
-		gatewayMutateFn := istio.GatewayWithTLSPassthrough(configuration.gateway, getLabels(), configuration.istioIngressGateway.Labels, allHosts, kubeapiserverconstants.Port)
+		gatewayMutateFn := istio.GatewayWithTLSPassthrough(configuration.gateway, getLabels(), configuration.istioIngressGateway.Labels, allHosts)
 		if values.IstioTLSTermination {
 			var serverConfigs []istio.ServerConfig
 			if len(configuration.hosts) > 0 {
-				serverConfigs = append(serverConfigs, istio.ServerConfig{Hosts: configuration.hosts, Port: kubeapiserverconstants.Port, PortName: portNameTLS, TLSSecret: s.namespace + istioTLSSecretSuffix})
+				serverConfigs = append(serverConfigs, istio.ServerConfig{Hosts: configuration.hosts, PortName: portNameTLS, TLSSecret: s.namespace + istioTLSSecretSuffix})
 			}
 			if configuration.wildcardConfiguration != nil {
-				serverConfigs = append(serverConfigs, istio.ServerConfig{Hosts: configuration.wildcardConfiguration.Hosts, Port: kubeapiserverconstants.Port, PortName: portNameWildcardTLS, TLSSecret: s.emptyIstioWildcardTLSSecret().Name})
+				serverConfigs = append(serverConfigs, istio.ServerConfig{Hosts: configuration.wildcardConfiguration.Hosts, PortName: portNameWildcardTLS, TLSSecret: s.emptyIstioWildcardTLSSecret().Name})
 			}
 			gatewayMutateFn = istio.GatewayWithMutualTLS(configuration.gateway, getLabels(), configuration.istioIngressGateway.Labels, serverConfigs)
 		}
