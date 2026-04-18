@@ -47,8 +47,8 @@ trap cleanup_output EXIT
 repo_root="$(git rev-parse --show-toplevel)"
 skaffold_yaml="$(cat "$repo_root/$skaffold_file")"
 
-path_current_skaffold_dependencies="${out_dir}/current-$skaffold_file-deps-$binary_name.txt"
-path_actual_dependencies="${out_dir}/actual-$skaffold_file-deps-$binary_name.txt"
+path_current_skaffold_dependencies="${out_dir}/current-${skaffold_file#*dev-setup/}-deps-$binary_name.txt"
+path_actual_dependencies="${out_dir}/actual-${skaffold_file#*dev-setup/}-deps-$binary_name.txt"
 
 is_custom_artifact="$(echo "$skaffold_yaml" | yq eval "select(.metadata.name == \"$skaffold_config_name\") | .build.artifacts[] | select(.image == \"local-skaffold/$binary_name\") | has(\"custom\")" -)"
 yq_dependencies_selector=".ko.dependencies"

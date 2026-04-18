@@ -33,7 +33,7 @@ This also includes the `gardenadm` CLI, which is installed on the machine pods b
 ## Setting Up the KinD Cluster
 
 ```shell
-make kind-single-node-up
+make kind-up
 ```
 
 Please see [this documentation section](getting_started_locally.md#alternative-way-to-set-up-garden-and-seed-leveraging-gardener-operator) for more details.
@@ -98,7 +98,7 @@ machine-0   Ready    <none>   4m11s   v1.32.0
 You can also access the cluster's API server directly from your host machine after obtaining a kubeconfig for it:
 
 ```shell
-$ ./hack/usage/generate-admin-kubeconfig-local.sh self-hosted-shoot > dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
+$ ./hack/usage/generate-kubeconfig.sh self-hosted-shoot > dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
 $ export KUBECONFIG=dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
 $ kubectl get no
 NAME        STATUS   ROLES    AGE   VERSION
@@ -170,7 +170,7 @@ machine-shoot--garden--root-control-plane-58ffc-2l6s7   Ready    <none>   4m11s 
 You can also access the cluster's API server directly from your host machine after obtaining a kubeconfig for it:
 
 ```shell
-$ ./hack/usage/generate-admin-kubeconfig-local.sh self-hosted-shoot > dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
+$ ./hack/usage/generate-kubeconfig.sh self-hosted-shoot > dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
 $ export KUBECONFIG=dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
 $ kubectl get no
 NAME        STATUS   ROLES    AGE   VERSION
@@ -262,5 +262,5 @@ make test-e2e-local-gardenadm-managed-infra
 ## Tear Down the KinD Cluster
 
 ```shell
-make kind-single-node-down
+make kind-down
 ```

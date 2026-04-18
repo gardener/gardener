@@ -18,7 +18,7 @@ If you're on a different OS or don't have IPv6 connectivity in your office envir
 To get started with the IPv6 setup and create a local IPv6 single-stack shoot cluster, run the following commands:
 
 ```bash
-make kind-single-node-up operator-seed-up IPFAMILY=ipv6
+make kind-up gardener-up IPFAMILY=ipv6
 export KUBECONFIG=dev-setup/kubeconfigs/virtual-garden/kubeconfig
 k apply -f example/provider-local/shoot-ipv6.yaml
 ```

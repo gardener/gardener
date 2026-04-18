@@ -1,0 +1,60 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+patches:
+- patch: |-
+    - op: add
+      path: /nodes/-
+      value:
+        role: node
+        image: kindest/node:v1.35.1@sha256:05d7bcdefbda08b4e038f644c4df690cdac3fba8b06f8289f30e10026720a1ab
+        labels:
+          topology.kubernetes.io/zone: "0"
+        extraPortMappings: []
+        extraMounts:
+          - hostPath: ./dev/local-backupbuckets
+            containerPath: /etc/gardener/local-backupbuckets
+          - hostPath: ./dev-setup/kind/cluster/resolv.conf
+            containerPath: /etc/resolv.conf
+          - hostPath: ${DOCKER_SOCKET}
+            containerPath: /var/run/docker.sock
+        kubeadmConfigPatches:
+          - ""
+          - |
+            apiVersion: kubelet.config.k8s.io/v1beta1
+            kind: KubeletConfiguration
+            maxPods: 500
+            serializeImagePulls: false
+            registryPullQPS: 10
+            registryBurst: 20
+            serverTLSBootstrap: true
+  target:
+    group: kind.x-k8s.io
+    kind: Cluster
+    name: local
+
+# Patches exclusively for the control plane node (always the first one, and always only exactly one)
+- patch: |-
+    - op: replace
+      path: /nodes/0/kubeadmConfigPatches/0
+      value: |
+        # TODO(ialidzhikov): Use the kubeadm.k8s.io/v1beta4 API when kind supports it (ref https://github.com/kubernetes-sigs/kind/pull/3675).
+        # Currently kind accepts kubeadm.k8s.io/v1beta3 only.
+        apiVersion: kubeadm.k8s.io/v1beta3
+        kind: ClusterConfiguration
+        apiServer:
+          extraArgs:
+            feature-gates: "MutatingAdmissionPolicy=true"
+            runtime-config: "admissionregistration.k8s.io/v1alpha1=true,admissionregistration.k8s.io/v1beta1=true"
+        controllerManager:
+          extraArgs:
+            # TODO(LucaBernstein): Remove once kind uses a Kubernetes version that includes the fix for
+            # https://github.com/kubernetes/kubernetes/issues/137409 (MaxUnavailableStatefulSet deadlock).
+            feature-gates: "MaxUnavailableStatefulSet=false"
+    - op: replace
+      path: /nodes/0/role
+      value: control-plane
+  target:
+    group: kind.x-k8s.io
+    kind: Cluster
+    name: local

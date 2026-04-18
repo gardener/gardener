@@ -29,10 +29,14 @@ function detect_scenario() {
   # Check if all providerIDs have a scheme (contain "://") but none start with kind://
   if [[ -n "$provider_ids" && $(echo "$provider_ids" | grep -c '://') -eq $(echo "$provider_ids" | wc -l) && $(echo "$provider_ids" | grep -cv '^kind://') -eq $(echo "$provider_ids" | wc -l) ]]; then
     export SCENARIO="remote"
+  elif grep -q "gardener-local2" <<< "$nodes"; then
+    if [[ $(echo "$nodes" | wc -l) -eq 1 ]]; then
+      export SCENARIO="single-node2"
+    else
+      export SCENARIO="multi-node2"
+    fi
   elif [[ $(echo "$nodes" | wc -l) -eq 1 ]]; then
     export SCENARIO="single-node"
-  elif grep -q "gardener-local-multi-node2" <<< "$nodes"; then
-    export SCENARIO="multi-node2"
   elif [[ $(echo "$zones" | wc -l) -eq 1 ]]; then
     export SCENARIO="multi-node"
   elif [[ $(echo "$zones" | wc -l) -eq 3 ]]; then
@@ -59,6 +63,9 @@ function skaffold_profile() {
   case "$1" in
     single-node)
       export SKAFFOLD_PROFILE="single-node"
+      ;;
+    single-node2)
+      export SKAFFOLD_PROFILE="single-node2"
       ;;
     multi-node)
       export SKAFFOLD_PROFILE="multi-node"

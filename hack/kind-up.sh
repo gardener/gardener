@@ -11,27 +11,23 @@ set -o pipefail
 WITH_LPP_RESIZE_SUPPORT=${WITH_LPP_RESIZE_SUPPORT:-false}
 USE_PROW_REGISTRY_CACHE=${CI:-false}
 CLUSTER_NAME=""
-PATH_CLUSTER_VALUES=""
-PATH_KUBECONFIG=""
-MULTI_ZONAL=false
-CHART=$(dirname "$0")/../example/gardener-local/kind/cluster
-ADDITIONAL_ARGS=""
+KUSTOMIZE_OVERLAY_BASENAME=""
+# KUBECONFIG_COPY_PATHS is a list of paths to which the kind cluster kubeconfig will be copied.
+KUBECONFIG_COPY_PATHS=()
+MULTI_ZONAL=""
 INFRA_COMPOSE_FILE="$(dirname "$0")/../dev-setup/infra/docker-compose.yaml"
 
 parse_flags() {
   while test $# -gt 0; do
     case "$1" in
-    --chart)
-      shift; CHART="$1"
-      ;;
     --cluster-name)
       shift; CLUSTER_NAME="$1"
       ;;
-    --path-cluster-values)
-      shift; PATH_CLUSTER_VALUES="$1"
+    --kustomize-overlay-basename)
+      shift; KUSTOMIZE_OVERLAY_BASENAME="$1"
       ;;
-    --path-kubeconfig)
-      shift; PATH_KUBECONFIG="$1"
+    --path-kubeconfig-copy)
+      shift; KUBECONFIG_COPY_PATHS+=("$1")
       ;;
     --multi-zonal)
       MULTI_ZONAL=true
@@ -377,11 +373,7 @@ mkdir -m 0755 -p \
   "$(dirname "$0")/../dev/local-backupbuckets" \
   "$(dirname "$0")/../dev/local-registry"
 
-additional_params=""
-if [[ ${MULTI_ZONAL} == "true" ]]; then
-  additional_params="--multi-zonal"
-fi
-./hack/kind-setup-loopback-devices.sh --cluster-name "${CLUSTER_NAME}" --ip-family "${IPFAMILY}" "${additional_params}"
+./hack/kind-setup-loopback-devices.sh --cluster-name "${CLUSTER_NAME}" --ip-family "${IPFAMILY}" ${MULTI_ZONAL:+--multi-zonal}
 
 setup_kind_network
 
@@ -392,20 +384,12 @@ docker compose -f "$INFRA_COMPOSE_FILE" up -d
 ensure_local_registry_hosts
 setup_local_dns_resolver
 
-if [[ "$IPFAMILY" == "ipv6" ]]; then
-  ADDITIONAL_ARGS="$ADDITIONAL_ARGS --values $CHART/values-ipv6.yaml"
-fi
-if [[ "$IPFAMILY" == "dual" ]]; then
-  ADDITIONAL_ARGS="$ADDITIONAL_ARGS --values $CHART/values-dual.yaml"
-fi
-
-if [[ "$IPFAMILY" == "ipv6" ]] && [[ "$MULTI_ZONAL" == "true" ]]; then
-  ADDITIONAL_ARGS="$ADDITIONAL_ARGS --set gardener.seed.istio.listenAddresses={fd00:ff::1,fd00:ff::10,fd00:ff::11,fd00:ff::12}"
-fi
-
-kind create cluster \
-  --name "$CLUSTER_NAME" \
-  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "gardener.repositoryRoot"=$(dirname "$0")/.. --set "dockerSocket=$(docker_socket)")
+kustomize build "$(dirname "$0")/../dev-setup/kind/cluster/overlays/${KUSTOMIZE_OVERLAY_BASENAME}-${IPFAMILY}" | \
+  yq 'del(.metadata)' | \
+  DOCKER_SOCKET="$(docker_socket)" envsubst '${DOCKER_SOCKET}' | \
+  kind create cluster \
+    --name "$CLUSTER_NAME" \
+    --config /dev/stdin
 
 nodes=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}')
 
@@ -448,19 +432,27 @@ for node in $nodes; do
   docker exec "$node" sh -c "sysctl fs.inotify.max_user_instances=8192"
 done
 
-if [[ "$KUBECONFIG" != "$PATH_KUBECONFIG" ]]; then
-  cp "$KUBECONFIG" "$PATH_KUBECONFIG"
-  if [[ "$PATH_KUBECONFIG" == *"dev-setup/gardenlet/components/kubeconfigs/seed-local2/kubeconfig" ]]; then
-    sed "s/127\.0\.0\.1:[0-9]\+/gardener-local-multi-node2-control-plane:6443/g" "$PATH_KUBECONFIG" > "${PATH_KUBECONFIG}-gardener-operator"
+# copy kind cluster kubeconfig to desired paths
+for path_kubeconfig in "${KUBECONFIG_COPY_PATHS[@]}"; do
+  if [[ "$(realpath "$KUBECONFIG")" != "$(realpath "$path_kubeconfig")" ]]; then
+    cp "$KUBECONFIG" "$path_kubeconfig"
   fi
-fi
+  # Replace 127.0.0.1 in the kind cluster kubeconfig with  the container name of the Docker container for the second
+  # kind cluster. This will be referenced in the `Gardenlet` resource (which is meant to register the second kind
+  # cluster as Seed). `gardener-operator` will read this kubeconfig when attempting to deploy `gardenlet` into it.
+  # Since `gardener-operator` runs in a pod, 127.0.0.1 would not work to communicate with the second kind cluster - but
+  # the Docker container name is resolvable.
+  if [[ "$path_kubeconfig" == *"dev-setup/gardenlet/components/kubeconfigs/seed-local2/kubeconfig" ]]; then
+    sed "s/127\.0\.0\.1:[0-9]\+/gardener-local2-control-plane:6443/g" "$path_kubeconfig" > "${path_kubeconfig}-gardener-operator"
+  fi
 
-# Prepare a kubeconfig that can be used by provider-local as the provider credentials to talk to the kind cluster
-# from within the kind cluster and also from within a self-hosted shoot.
-# See docs/extensions/provider-local.md#credentials.
-if [[ "$CLUSTER_NAME" == "gardener-operator-local" ]] ; then
-  sed "s/127\.0\.0\.1:[0-9]\+/$CLUSTER_NAME-control-plane:6443/g" "$PATH_KUBECONFIG" > "$(dirname "$0")/../dev-setup/gardenconfig/components/credentials/secret-project-garden-with-kind-kubeconfig/kubeconfig"
-fi
+  # Prepare a kubeconfig that can be used by provider-local as the provider credentials to talk to the kind cluster
+  # from within the kind cluster and also from within a self-hosted shoot.
+  # See docs/extensions/provider-local.md#credentials.
+  if [[ "$CLUSTER_NAME" == "gardener-local" ]] ; then
+    sed "s/127\.0\.0\.1:[0-9]\+/$CLUSTER_NAME-control-plane:6443/g" "$path_kubeconfig" > "$(dirname "$0")/../dev-setup/gardenconfig/components/credentials/secret-project-garden-with-kind-kubeconfig/kubeconfig"
+  fi
+done
 
 if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
   # All outgoing traffic from the cluster is masqueraded to the host's IPv6 address. This is to ensure outgoing traffic

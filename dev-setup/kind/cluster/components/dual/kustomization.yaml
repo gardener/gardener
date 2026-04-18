@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+patches:
+- patch: |-
+    - op: replace
+      path: /networking/ipFamily
+      value: dual
+    - op: replace
+      path: /networking/podSubnet
+      value: "fd00:10:1::/48,10.0.0.0/15"
+    - op: replace
+      path: /networking/serviceSubnet
+      value: "fd00:10:2::/112,10.2.0.0/16"
+  target:
+    group: kind.x-k8s.io
+    kind: Cluster
+    name: local

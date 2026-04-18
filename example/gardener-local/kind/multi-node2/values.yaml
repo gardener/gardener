@@ -1,9 +1,0 @@
-gardener:
-  controlPlane:
-    deployed: false
-  selfHostedShoot:
-    deployed: false
-
-workers:
-- zone: "0"
-- zone: "0"

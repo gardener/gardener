@@ -955,7 +955,7 @@ make test-e2e-local-operator
 To access the virtual garden, you can generate a `kubeconfig` by running
 
 ```shell
-hack/usage/generate-admin-kubeconfig-local.sh virtual-garden > /tmp/virtual-garden-kubeconfig
+hack/usage/generate-kubeconfig.sh virtual-garden > /tmp/virtual-garden-kubeconfig
 kubectl --kubeconfig /tmp/virtual-garden-kubeconfig get namespaces
 ```
 

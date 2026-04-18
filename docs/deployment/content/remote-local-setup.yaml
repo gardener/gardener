@@ -120,7 +120,7 @@ spec:
           - '${g}prepare-gardener.sh${n}'                        A basic 'make kind-up gardener-up' setup
           - '${g}prepare-operator.sh${n}'                        A 'make kind-multi-zone-up operator-up' setup
              ${g}                   ${n}                         with several tmux windows
-          - '${g}prepare-operator-complete.sh${n}'               A 'make kind-multi-zone-up operator-up operator-seed-up' setup,
+          - '${g}prepare-operator-complete.sh${n}'               A 'make kind-multi-zone-up gardener-up' setup,
              ${g}                            ${n}                a complete local "development landscape"
           - '${g}IPFAMILY=ipv6 prepare-operator-complete.sh${n}' As 'prepare-operator-complete.sh' but using IPv6. It requires
              ${g}                                          ${n}  a shoot with IPv6 enabled.
@@ -334,14 +334,15 @@ spec:
           tmux select-pane -T top; rm -f ~/.config/procps/toprc
           for k in top Enter z C c i t t m m V s 5 Enter E e W; do sleep .2; tmux send $k; done
           new_pane "Set up the KinD cluster (Garden and Seed)" <<"EOF"
-            sync_kubeconfig example/gardener-local/kind/local & sleep 1
+            sync_kubeconfig dev-setup/kubeconfigs/runtime & sleep 1
             nice make kind-down kind-up && kubectl wait --for=condition=ready pod -A --all --timeout=-1s
           EOF
           new_pane "Set up Gardener" <<"EOF"
-            export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/runtime/kubeconfig
             nice make gardener-up
           EOF
           new_pane "Create a shoot cluster" <<"EOF"
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             kubectl apply -f example/provider-local/shoot.yaml
           EOF
           new_pane "Access the shoot cluster" <<"EOF"
@@ -363,7 +364,7 @@ spec:
           make kind-down kind-multi-zone-down >/dev/null 2>&1
           cd - >/dev/null
           mkdir -p ~/.kube
-          echo '{"current-context": "kind-gardener-operator-local"}' > ~/.kube/config
+          echo '{"current-context": "kind-gardener-local"}' > ~/.kube/config
           source /usr/local/bin/tmux_functions.sh
           tmux new -d -s operator -n make -x 2000 -y 2000
           tmux select-pane -T top; rm -f ~/.config/procps/toprc
@@ -399,7 +400,7 @@ spec:
             watch "k get pods -A -o wide | awk '{split(\$3, a, \"/\"); if (a[1]!=a[2] || \$4 != \"Running\") {print}}'"
           EOF
           new_window "virtual-garden" "virtual-garden" <<"EOF"
-            hack/usage/generate-admin-kubeconfig-local.sh virtual-garden > /tmp/virtual-garden-kubeconfig && export KUBECONFIG=/tmp/virtual-garden-kubeconfig
+            hack/usage/generate-kubeconfig.sh virtual-garden > /tmp/virtual-garden-kubeconfig && export KUBECONFIG=/tmp/virtual-garden-kubeconfig
           EOF
           new_window "git" "git" Enter <<"EOF"
             # Use 'pr' or 'pr_base' to checkout the head or base commit of a PR
@@ -421,7 +422,7 @@ spec:
           make kind-down kind-multi-zone-down >/dev/null 2>&1
           cd - >/dev/null
           mkdir -p ~/.kube
-          echo '{"current-context": "kind-gardener-operator-local"}' > ~/.kube/config
+          echo '{"current-context": "kind-gardener-local"}' > ~/.kube/config
           source /usr/local/bin/tmux_functions.sh
           tmux new -d -s operator-complete -n make -x 2000 -y 2000
           tmux select-pane -T top; rm -f ~/.config/procps/toprc
@@ -434,9 +435,9 @@ spec:
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/runtime/kubeconfig
             nice make operator-up
           EOF
-          new_pane "make operator-seed-up" <<"EOF"
+          new_pane "make gardener-up" <<"EOF"
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/runtime/kubeconfig
-            nice make operator-seed-up
+            nice make gardener-up
           EOF
           new_window "garden" "garden" Enter <<"EOF"
             watch k get garden

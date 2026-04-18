@@ -27,7 +27,7 @@ fi
 garden_runtime_cluster_kubeconfig="$KUBECONFIG"
 if [[ "$SCENARIO" == "connect" ]]; then
   garden_runtime_cluster_kubeconfig="$(dirname "$0")/kubeconfigs/self-hosted-shoot/kubeconfig"
-  ./hack/usage/generate-admin-kubeconfig-local.sh self-hosted-shoot > "$garden_runtime_cluster_kubeconfig"
+  ./hack/usage/generate-kubeconfig.sh self-hosted-shoot > "$garden_runtime_cluster_kubeconfig"
 fi
 
 case "$COMMAND" in
@@ -92,7 +92,7 @@ case "$COMMAND" in
         KUBECONFIG="$garden_runtime_cluster_kubeconfig"
 
       echo "Creating global resources in the virtual garden cluster as preparation for running 'gardenadm connect'..."
-      kubectl --kubeconfig="$VIRTUAL_GARDEN_KUBECONFIG" apply -f "$(dirname "$0")/gardenadm/resources/generated/connect/manifests.yaml"
+      kubectl --kubeconfig="$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" apply -f "$(dirname "$0")/gardenadm/resources/generated/connect/manifests.yaml"
     fi
     ;;
 
