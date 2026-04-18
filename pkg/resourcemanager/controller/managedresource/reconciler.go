@@ -599,15 +599,18 @@ func ignore(meta metav1.Object) bool {
 }
 
 func deleteOnInvalidUpdate(obj *unstructured.Unstructured, err error) bool {
-	isImmutableConfigMapOrSecret := false
-	if obj.GetAPIVersion() == "v1" && sets.New("ConfigMap", "Secret").Has(obj.GetKind()) {
-		cause, ok := apierrors.StatusCause(err, metav1.CauseType(field.ErrorTypeForbidden))
-		if ok && strings.Contains(cause.Message, "field is immutable when `immutable` is set") {
-			isImmutableConfigMapOrSecret = true
+	// The API server returns a 422 Invalid error for immutable-field violations. The cause type
+	// within the status may be either Invalid (e.g. Deployments with immutable spec.selector) or
+	// Forbidden (e.g. immutable Secrets/ConfigMaps). Check both.
+	isImmutable := false
+	for _, causeType := range []metav1.CauseType{metav1.CauseType(field.ErrorTypeInvalid), metav1.CauseType(field.ErrorTypeForbidden)} {
+		cause, ok := apierrors.StatusCause(err, causeType)
+		if ok && strings.Contains(cause.Message, "field is immutable") {
+			isImmutable = true
 		}
 	}
 
-	return keyExistsAndValueTrue(obj.GetAnnotations(), resourcesv1alpha1.DeleteOnInvalidUpdate) || isImmutableConfigMapOrSecret
+	return keyExistsAndValueTrue(obj.GetAnnotations(), resourcesv1alpha1.DeleteOnInvalidUpdate) || isImmutable
 }
 
 func keepObject(meta metav1.Object) bool {
