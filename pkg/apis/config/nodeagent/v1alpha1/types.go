@@ -127,6 +127,10 @@ type OperatingSystemConfigControllerConfig struct {
 	// KubernetesVersion contains the Kubernetes version of the kubelet, used for annotating the corresponding node
 	// resource with a kubernetes version annotation.
 	KubernetesVersion *semver.Version `json:"kubernetesVersion"`
+	// ImagePullSecretName is the name of a Secret in the kube-system namespace of the shoot cluster
+	// that contains the image pull credentials (type kubernetes.io/dockerconfigjson) for pulling images.
+	// +optional
+	ImagePullSecretName *string `json:"imagePullSecretName,omitempty"`
 }
 
 // TokenControllerConfig defines the configuration of the access token controller.

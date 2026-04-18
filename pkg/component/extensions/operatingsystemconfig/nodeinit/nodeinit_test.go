@@ -6,16 +6,20 @@ package nodeinit_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"unicode/utf8"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/api/extensions/v1alpha1/helper"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -39,12 +43,12 @@ var _ = Describe("Init", func() {
 
 		BeforeEach(func() {
 			worker = gardencorev1beta1.Worker{}
-			config = nodeagentcomponent.ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, nil)
+			config = nodeagentcomponent.ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, nil, nil)
 		})
 
 		When("kubelet data volume is not configured", func() {
 			It("should return the expected units and files", func() {
-				units, files, err := Config(worker, image, config)
+				units, files, err := Config(worker, image, config, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(units).To(ConsistOf(extensionsv1alpha1.Unit{
@@ -129,11 +133,12 @@ trap unmount EXIT
 
 echo "> Pull gardener-node-agent image and mount it to the temporary directory"
 CTR_MAJOR=$(ctr version | grep Version | tail -n1 | awk '{print $2}' | cut -d '.' -f 1 | sed 's/[a-zA-Z]//g')
-CTR_EXTRA_ARGS=""
+CTR_EXTRA_ARGS=()
 if [ "$CTR_MAJOR" -gt 1 ]; then
-    CTR_EXTRA_ARGS="--skip-metadata"
+    CTR_EXTRA_ARGS+=("--skip-metadata")
 fi
-ctr images pull $CTR_EXTRA_ARGS --hosts-dir "/etc/containerd/certs.d" "` + image + `"
+
+ctr images pull "${CTR_EXTRA_ARGS[@]}" --hosts-dir "/etc/containerd/certs.d" "` + image + `"
 ctr images mount "` + image + `" "$tmp_dir"
 
 echo "> Copy gardener-node-agent binary to host (/opt/bin) and make it executable"
@@ -173,14 +178,14 @@ exec "/opt/bin/gardener-node-agent" bootstrap --config-dir="/var/lib/gardener-no
 			It("should return an error when the data volume cannot be found", func() {
 				*worker.KubeletDataVolumeName = "not-found"
 
-				units, files, err := Config(worker, image, config)
+				units, files, err := Config(worker, image, config, nil)
 				Expect(err).To(MatchError(ContainSubstring("failed finding data volume for kubelet in worker with name")))
 				Expect(units).To(BeNil())
 				Expect(files).To(BeNil())
 			})
 
 			It("should correctly configure the bootstrap configuration", func() {
-				_, files, err := Config(worker, image, config)
+				_, files, err := Config(worker, image, config, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(files).To(ContainElement(extensionsv1alpha1.File{
 					Path:        fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion),
@@ -213,7 +218,7 @@ server: {}
 			})
 
 			It("should ensure the size of the configuration is not exceeding a certain limit", func() {
-				units, files, err := Config(worker, image, config)
+				units, files, err := Config(worker, image, config, nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				writeFilesToDiskScript, err := operatingsystemconfig.FilesToDiskScript(context.Background(), nil, "", files)
@@ -222,6 +227,128 @@ server: {}
 
 				// best-effort check: ensure the node init configuration is not exceeding 4KB in size
 				Expect(utf8.RuneCountInString(writeFilesToDiskScript + writeUnitsToDiskScript)).To(BeNumerically("<", 4096))
+			})
+		})
+
+		When("an image pull secret is provided", func() {
+			const (
+				image        = "private.registry.io/repo/gardener-node-agent:latest"
+				registryHost = "private.registry.io"
+				registryUser = "myuser"
+				registryPass = "s3cr3t"
+			)
+
+			makeImagePullSecret := func(auths map[string]any) *corev1.Secret {
+				raw, marshalErr := json.Marshal(map[string]any{"auths": auths})
+				Expect(marshalErr).NotTo(HaveOccurred())
+				return &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "pull-secret"},
+					Data:       map[string][]byte{corev1.DockerConfigJsonKey: raw},
+				}
+			}
+
+			decodeInitScript := func(files []extensionsv1alpha1.File) string {
+				var initScriptFile extensionsv1alpha1.File
+				Expect(files).To(ContainElement(HaveField("Path", PathInitScript), &initScriptFile))
+				Expect(initScriptFile.Content.Inline).NotTo(BeNil())
+				decoded, decodeErr := extensionsv1alpha1helper.Decode(initScriptFile.Content.Inline.Encoding, []byte(initScriptFile.Content.Inline.Data))
+				Expect(decodeErr).NotTo(HaveOccurred())
+				return string(decoded)
+			}
+
+			It("should include registry credentials in the init script", func() {
+				pullSecret := makeImagePullSecret(map[string]any{
+					registryHost: map[string]any{"username": registryUser, "password": registryPass},
+				})
+
+				_, files, err := Config(worker, image, config, pullSecret)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(files).To(ContainElement(extensionsv1alpha1.File{
+					Path:        PathInitScript,
+					Permissions: ptr.To[uint32](0755),
+					Content: extensionsv1alpha1.FileContent{
+						Inline: &extensionsv1alpha1.FileContentInline{
+							Encoding: "b64",
+							Data: utils.EncodeBase64([]byte(`#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+echo "> Prepare temporary directory for image pull and mount"
+tmp_dir="$(mktemp -d)"
+unmount() {
+  ctr images unmount "$tmp_dir" && rm -rf "$tmp_dir"
+}
+trap unmount EXIT
+
+echo "> Pull gardener-node-agent image and mount it to the temporary directory"
+CTR_MAJOR=$(ctr version | grep Version | tail -n1 | awk '{print $2}' | cut -d '.' -f 1 | sed 's/[a-zA-Z]//g')
+CTR_EXTRA_ARGS=()
+if [ "$CTR_MAJOR" -gt 1 ]; then
+    CTR_EXTRA_ARGS+=("--skip-metadata")
+fi
+CTR_EXTRA_ARGS+=("--user" '` + registryUser + `:` + registryPass + `')
+
+ctr images pull "${CTR_EXTRA_ARGS[@]}" --hosts-dir "/etc/containerd/certs.d" "` + image + `"
+ctr images mount "` + image + `" "$tmp_dir"
+
+echo "> Copy gardener-node-agent binary to host (/opt/bin) and make it executable"
+mkdir -p "/opt/bin"
+cp -f "$tmp_dir/gardener-node-agent" "/opt/bin" || cp -f "$tmp_dir/ko-app/gardener-node-agent" "/opt/bin"
+chmod +x "/opt/bin/gardener-node-agent"
+
+echo "> Bootstrap gardener-node-agent"
+exec "/opt/bin/gardener-node-agent" bootstrap --config-dir="/var/lib/gardener-node-agent"
+`)),
+						},
+					},
+				}))
+			})
+
+			It("should not include credentials when the secret has no matching registry", func() {
+				pullSecret := makeImagePullSecret(map[string]any{
+					"other.registry.io": map[string]any{"username": registryUser, "password": registryPass},
+				})
+
+				_, files, err := Config(worker, image, config, pullSecret)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decodeInitScript(files)).NotTo(ContainSubstring("--user"))
+			})
+
+			It("should not include credentials when the username is empty", func() {
+				pullSecret := makeImagePullSecret(map[string]any{
+					registryHost: map[string]any{"username": "", "password": registryPass},
+				})
+
+				_, files, err := Config(worker, image, config, pullSecret)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decodeInitScript(files)).NotTo(ContainSubstring("--user"))
+			})
+
+			It("should not include credentials when the password is empty", func() {
+				pullSecret := makeImagePullSecret(map[string]any{
+					registryHost: map[string]any{"username": registryUser, "password": ""},
+				})
+
+				_, files, err := Config(worker, image, config, pullSecret)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decodeInitScript(files)).NotTo(ContainSubstring("--user"))
+			})
+
+			It("should return an error when the pull secret is malformed", func() {
+				invalidSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "pull-secret"},
+					Data:       map[string][]byte{},
+				}
+
+				_, _, err := Config(worker, image, config, invalidSecret)
+
+				Expect(err).To(MatchError(ContainSubstring(`failed parsing image pull secret "pull-secret"`)))
 			})
 		})
 	})
