@@ -160,7 +160,6 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 
 			values := &kubeapiserverexposure.SNIValues{
 				Hosts: []string{
-					v1beta1helper.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
 					v1beta1helper.GetAPIServerDomain(*b.Shoot.InternalClusterDomain),
 				},
 				APIServerProxy: &kubeapiserverexposure.APIServerProxy{
@@ -172,6 +171,10 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 				},
 				IstioTLSTermination:   b.ShootUsesIstioTLSTermination(),
 				WildcardConfiguration: wildcardConfiguration,
+			}
+
+			if b.Shoot.ExternalClusterDomain != nil {
+				values.Hosts = append(values.Hosts, v1beta1helper.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain))
 			}
 
 			return values
