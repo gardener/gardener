@@ -117,15 +117,6 @@ func VerifyBastion(s *ShootContext) {
 			nodeAddrInternalIP = net.JoinHostPort(nodeInternalIP, "22")
 		}, SpecTimeout(time.Minute))
 
-		It("should ensure there are no other Bastions", func(ctx SpecContext) {
-			// For now, the local setup supports only a single Bastion at a time because there is only one LoadBalancer IP.
-			// With this step, we try to avoid creating multiple Bastions at the same time that interfere with each other.
-			bastionList := &operationsv1alpha1.BastionList{}
-			Eventually(ctx, s.GardenKomega.ObjectList(bastionList)).
-				WithPolling(5 * time.Second).
-				Should(HaveField("Items", BeEmpty()))
-		}, SpecTimeout(5*time.Minute))
-
 		var bastionSSHKey *rsa.PrivateKey
 		It("should create the Bastion", func(ctx SpecContext) {
 			sshKeyInterface, err := (&secretsutils.RSASecretConfig{

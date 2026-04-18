@@ -1,18 +1,8 @@
 gardener:
-  garden:
-    virtualGarden:
-      listenAddress: fd00:ff::3
-  seed:
-    istio:
-      listenAddresses:
-      - "fd00:ff::1"
-      - "172.18.255.1"
-    bastion:
-      listenAddresses:
-      - "fd00:ff::22"
-      - "172.18.255.22"
   selfHostedShoot:
     listenAddress: fd00:ff::4
+    virtualGarden:
+      listenAddress: fd00:ff::3
 
 networking:
   ipFamily: dual

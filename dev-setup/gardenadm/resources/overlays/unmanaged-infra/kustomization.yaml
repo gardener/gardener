@@ -6,3 +6,6 @@ sortOptions:
 
 resources:
 - ../../base
+
+patches:
+- path: patch-shoot-unmanaged-infra.yaml

@@ -6,16 +6,14 @@ nodes:
   labels:
     topology.kubernetes.io/zone: "0"
   extraPortMappings:
-{{ include "extraPortMappings.gardener.operator.virtualGarden" . | indent 2 }}
 {{ include "extraPortMappings.gardener.controlPlane.etcd" . | indent 2 }}
-{{ include "extraPortMappings.gardener.seed.istio" . | indent 2 }}
-{{ include "extraPortMappings.gardener.seed.bastion" . | indent 2 }}
 {{ include "extraPortMappings.gardener.selfHostedShoot" . | indent 2 }}
   extraMounts:
 {{ include "extraMounts.kind.kubeAPIServer" . | indent 2 }}
 {{ include "extraMounts.gardener.controlPlane" . | indent 2 }}
 {{ include "extraMounts.backupBucket" . | indent 2 }}
 {{ include "extraMounts.resolveConfig" . | indent 2 }}
+{{ include "extraMounts.dockerSocket" . | indent 2 }}
   kubeadmConfigPatches:
 {{ include "kubeadmConfigPatches" . | indent 2 }}
 
@@ -28,6 +26,7 @@ nodes:
 {{ include "extraMounts.gardener.controlPlane" $ | indent 2 }}
 {{ include "extraMounts.backupBucket" $ | indent 2 }}
 {{ include "extraMounts.resolveConfig" $ | indent 2 }}
+{{ include "extraMounts.dockerSocket" $ | indent 2 }}
   kubeadmConfigPatches:
 {{ include "kubeadmConfigPatches" $ | indent 2 }}
 {{- end }}

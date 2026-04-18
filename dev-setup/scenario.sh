@@ -6,6 +6,21 @@
 set -o errexit
 set -o pipefail
 
+function detect_kind_cluster_name() {
+  provider_id=$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[*].spec.providerID}' | tr ' ' '\n' | head -1)
+
+  if ! [[ "$provider_id" == kind://* ]]; then
+    echo "Error: Unable to detect kind cluster name. Couldn't find control-plane node with providerID starting with 'kind://'." >&2
+    return 1
+  fi
+
+  CLUSTER_NAME=${provider_id#kind://docker/}
+  CLUSTER_NAME=${CLUSTER_NAME%%/*}
+  export CLUSTER_NAME
+
+  echo "Detected cluster name: $CLUSTER_NAME"
+}
+
 function detect_scenario() {
   nodes=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}' | tr ' ' '\n')
   zones=$(kubectl get nodes -o jsonpath='{.items[*].metadata.labels.topology\.kubernetes\.io/zone}' | tr ' ' '\n' | sort -u)
@@ -37,7 +52,7 @@ function detect_scenario() {
     export SCENARIO="${SCENARIO}-gardenadm"
   fi
 
-  echo "DETECTED SCENARIO: $SCENARIO"
+  echo "Detected scenario: $SCENARIO"
 }
 
 function skaffold_profile() {
@@ -72,6 +87,6 @@ function skaffold_profile() {
   esac
 
   if [[ -n "$SKAFFOLD_PROFILE" ]]; then
-    echo "USING SKAFFOLD PROFILE: $SKAFFOLD_PROFILE"
+    echo "Using skaffold profile: $SKAFFOLD_PROFILE"
   fi
 }

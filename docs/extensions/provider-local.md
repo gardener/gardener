@@ -18,11 +18,7 @@ The motivation for maintaining such extension is the following:
 The following enlists the current limitations of the implementation.
 Please note that all of them are not technical limitations/blockers, but simply advanced scenarios that we haven't had invested yet into.
 
-1. No load balancers for Shoot clusters.
-
-   _We have not yet developed a `cloud-controller-manager` which could reconcile load balancer `Service`s in the shoot cluster._
-
-2. Machines/nodes are recreated during control plane migration.
+1. Machines/nodes are recreated during control plane migration.
 
    _Since the machine provider creates `Pod`s for the shoot worker nodes in the shoot's control plane namespace, they get deleted and recreated on the other seed cluster during control plane migration._
 
@@ -44,10 +40,7 @@ The Gardener images built locally by `Skaffold` are pushed to/pulled from a cont
 `provider-local` configures this registry as mirror for the shoot by mutating the `OperatingSystemConfig` and using the [default contract for extending the `containerd` configuration](../usage/advanced/custom-containerd-config.md).
 
 In order to bootstrap a seed cluster, the `gardenlet` deploys `PersistentVolumeClaim`s and `Service`s of type `LoadBalancer`.
-While storage is supported in shoot clusters by using the [`local-path-provisioner`](https://github.com/rancher/local-path-provisioner), load balancers are not supported yet.
-However, `provider-local` runs a `Service` controller which specifically reconciles the seed-related `Service`s of type `LoadBalancer`.
-This way, they get an IP and `gardenlet` can finish its bootstrapping process.
-Note that these IPs are not reachable, however for the sake of developing `ManagedSeed`s this is sufficient for now.
+Storage is supported in shoot clusters by using the [`local-path-provisioner`](https://github.com/rancher/local-path-provisioner), and load balancers are supported by [`cloud-controller-manager-local`](#cloud-controller-manager-local).
 
 Also, please note that the `provider-local` extension only gets deployed because of the `Always` deployment policy in its corresponding `ControllerRegistration` and because the DNS provider type of the seed is set to `local`.
 
@@ -87,6 +80,7 @@ There are controllers for all resources in the `extensions.gardener.cloud/v1alph
 #### `ControlPlane`
 
 This controller is deploying the [local-path-provisioner](https://github.com/rancher/local-path-provisioner) as well as a related `StorageClass` in order to support `PersistentVolumeClaim`s in the local shoot cluster.
+It also deploys the [`cloud-controller-manager-local`](#cloud-controller-manager-local) as a `Deployment` in the shoot cluster to support `LoadBalancer` services.
 Additionally, it creates a few (currently unused) dummy secrets (CA, server and client certificate, basic auth credentials) for the sake of testing the secrets manager integration in the extensions library.
 
 #### `DNSRecord`
@@ -113,7 +107,7 @@ In addition, we had issues with shoot clusters having more than one node (hence,
 
 This controller renders a simple cloud-init template which can later be executed by the shoot worker nodes.
 
-The shoot worker nodes are `Pod`s with a container based on the `kindest/node` image. This is maintained in the [`pkg/provider-local/node`](../../pkg/provider-local/node) directory and has a special `run-userdata` systemd service which executes the cloud-init generated earlier by the `OperatingSystemConfig` controller.
+The shoot worker nodes are `Pod`s with a container based on the `kindest/node` image. This is maintained in the [`pkg/provider-local/machine-provider/node`](../../pkg/provider-local/machine-provider/node) directory and has a special `run-userdata` systemd service which executes the cloud-init generated earlier by the `OperatingSystemConfig` controller.
 
 #### `Worker`
 
@@ -127,17 +121,6 @@ This is needed because the [local machine provider](#machine-controller-manager-
 This controller implements the `Bastion.extensions.gardener.cloud` resource by deploying a pod with the local machine image along with a `LoadBalancer` service.
 
 Note that this controller does not respect the `Bastion.spec.ingress` configuration as there is no way to perform client IP restrictions in the local setup.
-
-#### `Service`
-
-This controller reconciles `Services` of type `LoadBalancer` in the local `Seed` cluster.
-Since the local Kubernetes clusters used as Seed clusters typically don't support such services, this controller sets the `.status.ingress.loadBalancer.ip[0]` to magic `172.18.255.*` or `fd00:ff::*` IP addresses that are added to the loopback interface of the host machine running the kind cluster.
-It makes LoadBalancer Services (e.g. `istio-ingressgateway` and `shoot--*--*/bastion-*`) available to the host by setting `spec.ports[].nodePort` to well-known ports that are mapped to `hostPorts` in the kind cluster configuration.
-
-`istio-ingress/istio-ingressgateway` is set to be exposed on `nodePort` `30433` by this controller.
-The bastion services are exposed on `nodePort` `30022`.
-
-In case the seed has multiple availability zones (`.spec.provider.zones`) and it uses SNI, the different zone-specific `istio-ingressgateway` loadbalancers are exposed via different IP addresses. Per default, IP addresses `172.18.255.1{0,1,2}` and `fd00:ff::1{0,1,2}` are used for the zones `0`, `1`, and `2` respectively.
 
 #### ETCD Backups
 
@@ -185,13 +168,33 @@ For the shoot clusters, this empty patch trigger is not needed since the `Mutati
 
 This webhook reacts on the `ConfigMap` used by the `kube-proxy` and sets the `maxPerCore` field to `0` since other values don't work well in conjunction with the `kindest/node` image which is used as base for the shoot worker machine pods ([ref](https://github.com/kubernetes-sigs/kind/blob/fa7d86470f4c0e924fc4c2e767ec8491c45f4304/pkg/cluster/internal/kubeadm/config.go#L283-L285)).
 
+### cloud-controller-manager-local
+
+`Services` of type `LoadBalancer` in the local setup are handled by `cloud-controller-manager-local`, a dedicated cloud controller manager implementing the Kubernetes [`cloudprovider.LoadBalancer`](https://pkg.go.dev/k8s.io/cloud-provider#LoadBalancer) interface.
+
+For each `LoadBalancer` service, the cloud controller manager creates a Docker container running [envoy](https://www.envoyproxy.io/) as a Layer 4 proxy.
+The envoy container is connected to the `kind` Docker network and proxies traffic from external IPs to the Kubernetes node ports of the service.
+
+Load balancer IPs are allocated from dedicated CIDR ranges:
+- Internal IPs (within the `kind` network): `172.18.0.224/27` (IPv4), `fd00:10::e0/123` (IPv6)
+- External IPs (bound on the host): `172.18.255.224/27` (IPv4), `fd00:ff::e0/123` (IPv6)
+
+The external IPs are added to the loopback interface of the host machine by `hack/kind-up.sh`, making `LoadBalancer` services (e.g., `istio-ingressgateway` and bastion services) reachable from the host.
+
+The cloud-controller-manager is used for both the kind cluster (started automatically during `make kind*-up`) and for the shoot clusters (deployed by provider-local's [`ControlPlane` controller](#controlplane)).
+For the shoot clusters, the cloud-controller-manager is configured to talk to the shoot's API server using a shoot access secret.
+Additionally, it also uses the in-cluster credentials (ServiceAccount in the seed cluster) to look up the machine pods corresponding to the shoot `Node` objects.
+This is needed, because the shoot node IPs are pod IPs in the kind cluster, which are not directly reachable from load balancer containers in the `kind` network.
+Therefore, cloud-controller-manager-local configures IP routes to the machine pod IPs via the kind nodes on which the machine pods are running.
+This way, creating a `Service` of type `LoadBalancer` works even in shoots.
+
 ### machine-controller-manager-provider-local
 
 Out of tree (controller-based) implementation for `local` as a new provider.
 The local out-of-tree provider implements the interface defined at [MCM OOT driver](https://github.com/gardener/machine-controller-manager/blob/master/pkg/util/provider/driver/driver.go).
 
 For every `Machine` object, the [local machine provider](../../pkg/provider-local/machine-provider) creates a `Pod` in the shoot control plane namespace.
-A machine pod uses an [image](../../pkg/provider-local/node) based on [kind's](https://github.com/kubernetes-sigs/kind) node image (`kindest/node`).
+A machine pod uses an [image](../../pkg/provider-local/machine-provider/node) based on [kind's](https://github.com/kubernetes-sigs/kind) node image (`kindest/node`).
 The machine's user data is deployed as a `Secret` in the shoot control plane namespace and mounted into the machine pod.
 In contrast to kind, the local machine image doesn't directly run kubelet as a systemd unit. Instead, it has a unit for running the user data script at `/etc/machine/userdata`.
 
@@ -205,7 +208,7 @@ metadata:
   namespace: shoot--garden-local--local
 provider: local
 providerSpec:
-  image: registry.local.gardener.cloud:5001/local-skaffold_gardener-extension-provider-local-node:...
+  image: registry.local.gardener.cloud:5001/local-skaffold_gardener-extension-provider-local/node:...
   ipPoolNameV4: shoot-machine-pods-shoot--garden-local--local-ipv4
   ipPoolNameV6: shoot-machine-pods-shoot--garden-local--local-ipv6
   namespace: shoot--garden-local--local
@@ -227,5 +230,4 @@ With this, local `Nodes` and `Bastions` can connect to other `Nodes` via their h
 
 Future work could mostly focus on resolving the above listed [limitations](#limitations), i.e.:
 
-- Implement a `cloud-controller-manager` and deploy it via the [`ControlPlane` controller](#controlplane).
 - Properly implement `.spec.machineTypes` in the `CloudProfile`s (i.e., configure `.spec.resources` properly for the created shoot worker machine pods).

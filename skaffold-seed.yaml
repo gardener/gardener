@@ -4,8 +4,11 @@ metadata:
   name: garden-config
 build:
   artifacts:
-    - image: local-skaffold/gardener-extension-provider-local-node
-      context: pkg/provider-local/node
+    - image: local-skaffold/gardener-extension-provider-local/loadbalancer
+      context: pkg/provider-local/cloud-provider/loadbalancer/image
+      docker: {}
+    - image: local-skaffold/gardener-extension-provider-local/node
+      context: pkg/provider-local/machine-provider/node
       docker: {}
   insecureRegistries:
     - registry.local.gardener.cloud:5001

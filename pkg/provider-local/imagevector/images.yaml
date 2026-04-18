@@ -1,6 +1,10 @@
 # Before introducing a new image, ensure it complies with the container image guidelines
 # in the component checklist: https://github.com/gardener/gardener/blob/master/docs/development/component-checklist.md#images
 images:
+- name: cloud-controller-manager-local
+  sourceRepository: github.com/gardener/gardener
+  repository: cloud-controller-manager-local
+  tag: v0.0.0
 - name: machine-controller-manager-provider-local
   sourceRepository: github.com/gardener/gardener
   repository: machine-controller-manager-provider-local

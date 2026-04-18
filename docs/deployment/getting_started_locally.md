@@ -262,7 +262,6 @@ make kind2-up
 ```
 
 This command sets up a new KinD cluster named `gardener-local2` and stores its kubeconfig in the `./example/gardener-local/kind/local2/kubeconfig` file.
-It adds another IP address (`172.18.255.2`) to your loopback device which is necessary for you to reach the new cluster locally.
 
 In order to deploy required resources in the KinD cluster that you just created, run:
 
@@ -297,12 +296,6 @@ If you want to perform control plane migration, you can follow the steps outline
 
 ``` shell
 make kind2-down
-```
-
-On macOS, if you want to remove the additional IP address on your loopback device run the following script:
-
-```shell
-sudo ip addr del 172.18.255.2 dev lo0
 ```
 
 ## Tear Down the Gardener Environment

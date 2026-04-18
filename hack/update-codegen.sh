@@ -30,6 +30,7 @@ AVAILABLE_CODEGEN_OPTIONS=(
   "shoottolerationrestriction_groups"
   "shootdnsrewriting_groups"
   "provider_local_groups"
+  "cloud_provider_local_groups"
   "extensions_config_groups"
   "nodeagent_groups"
 )
@@ -411,6 +412,21 @@ provider_local_groups() {
 }
 export -f provider_local_groups
 
+# local.provider.gardener.cloud APIs
+
+cloud_provider_local_groups() {
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  echo "Generating API groups for pkg/provider-local/cloud-provider/api"
+
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    --extra-peer-dir github.com/gardener/gardener/pkg/provider-local/cloud-provider/api/v1alpha1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/apis/meta/v1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/runtime \
+    "${PROJECT_ROOT}/pkg/provider-local/cloud-provider/api"
+}
+export -f cloud_provider_local_groups
+
 # extensions/pkg/apis deepcopy methods
 
 extensions_config_groups() {
@@ -528,6 +544,7 @@ HELPERS_ONLY_GROUPS=(
   "shoottolerationrestriction_groups"
   "shootdnsrewriting_groups"
   "provider_local_groups"
+  "cloud_provider_local_groups"
   "extensions_config_groups"
   "nodeagent_groups"
 )

@@ -23,7 +23,7 @@ spec:
       # On subsequent boots the directories are already populated and the copy is skipped, preserving any changes made at runtime.
       # For /etc/containerd, it also patches config_path so containerd finds the registry mirror configuration in /etc/containerd/certs.d from the very first start.
       - name: init-machine-state
-        image: local-skaffold/gardener-extension-provider-local-node
+        image: local-skaffold/gardener-extension-provider-local/node
         command:
         - sh
         - -c
@@ -48,7 +48,7 @@ spec:
           subPath: containerd
       containers:
       - name: node
-        image: local-skaffold/gardener-extension-provider-local-node
+        image: local-skaffold/gardener-extension-provider-local/node
         securityContext:
           privileged: true
         env:

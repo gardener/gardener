@@ -39,6 +39,54 @@ resource.
 <p>MachineImages is the list of machine images that are understood by the controller. It maps<br />logical names and versions to provider-specific identifiers.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>loadBalancer</code></br>
+<em>
+<a href="#loadbalancer">LoadBalancer</a>
+</em>
+</td>
+<td>
+<p>LoadBalancer contains the configuration for the service controller of cloud-controller-manager-local.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="loadbalancer">LoadBalancer
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#cloudprofileconfig">CloudProfileConfig</a>)
+</p>
+
+<p>
+LoadBalancer contains the configuration for the service controller of cloud-controller-manager-local.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>image</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Image is the envoy container image used for starting load balancer containers.</p>
+</td>
+</tr>
 
 </tbody>
 </table>

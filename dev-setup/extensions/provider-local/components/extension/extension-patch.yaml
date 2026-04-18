@@ -13,6 +13,8 @@ spec:
         logLevel: debug
         imageVectorOverwrite:
           images:
+          - name: cloud-controller-manager-local
+            ref: local-skaffold/cloud-controller-manager-local
           - name: machine-controller-manager-provider-local
             ref: local-skaffold/machine-controller-manager-provider-local
       injectGardenKubeconfig: true

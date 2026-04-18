@@ -1,0 +1,60 @@
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingAdmissionPolicy
+metadata:
+  name: loadbalancer-services
+  annotations:
+    gardener.cloud/description: |
+      This admission policy overwrites the nodePort of istio-ingressgateway LoadBalancer services to well-known values
+      for the port mapping in the kind cluster. This is used to implement services of type LoadBalancer in self-hosted
+      shoots with unmanaged infrastructure, where we don't provision dynamic load balancers in
+      cloud-controller-manager-local. In this case, cloud-controller-manager-local simply publishes the hard-coded
+      external IPs in the service status without provisioning any load balancer containers.
+spec:
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      resources: ["services"]
+      operations: ["CREATE", "UPDATE"]
+  matchConditions:
+  - name: is-loadbalancer-service
+    expression: >
+      object.spec.type == "LoadBalancer"
+  - name: is-istio-ingressgateway
+    expression: >
+      object.metadata.name == "istio-ingressgateway" && object.metadata.namespace == "virtual-garden-istio-ingress"
+  failurePolicy: Fail
+  reinvocationPolicy: IfNeeded
+  mutations:
+  - patchType: "ApplyConfiguration"
+    applyConfiguration:
+      expression: >
+        Object{
+          metadata: Object.metadata{
+            annotations: {
+              "gardener.cloud/mutation-description": "This Service has been mutated by MutatingAdmissionPolicy loadbalancer-services to set the nodePort to the well-known value for the port mapping in the kind cluster."
+            }
+          },
+          spec: Object.spec{
+            ports: [
+              Object.spec.ports{
+                port: 443,
+                protocol: "TCP",
+                nodePort: 31443
+              }
+            ]
+          }
+        }
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingAdmissionPolicyBinding
+metadata:
+  name: loadbalancer-services
+spec:
+  policyName: loadbalancer-services
+  matchResources:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      resources: ["services"]
+      operations: ["CREATE", "UPDATE"]

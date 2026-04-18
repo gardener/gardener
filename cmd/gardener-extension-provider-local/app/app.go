@@ -7,7 +7,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"net"
 	"os"
 	"slices"
 	"time"
@@ -18,7 +17,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,28 +45,11 @@ import (
 	localhealthcheck "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
 	localinfrastructure "github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	localoperatingsystemconfig "github.com/gardener/gardener/pkg/provider-local/controller/operatingsystemconfig"
-	localservice "github.com/gardener/gardener/pkg/provider-local/controller/service"
 	localworker "github.com/gardener/gardener/pkg/provider-local/controller/worker"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	prometheuswebhook "github.com/gardener/gardener/pkg/provider-local/webhook/prometheus"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
-
-var hostIP string
-
-func init() {
-	addrs, err := net.InterfaceAddrs()
-	utilruntime.Must(err)
-
-	for _, address := range addrs {
-		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				hostIP = ipnet.IP.String()
-				break
-			}
-		}
-	}
-}
 
 // NewControllerManagerCommand creates a new command for running a local provider controller.
 func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
@@ -108,12 +89,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 		// options for the extension controllers
 		extensionCtrlOpts = &extensionscmdcontroller.ControllerOptions{
 			MaxConcurrentReconciles: 5,
-		}
-
-		// options for the service controller
-		serviceCtrlOpts = &localservice.ControllerOptions{
-			MaxConcurrentReconciles: 5,
-			HostIP:                  hostIP,
 		}
 
 		// options for the local backupbucket controller
@@ -173,7 +148,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			extensionscmdcontroller.PrefixOption("extension-", extensionCtrlOpts),
 			extensionscmdcontroller.PrefixOption("infrastructure-", infraCtrlOpts),
 			extensionscmdcontroller.PrefixOption("worker-", workerCtrlOpts),
-			extensionscmdcontroller.PrefixOption("service-", serviceCtrlOpts),
 			extensionscmdcontroller.PrefixOption("backupbucket-", localBackupBucketOptions),
 			extensionscmdcontroller.PrefixOption("operatingsystemconfig-", operatingSystemConfigCtrlOpts),
 			extensionscmdcontroller.PrefixOption("healthcheck-", healthCheckCtrlOpts),
@@ -276,7 +250,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			healthCheckCtrlOpts.Completed().Apply(&localhealthcheck.DefaultAddOptions.Controller)
 			infraCtrlOpts.Completed().Apply(&localinfrastructure.DefaultAddOptions.Controller)
 			operatingSystemConfigCtrlOpts.Completed().Apply(&localoperatingsystemconfig.DefaultAddOptions.Controller)
-			serviceCtrlOpts.Completed().Apply(&localservice.DefaultAddOptions)
 			workerCtrlOpts.Completed().Apply(&localworker.DefaultAddOptions.Controller)
 			localBackupBucketOptions.Completed().Apply(&localbackupbucket.DefaultAddOptions)
 			localBackupBucketOptions.Completed().Apply(&localbackupentry.DefaultAddOptions)
@@ -311,8 +284,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			if err := controllerSwitches.Completed().AddToManager(ctx, mgr); err != nil {
 				return fmt.Errorf("could not add controllers to manager: %w", err)
 			}
-
-			log.Info("Started with", "hostIP", serviceCtrlOpts.HostIP)
 
 			if err := mgr.Start(ctx); err != nil {
 				return fmt.Errorf("error running manager: %w", err)

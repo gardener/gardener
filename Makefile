@@ -195,7 +195,7 @@ define GENERATE_HELP_INFO
 #   WHAT                   - Specify the targets to run (e.g., "protobuf codegen manifests logcheck")
 #   CODEGEN_GROUPS         - Specify which groups to run the 'codegen' target for, not applicable for other targets (e.g., "authentication_groups core_groups extensions_groups resources_groups
 #                            operator_groups seedmanagement_groups operations_groups settings_groups operatorconfig_groups controllermanager_groups admissioncontroller_groups scheduler_groups
-#                            gardenlet_groups resourcemanager_groups shoottolerationrestriction_groups shootdnsrewriting_groups shootresourcereservation_groups provider_local_groups extensions_config_groups")
+#                            gardenlet_groups resourcemanager_groups shoottolerationrestriction_groups shootdnsrewriting_groups shootresourcereservation_groups provider_local_groups cloud_provider_local_groups extensions_config_groups")
 #   MANIFESTS_DIRS         - Specify which directories to run the 'manifests' target in, not applicable for other targets (Default directories are "charts cmd example extensions imagevector pkg plugin test")
 #   MODE                   - Specify the mode for the 'manifests' (default=parallel) or 'codegen' (default=sequential) target (e.g., "parallel" or "sequential")
 #   MAX_PARALLEL_WORKERS   - Specify the number of maximum parallel workers that will be used when MODE='parallel' (default=4)
@@ -350,6 +350,12 @@ export SKAFFOLD_LABEL = "skaffold.dev/run-id=gardener-local"
 %debug: export SKAFFOLD_CACHE_ARTIFACTS = false
 
 
+# cloud-provider-local-{up,dev,debug,down}
+cloud-provider-local-%: export SKAFFOLD_FILENAME = skaffold-cloud-provider-local.yaml
+cloud-provider-local-up cloud-provider-local-dev cloud-provider-local-debug cloud-provider-local-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	./dev-setup/cloud-provider-local.sh $(subst cloud-provider-local-,,$@)
+
+# gardener-{up,dev,debug,down}
 gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	$(SKAFFOLD) run
 gardener-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
@@ -359,6 +365,7 @@ gardener-debug: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh
 
+# gardenlet-kind2-{up,dev,debug,down}
 gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down: export SKAFFOLD_PREFIX_NAME = kind2
 gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down: export SKAFFOLD_COMMAND_KUBECONFIG := $(GARDENER_LOCAL_KUBECONFIG)
 gardenlet-kind2-up: $(SKAFFOLD) $(HELM) $(KUBECTL)

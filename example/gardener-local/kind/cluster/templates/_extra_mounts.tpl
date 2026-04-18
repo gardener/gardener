@@ -23,3 +23,8 @@
 - hostPath: {{.Values.gardener.repositoryRoot}}/example/gardener-local/kind/resolv.conf
   containerPath: /etc/resolv.conf
 {{- end -}}
+
+{{- define "extraMounts.dockerSocket" -}}
+- hostPath: {{ .Values.dockerSocket | default "/var/run/docker.sock" }}
+  containerPath: /var/run/docker.sock
+{{- end -}}

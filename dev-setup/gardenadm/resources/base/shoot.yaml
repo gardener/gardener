@@ -39,7 +39,7 @@ spec:
       systemComponents:
         allow: false
   kubernetes:
-    version: 1.33.0
+    version: 1.34.3
     kubelet:
       seccompDefault: true
       serializeImagePulls: false

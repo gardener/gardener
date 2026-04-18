@@ -1,0 +1,4 @@
+apiVersion: v1
+description: An umbrella chart for control plane resources in the Seed cluster
+name: seed-controlplane
+version: 0.1.0

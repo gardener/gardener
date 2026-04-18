@@ -37,21 +37,22 @@ case "$COMMAND" in
       # The manifests are copied to the unmanaged-infra machine pods or can be passed to the `--config-dir` flag of `gardenadm bootstrap`.
       skaffold build \
         -p "$SCENARIO" \
-        -m gardenadm,provider-local-node,provider-local \
+        -m gardenadm,provider-local \
         -q \
         --cache-artifacts="$($(dirname "$0")/get-skaffold-cache-artifacts.sh gardenadm)" \
         |\
       skaffold render \
         -p "$SCENARIO" \
-        -m provider-local-node,provider-local \
+        -m provider-local \
         -o "$(dirname "$0")/gardenadm/resources/generated/$SCENARIO/manifests.yaml" \
         --build-artifacts \
         -
 
       if [[ "$SCENARIO" == "unmanaged-infra" ]]; then
         skaffold run \
+          -p "$SCENARIO" \
           -n gardenadm-unmanaged-infra \
-          -m provider-local-node,machine
+          -m provider-local,machine
       fi
 
       # Export global resources for `gardenadm connect` scenario in case they will be needed later
@@ -71,11 +72,13 @@ case "$COMMAND" in
         # Used to talk to the virtual-garden API server from the host machine via the following network path:
         # Host:172.18.255.3:443
         #   → Docker (hostPort 443 → containerPort 31443)
-        #     → KinD node, NodePort 31443
+        #     → KinD node, NodePort 31443 (service gardenadm-unmanaged-infra/control-plane-machine)
         #       → machine-0 pod IP 10.0.212.0:31443
-        #         → istio-ingressgateway pod exposed via NodePort 31443 in the machine-0 node
-        # In the 'connect-kind' scenario, the istio-ingressgateway runs directly in the KinD node and gets exposed via
-        # node port 31443 directly, hence, no need to patch this Service in this scenario.
+        #         → istio-ingressgateway pod exposed via NodePort 31443 in the machine-0 node (patched by MutatingAdmissionPolicy loadbalancer-services)
+        # In the 'connect-kind' scenario, the istio-ingressgateway runs directly on the KinD cluster and gets exposed
+        # via a dynamic load balancer provisioned by cloud-controller-manager-local, hence, no need to patch this
+        # Service in this scenario.
+        kubectl --kubeconfig "$garden_runtime_cluster_kubeconfig" apply -k "$(dirname "$0")/../dev-setup/gardenadm/loadbalancer-services" --server-side
         if ! kubectl --kubeconfig "$KUBECONFIG" -n gardenadm-unmanaged-infra get service control-plane-machine \
           -o jsonpath='{.spec.ports[*].name}' | grep -qw virtual-garden-apiserver; then
           kubectl --kubeconfig "$KUBECONFIG" -n gardenadm-unmanaged-infra patch service control-plane-machine \

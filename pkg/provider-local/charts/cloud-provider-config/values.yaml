@@ -1,0 +1,6 @@
+#runtimeCluster:
+#  namespace: ""
+#  kubeconfig: ""
+
+loadBalancer:
+  image: image-repository:image-tag

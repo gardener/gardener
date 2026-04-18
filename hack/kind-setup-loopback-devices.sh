@@ -35,35 +35,16 @@ parse_flags() {
 
 parse_flags "$@"
 
-LOOPBACK_IP_ADDRESSES=(172.18.255.1 172.18.255.4 172.18.255.53 fd00:ff::53)
+LOOPBACK_IP_ADDRESSES=(172.18.255.3 172.18.255.4 172.18.255.53 fd00:ff::53)
 if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-  LOOPBACK_IP_ADDRESSES+=(fd00:ff::1 fd00:ff::4)
+  LOOPBACK_IP_ADDRESSES+=(fd00:ff::3 fd00:ff::4)
 fi
 
-if [[ "$MULTI_ZONAL" == "true" ]]; then
-  LOOPBACK_IP_ADDRESSES+=(172.18.255.10 172.18.255.11 172.18.255.12)
-  if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-    LOOPBACK_IP_ADDRESSES+=(fd00:ff::10 fd00:ff::11 fd00:ff::12)
-  fi
-fi
-
-if [[ "$CLUSTER_NAME" != "*local2*" ]] ; then
-  LOOPBACK_IP_ADDRESSES+=(172.18.255.22)
-  if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-    LOOPBACK_IP_ADDRESSES+=(fd00:ff::22)
-  fi
-fi
-
-if [[ "$CLUSTER_NAME" == "gardener-operator-local" ]]; then
-  LOOPBACK_IP_ADDRESSES+=(172.18.255.3)
-  if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-    LOOPBACK_IP_ADDRESSES+=(fd00:ff::3)
-  fi
-elif [[ "$CLUSTER_NAME" == "gardener-local2" || "$CLUSTER_NAME" == "gardener-local-multi-node2" ]]; then
-  LOOPBACK_IP_ADDRESSES+=(172.18.255.2)
-  if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-    LOOPBACK_IP_ADDRESSES+=(::2)
-  fi
+# load balancer range IPv4 (172.18.255.224/27)
+LOOPBACK_IP_ADDRESSES+=( $(printf "172.18.255.%d\n" {224..255}) )
+if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
+  # load balancer range IPv6 (fd00:ff::e0/123)
+  LOOPBACK_IP_ADDRESSES+=( $(printf "fd00:ff::e%x\n" {0..15}) $(printf "fd00:ff::f%x\n" {0..15}) )
 fi
 
 if ! command -v ip &>/dev/null; then
