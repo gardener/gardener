@@ -79,7 +79,7 @@ require (
 	k8s.io/code-generator v0.35.4
 	k8s.io/component-base v0.35.4
 	k8s.io/component-helpers v0.35.4
-	k8s.io/klog/v2 v2.130.1
+	k8s.io/klog/v2 v2.140.0
 	k8s.io/kube-aggregator v0.35.4
 	k8s.io/kube-openapi v0.0.0-20260127142750-a19766b6e2d4
 	k8s.io/kube-proxy v0.35.4
