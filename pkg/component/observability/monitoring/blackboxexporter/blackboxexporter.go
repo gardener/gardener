@@ -43,9 +43,6 @@ import (
 )
 
 const (
-	labelValue    = "blackbox-exporter"
-	containerName = "blackbox-exporter"
-
 	volumeMountPathConfig = "/etc/blackbox_exporter"
 	dataKeyConfig         = "blackbox.yaml"
 
@@ -142,9 +139,9 @@ func (b *blackboxExporter) Destroy(ctx context.Context) error {
 
 func (b *blackboxExporter) managedResourceName() string {
 	if b.values.ClusterType == component.ClusterTypeSeed {
-		return "blackbox-exporter"
+		return v1beta1constants.DeploymentNameBlackBoxExporter
 	}
-	return "shoot-core-blackbox-exporter"
+	return fmt.Sprintf("shoot-core-%s", v1beta1constants.DeploymentNameBlackBoxExporter)
 }
 
 func (b *blackboxExporter) monitoringResourcesManagedResourceName() string {
@@ -190,7 +187,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 	var (
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "blackbox-exporter",
+				Name:      v1beta1constants.DeploymentNameBlackBoxExporter,
 				Namespace: b.runtimeNamespace(),
 				Labels:    getLabels(),
 			},
@@ -199,10 +196,10 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 
 		configMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "blackbox-exporter-config",
+				Name:      v1beta1constants.ConfigMapNameBlackBoxExporter,
 				Namespace: b.runtimeNamespace(),
 				Labels: map[string]string{
-					v1beta1constants.LabelApp:  "prometheus",
+					v1beta1constants.LabelApp:  v1beta1constants.MonitoringNamePrometheus,
 					v1beta1constants.LabelRole: v1beta1constants.GardenRoleMonitoring,
 				},
 			},
@@ -215,14 +212,14 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 	var (
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "blackbox-exporter",
+				Name:      v1beta1constants.DeploymentNameBlackBoxExporter,
 				Namespace: b.runtimeNamespace(),
 				Labels:    utils.MergeStringMaps(getLabels(), map[string]string{resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer}),
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             &b.values.Replicas,
 				RevisionHistoryLimit: ptr.To[int32](2),
-				Selector:             &metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelApp: labelValue}},
+				Selector:             &metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameBlackBoxExporter}},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{},
@@ -240,7 +237,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 						},
 						Containers: []corev1.Container{
 							{
-								Name:  containerName,
+								Name:  v1beta1constants.DeploymentNameBlackBoxExporter,
 								Image: b.values.Image,
 								Args: []string{
 									fmt.Sprintf("--config.file=%s/%s", volumeMountPathConfig, dataKeyConfig),
@@ -264,7 +261,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
-										Name:      "blackbox-exporter-config",
+										Name:      v1beta1constants.ConfigMapNameBlackBoxExporter,
 										MountPath: volumeMountPathConfig,
 									},
 								},
@@ -280,7 +277,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 						},
 						Volumes: []corev1.Volume{
 							{
-								Name: "blackbox-exporter-config",
+								Name: v1beta1constants.ConfigMapNameBlackBoxExporter,
 								VolumeSource: corev1.VolumeSource{
 									ConfigMap: &corev1.ConfigMapVolumeSource{
 										LocalObjectReference: corev1.LocalObjectReference{
@@ -297,10 +294,10 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "blackbox-exporter",
+				Name:      v1beta1constants.DeploymentNameBlackBoxExporter,
 				Namespace: b.runtimeNamespace(),
 				Labels: map[string]string{
-					v1beta1constants.LabelApp: labelValue,
+					v1beta1constants.LabelApp: v1beta1constants.DeploymentNameBlackBoxExporter,
 				},
 			},
 			Spec: corev1.ServiceSpec{
@@ -313,18 +310,18 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 					},
 				},
 				Selector: map[string]string{
-					v1beta1constants.LabelApp: labelValue,
+					v1beta1constants.LabelApp: v1beta1constants.DeploymentNameBlackBoxExporter,
 				},
 			},
 		}
 
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "blackbox-exporter",
+				Name:      v1beta1constants.DeploymentNameBlackBoxExporter,
 				Namespace: b.runtimeNamespace(),
 				Labels: map[string]string{
 					v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
-					v1beta1constants.LabelApp:   labelValue,
+					v1beta1constants.LabelApp:   v1beta1constants.DeploymentNameBlackBoxExporter,
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
@@ -355,7 +352,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 	if b.values.VPAEnabled {
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "blackbox-exporter",
+				Name:      v1beta1constants.DeploymentNameBlackBoxExporter,
 				Namespace: b.runtimeNamespace(),
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
@@ -370,7 +367,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName:       containerName,
+							ContainerName:       v1beta1constants.DeploymentNameBlackBoxExporter,
 							ControlledValues:    ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							ControlledResources: &[]corev1.ResourceName{corev1.ResourceMemory},
 						},
@@ -492,7 +489,7 @@ func (b *blackboxExporter) computeMonitoringResourcesData() (map[string][]byte, 
 
 func getLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp:       labelValue,
+		v1beta1constants.LabelApp:       v1beta1constants.DeploymentNameBlackBoxExporter,
 		v1beta1constants.GardenRole:     v1beta1constants.GardenRoleMonitoring,
 		managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 	}

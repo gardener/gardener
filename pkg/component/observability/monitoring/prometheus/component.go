@@ -416,7 +416,7 @@ func (p *prometheus) addCentralConfigsToRegistry(registry *managedresources.Regi
 
 func (p *prometheus) getLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp:  "prometheus",
+		v1beta1constants.LabelApp:  v1beta1constants.MonitoringNamePrometheus,
 		v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring,
 		"name":                     p.values.Name,
 	}

@@ -32,19 +32,6 @@ import (
 )
 
 const (
-	// name is the base name for victoria-operator resources.
-	name = "victoria-operator"
-
-	// Resource names
-	containerName           = name
-	managedResourceName     = name
-	serviceAccountName      = name
-	deploymentName          = name
-	clusterRoleName         = name
-	clusterRoleBindingName  = name
-	podDisruptionBudgetName = name
-	vpaName                 = name
-
 	// Ports
 	healthProbePort = 8081
 	metricsPort     = 8080
@@ -92,33 +79,33 @@ func (v *victoriaOperator) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeedWithLabels(ctx, v.client, v.namespace, managedResourceName, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, resources)
+	return managedresources.CreateForSeedWithLabels(ctx, v.client, v.namespace, v1beta1constants.DeploymentNameVictoriaOperator, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, resources)
 }
 
 func (v *victoriaOperator) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, v.client, v.namespace, managedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, v.client, v.namespace, v1beta1constants.DeploymentNameVictoriaOperator)
 }
 
 func (v *victoriaOperator) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, v.client, v.namespace, managedResourceName)
+	return managedresources.DeleteForSeed(ctx, v.client, v.namespace, v1beta1constants.DeploymentNameVictoriaOperator)
 }
 
 func (v *victoriaOperator) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, v.client, v.namespace, managedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, v.client, v.namespace, v1beta1constants.DeploymentNameVictoriaOperator)
 }
 
 func (v *victoriaOperator) serviceAccount() *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      serviceAccountName,
+			Name:      v1beta1constants.DeploymentNameVictoriaOperator,
 			Namespace: v.namespace,
-			Labels:    GetLabels(),
+			Labels:    getLabels(),
 		},
 		AutomountServiceAccountToken: ptr.To(false),
 	}
@@ -127,23 +114,23 @@ func (v *victoriaOperator) serviceAccount() *corev1.ServiceAccount {
 func (v *victoriaOperator) deployment() *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploymentName,
+			Name:      v1beta1constants.DeploymentNameVictoriaOperator,
 			Namespace: v.namespace,
-			Labels:    GetLabels(),
+			Labels:    getLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas:             ptr.To[int32](1),
 			RevisionHistoryLimit: ptr.To[int32](2),
-			Selector:             &metav1.LabelSelector{MatchLabels: GetLabels()},
+			Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: utils.MergeStringMaps(GetLabels(), map[string]string{
+					Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 						v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 					}),
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: serviceAccountName,
+					ServiceAccountName: v1beta1constants.DeploymentNameVictoriaOperator,
 					PriorityClassName:  v.values.PriorityClassName,
 					SecurityContext: &corev1.PodSecurityContext{
 						SeccompProfile: &corev1.SeccompProfile{
@@ -152,7 +139,7 @@ func (v *victoriaOperator) deployment() *appsv1.Deployment {
 					},
 					Containers: []corev1.Container{
 						{
-							Name:            containerName,
+							Name:            v1beta1constants.DeploymentNameVictoriaOperator,
 							Image:           v.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
@@ -240,15 +227,15 @@ func (v *victoriaOperator) deployment() *appsv1.Deployment {
 func (v *victoriaOperator) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      vpaName,
+			Name:      v1beta1constants.DeploymentNameVictoriaOperator,
 			Namespace: v.namespace,
-			Labels:    GetLabels(),
+			Labels:    getLabels(),
 		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "Deployment",
-				Name:       deploymentName,
+				Name:       v1beta1constants.DeploymentNameVictoriaOperator,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
@@ -256,7 +243,7 @@ func (v *victoriaOperator) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
-						ContainerName: containerName,
+						ContainerName: v1beta1constants.DeploymentNameVictoriaOperator,
 						MinAllowed: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("64Mi"),
 						},
@@ -274,8 +261,8 @@ func (v *victoriaOperator) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 func (v *victoriaOperator) clusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   clusterRoleName,
-			Labels: GetLabels(),
+			Name:   v1beta1constants.DeploymentNameVictoriaOperator,
+			Labels: getLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -331,18 +318,18 @@ func (v *victoriaOperator) clusterRole() *rbacv1.ClusterRole {
 func (v *victoriaOperator) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   clusterRoleBindingName,
-			Labels: GetLabels(),
+			Name:   v1beta1constants.DeploymentNameVictoriaOperator,
+			Labels: getLabels(),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     clusterRoleName,
+			Name:     v1beta1constants.DeploymentNameVictoriaOperator,
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccountName,
+				Name:      v1beta1constants.DeploymentNameVictoriaOperator,
 				Namespace: v.namespace,
 			},
 		},
@@ -352,13 +339,13 @@ func (v *victoriaOperator) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 func (v *victoriaOperator) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 	pdb := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      podDisruptionBudgetName,
+			Name:      v1beta1constants.DeploymentNameVictoriaOperator,
 			Namespace: v.namespace,
-			Labels:    GetLabels(),
+			Labels:    getLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
-			Selector:                   &metav1.LabelSelector{MatchLabels: GetLabels()},
+			Selector:                   &metav1.LabelSelector{MatchLabels: getLabels()},
 			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		},
 	}
@@ -366,10 +353,9 @@ func (v *victoriaOperator) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 	return pdb
 }
 
-// GetLabels returns the labels for the victoria-operator.
-func GetLabels() map[string]string {
+func getLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp:                    name,
+		v1beta1constants.LabelApp:                    v1beta1constants.DeploymentNameVictoriaOperator,
 		v1beta1constants.LabelRole:                   v1beta1constants.LabelObservability,
 		v1beta1constants.GardenRole:                  v1beta1constants.GardenRoleObservability,
 		resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,

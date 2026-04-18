@@ -43,9 +43,9 @@ import (
 
 const (
 	managedResourceNameTarget  = "logging-target"
-	managedResourceName        = "opentelemetry-collector"
-	serviceMonitorName         = "opentelemetry-collector"
-	openTelemetryCollectorName = "gardener-opentelemetry-collector"
+	managedResourceName        = v1beta1constants.DeploymentNameOpenTelemetryCollector
+	serviceMonitorName         = v1beta1constants.DeploymentNameOpenTelemetryCollector
+	openTelemetryCollectorName = "gardener-" + v1beta1constants.DeploymentNameOpenTelemetryCollector
 
 	kubeRBACProxyName = "rbac-proxy"
 
@@ -318,7 +318,7 @@ func (o *otelCollector) serviceMonitor() *monitoringv1.ServiceMonitor {
 					// job label, prometheus-operator would choose job=logging (service name).
 					{
 						Action:      "replace",
-						Replacement: ptr.To("opentelemetry-collector"),
+						Replacement: ptr.To(v1beta1constants.DeploymentNameOpenTelemetryCollector),
 						TargetLabel: "job",
 					},
 					{
@@ -643,7 +643,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 }
 
 func (o *otelCollector) newLoggingAgentShootAccessSecret() *gardenerutils.AccessSecret {
-	return gardenerutils.NewShootAccessSecret("opentelemetry-collector", o.namespace).
+	return gardenerutils.NewShootAccessSecret(v1beta1constants.DeploymentNameOpenTelemetryCollector, o.namespace).
 		WithServiceAccountName(openTelemetryCollectorName).
 		WithTokenExpirationDuration("720h").
 		WithTargetSecret(collectorconstants.OpenTelemetryCollectorSecretName, metav1.NamespaceSystem)
@@ -734,7 +734,7 @@ func (o *otelCollector) getIstioResources(tlsSecret *corev1.Secret) ([]client.Ob
 func (o *otelCollector) getLoggingAgentClusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "gardener.cloud:logging:opentelemetry-collector",
+			Name:   fmt.Sprintf("gardener.cloud:logging:%s", v1beta1constants.DeploymentNameOpenTelemetryCollector),
 			Labels: map[string]string{v1beta1constants.LabelApp: openTelemetryCollectorName},
 		},
 		Rules: []rbacv1.PolicyRule{
@@ -793,11 +793,12 @@ func (o *otelCollector) getPrometheusLabel() string {
 
 func getLabels() map[string]string {
 	return map[string]string{
+		v1beta1constants.LabelApp:   v1beta1constants.DeploymentNameOpenTelemetryCollector,
 		v1beta1constants.LabelRole:  v1beta1constants.LabelObservability,
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleObservability,
 		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort):                         v1beta1constants.LabelNetworkPolicyAllowed,
 		gardenerutils.NetworkPolicyLabel(victorialogsconstants.ServiceName, victorialogsconstants.VictoriaLogsPort): v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToDNS:                                                                    v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelObservabilityApplication:                                                              "opentelemetry-collector",
+		v1beta1constants.LabelObservabilityApplication:                                                              v1beta1constants.DeploymentNameOpenTelemetryCollector,
 	}
 }

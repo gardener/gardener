@@ -340,7 +340,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 	JustBeforeEach(func() {
 		operatorManagedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      OperatorManagedResourceName,
+				Name:      v1beta1constants.DeploymentNameOpenTelemetryOperator,
 				Namespace: namespace,
 			},
 		}
@@ -361,7 +361,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(operatorManagedResource), operatorManagedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            OperatorManagedResourceName,
+					Name:            v1beta1constants.DeploymentNameOpenTelemetryOperator,
 					Namespace:       namespace,
 					Labels:          map[string]string{v1beta1constants.GardenRole: "seed-system-component"},
 					ResourceVersion: "1",
@@ -430,7 +430,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 			It("should fail because the ManagedResource doesn't become healthy", func() {
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:       OperatorManagedResourceName,
+						Name:       v1beta1constants.DeploymentNameOpenTelemetryOperator,
 						Namespace:  namespace,
 						Generation: 1,
 					},
@@ -457,7 +457,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:       OperatorManagedResourceName,
+						Name:       v1beta1constants.DeploymentNameOpenTelemetryOperator,
 						Namespace:  namespace,
 						Generation: 1,
 					},
@@ -486,7 +486,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 
 				operatorManagedResource := &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      OperatorManagedResourceName,
+						Name:      v1beta1constants.DeploymentNameOpenTelemetryOperator,
 						Namespace: namespace,
 					},
 				}

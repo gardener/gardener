@@ -20,7 +20,7 @@ func CentralServiceMonitors() []*monitoringv1.ServiceMonitor {
 			ObjectMeta: metav1.ObjectMeta{Name: "shoot-prometheus"},
 			Spec: monitoringv1.ServiceMonitorSpec{
 				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-					v1beta1constants.LabelApp:  "prometheus",
+					v1beta1constants.LabelApp:  v1beta1constants.MonitoringNamePrometheus,
 					v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring,
 				}},
 				NamespaceSelector: monitoringv1.NamespaceSelector{Any: true},

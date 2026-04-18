@@ -97,14 +97,14 @@ var _ = Describe("VictoriaLogs", func() {
 
 		vlSingle = &victoriametricsv1.VLSingle{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      victorialogsconstants.VLSingleResourceName,
+				Name:      v1beta1constants.StatefulSetNameVictoriaLogs,
 				Namespace: namespace,
 				Labels:    getLabels(),
 			},
 			Spec: victoriametricsv1.VLSingleSpec{
 				PodMetadata: &victoriametricsv1beta1.EmbeddedObjectMetadata{
 					Labels: map[string]string{
-						v1beta1constants.LabelObservabilityApplication: victorialogsconstants.VLSingleResourceName,
+						v1beta1constants.LabelObservabilityApplication: v1beta1constants.StatefulSetNameVictoriaLogs,
 					},
 				},
 				CommonDefaultableParams: victoriametricsv1beta1.CommonDefaultableParams{
@@ -152,7 +152,7 @@ var _ = Describe("VictoriaLogs", func() {
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					Kind:       "Deployment",
-					Name:       "vlsingle-" + victorialogsconstants.VLSingleResourceName,
+					Name:       "vlsingle-" + v1beta1constants.StatefulSetNameVictoriaLogs,
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
@@ -174,7 +174,7 @@ var _ = Describe("VictoriaLogs", func() {
 			Spec: monitoringv1.ServiceMonitorSpec{
 				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
 					"app.kubernetes.io/name":      "vlsingle",
-					"app.kubernetes.io/instance":  victorialogsconstants.VLSingleResourceName,
+					"app.kubernetes.io/instance":  v1beta1constants.StatefulSetNameVictoriaLogs,
 					"app.kubernetes.io/component": "monitoring",
 					"managed-by":                  "vm-operator",
 				}},
@@ -499,11 +499,12 @@ var _ = Describe("VictoriaLogs", func() {
 
 func getLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelRole:                            v1beta1constants.LabelObservability,
-		v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleObservability,
-		gardenerutils.NetworkPolicyLabel("logging-vl", 9428):  v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelApp:                             "victoria-logs",
+		v1beta1constants.LabelRole:                            "observability",
+		v1beta1constants.GardenRole:                           "observability",
+		gardenerutils.NetworkPolicyLabel("logging-vl", 9428):  "allowed",
+		v1beta1constants.LabelNetworkPolicyToDNS:              "allowed",
+		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: "allowed",
 		v1beta1constants.LabelObservabilityApplication:        "victoria-logs",
 	}
 }
