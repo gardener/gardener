@@ -4,6 +4,10 @@ metadata:
   name: root
   namespace: garden
 spec:
+  controlPlane:
+    highAvailability:
+      failureTolerance:
+        type: node
   cloudProfile:
     kind: CloudProfile
     name: local
@@ -26,8 +30,10 @@ spec:
         type: local
         image:
           name: local
-      minimum: 1
-      maximum: 1
+      minimum: 3
+      maximum: 3
+      maxSurge: 1
+      maxUnavailable: 1
     - name: worker
       machine:
         type: local

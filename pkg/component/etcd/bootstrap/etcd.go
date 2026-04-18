@@ -83,6 +83,7 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 		e.values.Role,
 		[]string{"localhost"},
 		nil,
+		nil,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to generate etcd client/server certificates: %w", err)
@@ -92,7 +93,7 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
 	}
-	peerServerSecret, err := etcd.GeneratePeerCertificate(ctx, e.secretsManager, e.values.Role, []string{"localhost"}, nil)
+	peerServerSecret, err := etcd.GeneratePeerCertificate(ctx, e.secretsManager, e.values.Role, []string{"localhost"}, nil, nil)
 	if err != nil {
 		return fmt.Errorf("failed to generate etcd peer certificate: %w", err)
 	}

@@ -9,12 +9,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/spf13/afero"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -25,13 +29,19 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	bootstrapetcd "github.com/gardener/gardener/pkg/component/etcd/bootstrap"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	corebackupbucket "github.com/gardener/gardener/pkg/component/garden/backupbucket"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
+	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
+	"github.com/gardener/gardener/pkg/utils"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // DeployEtcdDruid deploys the etcd-druid component.
@@ -185,4 +195,138 @@ func (b *GardenadmBotanist) FinalizeEtcdBootstrapTransition(_ context.Context) e
 	}
 
 	return nil
+}
+
+// ETCDAssets contains node-specific assets for the static ETCD pods.
+type ETCDAssets struct {
+	ServerSecret, PeerSecret *corev1.Secret
+	Config                   *corev1.ConfigMap
+}
+
+// ETCDRoleToAssets is a map whose keys are ETCD roles and whose values are the specific assets.
+type ETCDRoleToAssets map[string]*ETCDAssets
+
+// FetchSecrets fetches the etcd secrets and assigns them to the assets. Peer secrets are only
+// fetched when highAvailabilityEnabled is true since they are only generated for multi-member etcd clusters.
+func (e ETCDRoleToAssets) FetchSecrets(ctx context.Context, c client.Client, namespace, hostName string, highAvailabilityEnabled bool) error {
+	for role := range e {
+		findNewestObject := func(secretType string) (client.Object, error) {
+			return kubernetes.NewestObject(ctx, c, &corev1.SecretList{}, nil, client.InNamespace(namespace), client.MatchingLabels{
+				secretsmanager.LabelKeyManagedBy: secretsmanager.LabelValueSecretsManager,
+				etcdconstants.LabelKeySecretType: secretType,
+				etcdconstants.LabelKeyRole:       role,
+				etcdconstants.LabelKeyHostName:   hostName,
+			})
+		}
+
+		serverSecret, err := findNewestObject(etcdconstants.LabelValueSecretTypeServer)
+		if err != nil {
+			return fmt.Errorf("failed to find server secret for role %q: %w", role, err)
+		}
+		e[role].ServerSecret = serverSecret.(*corev1.Secret)
+
+		if highAvailabilityEnabled {
+			peerSecret, err := findNewestObject(etcdconstants.LabelValueSecretTypePeer)
+			if err != nil {
+				return fmt.Errorf("failed to find peer secret for role %q: %w", role, err)
+			}
+			e[role].PeerSecret = peerSecret.(*corev1.Secret)
+		}
+	}
+
+	return nil
+}
+
+// FetchConfigMaps fetches the etcd ConfigMaps and assigns them to the assets.
+func (e ETCDRoleToAssets) FetchConfigMaps(ctx context.Context, c client.Client, namespace string) error {
+	for role := range e {
+		configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: etcd.ConfigMapName(role), Namespace: namespace}}
+		if err := c.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
+			return fmt.Errorf("failed to fetch the configuration ConfigMap %s: %w", client.ObjectKeyFromObject(configMap), err)
+		}
+		e[role].Config = configMap
+	}
+
+	return nil
+}
+
+func (e ETCDRoleToAssets) walkAssets(fnVolume func(dir string) error, fnAssetData func(path, key string, value []byte) error) error {
+	for role, assets := range e {
+		volumes := map[string]map[string][]byte{
+			etcdconstants.VolumeNameServerTLS:     assets.ServerSecret.Data,
+			etcdconstants.VolumeNameConfiguration: toBinaryData(assets.Config.Data),
+		}
+		if assets.PeerSecret != nil {
+			volumes[etcdconstants.VolumeNamePeerTLS] = assets.PeerSecret.Data
+		}
+
+		for volumeName, data := range volumes {
+			dir := staticpod.HostPath(etcd.Name(role), volumeName)
+
+			if fnVolume != nil {
+				if err := fnVolume(dir); err != nil {
+					return err
+				}
+			}
+
+			for key, value := range data {
+				path := filepath.Join(dir, key)
+
+				if fnAssetData != nil {
+					if err := fnAssetData(path, key, value); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func toBinaryData(data map[string]string) map[string][]byte {
+	out := make(map[string][]byte, len(data))
+	for k, v := range data {
+		out[k] = []byte(v)
+	}
+	return out
+}
+
+func (e ETCDRoleToAssets) allFiles(hostName string) []extensionsv1alpha1.File {
+	out := make([]extensionsv1alpha1.File, 0, 3*len(e))
+
+	_ = e.walkAssets(nil, func(path, _ string, value []byte) error {
+		out = append(out, extensionsv1alpha1.File{
+			Path:        path,
+			Permissions: ptr.To[uint32](0600),
+			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(value)}},
+			HostName:    &hostName,
+		})
+		return nil
+	})
+
+	return out
+}
+
+// WriteToDisk writes all node-specific ETCD assets to the disk.
+func (e ETCDRoleToAssets) WriteToDisk(fs afero.Afero) error {
+	return e.walkAssets(
+		func(dir string) error { return fs.MkdirAll(dir, os.ModeDir) },
+		func(path, _ string, value []byte) error { return fs.WriteFile(path, value, 0640) },
+	)
+}
+
+// HostNameToETCDAssets maps control plane nodes to their ETCD assets. The keys are the hostnames, the values are the
+// ETCD assets.
+type HostNameToETCDAssets map[string]ETCDRoleToAssets
+
+// AppendToFiles appends the node-specific ETCD assets to the provided files.
+func (h HostNameToETCDAssets) AppendToFiles(files []extensionsv1alpha1.File) []extensionsv1alpha1.File {
+	out := slices.Clone(files)
+
+	for hostName, etcdRoleToAssets := range h {
+		out = append(out, etcdRoleToAssets.allFiles(hostName)...)
+	}
+
+	return out
 }

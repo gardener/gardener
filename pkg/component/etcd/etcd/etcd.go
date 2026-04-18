@@ -10,6 +10,7 @@ import (
 	"maps"
 	"net"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -75,9 +76,10 @@ const (
 	portNameClient        = "client"
 	portNameBackupRestore = "backuprestore"
 
-	statefulSetNamePrefix      = "etcd"
-	containerNameEtcd          = "etcd"
-	containerNameBackupRestore = "backup-restore"
+	statefulSetNamePrefix = "etcd"
+	containerNameEtcd     = "etcd"
+	// ContainerNameBackupRestore is a constant for the backup-restore container in the etcd pod
+	ContainerNameBackupRestore = "backup-restore"
 )
 
 var (
@@ -105,9 +107,8 @@ type Interface interface {
 	GetReplicas() *int32
 	// SetReplicas sets the Replicas field in the Values.
 	SetReplicas(*int32)
-	// SetStaticPodControlPlaneNodesIPAddresses sets the IP addresses of all control plane nodes when etcd is run as
-	// static pod.
-	SetStaticPodControlPlaneNodesIPAddresses(...net.IP)
+	// SetStaticPodControlPlaneNodes sets the information about all control plane nodes when etcd is run as static pod.
+	SetStaticPodControlPlaneNodes(...ControlPlaneNode)
 }
 
 // New creates a new instance of DeployWaiter for the Etcd.
@@ -193,8 +194,16 @@ type AutoscalingConfig struct {
 
 // StaticPodConfig contains configuration when etcd runs as static pod.
 type StaticPodConfig struct {
-	// ControlPlaneNodesIPAddresses is the list of IP addresses for control plane nodes.
-	ControlPlaneNodesIPAddresses []net.IP
+	// ControlPlaneNodes is the list of control plane nodes.
+	ControlPlaneNodes []ControlPlaneNode
+}
+
+// ControlPlaneNode contains information about a control plane node.
+type ControlPlaneNode struct {
+	// HostName is the hostname of the node.
+	HostName string
+	// IPAddress is the IP address of the node.
+	IPAddress net.IP
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -245,10 +254,14 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 	}
 
-	var controlPlaneNodeIP net.IP
-	if e.values.StaticPodConfig != nil && len(e.values.StaticPodConfig.ControlPlaneNodesIPAddresses) > 0 {
+	var (
+		controlPlaneNodeHostName *string
+		controlPlaneNodeIP       net.IP
+	)
+	if e.values.StaticPodConfig != nil && len(e.values.StaticPodConfig.ControlPlaneNodes) > 0 {
 		// TODO(rfranzke): Handle multiple control plane nodes later on as part of GEP-28.
-		controlPlaneNodeIP = e.values.StaticPodConfig.ControlPlaneNodesIPAddresses[0]
+		controlPlaneNodeHostName = &e.values.StaticPodConfig.ControlPlaneNodes[0].HostName
+		controlPlaneNodeIP = e.values.StaticPodConfig.ControlPlaneNodes[0].IPAddress
 	}
 
 	etcdCASecret, serverSecret, clientSecret, err := GenerateServerAndClientCertificates(
@@ -257,6 +270,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		e.values.Role,
 		ClientServiceDNSNames(e.etcd.Name, e.namespace, e.values.StaticPodConfig != nil),
 		controlPlaneNodeIP,
+		controlPlaneNodeHostName,
 	)
 	if err != nil {
 		return err
@@ -272,7 +286,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
 		}
 
-		peerServerSecret, err := GeneratePeerCertificate(ctx, e.secretsManager, e.values.Role, e.peerServiceDNSNames(), controlPlaneNodeIP)
+		peerServerSecret, err := GeneratePeerCertificate(ctx, e.secretsManager, e.values.Role, e.peerServiceDNSNames(), controlPlaneNodeIP, controlPlaneNodeHostName)
 		if err != nil {
 			return fmt.Errorf("failed to generate a peer certificate: %w", err)
 		}
@@ -430,8 +444,35 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 
 		if e.values.StaticPodConfig != nil {
+			if existingEtcd != nil {
+				e.etcd.Spec.ExternallyManagedMemberAddresses = slices.Clone(existingEtcd.Spec.ExternallyManagedMemberAddresses)
+			}
+			if ip := controlPlaneNodeIP.String(); !slices.Contains(e.etcd.Spec.ExternallyManagedMemberAddresses, ip) {
+				e.etcd.Spec.ExternallyManagedMemberAddresses = append(e.etcd.Spec.ExternallyManagedMemberAddresses, ip)
+			}
+			e.etcd.Spec.Replicas = int32(len(e.etcd.Spec.ExternallyManagedMemberAddresses))
 			e.etcd.Spec.RunAsRoot = ptr.To(true)
-			metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, druidcorev1alpha1.DisableEtcdRuntimeComponentCreationAnnotation, "")
+
+			// backup-restore container requires a kubeconfig to the shoot cluster itself - in the hosted case (where
+			// backup-restore runs in the seed) it talks to the seed API server by using a regular service account in
+			// its pod spec - this doesn't work in the self-hosted case since it runs as static pod here.
+			shootAccessSecret := gardenerutils.NewShootAccessSecret(e.etcd.Name, e.namespace)
+			if err := shootAccessSecret.Reconcile(ctx, e.client); err != nil {
+				return err
+			}
+
+			// TODO(rfranzke): Currently, the Etcd API does not allow to specify additional volumes/mounts/env vars, so
+			//  we cannot idiomatically inject the generic kubeconfig here (see https://github.com/gardener/etcd-druid/issues/1317).
+			//  Once this is supported, uncomment this line and remove the TODO in pkg/gardenadm/botanist/controlplane.go.
+			//
+			//nolint:gocritic // Intentionally commented-out code for future use.
+			// genericTokenKubeconfigSecret, found := e.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+			// if !found {
+			// 	return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+			// }
+
+			//nolint:gocritic // Intentionally commented-out code for future use.
+			// utilruntime.Must(gardenerutils.InjectGenericKubeconfig(e.etcd, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
 		}
 
 		if existingEtcd == nil || existingEtcd.Spec.StorageCapacity == nil {
@@ -960,9 +1001,9 @@ func (e *etcd) GetReplicas() *int32 { return e.values.Replicas }
 
 func (e *etcd) SetReplicas(replicas *int32) { e.values.Replicas = replicas }
 
-func (e *etcd) SetStaticPodControlPlaneNodesIPAddresses(ips ...net.IP) {
+func (e *etcd) SetStaticPodControlPlaneNodes(controlPlaneNodes ...ControlPlaneNode) {
 	if e.values.StaticPodConfig != nil {
-		e.values.StaticPodConfig.ControlPlaneNodesIPAddresses = ips
+		e.values.StaticPodConfig.ControlPlaneNodes = controlPlaneNodes
 	}
 }
 
@@ -1065,4 +1106,9 @@ func (e *etcd) defaultPortOrEtcdEventsStaticPodPort(defaultPort, etcdEventsPortW
 // Name returns the name of the etcd based on its role.
 func Name(role string) string {
 	return "etcd-" + role
+}
+
+// ConfigMapName returns the name of the etcd ConfigMap based on its role.
+func ConfigMapName(role string) string {
+	return "etcd-" + role + "-config"
 }

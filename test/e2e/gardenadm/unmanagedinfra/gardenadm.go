@@ -221,35 +221,54 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 				}).Should(Equal(configDirectory))
 			}, SpecTimeout(time.Minute))
 
-			It("should generate a bootstrap token and join the worker node", func(ctx SpecContext) {
-				stdOut, _, err := execute(ctx, 0, "gardenadm", "token", "create", "--print-join-command")
-				Expect(err).NotTo(HaveOccurred())
-				joinCommand := strings.Split(strings.ReplaceAll(string(stdOut.Contents()), `"`, ``), " ")
+			for _, node := range []struct {
+				machineIndex int
+				controlPlane bool
+				description  string
+			}{
+				{machineIndex: 1, controlPlane: true, description: "second control plane node"},
+				{machineIndex: 2, controlPlane: true, description: "third control plane node"},
+				{machineIndex: 3, controlPlane: false, description: "worker node"},
+			} {
+				It("should generate a bootstrap token and join the "+node.description, func(ctx SpecContext) {
+					stdOut, _, err := execute(ctx, 0, "gardenadm", "token", "create", "--print-join-command")
+					Expect(err).NotTo(HaveOccurred())
 
-				stdOut, _, err = execute(ctx, 1, append(joinCommand, "--log-level=debug")...)
-				Expect(err).NotTo(HaveOccurred())
+					joinCommand := strings.Split(strings.ReplaceAll(string(stdOut.Contents()), `"`, ``), " ")
+					if node.controlPlane {
+						joinCommand = append(joinCommand, "--control-plane")
+					}
+					joinCommand = append(joinCommand, "--log-level=debug")
 
-				Eventually(ctx, stdOut).Should(gbytes.Say("Your node has successfully joined the cluster as a worker!"))
-			}, SpecTimeout(time.Minute))
+					stdOut, _, err = execute(ctx, node.machineIndex, joinCommand...)
+					Expect(err).NotTo(HaveOccurred())
 
-			It("should see the joined node and observe its readiness", func(ctx SpecContext) {
-				Eventually(ctx, func(g Gomega) {
-					node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machinePodName(1)}}
-					g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+					if node.controlPlane {
+						Eventually(ctx, stdOut).Should(gbytes.Say("Your node has successfully joined the cluster as a control-plane instance!"))
+					} else {
+						Eventually(ctx, stdOut).Should(gbytes.Say("Your node has successfully joined the cluster as a worker!"))
+					}
+				}, SpecTimeout(5*time.Minute))
 
-					g.Expect(node.Status.Conditions).To(ContainCondition(
-						MatchFields(IgnoreExtras, Fields{"Type": Equal(corev1.NodeReady)}),
-						MatchFields(IgnoreExtras, Fields{"Status": Equal(corev1.ConditionTrue)}),
-					))
-					g.Expect(node.Spec.Taints).NotTo(ContainElement(corev1.Taint{
-						Key:    v1beta1constants.TaintNodeCriticalComponentsNotReady,
-						Effect: corev1.TaintEffectNoSchedule,
-					}))
-				}).Should(Succeed())
-			}, SpecTimeout(2*time.Minute))
+				It("should see the joined "+node.description+" and observe its readiness", func(ctx SpecContext) {
+					Eventually(ctx, func(g Gomega) {
+						n := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machinePodName(node.machineIndex)}}
+						g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(n), n)).To(Succeed())
+
+						g.Expect(n.Status.Conditions).To(ContainCondition(
+							MatchFields(IgnoreExtras, Fields{"Type": Equal(corev1.NodeReady)}),
+							MatchFields(IgnoreExtras, Fields{"Status": Equal(corev1.ConditionTrue)}),
+						))
+						g.Expect(n.Spec.Taints).NotTo(ContainElement(corev1.Taint{
+							Key:    v1beta1constants.TaintNodeCriticalComponentsNotReady,
+							Effect: corev1.TaintEffectNoSchedule,
+						}))
+					}).Should(Succeed())
+				}, SpecTimeout(2*time.Minute))
+			}
 		})
 
-		Context("gardenadm init + join", Ordered, Label("connect"), func() {
+		Context("gardenadm connect", Ordered, Label("connect"), func() {
 			var (
 				gardenClientSet                      kubernetes.Interface
 				gardenKomega                         Komega
