@@ -42,11 +42,10 @@ import (
 )
 
 const (
-	managedResourceNameTarget           = "logging-target"
-	managedResourceName                 = "opentelemetry-collector"
-	serviceMonitorName                  = "opentelemetry-collector"
-	openTelemetryCollectorName          = "gardener-opentelemetry-collector"
-	kubeRBACProxyClusterRoleBindingName = "gardener.cloud:logging:rbac-proxy"
+	managedResourceNameTarget  = "logging-target"
+	managedResourceName        = "opentelemetry-collector"
+	serviceMonitorName         = "opentelemetry-collector"
+	openTelemetryCollectorName = "gardener-opentelemetry-collector"
 
 	kubeRBACProxyName = "rbac-proxy"
 
@@ -158,7 +157,12 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		}
 		genericTokenKubeconfigSecretName = genericTokenKubeconfigSecret.Name
 
-		seedObjects = append(seedObjects, o.getIngress(ingressTLSSecret.Name))
+		istioResources, err := o.getIstioResources(ingressTLSSecret)
+		if err != nil {
+			return fmt.Errorf("failed to get istio resources: %w", err)
+		}
+
+		seedObjects = append(seedObjects, istioResources...)
 		shootObjects = append(shootObjects, o.getKubeRBACProxyClusterRoleBinding(kubeRBACProxyShootAccessSecret.ServiceAccountName))
 	}
 
@@ -166,34 +170,6 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		if err := loggingAgentShootAccessSecret.Reconcile(ctx, o.client); err != nil {
 			return err
 		}
-		if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, o.client); err != nil {
-			return err
-		}
-		ingressTLSSecret, err := o.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
-			Name:                        "logging-tls",
-			CommonName:                  o.values.IngressHost,
-			Organization:                []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:                    []string{o.values.IngressHost, o.values.ValiHost},
-			CertType:                    secrets.ServerCert,
-			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
-			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(o.values.SecretNameServerCA))
-		if err != nil {
-			return err
-		}
-
-		genericTokenKubeconfigSecret, found := o.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
-		if !found {
-			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
-		}
-		genericTokenKubeconfigSecretName = genericTokenKubeconfigSecret.Name
-
-		istioResources, err := o.getIstioResources(ingressTLSSecret)
-		if err != nil {
-			return fmt.Errorf("failed to get istio resources: %w", err)
-		}
-
-		objects = append(objects, istioResources...)
 
 		loggingAgentClusterRole := o.getLoggingAgentClusterRole()
 		shootObjects = append(shootObjects, loggingAgentClusterRole)
@@ -234,7 +210,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 func (o *otelCollector) getKubeRBACProxyClusterRoleBinding(serviceAccountName string) *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   kubeRBACProxyClusterRoleBindingName,
+			Name:   "gardener.cloud:logging:rbac-proxy",
 			Labels: map[string]string{v1beta1constants.LabelApp: kubeRBACProxyName},
 		},
 		RoleRef: rbacv1.RoleRef{
