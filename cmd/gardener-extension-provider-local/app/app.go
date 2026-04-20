@@ -302,6 +302,7 @@ func applyReconcileOptions(reconcileOpts *extensionscmdcontroller.ReconcilerOpti
 	config := reconcileOpts.Completed()
 
 	localbackupbucket.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
+	localbackupentry.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
 	localbastion.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
 	localcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
 	localextensionseedcontroller.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
@@ -318,6 +319,7 @@ func applyGeneralOptions(generalOpts *extensionscmdcontroller.GeneralOptions) {
 	localworker.DefaultAddOptions.SelfHostedShootCluster = config.SelfHostedShootCluster
 
 	localbackupbucket.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
+	localbackupentry.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
 	localbastion.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
 	localcontrolplane.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
 	localextensionseedcontroller.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)

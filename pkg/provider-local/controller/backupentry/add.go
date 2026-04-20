@@ -19,14 +19,14 @@ import (
 )
 
 // ControllerName is the name of the controller.
-const ControllerName = "backupentry_controller"
+const ControllerName = "backupentry"
 
 var (
 	// DefaultAddOptions are the default AddOptions for AddToManager.
 	DefaultAddOptions = backupoptions.AddOptions{}
 
 	// supportedExtensionClasses are the extension classes supported by the backupentry controller.
-	supportedExtensionClasses = sets.New(extensionsv1alpha1.ExtensionClassShoot)
+	supportedExtensionClasses = sets.New(extensionsv1alpha1.ExtensionClassGarden, extensionsv1alpha1.ExtensionClassShoot)
 )
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.

@@ -69,7 +69,7 @@ spec:
         - --heartbeat-renew-interval-seconds={{ .Values.controllers.heartbeat.renewIntervalSeconds }}
         {{- if .Values.gardener.runtimeCluster.enabled }}
         - --disable-webhooks=controlplane,networkpolicy,prometheus,shoot
-        - --controllers=backupbucket,dnsrecord,local-ext-shoot
+        - --controllers=backupbucket,backupentry,dnsrecord,local-ext-shoot
         - --extension-classes=garden
         {{- else }}
         - --extension-classes=seed,shoot
