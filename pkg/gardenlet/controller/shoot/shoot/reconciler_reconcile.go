@@ -972,7 +972,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		waitUntilPlutonoReady = g.Add(flow.Task{
 			Name:         "Waiting until Plutono for Shoot in Seed is ready",
-			Fn:           o.Shoot.Components.ControlPlane.Plutono.Wait,
+			Fn:           botanist.WaitForPlutono,
 			Dependencies: flow.NewTaskIDs(deployPlutonoForLogging, deployPlutonoForMonitoring),
 		})
 		_ = g.Add(flow.Task{

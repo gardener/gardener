@@ -55,3 +55,11 @@ func (b *Botanist) DeployPlutono(ctx context.Context) error {
 
 	return b.Shoot.Components.ControlPlane.Plutono.Deploy(ctx)
 }
+
+// WaitForPlutono waits for the plutono in the Seed cluster to be ready.
+func (b *Botanist) WaitForPlutono(ctx context.Context) error {
+	if !b.WantsObservabilityComponents() {
+		return b.Shoot.Components.ControlPlane.Plutono.WaitCleanup(ctx)
+	}
+	return b.Shoot.Components.ControlPlane.Plutono.Wait(ctx)
+}

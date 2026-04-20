@@ -124,4 +124,17 @@ var _ = Describe("Plutono", func() {
 			Expect(botanist.DeployPlutono(ctx)).To(Succeed())
 		})
 	})
+
+	Describe("#WaitForPlutono", func() {
+		It("should successfully wait for plutono", func() {
+			mockPlutono.EXPECT().Wait(ctx)
+			Expect(botanist.WaitForPlutono(ctx)).To(Succeed())
+		})
+
+		It("should successfully wait for plutono cleanup", func() {
+			botanist.Shoot.Purpose = gardencorev1beta1.ShootPurposeTesting
+			mockPlutono.EXPECT().WaitCleanup(ctx)
+			Expect(botanist.WaitForPlutono(ctx)).To(Succeed())
+		})
+	})
 })
