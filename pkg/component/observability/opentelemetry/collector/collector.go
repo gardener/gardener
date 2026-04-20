@@ -136,8 +136,9 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 			if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, o.client); err != nil {
 				return err
 			}
-		}
 
+			shootObjects = append(shootObjects, o.getKubeRBACProxyClusterRoleBinding(kubeRBACProxyShootAccessSecret.ServiceAccountName))
+		}
 		ingressTLSSecret, err := o.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 			Name:                        "logging-tls",
 			CommonName:                  o.values.IngressHost,
@@ -163,7 +164,6 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		}
 
 		seedObjects = append(seedObjects, istioResources...)
-		shootObjects = append(shootObjects, o.getKubeRBACProxyClusterRoleBinding(kubeRBACProxyShootAccessSecret.ServiceAccountName))
 	}
 
 	if o.values.ShootNodeLoggingEnabled {
