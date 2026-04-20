@@ -817,7 +817,7 @@ build:
     - image: local-skaffold/gardenlet/chart
       custom:
         buildCommand: |
-          ./hack/push-helm.sh ./charts/gardener/gardenlet .image.ref
+          ./dev-setup/push-helm.sh ./charts/gardener/gardenlet .image.ref
         dependencies:
           paths:
             - charts/gardener/gardenlet
@@ -1155,7 +1155,7 @@ build:
     - image: local-skaffold/gardener-extension-provider-local/charts/extension
       custom:
         buildCommand: |
-          ./hack/push-helm.sh
+          ./dev-setup/push-helm.sh
         dependencies:
           paths:
             - charts/gardener/provider-local
