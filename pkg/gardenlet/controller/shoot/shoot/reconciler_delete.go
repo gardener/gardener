@@ -253,7 +253,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name: "Deploying Kubernetes API server",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.DeployKubeAPIServer(ctx, true)
+				return botanist.DeployKubeAPIServer(ctx)
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf: !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(

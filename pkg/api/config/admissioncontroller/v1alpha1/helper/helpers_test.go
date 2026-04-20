@@ -72,7 +72,8 @@ var _ = Describe("Helpers test", func() {
 		Entry("no match because request is empty", limit, "", BeFalse()),
 		Entry("core.gardener.cloud group is found", limit, "core.gardener.cloud", BeTrue()),
 		Entry("extensions.gardener.cloud group is found", limit, "core.gardener.cloud", BeTrue()),
-		Entry("settings.gardener.cloud apiGroup is not found", limit, "settings.gardener.cloud", BeFalse()),
+		Entry("resources.gardener.cloud apiGroup is not found", limit, "resources.gardener.cloud", BeFalse()),
+		Entry("resources.gardener.cloud apiGroup is found because of wildcard", limitWildcard, "resources.gardener.cloud", BeTrue()),
 	)
 
 	DescribeTable("#VersionMatches",
@@ -81,8 +82,8 @@ var _ = Describe("Helpers test", func() {
 		},
 		Entry("no match because request is empty", limit, "", BeFalse()),
 		Entry("version is found", limit, "v1beta1", BeTrue()),
-		Entry("version is not found", limit, "settings.gardener.cloud", BeFalse()),
-		Entry("version is found because of wildcard", limitWildcard, "settings.gardener.cloud", BeTrue()),
+		Entry("version is not found", limit, "resources.gardener.cloud", BeFalse()),
+		Entry("version is found because of wildcard", limitWildcard, "resources.gardener.cloud", BeTrue()),
 	)
 
 	DescribeTable("#ResourceMatches",

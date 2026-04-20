@@ -6,22 +6,7 @@ The enablement of [highly available shoot control-planes](../usage/high-availabi
 
 ## How it works
 
-The topology-aware routing feature relies on the Kubernetes features [`TopologyAwareHints`](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/) or [`ServiceTrafficDistribution`](https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution) based on the runtime cluster's Kubernetes versions.
-
-For Kubernetes versions >= 1.32, the `ServiceTrafficDistribution` feature is being used on.
-
-### How `TopologyAwareHints` works
-
-The [kube-proxy](#kube-proxy) section reveals the implementation details (and the drawbacks) of the `TopologyAwareHints` feature. For more details, see [upstream documentation](https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/) of the feature.
-
-##### kube-proxy
-
-By default, with kube-proxy running in `iptables` mode, traffic is distributed randomly across all endpoints, regardless of where it originates from. In a cluster with 3 zones, traffic is more likely to go to another zone than to stay in the current zone.
-With the topology-aware routing feature, kube-proxy filters the endpoints it routes to based on the hints in the EndpointSlice resource. In most of the cases, kube-proxy will prefer the endpoint(s) in the same zone. For more details, see the [Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/#implementation-kube-proxy).
-
-### How `ServiceTrafficDistribution` works
-
-We reported the drawbacks related to the `TopologyAwareHints` feature in [kubernetes/kubernetes#113731](https://github.com/kubernetes/kubernetes/issues/113731). As result, the Kubernetes community implemented the `ServiceTrafficDistribution` feature.
+The topology-aware routing feature relies on the Kubernetes [`ServiceTrafficDistribution`](https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution) feature.
 
 The `ServiceTrafficDistribution` allows expressing preferences for how traffic should be routed to Service endpoints. For more details, see [upstream documentation](https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution) of the feature.
 
@@ -56,9 +41,6 @@ spec:
 
 1. The Pods backing the Service should be spread on most of the available zones. This constraint should be ensured with appropriate scheduling constraints (topology spread constraints, (anti-)affinity). Enabling the feature for a Service with a single backing Pod or Pods all located in the same zone does not lead to a benefit.
 1. The component should be scaled up by `VerticalPodAutoscaler`. In case of an overload (a large portion of the of the traffic is originating from a given zone), the `VerticalPodAutoscaler` should provide better resource recommendations for the overloaded backing Pods.
-1. Consider the [`TopologyAwareHints` constraints](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/#constraints).
-
-> Note: The topology-aware routing feature is considered as alpha feature. Use it only for evaluation purposes.
 
 ## Topology-aware Services in the Seed cluster
 

@@ -310,6 +310,7 @@ var _ = Describe("KubeAPIServer", func() {
 						prepTest()
 					}
 
+					kubeAPIServer.EXPECT().AppendAuthorizationWebhook(gomock.Any(), logr.Discard())
 					kubeAPIServer.EXPECT().GetValues()
 					kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 					kubeAPIServer.EXPECT().SetSNIConfig(expectedConfig)
@@ -323,7 +324,7 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 					kubeAPIServer.EXPECT().Deploy(ctx)
 
-					Expect(botanist.DeployKubeAPIServer(ctx, false)).To(Succeed())
+					Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
 				},
 
 				Entry("no need for internal DNS",
@@ -381,6 +382,7 @@ var _ = Describe("KubeAPIServer", func() {
 						prepTest()
 					}
 
+					kubeAPIServer.EXPECT().AppendAuthorizationWebhook(gomock.Any(), logr.Discard())
 					kubeAPIServer.EXPECT().GetValues()
 					kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 					kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
@@ -394,7 +396,7 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeAPIServer.EXPECT().SetServiceAccountConfig(expectedConfig)
 					kubeAPIServer.EXPECT().Deploy(ctx)
 
-					Expect(botanist.DeployKubeAPIServer(ctx, false)).To(Succeed())
+					Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
 				},
 
 				Entry("should default the issuer",
@@ -470,13 +472,13 @@ var _ = Describe("KubeAPIServer", func() {
 					ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{},
 				}
 
-				err := botanist.DeployKubeAPIServer(ctx, false)
+				err := botanist.DeployKubeAPIServer(ctx)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("shoot requires managed issuer, but gardener does not have shoot service account hostname configured"))
 			})
 		})
 
-		It("should append the node-agent-authorizer webhook configuration if it is enabled", func() {
+		It("should append the node-agent-authorizer webhook configuration", func() {
 			expectedKubeconfig := []byte(`apiVersion: v1
 clusters:
 - cluster:
@@ -524,7 +526,7 @@ users:
 			kubeAPIServer.EXPECT().AppendAuthorizationWebhook(expectedAuthorizationWebhook, logr.Discard())
 			kubeAPIServer.EXPECT().Deploy(ctx)
 
-			Expect(botanist.DeployKubeAPIServer(ctx, true)).To(Succeed())
+			Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
 		})
 	})
 

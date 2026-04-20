@@ -325,7 +325,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name: "Deploying Kubernetes API server",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.DeployKubeAPIServer(ctx, true)
+				return botanist.DeployKubeAPIServer(ctx)
 			}).RetryUntilTimeout(defaultInterval, deployKubeAPIServerTaskTimeout),
 			Dependencies: flow.NewTaskIDs(
 				initializeSecretsManagement,

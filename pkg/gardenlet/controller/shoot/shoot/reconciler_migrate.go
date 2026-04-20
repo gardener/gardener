@@ -150,10 +150,8 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD),
 		})
 		wakeUpKubeAPIServer = g.Add(flow.Task{
-			Name: "Scaling Kubernetes API Server up and waiting until ready",
-			Fn: func(ctx context.Context) error {
-				return botanist.WakeUpKubeAPIServer(ctx, true)
-			},
+			Name:         "Scaling Kubernetes API Server up and waiting until ready",
+			Fn:           botanist.WakeUpKubeAPIServer,
 			SkipIf:       !wakeupRequired,
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD, initializeSecretsManagement),
 		})

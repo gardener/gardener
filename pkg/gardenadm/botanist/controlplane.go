@@ -84,9 +84,8 @@ func (b *GardenadmBotanist) deployKubeAPIServer(ctx context.Context) error {
 	}
 
 	b.gardenerResourceManagerServiceIPs = service.Spec.ClusterIPs
-	enableNodeAgentAuthorizer := len(b.gardenerResourceManagerServiceIPs) > 0
 
-	return b.DeployKubeAPIServer(ctx, enableNodeAgentAuthorizer)
+	return b.DeployKubeAPIServer(ctx)
 }
 
 type staticControlPlaneComponent struct {

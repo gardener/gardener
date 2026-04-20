@@ -186,7 +186,7 @@ var _ = Describe("Etcd", func() {
 				if versionutils.ConstraintK8sGreaterEqual134.Check(runtimeKubernetesVersion) {
 					clientService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferSameZone)
 				} else {
-					// For Kubernetes >= 1.32 (minimum supported version), use PreferClose
+					// For Kubernetes < 1.34, use PreferClose
 					clientService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
 				}
 			}

@@ -24,7 +24,7 @@ var _ = Describe("TopologyAwareRouting", func() {
 			})
 		})
 
-		When("K8s version >= 1.32", func() {
+		When("K8s version < 1.34", func() {
 			It("should set traffic distribution field when topology-aware routing is enabled", func() {
 				service := &corev1.Service{}
 				ReconcileTopologyAwareRoutingSettings(service, true, semver.MustParse("1.32.1"))

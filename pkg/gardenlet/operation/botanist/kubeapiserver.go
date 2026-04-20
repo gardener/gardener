@@ -156,56 +156,52 @@ func (b *Botanist) computeKubeAPIServerSNIConfig() kubeapiserver.SNIConfig {
 }
 
 // DeployKubeAPIServer deploys the Kubernetes API server.
-func (b *Botanist) DeployKubeAPIServer(ctx context.Context, enableNodeAgentAuthorizer bool) error {
+func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(true)
 	serviceAccountConfig, err := b.computeKubeAPIServerServiceAccountConfig(externalHostname)
 	if err != nil {
 		return err
 	}
 
-	if enableNodeAgentAuthorizer {
-		caSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
-		if !found {
-			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
-		}
-
-		kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
-			"authorization-webhook",
-			clientcmdv1.Cluster{
-				Server:                   fmt.Sprintf("https://%s/webhooks/auth/nodeagent", resourcemanagerconstants.ServiceName),
-				CertificateAuthorityData: caSecret.Data[secretsutils.DataKeyCertificateBundle],
-			},
-			clientcmdv1.AuthInfo{},
-		))
-		if err != nil {
-			return fmt.Errorf("failed generating authorization webhook kubeconfig: %w", err)
-		}
-
-		b.Logger.Info("Adding node-agent authorizer webhook to kube-apiserver")
-
-		b.Shoot.Components.ControlPlane.KubeAPIServer.AppendAuthorizationWebhook(
-			kubeapiserver.AuthorizationWebhook{
-				Name:       "node-agent-authorizer",
-				Kubeconfig: kubeconfig,
-				WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{
-					// Set TTL to a very low value since it cannot be set to 0 because of defaulting.
-					// See https://github.com/kubernetes/apiserver/blob/3658357fea9fa8b36173d072f2d548f135049e05/pkg/apis/apiserver/v1beta1/defaults.go#L29-L36
-					// TODO(rfranzke): Use `Cache{Una,A}uthorizedRequests` instead of `AuthorizedTTL` and
-					//  `UnauthorizedTTL` once Kubernetes 1.34 is the lowest supported version.
-					//  More info: https://github.com/kubernetes/kubernetes/pull/129237
-					AuthorizedTTL:                            metav1.Duration{Duration: 1 * time.Nanosecond},
-					UnauthorizedTTL:                          metav1.Duration{Duration: 1 * time.Nanosecond},
-					Timeout:                                  metav1.Duration{Duration: 10 * time.Second},
-					FailurePolicy:                            apiserverv1beta1.FailurePolicyDeny,
-					SubjectAccessReviewVersion:               "v1",
-					MatchConditionSubjectAccessReviewVersion: "v1",
-					MatchConditions: []apiserverv1beta1.WebhookMatchCondition{{
-						// Only intercept request node-agents
-						Expression: fmt.Sprintf("'%s' in request.groups", v1beta1constants.NodeAgentsGroup),
-					}},
-				},
-			}, b.Logger)
+	caSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
+
+	kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
+		"authorization-webhook",
+		clientcmdv1.Cluster{
+			Server:                   fmt.Sprintf("https://%s/webhooks/auth/nodeagent", resourcemanagerconstants.ServiceName),
+			CertificateAuthorityData: caSecret.Data[secretsutils.DataKeyCertificateBundle],
+		},
+		clientcmdv1.AuthInfo{},
+	))
+	if err != nil {
+		return fmt.Errorf("failed generating authorization webhook kubeconfig: %w", err)
+	}
+
+	b.Shoot.Components.ControlPlane.KubeAPIServer.AppendAuthorizationWebhook(
+		kubeapiserver.AuthorizationWebhook{
+			Name:       "node-agent-authorizer",
+			Kubeconfig: kubeconfig,
+			WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{
+				// Set TTL to a very low value since it cannot be set to 0 because of defaulting.
+				// See https://github.com/kubernetes/apiserver/blob/3658357fea9fa8b36173d072f2d548f135049e05/pkg/apis/apiserver/v1beta1/defaults.go#L29-L36
+				// TODO(rfranzke): Use `Cache{Una,A}uthorizedRequests` instead of `AuthorizedTTL` and
+				//  `UnauthorizedTTL` once Kubernetes 1.34 is the lowest supported version.
+				//  More info: https://github.com/kubernetes/kubernetes/pull/129237
+				AuthorizedTTL:                            metav1.Duration{Duration: 1 * time.Nanosecond},
+				UnauthorizedTTL:                          metav1.Duration{Duration: 1 * time.Nanosecond},
+				Timeout:                                  metav1.Duration{Duration: 10 * time.Second},
+				FailurePolicy:                            apiserverv1beta1.FailurePolicyDeny,
+				SubjectAccessReviewVersion:               "v1",
+				MatchConditionSubjectAccessReviewVersion: "v1",
+				MatchConditions: []apiserverv1beta1.WebhookMatchCondition{{
+					// Only intercept request node-agents
+					Expression: fmt.Sprintf("'%s' in request.groups", v1beta1constants.NodeAgentsGroup),
+				}},
+			},
+		}, b.Logger)
 
 	var seedPods *net.IPNet
 	seedPodSpec := b.Seed.GetInfo().Spec.Networks.Pods
@@ -286,14 +282,14 @@ func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 }
 
 // WakeUpKubeAPIServer creates a service and ensures API Server is scaled up
-func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context, enableNodeAgentAuthorizer bool) error {
+func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
 	if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Deploy(ctx); err != nil {
 		return err
 	}
 	if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Wait(ctx); err != nil {
 		return err
 	}
-	if err := b.DeployKubeAPIServer(ctx, enableNodeAgentAuthorizer); err != nil {
+	if err := b.DeployKubeAPIServer(ctx); err != nil {
 		return err
 	}
 	if b.ShootUsesDNS() {
