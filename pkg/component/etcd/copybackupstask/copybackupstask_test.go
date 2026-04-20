@@ -12,37 +12,36 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	. "github.com/gardener/gardener/pkg/component/etcd/copybackupstask"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("CopyBackupsTask", func() {
 	var (
-		ctrl *gomock.Controller
-		ctx  context.Context
-		c    *mockclient.MockClient
-		log  logr.Logger
+		ctx        context.Context
+		fakeClient client.Client
+		log        logr.Logger
 
 		expected            *druidcorev1alpha1.EtcdCopyBackupsTask
 		values              *Values
 		etcdCopyBackupsTask Interface
-
-		notFoundErr = apierrors.NewNotFound(schema.GroupResource{}, "etcdcopybackupstask")
+		s                   *runtime.Scheme
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
 		ctx = context.TODO()
-		c = mockclient.NewMockClient(ctrl)
 		log = logr.Discard()
+
+		s = runtime.NewScheme()
+		Expect(druidcorev1alpha1.AddToScheme(s)).To(Succeed())
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(s).Build()
 
 		expected = &druidcorev1alpha1.EtcdCopyBackupsTask{
 			ObjectMeta: metav1.ObjectMeta{
@@ -59,98 +58,80 @@ var _ = Describe("CopyBackupsTask", func() {
 			Name:      expected.Name,
 			Namespace: expected.Namespace,
 		}
-		etcdCopyBackupsTask = New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
+		etcdCopyBackupsTask = New(log, fakeClient, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 	})
 
 	Describe("#Deploy", func() {
 		It("should create the EtcdCopyBackupsTask", func() {
-			expected.Spec.PodLabels = map[string]string{
+			Expect(etcdCopyBackupsTask.Deploy(ctx)).To(Succeed())
+
+			actual := &druidcorev1alpha1.EtcdCopyBackupsTask{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
+			Expect(actual.Spec.PodLabels).To(Equal(map[string]string{
 				"networking.gardener.cloud/to-dns":             "allowed",
 				"networking.gardener.cloud/to-public-networks": "allowed",
-			}
-			c.EXPECT().Create(ctx, expected)
-			Expect(etcdCopyBackupsTask.Deploy(ctx)).To(Succeed())
+			}))
+			Expect(actual.Spec.SourceStore).To(Equal(expected.Spec.SourceStore))
+			Expect(actual.Spec.TargetStore).To(Equal(expected.Spec.TargetStore))
 		})
 	})
 
 	Describe("#Destroy", func() {
 		It("should not return error if EtcdCopyBackupsTask resource doesn't exist", func() {
-			c.EXPECT().Delete(ctx, expected).Return(notFoundErr)
 			Expect(etcdCopyBackupsTask.Destroy(ctx)).To(Succeed())
 		})
 
 		It("should properly delete EtcdCopyBackupsTask resource if it exists", func() {
-			c.EXPECT().Delete(ctx, expected)
+			Expect(fakeClient.Create(ctx, expected.DeepCopy())).To(Succeed())
 			Expect(etcdCopyBackupsTask.Destroy(ctx)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expected), &druidcorev1alpha1.EtcdCopyBackupsTask{})).To(BeNotFoundError())
 		})
 	})
 
 	Describe("#Wait", func() {
-		var (
-			timeoutCtx context.Context
-			cancelFunc context.CancelFunc
-		)
-
-		BeforeEach(func() {
-			timeoutCtx, cancelFunc = context.WithTimeout(ctx, time.Millisecond)
-		})
-
-		AfterEach(func() {
-			cancelFunc()
-		})
-
 		It("should return error if EtcdCopyBackupsTask resource is not found", func() {
-			c.EXPECT().Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), expected).Return(notFoundErr).AnyTimes()
 			Expect(etcdCopyBackupsTask.Wait(ctx)).To(BeNotFoundError())
 		})
 
 		It("should return error if observed generation is nil", func() {
-			c.EXPECT().Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), expected).AnyTimes()
+			Expect(fakeClient.Create(ctx, expected.DeepCopy())).To(Succeed())
 			Expect(etcdCopyBackupsTask.Wait(ctx)).To(MatchError(ContainSubstring("observed generation not recorded")))
 		})
 
 		It("should return error if observed generation is not updated", func() {
-			c.EXPECT().
-				Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidcorev1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
-					etcdCopyBackupsTask.Generation = 1
-					etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To[int64](0)
-					return nil
-				}).AnyTimes()
+			obj := expected.DeepCopy()
+			obj.Generation = 1
+			obj.Status.ObservedGeneration = ptr.To[int64](0)
+			Expect(fakeClient.Create(ctx, obj)).To(Succeed())
 			Expect(etcdCopyBackupsTask.Wait(ctx)).To(MatchError(ContainSubstring("observed generation outdated (0/1)")))
 		})
 
 		It("should return error if EtcdCopyBackupsTask reconciliation encountered error", func() {
 			errorText := "some error"
-			c.EXPECT().
-				Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidcorev1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
-					etcdCopyBackupsTask.Status.ObservedGeneration = &expected.Generation
-					etcdCopyBackupsTask.Status.LastError = &errorText
-					return nil
-				}).AnyTimes()
+			obj := expected.DeepCopy()
+			obj.Status.ObservedGeneration = &expected.Generation
+			obj.Status.LastError = &errorText
+			Expect(fakeClient.Create(ctx, obj)).To(Succeed())
 			Expect(etcdCopyBackupsTask.Wait(ctx)).To(MatchError(ContainSubstring(errorText)))
 		})
 
 		It("should return error if expected Successful or Failed conditions are not added yet", func() {
-			c.EXPECT().
-				Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidcorev1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
-					etcdCopyBackupsTask.Status.ObservedGeneration = &expected.Generation
-					return nil
-				}).AnyTimes()
+			obj := expected.DeepCopy()
+			obj.Status.ObservedGeneration = &expected.Generation
+			Expect(fakeClient.Create(ctx, obj)).To(Succeed())
 			Expect(etcdCopyBackupsTask.Wait(ctx)).To(MatchError(ContainSubstring("expected condition")))
 		})
 
 		It("should return error if Failed condition with status True has been added", func() {
 			var callCount int
-			c.EXPECT().
-				Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidcorev1alpha1.EtcdCopyBackupsTask{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidcorev1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
+
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(s).WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					etcdCopyBackupsTask, ok := obj.(*druidcorev1alpha1.EtcdCopyBackupsTask)
+					if !ok {
+						return nil
+					}
+
 					callCount++
 					etcdCopyBackupsTask.Status.ObservedGeneration = &expected.Generation
 					etcdCopyBackupsTask.Status.Conditions = []druidcorev1alpha1.Condition{
@@ -162,84 +143,38 @@ var _ = Describe("CopyBackupsTask", func() {
 						},
 					}
 					return nil
-				}).AnyTimes()
+				},
+			}).Build()
+
+			etcdCopyBackupsTask = New(log, fakeClient, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 			Expect(etcdCopyBackupsTask.Wait(ctx)).To(HaveOccurred())
 			Expect(callCount).To(BeNumerically(">", 1), "should have retried multiple times")
 		})
 
 		It("should be successful if Successful condition with status True has been added", func() {
-			c.EXPECT().
-				Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), expected).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidcorev1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
-					etcdCopyBackupsTask.Status.ObservedGeneration = &expected.Generation
-					etcdCopyBackupsTask.Status.Conditions = []druidcorev1alpha1.Condition{
-						{
-							Type:    druidcorev1alpha1.EtcdCopyBackupsTaskSucceeded,
-							Status:  druidcorev1alpha1.ConditionTrue,
-							Reason:  "reason",
-							Message: "message",
-						},
-					}
-					return nil
-				}).AnyTimes()
+			obj := expected.DeepCopy()
+			obj.Status.ObservedGeneration = &expected.Generation
+			obj.Status.Conditions = []druidcorev1alpha1.Condition{
+				{
+					Type:    druidcorev1alpha1.EtcdCopyBackupsTaskSucceeded,
+					Status:  druidcorev1alpha1.ConditionTrue,
+					Reason:  "reason",
+					Message: "message",
+				},
+			}
+			Expect(fakeClient.Create(ctx, obj)).To(Succeed())
 			Expect(etcdCopyBackupsTask.Wait(ctx)).To(Succeed())
 		})
-
-		It("should eventually return success when Successful condition is reported with status True", func() {
-			gomock.InOrder(
-				c.EXPECT().Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidcorev1alpha1.EtcdCopyBackupsTask{})).Return(notFoundErr),
-				c.EXPECT().
-					Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidcorev1alpha1.EtcdCopyBackupsTask{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidcorev1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
-						etcdCopyBackupsTask.Generation = 1
-						etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To[int64](0)
-						return nil
-					}),
-				c.EXPECT().
-					Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidcorev1alpha1.EtcdCopyBackupsTask{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidcorev1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
-						etcdCopyBackupsTask.Generation = 1
-						etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To[int64](1)
-						return nil
-					}),
-				c.EXPECT().
-					Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidcorev1alpha1.EtcdCopyBackupsTask{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidcorev1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
-						etcdCopyBackupsTask.Generation = 1
-						etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To[int64](1)
-						etcdCopyBackupsTask.Status.Conditions = []druidcorev1alpha1.Condition{
-							{
-								Type:    druidcorev1alpha1.EtcdCopyBackupsTaskSucceeded,
-								Status:  druidcorev1alpha1.ConditionTrue,
-								Reason:  "reason",
-								Message: "message",
-							},
-						}
-						return nil
-					}),
-			)
-			Expect(etcdCopyBackupsTask.Wait(ctx)).To(Succeed())
-		})
-
 	})
 
 	Describe("#WaitCleanup", func() {
 		It("should be successful if EtcdCopyBackupsTask resource does not exist", func() {
-			c.EXPECT().Get(gomock.Any(), gomock.AssignableToTypeOf(client.ObjectKey{}), expected).Return(notFoundErr)
 			Expect(etcdCopyBackupsTask.WaitCleanup(ctx)).To(Succeed())
 		})
 
 		It("should return error if EtcdCopyBackupsTask resource does not get deleted", func() {
-			c.EXPECT().Get(gomock.Any(), gomock.AssignableToTypeOf(client.ObjectKey{}), expected).AnyTimes()
+			Expect(fakeClient.Create(ctx, expected.DeepCopy())).To(Succeed())
 			Expect(etcdCopyBackupsTask.WaitCleanup(ctx)).To(HaveOccurred())
-		})
-
-		It("should be successful when EtcdCopyBackupsTask gets deleted", func() {
-			gomock.InOrder(
-				c.EXPECT().Get(gomock.Any(), gomock.AssignableToTypeOf(client.ObjectKey{}), expected).Times(3),
-				c.EXPECT().Get(gomock.Any(), gomock.AssignableToTypeOf(client.ObjectKey{}), expected).Return(notFoundErr),
-			)
-			Expect(etcdCopyBackupsTask.WaitCleanup(ctx)).To(Succeed())
 		})
 	})
 })

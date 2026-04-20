@@ -978,7 +978,7 @@ func (v *vali) getPrometheusRule() *monitoringv1.PrometheusRule {
 					Expr:  intstr.FromString(`absent(up{job="vali"} == 1)`),
 					For:   ptr.To(monitoringv1.Duration("30m")),
 					Labels: map[string]string{
-						"service":    "logging",
+						"service":    valiServiceName,
 						"severity":   "warning",
 						"type":       "seed",
 						"visibility": "operator",
@@ -996,7 +996,7 @@ func (v *vali) getPrometheusRule() *monitoringv1.PrometheusRule {
 func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
-		v1beta1constants.LabelRole:  "logging",
+		v1beta1constants.LabelRole:  valiServiceName,
 		v1beta1constants.LabelApp:   valiName,
 	}
 }

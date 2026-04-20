@@ -73,7 +73,7 @@ func WaitUntilDeploymentScaledToDesiredReplicas(ctx context.Context, client clie
 }
 
 // WaitUntilStatefulSetScaledToDesiredReplicas waits for the number of available replicas to be equal to the StatefulSet's desired replicas count.
-func WaitUntilStatefulSetScaledToDesiredReplicas(ctx context.Context, client client.Client, key types.NamespacedName, desiredReplicas int32) error {
+var WaitUntilStatefulSetScaledToDesiredReplicas = func(ctx context.Context, client client.Client, key types.NamespacedName, desiredReplicas int32) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
 		statefulSet := &appsv1.StatefulSet{}
 		if err := client.Get(ctx, key, statefulSet); err != nil {

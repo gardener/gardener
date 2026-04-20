@@ -10,7 +10,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
@@ -22,13 +21,12 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	"github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("CRD", func() {
 	var (
 		ctx        context.Context
-		testClient client.Client
+		fakeClient client.Client
 
 		readyCRD = &apiextensionsv1.CustomResourceDefinition{
 			ObjectMeta: metav1.ObjectMeta{
@@ -101,13 +99,13 @@ status:
     - type: Established
       status: "True"`
 
-		testClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-		crdDeployer, err = New(testClient, []string{crd1, crd2}, false)
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+		crdDeployer, err = New(fakeClient, []string{crd1, crd2}, false)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(crdDeployer).ToNot(BeNil())
 
 		DeferCleanup(func() {
-			Expect(testClient.Delete(ctx, readyCRD)).To(Or(Succeed(), matchers.BeNotFoundError()))
+			Expect(fakeClient.Delete(ctx, readyCRD)).To(Or(Succeed(), matchers.BeNotFoundError()))
 		})
 	})
 
@@ -117,12 +115,12 @@ status:
 
 			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
 
-			Expect(testClient.Get(ctx, client.ObjectKey{Name: readyCRD.Name}, actualCRD)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: readyCRD.Name}, actualCRD)).To(Succeed())
 			Expect(actualCRD.Name).To(Equal(readyCRD.Name))
 		})
 
 		It("should update an existing CRD", func() {
-			crdDeployer, err := New(testClient, []string{crd3}, false)
+			crdDeployer, err := New(fakeClient, []string{crd3}, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(crdDeployer).ToNot(BeNil())
 
@@ -130,7 +128,7 @@ status:
 
 			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
 
-			Expect(testClient.Get(ctx, client.ObjectKey{Name: crd3Name}, actualCRD)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: crd3Name}, actualCRD)).To(Succeed())
 			Expect(actualCRD.Name).To(Equal(crd3Name))
 
 			crd3Updated := `apiVersion: apiextensions.k8s.io/v1
@@ -148,13 +146,13 @@ spec:
     storage: true
 `
 
-			crdDeployer, err = New(testClient, []string{crd3Updated}, false)
+			crdDeployer, err = New(fakeClient, []string{crd3Updated}, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(crdDeployer).ToNot(BeNil())
 
 			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
 
-			Expect(testClient.Get(ctx, client.ObjectKey{Name: crd3Name}, actualCRD)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: crd3Name}, actualCRD)).To(Succeed())
 			Expect(actualCRD.Name).To(Equal(crd3Name))
 			Expect(actualCRD.Spec.Versions).To(HaveLen(1))
 			Expect(actualCRD.Spec.Versions[0].Name).To(Equal("v1beta1"))
@@ -164,7 +162,7 @@ spec:
 	Describe("#Deploy for CRDs that have deletion protection", func() {
 		BeforeEach(func() {
 			var err error
-			crdDeployer, err = New(testClient, []string{crd1}, true)
+			crdDeployer, err = New(fakeClient, []string{crd1}, true)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(crdDeployer).ToNot(BeNil())
 		})
@@ -173,7 +171,7 @@ spec:
 			actualCRD := &apiextensionsv1.CustomResourceDefinition{}
 
 			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
-			Expect(testClient.Get(ctx, client.ObjectKey{Name: crd1Name}, actualCRD)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: crd1Name}, actualCRD)).To(Succeed())
 			Expect(actualCRD.Labels).To(HaveKeyWithValue("gardener.cloud/deletion-protected", "true"))
 		})
 	})
@@ -182,66 +180,48 @@ spec:
 		It("should destroy a CRD", func() {
 			actualCRD := &apiextensionsv1.CustomResourceDefinition{}
 
-			Expect(testClient.Create(ctx, readyCRD)).To(Succeed())
+			Expect(fakeClient.Create(ctx, readyCRD)).To(Succeed())
 
 			Expect(crdDeployer.Destroy(ctx)).To(Succeed())
 
-			Expect(testClient.Get(ctx, client.ObjectKey{Name: readyCRD.Name}, actualCRD)).To(matchers.BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: readyCRD.Name}, actualCRD)).To(matchers.BeNotFoundError())
 		})
 	})
 
 	Describe("#Destroy for CRDs that have deletion protection", func() {
-		var (
-			ctrl       *gomock.Controller
-			mockClient *mockclient.MockClient
-		)
-
-		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
-			mockClient = mockclient.NewMockClient(ctrl)
-		})
-
-		AfterEach(func() {
-			ctrl.Finish()
-		})
-
 		It("should destroy CRDs when CRDDeployer has deletionProtection set to false", func() {
-			crdDeployer, err := New(mockClient, []string{confirmationCRD}, false)
+			crdDeployer, err := New(fakeClient, []string{confirmationCRD}, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(crdDeployer).NotTo(BeNil())
 
-			mockClient.EXPECT().Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: readyCRD.Name}})
+			Expect(fakeClient.Create(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: readyCRD.Name}})).To(Succeed())
 
 			Expect(crdDeployer.Destroy(ctx)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(readyCRD), &apiextensionsv1.CustomResourceDefinition{})).To(matchers.BeNotFoundError())
 		})
 
 		It("should destroy CRDs when CRDDeployer has deletionProtection set to true", func() {
-			crdDeployer, err := New(mockClient, []string{confirmationCRD}, true)
+			crdDeployer, err := New(fakeClient, []string{confirmationCRD}, true)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(crdDeployer).NotTo(BeNil())
 
-			mockClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{}), gomock.Any()).DoAndReturn(func(_ context.Context, crd client.Object, _ client.Patch, _ ...client.PatchOptions) error {
-				Expect(crd.GetAnnotations()).To(HaveKeyWithValue("confirmation.gardener.cloud/deletion", "true"))
-				return nil
-			})
-
-			mockClient.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{})).DoAndReturn(func(_ context.Context, crd client.Object, _ ...client.DeleteOptions) error {
-				Expect(crd.GetName()).To(Equal(crd1Name))
-				return nil
-			})
+			Expect(fakeClient.Create(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crd1Name}})).To(Succeed())
 
 			Eventually(crdDeployer.Destroy).WithArguments(ctx).Should(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: crd1Name}, &apiextensionsv1.CustomResourceDefinition{})).To(matchers.BeNotFoundError())
 		})
 	})
 
 	Describe("#Wait", func() {
 		It("should return true because the CRD is ready", func() {
-			crdDeployer, err := New(testClient, []string{crd1Ready}, false)
+			crdDeployer, err := New(fakeClient, []string{crd1Ready}, false)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Create a CRD that already has the ready status
 			readyCRD.ResourceVersion = ""
-			Expect(testClient.Create(ctx, readyCRD)).To(Succeed())
+			Expect(fakeClient.Create(ctx, readyCRD)).To(Succeed())
 
 			Expect(crdDeployer.Wait(ctx)).To(Succeed())
 		})

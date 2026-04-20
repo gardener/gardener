@@ -12,14 +12,15 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
+	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/resourcemanager/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -27,12 +28,11 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
-	mockresourcemanager "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/mock"
 	. "github.com/gardener/gardener/pkg/component/shared"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("ResourceManager", func() {
@@ -40,7 +40,6 @@ var _ = Describe("ResourceManager", func() {
 		ctx       = context.TODO()
 		namespace string
 		sm        secretsmanager.Interface
-		ctrl      *gomock.Controller
 	)
 
 	Describe("#New*GardenerResourceManager", func() {
@@ -163,13 +162,12 @@ var _ = Describe("ResourceManager", func() {
 
 	Describe("#DeployGardenerResourceManager", func() {
 		var (
-			resourceManager *mockresourcemanager.MockInterface
-			secrets         resourcemanager.Secrets
+			resourceManager *fakeResourceManager
+			fakeErr         = errors.New("fake err")
 
-			fakeErr = errors.New("fake err")
-
-			c             *mockclient.MockClient
+			fakeClient    client.Client
 			k8sSeedClient kubernetes.Interface
+			scheme        *runtime.Scheme
 
 			setReplicas         func(ctx context.Context) (int32, error)
 			getAPIServerAddress func() string
@@ -177,17 +175,24 @@ var _ = Describe("ResourceManager", func() {
 			bootstrapKubeconfigSecret *corev1.Secret
 			shootAccessSecret         *corev1.Secret
 			managedResource           *resourcesv1alpha1.ManagedResource
+			now                       time.Time
 		)
 
 		BeforeEach(func() {
 			namespace = "fake-ns"
 
-			ctrl = gomock.NewController(GinkgoT())
-			resourceManager = mockresourcemanager.NewMockInterface(ctrl)
+			resourceManager = &fakeResourceManager{}
 
-			c = mockclient.NewMockClient(ctrl)
-			k8sSeedClient = fakekubernetes.NewClientSetBuilder().WithClient(c).Build()
-			sm = fakesecretsmanager.New(c, namespace)
+			now = time.Unix(60, 0)
+			DeferCleanup(test.WithVar(&Now, now))
+
+			scheme = runtime.NewScheme()
+			Expect(kubernetesscheme.AddToScheme(scheme)).To(Succeed())
+			Expect(resourcesv1alpha1.AddToScheme(scheme)).To(Succeed())
+
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
+			k8sSeedClient = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
+			sm = fakesecretsmanager.New(fakeClient, namespace)
 
 			setReplicas = func(_ context.Context) (int32, error) {
 				return 2, nil
@@ -195,9 +200,7 @@ var _ = Describe("ResourceManager", func() {
 			getAPIServerAddress = func() string { return "kube-apiserver" }
 
 			By("Ensure secrets managed outside of this function for which secretsmanager.Get() will be called")
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "ca"}, gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
-
-			secrets = resourcemanager.Secrets{}
+			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 
 			bootstrapKubeconfigSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -210,7 +213,7 @@ var _ = Describe("ResourceManager", func() {
 					Name:      "shoot-access-gardener-resource-manager",
 					Namespace: namespace,
 					Annotations: map[string]string{
-						"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(time.Hour).Format(time.RFC3339),
+						"serviceaccount.resources.gardener.cloud/token-renew-timestamp": now.Add(time.Hour).Format(time.RFC3339),
 					},
 				},
 			}
@@ -220,39 +223,26 @@ var _ = Describe("ResourceManager", func() {
 					Namespace: namespace,
 				},
 			}
-		})
 
-		AfterEach(func() {
-			ctrl.Finish()
 		})
 
 		Context("w/o bootstrapping", func() {
 			Context("deploy gardener-resource-manager", func() {
 				BeforeEach(func() {
-					gomock.InOrder(
-						resourceManager.EXPECT().GetReplicas(),
-						resourceManager.EXPECT().SetReplicas(ptr.To[int32](2)),
-						resourceManager.EXPECT().GetReplicas().Return(ptr.To[int32](2)),
-
-						// ensure bootstrapping prerequisites are not met
-						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-							obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(time.Hour).Format(time.RFC3339)}
-							return nil
-						}),
-						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-
-						// set secrets
-						resourceManager.EXPECT().SetSecrets(secrets),
-					)
+					Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
+					Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
 				})
 
 				It("should set the secrets and deploy", func() {
-					resourceManager.EXPECT().Deploy(ctx)
 					Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
+
+					Expect(resourceManager.replicas).To(PointTo(Equal(int32(2))))
+					Expect(resourceManager.secrets.BootstrapKubeconfig).To(BeNil())
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(bootstrapKubeconfigSecret), bootstrapKubeconfigSecret)).To(BeNotFoundError())
 				})
 
 				It("should fail when the deploy function fails", func() {
-					resourceManager.EXPECT().Deploy(ctx).Return(fakeErr)
+					resourceManager.deployError = fakeErr
 					Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(MatchError(fakeErr))
 				})
 			})
@@ -260,187 +250,126 @@ var _ = Describe("ResourceManager", func() {
 
 		Context("w/ bootstrapping", func() {
 			Context("with success", func() {
-				AfterEach(func() {
-					defer test.WithVar(&TimeoutWaitForGardenerResourceManagerBootstrapping, time.Second)()
-
-					gomock.InOrder(
-						// create bootstrap kubeconfig
-						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, s *corev1.Secret, _ ...client.CreateOption) error {
-							Expect(s.Data["kubeconfig"]).NotTo(BeNil())
-							return nil
-						}),
-
-						// set secrets and deploy with bootstrap kubeconfig
-						resourceManager.EXPECT().SetSecrets(&secretMatcher{
-							bootstrapKubeconfigName: &bootstrapKubeconfigSecret.Name,
-						}),
-						resourceManager.EXPECT().Deploy(ctx),
-
-						// wait for shoot access secret to be reconciled and managed resource to be healthy
-						c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-							obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(time.Hour).Format(time.RFC3339)}
-							return nil
-						}),
-						c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *resourcesv1alpha1.ManagedResource, _ ...client.GetOption) error {
-							obj.Status.ObservedGeneration = obj.Generation
-							obj.Status.Conditions = []gardencorev1beta1.Condition{
-								{Type: "ResourcesApplied", Status: gardencorev1beta1.ConditionTrue},
-								{Type: "ResourcesHealthy", Status: gardencorev1beta1.ConditionTrue},
-							}
-							return nil
-						}),
-
-						// set secrets and deploy with shoot access token
-						resourceManager.EXPECT().SetSecrets(secrets),
-						resourceManager.EXPECT().Deploy(ctx),
-					)
-
-					Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
+				BeforeEach(func() {
+					DeferCleanup(test.WithVar(&WaitUntilGardenerResourceManagerBootstrapped,
+						func(_ context.Context, _ client.Client, _ string) error { return nil },
+					))
 				})
 
-				tests := func() {
+				AfterEach(func() {
+					Expect(resourceManager.replicas).To(PointTo(Equal(int32(2))))
+					Expect(resourceManager.secrets.BootstrapKubeconfig).To(BeNil())
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(bootstrapKubeconfigSecret), bootstrapKubeconfigSecret)).To(Succeed())
+				})
+
+				Context("deploy with 2 replicas", func() {
 					It("bootstraps because the shoot access secret was not found", func() {
-						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
 					})
 
 					It("bootstraps because the shoot access secret was never reconciled", func() {
-						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{}))
+						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
+
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
 					})
 
 					It("bootstraps because the shoot access secret was not renewed", func() {
-						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-							obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(-time.Hour).Format(time.RFC3339)}
-							return nil
-						})
+						shootAccessSecret.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": now.Add(-time.Hour).Format(time.RFC3339)}
+						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
+						Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
+
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
 					})
 
 					It("bootstraps because the managed resource was not found", func() {
-						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-							obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(time.Hour).Format(time.RFC3339)}
-							return nil
-						})
-						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
+
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
 					})
 
 					It("bootstraps because the managed resource indicates that the shoot access token lost access", func() {
-						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-							obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(time.Hour).Format(time.RFC3339)}
-							return nil
-						})
-						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *resourcesv1alpha1.ManagedResource, _ ...client.GetOption) error {
-							obj.Status.ObservedGeneration = obj.Generation
-							obj.Status.Conditions = []gardencorev1beta1.Condition{
-								{Type: "ResourcesApplied", Status: gardencorev1beta1.ConditionFalse, Message: `forbidden: User "system:serviceaccount:kube-system:gardener-resource-manager" cannot do anything`},
-								{Type: "ResourcesHealthy", Status: gardencorev1beta1.ConditionTrue},
-							}
-							return nil
-						})
+						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
+
+						managedResource.Status.ObservedGeneration = managedResource.Generation
+						managedResource.Status.Conditions = []gardencorev1beta1.Condition{
+							{Type: "ResourcesApplied", Status: gardencorev1beta1.ConditionFalse, Message: `forbidden: User "system:serviceaccount:kube-system:gardener-resource-manager" cannot do anything`},
+							{Type: "ResourcesHealthy", Status: gardencorev1beta1.ConditionTrue},
+						}
+						Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
+
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
 					})
 
 					It("bootstraps because the managed resource indicates that the shoot access token was invalidated", func() {
-						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-							obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(time.Hour).Format(time.RFC3339)}
-							return nil
-						})
-						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *resourcesv1alpha1.ManagedResource, _ ...client.GetOption) error {
-							obj.Status.ObservedGeneration = obj.Generation
-							obj.Status.Conditions = []gardencorev1beta1.Condition{
-								{Type: "ResourcesApplied", Status: gardencorev1beta1.ConditionFalse, Message: `failed to compute all HPA target ref object keys: failed to list all HPAs: Unauthorized`},
-								{Type: "ResourcesHealthy", Status: gardencorev1beta1.ConditionTrue},
-							}
-							return nil
-						})
-					})
-				}
+						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
 
-				Context("deploy with 2 replicas", func() {
-					BeforeEach(func() {
-						gomock.InOrder(
-							resourceManager.EXPECT().GetReplicas(),
-							resourceManager.EXPECT().SetReplicas(ptr.To[int32](2)),
-							resourceManager.EXPECT().GetReplicas().Return(ptr.To[int32](2)),
-						)
-					})
+						managedResource.Status.ObservedGeneration = managedResource.Generation
+						managedResource.Status.Conditions = []gardencorev1beta1.Condition{
+							{Type: "ResourcesApplied", Status: gardencorev1beta1.ConditionFalse, Message: `failed to compute all HPA target ref object keys: failed to list all HPAs: Unauthorized`},
+							{Type: "ResourcesHealthy", Status: gardencorev1beta1.ConditionTrue},
+						}
+						Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
 
-					tests()
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
+					})
 				})
 			})
 
 			Context("with failure", func() {
-				BeforeEach(func() {
-					// ensure bootstrapping preconditions are met
-					resourceManager.EXPECT().GetReplicas().Return(ptr.To[int32](3)).Times(2)
-					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-				})
-
 				It("fails because the bootstrap kubeconfig secret cannot be created", func() {
-					gomock.InOrder(
-						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
-					)
+					fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).
+						WithObjects(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}}).
+						WithInterceptorFuncs(interceptor.Funcs{
+							Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+								if _, ok := obj.(*corev1.Secret); ok {
+									return fakeErr
+								}
+								return client.Create(ctx, obj, opts...)
+							},
+						}).Build()
+					k8sSeedClient = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
+					sm = fakesecretsmanager.New(fakeClient, namespace)
 
 					Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(MatchError(fakeErr))
 				})
 
 				Context("waiting for bootstrapping process", func() {
 					BeforeEach(func() {
-						gomock.InOrder(
-							// create bootstrap kubeconfig
-							c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
-
-							// set secrets and deploy with bootstrap kubeconfig
-							resourceManager.EXPECT().SetSecrets(&secretMatcher{
-								bootstrapKubeconfigName: &bootstrapKubeconfigSecret.Name,
-							}),
-							resourceManager.EXPECT().Deploy(ctx),
-						)
+						DeferCleanup(test.WithVars(
+							&TimeoutWaitForGardenerResourceManagerBootstrapping, 500*time.Millisecond,
+							&IntervalWaitForGardenerResourceManagerBootstrapping, 5*time.Millisecond,
+						))
 					})
 
 					It("fails because the shoot access token was not generated", func() {
-						defer test.WithVar(&TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
-
-						c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-							obj.Annotations = nil
-							return nil
-						})
+						shootAccessSecret.Annotations = nil
+						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
 
 						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(MatchError(ContainSubstring("token not yet generated")))
 					})
 
 					It("fails because the shoot access token renew timestamp cannot be parsed", func() {
-						defer test.WithVar(&TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
-
-						c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-							obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": "foo"}
-							return nil
-						})
+						shootAccessSecret.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": "foo"}
+						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
 
 						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress).Error()).To(ContainSubstring("could not parse renew timestamp"))
 					})
 
 					It("fails because the shoot access token was not renewed", func() {
-						defer test.WithVar(&TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
-
-						c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-							obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(-time.Hour).Format(time.RFC3339)}
-							return nil
-						})
+						shootAccessSecret.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": now.Add(-time.Hour).Format(time.RFC3339)}
+						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
+						Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
 
 						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress).Error()).To(ContainSubstring("token not yet renewed"))
 					})
 
 					It("fails because the managed resource is not getting healthy", func() {
-						defer test.WithVar(&TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
+						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
 
-						gomock.InOrder(
-							c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-								obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(time.Hour).Format(time.RFC3339)}
-								return nil
-							}),
-							c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *resourcesv1alpha1.ManagedResource, _ ...client.GetOption) error {
-								obj.Status.ObservedGeneration = -1
-								return nil
-							}),
-						)
+						managedResource.Status.Conditions = []gardencorev1beta1.Condition{
+							{Type: "ResourcesApplied", Status: gardencorev1beta1.ConditionFalse, Message: ": Unauthorized"},
+						}
+						Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
 
 						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress).Error()).To(ContainSubstring(fmt.Sprintf("managed resource %s/%s is not healthy", namespace, managedResource.Name)))
 					})
@@ -450,25 +379,22 @@ var _ = Describe("ResourceManager", func() {
 	})
 })
 
-type secretMatcher struct {
-	bootstrapKubeconfigName *string
+type fakeResourceManager struct {
+	replicas    *int32
+	deployError error
+	secrets     resourcemanager.Secrets
 }
 
-func (m *secretMatcher) Matches(x any) bool {
-	req, ok := x.(resourcemanager.Secrets)
-	if !ok {
-		return false
-	}
-
-	if m.bootstrapKubeconfigName != nil && (req.BootstrapKubeconfig == nil || req.BootstrapKubeconfig.Name != *m.bootstrapKubeconfigName) {
-		return false
-	}
-
-	return true
+func (f *fakeResourceManager) GetReplicas() *int32                  { return f.replicas }
+func (f *fakeResourceManager) SetReplicas(r *int32)                 { f.replicas = r }
+func (f *fakeResourceManager) SetSecrets(s resourcemanager.Secrets) { f.secrets = s }
+func (f *fakeResourceManager) GetValues() resourcemanager.Values    { return resourcemanager.Values{} }
+func (f *fakeResourceManager) SetBootstrapControlPlaneNode(bool)    {}
+func (f *fakeResourceManager) Deploy(_ context.Context) error {
+	err := f.deployError
+	f.deployError = nil
+	return err
 }
-
-func (m *secretMatcher) String() string {
-	return fmt.Sprintf(`Secret Matcher:
-bootstrapKubeconfigName: %v,
-`, m.bootstrapKubeconfigName)
-}
+func (f *fakeResourceManager) Destroy(_ context.Context) error     { return nil }
+func (f *fakeResourceManager) Wait(_ context.Context) error        { return nil }
+func (f *fakeResourceManager) WaitCleanup(_ context.Context) error { return nil }

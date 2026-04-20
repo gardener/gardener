@@ -7,25 +7,27 @@ package projectrbac_test
 import (
 	"context"
 	"errors"
+	"slices"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/garden/projectrbac"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("ProjectRBAC", func() {
 	var (
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
+		c client.Client
 
 		project     *gardencorev1beta1.Project
 		projectRBAC Interface
@@ -64,41 +66,41 @@ var _ = Describe("ProjectRBAC", func() {
 		clusterRoleProjectExtensionRole1 *rbacv1.ClusterRole
 		roleBindingProjectExtensionRole1 *rbacv1.RoleBinding
 
-		extensionRoleListOptions = []client.ListOption{
-			client.InNamespace(namespace),
-			client.MatchingLabels{
-				v1beta1constants.GardenRole:  v1beta1constants.LabelExtensionProjectRole,
-				v1beta1constants.ProjectName: projectName,
-			},
+		roleLabels = map[string]string{
+			v1beta1constants.GardenRole:  v1beta1constants.LabelExtensionProjectRole,
+			v1beta1constants.ProjectName: projectName,
 		}
 
 		emptyExtensionRoleBinding1 = rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      extensionRolePrefix + extensionRole1,
 				Namespace: namespace,
+				Labels:    roleLabels,
 			},
 		}
 		emptyExtensionRoleBinding2 = rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      extensionRolePrefix + extensionRole2,
 				Namespace: namespace,
+				Labels:    roleLabels,
 			},
 		}
 		emptyExtensionClusterRole1 = rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: extensionRolePrefix + extensionRole1,
+				Name:   extensionRolePrefix + extensionRole1,
+				Labels: roleLabels,
 			},
 		}
 		emptyExtensionClusterRole2 = rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: extensionRolePrefix + extensionRole2,
+				Name:   extensionRolePrefix + extensionRole2,
+				Labels: roleLabels,
 			},
 		}
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
+		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 
 		project = &gardencorev1beta1.Project{
 			ObjectMeta: metav1.ObjectMeta{
@@ -381,10 +383,6 @@ var _ = Describe("ProjectRBAC", func() {
 		}
 	})
 
-	AfterEach(func() {
-		ctrl.Finish()
-	})
-
 	Describe("#Deploy", func() {
 		It("should successfully reconcile all project RBAC resources", func() {
 			project.Spec.Owner = &member3
@@ -417,45 +415,48 @@ var _ = Describe("ProjectRBAC", func() {
 			roleBindingProjectViewer.Subjects = []rbacv1.Subject{member1, member3}
 			roleBindingProjectExtensionRole1.Subjects = []rbacv1.Subject{member1}
 
+			Expect(projectRBAC.Deploy(ctx)).To(Succeed())
+
 			// project admin
-			c.EXPECT().Get(ctx, client.ObjectKey{Name: clusterRoleProjectAdmin.Name}, gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}))
-			c.EXPECT().Patch(ctx, clusterRoleProjectAdmin, gomock.Any())
-			c.EXPECT().Get(ctx, client.ObjectKey{Name: clusterRoleBindingProjectAdmin.Name}, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}))
-			c.EXPECT().Patch(ctx, clusterRoleBindingProjectAdmin, gomock.Any())
+			actualCR := &rbacv1.ClusterRole{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleProjectAdmin), actualCR)).To(Succeed())
+			Expect(actualCR.Rules).To(Equal(clusterRoleProjectAdmin.Rules))
+			actualCRB := &rbacv1.ClusterRoleBinding{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingProjectAdmin), actualCRB)).To(Succeed())
+			Expect(actualCRB.Subjects).To(Equal(clusterRoleBindingProjectAdmin.Subjects))
 
 			// project uam
-			c.EXPECT().Get(ctx, client.ObjectKey{Name: clusterRoleProjectUAM.Name}, gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}))
-			c.EXPECT().Patch(ctx, clusterRoleProjectUAM, gomock.Any())
-			c.EXPECT().Get(ctx, client.ObjectKey{Name: clusterRoleBindingProjectUAM.Name}, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}))
-			c.EXPECT().Patch(ctx, clusterRoleBindingProjectUAM, gomock.Any())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleProjectUAM), actualCR)).To(Succeed())
+			Expect(actualCR.Rules).To(Equal(clusterRoleProjectUAM.Rules))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingProjectUAM), actualCRB)).To(Succeed())
+			Expect(actualCRB.Subjects).To(Equal(clusterRoleBindingProjectUAM.Subjects))
 
-			// project serviceaccountmanager
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: roleBindingProjectServiceAccountManager.Namespace, Name: roleBindingProjectServiceAccountManager.Name}, gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}))
-			c.EXPECT().Patch(ctx, roleBindingProjectServiceAccountManager, gomock.Any())
+			// project service account manager
+			actualRB := &rbacv1.RoleBinding{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(roleBindingProjectServiceAccountManager), actualRB)).To(Succeed())
+			Expect(actualRB.Subjects).To(Equal(roleBindingProjectServiceAccountManager.Subjects))
 
 			// project member
-			c.EXPECT().Get(ctx, client.ObjectKey{Name: clusterRoleProjectMember.Name}, gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}))
-			c.EXPECT().Patch(ctx, clusterRoleProjectMember, gomock.Any())
-			c.EXPECT().Get(ctx, client.ObjectKey{Name: clusterRoleBindingProjectMember.Name}, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}))
-			c.EXPECT().Patch(ctx, clusterRoleBindingProjectMember, gomock.Any())
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: roleBindingProjectMember.Namespace, Name: roleBindingProjectMember.Name}, gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}))
-			c.EXPECT().Patch(ctx, roleBindingProjectMember, gomock.Any())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleProjectMember), actualCR)).To(Succeed())
+			Expect(actualCR.Rules).To(Equal(clusterRoleProjectMember.Rules))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingProjectMember), actualCRB)).To(Succeed())
+			Expect(actualCRB.Subjects).To(Equal(clusterRoleBindingProjectMember.Subjects))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(roleBindingProjectMember), actualRB)).To(Succeed())
+			Expect(actualRB.Subjects).To(Equal(roleBindingProjectMember.Subjects))
 
 			// project viewer
-			c.EXPECT().Get(ctx, client.ObjectKey{Name: clusterRoleProjectViewer.Name}, gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}))
-			c.EXPECT().Patch(ctx, clusterRoleProjectViewer, gomock.Any())
-			c.EXPECT().Get(ctx, client.ObjectKey{Name: clusterRoleBindingProjectViewer.Name}, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}))
-			c.EXPECT().Patch(ctx, clusterRoleBindingProjectViewer, gomock.Any())
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: roleBindingProjectViewer.Namespace, Name: roleBindingProjectViewer.Name}, gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}))
-			c.EXPECT().Patch(ctx, roleBindingProjectViewer, gomock.Any())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleProjectViewer), actualCR)).To(Succeed())
+			Expect(actualCR.Rules).To(Equal(clusterRoleProjectViewer.Rules))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingProjectViewer), actualCRB)).To(Succeed())
+			Expect(actualCRB.Subjects).To(Equal(clusterRoleBindingProjectViewer.Subjects))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(roleBindingProjectViewer), actualRB)).To(Succeed())
+			Expect(actualRB.Subjects).To(Equal(roleBindingProjectViewer.Subjects))
 
 			// project extension roles
-			c.EXPECT().Get(ctx, client.ObjectKey{Name: clusterRoleProjectExtensionRole1.Name}, gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}))
-			c.EXPECT().Patch(ctx, clusterRoleProjectExtensionRole1, gomock.Any())
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: roleBindingProjectExtensionRole1.Namespace, Name: roleBindingProjectExtensionRole1.Name}, gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}))
-			c.EXPECT().Patch(ctx, roleBindingProjectExtensionRole1, gomock.Any())
-
-			Expect(projectRBAC.Deploy(ctx)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleProjectExtensionRole1), actualCR)).To(Succeed())
+			Expect(actualCR.AggregationRule).To(Equal(clusterRoleProjectExtensionRole1.AggregationRule))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(roleBindingProjectExtensionRole1), actualRB)).To(Succeed())
+			Expect(actualRB.Subjects).To(Equal(roleBindingProjectExtensionRole1.Subjects))
 		})
 	})
 
@@ -463,88 +464,129 @@ var _ = Describe("ProjectRBAC", func() {
 		It("should successfully delete all project RBAC resources", func() {
 			project.Spec.Members = []gardencorev1beta1.ProjectMember{{Role: "extension:" + extensionRole1}}
 
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), extensionRoleListOptions).DoAndReturn(func(_ context.Context, list *rbacv1.RoleBindingList, _ ...client.ListOption) error {
-				list.Items = []rbacv1.RoleBinding{emptyExtensionRoleBinding1, emptyExtensionRoleBinding2}
-				return nil
-			})
-			c.EXPECT().Delete(ctx, &emptyExtensionRoleBinding1)
-			c.EXPECT().Delete(ctx, &emptyExtensionRoleBinding2)
+			Expect(projectRBAC.Deploy(ctx)).To(Succeed())
 
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleList{}), extensionRoleListOptions).DoAndReturn(func(_ context.Context, list *rbacv1.ClusterRoleList, _ ...client.ListOption) error {
-				list.Items = []rbacv1.ClusterRole{emptyExtensionClusterRole1, emptyExtensionClusterRole2}
-				return nil
-			})
-			c.EXPECT().Delete(ctx, &emptyExtensionClusterRole1)
-			c.EXPECT().Delete(ctx, &emptyExtensionClusterRole2)
-
-			c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:system:project:" + projectName}})
-			c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:system:project:" + projectName}})
-
-			c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:system:project-uam:" + projectName}})
-			c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:system:project-uam:" + projectName}})
-
-			c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:system:project-serviceaccountmanager", Namespace: namespace}})
-
-			c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:system:project-member:" + projectName}})
-			c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:system:project-member:" + projectName}})
-			c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:system:project-member", Namespace: namespace}})
-
-			c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:system:project-viewer:" + projectName}})
-			c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:system:project-viewer:" + projectName}})
-			c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:system:project-viewer", Namespace: namespace}})
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleProjectAdmin), &rbacv1.ClusterRole{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingProjectAdmin), &rbacv1.ClusterRoleBinding{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleProjectUAM), &rbacv1.ClusterRole{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingProjectUAM), &rbacv1.ClusterRoleBinding{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(roleBindingProjectServiceAccountManager), &rbacv1.RoleBinding{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleProjectMember), &rbacv1.ClusterRole{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingProjectMember), &rbacv1.ClusterRoleBinding{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(roleBindingProjectMember), &rbacv1.RoleBinding{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleProjectViewer), &rbacv1.ClusterRole{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingProjectViewer), &rbacv1.ClusterRoleBinding{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(roleBindingProjectViewer), &rbacv1.RoleBinding{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(roleBindingProjectExtensionRole1), &rbacv1.RoleBinding{})).To(Succeed())
 
 			Expect(projectRBAC.Destroy(ctx)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleProjectAdmin), &rbacv1.ClusterRole{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingProjectAdmin), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleProjectUAM), &rbacv1.ClusterRole{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingProjectUAM), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(roleBindingProjectServiceAccountManager), &rbacv1.RoleBinding{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleProjectMember), &rbacv1.ClusterRole{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingProjectMember), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(roleBindingProjectMember), &rbacv1.RoleBinding{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleProjectViewer), &rbacv1.ClusterRole{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingProjectViewer), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(roleBindingProjectViewer), &rbacv1.RoleBinding{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(roleBindingProjectExtensionRole1), &rbacv1.RoleBinding{})).To(BeNotFoundError())
 		})
 	})
 
 	Describe("#DeleteStaleExtensionRolesResources", func() {
 		It("should do nothing because neither rolebindings nor clusterroles exist", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), extensionRoleListOptions)
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleList{}), extensionRoleListOptions)
-
 			Expect(projectRBAC.DeleteStaleExtensionRolesResources(ctx)).To(Succeed())
 		})
 
 		It("should return an error because listing the rolebindings failed", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), extensionRoleListOptions).Return(fakeErr)
+			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
+				List: func(ctx context.Context, cl client.WithWatch, obj client.ObjectList, opts ...client.ListOption) error {
+					if _, ok := obj.(*rbacv1.RoleBindingList); ok {
+						return fakeErr
+					}
+					return cl.List(ctx, obj, opts...)
+				},
+			}).Build()
+			projectRBAC, err = New(fakeClient, project)
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(projectRBAC.DeleteStaleExtensionRolesResources(ctx)).To(MatchError(fakeErr))
 		})
 
 		It("should return an error because listing the clusterroles failed", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), extensionRoleListOptions)
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleList{}), extensionRoleListOptions).Return(fakeErr)
+			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
+				List: func(ctx context.Context, cl client.WithWatch, obj client.ObjectList, opts ...client.ListOption) error {
+					if _, ok := obj.(*rbacv1.ClusterRoleList); ok {
+						return fakeErr
+					}
+					return cl.List(ctx, obj, opts...)
+				},
+			}).Build()
+			projectRBAC, err = New(fakeClient, project)
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(projectRBAC.DeleteStaleExtensionRolesResources(ctx)).To(MatchError(fakeErr))
 		})
 
 		It("should return an error because deleting a stale rolebinding failed", func() {
-			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), extensionRoleListOptions).DoAndReturn(func(_ context.Context, list *rbacv1.RoleBindingList, _ ...client.ListOption) error {
-					list.Items = []rbacv1.RoleBinding{emptyExtensionRoleBinding1, emptyExtensionRoleBinding2}
-					return nil
-				}),
-				c.EXPECT().Delete(ctx, &emptyExtensionRoleBinding1).Return(fakeErr),
-			)
+			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
+				Delete: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.DeleteOption) error {
+					return fakeErr
+				},
+			}).Build()
+
+			// Create stale rolebinding with the right labels
+			rb1 := emptyExtensionRoleBinding1.DeepCopy()
+			Expect(fakeClient.Create(ctx, rb1)).To(Succeed())
+
+			projectRBAC, err = New(fakeClient, project)
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(projectRBAC.DeleteStaleExtensionRolesResources(ctx)).To(MatchError(fakeErr))
 		})
 
 		It("should return an error because deleting a stale clusterrole failed", func() {
-			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), extensionRoleListOptions).DoAndReturn(func(_ context.Context, list *rbacv1.RoleBindingList, _ ...client.ListOption) error {
-					list.Items = []rbacv1.RoleBinding{emptyExtensionRoleBinding1, emptyExtensionRoleBinding2}
-					return nil
-				}),
-				c.EXPECT().Delete(ctx, &emptyExtensionRoleBinding1),
-				c.EXPECT().Delete(ctx, &emptyExtensionRoleBinding2),
+			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
+				List: func(ctx context.Context, cl client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+					// The fake client filters cluster-scoped resources by namespace (unlike the real
+					// API server which ignores InNamespace for cluster-scoped resources). Strip the
+					// InNamespace option so that ClusterRoles are returned by the list call.
+					if _, ok := list.(*rbacv1.ClusterRoleList); ok {
+						filteredOpts := slices.DeleteFunc(opts, func(opt client.ListOption) bool {
+							_, isInNamespace := opt.(client.InNamespace)
+							return isInNamespace
+						})
 
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleList{}), extensionRoleListOptions).DoAndReturn(func(_ context.Context, list *rbacv1.ClusterRoleList, _ ...client.ListOption) error {
-					list.Items = []rbacv1.ClusterRole{emptyExtensionClusterRole1, emptyExtensionClusterRole2}
-					return nil
-				}),
-				c.EXPECT().Delete(ctx, &emptyExtensionClusterRole1).Return(fakeErr),
-			)
+						return cl.List(ctx, list, filteredOpts...)
+					}
+					return cl.List(ctx, list, opts...)
+				},
+				Delete: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+					// The rolebinding deletes succeed, but the first clusterrole delete fails
+					if _, ok := obj.(*rbacv1.ClusterRole); ok {
+						return fakeErr
+					}
+					return c.Delete(ctx, obj, opts...)
+				},
+			}).Build()
+
+			// Create stale rolebindings
+			rb1 := emptyExtensionRoleBinding1.DeepCopy()
+			Expect(fakeClient.Create(ctx, rb1)).To(Succeed())
+			rb2 := emptyExtensionRoleBinding2.DeepCopy()
+			Expect(fakeClient.Create(ctx, rb2)).To(Succeed())
+
+			// Create stale clusterroles
+			cr1 := emptyExtensionClusterRole1.DeepCopy()
+			Expect(fakeClient.Create(ctx, cr1)).To(Succeed())
+			cr2 := emptyExtensionClusterRole2.DeepCopy()
+			Expect(fakeClient.Create(ctx, cr2)).To(Succeed())
+
+			projectRBAC, err = New(fakeClient, project)
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(projectRBAC.DeleteStaleExtensionRolesResources(ctx)).To(MatchError(fakeErr))
 		})
@@ -552,21 +594,21 @@ var _ = Describe("ProjectRBAC", func() {
 		It("should succeed deleting the stale rolebindings and clusterroles", func() {
 			project.Spec.Members = []gardencorev1beta1.ProjectMember{{Role: "extension:" + extensionRole1}}
 
-			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), extensionRoleListOptions).DoAndReturn(func(_ context.Context, list *rbacv1.RoleBindingList, _ ...client.ListOption) error {
-					list.Items = []rbacv1.RoleBinding{emptyExtensionRoleBinding1, emptyExtensionRoleBinding2}
-					return nil
-				}),
-				c.EXPECT().Delete(ctx, &emptyExtensionRoleBinding2),
+			rb1 := emptyExtensionRoleBinding1.DeepCopy()
+			Expect(c.Create(ctx, rb1)).To(Succeed())
+			rb2 := emptyExtensionRoleBinding2.DeepCopy()
+			Expect(c.Create(ctx, rb2)).To(Succeed())
 
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleList{}), extensionRoleListOptions).DoAndReturn(func(_ context.Context, list *rbacv1.ClusterRoleList, _ ...client.ListOption) error {
-					list.Items = []rbacv1.ClusterRole{emptyExtensionClusterRole1, emptyExtensionClusterRole2}
-					return nil
-				}),
-				c.EXPECT().Delete(ctx, &emptyExtensionClusterRole2),
-			)
+			cr1 := emptyExtensionClusterRole1.DeepCopy()
+			Expect(c.Create(ctx, cr1)).To(Succeed())
+			cr2 := emptyExtensionClusterRole2.DeepCopy()
+			Expect(c.Create(ctx, cr2)).To(Succeed())
 
 			Expect(projectRBAC.DeleteStaleExtensionRolesResources(ctx)).To(Succeed())
+
+			// Verify role1 still exists (not stale), role2 was deleted (stale)
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(rb1), &rbacv1.RoleBinding{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(rb2), &rbacv1.RoleBinding{})).To(BeNotFoundError())
 		})
 	})
 })

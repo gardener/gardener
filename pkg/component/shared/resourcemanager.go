@@ -121,6 +121,8 @@ func NewTargetGardenerResourceManager(
 }
 
 var (
+	// Now is an alias for time.Now(). Exposed for testing.
+	Now = time.Now()
 	// TimeoutWaitForGardenerResourceManagerBootstrapping is the maximum time the bootstrap process for the
 	// gardener-resource-manager may take.
 	// Exposed for testing.
@@ -129,6 +131,9 @@ var (
 	// process for the gardener-resource-manager has completed.
 	// Exposed for testing.
 	IntervalWaitForGardenerResourceManagerBootstrapping = 5 * time.Second
+	// WaitUntilGardenerResourceManagerBootstrapped is the function to wait for the bootstrap process to complete.
+	// Exposed for testing.
+	WaitUntilGardenerResourceManagerBootstrapped = waitUntilGardenerResourceManagerBootstrapped
 )
 
 // DeployGardenerResourceManager deploys the gardener-resource-manager
@@ -177,7 +182,7 @@ func DeployGardenerResourceManager(
 		timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForGardenerResourceManagerBootstrapping)
 		defer cancel()
 
-		if err := waitUntilGardenerResourceManagerBootstrapped(timeoutCtx, c, namespace); err != nil {
+		if err := WaitUntilGardenerResourceManagerBootstrapped(timeoutCtx, c, namespace); err != nil {
 			return err
 		}
 	}
@@ -210,7 +215,7 @@ func mustBootstrapGardenerResourceManager(ctx context.Context, c client.Client, 
 	if err2 != nil {
 		return false, fmt.Errorf("could not parse renew timestamp: %w", err2)
 	}
-	if time.Now().UTC().After(renewTime.UTC()) {
+	if Now.UTC().After(renewTime.UTC()) {
 		return true, nil // Shoot token was not renewed.
 	}
 
@@ -285,7 +290,7 @@ func waitUntilGardenerResourceManagerBootstrapped(ctx context.Context, c client.
 			return retryutils.SevereError(fmt.Errorf("could not parse renew timestamp: %w", err2))
 		}
 
-		if time.Now().UTC().After(renewTime.UTC()) {
+		if Now.UTC().After(renewTime.UTC()) {
 			return retryutils.MinorError(errors.New("token not yet renewed"))
 		}
 
