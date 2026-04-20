@@ -997,14 +997,6 @@ profiles:
     activation:
       - env: SCENARIO=multi-zone
       - env: SCENARIO=multi-zone-ipv6
-  - name: remote
-    activation:
-      - env: SCENARIO=remote
-    patches:
-      - op: remove
-        path: /deploy/helm/releases/0/setValueTemplates/env[0].name
-      - op: remove
-        path: /deploy/helm/releases/0/setValueTemplates/env[0].value
   - name: debug
     activation:
       - command: debug
