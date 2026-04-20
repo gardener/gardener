@@ -719,6 +719,8 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			values.ShootNodeLoggingEnabled = false
 			component = New(c, namespace, values, fakeSecretManager)
 
+			Expect(component.Deploy(ctx)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
 			tlsSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "logging-tls",
@@ -726,9 +728,6 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				},
 			}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(tlsSecret), tlsSecret)).To(Succeed())
-
-			Expect(component.Deploy(ctx)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
 				getGateway(),
