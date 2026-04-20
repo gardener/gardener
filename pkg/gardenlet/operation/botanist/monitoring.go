@@ -45,7 +45,7 @@ func (b *Botanist) DefaultAlertmanager() (alertmanager.Interface, error) {
 		Replicas:           b.Shoot.GetReplicas(1),
 		AlertingSMTPSecret: b.LoadSecret(v1beta1constants.GardenRoleAlerting),
 		EmailReceivers:     emailReceivers,
-		Ingress: &alertmanager.IngressValues{
+		ExternalExposure: &alertmanager.ExposureValues{
 			Host:                      b.ComputeAlertManagerHost(),
 			SecretsManager:            b.SecretsManager,
 			SigningCA:                 v1beta1constants.SecretNameCACluster,

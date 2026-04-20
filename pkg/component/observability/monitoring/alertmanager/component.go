@@ -59,12 +59,12 @@ type Values struct {
 	// EmailReceivers is a list of email addresses to which alerts should be sent. If this list is empty, the alerts
 	// will be sent to the email address in `.data.to` in the alerting SMTP secret.
 	EmailReceivers []string
-	// Ingress contains configuration for exposing this AlertManager instance via a VirtualService resource.
-	Ingress *IngressValues
+	// ExternalExposure contains configuration for exposing this AlertManager instance via a VirtualService resource.
+	ExternalExposure *ExposureValues
 }
 
-// IngressValues contains configuration for exposing this AlertManager instance via a VirtualService resource.
-type IngressValues struct {
+// ExposureValues contains configuration for exposing this AlertManager instance via a VirtualService resource.
+type ExposureValues struct {
 	// AuthSecretName is the name of the auth secret.
 	AuthSecretName string
 	// Host is the hostname under which the AlertManager instance should be exposed.
@@ -149,14 +149,14 @@ func (a *alertManager) WaitCleanup(ctx context.Context) error {
 }
 
 func (a *alertManager) SetIngressAuthSecret(secret *corev1.Secret) {
-	if a.values.Ingress != nil && secret != nil {
-		a.values.Ingress.AuthSecretName = secret.Name
+	if a.values.ExternalExposure != nil && secret != nil {
+		a.values.ExternalExposure.AuthSecretName = secret.Name
 	}
 }
 
 func (a *alertManager) SetIngressWildcardCertSecret(secret *corev1.Secret) {
-	if a.values.Ingress != nil && secret != nil {
-		a.values.Ingress.WildcardCertSecretName = &secret.Name
+	if a.values.ExternalExposure != nil && secret != nil {
+		a.values.ExternalExposure.WildcardCertSecretName = &secret.Name
 	}
 }
 

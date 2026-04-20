@@ -1525,7 +1525,7 @@ func (r *Reconciler) newAlertmanager(
 		StorageCapacity:   resource.MustParse(getValidVolumeSize(garden.Spec.RuntimeCluster.Volume, "1Gi")),
 		Replicas:          2,
 		RuntimeVersion:    r.RuntimeVersion,
-		Ingress: &alertmanager.IngressValues{
+		ExternalExposure: &alertmanager.ExposureValues{
 			Host:                      "alertmanager-garden." + ingressDomain,
 			IsGardenCluster:           true,
 			IstioIngressGatewayLabels: ingressGatewayValues[0].Labels,

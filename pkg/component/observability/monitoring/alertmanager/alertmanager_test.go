@@ -532,7 +532,7 @@ var _ = Describe("Alertmanager", func() {
 
 			When("ingress is configured", func() {
 				BeforeEach(func() {
-					values.Ingress = &IngressValues{
+					values.ExternalExposure = &ExposureValues{
 						AuthSecretName:         ingressAuthSecretName,
 						Host:                   ingressHost,
 						WildcardCertSecretName: &ingressWildcardSecretName,

@@ -76,8 +76,8 @@ func (a *alertManager) alertManager() *monitoringv1.Alertmanager {
 		obj.Spec.PodMetadata.Labels[v1beta1constants.GardenRole] = v1beta1constants.GardenRoleMonitoring
 	}
 
-	if a.values.Ingress != nil {
-		obj.Spec.ExternalURL = "https://" + a.values.Ingress.Host
+	if a.values.ExternalExposure != nil {
+		obj.Spec.ExternalURL = "https://" + a.values.ExternalExposure.Host
 	}
 
 	return obj

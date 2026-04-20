@@ -25,7 +25,7 @@ import (
 )
 
 func (a *alertManager) istioResources(ctx context.Context) ([]client.Object, error) {
-	if a.values.Ingress == nil {
+	if a.values.ExternalExposure == nil {
 		return nil, nil
 	}
 
@@ -37,22 +37,22 @@ func (a *alertManager) istioResources(ctx context.Context) ([]client.Object, err
 		gatewayName      = a.name()
 	)
 
-	if a.values.Ingress.IsGardenCluster {
+	if a.values.ExternalExposure.IsGardenCluster {
 		ingressNamespace = operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace
 		gatewayName = operatorv1alpha1.VirtualGardenNamePrefix + gatewayName
 	}
 
-	tlsSecretName := ptr.Deref(a.values.Ingress.WildcardCertSecretName, "")
-	if tlsSecretName == "" && a.values.Ingress.SecretsManager != nil {
-		ingressTLSSecret, err := a.values.Ingress.SecretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
+	tlsSecretName := ptr.Deref(a.values.ExternalExposure.WildcardCertSecretName, "")
+	if tlsSecretName == "" && a.values.ExternalExposure.SecretsManager != nil {
+		ingressTLSSecret, err := a.values.ExternalExposure.SecretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 			Name:                        a.name() + "-tls",
 			CommonName:                  a.name(),
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:                    []string{a.values.Ingress.Host},
+			DNSNames:                    []string{a.values.ExternalExposure.Host},
 			CertType:                    secretsutils.ServerCert,
 			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(a.values.Ingress.SigningCA))
+		}, secretsmanager.SignedByCA(a.values.ExternalExposure.SigningCA))
 		if err != nil {
 			return nil, err
 		}
@@ -83,8 +83,8 @@ func (a *alertManager) istioResources(ctx context.Context) ([]client.Object, err
 	if err := istio.GatewayWithTLSTermination(
 		gateway,
 		a.getLabels(),
-		a.values.Ingress.IstioIngressGatewayLabels,
-		[]string{a.values.Ingress.Host},
+		a.values.ExternalExposure.IstioIngressGatewayLabels,
+		[]string{a.values.ExternalExposure.Host},
 		tlsSecretInIstioNamespace.Name,
 	)(); err != nil {
 		return nil, fmt.Errorf("failed to create gateway resource: %w", err)
@@ -94,8 +94,8 @@ func (a *alertManager) istioResources(ctx context.Context) ([]client.Object, err
 	virtualService := &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: a.namespace}}
 	if err := istio.VirtualServiceForTLSTermination(
 		virtualService,
-		utils.MergeStringMaps(a.getLabels(), map[string]string{v1beta1constants.LabelBasicAuthSecretName: a.values.Ingress.AuthSecretName}),
-		[]string{a.values.Ingress.Host},
+		utils.MergeStringMaps(a.getLabels(), map[string]string{v1beta1constants.LabelBasicAuthSecretName: a.values.ExternalExposure.AuthSecretName}),
+		[]string{a.values.ExternalExposure.Host},
 		gatewayName,
 		port,
 		destinationHost,
