@@ -104,7 +104,7 @@ var _ = Describe("#CRDs", func() {
 			},
 
 			Entry("BackupBucket", "backupbuckets.extensions.gardener.cloud", Succeed()),
-			Entry("BackupEntry", "backupentries.extensions.gardener.cloud", BeNotFoundError()),
+			Entry("BackupEntry", "backupentries.extensions.gardener.cloud", Succeed()),
 			Entry("Bastion", "bastions.extensions.gardener.cloud", BeNotFoundError()),
 			Entry("Cluster", "clusters.extensions.gardener.cloud", BeNotFoundError()),
 			Entry("ContainerRuntime", "containerruntimes.extensions.gardener.cloud", BeNotFoundError()),
@@ -127,7 +127,7 @@ var _ = Describe("#CRDs", func() {
 			},
 
 			Entry("BackupBucket", "backupbuckets.extensions.gardener.cloud", Succeed()),
-			Entry("BackupEntry", "backupentries.extensions.gardener.cloud", BeNotFoundError()),
+			Entry("BackupEntry", "backupentries.extensions.gardener.cloud", Succeed()),
 			Entry("Bastion", "bastions.extensions.gardener.cloud", BeNotFoundError()),
 			Entry("Cluster", "clusters.extensions.gardener.cloud", BeNotFoundError()),
 			Entry("ContainerRuntime", "containerruntimes.extensions.gardener.cloud", BeNotFoundError()),
@@ -154,7 +154,7 @@ var _ = Describe("#CRDs", func() {
 			},
 
 			Entry("BackupBucket", "backupbuckets.extensions.gardener.cloud", BeNotFoundError()),
-			Entry("BackupEntry", "backupentries.extensions.gardener.cloud", Succeed()),
+			Entry("BackupEntry", "backupentries.extensions.gardener.cloud", BeNotFoundError()),
 			Entry("Bastion", "bastions.extensions.gardener.cloud", Succeed()),
 			Entry("Cluster", "clusters.extensions.gardener.cloud", Succeed()),
 			Entry("ContainerRuntime", "containerruntimes.extensions.gardener.cloud", Succeed()),
@@ -177,7 +177,7 @@ var _ = Describe("#CRDs", func() {
 			},
 
 			Entry("BackupBucket", "backupbuckets.extensions.gardener.cloud", BeNotFoundError()),
-			Entry("BackupEntry", "backupentries.extensions.gardener.cloud", Succeed()),
+			Entry("BackupEntry", "backupentries.extensions.gardener.cloud", BeNotFoundError()),
 			Entry("Bastion", "bastions.extensions.gardener.cloud", Succeed()),
 			Entry("Cluster", "clusters.extensions.gardener.cloud", Succeed()),
 			Entry("ContainerRuntime", "containerruntimes.extensions.gardener.cloud", Succeed()),
@@ -222,7 +222,7 @@ var _ = Describe("#CRDs", func() {
 			Expect(crdDeployer.Destroy(ctx)).To(Succeed(), "extensions crds deletion succeeds")
 
 			Expect(c.Get(ctx, client.ObjectKey{Name: "backupbuckets.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKey{Name: "backupentries.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "backupentries.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "bastions.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "clusters.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "containerruntimes.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
@@ -241,7 +241,7 @@ var _ = Describe("#CRDs", func() {
 			Expect(crdDeployer.Destroy(ctx)).To(Succeed(), "extensions crds deletion succeeds")
 
 			Expect(c.Get(ctx, client.ObjectKey{Name: "backupbuckets.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKey{Name: "backupentries.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "backupentries.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "bastions.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "clusters.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "containerruntimes.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())

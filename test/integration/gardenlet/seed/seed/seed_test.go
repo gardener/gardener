@@ -515,7 +515,6 @@ var _ = Describe("Seed controller tests", func() {
 						"machines.machine.sapcloud.io",
 						"machinesets.machine.sapcloud.io",
 						// extensions
-						"backupentries.extensions.gardener.cloud",
 						"bastions.extensions.gardener.cloud",
 						"clusters.extensions.gardener.cloud",
 						"containerruntimes.extensions.gardener.cloud",
@@ -529,6 +528,7 @@ var _ = Describe("Seed controller tests", func() {
 					crdsSharedWithGardenCluster = []string{
 						// extensions
 						"backupbuckets.extensions.gardener.cloud",
+						"backupentries.extensions.gardener.cloud",
 						"dnsrecords.extensions.gardener.cloud",
 						"extensions.extensions.gardener.cloud",
 						// etcd-druid

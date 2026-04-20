@@ -48,12 +48,12 @@ func NewCRD(client client.Client, includeGeneralCRDs, includeShootCRDs bool) (co
 		crds        []string
 		generalCRDs = []string{
 			backupBucketCRD,
+			backupEntryCRD,
 			dnsRecordCRD,
 			extensionCRD,
 		}
 
 		shootCRDs = []string{
-			backupEntryCRD,
 			bastionCRD,
 			clusterCRD,
 			containerRuntimeCRD,
