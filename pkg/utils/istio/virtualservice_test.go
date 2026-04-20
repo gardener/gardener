@@ -30,7 +30,7 @@ var _ = Describe("VirtualService", func() {
 		Expect(virtualService.Spec.Gateways[0]).To(Equal(gatewayName))
 		Expect(virtualService.Spec.Tls).To(HaveLen(1))
 		Expect(virtualService.Spec.Tls[0].Match).To(HaveLen(1))
-		Expect(virtualService.Spec.Tls[0].Match[0].Port).To(Equal(port))
+		Expect(virtualService.Spec.Tls[0].Match[0].Port).To(Equal(uint32(443)))
 		Expect(virtualService.Spec.Tls[0].Match[0].SniHosts).To(Equal(hosts))
 		Expect(virtualService.Spec.Tls[0].Route).To(HaveLen(1))
 		Expect(virtualService.Spec.Tls[0].Route[0].Destination.Host).To(Equal(destinationHost))

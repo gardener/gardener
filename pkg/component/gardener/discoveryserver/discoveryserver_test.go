@@ -461,7 +461,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 				Gateways: []string{"gardener-discovery-server"},
 				Tls: []*istioapinetworkingv1alpha3.TLSRoute{{
 					Match: []*istioapinetworkingv1alpha3.TLSMatchAttributes{{
-						Port:     10443,
+						Port:     443,
 						SniHosts: []string{"discovery.local.gardener.cloud"},
 					}},
 					Route: []*istioapinetworkingv1alpha3.RouteDestination{{
