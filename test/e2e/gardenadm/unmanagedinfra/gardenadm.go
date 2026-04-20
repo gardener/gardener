@@ -48,17 +48,10 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 
 	Describe("Single-node control plane", Ordered, Label("single"), func() {
 		var (
-			portForwardCtx    context.Context
-			cancelPortForward context.CancelFunc
-			shootClientSet    kubernetes.Interface
+			shootClientSet kubernetes.Interface
 
 			configDirectory = "/gardenadm/resources"
 		)
-
-		BeforeAll(func() {
-			portForwardCtx, cancelPortForward = context.WithCancel(context.Background())
-			DeferCleanup(func() { cancelPortForward() })
-		})
 
 		Context("gardenadm init + join", Ordered, Label("initjoin"), func() {
 			BeforeAll(func(ctx SpecContext) {
@@ -99,37 +92,20 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 				Eventually(ctx, stdOut).Should(gbytes.Say("Your Shoot cluster control-plane has initialized successfully!"))
 			}, SpecTimeout(15*time.Minute))
 
-			It("copy admin kubeconfig and create client", func(ctx SpecContext) {
-				tempDir, err := os.MkdirTemp("", "tmp")
-				Expect(err).NotTo(HaveOccurred())
-				DeferCleanup(func() { Expect(os.RemoveAll(tempDir)).To(Succeed()) })
-				adminKubeconfigFile := filepath.Join(tempDir, "admin.conf")
+			It("should create a client for the self-hosted shoot API server", func(ctx SpecContext) {
+				var adminKubeconfig []byte
 
-				By("Copy admin kubeconfig to local file")
-				localPort := 6443
-				Eventually(ctx, func(g Gomega) error {
+				By("Read admin kubeconfig from control plane machine")
+				Eventually(ctx, func(g Gomega) {
 					stdOut, _, err := execute(ctx, 0, "cat", "/etc/kubernetes/admin.conf")
 					g.Expect(err).NotTo(HaveOccurred())
-
-					kubeconfig := strings.ReplaceAll(string(stdOut.Contents()), fmt.Sprintf("api.%s.%s.external.local.gardener.cloud", shootName, shootNamespace), fmt.Sprintf("localhost:%d", localPort))
-					return os.WriteFile(adminKubeconfigFile, []byte(kubeconfig), 0600)
+					adminKubeconfig = stdOut.Contents()
 				}).Should(Succeed())
-
-				By("Forward port to control plane machine pod")
-				fw, err := kubernetes.SetupPortForwarder(portForwardCtx, RuntimeClient.RESTConfig(), namespace, machinePodName(0), localPort, 443)
-				Expect(err).NotTo(HaveOccurred())
-
-				go func() {
-					if err := fw.ForwardPorts(); err != nil {
-						Fail("Error forwarding ports: " + err.Error())
-					}
-				}()
-
-				Eventually(func() chan struct{} { return fw.Ready() }).Should(BeClosed())
 
 				By("Create client set")
 				Eventually(func() error {
-					shootClientSet, err = kubernetes.NewClientFromFile("", adminKubeconfigFile,
+					var err error
+					shootClientSet, err = kubernetes.NewClientFromBytes(adminKubeconfig,
 						kubernetes.WithDisabledCachedClient(),
 						kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
 					)
