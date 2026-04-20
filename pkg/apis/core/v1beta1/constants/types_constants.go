@@ -200,9 +200,9 @@ const (
 	// DeploymentNameVictoriaOperator is a constant for the name of a Kubernetes deployment object that contains
 	// the victoria-operator pod.
 	DeploymentNameVictoriaOperator = "victoria-operator"
-	// StatefulSetNameVictoriaLogs is a constant for the name of a Kubernetes stateful set object that contains
+	// DeploymentNameVictoriaLogs is a constant for the name of a Kubernetes stateful set object that contains
 	// the victoria-logs pod.
-	StatefulSetNameVictoriaLogs = "victoria-logs"
+	DeploymentNameVictoriaLogs = "victoria-logs"
 
 	// DeploymentNameVPAAdmissionController is a constant for the name of the VPA admission controller deployment.
 	DeploymentNameVPAAdmissionController = "vpa-admission-controller"

@@ -30,11 +30,11 @@ func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 	return []*fluentbitv1alpha2.ClusterFilter{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   fmt.Sprintf("%s--%s", v1beta1constants.StatefulSetNameVictoriaLogs, vlsingleName),
+				Name:   fmt.Sprintf("%s--%s", v1beta1constants.DeploymentNameVictoriaLogs, vlsingleName),
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.FilterSpec{
-				Match: fmt.Sprintf("kubernetes.*%s*%s*", vlsingleName, v1beta1constants.StatefulSetNameVictoriaLogs),
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", vlsingleName, v1beta1constants.DeploymentNameVictoriaLogs),
 				FilterItems: []fluentbitv1alpha2.FilterItem{
 					{
 						Parser: &fluentbitv1alpha2filter.Parser{
