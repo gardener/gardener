@@ -9,16 +9,22 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/component"
+	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
 	mockalertmanager "github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager/mock"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -36,6 +42,7 @@ var _ = Describe("Monitoring", func() {
 
 		botanist              *Botanist
 		alertManager          *mockalertmanager.MockInterface
+		prometheus            *mockcomponent.MockWaiter
 		controlPlaneNamespace = "shoot--foo--bar"
 
 		ingressAuthSecret     *corev1.Secret
@@ -49,6 +56,7 @@ var _ = Describe("Monitoring", func() {
 		fakeSecretManager = fakesecretsmanager.New(fakeSeedClient, controlPlaneNamespace)
 
 		alertManager = mockalertmanager.NewMockInterface(ctrl)
+		prometheus = mockcomponent.NewMockWaiter(ctrl)
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
@@ -60,6 +68,7 @@ var _ = Describe("Monitoring", func() {
 					Components: &shootpkg.Components{
 						ControlPlane: &shootpkg.ControlPlane{
 							Alertmanager: alertManager,
+							Prometheus:   newMockPrometheus(prometheus),
 						},
 					},
 					WantsAlertmanager: true,
@@ -128,4 +137,79 @@ var _ = Describe("Monitoring", func() {
 			Expect(botanist.WaitForAlertManager(ctx)).To(Succeed())
 		})
 	})
+
+	Describe("#WaitForPrometheus", func() {
+		It("should successfully wait for prometheus", func() {
+			prometheus.EXPECT().Wait(ctx)
+			Expect(botanist.WaitForPrometheus(ctx)).To(Succeed())
+		})
+
+		It("should successfully wait for prometheus cleanup", func() {
+			botanist.Shoot.Purpose = gardencorev1beta1.ShootPurposeTesting
+			prometheus.EXPECT().WaitCleanup(ctx)
+			Expect(botanist.WaitForPrometheus(ctx)).To(Succeed())
+		})
+	})
 })
+
+type mockPrometheus struct {
+	prometheus.Interface
+
+	waiter component.Waiter
+}
+
+func newMockPrometheus(w component.Waiter) prometheus.Interface {
+	return &mockPrometheus{
+		waiter: w,
+	}
+}
+
+// SetIngressAuthSecret sets the ingress authentication secret name.
+func (m *mockPrometheus) SetIngressAuthSecret(_ *corev1.Secret) {
+	panic("unexpected call to SetIngressAuthSecret")
+}
+
+// SetIngressWildcardCertSecret sets the ingress wildcard certificate secret name.
+func (m *mockPrometheus) SetIngressWildcardCertSecret(_ *corev1.Secret) {
+	panic("unexpected call to SetIngressWildcardCertSecret")
+}
+
+// SetCentralScrapeConfigs sets the central scrape configs.
+func (m *mockPrometheus) SetCentralScrapeConfigs(_ []*monitoringv1alpha1.ScrapeConfig) {
+	panic("unexpected call to SetCentralScrapeConfigs")
+}
+
+// SetCentralPrometheusRules sets the central Prometheus rules.
+func (m *mockPrometheus) SetCentralPrometheusRules(_ []*monitoringv1.PrometheusRule) {
+	panic("unexpected call to SetCentralPrometheusRules")
+}
+
+// SetNamespaceUID sets the namespace UID.
+func (m *mockPrometheus) SetNamespaceUID(_ types.UID) {
+	panic("unexpected call to SetNamespaceUID")
+}
+
+// SetAdditionalAlertRelabelConfigs sets the additional alert relabel configs.
+func (m *mockPrometheus) SetAdditionalAlertRelabelConfigs(_ []monitoringv1.RelabelConfig) {
+	panic("unexpected call to SetAdditionalAlertRelabelConfigs")
+}
+
+// Deploy a component.
+func (m *mockPrometheus) Deploy(_ context.Context) error {
+	panic("unexpected call to Deploy")
+}
+
+// Destroy already deployed component.
+func (m *mockPrometheus) Destroy(_ context.Context) error {
+	panic("unexpected call to Destroy")
+}
+
+// Wait for deployment to finish and component to report ready.
+func (m *mockPrometheus) Wait(ctx context.Context) error {
+	return m.waiter.Wait(ctx)
+}
+
+// WaitCleanup for destruction to finish and component to be fully removed.
+func (m *mockPrometheus) WaitCleanup(ctx context.Context) error {
+	return m.waiter.WaitCleanup(ctx)
+}

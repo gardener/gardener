@@ -204,3 +204,11 @@ func (b *Botanist) DestroyPrometheus(ctx context.Context) error {
 
 	return kubernetesutils.DeleteObject(ctx, b.SeedClientSet.Client(), gardenerutils.NewShootAccessSecret(shootprometheus.AccessSecretName, b.Shoot.ControlPlaneNamespace).Secret)
 }
+
+// WaitForPrometheus waits for the shoot prometheus to be ready.
+func (b *Botanist) WaitForPrometheus(ctx context.Context) error {
+	if !b.IsShootMonitoringEnabled() {
+		return b.Shoot.Components.ControlPlane.Prometheus.WaitCleanup(ctx)
+	}
+	return b.Shoot.Components.ControlPlane.Prometheus.Wait(ctx)
+}

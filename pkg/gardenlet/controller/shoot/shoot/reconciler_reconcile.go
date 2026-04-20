@@ -951,7 +951,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		waitUntilPrometheusReady = g.Add(flow.Task{
 			Name:         "Waiting until Shoot Prometheus is ready",
-			Fn:           o.Shoot.Components.ControlPlane.Prometheus.Wait,
+			Fn:           botanist.WaitForPrometheus,
 			Dependencies: flow.NewTaskIDs(deployPrometheus),
 		})
 		_ = g.Add(flow.Task{
