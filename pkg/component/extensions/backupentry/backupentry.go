@@ -39,6 +39,7 @@ type Interface interface {
 	SetType(string)
 	SetProviderConfig(*runtime.RawExtension)
 	SetRegion(string)
+	SetSecretRef(corev1.SecretReference)
 	SetBackupBucketProviderStatus(*runtime.RawExtension)
 }
 
@@ -50,6 +51,8 @@ type Values struct {
 	Type string
 	// ProviderConfig contains the provider config for the BackupEntry extension.
 	ProviderConfig *runtime.RawExtension
+	// Class is the extension class of this BackupEntry.
+	Class *extensionsv1alpha1.ExtensionClass
 	// Region is the infrastructure region of the BackupEntry.
 	Region string
 	// SecretRef is a reference to a secret with the infrastructure credentials.
@@ -114,6 +117,7 @@ func (b *backupEntry) deploy(ctx context.Context, operation string) (extensionsv
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type:           b.values.Type,
 				ProviderConfig: b.values.ProviderConfig,
+				Class:          b.values.Class,
 			},
 			Region:                     b.values.Region,
 			SecretRef:                  b.values.SecretRef,
@@ -207,6 +211,10 @@ func (b *backupEntry) SetProviderConfig(providerConfig *runtime.RawExtension) {
 
 func (b *backupEntry) SetRegion(region string) {
 	b.values.Region = region
+}
+
+func (b *backupEntry) SetSecretRef(secretRef corev1.SecretReference) {
+	b.values.SecretRef = secretRef
 }
 
 func (b *backupEntry) SetBackupBucketProviderStatus(providerStatus *runtime.RawExtension) {

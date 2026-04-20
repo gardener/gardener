@@ -47,6 +47,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	extensionsbackupentry "github.com/gardener/gardener/pkg/component/extensions/backupentry"
 	extensioncrds "github.com/gardener/gardener/pkg/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/component/extensions/extension"
 	runtimegardensystem "github.com/gardener/gardener/pkg/component/garden/system/runtime"
@@ -115,6 +116,7 @@ type components struct {
 
 	extensions extension.Interface
 
+	etcdMainBackupEntry                  extensionsbackupentry.Interface
 	etcdMain                             etcd.Interface
 	etcdEvents                           etcd.Interface
 	kubeAPIServerService                 component.DeployWaiter
@@ -239,6 +241,11 @@ func (r *Reconciler) instantiateComponents(
 
 	// garden extensions
 	c.extensions = r.newExtensions(log, garden, extensionList)
+
+	// etcd backup entry
+	if helper.GetETCDMainBackup(garden) != nil {
+		c.etcdMainBackupEntry = r.newEtcdMainBackupEntry(log, garden)
+	}
 
 	// virtual garden control plane components
 	c.etcdMain, err = r.newEtcd(log, garden, secretsManager, v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
@@ -1816,6 +1823,36 @@ func discoveryServerTLSSecretName(garden *operatorv1alpha1.Garden, wildcardCertS
 		return config.TLSSecretName
 	}
 	return wildcardCertSecretName
+}
+
+// newEtcdMainBackupEntry creates a BackupEntry component for the ETCD main backup. The name follows the
+// <namespace>--<uid> convention so that the generic actuator's `ExtractShootDetailsFromBackupEntryName` can derive
+// the garden namespace and create the `etcd-backup` secret there.
+func (r *Reconciler) newEtcdMainBackupEntry(log logr.Logger, garden *operatorv1alpha1.Garden) extensionsbackupentry.Interface {
+	backup := helper.GetETCDMainBackup(garden)
+
+	var region string
+	switch {
+	case backup.Region != nil:
+		region = *backup.Region
+	case garden.Spec.RuntimeCluster.Provider.Region != nil:
+		region = *garden.Spec.RuntimeCluster.Provider.Region
+	}
+
+	bucketName, _ := etcdMainBackupBucketNameAndPrefix(garden)
+
+	return extensionsbackupentry.New(log, r.RuntimeClientSet.Client(), r.Clock, &extensionsbackupentry.Values{
+		Name:           r.GardenNamespace + "--" + string(garden.UID),
+		Type:           backup.Provider,
+		ProviderConfig: backup.ProviderConfig,
+		Class:          ptr.To(extensionsv1alpha1.ExtensionClassGarden),
+		Region:         region,
+		SecretRef: corev1.SecretReference{
+			Name:      backup.SecretRef.Name,
+			Namespace: r.GardenNamespace,
+		},
+		BucketName: bucketName,
+	}, extensionsbackupentry.DefaultInterval, extensionsbackupentry.DefaultSevereThreshold, extensionsbackupentry.DefaultTimeout)
 }
 
 func workloadIdentityTokenIssuerURL(garden *operatorv1alpha1.Garden) string {

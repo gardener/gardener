@@ -15,6 +15,7 @@ import (
 
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gomock "go.uber.org/mock/gomock"
+	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -132,6 +133,18 @@ func (m *MockInterface) SetRegion(arg0 string) {
 func (mr *MockInterfaceMockRecorder) SetRegion(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRegion", reflect.TypeOf((*MockInterface)(nil).SetRegion), arg0)
+}
+
+// SetSecretRef mocks base method.
+func (m *MockInterface) SetSecretRef(arg0 v1.SecretReference) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetSecretRef", arg0)
+}
+
+// SetSecretRef indicates an expected call of SetSecretRef.
+func (mr *MockInterfaceMockRecorder) SetSecretRef(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSecretRef", reflect.TypeOf((*MockInterface)(nil).SetSecretRef), arg0)
 }
 
 // SetType mocks base method.

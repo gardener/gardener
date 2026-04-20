@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	testclock "k8s.io/utils/clock/testing"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -54,6 +55,7 @@ var _ = Describe("#BackupEntry", func() {
 		bucketName                 = "bucketname"
 		providerType               = "foo"
 		providerConfig             = &runtime.RawExtension{Raw: []byte(`{"bar":"foo"}`)}
+		class                      = ptr.To(extensionsv1alpha1.ExtensionClassShoot)
 		backupBucketProviderStatus = &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)}
 		secretRef                  = corev1.SecretReference{
 			Name:      "secretname",
@@ -79,6 +81,7 @@ var _ = Describe("#BackupEntry", func() {
 			Name:                       name,
 			Type:                       providerType,
 			ProviderConfig:             providerConfig,
+			Class:                      class,
 			Region:                     region,
 			SecretRef:                  secretRef,
 			BucketName:                 bucketName,
@@ -103,6 +106,7 @@ var _ = Describe("#BackupEntry", func() {
 				DefaultSpec: extensionsv1alpha1.DefaultSpec{
 					Type:           providerType,
 					ProviderConfig: providerConfig,
+					Class:          class,
 				},
 				Region:                     region,
 				SecretRef:                  secretRef,

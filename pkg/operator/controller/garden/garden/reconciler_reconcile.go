@@ -6,6 +6,7 @@ package garden
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -271,10 +272,27 @@ func (r *Reconciler) reconcile(
 			},
 			SkipIf: !backupConfigured,
 		})
+		deployEtcdBackupEntry = g.Add(flow.Task{
+			Name: "Reconciling main ETCD backup entry",
+			Fn: func(ctx context.Context) error {
+				if backupBucket.Status.GeneratedSecretRef != nil {
+					secretRef := *backupBucket.Status.GeneratedSecretRef
+					if secretRef.Namespace == "" {
+						secretRef.Namespace = r.GardenNamespace
+					}
+					c.etcdMainBackupEntry.SetSecretRef(secretRef)
+				}
+
+				c.etcdMainBackupEntry.SetBackupBucketProviderStatus(backupBucket.Status.ProviderStatus)
+				return component.OpWait(c.etcdMainBackupEntry).Deploy(ctx)
+			},
+			SkipIf:       !backupConfigured,
+			Dependencies: flow.NewTaskIDs(deployEtcdBackupBucket),
+		})
 		deployEtcds = g.Add(flow.Task{
 			Name:         "Deploying main and events ETCDs of virtual garden",
-			Fn:           r.deployEtcdsFunc(garden, c.etcdMain, c.etcdEvents, backupBucket),
-			Dependencies: flow.NewTaskIDs(waitUntilEtcdDruidReady, deployEtcdBackupBucket),
+			Fn:           r.deployEtcdsFunc(garden, c.etcdMain, c.etcdEvents),
+			Dependencies: flow.NewTaskIDs(waitUntilEtcdDruidReady, deployEtcdBackupEntry),
 		})
 		waitUntilEtcdsReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event ETCDs report readiness",
@@ -846,22 +864,29 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 	return nil
 }
 
-func (r *Reconciler) deployEtcdMainBackupBucket(ctx context.Context, garden *operatorv1alpha1.Garden, backupBucket *extensionsv1alpha1.BackupBucket) error {
+func resolveETCDMainBackupConfig(garden *operatorv1alpha1.Garden) (*operatorv1alpha1.Backup, string, error) {
 	backup := helper.GetETCDMainBackup(garden)
 	if backup == nil {
-		return fmt.Errorf("no ETCD main backup configuration found in Garden resource")
+		return nil, "", errors.New("no ETCD main backup configuration found in Garden resource")
 	}
 
-	var bucketRegion string
-	if backup.Region != nil {
-		bucketRegion = *backup.Region
-	} else if garden.Spec.RuntimeCluster.Provider.Region != nil {
-		bucketRegion = *garden.Spec.RuntimeCluster.Provider.Region
-	} else {
-		return fmt.Errorf("no region found in spec.virtualCluster.etcd.main.backup.region of spec.runtimeCluster.provider.region in Garden resource")
+	switch {
+	case backup.Region != nil:
+		return backup, *backup.Region, nil
+	case garden.Spec.RuntimeCluster.Provider.Region != nil:
+		return backup, *garden.Spec.RuntimeCluster.Provider.Region, nil
+	default:
+		return nil, "", errors.New("no region found in spec.virtualCluster.etcd.main.backup.region or spec.runtimeCluster.provider.region in Garden resource")
+	}
+}
+
+func (r *Reconciler) deployEtcdMainBackupBucket(ctx context.Context, garden *operatorv1alpha1.Garden, backupBucket *extensionsv1alpha1.BackupBucket) error {
+	backup, bucketRegion, err := resolveETCDMainBackupConfig(garden)
+	if err != nil {
+		return err
 	}
 
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.RuntimeClientSet.Client(), backupBucket, func() error {
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.RuntimeClientSet.Client(), backupBucket, func() error {
 		metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().Format(time.RFC3339Nano))
 
@@ -900,7 +925,7 @@ func etcdMainBackupBucketNameAndPrefix(garden *operatorv1alpha1.Garden) (string,
 	return "garden-" + string(garden.UID), prefix
 }
 
-func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, etcdEvents etcd.Interface, backupBucket *extensionsv1alpha1.BackupBucket) func(context.Context) error {
+func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, etcdEvents etcd.Interface) func(context.Context) error {
 	return func(ctx context.Context) error {
 		if backup := helper.GetETCDMainBackup(garden); backup != nil {
 			snapshotSchedule, err := timewindow.DetermineSchedule(
@@ -920,16 +945,11 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 				backupLeaderElection = r.Config.Controllers.Garden.ETCDConfig.BackupLeaderElection
 			}
 
-			secretRefName := backup.SecretRef.Name
-			if backupBucket.Status.GeneratedSecretRef != nil {
-				secretRefName = backupBucket.Status.GeneratedSecretRef.Name
-			}
-
 			container, prefix := etcdMainBackupBucketNameAndPrefix(garden)
 
 			etcdMain.SetBackupConfig(&etcd.BackupConfig{
 				Provider:             backup.Provider,
-				SecretRefName:        secretRefName,
+				SecretRefName:        v1beta1constants.BackupSecretName,
 				Container:            container,
 				Prefix:               prefix,
 				FullSnapshotSchedule: snapshotSchedule,

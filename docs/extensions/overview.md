@@ -49,7 +49,7 @@ The `.spec.class` field identifies the different deployment cases.
 #### Garden
 
 Extension controllers serve the garden (run in garden runtime), e.g., installing certificates for API and ingress endpoints.
-In the course of the `Garden` reconciliation, the `gardener-operator` creates `BackupBucket`, `DNSRecord` and `Extension` resources (group `extensions.gardener.cloud`) which triggers the responsible extension controllers to reconcile them.
+In the course of the `Garden` reconciliation, the `gardener-operator` creates `BackupBucket`, `BackupEntry`, `DNSRecord` and `Extension` resources (group `extensions.gardener.cloud`) which triggers the responsible extension controllers to reconcile them.
 
 #### Seed
 

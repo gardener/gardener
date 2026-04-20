@@ -87,6 +87,7 @@ build:
             - pkg/component/crddeployer
             - pkg/component/etcd/etcd
             - pkg/component/etcd/etcd/constants
+            - pkg/component/extensions/backupentry
             - pkg/component/extensions/crds
             - pkg/component/extensions/dnsrecord
             - pkg/component/extensions/extension

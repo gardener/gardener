@@ -88,8 +88,9 @@ It contains configuration for the following scenarios:
 - The deployment of `ControllerRegistration` and `ControllerDeployment` resources in the (virtual) garden cluster.
 - The deployment of [extension admissions charts](../extensions/admission.md) in runtime and virtual clusters.
 
-With regard to the `Garden` reconciliation process, there are specific types of extensions that are of key interest, namely the `BackupBucket`, `DNSRecord`, and `Extension` types.
+With regard to the `Garden` reconciliation process, there are specific types of extensions that are of key interest, namely the `BackupBucket`, `BackupEntry`, `DNSRecord`, and `Extension` types.
 The `BackupBucket` extension is utilized to manage the backup bucket dedicated to the garden's main etcd.
+The `BackupEntry` extension manages the backup entry within the bucket, using the provider-generated credentials from the `BackupBucket`.
 The `DNSRecord` extension type is essential to manage the API server and ingress DNS records.
 Lastly, the `Extension` type plays a crucial role in managing generic Gardener extensions which deploy various components within the runtime cluster. These extensions can be activated and configured in the `.spec.extensions` field of the `Garden` resource. These extensions can supplement functionality and provide new capabilities.
 
@@ -113,7 +114,7 @@ Each one is described in more details below.
 
 ##### Runtime
 
-Extensions can manage resources required by the `Garden` resource (e.g. `BackupBucket`, `DNSRecord`, `Extension`) in the runtime cluster.
+Extensions can manage resources required by the `Garden` resource (e.g. `BackupBucket`, `BackupEntry`, `DNSRecord`, `Extension`) in the runtime cluster.
 Since the environment in the runtime cluster may differ from that of a `Seed`, the extension is installed in the runtime cluster with a distinct set of Helm chart values specified in `.spec.deployment.extension.runtimeValues`.
 If no `runtimeValues` are provided, the extension deployment for the runtime garden is considered superfluous and the deployment is uninstalled.
 The configuration allows for precise control over various extension parameters, such as requested resources, [priority classes](../development/priority-classes.md), and more.
@@ -123,7 +124,7 @@ Besides the values configured in `.spec.deployment.extension.runtimeValues`, a r
 ```yaml
 gardener:
   runtimeCluster:
-    enabled: true # indicates the extension is enabled for the Garden cluster, e.g. for handling `BackupBucket`, `DNSRecord` and `Extension` objects.
+    enabled: true # indicates the extension is enabled for the Garden cluster, e.g. for handling `BackupBucket`, `BackupEntry`, `DNSRecord` and `Extension` objects.
     priorityClassName: gardener-garden-system-200
 ```
 
