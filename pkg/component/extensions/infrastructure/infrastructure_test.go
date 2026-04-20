@@ -12,17 +12,15 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -34,7 +32,6 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("#Interface", func() {
@@ -49,7 +46,6 @@ var _ = Describe("#Interface", func() {
 		log     logr.Logger
 		fakeErr = errors.New("fake")
 
-		ctrl      *gomock.Controller
 		c         client.Client
 		fakeClock *testclock.FakeClock
 		now       time.Time
@@ -75,13 +71,12 @@ var _ = Describe("#Interface", func() {
 		ctx = context.TODO()
 		log = logr.Discard()
 
-		ctrl = gomock.NewController(GinkgoT())
 		now = time.Unix(60, 0)
 		fakeClock = testclock.NewFakeClock(now)
 
 		s := runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).To(Succeed())
-		c = fake.NewClientBuilder().WithScheme(s).Build()
+		c = fake.NewClientBuilder().WithScheme(s).WithStatusSubresource(&extensionsv1alpha1.Infrastructure{}).Build()
 
 		region = "europe"
 		sshPublicKey = []byte("secure")
@@ -137,10 +132,14 @@ var _ = Describe("#Interface", func() {
 		)
 
 		deployWaiter = infrastructure.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+
+		DeferCleanup(test.WithVars(
+			&infrastructure.TimeNow, fakeClock.Now,
+			&extensions.TimeNow, fakeClock.Now,
+		))
 	})
 
 	AfterEach(func() {
-		ctrl.Finish()
 		cleanupFunc()
 	})
 
@@ -150,10 +149,6 @@ var _ = Describe("#Interface", func() {
 		})
 
 		It("correct Infrastructure is created (AnnotateOperation=false)", func() {
-			defer test.WithVars(
-				&infrastructure.TimeNow, fakeClock.Now,
-			)()
-
 			deployWaiter.SetSSHPublicKey([]byte(""))
 			Expect(deployWaiter.Deploy(ctx)).To(Succeed())
 
@@ -165,10 +160,6 @@ var _ = Describe("#Interface", func() {
 		})
 
 		It("correct Infrastructure is created (AnnotateOperation=true)", func() {
-			defer test.WithVars(
-				&infrastructure.TimeNow, fakeClock.Now,
-			)()
-
 			values.AnnotateOperation = true
 			deployWaiter.SetSSHPublicKey(sshPublicKey)
 			Expect(deployWaiter.Deploy(ctx)).To(Succeed())
@@ -179,9 +170,6 @@ var _ = Describe("#Interface", func() {
 		})
 
 		It("should deploy the Infrastructure with operation annotation if it is in error state", func() {
-			defer test.WithVars(
-				&infrastructure.TimeNow, fakeClock.Now,
-			)()
 			existingInfra := expected.DeepCopy()
 			existingInfra.ResourceVersion = ""
 			delete(existingInfra.Annotations, v1beta1constants.GardenerOperation)
@@ -215,9 +203,6 @@ var _ = Describe("#Interface", func() {
 		})
 
 		It("should deploy the Infrastructure with operation annotation if gardener timestamp is after status.lastOperation.lastUpdateTime", func() {
-			defer test.WithVars(
-				&infrastructure.TimeNow, fakeClock.Now,
-			)()
 			existingInfra := expected.DeepCopy()
 			existingInfra.ResourceVersion = ""
 			delete(existingInfra.Annotations, v1beta1constants.GardenerOperation)
@@ -268,10 +253,6 @@ var _ = Describe("#Interface", func() {
 		})
 
 		It("should return error if we haven't observed the latest timestamp annotation", func() {
-			defer test.WithVars(
-				&infrastructure.TimeNow, fakeClock.Now,
-			)()
-
 			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
 			values.AnnotateOperation = true
@@ -295,10 +276,6 @@ var _ = Describe("#Interface", func() {
 		})
 
 		It("should return no error when is ready", func() {
-			defer test.WithVars(
-				&infrastructure.TimeNow, fakeClock.Now,
-			)()
-
 			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
 			values.AnnotateOperation = true
@@ -307,11 +284,15 @@ var _ = Describe("#Interface", func() {
 
 			By("Patch object")
 			patch := client.MergeFrom(expected.DeepCopy())
-			expected.Status.LastError = nil
+
 			// remove operation annotation, add up-to-date timestamp annotation
 			expected.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
+
+			Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching infrastructure succeeds")
+
+			expected.Status.LastError = nil
 			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State:          gardencorev1beta1.LastOperationStateSucceeded,
 				LastUpdateTime: metav1.Time{Time: now.UTC().Add(time.Second)},
@@ -324,7 +305,7 @@ var _ = Describe("#Interface", func() {
 			}
 			expected.Status.ProviderStatus = providerStatus
 			expected.Status.EgressCIDRs = egressCIDRs
-			Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching infrastructure succeeds")
+			Expect(c.Status().Patch(ctx, expected, patch)).To(Succeed(), "patching infrastructure status succeeds")
 
 			By("Wait")
 			Expect(deployWaiter.Wait(ctx)).To(Succeed(), "infrastructure is ready")
@@ -379,19 +360,16 @@ var _ = Describe("#Interface", func() {
 				&gardenerutils.TimeNow, fakeClock.Now,
 			)()
 
-			mc := mockclient.NewMockClient(ctrl)
-
-			expected = empty.DeepCopy()
-			expected.SetAnnotations(map[string]string{
-				v1beta1constants.ConfirmationDeletion: "true",
-				v1beta1constants.GardenerTimestamp:    now.UTC().Format(time.RFC3339Nano),
-			})
-
-			// add deletion confirmation and timestamp annotation
-			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Return(nil)
-			mc.EXPECT().Delete(ctx, expected).Times(1).Return(fakeErr)
-
-			deployWaiter = infrastructure.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+			cWithErr := fake.NewClientBuilder().WithScheme(c.Scheme()).WithInterceptorFuncs(interceptor.Funcs{
+				Delete: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+					if _, ok := obj.(*extensionsv1alpha1.Infrastructure); ok {
+						return fakeErr
+					}
+					return cl.Delete(ctx, obj, opts...)
+				},
+			}).Build()
+			Expect(cWithErr.Create(ctx, expected.DeepCopy())).To(Succeed())
+			deployWaiter = infrastructure.New(log, cWithErr, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 			Expect(deployWaiter.Destroy(ctx)).To(MatchError(fakeErr))
 		})
 	})
@@ -428,54 +406,20 @@ var _ = Describe("#Interface", func() {
 		)
 
 		It("should properly restore the infrastructure state if it exists", func() {
-			defer test.WithVars(
-				&infrastructure.TimeNow, fakeClock.Now,
-				&extensions.TimeNow, fakeClock.Now,
-			)()
-
-			mc := mockclient.NewMockClient(ctrl)
-			mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
-
-			mc.EXPECT().Status().Return(mockStatusWriter)
-
 			values.SSHPublicKey = sshPublicKey
 			values.AnnotateOperation = true
 
-			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(empty), gomock.AssignableToTypeOf(empty)).
-				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("infrastructures"), name))
+			Expect(infrastructure.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
 
-			// deploy with wait-for-state annotation
-			obj := expected.DeepCopy()
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().Format(time.RFC3339Nano))
-			obj.TypeMeta = metav1.TypeMeta{}
-			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
-				DoAndReturn(func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
-					Expect(actual).To(DeepEqual(obj))
-					return nil
-				})
-
-			// restore state
-			expectedWithState := obj.DeepCopy()
-			expectedWithState.Status.State = state
-			test.EXPECTStatusPatch(ctx, mockStatusWriter, expectedWithState, obj, types.MergePatchType)
-
-			// annotate with restore annotation
-			expectedWithRestore := expectedWithState.DeepCopy()
-			metav1.SetMetaDataAnnotation(&expectedWithRestore.ObjectMeta, "gardener.cloud/operation", "restore")
-			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
-
-			Expect(infrastructure.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
+			actual := &extensionsv1alpha1.Infrastructure{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(empty), actual)).To(Succeed())
+			Expect(actual.Annotations).To(HaveKeyWithValue("gardener.cloud/operation", "restore"))
+			Expect(actual.Status.State).To(Equal(state))
 		})
 	})
 
 	Describe("#Migrate", func() {
 		It("should migrate the resources", func() {
-			defer test.WithVars(
-				&infrastructure.TimeNow, fakeClock.Now,
-				&extensions.TimeNow, fakeClock.Now,
-			)()
-
 			Expect(c.Create(ctx, expected)).To(Succeed(), "creating infrastructure succeeds")
 
 			deployWaiter.SetSSHPublicKey(sshPublicKey)

@@ -13,14 +13,13 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -30,7 +29,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("#ContainerRuntime", func() {
@@ -43,8 +41,8 @@ var _ = Describe("#ContainerRuntime", func() {
 		ctrl *gomock.Controller
 
 		ctx      context.Context
+		s        *runtime.Scheme
 		c        client.Client
-		empty    *extensionsv1alpha1.ContainerRuntime
 		expected []*extensionsv1alpha1.ContainerRuntime
 		values   *containerruntime.Values
 		log      logr.Logger
@@ -64,7 +62,7 @@ var _ = Describe("#ContainerRuntime", func() {
 		ctx = context.TODO()
 		log = logr.Discard()
 
-		s := runtime.NewScheme()
+		s = runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
 		c = fake.NewClientBuilder().WithScheme(s).Build()
 
@@ -85,12 +83,6 @@ var _ = Describe("#ContainerRuntime", func() {
 					ContainerRuntimes: containerRuntimes,
 				},
 			})
-		}
-
-		empty = &extensionsv1alpha1.ContainerRuntime{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: namespace,
-			},
 		}
 
 		expected = []*extensionsv1alpha1.ContainerRuntime{}
@@ -243,6 +235,8 @@ var _ = Describe("#ContainerRuntime", func() {
 				&gardenerutils.TimeNow, fakeClock.Now,
 			)()
 
+			fakeErr := fmt.Errorf("some random error")
+
 			worker := gardencorev1beta1.Worker{
 				Name: workerNames[0],
 				CRI: &gardencorev1beta1.CRI{
@@ -258,25 +252,24 @@ var _ = Describe("#ContainerRuntime", func() {
 
 			containerRuntimeName := fmt.Sprintf("%s-%s", containerRuntimeTypes[0], workerNames[0])
 
-			expectedContainerRuntime := extensionsv1alpha1.ContainerRuntime{
+			c := fake.NewClientBuilder().WithScheme(s).WithInterceptorFuncs(interceptor.Funcs{
+				Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+					if _, ok := obj.(*extensionsv1alpha1.ContainerRuntime); ok {
+						return fakeErr
+					}
+					return client.Delete(ctx, obj, opts...)
+				},
+			}).Build()
+
+			// Pre-create the container runtime resource
+			Expect(c.Create(ctx, &extensionsv1alpha1.ContainerRuntime{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      containerRuntimeName,
 					Namespace: namespace,
-					Annotations: map[string]string{
-						v1beta1constants.ConfirmationDeletion: "true",
-						v1beta1constants.GardenerTimestamp:    now.UTC().Format(time.RFC3339Nano),
-					},
 				},
-			}
+			})).To(Succeed())
 
-			mc := mockclient.NewMockClient(ctrl)
-			// check if the containerruntime exist
-			mc.EXPECT().List(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.ContainerRuntimeList{}), client.InNamespace(namespace)).SetArg(1, extensionsv1alpha1.ContainerRuntimeList{Items: []extensionsv1alpha1.ContainerRuntime{expectedContainerRuntime}})
-			// add deletion confirmation and Timestamp annotation
-			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.ContainerRuntime{}), gomock.Any())
-			mc.EXPECT().Delete(ctx, &expectedContainerRuntime).Times(1).Return(fmt.Errorf("some random error"))
-
-			defaultDepWaiter = containerruntime.New(log, mc, &containerruntime.Values{
+			defaultDepWaiter = containerruntime.New(log, c, &containerruntime.Values{
 				Namespace: namespace,
 				Workers:   []gardencorev1beta1.Worker{worker},
 			}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
@@ -327,11 +320,6 @@ var _ = Describe("#ContainerRuntime", func() {
 				&extensions.TimeNow, fakeClock.Now,
 			)()
 
-			mc := mockclient.NewMockClient(ctrl)
-			mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
-
-			mc.EXPECT().Status().Return(mockStatusWriter)
-
 			worker := gardencorev1beta1.Worker{
 				Name: workerNames[0],
 				CRI: &gardencorev1beta1.CRI{
@@ -345,40 +333,23 @@ var _ = Describe("#ContainerRuntime", func() {
 				},
 			}
 
-			empty.SetName(expected[0].GetName())
-			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(empty), gomock.AssignableToTypeOf(empty)).
-				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("containerruntimes"), expected[0].GetName()))
-
-			// deploy with wait-for-state annotation
-			expected[0].Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationWaitForState
-			expected[0].Annotations[v1beta1constants.GardenerTimestamp] = now.UTC().Format(time.RFC3339Nano)
-			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(expected[0])).
-				DoAndReturn(func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
-					Expect(actual).To(DeepEqual(expected[0]))
-					return nil
-				})
-
-			// restore state
-			expectedWithState := expected[0].DeepCopy()
-			expectedWithState.Status = extensionsv1alpha1.ContainerRuntimeStatus{
-				DefaultStatus: extensionsv1alpha1.DefaultStatus{State: &runtime.RawExtension{Raw: []byte(`{"dummy":"state"}`)}},
-			}
-			test.EXPECTStatusPatch(ctx, mockStatusWriter, expectedWithState, expected[0], types.MergePatchType)
-
-			// annotate with restore annotation
-			expectedWithRestore := expectedWithState.DeepCopy()
-			expectedWithRestore.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationRestore
-			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
+			c := fake.NewClientBuilder().WithScheme(s).WithStatusSubresource(&extensionsv1alpha1.ContainerRuntime{}).Build()
 
 			defaultDepWaiter = containerruntime.New(
 				log,
-				mc,
+				c,
 				&containerruntime.Values{
 					Namespace: namespace,
 					Workers:   []gardencorev1beta1.Worker{worker},
 				}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 
 			Expect(defaultDepWaiter.Restore(ctx, shootState)).To(Succeed())
+
+			// Verify the ContainerRuntime was created with restore annotation and state
+			actual := &extensionsv1alpha1.ContainerRuntime{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(expected[0]), actual)).To(Succeed())
+			Expect(actual.Status.State).To(Equal(&runtime.RawExtension{Raw: []byte(`{"dummy":"state"}`)}))
+			Expect(actual.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore))
 		})
 	})
 

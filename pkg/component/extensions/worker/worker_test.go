@@ -16,16 +16,15 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -39,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Worker", func() {
@@ -49,7 +47,7 @@ var _ = Describe("Worker", func() {
 
 		fakeClock *testclock.FakeClock
 		now       time.Time
-		metav1Now metav1.Time
+		scheme    *runtime.Scheme
 
 		ctx = context.TODO()
 		log = logr.Discard()
@@ -131,11 +129,10 @@ var _ = Describe("Worker", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		now = time.Unix(60, 0)
 		fakeClock = testclock.NewFakeClock(now)
-		metav1Now = metav1.NewTime(now)
 
-		s := runtime.NewScheme()
-		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
-		c = fake.NewClientBuilder().WithScheme(s).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build()
+		scheme = runtime.NewScheme()
+		Expect(extensionsv1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
+		c = fakeclient.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build()
 
 		machineTypes = []gardencorev1beta1.MachineType{
 			{
@@ -733,6 +730,12 @@ var _ = Describe("Worker", func() {
 	})
 
 	Describe("#WaitUntilWorkerStatusMachineDeploymentsUpdated", func() {
+		var metav1Now metav1.Time
+
+		BeforeEach(func() {
+			metav1Now = metav1.NewTime(now)
+		})
+
 		It("should return error when no resources are found", func() {
 			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(HaveOccurred())
 		})
@@ -880,17 +883,19 @@ var _ = Describe("Worker", func() {
 			)()
 
 			fakeErr := fmt.Errorf("some random error")
-			obj := w.DeepCopy()
-			obj.Annotations = map[string]string{
-				"confirmation.gardener.cloud/deletion": "true",
-				"gardener.cloud/timestamp":             now.UTC().Format(time.RFC3339Nano),
-			}
 
-			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{}), gomock.Any())
-			mc.EXPECT().Delete(ctx, obj).Return(fakeErr)
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(&extensionsv1alpha1.Worker{}).WithInterceptorFuncs(interceptor.Funcs{
+				Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+					if _, ok := obj.(*extensionsv1alpha1.Worker); ok {
+						return fakeErr
+					}
+					return client.Delete(ctx, obj, opts...)
+				},
+			}).Build()
 
-			err := worker.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Destroy(ctx)
+			Expect(c.Create(ctx, w.DeepCopy())).To(Succeed())
+
+			err := worker.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Destroy(ctx)
 			Expect(err).To(MatchError(fakeErr))
 		})
 	})
@@ -933,37 +938,16 @@ var _ = Describe("Worker", func() {
 				&extensions.TimeNow, fakeClock.Now,
 			)()
 
-			mc := mockclient.NewMockClient(ctrl)
-			mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build()
 
-			mc.EXPECT().Status().Return(mockStatusWriter)
+			Expect(worker.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
 
-			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(empty), gomock.AssignableToTypeOf(empty)).
-				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("workers"), name)).AnyTimes()
-
-			// deploy with wait-for-state annotation
-			obj := w.DeepCopy()
-			obj.Spec = wSpec
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().Format(time.RFC3339Nano))
-			obj.TypeMeta = metav1.TypeMeta{}
-			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
-				DoAndReturn(func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
-					Expect(actual).To(DeepEqual(obj))
-					return nil
-				})
-
-			// restore state
-			expectedWithState := obj.DeepCopy()
-			expectedWithState.Status.State = &runtime.RawExtension{Raw: []byte(`{"some":"state"}`)}
-			test.EXPECTStatusPatch(ctx, mockStatusWriter, expectedWithState, obj, types.MergePatchType)
-
-			// annotate with restore annotation
-			expectedWithRestore := expectedWithState.DeepCopy()
-			expectedWithRestore.Annotations["gardener.cloud/operation"] = "restore"
-			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
-
-			Expect(worker.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
+			// Verify the Worker was created with restore annotation
+			actual := &extensionsv1alpha1.Worker{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, actual)).To(Succeed())
+			Expect(actual.Status.State).To(Equal(&runtime.RawExtension{Raw: []byte(`{"some":"state"}`)}))
+			Expect(actual.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore))
+			Expect(actual.Spec).To(Equal(wSpec))
 		})
 	})
 

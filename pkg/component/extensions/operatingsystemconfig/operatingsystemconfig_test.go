@@ -19,19 +19,17 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	fakekubernetes "k8s.io/client-go/kubernetes/fake"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -48,8 +46,6 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("OperatingSystemConfig", func() {
@@ -65,7 +61,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 		)
 
 		var (
-			ctrl             *gomock.Controller
 			c                client.Client
 			fakeClient       client.Client
 			sm               secretsmanager.Interface
@@ -145,7 +140,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 			workers              []gardencorev1beta1.Worker
 			inPlaceUpdateWorkers []gardencorev1beta1.Worker
 
-			empty    *extensionsv1alpha1.OperatingSystemConfig
 			expected []*extensionsv1alpha1.OperatingSystemConfig
 
 			globalLastInitiationTime = &metav1.Time{Time: time.Date(2020, 12, 2, 10, 0, 0, 0, time.UTC)}
@@ -342,7 +336,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 		}
 
 		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
 			now = time.Unix(60, 0)
 			fakeClock = testclock.NewFakeClock(now)
 
@@ -353,7 +346,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			Expect(extensionsv1alpha1.AddToScheme(s)).To(Succeed())
 			Expect(fakekubernetes.AddToScheme(s)).To(Succeed())
 			Expect(machinev1alpha1.AddToScheme(s)).To(Succeed())
-			c = fakeclient.NewClientBuilder().WithScheme(s).Build()
+			c = fakeclient.NewClientBuilder().WithScheme(s).WithStatusSubresource(&extensionsv1alpha1.OperatingSystemConfig{}).Build()
 
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(s).Build()
 			sm = fakesecretsmanager.New(fakeClient, namespace)
@@ -458,12 +451,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 				},
 			}
 
-			empty = &extensionsv1alpha1.OperatingSystemConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: namespace,
-				},
-			}
-
 			poolHashesSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "worker-pools-operatingsystemconfig-hashes",
@@ -491,7 +478,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 		})
 
 		AfterEach(func() {
-			ctrl.Finish()
 		})
 
 		Describe("#Deploy", func() {
@@ -899,63 +885,24 @@ var _ = Describe("OperatingSystemConfig", func() {
 					&extensions.TimeNow, fakeClock.Now,
 				)()
 
-				mc := mockclient.NewMockClient(ctrl)
-				mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
+				// Pre-create the poolHashesSecret
+				Expect(c.Create(ctx, poolHashesSecret)).To(Succeed())
 
-				mc.EXPECT().Status().Return(mockStatusWriter).AnyTimes()
+				defaultDepWaiter = New(log, c, sm, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+				Expect(defaultDepWaiter.Restore(ctx, shootState)).To(Succeed())
 
 				for i := range expected {
-					var state []byte
+					actual := &extensionsv1alpha1.OperatingSystemConfig{}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expected[i]), actual)).To(Succeed())
+					Expect(actual.Annotations).To(HaveKeyWithValue("gardener.cloud/operation", "restore"))
+					var expectedState []byte
 					if strings.HasSuffix(expected[i].Name, "init") {
-						state = stateInit
+						expectedState = stateInit
 					} else {
-						state = stateOriginal
+						expectedState = stateOriginal
 					}
-
-					emptyWithName := empty.DeepCopy()
-					emptyWithName.SetName(expected[i].GetName())
-					mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(emptyWithName), gomock.AssignableToTypeOf(emptyWithName)).
-						Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("operatingsystemconfigs"), emptyWithName.GetName()))
-
-					// deploy with wait-for-state annotation
-					obj := expected[i].DeepCopy()
-					metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
-					metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().Format(time.RFC3339Nano))
-					obj.TypeMeta = metav1.TypeMeta{}
-					mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
-						DoAndReturn(func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
-							Expect(actual).To(DeepEqual(obj))
-							return nil
-						})
-
-					// restore state
-					expectedWithState := obj.DeepCopy()
-					expectedWithState.Status.State = &runtime.RawExtension{Raw: state}
-					test.EXPECTStatusPatch(ctx, mockStatusWriter, expectedWithState, obj, types.MergePatchType)
-
-					// annotate with restore annotation
-					expectedWithRestore := expectedWithState.DeepCopy()
-					metav1.SetMetaDataAnnotation(&expectedWithRestore.ObjectMeta, "gardener.cloud/operation", "restore")
-					test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
+					Expect(actual.Status.State).To(Equal(&runtime.RawExtension{Raw: expectedState}))
 				}
-
-				clientGet := func(result client.Object) any {
-					return func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-						switch obj.(type) {
-						case *corev1.Secret:
-							*obj.(*corev1.Secret) = *result.(*corev1.Secret)
-						}
-						return nil
-					}
-				}
-
-				mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(poolHashesSecret), gomock.AssignableToTypeOf(poolHashesSecret)).
-					DoAndReturn(clientGet(poolHashesSecret))
-				mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(poolHashesSecret), client.RawPatch(types.MergePatchType, []byte("{}"))).
-					Return(nil)
-
-				defaultDepWaiter = New(log, mc, sm, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
-				Expect(defaultDepWaiter.Restore(ctx, shootState)).To(Succeed())
 			})
 		})
 
@@ -1073,11 +1020,14 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				By("Patch object")
 				for i := range expected {
-					patch := client.MergeFrom(expected[i].DeepCopy())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expected[i]), expected[i])).To(Succeed())
+
 					// remove operation annotation, add up-to-date timestamp annotation
 					expected[i].Annotations = map[string]string{
 						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 					}
+					Expect(c.Update(ctx, expected[i])).To(Succeed(), "patching operatingsystemconfig succeeds")
+
 					// set last operation
 					expected[i].Status.LastOperation = &gardencorev1beta1.LastOperation{
 						State:          gardencorev1beta1.LastOperationStateSucceeded,
@@ -1090,7 +1040,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 							Namespace: expected[i].Name,
 						},
 					}
-					Expect(c.Patch(ctx, expected[i], patch)).ToNot(HaveOccurred(), "patching operatingsystemconfig succeeds")
+					Expect(c.Status().Update(ctx, expected[i])).To(Succeed(), "patching operatingsystemconfig status succeeds")
 
 					// create cloud-config secret
 					ccSecret := &corev1.Secret{
@@ -1162,6 +1112,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 					expected[i].Annotations = map[string]string{
 						"gardener.cloud/timestamp": now.UTC().Format(time.RFC3339Nano),
 					}
+					Expect(c.Update(ctx, expected[i])).To(Succeed())
+
 					// set last operation
 					lastUpdateTime := metav1.Time{Time: now}.Rfc3339Copy()
 					// fix timezone
@@ -1177,7 +1129,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 							Namespace: expected[i].Name,
 						},
 					}
-					Expect(c.Update(ctx, expected[i])).To(Succeed())
+					Expect(c.Status().Update(ctx, expected[i])).To(Succeed())
 
 					// create cloud-config secret
 					ccSecret := &corev1.Secret{
@@ -1252,14 +1204,16 @@ var _ = Describe("OperatingSystemConfig", func() {
 					},
 				}
 
-				mc := mockclient.NewMockClient(ctrl)
-				// check if the operatingsystemconfigs exist
-				mc.EXPECT().List(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.OperatingSystemConfigList{}), client.InNamespace(namespace)).SetArg(1, extensionsv1alpha1.OperatingSystemConfigList{Items: []extensionsv1alpha1.OperatingSystemConfig{expectedOSC}})
-				// add deletion confirmation and Timestamp annotation
-				mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.OperatingSystemConfig{}), gomock.Any())
-				mc.EXPECT().Delete(ctx, &expectedOSC).Return(fakeErr)
+				cWithErr := fakeclient.NewClientBuilder().WithScheme(c.Scheme()).WithObjects(&expectedOSC).WithInterceptorFuncs(interceptor.Funcs{
+					Delete: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+						if _, ok := obj.(*extensionsv1alpha1.OperatingSystemConfig); ok {
+							return fakeErr
+						}
+						return cl.Delete(ctx, obj, opts...)
+					},
+				}).Build()
 
-				defaultDepWaiter = New(log, mc, nil, &Values{Namespace: namespace}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+				defaultDepWaiter = New(log, cWithErr, nil, &Values{Namespace: namespace}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 				Expect(defaultDepWaiter.Destroy(ctx)).To(MatchError(error(multierror.Append(fakeErr))))
 			})
 		})

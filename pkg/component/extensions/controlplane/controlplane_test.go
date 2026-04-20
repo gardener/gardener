@@ -14,13 +14,12 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -30,7 +29,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("ControlPlane", func() {
@@ -40,6 +38,7 @@ var _ = Describe("ControlPlane", func() {
 
 		fakeClock *testclock.FakeClock
 		now       time.Time
+		scheme    *runtime.Scheme
 
 		ctx = context.TODO()
 		log = logr.Discard()
@@ -63,9 +62,9 @@ var _ = Describe("ControlPlane", func() {
 		now = time.Unix(60, 0)
 		fakeClock = testclock.NewFakeClock(now)
 
-		s := runtime.NewScheme()
-		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
-		c = fake.NewClientBuilder().WithScheme(s).Build()
+		scheme = runtime.NewScheme()
+		Expect(extensionsv1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
+		c = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
 		empty = &extensionsv1alpha1.ControlPlane{
 			ObjectMeta: metav1.ObjectMeta{
@@ -210,17 +209,19 @@ var _ = Describe("ControlPlane", func() {
 			)()
 
 			fakeErr := fmt.Errorf("some random error")
-			obj := cp.DeepCopy()
-			obj.Annotations = map[string]string{
-				"confirmation.gardener.cloud/deletion": "true",
-				"gardener.cloud/timestamp":             now.UTC().Format(time.RFC3339Nano),
-			}
 
-			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}), gomock.Any())
-			mc.EXPECT().Delete(ctx, obj).Return(fakeErr)
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+					if _, ok := obj.(*extensionsv1alpha1.ControlPlane); ok {
+						return fakeErr
+					}
+					return client.Delete(ctx, obj, opts...)
+				},
+			}).Build()
 
-			err := controlplane.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Destroy(ctx)
+			Expect(c.Create(ctx, cp.DeepCopy())).To(Succeed())
+
+			err := controlplane.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Destroy(ctx)
 			Expect(err).To(MatchError(fakeErr))
 		})
 	})
@@ -266,36 +267,16 @@ var _ = Describe("ControlPlane", func() {
 				&extensions.TimeNow, fakeClock.Now,
 			)()
 
-			mc := mockclient.NewMockClient(ctrl)
-			mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(&extensionsv1alpha1.ControlPlane{}).Build()
 
-			mc.EXPECT().Status().Return(mockStatusWriter)
+			Expect(controlplane.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
 
-			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(empty), gomock.AssignableToTypeOf(empty)).
-				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("controlplanes"), name))
-
-			// deploy with wait-for-state annotation
-			obj := cp.DeepCopy()
-			obj.Spec = cpSpec
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().Format(time.RFC3339Nano))
-			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
-				DoAndReturn(func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
-					Expect(actual).To(DeepEqual(obj))
-					return nil
-				})
-
-			// restore state
-			expectedWithState := obj.DeepCopy()
-			expectedWithState.Status.State = state
-			test.EXPECTStatusPatch(ctx, mockStatusWriter, expectedWithState, obj, types.MergePatchType)
-
-			// annotate with restore annotation
-			expectedWithRestore := expectedWithState.DeepCopy()
-			metav1.SetMetaDataAnnotation(&expectedWithRestore.ObjectMeta, "gardener.cloud/operation", "restore")
-			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
-
-			Expect(controlplane.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
+			// Verify the ControlPlane was created with restore annotation
+			actual := &extensionsv1alpha1.ControlPlane{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, actual)).To(Succeed())
+			Expect(actual.Status.State).To(Equal(state))
+			Expect(actual.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore))
+			Expect(actual.Spec).To(Equal(cpSpec))
 		})
 	})
 

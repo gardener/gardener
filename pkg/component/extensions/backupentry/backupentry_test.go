@@ -14,14 +14,13 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -32,7 +31,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("#BackupEntry", func() {
@@ -41,7 +39,6 @@ var _ = Describe("#BackupEntry", func() {
 
 		ctx              context.Context
 		c                client.Client
-		empty            *extensionsv1alpha1.BackupEntry
 		expected         *extensionsv1alpha1.BackupEntry
 		values           *backupentry.Values
 		log              logr.Logger
@@ -49,6 +46,7 @@ var _ = Describe("#BackupEntry", func() {
 		defaultDepWaiter component.DeployMigrateWaiter
 
 		fakeClock *testclock.FakeClock
+		s         *runtime.Scheme
 
 		name                       = "test-deploy"
 		region                     = "region"
@@ -72,10 +70,10 @@ var _ = Describe("#BackupEntry", func() {
 		log = logr.Discard()
 		fakeErr = fmt.Errorf("some random error")
 
-		s := runtime.NewScheme()
+		s = runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).To(Succeed())
 
-		c = fake.NewClientBuilder().WithScheme(s).Build()
+		c = fake.NewClientBuilder().WithScheme(s).WithStatusSubresource(&extensionsv1alpha1.BackupEntry{}).Build()
 
 		values = &backupentry.Values{
 			Name:                       name,
@@ -86,12 +84,6 @@ var _ = Describe("#BackupEntry", func() {
 			SecretRef:                  secretRef,
 			BucketName:                 bucketName,
 			BackupBucketProviderStatus: backupBucketProviderStatus,
-		}
-
-		empty = &extensionsv1alpha1.BackupEntry{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
-			},
 		}
 
 		expected = &extensionsv1alpha1.BackupEntry{
@@ -184,11 +176,13 @@ var _ = Describe("#BackupEntry", func() {
 			expected.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: fakeClock.Now().UTC().Format(time.RFC3339Nano),
 			}
+			Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching backupentry succeeds")
+
 			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State:          gardencorev1beta1.LastOperationStateSucceeded,
 				LastUpdateTime: metav1.Time{Time: fakeClock.Now().UTC().Add(time.Second)},
 			}
-			Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching backupentry succeeds")
+			Expect(c.Status().Patch(ctx, expected, patch)).To(Succeed(), "patching backupentry status succeeds")
 
 			By("Wait")
 			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "backupentry is ready")
@@ -211,19 +205,18 @@ var _ = Describe("#BackupEntry", func() {
 				&gardenerutils.TimeNow, fakeClock.Now,
 			)()
 
-			mc := mockclient.NewMockClient(ctrl)
+			c := fake.NewClientBuilder().WithScheme(s).WithInterceptorFuncs(interceptor.Funcs{
+				Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+					if _, ok := obj.(*extensionsv1alpha1.BackupEntry); ok {
+						return fakeErr
+					}
+					return client.Delete(ctx, obj, opts...)
+				},
+			}).Build()
 
-			expected = empty.DeepCopy()
-			expected.SetAnnotations(map[string]string{
-				v1beta1constants.ConfirmationDeletion: "true",
-				v1beta1constants.GardenerTimestamp:    fakeClock.Now().UTC().Format(time.RFC3339Nano),
-			})
+			Expect(c.Create(ctx, expected.DeepCopy())).To(Succeed())
 
-			// add deletion confirmation and timestamp annotation
-			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.BackupEntry{}), gomock.Any()).Return(nil)
-			mc.EXPECT().Delete(ctx, expected).Times(1).Return(fakeErr)
-
-			defaultDepWaiter = backupentry.New(log, mc, fakeClock, &backupentry.Values{Name: name}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+			defaultDepWaiter = backupentry.New(log, c, fakeClock, &backupentry.Values{Name: name}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 			Expect(defaultDepWaiter.Destroy(ctx)).To(MatchError(fakeErr))
 		})
 	})
@@ -264,46 +257,17 @@ var _ = Describe("#BackupEntry", func() {
 		})
 
 		It("should properly restore the BackupEntry state if it exists", func() {
-			// NB(timebertt): such tests with mocks are ridiculously hard to adapt to refactoring changes.
-			// Let's **please** just stop writing such tests with mocks and use a fake client or envtest instead.
-			// Testing with mocks does not only assert that the tested unit fulfills its task but also
-			// asserts that specific calls are made in order to fulfill its task. However, we/the caller don't
-			// care about what helper funcs are used internally or whether it uses update or patch to fulfill
-			// the task, as long as the result is what we expect (which is what should be asserted instead).
 			defer test.WithVars(
 				&extensions.TimeNow, fakeClock.Now,
 			)()
 
-			mc := mockclient.NewMockClient(ctrl)
-			mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
+			Expect(backupentry.New(log, c, fakeClock, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
 
-			mc.EXPECT().Status().Return(mockStatusWriter)
-
-			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(empty), gomock.AssignableToTypeOf(empty)).
-				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("backupentries"), name))
-
-			// deploy with wait-for-state annotation
-			obj := expected.DeepCopy()
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", fakeClock.Now().UTC().Format(time.RFC3339Nano))
-			obj.TypeMeta = metav1.TypeMeta{}
-			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
-				DoAndReturn(func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
-					Expect(actual).To(DeepEqual(obj))
-					return nil
-				})
-
-			// restore state
-			expectedWithState := obj.DeepCopy()
-			expectedWithState.Status.State = state
-			test.EXPECTStatusPatch(ctx, mockStatusWriter, expectedWithState, obj, types.MergePatchType)
-
-			// annotate with restore annotation
-			expectedWithRestore := expectedWithState.DeepCopy()
-			metav1.SetMetaDataAnnotation(&expectedWithRestore.ObjectMeta, "gardener.cloud/operation", "restore")
-			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
-
-			Expect(backupentry.New(log, mc, fakeClock, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
+			// Verify the BackupEntry was created with restore annotation and state
+			actual := &extensionsv1alpha1.BackupEntry{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
+			Expect(actual.Status.State).To(Equal(state))
+			Expect(actual.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore))
 		})
 	})
 
@@ -312,29 +276,16 @@ var _ = Describe("#BackupEntry", func() {
 			defer test.WithVars(
 				&extensions.TimeNow, fakeClock.Now,
 			)()
-			mc := mockclient.NewMockClient(ctrl)
+			Expect(c.Create(ctx, expected.DeepCopy())).To(Succeed())
 
-			expectedCopy := empty.DeepCopy()
-			metav1.SetMetaDataAnnotation(&expectedCopy.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate)
-			metav1.SetMetaDataAnnotation(&expectedCopy.ObjectMeta, v1beta1constants.GardenerTimestamp, fakeClock.Now().UTC().Format(time.RFC3339Nano))
-			test.EXPECTPatch(ctx, mc, expectedCopy, empty, types.MergePatchType)
-
-			defaultDepWaiter = backupentry.New(log, mc, fakeClock, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 			Expect(defaultDepWaiter.Migrate(ctx)).To(Succeed())
+
+			actual := &extensionsv1alpha1.BackupEntry{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
+			Expect(actual.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate))
 		})
 
 		It("should not return error if resource does not exist", func() {
-			defer test.WithVars(
-				&extensions.TimeNow, fakeClock.Now,
-			)()
-			mc := mockclient.NewMockClient(ctrl)
-
-			expectedCopy := empty.DeepCopy()
-			metav1.SetMetaDataAnnotation(&expectedCopy.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate)
-			metav1.SetMetaDataAnnotation(&expectedCopy.ObjectMeta, v1beta1constants.GardenerTimestamp, fakeClock.Now().UTC().Format(time.RFC3339Nano))
-			test.EXPECTPatch(ctx, mc, expectedCopy, empty, types.MergePatchType)
-
-			defaultDepWaiter = backupentry.New(log, mc, fakeClock, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 			Expect(defaultDepWaiter.Migrate(ctx)).To(Succeed())
 		})
 	})

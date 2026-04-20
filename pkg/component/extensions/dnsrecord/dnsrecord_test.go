@@ -14,14 +14,13 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -34,7 +33,6 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 const (
@@ -54,6 +52,8 @@ var _ = Describe("DNSRecord", func() {
 		ctrl *gomock.Controller
 
 		c client.Client
+
+		scheme *runtime.Scheme
 
 		credentialsDeployFunc dnsrecord.CredentialsDeployFunc
 		values                *dnsrecord.Values
@@ -75,10 +75,10 @@ var _ = Describe("DNSRecord", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
-		scheme := runtime.NewScheme()
+		scheme = runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(scheme)).To(Succeed())
 		Expect(corev1.AddToScheme(scheme)).To(Succeed())
-		c = fake.NewClientBuilder().WithScheme(scheme).Build()
+		c = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
 		values = &dnsrecord.Values{
 			Name:              name,
@@ -570,25 +570,20 @@ var _ = Describe("DNSRecord", func() {
 		})
 
 		It("should fail if creating the DNSRecord resource failed", func() {
-			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(secret), gomock.AssignableToTypeOf(&corev1.Secret{})).
-				Return(apierrors.NewNotFound(corev1.Resource("secrets"), name))
-			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(secret)).DoAndReturn(
-				func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
-					Expect(actual).To(DeepEqual(secret))
-					return nil
-				})
-			//  get should be called twice as its first used to decide whether we need to recreate
-			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(dns), gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{})).
-				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("dnsrecords"), name)).MaxTimes(2)
+			createCallCount := 0
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+					if _, ok := obj.(*extensionsv1alpha1.DNSRecord); ok {
+						createCallCount++
+						if createCallCount == 1 {
+							return testErr
+						}
+					}
+					return client.Create(ctx, obj, opts...)
+				},
+			}).Build()
 
-			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(dns)).DoAndReturn(
-				func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
-					Expect(actual).To(DeepEqual(dns))
-					return testErr
-				})
-
-			dnsRecord := dnsrecord.New(log, mc, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout, credentialsDeployFunc)
+			dnsRecord := dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout, credentialsDeployFunc)
 			Expect(dnsRecord.Deploy(ctx)).To(MatchError(testErr))
 		})
 
@@ -741,61 +736,42 @@ var _ = Describe("DNSRecord", func() {
 	})
 
 	Describe("#Destroy", func() {
-		It("should update the DNSRecord secret", func() {
-			dns := &extensionsv1alpha1.DNSRecord{
+		It("should update the DNSRecord secret and delete the resource", func() {
+			// Pre-create the DNSRecord and the secret with old data
+			Expect(c.Create(ctx, dns.DeepCopy())).To(Succeed())
+			oldSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
+					Name:      secretName,
 					Namespace: namespace,
-					Annotations: map[string]string{
-						"confirmation.gardener.cloud/deletion": "true",
-						v1beta1constants.GardenerTimestamp:     now.UTC().Format(time.RFC3339Nano),
-					},
+				},
+				Type: corev1.SecretTypeOpaque,
+				Data: map[string][]byte{
+					"baz": []byte("bar"),
 				},
 			}
+			Expect(c.Create(ctx, oldSecret)).To(Succeed())
 
-			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(secret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
-					s.Data = map[string][]byte{
-						"baz": []byte("bar"),
-					}
-					return nil
-				})
-			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, s *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
-					Expect(s.Name).To(Equal(secret.Name))
-					Expect(s.Namespace).To(Equal(secret.Namespace))
-					Expect(s.Type).To(Equal(secret.Type))
-					Expect(s.Data).To(Equal(secret.Data))
-					return nil
-				})
-			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{}), gomock.Any())
-			mc.EXPECT().Delete(ctx, dns)
-
-			dnsRecord := dnsrecord.New(log, mc, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout, credentialsDeployFunc)
 			Expect(dnsRecord.Destroy(ctx)).To(Succeed())
+
+			// Verify secret was updated with new data
+			updatedSecret := &corev1.Secret{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: secretName, Namespace: namespace}, updatedSecret)).To(Succeed())
+			Expect(updatedSecret.Data).To(Equal(secret.Data))
+
+			// Verify DNSRecord was deleted
+			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, &extensionsv1alpha1.DNSRecord{})).To(BeNotFoundError())
 		})
 
 		It("should skip updating the DNSRecord secret if SecretName is empty", func() {
 			values.SecretName = ""
+			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout, credentialsDeployFunc)
 
-			dns := &extensionsv1alpha1.DNSRecord{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: namespace,
-					Annotations: map[string]string{
-						"confirmation.gardener.cloud/deletion": "true",
-						v1beta1constants.GardenerTimestamp:     now.UTC().Format(time.RFC3339Nano),
-					},
-				},
-			}
+			Expect(c.Create(ctx, dns.DeepCopy())).To(Succeed())
 
-			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{}), gomock.Any())
-			mc.EXPECT().Delete(ctx, dns)
-
-			dnsRecord := dnsrecord.New(log, mc, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout, credentialsDeployFunc)
 			Expect(dnsRecord.Destroy(ctx)).To(Succeed())
+
+			// Verify DNSRecord was deleted
+			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, &extensionsv1alpha1.DNSRecord{})).To(BeNotFoundError())
 		})
 
 		It("should succeed if the resource does not exist", func() {
@@ -811,24 +787,18 @@ var _ = Describe("DNSRecord", func() {
 		})
 
 		It("should fail if deleting the DNSRecord resource failed", func() {
-			dns := &extensionsv1alpha1.DNSRecord{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: namespace,
-					Annotations: map[string]string{
-						"confirmation.gardener.cloud/deletion": "true",
-						v1beta1constants.GardenerTimestamp:     now.UTC().Format(time.RFC3339Nano),
-					},
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+					if _, ok := obj.(*extensionsv1alpha1.DNSRecord); ok {
+						return testErr
+					}
+					return client.Delete(ctx, obj, opts...)
 				},
-			}
+			}).Build()
 
-			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(secret), gomock.AssignableToTypeOf(&corev1.Secret{}))
-			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any())
-			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{}), gomock.Any())
-			mc.EXPECT().Delete(ctx, dns).Return(testErr)
+			Expect(c.Create(ctx, dns.DeepCopy())).To(Succeed())
 
-			dnsRecord := dnsrecord.New(log, mc, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout, credentialsDeployFunc)
+			dnsRecord := dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout, credentialsDeployFunc)
 			Expect(dnsRecord.Destroy(ctx)).To(MatchError(testErr))
 		})
 	})
@@ -868,42 +838,25 @@ var _ = Describe("DNSRecord", func() {
 		})
 
 		It("should properly restore the DNSRecord resource state", func() {
-			mc := mockclient.NewMockClient(ctrl)
-			mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
+			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(&extensionsv1alpha1.DNSRecord{}).Build()
 
-			mc.EXPECT().Status().Return(mockStatusWriter)
-
-			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(secret), gomock.AssignableToTypeOf(&corev1.Secret{})).
-				Return(apierrors.NewNotFound(corev1.Resource("secrets"), name))
-			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(secret)).DoAndReturn(
-				func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
-					Expect(actual).To(DeepEqual(secret))
-					return nil
-				})
-
-			metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationWaitForState)
-
-			//  get should be called twice as its first used to decide whether we need to recreate
-			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(dns), gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{})).
-				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("dnsrecords"), name)).MaxTimes(2)
-			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(dns)).DoAndReturn(
-				func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
-					Expect(actual).To(DeepEqual(dns))
-					return nil
-				})
-
-			// Restore state
-			dnsWithState := dns.DeepCopy()
-			dnsWithState.Status.State = state
-			test.EXPECTStatusPatch(ctx, mockStatusWriter, dnsWithState, dns, types.MergePatchType)
-
-			// Annotate with restore annotation
-			dnsWithRestore := dnsWithState.DeepCopy()
-			metav1.SetMetaDataAnnotation(&dnsWithRestore.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore)
-			test.EXPECTPatch(ctx, mc, dnsWithRestore, dnsWithState, types.MergePatchType)
-
-			dnsRecord := dnsrecord.New(log, mc, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout, credentialsDeployFunc)
+			dnsRecord := dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout, credentialsDeployFunc)
 			Expect(dnsRecord.Restore(ctx, shootState)).To(Succeed())
+
+			// Verify the DNSRecord was created
+			actual := &extensionsv1alpha1.DNSRecord{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, actual)).To(Succeed())
+
+			// Verify the state was restored
+			Expect(actual.Status.State).To(Equal(state))
+
+			// Verify the restore annotation was set
+			Expect(actual.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore))
+
+			// Verify the secret was created
+			deployedSecret := &corev1.Secret{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: secretName, Namespace: namespace}, deployedSecret)).To(Succeed())
+			Expect(deployedSecret.Data).To(Equal(secret.Data))
 		})
 	})
 
