@@ -46,7 +46,7 @@ function kind_down() {
 # `make kind*-up` is executed from the folder of the 'next version' before the 'previous version' is downloaded into
 # another folder. From this other folder, Gardener gets installed into the existing kind cluster, but this requires the
 # kubeconfig files in the worktree.
-# This function mirrors the behaviour of ./hack/kind-up.sh (which also copies the kubeconfig of the kind cluster into
+# This function mirrors the behaviour of 'dev-setup/kind.sh up' (which also copies the kubeconfig of the kind cluster into
 # various locations).
 function copy_kubeconfig_files_to_old_gardener_version_folder() {
   cp "$KUBECONFIG_RUNTIME_CLUSTER"  "dev-setup/${KUBECONFIG_RUNTIME_CLUSTER#*/dev-setup/}"

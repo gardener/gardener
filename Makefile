@@ -289,7 +289,7 @@ kind-single-node2-down kind-multi-node2-down: export ADDITIONAL_PARAMETERS = --k
 kind-multi-zone-up: export ADDITIONAL_PARAMETERS = --multi-zonal
 
 kind-single-node-up kind-multi-node-up kind-multi-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
-	./hack/kind-up.sh \
+	$(DEV_SETUP)/kind.sh up \
 		--cluster-name $(CLUSTER_NAME) \
 		--kustomize-overlay-basename $(KUSTOMIZE_OVERLAY_BASENAME) \
 		--path-kubeconfig-copy $(KUBECONFIG_SEED_CLUSTER) \
@@ -298,7 +298,7 @@ kind-single-node-up kind-multi-node-up kind-multi-zone-up: $(KIND) $(KUBECTL) $(
 		$(ADDITIONAL_PARAMETERS)
 	mkdir -p $(REPO_ROOT)/dev/local-backupbuckets
 kind-single-node-down kind-multi-node-down kind-multi-zone-down: $(KIND)
-	./hack/kind-down.sh \
+	$(DEV_SETUP)/kind.sh down \
 		--cluster-name $(CLUSTER_NAME) \
 		--path-kubeconfig-copy $(KUBECONFIG_SEED_CLUSTER) \
 		--path-kubeconfig-copy $(KUBECONFIG_SEED_SECRET_PATH)
@@ -306,7 +306,7 @@ kind-single-node-down kind-multi-node-down kind-multi-zone-down: $(KIND)
 	docker run --rm --user root:root -v $(REPO_ROOT)/dev/local-backupbuckets:/dev/local-backupbuckets alpine rm -rf /dev/local-backupbuckets/garden-*
 
 kind-single-node2-up kind-multi-node2-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
-	./hack/kind-up.sh \
+	$(DEV_SETUP)/kind.sh up \
 		--cluster-name $(CLUSTER_NAME) \
 		--kustomize-overlay-basename $(KUSTOMIZE_OVERLAY_BASENAME) \
 		--path-kubeconfig-copy $(KUBECONFIG_SEED2_CLUSTER) \
@@ -314,7 +314,7 @@ kind-single-node2-up kind-multi-node2-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUS
 		--with-lpp-resize-support $(DEV_SETUP_WITH_LPP_RESIZE_SUPPORT) \
 		$(ADDITIONAL_PARAMETERS)
 kind-single-node2-down kind-multi-node2-down: $(KIND)
-	./hack/kind-down.sh \
+	$(DEV_SETUP)/kind.sh down \
 		--cluster-name $(CLUSTER_NAME) \
 		--path-kubeconfig-copy $(KUBECONFIG_SEED2_CLUSTER) \
 		--path-kubeconfig-copy $(KUBECONFIG_SEED_SECRET_PATH) \
@@ -348,25 +348,25 @@ export SKAFFOLD_LABEL = "skaffold.dev/run-id=gardener-local"
 # cloud-provider-local-{up,dev,debug,down}
 cloud-provider-local-%: export SKAFFOLD_FILENAME = $(DEV_SETUP)/skaffold-cloud-provider-local.yaml
 cloud-provider-local-up cloud-provider-local-dev cloud-provider-local-debug cloud-provider-local-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./dev-setup/cloud-provider-local.sh $(subst cloud-provider-local-,,$@)
+	$(DEV_SETUP)/cloud-provider-local.sh $(subst cloud-provider-local-,,$@)
 
 # operator-{up,dev,debug,down}
 operator-%: export SKAFFOLD_FILENAME = $(DEV_SETUP)/skaffold-operator.yaml
 operator-up operator-dev operator-debug operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./dev-setup/operator.sh $(subst operator-,,$@)
+	$(DEV_SETUP)/operator.sh $(subst operator-,,$@)
 
 # remote-{up,down}
 remote-up remote-down: $(KUBECTL)
-	./dev-setup/remote.sh $(subst remote-,,$@) $(DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT)
+	$(DEV_SETUP)/remote.sh $(subst remote-,,$@) $(DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT)
 
 # garden-{up,down}
 garden-up garden-down: $(KUBECTL)
-	./dev-setup/garden.sh $(subst garden-,,$@)
+	$(DEV_SETUP)/garden.sh $(subst garden-,,$@)
 
 # seed-{up,down}
 seed-%: export SKAFFOLD_FILENAME = $(DEV_SETUP)/skaffold-seed.yaml
 seed-up seed-dev seed-debug seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./dev-setup/seed.sh $(subst seed-,,$@)
+	$(DEV_SETUP)/seed.sh $(subst seed-,,$@)
 
 # gardener-{up,dev,down}
 gardener-%: export SKAFFOLD_FILENAME = $(DEV_SETUP)/skaffold-seed.yaml
@@ -382,7 +382,7 @@ gardenadm:
 # gardenadm-{up,down}
 gardenadm-%: export SKAFFOLD_FILENAME = $(DEV_SETUP)/skaffold-gardenadm.yaml
 gardenadm-up gardenadm-down: $(SKAFFOLD) $(KUBECTL)
-	./dev-setup/gardenadm.sh $(subst gardenadm-,,$@)
+	$(DEV_SETUP)/gardenadm.sh $(subst gardenadm-,,$@)
 
 test-e2e-local: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default" ./test/e2e/gardener/...

@@ -18,11 +18,11 @@ ns      IN      AAAA    fd00:ff::53
 ; the host aliases configured in the docker compose file.
 ; We wouldn't need this if we had separate zones for registry records outside of local.gardener.cloud.
 ; Note that, on the host, registry.local.gardener.cloud points to 127.0.0.1 and ::1 respectively as configured
-; in /etc/hosts (see ensure_local_registry_hosts in kind-up.sh), so the delegation here only applies to containers.
+; in /etc/hosts (see ensure_local_registry_hosts in 'dev-setup/kind.sh up'), so the delegation here only applies to containers.
 registry        IN      NS      docker-dns.local.gardener.cloud.
 registry-cache  IN      NS      docker-dns.local.gardener.cloud.
 docker-dns      IN      A       127.0.0.11
 
 ; The self-hosted shoot API server is accessible from the host machine via a port mapping through the kind cluster
-; node. The loopback device for this IP is set up in hack/kind-setup-loopback-devices.sh.
+; node. The loopback device for this IP is set up in 'dev-setup/kind.sh setup-loopback-devices'.
 api.root.garden.external    IN  A       172.18.255.4

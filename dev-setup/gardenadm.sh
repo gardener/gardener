@@ -78,7 +78,7 @@ case "$COMMAND" in
         # In the 'connect-kind' scenario, the istio-ingressgateway runs directly on the KinD cluster and gets exposed
         # via a dynamic load balancer provisioned by cloud-controller-manager-local, hence, no need to patch this
         # Service in this scenario.
-        kubectl --kubeconfig "$garden_runtime_cluster_kubeconfig" apply -k "$(dirname "$0")/../dev-setup/gardenadm/loadbalancer-services" --server-side
+        kubectl --kubeconfig "$garden_runtime_cluster_kubeconfig" apply -k "$(dirname "$0")/gardenadm/loadbalancer-services" --server-side
         if ! kubectl --kubeconfig "$KUBECONFIG" -n gardenadm-unmanaged-infra get service control-plane-machine \
           -o jsonpath='{.spec.ports[*].name}' | grep -qw virtual-garden-apiserver; then
           kubectl --kubeconfig "$KUBECONFIG" -n gardenadm-unmanaged-infra patch service control-plane-machine \
