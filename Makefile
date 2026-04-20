@@ -38,7 +38,7 @@ ifndef ARTIFACTS
 	export ARTIFACTS=/tmp/artifacts
 endif
 
-ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
+ifneq ($(shell { git diff-index --quiet HEAD -- && ! git ls-files --others --exclude-standard 2>/dev/null | grep -q .; } 2>/dev/null || echo dirty),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
 endif
 
