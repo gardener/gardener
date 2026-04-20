@@ -187,6 +187,7 @@ rules:
   - extensions.gardener.cloud
   resources:
   - backupbuckets
+  - backupentries
   - dnsrecords
   verbs:
   - get

@@ -92,7 +92,7 @@ var _ = Describe("Garden", func() {
 			Expect(ComputeRequiredExtensionsForGarden(garden, extensionList).UnsortedList()).To(BeEmpty())
 		})
 
-		It("should return required BackupBucket extension type", func() {
+		It("should return required BackupBucket and BackupEntry extension types", func() {
 			garden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
 				Main: &operatorv1alpha1.ETCDMain{
 					Backup: &operatorv1alpha1.Backup{
@@ -103,6 +103,7 @@ var _ = Describe("Garden", func() {
 
 			Expect(ComputeRequiredExtensionsForGarden(garden, extensionList).UnsortedList()).To(ConsistOf(
 				"BackupBucket/local-infrastructure",
+				"BackupEntry/local-infrastructure",
 			))
 		})
 
@@ -163,6 +164,7 @@ var _ = Describe("Garden", func() {
 
 			Expect(ComputeRequiredExtensionsForGarden(garden, extensionList).UnsortedList()).To(ConsistOf(
 				"BackupBucket/local-infrastructure",
+				"BackupEntry/local-infrastructure",
 				"DNSRecord/local-dns",
 				"Extension/local-extension-1",
 				"Extension/local-extension-2",

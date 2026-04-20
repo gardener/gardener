@@ -50,6 +50,10 @@ var _ = Describe("Extension Required Runtime controller tests", Ordered, func() 
 						Kind: "BackupBucket",
 						Type: backupBucketProvider,
 					},
+					{
+						Kind: "BackupEntry",
+						Type: backupBucketProvider,
+					},
 				},
 			},
 		}
@@ -285,13 +289,35 @@ var _ = Describe("Extension Required Runtime controller tests", Ordered, func() 
 			},
 		}
 
+		backupEntry := &extensionsv1alpha1.BackupEntry{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: extensionPrefix + "-entry",
+			},
+			Spec: extensionsv1alpha1.BackupEntrySpec{
+				DefaultSpec: extensionsv1alpha1.DefaultSpec{
+					Class: ptr.To[extensionsv1alpha1.ExtensionClass]("garden"),
+					Type:  backupBucketProvider,
+				},
+				Region:     "region",
+				BucketName: extensionPrefix + "-bucket",
+				SecretRef: corev1.SecretReference{
+					Name: "test-bar-bucket",
+				},
+			},
+		}
+
 		Expect(testClient.Create(ctx, backupBucket)).To(Succeed())
+		Expect(testClient.Create(ctx, backupEntry)).To(Succeed())
 		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, backupEntry)).To(Succeed())
 			Expect(testClient.Delete(ctx, backupBucket)).To(Succeed())
 		})
 
 		Eventually(func() error {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)
+		}).Should(Succeed())
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)
 		}).Should(Succeed())
 
 		Expect(testClient.Delete(ctx, garden)).To(Succeed())
@@ -315,7 +341,7 @@ var _ = Describe("Extension Required Runtime controller tests", Ordered, func() 
 		))
 	})
 
-	It("should report provider extension as not required during garden deletion after backupbucket is gone", func() {
+	It("should report provider extension as not required during garden deletion after backup resources are gone", func() {
 		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(providerExtension), providerExtension)).To(Succeed())
 			return providerExtension.Status.Conditions

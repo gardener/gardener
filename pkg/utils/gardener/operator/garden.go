@@ -56,6 +56,7 @@ func ComputeRequiredExtensionsForGarden(garden *operatorv1alpha1.Garden, extensi
 
 	if operatorv1alpha1helper.GetETCDMainBackup(garden) != nil {
 		requiredExtensions.Insert(gardener.ExtensionsID(extensionsv1alpha1.BackupBucketResource, garden.Spec.VirtualCluster.ETCD.Main.Backup.Provider))
+		requiredExtensions.Insert(gardener.ExtensionsID(extensionsv1alpha1.BackupEntryResource, garden.Spec.VirtualCluster.ETCD.Main.Backup.Provider))
 	}
 
 	for _, provider := range operatorv1alpha1helper.GetDNSProviders(garden) {

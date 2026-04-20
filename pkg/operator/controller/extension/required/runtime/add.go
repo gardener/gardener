@@ -43,6 +43,7 @@ type extension struct {
 
 var runtimeClusterExtensions = []extension{
 	{objectKind: extensionsv1alpha1.BackupBucketResource, object: &extensionsv1alpha1.BackupBucket{}, newObjectListFunc: func() client.ObjectList { return &extensionsv1alpha1.BackupBucketList{} }},
+	{objectKind: extensionsv1alpha1.BackupEntryResource, object: &extensionsv1alpha1.BackupEntry{}, newObjectListFunc: func() client.ObjectList { return &extensionsv1alpha1.BackupEntryList{} }},
 	{objectKind: extensionsv1alpha1.DNSRecordResource, object: &extensionsv1alpha1.DNSRecord{}, newObjectListFunc: func() client.ObjectList { return &extensionsv1alpha1.DNSRecordList{} }},
 	{objectKind: extensionsv1alpha1.ExtensionResource, object: &extensionsv1alpha1.Extension{}, newObjectListFunc: func() client.ObjectList { return &extensionsv1alpha1.ExtensionList{} }},
 }
