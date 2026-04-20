@@ -175,9 +175,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		shootObjects = append(shootObjects, loggingAgentClusterRole)
 		shootObjects = append(shootObjects, o.getLoggingAgentClusterRoleBinding(loggingAgentShootAccessSecret.ServiceAccountName, loggingAgentClusterRole.Name))
 	} else {
-		if err := kubernetesutils.DeleteObjects(ctx, o.client,
-			loggingAgentShootAccessSecret.Secret,
-		); err != nil {
+		if err := kubernetesutils.DeleteObject(ctx, o.client, loggingAgentShootAccessSecret.Secret); err != nil {
 			return err
 		}
 	}
