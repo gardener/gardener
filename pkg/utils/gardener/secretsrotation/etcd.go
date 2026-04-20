@@ -265,7 +265,17 @@ func GetResourcesForRewrite(
 
 	resourceLists, err := discoveryClient.ServerPreferredResources()
 	if err != nil {
-		return encryptedGVKs.UnsortedList(), "", fmt.Errorf("error discovering server preferred resources: %w", err)
+		failedGroups, isPartialFailure := discovery.GroupDiscoveryFailedErrorGroups(err)
+		if !isPartialFailure {
+			return encryptedGVKs.UnsortedList(), "", fmt.Errorf("error discovering server preferred resources: %w", err)
+		}
+		for failedGV := range failedGroups {
+			for _, gr := range groupResourcesToEncrypt {
+				if gr.Group == failedGV.Group {
+					return encryptedGVKs.UnsortedList(), "", fmt.Errorf("error discovering server preferred resources: %w", err)
+				}
+			}
+		}
 	}
 
 	for _, list := range resourceLists {

@@ -6,6 +6,7 @@ package secretsrotation_test
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -16,6 +17,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -360,6 +362,64 @@ var _ = Describe("ETCD", func() {
 			))
 		})
 
+		It("should succeed with partial results when an unrelated API group fails discovery", func() {
+			var (
+				resources = []string{
+					"configmaps",
+					"managedresources.resources.gardener.cloud",
+				}
+
+				defaultGVKs = []schema.GroupVersionKind{corev1.SchemeGroupVersion.WithKind("Secret")}
+			)
+
+			fakeDiscoveryClient.err = &discovery.ErrGroupDiscoveryFailed{
+				Groups: map[schema.GroupVersion]error{
+					{Group: "acme.stackit.de", Version: "v1alpha1"}: fmt.Errorf("stale GroupVersion discovery: acme.stackit.de/v1alpha1"),
+				},
+			}
+			DeferCleanup(func() { fakeDiscoveryClient.err = nil })
+
+			list, message, err := GetResourcesForRewrite(fakeDiscoveryClient, resources, resources, defaultGVKs)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(message).To(Equal("Objects requiring to be rewritten after ETCD encryption key rotation"))
+			Expect(list).To(ConsistOf(
+				schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
+				schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
+				schema.GroupVersionKind{Group: "resources.gardener.cloud", Version: "v1alpha1", Kind: "ManagedResource"},
+			))
+		})
+
+		It("should fail when a required API group fails discovery", func() {
+			var (
+				resources = []string{
+					"configmaps",
+					"certificates.acme.stackit.de",
+				}
+
+				defaultGVKs = []schema.GroupVersionKind{corev1.SchemeGroupVersion.WithKind("Secret")}
+			)
+
+			fakeDiscoveryClient.err = &discovery.ErrGroupDiscoveryFailed{
+				Groups: map[schema.GroupVersion]error{
+					{Group: "acme.stackit.de", Version: "v1alpha1"}: fmt.Errorf("stale GroupVersion discovery: acme.stackit.de/v1alpha1"),
+				},
+			}
+			DeferCleanup(func() { fakeDiscoveryClient.err = nil })
+
+			_, _, err := GetResourcesForRewrite(fakeDiscoveryClient, resources, resources, defaultGVKs)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("error discovering server preferred resources"))
+		})
+
+		It("should fail on non-partial discovery errors", func() {
+			fakeDiscoveryClient.err = fmt.Errorf("connection refused")
+			DeferCleanup(func() { fakeDiscoveryClient.err = nil })
+
+			_, _, err := GetResourcesForRewrite(fakeDiscoveryClient, []string{"configmaps"}, []string{"configmaps"}, nil)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("error discovering server preferred resources"))
+		})
+
 		It("should return the correct GVK list for the modified resources when the resources to encrypt and encrypted resources are not equal", func() {
 			var (
 				resourcesToEncrypt = []string{
@@ -394,6 +454,8 @@ var _ = Describe("ETCD", func() {
 
 type fakeDiscoveryWithServerPreferredResources struct {
 	*fakediscovery.FakeDiscovery
+	// err is returned alongside the resource lists (simulates partial discovery failures).
+	err error
 }
 
 func (c *fakeDiscoveryWithServerPreferredResources) ServerPreferredResources() ([]*metav1.APIResourceList, error) {
@@ -495,5 +557,5 @@ func (c *fakeDiscoveryWithServerPreferredResources) ServerPreferredResources() (
 				},
 			},
 		},
-	}, nil
+	}, c.err
 }
