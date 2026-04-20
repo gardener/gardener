@@ -187,7 +187,11 @@ var (
 )
 
 func getTimeoutWaitOperatingSystemConfigUpdated(shoot *shootpkg.Shoot) time.Duration {
-	return shoot.OSCSyncJitterPeriod.Duration + controllerutils.DefaultReconciliationTimeout
+	reconciliationTimeout := controllerutils.DefaultReconciliationTimeout
+	if shoot.IsSelfHosted() && !shoot.HasManagedInfrastructure() {
+		reconciliationTimeout = 10 * time.Minute
+	}
+	return shoot.OSCSyncJitterPeriod.Duration + reconciliationTimeout
 }
 
 // WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools waits for a maximum of 2*GetTimeoutWaitOperatingSystemConfigUpdated
