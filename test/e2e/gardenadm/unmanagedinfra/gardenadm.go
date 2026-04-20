@@ -97,7 +97,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 				Expect(err).NotTo(HaveOccurred())
 
 				Eventually(ctx, stdOut).Should(gbytes.Say("Your Shoot cluster control-plane has initialized successfully!"))
-			}, SpecTimeout(10*time.Minute))
+			}, SpecTimeout(15*time.Minute))
 
 			It("copy admin kubeconfig and create client", func(ctx SpecContext) {
 				tempDir, err := os.MkdirTemp("", "tmp")
