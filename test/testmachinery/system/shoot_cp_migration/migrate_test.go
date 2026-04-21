@@ -12,14 +12,12 @@ package cp_migration_test
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"strings"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
 
-	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	. "github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/applications"
 	shootmigration "github.com/gardener/gardener/test/utils/shoots/migration"
@@ -112,10 +110,6 @@ func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *a
 
 	if t.Shoot.Status.IsHibernated {
 		return nil
-	}
-
-	if !v1beta1helper.NginxIngressEnabled(t.Shoot.Spec.Addons) {
-		return errors.New("the shoot must have the nginx-ingress addon enabled")
 	}
 
 	ginkgo.By("Create test Secret and Service Account")
