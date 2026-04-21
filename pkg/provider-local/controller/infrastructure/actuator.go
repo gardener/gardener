@@ -47,78 +47,82 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, infrastructur
 		return fmt.Errorf("could not create client for infrastructure resources: %w", err)
 	}
 
-	networkPolicyAllowMachinePods := emptyNetworkPolicy("allow-machine-pods", infrastructure.Namespace)
-	networkPolicyAllowMachinePods.Spec = networkingv1.NetworkPolicySpec{
-		Ingress: []networkingv1.NetworkPolicyIngressRule{{
-			From: []networkingv1.NetworkPolicyPeer{
-				{
-					PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}},
-				},
-				// Allow traffic from load balancer containers in the Docker kind network.
-				{
-					IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV4},
-				},
-				{
-					IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV6},
+	// We don't need these resources in case we're operating in the kube-system namespace (only the case for self-hosted
+	// shoots) - we will never have machine pods there.
+	if infrastructure.Namespace != metav1.NamespaceSystem {
+		networkPolicyAllowMachinePods := emptyNetworkPolicy("allow-machine-pods", infrastructure.Namespace)
+		networkPolicyAllowMachinePods.Spec = networkingv1.NetworkPolicySpec{
+			Ingress: []networkingv1.NetworkPolicyIngressRule{{
+				From: []networkingv1.NetworkPolicyPeer{
+					{
+						PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}},
+					},
+					// Allow traffic from load balancer containers in the Docker kind network.
+					{
+						IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV4},
+					},
+					{
+						IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV6},
+					},
+				}},
+			},
+			Egress: []networkingv1.NetworkPolicyEgressRule{{
+				To: []networkingv1.NetworkPolicyPeer{
+					{
+						PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}},
+					},
+					{
+						NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "registry"}},
+						PodSelector:       &metav1.LabelSelector{MatchLabels: map[string]string{"app": "registry"}},
+					},
 				},
 			}},
-		},
-		Egress: []networkingv1.NetworkPolicyEgressRule{{
-			To: []networkingv1.NetworkPolicyPeer{
-				{
-					PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}},
-				},
-				{
-					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "registry"}},
-					PodSelector:       &metav1.LabelSelector{MatchLabels: map[string]string{"app": "registry"}},
-				},
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{"app": "machine"},
 			},
-		}},
-		PodSelector: metav1.LabelSelector{
-			MatchLabels: map[string]string{"app": "machine"},
-		},
-		PolicyTypes: []networkingv1.PolicyType{
-			networkingv1.PolicyTypeIngress,
-			networkingv1.PolicyTypeEgress,
-		},
-	}
-
-	// The machines service is used to add NetworkPolicies for accessing the machine ports,
-	// e.g., access from the Bastion pod to port 22
-	service := emptyService(infrastructure.Namespace)
-	service.Spec = corev1.ServiceSpec{
-		Type:     corev1.ServiceTypeClusterIP,
-		Selector: map[string]string{"app": "machine"},
-		Ports: []corev1.ServicePort{
-			{
-				Name:        "ssh",
-				Port:        22,
-				Protocol:    corev1.ProtocolTCP,
-				AppProtocol: ptr.To("ssh"),
+			PolicyTypes: []networkingv1.PolicyType{
+				networkingv1.PolicyTypeIngress,
+				networkingv1.PolicyTypeEgress,
 			},
-		},
-	}
-
-	if cluster.Shoot.Spec.Networking == nil || cluster.Shoot.Spec.Networking.Nodes == nil {
-		return fmt.Errorf("shoot specification does not contain node network CIDR required for VPN tunnel")
-	}
-
-	objects := []client.Object{
-		networkPolicyAllowMachinePods,
-		service,
-	}
-
-	for _, ipFamily := range cluster.Shoot.Spec.Networking.IPFamilies {
-		ipPoolObj, err := ipPool(cluster.ObjectMeta, string(ipFamily), *cluster.Shoot.Spec.Networking.Nodes)
-		if err != nil {
-			return err
 		}
-		objects = append(objects, ipPoolObj)
-	}
 
-	for _, obj := range objects {
-		if err := providerClient.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
-			return err
+		// The machines service is used to add NetworkPolicies for accessing the machine ports,
+		// e.g., access from the Bastion pod to port 22
+		service := emptyService(infrastructure.Namespace)
+		service.Spec = corev1.ServiceSpec{
+			Type:     corev1.ServiceTypeClusterIP,
+			Selector: map[string]string{"app": "machine"},
+			Ports: []corev1.ServicePort{
+				{
+					Name:        "ssh",
+					Port:        22,
+					Protocol:    corev1.ProtocolTCP,
+					AppProtocol: ptr.To("ssh"),
+				},
+			},
+		}
+
+		if cluster.Shoot.Spec.Networking == nil || cluster.Shoot.Spec.Networking.Nodes == nil {
+			return fmt.Errorf("shoot specification does not contain node network CIDR required for VPN tunnel")
+		}
+
+		objects := []client.Object{
+			networkPolicyAllowMachinePods,
+			service,
+		}
+
+		for _, ipFamily := range cluster.Shoot.Spec.Networking.IPFamilies {
+			ipPoolObj, err := ipPool(cluster.ObjectMeta, string(ipFamily), *cluster.Shoot.Spec.Networking.Nodes)
+			if err != nil {
+				return err
+			}
+			objects = append(objects, ipPoolObj)
+		}
+
+		for _, obj := range objects {
+			if err := providerClient.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+				return err
+			}
 		}
 	}
 
