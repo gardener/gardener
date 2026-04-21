@@ -833,7 +833,7 @@ build:
           - command:
               - bash
               - -c
-              - >
+              - |
                 kubectl --kubeconfig="$VIRTUAL_GARDEN_KUBECONFIG" -n garden patch gardenlet self-hosted-shoot-root --type=merge -p "$(jq -n \
                   --arg image "$SKAFFOLD_IMAGE" \
                   --arg imagevector_overwrite "$(cat ./dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml)" \
@@ -850,7 +850,6 @@ build:
                     }
                   }'
                 )" || true
-
   insecureRegistries:
     - registry.local.gardener.cloud:5001
   tagPolicy:
