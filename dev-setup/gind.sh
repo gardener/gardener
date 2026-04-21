@@ -36,6 +36,8 @@ case "$COMMAND" in
     done
 
     docker compose -f "$GIND_COMPOSE_FILE" exec machine-0 bash -c 'gardenadm init -d /gardenadm/resources'
+
+    ./hack/usage/generate-kubeconfig.sh self-hosted-shoot --docker gind-machine-0 > "$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER"
     ;;
 
   down)
