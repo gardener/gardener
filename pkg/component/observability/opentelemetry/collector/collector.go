@@ -190,6 +190,10 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		if err := managedresources.CreateForShoot(ctx, o.client, o.namespace, managedResourceNameTarget, managedresources.LabelValueGardener, false, resourcesTarget); err != nil {
 			return err
 		}
+	} else {
+		if err := managedresources.DeleteForShoot(ctx, o.client, o.namespace, managedResourceNameTarget); err != nil {
+			return err
+		}
 	}
 
 	seedObjects = append(seedObjects, o.openTelemetryCollector(o.namespace, o.values.LokiEndpoint, genericTokenKubeconfigSecretName))
