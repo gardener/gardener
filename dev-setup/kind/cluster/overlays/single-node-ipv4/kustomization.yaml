@@ -3,6 +3,3 @@ kind: Kustomization
 
 resources:
 - ../../base
-
-components:
-- ../../components/selfhostedshoot-runtime-ipv4

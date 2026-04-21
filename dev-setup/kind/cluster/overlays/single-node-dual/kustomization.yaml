@@ -5,5 +5,4 @@ resources:
 - ../../base
 
 components:
-- ../../components/selfhostedshoot-runtime-ipv4
 - ../../components/dual

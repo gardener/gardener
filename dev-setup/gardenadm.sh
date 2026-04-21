@@ -61,25 +61,6 @@ case "$COMMAND" in
         exit 1
       fi
 
-      if [[ "$SCENARIO" == "connect" ]]; then
-        # Used to talk to the virtual-garden API server from the host machine via the following network path:
-        # Host:172.18.255.3:443
-        #   → Docker (hostPort 443 → containerPort 31443)
-        #     → KinD node, NodePort 31443 (service gardenadm-unmanaged-infra/control-plane-machine)
-        #       → machine-0 pod IP 10.0.212.0:31443
-        #         → istio-ingressgateway pod exposed via NodePort 31443 in the machine-0 node (patched by MutatingAdmissionPolicy loadbalancer-services)
-        # In the 'connect-kind' scenario, the istio-ingressgateway runs directly on the KinD cluster and gets exposed
-        # via a dynamic load balancer provisioned by cloud-controller-manager-local, hence, no need to patch this
-        # Service in this scenario.
-        kubectl --kubeconfig "$garden_runtime_cluster_kubeconfig" apply -k "$(dirname "$0")/gardenadm/loadbalancer-services" --server-side
-        if ! kubectl --kubeconfig "$KUBECONFIG" -n gardenadm-unmanaged-infra get service control-plane-machine \
-          -o jsonpath='{.spec.ports[*].name}' | grep -qw virtual-garden-apiserver; then
-          kubectl --kubeconfig "$KUBECONFIG" -n gardenadm-unmanaged-infra patch service control-plane-machine \
-            --type=json \
-            -p '[{"op":"add","path":"/spec/ports/-","value":{"name":"virtual-garden-apiserver","port":31443,"targetPort":31443,"nodePort":31443}}]'
-        fi
-      fi
-
       make operator-up garden-up \
         -f "$(dirname "$0")/../Makefile" \
         KUBECONFIG="$garden_runtime_cluster_kubeconfig"

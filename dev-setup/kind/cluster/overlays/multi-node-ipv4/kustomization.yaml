@@ -7,4 +7,3 @@ resources:
 components:
 - ../../components/node
 - ../../components/node
-- ../../components/selfhostedshoot-runtime-ipv4
