@@ -1176,6 +1176,11 @@ func (in *GardenerDashboardConfig) DeepCopyInto(out *GardenerDashboardConfig) {
 		*out = new(DashboardIngress)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.IncludeCAForSNI != nil {
+		in, out := &in.IncludeCAForSNI, &out.IncludeCAForSNI
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 
