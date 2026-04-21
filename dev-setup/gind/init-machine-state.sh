@@ -14,6 +14,10 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# The kind Docker network is dual-stack. Disable IPv6 so that hostname resolution returns IPv4 — otherwise
+# kube-apiserver picks the IPv6 address as its advertise address, which conflicts with the IPv4 service CIDR.
+sysctl -w net.ipv6.conf.all.disable_ipv6=1 net.ipv6.conf.default.disable_ipv6=1
+
 seed_if_empty() {
   local src="$1" dst="$2"
   if [ -z "$(ls -A "$dst" 2>/dev/null)" ]; then

@@ -12,3 +12,6 @@ spec:
         MutatingAdmissionPolicy: true
       runtimeConfig:
         admissionregistration.k8s.io/v1beta1: true
+  networking:
+    # Must be within 172.18.0.0/24 (range of kind Docker network)
+    nodes: 172.18.0.0/24

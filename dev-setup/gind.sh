@@ -35,7 +35,7 @@ case "$COMMAND" in
       docker compose -f "$GIND_COMPOSE_FILE" exec "$service" bash -c '/install-gardenadm.sh $(cat /gardenadm/.skaffold-image)'
     done
 
-    docker compose -f "$GIND_COMPOSE_FILE" exec machine-0 bash -c 'gardenadm --help'
+    docker compose -f "$GIND_COMPOSE_FILE" exec machine-0 bash -c 'gardenadm init -d /gardenadm/resources'
     ;;
 
   down)

@@ -125,5 +125,45 @@ var _ = Describe("Shoot Validator", func() {
 			shoot.Spec.Networking.Nodes = nil
 			Expect(shootValidator.Validate(ctx, shoot, nil)).To(Succeed())
 		})
+
+		When("shoot is self-hosted without managed infrastructure", func() {
+			BeforeEach(func() {
+				shoot.Spec.Provider.Workers = []core.Worker{{
+					Name:         "worker-1",
+					ControlPlane: &core.WorkerControlPlane{},
+				}}
+			})
+
+			It("should succeed for valid GinD IPv4 nodes CIDR", func() {
+				shoot.Spec.Networking.Nodes = ptr.To("172.18.0.0/24")
+				Expect(shootValidator.Validate(ctx, shoot, nil)).To(Succeed())
+			})
+
+			It("should fail for invalid GinD IPv4 nodes CIDR", func() {
+				shoot.Spec.Networking.Nodes = ptr.To("192.168.0.0/24")
+				Expect(shootValidator.Validate(ctx, shoot, nil)).To(MatchError(ContainSubstring("nodes CIDR must be a subnet of 172.18.0.0/24")))
+			})
+
+			It("should succeed for valid GinD IPv6 nodes CIDR", func() {
+				shoot.Spec.Networking.Nodes = ptr.To("fd00:10::/64")
+				Expect(shootValidator.Validate(ctx, shoot, nil)).To(Succeed())
+			})
+
+			It("should fail for invalid GinD IPv6 nodes CIDR", func() {
+				shoot.Spec.Networking.Nodes = ptr.To("fd00:20::/64")
+				Expect(shootValidator.Validate(ctx, shoot, nil)).To(MatchError(ContainSubstring("nodes CIDR must be a subnet of fd00:10::/64")))
+			})
+
+			It("should fail for KinD CIDR when shoot is self-hosted without managed infrastructure", func() {
+				shoot.Spec.Networking.Nodes = ptr.To("10.0.0.0/24")
+				Expect(shootValidator.Validate(ctx, shoot, nil)).To(MatchError(ContainSubstring("nodes CIDR must be a subnet of 172.18.0.0/24")))
+			})
+
+			It("should use KinD CIDRs when shoot is self-hosted with managed infrastructure", func() {
+				shoot.Spec.CredentialsBindingName = ptr.To("my-binding")
+				shoot.Spec.Networking.Nodes = ptr.To("10.0.0.0/24")
+				Expect(shootValidator.Validate(ctx, shoot, nil)).To(Succeed())
+			})
+		})
 	})
 })

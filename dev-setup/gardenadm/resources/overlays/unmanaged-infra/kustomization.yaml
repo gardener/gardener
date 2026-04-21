@@ -8,4 +8,4 @@ resources:
 - ../../base
 
 patches:
-- path: patch-shoot-unmanaged-infra.yaml
+- path: patch-shoot.yaml
