@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/clock"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -28,6 +28,7 @@ import (
 var _ = Describe("Controller", func() {
 	var (
 		fakeClient client.Client
+		fakeClock  *testclock.FakeClock
 		reconciler reconcile.Reconciler
 
 		namespace   = "garden-dev"
@@ -39,13 +40,14 @@ var _ = Describe("Controller", func() {
 	)
 
 	BeforeEach(func() {
+		fakeClock = testclock.NewFakeClock(time.Now())
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		reconciler = &Reconciler{
 			Client: fakeClient,
 			Config: controllermanagerconfigv1alpha1.BastionControllerConfiguration{
 				MaxLifetime: &metav1.Duration{Duration: maxLifetime},
 			},
-			Clock: clock.RealClock{},
+			Clock: fakeClock,
 		}
 	})
 
@@ -57,8 +59,9 @@ var _ = Describe("Controller", func() {
 		})
 
 		It("should requeue alive Bastions", func() {
-			created := time.Now().Add(-maxLifetime / 2)
-			requeueAfter := time.Until(created.Add(maxLifetime))
+			now := fakeClock.Now()
+			created := now.Add(-maxLifetime / 2)
+			requeueAfter := created.Add(maxLifetime).Sub(now)
 
 			shoot := newShoot(namespace, shootName, &seedName)
 			Expect(fakeClient.Create(ctx, &shoot)).To(Succeed())
@@ -72,7 +75,7 @@ var _ = Describe("Controller", func() {
 		})
 
 		It("should requeue soon-to-expire Bastions", func() {
-			now := time.Now()
+			now := fakeClock.Now()
 			remaining := 30 * time.Second
 			expires := now.Add(remaining)
 
@@ -88,7 +91,7 @@ var _ = Describe("Controller", func() {
 		})
 
 		It("should requeue soon-to-reach-max-lifetime Bastions", func() {
-			now := time.Now()
+			now := fakeClock.Now()
 			created := now.Add(-maxLifetime).Add(10 * time.Minute) // reaches end-of-life in 10 minutes
 			expires := now.Add(30 * time.Minute)                   // expires in 30 minutes
 
@@ -104,7 +107,7 @@ var _ = Describe("Controller", func() {
 		})
 
 		It("should delete Bastions with missing shoots", func() {
-			created := time.Now().Add(-maxLifetime / 2)
+			created := fakeClock.Now().Add(-maxLifetime / 2)
 			bastion := newBastion(namespace, bastionName, shootName, &seedName, &created, nil)
 			Expect(fakeClient.Create(ctx, &bastion)).To(Succeed())
 
@@ -121,7 +124,7 @@ var _ = Describe("Controller", func() {
 			Expect(fakeClient.Create(ctx, &shoot)).To(Succeed())
 			Expect(fakeClient.Delete(ctx, &shoot)).To(Succeed())
 
-			created := time.Now().Add(-maxLifetime / 2)
+			created := fakeClock.Now().Add(-maxLifetime / 2)
 			bastion := newBastion(namespace, bastionName, shootName, &seedName, &created, nil)
 			Expect(fakeClient.Create(ctx, &bastion)).To(Succeed())
 
@@ -136,8 +139,8 @@ var _ = Describe("Controller", func() {
 			shoot := newShoot(namespace, shootName, &seedName)
 			Expect(fakeClient.Create(ctx, &shoot)).To(Succeed())
 
-			created := time.Now().Add(-maxLifetime / 2)
-			expires := time.Now().Add(-5 * time.Second)
+			created := fakeClock.Now().Add(-maxLifetime / 2)
+			expires := fakeClock.Now().Add(-5 * time.Second)
 			bastion := newBastion(namespace, bastionName, shootName, &seedName, &created, &expires)
 			Expect(fakeClient.Create(ctx, &bastion)).To(Succeed())
 
@@ -152,7 +155,7 @@ var _ = Describe("Controller", func() {
 			shoot := newShoot(namespace, shootName, &seedName)
 			Expect(fakeClient.Create(ctx, &shoot)).To(Succeed())
 
-			created := time.Now().Add(-maxLifetime * 2)
+			created := fakeClock.Now().Add(-maxLifetime * 2)
 			bastion := newBastion(namespace, bastionName, shootName, &seedName, &created, nil)
 			Expect(fakeClient.Create(ctx, &bastion)).To(Succeed())
 
@@ -169,8 +172,8 @@ var _ = Describe("Controller", func() {
 			shoot := newShoot(namespace, shootName, &newSeedName)
 			Expect(fakeClient.Create(ctx, &shoot)).To(Succeed())
 
-			created := time.Now().Add(-maxLifetime / 2)
-			expires := time.Now().Add(1 * time.Minute)
+			created := fakeClock.Now().Add(-maxLifetime / 2)
+			expires := fakeClock.Now().Add(1 * time.Minute)
 			bastion := newBastion(namespace, bastionName, shootName, &seedName, &created, &expires)
 			Expect(fakeClient.Create(ctx, &bastion)).To(Succeed())
 
@@ -185,8 +188,8 @@ var _ = Describe("Controller", func() {
 			shoot := newShoot(namespace, shootName, nil) // shoot was removed from original seed and since then hasn't found a new seed
 			Expect(fakeClient.Create(ctx, &shoot)).To(Succeed())
 
-			created := time.Now().Add(-maxLifetime / 2)
-			expires := time.Now().Add(1 * time.Minute)
+			created := fakeClock.Now().Add(-maxLifetime / 2)
+			expires := fakeClock.Now().Add(1 * time.Minute)
 			bastion := newBastion(namespace, bastionName, shootName, &seedName, &created, &expires)
 			Expect(fakeClient.Create(ctx, &bastion)).To(Succeed())
 
