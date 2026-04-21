@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -18,12 +19,10 @@ import (
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 	. "github.com/onsi/gomega/gstruct"
-	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
@@ -31,11 +30,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	. "github.com/gardener/gardener/test/e2e/gardenadm/common"
 )
 
 var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gardenadm", "unmanaged-infra"), func() {
@@ -54,64 +51,17 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 		)
 
 		Context("gardenadm init + join", Ordered, Label("initjoin"), func() {
-			BeforeAll(func(ctx SpecContext) {
-				testRunID := utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
-
-				By("Ensuring fresh machine pods for test execution")
-				statefulSet := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: statefulSetName, Namespace: namespace}}
-				Expect(RuntimeClient.Client().Get(ctx, client.ObjectKeyFromObject(statefulSet), statefulSet)).To(Succeed())
-
-				By("Deleting machine state PVCs to ensure clean state")
-				pvcList := &corev1.PersistentVolumeClaimList{}
-				Expect(RuntimeClient.Client().List(ctx, pvcList, client.InNamespace(namespace), client.MatchingLabels{"app": statefulSetName})).To(Succeed())
-				for _, pvc := range pvcList.Items {
-					// Only delete machine-state PVCs (shoot cluster state). The gardenadm PVCs hold the
-					// gardenadm binary and imagevectors populated by skaffold and must not be wiped.
-					if !strings.HasPrefix(pvc.Name, "machine-state-") {
-						continue
-					}
-					Expect(client.IgnoreNotFound(RuntimeClient.Client().Delete(ctx, &pvc))).To(Succeed())
-				}
-
-				patch := client.MergeFrom(statefulSet.DeepCopy())
-				metav1.SetMetaDataAnnotation(&statefulSet.Spec.Template.ObjectMeta, "test-run-id", testRunID)
-				Expect(RuntimeClient.Client().Patch(ctx, statefulSet, patch)).To(Succeed())
-
-				Eventually(ctx, func(g Gomega) {
-					g.Expect(RuntimeClient.Client().Get(ctx, client.ObjectKeyFromObject(statefulSet), statefulSet)).To(Succeed())
-					progressing, _ := health.IsStatefulSetProgressing(statefulSet)
-					g.Expect(progressing).To(BeFalse())
-					g.Expect(health.CheckStatefulSet(statefulSet)).To(Succeed())
-				}).Should(Succeed())
-			}, NodeTimeout(2*time.Minute))
-
-			It("should initialize as control plane node", func(ctx SpecContext) {
-				stdOut, _, err := execute(ctx, 0, "gardenadm", "--log-level=debug", "init", "-d", configDirectory)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(ctx, stdOut).Should(gbytes.Say("Your Shoot cluster control-plane has initialized successfully!"))
-			}, SpecTimeout(15*time.Minute))
-
 			It("should create a client for the self-hosted shoot API server", func(ctx SpecContext) {
-				var adminKubeconfig []byte
-
-				By("Read admin kubeconfig from control plane machine")
-				Eventually(ctx, func(g Gomega) {
-					stdOut, _, err := execute(ctx, 0, "cat", "/etc/kubernetes/admin.conf")
-					g.Expect(err).NotTo(HaveOccurred())
-					adminKubeconfig = stdOut.Contents()
-				}).Should(Succeed())
-
-				By("Create client set")
-				Eventually(func() error {
+				Eventually(ctx, func() error {
 					var err error
-					shootClientSet, err = kubernetes.NewClientFromBytes(adminKubeconfig,
+					shootClientSet, err = kubernetes.NewClientFromFile("",
+						filepath.Join("..", "..", "..", "dev-setup", "kubeconfigs", "self-hosted-shoot", "kubeconfig"),
 						kubernetes.WithDisabledCachedClient(),
 						kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
 					)
 					return err
 				}).Should(Succeed())
-			})
+			}, SpecTimeout(time.Minute))
 
 			It("should be able to communicate with the API server and see the node and the control plane pods", func(ctx SpecContext) {
 				Eventually(ctx, func(g Gomega) []corev1.Node {
@@ -125,11 +75,11 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 					g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace(controlPlaneNamespace))).To(Succeed())
 					return podList.Items
 				}).Should(ContainElements(
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-events-machine-0")})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-main-machine-0")})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-machine-0")})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-controller-manager-machine-0")})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-scheduler-machine-0")})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-events-gind-machine-0")})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-main-gind-machine-0")})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-gind-machine-0")})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-controller-manager-gind-machine-0")})}),
+					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-scheduler-gind-machine-0")})}),
 					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("kube-proxy")})}),
 					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("gardener-resource-manager")})}),
 					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("calico")})}),
@@ -184,7 +134,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			It("should ensure that extension webhooks on control plane components are functioning", func(ctx SpecContext) {
 				Eventually(ctx, func(g Gomega) map[string]string {
 					pod := &corev1.Pod{}
-					g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKey{Name: "kube-scheduler-machine-0", Namespace: controlPlaneNamespace}, pod)).To(Succeed())
+					g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKey{Name: "kube-scheduler-gind-machine-0", Namespace: controlPlaneNamespace}, pod)).To(Succeed())
 					return pod.Labels
 				}).Should(HaveKeyWithValue("injected-by", "provider-local"))
 			}, SpecTimeout(time.Minute))
@@ -210,7 +160,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 
 			It("should see the joined node and observe its readiness", func(ctx SpecContext) {
 				Eventually(ctx, func(g Gomega) {
-					node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machinePodName(1)}}
+					node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machineContainerName(1)}}
 					g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 
 					g.Expect(node.Status.Conditions).To(ContainCondition(
@@ -225,7 +175,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			}, SpecTimeout(2*time.Minute))
 		})
 
-		Context("gardenadm init + join", Ordered, Label("connect"), func() {
+		Context("gardenadm connect", Ordered, Label("connect"), func() {
 			var (
 				gardenClientSet                      kubernetes.Interface
 				gardenKomega                         Komega
@@ -352,14 +302,10 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 func execute(ctx context.Context, ordinal int, command ...string) (*gbytes.Buffer, *gbytes.Buffer, error) {
 	var stdOutBuffer, stdErrBuffer = gbytes.NewBuffer(), gbytes.NewBuffer()
 
-	return stdOutBuffer, stdErrBuffer, RuntimeClient.PodExecutor().ExecuteWithStreams(
-		ctx,
-		namespace,
-		machinePodName(ordinal),
-		ContainerName,
-		nil,
-		io.MultiWriter(stdOutBuffer, gexec.NewPrefixedWriter("[out] ", GinkgoWriter)),
-		io.MultiWriter(stdErrBuffer, gexec.NewPrefixedWriter("[err] ", GinkgoWriter)),
-		command...,
-	)
+	args := append([]string{"exec", machineContainerName(ordinal)}, command...)
+	cmd := exec.CommandContext(ctx, "docker", args...) // #nosec G204 -- Used for e2e tests only.
+	cmd.Stdout = io.MultiWriter(stdOutBuffer, gexec.NewPrefixedWriter("[out] ", GinkgoWriter))
+	cmd.Stderr = io.MultiWriter(stdErrBuffer, gexec.NewPrefixedWriter("[err] ", GinkgoWriter))
+
+	return stdOutBuffer, stdErrBuffer, cmd.Run()
 }

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package gardenadm
+package managedinfra
 
 import (
 	"os"

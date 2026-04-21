@@ -46,6 +46,23 @@ export_artifacts() {
   export_artifacts_for_cluster "$cluster_name"
 }
 
+export_node_artifacts() {
+  local node_dir="$1"
+  shift
+  local exec_cmd=("$@")
+
+  mkdir -p "$node_dir"
+
+  # general stuff
+  "${exec_cmd[@]}" crictl images >"$node_dir/images.log" || true
+
+  # relevant systemd units
+  for unit in gardener-node-agent kubelet containerd containerd-configuration-local-setup ssh; do
+    "${exec_cmd[@]}" journalctl --no-pager -u $unit.service >"$node_dir/$unit.log" || true
+  done
+  "${exec_cmd[@]}" journalctl --no-pager >"$node_dir/journal.log" || true
+}
+
 export_artifacts_for_cluster() {
   cluster_name="${1}"
 
@@ -57,22 +74,31 @@ export_artifacts_for_cluster() {
     while IFS= read -r node; do
       echo "> Exporting logs of shoot cluster '$namespace', node '$node'"
       node_dir="${ARTIFACTS:-}/$namespace/$node"
-      mkdir -p "$node_dir"
 
-      # general stuff
-      kubectl -n "$namespace" exec "$node" -- crictl images >"$node_dir/images.log" || true
+      export_node_artifacts "$node_dir" kubectl -n "$namespace" exec "$node" --
       kubectl -n "$namespace" get pod "$node" --show-managed-fields -oyaml >"$node_dir/pod.yaml" || true
-
-      # relevant systemd units
-      for unit in gardener-node-agent kubelet containerd containerd-configuration-local-setup ssh; do
-        kubectl -n "$namespace" exec "$node" -- journalctl --no-pager -u $unit.service >"$node_dir/$unit.log" || true
-      done
-      kubectl -n "$namespace" exec "$node" -- journalctl --no-pager >"$node_dir/journal.log" || true
 
       # container logs
       kubectl cp "$namespace/$node":/var/log "$node_dir" || true
     done < <(kubectl -n "$namespace" get po -l 'app in (machine,bastion)' -oname | cut -d/ -f2)
   done < <(kubectl get ns -l gardener.cloud/role=shoot -oname | cut -d/ -f2; kubectl get ns -l export-artifacts=true -oname | cut -d/ -f2)
+}
+
+export_artifacts_gind() {
+  echo "> Exporting logs and state of gind containers"
+  for container in $(yq '.services | keys() | .[]' ./dev-setup/gind/docker-compose.yaml); do
+    container_name="gind-$container"
+    node_dir="${ARTIFACTS:-}/gind/$container_name"
+
+    docker compose -f ./dev-setup/gind/docker-compose.yaml logs --no-log-prefix "$container" > "${ARTIFACTS:-}/gind/$container.log" || true
+    docker container inspect "$container_name" > "${ARTIFACTS:-}/gind/$container_name.json" || true
+
+    export_node_artifacts "$node_dir" docker exec "$container_name"
+
+    # container logs
+    mkdir -p "$node_dir/var-log"
+    docker cp "$container_name":/var/log/. "$node_dir/var-log" || true
+  done
 }
 
 export_resource_yamls_for() {

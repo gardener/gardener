@@ -22,7 +22,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	. "github.com/gardener/gardener/test/e2e/gardenadm/common"
 )
 
 var binaryPath string

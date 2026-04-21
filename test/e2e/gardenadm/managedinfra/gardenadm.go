@@ -32,12 +32,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	. "github.com/gardener/gardener/test/e2e/gardenadm/common"
 	shootmigration "github.com/gardener/gardener/test/utils/shoots/migration"
 )
 
 var _ = Describe("gardenadm managed infrastructure scenario tests", Label("gardenadm", "managed-infra"), func() {
 	BeforeEach(OncePerOrdered, func(SpecContext) {
+		SetupRuntimeClient()
 		PrepareBinary()
 	}, NodeTimeout(5*time.Minute))
 

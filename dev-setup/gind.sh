@@ -35,7 +35,7 @@ case "$COMMAND" in
       docker compose -f "$GIND_COMPOSE_FILE" exec "$service" bash -c '/install-gardenadm.sh $(cat /gardenadm/.skaffold-image)'
     done
 
-    docker compose -f "$GIND_COMPOSE_FILE" exec machine-0 bash -c 'gardenadm init -d /gardenadm/resources'
+    docker compose -f "$GIND_COMPOSE_FILE" exec machine-0 bash -c "gardenadm init -d /gardenadm/resources ${GARDENADM_INIT_FLAGS:-}"
 
     ./hack/usage/generate-kubeconfig.sh self-hosted-shoot --docker gind-machine-0 > "$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER"
     ;;
