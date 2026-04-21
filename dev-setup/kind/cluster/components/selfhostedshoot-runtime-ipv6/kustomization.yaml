@@ -6,12 +6,6 @@ patches:
     - op: add
       path: /nodes/0/extraPortMappings/-
       value:
-        containerPort: 30003
-        hostPort: 443
-        listenAddress: fd00:ff::4
-    - op: add
-      path: /nodes/0/extraPortMappings/-
-      value:
         containerPort: 31443
         hostPort: 443
         listenAddress: fd00:ff::3

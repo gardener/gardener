@@ -264,9 +264,12 @@ EOF
     ;;
 
   setup-loopback-devices)
-    LOOPBACK_IP_ADDRESSES=(172.18.255.3 172.18.255.4 172.18.255.53 fd00:ff::53)
+    # 172.18.255.3 (used for virtual garden access) will be dropped in a subsequent commit
+    # 172.18.255.53 exposes the bind9 DNS server
+    # 172.18.255.123 exposes the gind apiserver load balancer to the host
+    LOOPBACK_IP_ADDRESSES=(172.18.255.3 172.18.255.53 fd00:ff::53 172.18.255.123)
     if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-      LOOPBACK_IP_ADDRESSES+=(fd00:ff::3 fd00:ff::4)
+      LOOPBACK_IP_ADDRESSES+=(fd00:ff::3)
     fi
 
     # load balancer range IPv4 (172.18.255.224/27)

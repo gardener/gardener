@@ -42,9 +42,21 @@ x-machine: &machine
     kind: {}
 
 services:
+  apiserver-lb:
+    image: envoyproxy/envoy:v1.37.0
+    container_name: gind-apiserver-lb
+    ports:
+    - "172.18.255.123:443:443"
+    volumes:
+    - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
+    command: ["envoy", "-c", "/etc/envoy/envoy.yaml"]
+    depends_on:
+    - machine-0
+    networks:
+      kind: {}
+
   # Machines are defined explicitly (instead of using `deploy.replicas`) because we want stable, predictable container
-  # and host names (e.g. `gind-machine-0`) for usability/user experience, and for the envoy load balancer config (will
-  # be introduced in subsequent commit).
+  # and host names (e.g. `gind-machine-0`) for usability/user experience, and for the envoy load balancer config.
   machine-0:
     <<: *machine
     container_name: gind-machine-0
