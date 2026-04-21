@@ -125,6 +125,16 @@ const (
 	// owner: @ScheererJ
 	// alpha: v1.141.0
 	DisableNginxIngressInSeed featuregate.Feature = "DisableNginxIngressInSeed"
+
+	// DisableNginxIngressInShoot disables the deployment of the nginx ingress controller in the Shoot cluster
+	// and removes the nginx ingress controller (if existing) from the Shoot cluster.
+	// If set for the gardener-apiserver, the creation of new Shoot clusters with the addon enabled is blocked.
+	// Existing Shoot clusters can only disable the addon, but not enable it anymore.
+	// If set for the gardener-controller-manager, the maintenance controller will disable the addon during the next maintenance operation.
+	// If set for the gardenlet, the nginx ingress controller is removed from existing Shoot clusters during reconciliation.
+	// owner: @ScheererJ
+	// alpha: v1.141.0
+	DisableNginxIngressInShoot featuregate.Feature = "DisableNginxIngressInShoot"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -169,6 +179,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	RemoveVali:                     {Default: false, PreRelease: featuregate.Alpha},
 	DisableNginxIngressInGarden:    {Default: false, PreRelease: featuregate.Alpha},
 	DisableNginxIngressInSeed:      {Default: false, PreRelease: featuregate.Alpha},
+	DisableNginxIngressInShoot:     {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
