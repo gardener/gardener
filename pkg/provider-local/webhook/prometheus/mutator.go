@@ -48,7 +48,7 @@ func (m *mutator) Mutate(_ context.Context, newObj, _ client.Object) error {
 	var remoteWriteSpecs []monitoringv1.RemoteWriteSpec
 	for _, remoteWriteURL := range m.remoteWriteURLs {
 		remoteWriteSpecs = append(remoteWriteSpecs, monitoringv1.RemoteWriteSpec{
-			URL: remoteWriteURL,
+			URL: monitoringv1.URL(remoteWriteURL),
 			WriteRelabelConfigs: []monitoringv1.RelabelConfig{
 				{
 					SourceLabels: []monitoringv1.LabelName{"job"},
