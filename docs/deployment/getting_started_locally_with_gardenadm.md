@@ -15,11 +15,17 @@ If you encounter difficulties, please open an issue so that we can make this pro
 
 `gardenadm` is a command line tool for bootstrapping Kubernetes clusters called "Self-Hosted Shoot Clusters". Read the [`gardenadm` documentation](../concepts/gardenadm.md) for more details on its concepts.
 
-In this guide, we will start a [KinD](https://kind.sigs.k8s.io/) cluster which hosts pods serving as machines for the self-hosted shoot cluster – just as for shoot clusters of [provider-local](../extensions/provider-local.md).
-The setup supports both the "unmanaged infrastructure" and the "managed infrastructure" scenario of `gardenadm`.
+The local setup supports both the ["unmanaged infrastructure" and the "managed infrastructure" scenarios](../concepts/gardenadm.md#scenarios).
 
-Based on [Skaffold](https://skaffold.dev/), the container images for all required components will be built and deployed into the cluster.
-This also includes the `gardenadm` CLI, which is installed on the machine pods by pulling the container image and extracting the binary.
+In the **unmanaged infrastructure** scenario, there is no programmable infrastructure available (the "bare metal" or "edge" use-case).
+Machines must be prepared upfront, and network setup as well as machine management are out of scope.
+In this local setup, we simulate existing machines by running Docker containers directly via [Docker Compose](https://docs.docker.com/compose/).
+
+In the **managed infrastructure** scenario, programmable infrastructure is available and Gardener leverages [`provider-local`](../extensions/provider-local.md) and [`machine-controller-manager`](https://github.com/gardener/machine-controller-manager) to manage the network setup and machines.
+In this local setup, we start a [KinD](https://kind.sigs.k8s.io/) cluster that acts as the programmable infrastructure hosting the machines.
+
+Based on [Skaffold](https://skaffold.dev/), the container images for all required components will be built and deployed via Docker or into the cluster.
+This also includes the `gardenadm` CLI, which is installed on the machine containers by pulling the container image and extracting the binary.
 
 ## Prerequisites
 
@@ -30,41 +36,44 @@ This also includes the `gardenadm` CLI, which is installed on the machine pods b
 > [!TIP]
 > You can clean up unused data with `docker system df` and `docker system prune -a`.
 
-## Setting Up the KinD Cluster
-
-```shell
-make kind-up
-```
-
-Please see [this documentation section](getting_started_locally.md#alternative-way-to-set-up-garden-and-seed-leveraging-gardener-operator) for more details.
-
-All following steps assume that you are using the kubeconfig for this KinD cluster:
-
-```shell
-export KUBECONFIG=$PWD/dev-setup/kubeconfigs/runtime/kubeconfig
-```
-
 ## "Unmanaged Infrastructure" Scenario
 
 Use the following command to prepare the `gardenadm` unmanaged infrastructure scenario:
 
 ```shell
-make gardenadm-up
+make gind-up # Gardener-in-Docker
 ```
 
-This will first build the needed images, deploy 2 machine pods using the [`gardener-extension-provider-local/node` image](../../pkg/provider-local/machine-provider/node), install the `gardenadm` binary on both of them, and copy the needed manifests to the `/gardenadm/resources` directory.
-
-Afterward, you can use `kubectl exec` to execute `gardenadm` commands on the machines.
-
-Let's start with exec'ing into the `machine-0` pod:
+This will first build the needed images, deploy 4 machine containers using the [`gardener-extension-provider-local/node` image](../../pkg/provider-local/machine-provider/node), install the `gardenadm` binary on all of them, and copy the needed manifests to the `/gardenadm/resources` directory:
 
 ```shell
-$ kubectl -n gardenadm-unmanaged-infra exec -it machine-0 -- bash
-root@machine-0:/# gardenadm -h
+$ docker ps | grep gind-machine
+CONTAINER ID   IMAGE            COMMAND                  CREATED          STATUS          PORTS   NAMES
+08cd7c006fc1   gind-machine-0   "/init-machine-state…"   50 seconds ago   Up 48 seconds           gind-machine-0
+4b316de9a8c5   gind-machine-1   "/init-machine-state…"   50 seconds ago   Up 48 seconds           gind-machine-1
+dcdb62e429ef   gind-machine-2   "/init-machine-state…"   50 seconds ago   Up 48 seconds           gind-machine-2
+c1b74a741416   gind-machine-3   "/init-machine-state…"   50 seconds ago   Up 48 seconds           gind-machine-3
+```
+
+Afterward, it automatically runs `gardenadm init` on `gind-machine-0` to bootstrap the first control plane node.
+This usually takes a couple of minutes, but eventually you should see output like this:
+
+```shell
+Your Shoot cluster control-plane has initialized successfully!
+...
+```
+
+### Inspecting the Gardener Configuration (`Shoot`, `CloudProfile`, etc.)
+
+If you would like to inspect the resources used to bring up this self-hosted shoot cluster, you can exec into the `gind-machine-0` container:
+
+```shell
+$ docker exec -ti gind-machine-0 bash
+root@gind-machine-0:/# gardenadm -h
 gardenadm bootstraps and manages self-hosted shoot clusters in the Gardener project.
 ...
 
-root@machine-0:/# cat /gardenadm/resources/manifests.yaml
+root@gind-machine-0:/# cat /gardenadm/resources/manifests.yaml
 apiVersion: core.gardener.cloud/v1beta1
 kind: CloudProfile
 metadata:
@@ -72,66 +81,95 @@ metadata:
 ...
 ```
 
-### Bootstrapping a Single-Node Control Plane
-
-Use `gardenadm init` to bootstrap the first control plane node using the provided manifests:
-
-```shell
-root@machine-0:/# gardenadm init -d /gardenadm/resources
-...
-Your Shoot cluster control-plane has initialized successfully!
-...
-```
-
 ### Connecting to the Self-Hosted Shoot Cluster
 
-The machine pod's shell environment is configured for easily connecting to the self-hosted shoot cluster.
-Just execute `kubectl` within a `bash` shell in the machine pod:
+You can either exec into the machine container and access the cluster from there, or you access it directly from your host machine.
+
+#### Machine Container Access
+
+The machine container's shell environment is configured for easily connecting to the self-hosted shoot cluster.
+Just exec into the machine container via the `docker` CLI and run `bash`:
 
 ```shell
-$ kubectl -n gardenadm-unmanaged-infra exec -it machine-0 -- bash
-root@machine-0:/# kubectl get node
-NAME        STATUS   ROLES    AGE     VERSION
-machine-0   Ready    <none>   4m11s   v1.32.0
+$ docker exec -ti gind-machine-0 bash
+root@gind-machine-0:/# kubectl get node
+NAME             STATUS   ROLES           AGE     VERSION
+gind-machine-0   Ready    control-plane   7m15s   v1.34.3
 ```
 
-You can also access the cluster's API server directly from your host machine after obtaining a kubeconfig for it:
+#### Host Machine Access
+
+A kubeconfig is automatically exported by `make gind-up` to `dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig`.
+You can directly use it from there:
 
 ```shell
-$ ./hack/usage/generate-kubeconfig.sh self-hosted-shoot > dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
 $ export KUBECONFIG=dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
 $ kubectl get no
-NAME        STATUS   ROLES    AGE   VERSION
-machine-0   Ready    <none>   10m   v1.32.0
+NAME             STATUS   ROLES           AGE     VERSION
+gind-machine-0   Ready    control-plane   7m15s   v1.34.3
 ```
+
+> [!TIP]
+> This works by running an Envoy container next to the machine containers that binds to an IP previously added to the host's loopback device.
+> It forwards received traffic to the control plane machines:
+> 
+> ```shell
+> $ docker ps | grep gind-apiserver-lb
+> CONTAINER ID   IMAGE                      COMMAND                  CREATED          STATUS          PORTS                         NAMES
+> fd75b2c4612d   envoyproxy/envoy:v1.37.0   "/docker-entrypoint.…"   15 minutes ago   Up 15 minutes   172.18.255.123:443->443/tcp   gind-apiserver-lb
+> 
+> $ ip a
+> 1: lo0: <UP,LOOPBACK,RUNNING,MULTICAST> mtu 16384 status UNKNOWN
+>     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+>     inet 127.0.0.1/8
+>     inet6 ::1/128
+>     ...
+>     inet 172.18.255.123/16
+> ```
 
 ### Joining a Worker Node
 
-If you would like to join a worker node to the cluster, generate a bootstrap token and the corresponding `gardenadm join` command on `machine-0` (the control plane node).
-Then exec into the `machine-1` pod to run the command:
+If you would like to join a worker node to the cluster, generate a bootstrap token and the corresponding `gardenadm join` command on `gind-machine-0` (the control plane node).
+Then exec into the `gind-machine-1` container to run the command:
 
 ```shell
-root@machine-0:/# gardenadm token create --print-join-command
+root@gind-machine-0:/# gardenadm token create --print-join-command
 # now copy the output, terminate the exec session and start a new one for machine-1
 
-$ kubectl -n gardenadm-unmanaged-infra exec -it machine-1 -- bash
+$ docker exec -ti gind-machine-1 bash
 # paste the copied 'gardenadm join' command here and execute it
-root@machine-1:/# gardenadm join ...
+root@gind-machine-1:/# gardenadm join ...
 ...
 Your node has successfully joined the cluster as a worker!
 ...
 ```
+
+> [!NOTE]
+> Accessing the shoot cluster is only possible from within control plane machine - worker machines (like the just joined `gind-machine-1`) are not prepared accordingly.
 
 Using the kubeconfig as described in [this section](#connecting-to-the-self-hosted-shoot-cluster), you should now be able to see the new node in the cluster:
 
 ```shell
 $ kubectl get no
 NAME        STATUS   ROLES    AGE   VERSION
-machine-0   Ready    <none>   10m   v1.32.0
-machine-1   Ready    <none>   37s   v1.32.0
+NAME             STATUS   ROLES           AGE     VERSION
+gind-machine-0   Ready    control-plane   7m15s   v1.34.3
+gind-machine-1   Ready    worker          8m48s   v1.34.3
 ```
 
 ## "Managed Infrastructure" Scenario
+
+### Setting Up the KinD Cluster
+
+```shell
+make kind-up
+```
+
+All following steps assume that you are using the kubeconfig for this KinD cluster:
+
+```shell
+export KUBECONFIG=$PWD/dev-setup/kubeconfigs/runtime/kubeconfig
+```
 
 Use the following command to prepare the `gardenadm` managed infrastructure scenario:
 
@@ -182,6 +220,14 @@ NAME                                                    STATUS   ROLES    AGE   
 machine-shoot--garden--root-control-plane-58ffc-2l6s7   Ready    <none>   4m11s   v1.33.0
 ```
 
+### Tearing Down the KinD Cluster
+
+When you are done, you can delete the setup by running
+
+```shell
+make kind-down
+```
+
 ## Connecting the Self-Hosted Shoot Cluster to Gardener
 
 After you have successfully bootstrapped a self-hosted shoot cluster (either via the [unmanaged infrastructure](#unmanaged-infrastructure-scenario) or the [managed infrastructure](#managed-infrastructure-scenario) scenario), you can connect it to an existing Gardener system.
@@ -193,15 +239,18 @@ make gardenadm-up SCENARIO=connect
 ```
 
 This will deploy [`gardener-operator`](../concepts/operator.md) and create a `Garden` resource (which will then be reconciled and results in a full Gardener deployment) inside the self-hosted shoot cluster.
-Find all information about it [here](getting_started_locally.md#alternative-way-to-set-up-garden-and-seed-leveraging-gardener-operator).
+Find all information about it [here](getting_started_locally.md).
 
 > [!NOTE]
-> There is an alternative way of deploying Gardener outside the self-hosted shoot but inside the KinD cluster in the
+> There is an alternative way of deploying Gardener outside the self-hosted shoot but inside a KinD cluster in the
 > `garden` namespace.
 >
+> `make kind-up`
 > `make gardenadm-up SCENARIO=connect-kind`
 >
 > The following steps from above are the same.
+
+In all cases, the kubeconfig for the garden cluster gets exported to `/dev-setup/kubeconfigs/virtual-garden/kubeconfig`.
 
 Note, that in this setup, no `Seed` will be registered in the Gardener - it's just a plain garden cluster without the ability to create regular shoot clusters.
 
@@ -225,7 +274,7 @@ gardenadm connect --bootstrap-token ... --ca-certificate ... https://api.virtual
 Copy the full output, exec once again into one of the control-plane machines of your self-hosted shoot cluster, and paste and run the generated `gardenadm connect` command there:
 
 ```shell
-root@machine-0:/# gardenadm connect --bootstrap-token ... --ca-certificate ... https://api.virtual-garden.local.gardener.cloud
+root@gind-machine-0:/# gardenadm connect --bootstrap-token ... --ca-certificate ... https://api.virtual-garden.local.gardener.cloud
 2025-11-10T08:12:32.287Z	INFO	Using resources from directory	{"configDir": "/gardenadm/resources/"}
 2025-11-10T08:12:32.334Z	INFO	Initializing gardenadm botanist with fake client set	{"cloudProfile": {"apiVersion": "core.gardener.cloud/v1beta1", "kind": "CloudProfile", "name": "local"}, "project": {"apiVersion": "core.gardener.cloud/v1beta1", "kind": "Project", "name": "garden"}, "shoot": {"apiVersion": "core.gardener.cloud/v1beta1", "kind": "Shoot", "namespace": "garden", "name": "root"}}
 2025-11-10T08:12:32.345Z	INFO	Starting	{"flow": "connect"}
@@ -237,7 +286,7 @@ root@machine-0:/# gardenadm connect --bootstrap-token ... --ca-certificate ... h
 Once this is done, you can observe that there is now a `gardenlet` running in the self-hosted shoot cluster, which connects it to the Gardener instance:
 
 ```shell
-root@machine-0:/# kubectl get pods -n kube-system -l app=gardener,role=gardenlet
+root@gind-machine-0:/# kubectl get pods -n kube-system -l app=gardener,role=gardenlet
 gardenlet-6cbcb676f5-prh8f                           1/1     Running   0             40m
 gardenlet-6cbcb676f5-wwn8w                           1/1     Running   0             40m
 ````
@@ -262,10 +311,4 @@ make test-e2e-local-gardenadm-unmanaged-infra
 # or
 make gardenadm-up SCENARIO=managed-infra
 make test-e2e-local-gardenadm-managed-infra
-```
-
-## Tear Down the KinD Cluster
-
-```shell
-make kind-down
 ```
