@@ -70,8 +70,9 @@ func generateEncryptionProviders(keySecretCurrent, keySecretOld *corev1.Secret, 
 
 	for _, key := range encryptionKeys {
 		var (
-			provider     = key.Provider
-			lastIdx      = len(result) - 1
+			provider = key.Provider
+			lastIdx  = len(result) - 1
+			// Indicates whether the last ProviderConfiguration in the result can be reused for the current key based on the provider type
 			canReuseLast = false
 		)
 
@@ -192,7 +193,7 @@ func ReconcileSecretETCDEncryptionConfiguration(
 		removedResources := sets.New(config.EncryptedResources...).Difference(sets.New(config.ResourcesToEncrypt...))
 		encryptionProviders, err = generateEncryptionProviders(keySecret, keySecretOld, config.EncryptWithCurrentKey, false)
 		if err != nil {
-			return err
+			return fmt.Errorf("error generating encryption provider: '%w'", err)
 		}
 		if removedResources.Len() > 0 {
 			encryptionConfiguration.Resources = append(encryptionConfiguration.Resources, apiserverconfigv1.ResourceConfiguration{
