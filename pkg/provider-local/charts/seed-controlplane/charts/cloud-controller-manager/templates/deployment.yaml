@@ -33,12 +33,26 @@ spec:
         role: cloud-controller-manager
         networking.gardener.cloud/to-dns: allowed
         {{- if (include "is-shoot" .) }}
+        # Case: CCM is responsible for shoot clusters - in addition, CCM also runs in the kind cluster's kube-system
+        # namespace, but we don't deploy NetworkPolicies there, so no special labeling is needed.
         {{- if hasPrefix "shoot-" .Release.Namespace }}
-        networking.resources.gardener.cloud/to-kube-apiserver-tcp-443: allowed
+        # Case: CCM runs in shoot namespace next to control plane (hosted shoot scenario)
+        networking.resources.gardener.cloud/to-kube-apiserver-tcp-443: allowed # Allows communication to kube-apiserver
+                                                                               # of shoot (e.g., for watching Services).
         # Needed for looking up where machine pods are running for setting up routes on the load balancer containers.
-        networking.gardener.cloud/to-runtime-apiserver: allowed
+        networking.gardener.cloud/to-runtime-apiserver: allowed # Allows communication to the kind apiserver - needed
+                                                                # for looking up where machine pods are running for
+                                                                # setting up routes on the load balancer containers.
         {{- else }}
-        networking.gardener.cloud/to-apiserver: allowed
+        # Case: CCM runs in kube-system namespace (self-hosted shoot scenario)
+        networking.gardener.cloud/to-apiserver: allowed # Allows communication to kube-apiserver running in the cluster
+                                                        # itself (e.g., for watching Services).
+        {{- if .Values.hasManagedInfrastructure }}
+        networking.gardener.cloud/to-public-networks: allowed # Allows communication to the kind apiserver (running
+                                                              # outside the self-hosted shoot) - needed for looking up
+                                                              # where machine pods are running for setting up routes on
+                                                              # the load balancer containers.
+        {{- end }}
         {{- end }}
         {{- end }}
         {{- with .Values.podLabels }}
