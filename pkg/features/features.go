@@ -113,6 +113,12 @@ const (
 	// owner: @rrhubenov
 	// alpha: v1.140.0
 	RemoveVali featuregate.Feature = "RemoveVali"
+
+	// DisableNginxIngressInGarden disables the deployment of the nginx ingress controller in the Garden runtime cluster
+	// and removes the nginx ingress controller (if existing) from the Garden runtime cluster.
+	// owner: @ScheererJ
+	// alpha: v1.141.0
+	DisableNginxIngressInGarden featuregate.Feature = "DisableNginxIngressInGarden"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -155,6 +161,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	PrometheusHealthChecks:         {Default: false, PreRelease: featuregate.Alpha},
 	VersionClassificationLifecycle: {Default: false, PreRelease: featuregate.Alpha},
 	RemoveVali:                     {Default: false, PreRelease: featuregate.Alpha},
+	DisableNginxIngressInGarden:    {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

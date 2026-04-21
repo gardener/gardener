@@ -979,6 +979,7 @@ deploy:
           config.featureGates.IstioTLSTermination: true
           config.featureGates.PrometheusHealthChecks: true
           config.featureGates.VictoriaLogsBackend: true
+          config.featureGates.DisableNginxIngressInGarden: true
         createNamespace: true
         wait: true
 profiles:
