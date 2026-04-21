@@ -313,6 +313,7 @@ spec:
     #       description: A nice container for debugging purposes
     #   ingress:
     #     enabled: true
+    #   includeCAForSNI: false # set to true when using SNI with a private CA
       gardenerDiscoveryServer:
       # domain:
       #   name: discovery.local.gardener.cloud
