@@ -74,6 +74,8 @@ const (
 
 // Values is a set of configuration values for the nginx-ingress component.
 type Values struct {
+	// Disabled indicates whether the component should be deployed or not.
+	Disabled bool
 	// ClusterType specifies the type of the cluster to which nginx-ingress is being deployed.
 	ClusterType component.ClusterType
 	// TargetNamespace is the namespace in which the resources should be deployed
@@ -127,6 +129,10 @@ type nginxIngress struct {
 }
 
 func (n *nginxIngress) Deploy(ctx context.Context) error {
+	if n.values.Disabled {
+		return n.Destroy(ctx)
+	}
+
 	data, err := n.computeResourcesData()
 	if err != nil {
 		return err
@@ -154,6 +160,10 @@ var (
 )
 
 func (n *nginxIngress) Wait(ctx context.Context) error {
+	if n.values.Disabled {
+		return n.WaitCleanup(ctx)
+	}
+
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 

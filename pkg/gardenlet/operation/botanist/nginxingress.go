@@ -58,6 +58,7 @@ func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
 		nil,
 		nil,
 		false,
+		false,
 	)
 }
 

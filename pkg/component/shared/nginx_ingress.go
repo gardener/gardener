@@ -32,6 +32,7 @@ func NewNginxIngress(
 	domains []string,
 	istioIngressGatewayLabels map[string]string,
 	seedIsGarden bool,
+	disabled bool,
 ) (
 	component.DeployWaiter,
 	error,
@@ -46,6 +47,7 @@ func NewNginxIngress(
 	}
 
 	values := nginxingress.Values{
+		Disabled:                  disabled,
 		ImageController:           imageController.String(),
 		ImageDefaultBackend:       imageDefaultBackend.String(),
 		IngressClass:              ingressClass,

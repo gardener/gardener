@@ -708,6 +708,22 @@ spec: {}
 
 				Expect(manifests).To(ConsistOf(expectedManifests))
 			})
+
+			It("should successfully destroy all resources if disabled", func() {
+				values.Disabled = true
+				nginxIngress = New(c, namespace, values)
+
+				Expect(c.Create(ctx, managedResource)).To(Succeed())
+				Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+
+				Expect(nginxIngress.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
+			})
 		})
 
 		Describe("#Destroy", func() {
