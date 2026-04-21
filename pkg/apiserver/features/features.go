@@ -16,5 +16,6 @@ func RegisterFeatureGates() {
 		features.InPlaceNodeUpdates,
 		features.CloudProfileCapabilities,
 		features.VersionClassificationLifecycle,
+		features.DisableNginxIngressInShoot,
 	)))
 }

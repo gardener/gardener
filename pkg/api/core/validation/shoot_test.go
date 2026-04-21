@@ -716,6 +716,47 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
+			It("should forbid nginx ingress addon if feature gate is set", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.DisableNginxIngressInShoot, true))
+				shoot.Spec.Addons = &core.Addons{NginxIngress: &core.NginxIngress{Addon: core.Addon{Enabled: true}}}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.addons.nginxIngress.enabled"),
+					"Detail": ContainSubstring("nginx ingress addon disallowed by landscape operator"),
+				}))))
+			})
+
+			It("should forbid enabling nginx ingress addon if feature gate is set", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.DisableNginxIngressInShoot, true))
+				shoot.Spec.Addons = nil
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Addons = &core.Addons{NginxIngress: &core.NginxIngress{Addon: core.Addon{Enabled: true}}}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.addons.nginxIngress.enabled"),
+					"Detail": ContainSubstring("nginx ingress addon disallowed by landscape operator"),
+				}))))
+			})
+
+			It("should allow disabling nginx ingress addon if feature gate is set", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.DisableNginxIngressInShoot, true))
+				shoot.Spec.Addons = &core.Addons{NginxIngress: &core.NginxIngress{Addon: core.Addon{Enabled: true}}}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Addons = nil
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
 			It("should allow valid load balancer source ranges for nginx-ingress", func() {
 				shoot.Spec.Addons.NginxIngress.LoadBalancerSourceRanges = []string{"192.168.123.56/32", "2001:db8::/64"}
 				errorList := ValidateShoot(shoot)

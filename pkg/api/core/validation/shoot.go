@@ -185,6 +185,7 @@ var (
 type shootValidationOptions struct {
 	// KubeAPIServerValidationOptions are validation options for the KubeAPIServer fields.
 	KubeAPIServerValidationOptions KubeAPIServerValidationOptions
+	addonsValidationOptions
 }
 
 // KubeAPIServerValidationOptions are validation options for the KubeAPIServer fields.
@@ -207,6 +208,11 @@ type ETCDEncryptionConfigValidationOptions struct {
 	SkipAESGCMAutoRotationValidation bool
 }
 
+type addonsValidationOptions struct {
+	// AllowNginxIngress specifies whether nginx ingress addon is allowed.
+	AllowNginxIngress bool
+}
+
 // ValidateShoot validates a Shoot object.
 func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 	opts := shootValidationOptions{
@@ -216,6 +222,9 @@ func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 			ETCDEncryptionConfigValidationOptions: ETCDEncryptionConfigValidationOptions{
 				AutoRotationEnabled: helper.IsETCDEncryptionKeyAutoRotationEnabled(shoot.Spec.Maintenance),
 			},
+		},
+		addonsValidationOptions: addonsValidationOptions{
+			AllowNginxIngress: false,
 		},
 	}
 
@@ -248,6 +257,9 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 			ETCDEncryptionConfigValidationOptions: ETCDEncryptionConfigValidationOptions{
 				AutoRotationEnabled: helper.IsETCDEncryptionKeyAutoRotationEnabled(newShoot.Spec.Maintenance),
 			},
+		},
+		addonsValidationOptions: addonsValidationOptions{
+			AllowNginxIngress: oldShoot.Spec.Addons != nil && oldShoot.Spec.Addons.NginxIngress != nil && oldShoot.Spec.Addons.NginxIngress.Enabled,
 		},
 	}
 
@@ -336,7 +348,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 
 	allErrs = append(allErrs, ValidateCloudProfileReference(spec.CloudProfile, spec.CloudProfileName, spec.Kubernetes.Version, fldPath)...)
 	allErrs = append(allErrs, validateProvider(meta.Namespace, spec.Provider, spec.Kubernetes, spec.Networking, workerless, fldPath.Child("provider"), inTemplate)...)
-	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Purpose, workerless, spec.Kubernetes.Version, fldPath.Child("addons"))...)
+	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Purpose, workerless, spec.Kubernetes.Version, opts, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, spec.Kubernetes.Version, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, ValidateResources(spec.Resources, fldPath.Child("resources"), true)...)
@@ -648,7 +660,7 @@ func validateAdvertisedURL(rawURL string, fldPath *field.Path) field.ErrorList {
 	return allErrors
 }
 
-func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless bool, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
+func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless bool, kubernetesVersion string, opts shootValidationOptions, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if addons == nil {
@@ -670,6 +682,10 @@ func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless 
 	}
 
 	if helper.NginxIngressEnabled(addons) {
+		if !opts.AllowNginxIngress && features.DefaultFeatureGate.Enabled(features.DisableNginxIngressInShoot) {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("nginxIngress", "enabled"), "nginx ingress addon disallowed by landscape operator"))
+		}
+
 		for i, sourceRange := range addons.NginxIngress.LoadBalancerSourceRanges {
 			allErrs = append(allErrs, validation.IsValidCIDR(fldPath.Child("nginxIngress", "loadBalancerSourceRanges").Index(i), sourceRange)...)
 		}

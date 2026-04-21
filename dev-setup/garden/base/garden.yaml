@@ -58,6 +58,7 @@ spec:
           CloudProfileCapabilities: true
           InPlaceNodeUpdates: true
           VersionClassificationLifecycle: true
+          DisableNginxIngressInShoot: true
       gardenerDashboard: {}
       gardenerDiscoveryServer:
         domain:
