@@ -71,7 +71,7 @@ func (b *Botanist) DeployAlertManager(ctx context.Context) error {
 	return b.Shoot.Components.ControlPlane.Alertmanager.Deploy(ctx)
 }
 
-// WaitForAlertManager waits for the shoot alert manager to be ready.
+// WaitForAlertManager waits for the shoot alert manager to be reconciled.
 func (b *Botanist) WaitForAlertManager(ctx context.Context) error {
 	if !b.Shoot.WantsAlertmanager || !b.IsShootMonitoringEnabled() {
 		return b.Shoot.Components.ControlPlane.Alertmanager.WaitCleanup(ctx)
@@ -205,7 +205,7 @@ func (b *Botanist) DestroyPrometheus(ctx context.Context) error {
 	return kubernetesutils.DeleteObject(ctx, b.SeedClientSet.Client(), gardenerutils.NewShootAccessSecret(shootprometheus.AccessSecretName, b.Shoot.ControlPlaneNamespace).Secret)
 }
 
-// WaitForPrometheus waits for the shoot prometheus to be ready.
+// WaitForPrometheus waits for the shoot prometheus to be reconciled.
 func (b *Botanist) WaitForPrometheus(ctx context.Context) error {
 	if !b.IsShootMonitoringEnabled() {
 		return b.Shoot.Components.ControlPlane.Prometheus.WaitCleanup(ctx)
