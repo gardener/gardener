@@ -18,6 +18,7 @@ import (
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -58,7 +59,7 @@ func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
 		nil,
 		nil,
 		false,
-		false,
+		features.DefaultFeatureGate.Enabled(features.DisableNginxIngressInShoot),
 	)
 }
 
@@ -99,7 +100,7 @@ func getConfig(config map[string]string) map[string]string {
 
 // NeedsIngressDNS returns true if the Shoot cluster needs ingress DNS.
 func (b *Botanist) NeedsIngressDNS() bool {
-	return b.NeedsExternalDNS() && v1beta1helper.NginxIngressEnabled(b.Shoot.GetInfo().Spec.Addons)
+	return b.NeedsExternalDNS() && v1beta1helper.NginxIngressEnabled(b.Shoot.GetInfo().Spec.Addons) && !features.DefaultFeatureGate.Enabled(features.DisableNginxIngressInShoot)
 }
 
 // DefaultIngressDNSRecord creates the default deployer for the ingress DNSRecord resource.
