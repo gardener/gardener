@@ -381,6 +381,10 @@ This section highlights the most prominent fields:
   The `container` section allows you to specify a container image and a description that should be used for the web terminals.
 - `ingress`: This allows you to customize the `Ingress` resource of the dashboard.
   The `enabled` field allows you to control whether to deploy the `Ingress` resource to the cluster.
+- `includeCAForSNI`: When the kube-apiserver is exposed via SNI (`.spec.virtualCluster.kubernetes.kubeAPIServer.sni`) and the TLS certificate is signed by a private/custom CA, enable this field to include the CA certificate from the SNI TLS secret in the dashboard's `apiServerCaData` configuration.
+  This ensures the dashboard and all kubeconfigs it generates (e.g. for terminal sessions, OIDC login, or service account access) can trust the API server.
+  For publicly trusted CAs (e.g. Let's Encrypt), leave this disabled to allow transparent CA rotation without requiring kubeconfig re-downloads.
+  This field is only relevant when SNI is configured.
 
 ##### Observability
 
