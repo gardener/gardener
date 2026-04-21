@@ -22,6 +22,22 @@ seed_if_empty() {
 }
 
 seed_if_empty /etc/systemd/system /mnt/systemd-system
+
+# Ensure cgroup v2 controllers are delegated before kubelet starts.
+# The kindest/node image ships /kind/bin/create-kubelet-cgroup-v2.sh which writes all available controllers
+# to /sys/fs/cgroup/cgroup.subtree_control (and creates /kubelet, /kubelet.slice cgroups). Originally, this
+# script was wired as ExecStartPre via a kubelet.service.d/11-kind.conf drop-in — but the gind Dockerfile
+# removes the entire kubelet service (and its .d/ directory) because gardenadm installs its own.
+#
+# When running on top of KinD (the normal local setup), this isn't needed: the outer KinD node's kubelet has
+# already delegated cgroup controllers, and the cgroupns gives the inner container a view with controllers
+# pre-delegated. In gind, there is no outer kubelet — the Docker container IS the node, so we must ensure
+# the delegation happens before gardenadm's kubelet starts.
+mkdir -p /mnt/systemd-system/kubelet.service.d
+cat > /mnt/systemd-system/kubelet.service.d/11-cgroup-v2.conf <<'DROPIN'
+[Service]
+ExecStartPre=/bin/sh -euc "if [ -f /sys/fs/cgroup/cgroup.controllers ]; then /kind/bin/create-kubelet-cgroup-v2.sh; fi"
+DROPIN
 seed_if_empty /etc/containerd     /mnt/containerd
 seed_if_empty /etc/cni/net.d      /mnt/cni-net-d 2>/dev/null || true
 
