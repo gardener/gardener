@@ -6,10 +6,25 @@
 set -o errexit
 set -o pipefail
 
+GIND_COMPOSE_FILE="$(dirname "$0")/gind/docker-compose.yaml"
+
 COMMAND="${1:-up}"
 VALID_COMMANDS=("up" "down")
 
-GIND_COMPOSE_FILE="$(dirname "$0")/gind/docker-compose.yaml"
+SCENARIO="${SCENARIO:-default}"
+declare -A SCENARIO_LEVEL=(
+  [machines]=1 # Only start gind machine containers and installs gardenadm, but doesn't run it
+  [default]=2       # Like 'machines', but also runs `gardenadm init` and exports the kubeconfig for the self-hosted shoot
+  [join]=3          # Like 'default', but also runs `gardenadm join` on gind-machine-1 to join it as worker node
+  [full]=4          # Like 'join', but also deploys Gardener into the self-hosted shoot and runs `gardenadm connect` to deploy gardenlet which registers the Shoot
+)
+
+if [[ -z "${SCENARIO_LEVEL[$SCENARIO]+x}" ]]; then
+  echo "Error: Invalid scenario '${SCENARIO}'. Valid options are: ${!SCENARIO_LEVEL[*]}." >&2
+  exit 1
+fi
+
+level="${SCENARIO_LEVEL[$SCENARIO]}"
 
 case "$COMMAND" in
   up)
@@ -21,7 +36,7 @@ case "$COMMAND" in
     export GIND_MACHINE_IMAGE="gind-machine:$(find "$GIND_BUILD_CONTEXT" -type f | sort | xargs shasum -a 256 | shasum -a 256 | cut -c1-12)"
     docker compose -f "$GIND_COMPOSE_FILE" up -d
 
-    make gardenadm-up SKAFFOLD_PLATFORM="linux/$(go env GOARCH)" SKAFFOLD_CHECK_CLUSTER_NODE_PLATFORMS=false
+    make gardenadm-up SCENARIO=unmanaged-infra SKAFFOLD_PLATFORM="linux/$(go env GOARCH)" SKAFFOLD_CHECK_CLUSTER_NODE_PLATFORMS=false
 
     for i in 0 1 2 3; do
       service="machine-$i"
@@ -35,13 +50,32 @@ case "$COMMAND" in
       docker compose -f "$GIND_COMPOSE_FILE" exec "$service" bash -c '/install-gardenadm.sh $(cat /gardenadm/.skaffold-image)'
     done
 
-    docker compose -f "$GIND_COMPOSE_FILE" exec machine-0 bash -c "gardenadm init -d /gardenadm/resources ${GARDENADM_INIT_FLAGS:-}"
+    # Run `gardenadm init` and export the kubeconfig for the self-hosted shoot
+    if (( level >= 2 )); then
+      if [[ "${FAST:-}" == "true" ]]; then
+        GARDENADM_INIT_FLAGS="${GARDENADM_INIT_FLAGS:-} --use-bootstrap-etcd --use-host-network"
+      fi
+      docker compose -f "$GIND_COMPOSE_FILE" exec machine-0 bash -c "gardenadm init -d /gardenadm/resources ${GARDENADM_INIT_FLAGS:-}"
+      ./hack/usage/generate-kubeconfig.sh self-hosted-shoot --docker gind-machine-0 > "$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER"
+    fi
 
-    ./hack/usage/generate-kubeconfig.sh self-hosted-shoot --docker gind-machine-0 > "$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER"
+    # Run `gardenadm join` on gind-machine-1 to join it as worker node
+    if (( level >= 3 )); then
+      join_command="$(docker compose -f "$GIND_COMPOSE_FILE" exec machine-0 bash -c 'gardenadm token create --print-join-command')"
+      docker compose -f "$GIND_COMPOSE_FILE" exec machine-1 bash -c "$join_command"
+    fi
+
+    # Deploy Gardener into the self-hosted shoot and run `gardenadm connect` to deploy gardenlet which registers the Shoot
+    if (( level >= 4 )); then
+      make gardenadm-up SCENARIO=connect # deploys gardener-operator, the 'Garden' resource, and waits for reconciliation
+      make gardenadm # builds gardenadm binary locally so that we can execute it against the virtual-garden-cluster
+      connect_command="$(KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER gardenadm token create --print-connect-command --shoot-namespace garden --shoot-name root)"
+      docker compose -f "$GIND_COMPOSE_FILE" exec machine-0 bash -c "$connect_command"
+    fi
     ;;
 
   down)
-    make gardenadm-down SKAFFOLD_PLATFORM="linux/$(go env GOARCH)" SKAFFOLD_CHECK_CLUSTER_NODE_PLATFORMS=false
+    make gardenadm-down SCENARIO=unmanaged-infra SKAFFOLD_PLATFORM="linux/$(go env GOARCH)" SKAFFOLD_CHECK_CLUSTER_NODE_PLATFORMS=false
 
     docker compose -f "$GIND_COMPOSE_FILE" down --volumes
 
