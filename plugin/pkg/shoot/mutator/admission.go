@@ -365,8 +365,6 @@ func (c *mutationContext) defaultKubernetes() field.ErrorList {
 }
 
 // defaultMaintenanceWindow defaults auto-rotation settings for newly created shoots.
-// This cannot be part of the static defaulting because MaintenanceRotationConfig is shared across
-// multiple auto-rotation configurations (e.g., etcd encryption key, service account key, etc.)
 func (c *mutationContext) defaultMaintenanceWindow(a admission.Attributes) {
 	if a.GetOperation() != admission.Create {
 		return
