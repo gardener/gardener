@@ -119,6 +119,12 @@ const (
 	// owner: @ScheererJ
 	// alpha: v1.141.0
 	DisableNginxIngressInGarden featuregate.Feature = "DisableNginxIngressInGarden"
+
+	// DisableNginxIngressInSeed disables the deployment of the nginx ingress controller in the Seed cluster
+	// and removes the nginx ingress controller (if existing) from the Seed cluster.
+	// owner: @ScheererJ
+	// alpha: v1.141.0
+	DisableNginxIngressInSeed featuregate.Feature = "DisableNginxIngressInSeed"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -162,6 +168,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	VersionClassificationLifecycle: {Default: false, PreRelease: featuregate.Alpha},
 	RemoveVali:                     {Default: false, PreRelease: featuregate.Alpha},
 	DisableNginxIngressInGarden:    {Default: false, PreRelease: featuregate.Alpha},
+	DisableNginxIngressInSeed:      {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

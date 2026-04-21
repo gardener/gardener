@@ -16,6 +16,7 @@ spec:
       VPNBondingModeRoundRobin: true
       PrometheusHealthChecks: true
       VictoriaLogsBackend: true
+      DisableNginxIngressInSeed: true
     controllers:
       shoot:
         reconcileInMaintenanceOnly: true
