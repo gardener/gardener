@@ -250,7 +250,7 @@ DEV_SETUP_WITH_LPP_RESIZE_SUPPORT        ?= false
 DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT ?= false
 IPFAMILY                                 ?= ipv4
 
-kind-% operator-% gardener-% garden-% seed-% seed2-% ci-e2e-kind: export IPFAMILY := $(IPFAMILY)
+kind-% gind-% operator-% gardener-% garden-% seed-% seed2-% ci-e2e-kind: export IPFAMILY := $(IPFAMILY)
 kind-%: export WITH_LPP_RESIZE_SUPPORT := $(DEV_SETUP_WITH_LPP_RESIZE_SUPPORT)
 
 export KUBECONFIG_RUNTIME_CLUSTER         := $(DEV_SETUP)/kubeconfigs/runtime/kubeconfig
@@ -283,6 +283,7 @@ kind-single-node2-% kind-multi-node2-%: export CLUSTER_NAME = gardener-local2
 # e.g., `kind-single-node-up` -> `single-node`, `kind-multi-zone-down` -> `multi-zone`.
 kind-%: export KUSTOMIZE_OVERLAY = $(subst kind-,,$(subst -up,,$(subst -down,,$@)))
 
+# kind*-{up,down}
 kind-single-node-up kind-single-node-down \
 kind-single-node2-up kind-single-node2-down \
 kind-multi-node-up kind-multi-node-down \
@@ -295,10 +296,14 @@ kind-down: kind-single-node-down
 kind2-up: kind-single-node2-up
 kind2-down: kind-single-node2-down
 
+# gind-{up,down}
+gind-up gind-down: $(KUBECTL) $(YQ) $(KUSTOMIZE)
+	$(DEV_SETUP)/gind.sh $(subst gind-,,$@)
+
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
 # build the images for the platform matching the nodes of the active kubernetes cluster, even in `skaffold build`, which doesn't enable this by default
-export SKAFFOLD_CHECK_CLUSTER_NODE_PLATFORMS = true
+export SKAFFOLD_CHECK_CLUSTER_NODE_PLATFORMS ?= true
 export SKAFFOLD_DEFAULT_REPO ?= registry.local.gardener.cloud:5001
 export SKAFFOLD_PUSH = true
 export SOURCE_DATE_EPOCH = $(shell date -d $(BUILD_DATE) +%s)

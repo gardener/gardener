@@ -3,7 +3,8 @@ networks:
     external: true
 
 x-machine: &machine
-  image: gind-machine:local
+  image: ${GIND_MACHINE_IMAGE:-gind-machine:local}
+  pull_policy: never
   build:
     context: ../../pkg/provider-local/machine-provider/node
     dockerfile: Dockerfile
