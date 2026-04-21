@@ -59,6 +59,9 @@ spec:
           InPlaceNodeUpdates: true
           VersionClassificationLifecycle: true
           DisableNginxIngressInShoot: true
+      gardenerControllerManager:
+        featureGates:
+          DisableNginxIngressInShoot: true
       gardenerDashboard: {}
       gardenerDiscoveryServer:
         domain:

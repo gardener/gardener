@@ -22,6 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
 	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
@@ -2000,6 +2001,51 @@ var _ = Describe("Shoot Maintenance", func() {
 				HaveField("Name", Equal(supportedAdmissionPlugin1)),
 				HaveField("Name", Equal(supportedAdmissionPlugin2)),
 			))
+		})
+	})
+
+	Describe("#maintainAddons", func() {
+		var (
+			shoot *gardencorev1beta1.Shoot
+		)
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "shoot",
+				},
+				Spec: gardencorev1beta1.ShootSpec{
+					Addons: &gardencorev1beta1.Addons{
+						NginxIngress: &gardencorev1beta1.NginxIngress{
+							Addon: gardencorev1beta1.Addon{
+								Enabled: true,
+							},
+						},
+					},
+				},
+			}
+		})
+
+		It("should maintain addons without addons", func() {
+			shoot.Spec.Addons = nil
+			result := maintainAddons(shoot)
+			Expect(result).To(BeEmpty())
+			Expect(shoot.Spec.Addons).To(BeNil())
+		})
+
+		It("should maintain addons without feature gate enabled", func() {
+			result := maintainAddons(shoot)
+			Expect(result).To(BeEmpty())
+			Expect(shoot.Spec.Addons.NginxIngress.Addon.Enabled).To(BeTrue())
+		})
+
+		It("should maintain addons with feature gate enabled", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.DisableNginxIngressInShoot, true))
+			result := maintainAddons(shoot)
+			Expect(result).To(ConsistOf(
+				ContainSubstring(".spec.addons.nginxIngress was disabled. Reason: nginx ingress addon disallowed by landscape operator"),
+			))
+			Expect(shoot.Spec.Addons.NginxIngress.Addon.Enabled).To(BeFalse())
 		})
 	})
 
