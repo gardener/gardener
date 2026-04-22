@@ -41,6 +41,7 @@ spec:
 
 1. The Pods backing the Service should be spread on most of the available zones. This constraint should be ensured with appropriate scheduling constraints (topology spread constraints, (anti-)affinity). Enabling the feature for a Service with a single backing Pod or Pods all located in the same zone does not lead to a benefit.
 1. The component should be scaled up by `VerticalPodAutoscaler`. In case of an overload (a large portion of the of the traffic is originating from a given zone), the `VerticalPodAutoscaler` should provide better resource recommendations for the overloaded backing Pods.
+1. Check the [Considerations for using traffic distribution control](https://kubernetes.io/docs/reference/networking/virtual-ips/#considerations-for-using-traffic-distribution-control).
 
 ## Topology-aware Services in the Seed cluster
 
