@@ -673,7 +673,7 @@ func (o *otelCollector) getIstioResources(tlsSecret *corev1.Secret) ([]client.Ob
 		gateway,
 		getLabels(),
 		o.values.IstioIngressGatewayLabels,
-		[]string{o.values.IngressHost},
+		[]string{o.values.IngressHost, o.values.ValiHost},
 		tlsSecretInIstioNamespace.Name,
 	)(); err != nil {
 		return nil, fmt.Errorf("failed to create gateway resource: %w", err)
@@ -684,7 +684,7 @@ func (o *otelCollector) getIstioResources(tlsSecret *corev1.Secret) ([]client.Ob
 	if err := istio.VirtualServiceForTLSTermination(
 		virtualService,
 		getLabels(),
-		[]string{o.values.IngressHost},
+		[]string{o.values.IngressHost, o.values.ValiHost},
 		name,
 		uint32(collectorconstants.KubeRBACProxyOTLPReceiverPort),
 		destinationHost,

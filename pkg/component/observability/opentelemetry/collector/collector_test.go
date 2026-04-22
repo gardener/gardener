@@ -830,7 +830,7 @@ func getGateway() *istionetworkingv1beta1.Gateway {
 					Number:   443,
 					Protocol: "HTTPS",
 				},
-				Hosts: []string{ingressHost},
+				Hosts: []string{ingressHost, valiHost},
 				Tls: &istioapinetworkingv1beta1.ServerTLSSettings{
 					Mode:           istioapinetworkingv1beta1.ServerTLSSettings_SIMPLE,
 					CredentialName: "some-namespace-logging-logging-tls",
@@ -850,7 +850,7 @@ func getVirtualService() *istionetworkingv1beta1.VirtualService {
 		Spec: istioapinetworkingv1beta1.VirtualService{
 			ExportTo: []string{"*"},
 			Gateways: []string{"logging"},
-			Hosts:    []string{ingressHost},
+			Hosts:    []string{ingressHost, valiHost},
 			Http: []*istioapinetworkingv1beta1.HTTPRoute{
 				{
 					Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{{
