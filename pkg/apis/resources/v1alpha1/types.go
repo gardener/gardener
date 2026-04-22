@@ -20,6 +20,10 @@ const (
 	// DeleteOnInvalidUpdate is a constant for an annotation on a resource managed by a ManagedResource. If set to
 	// true then the controller will delete the object in case it faces an "Invalid" response during an update operation.
 	DeleteOnInvalidUpdate = "resources.gardener.cloud/delete-on-invalid-update"
+	// DeletionPropagationOnInvalidUpdate is a constant for an annotation on a resource managed by a ManagedResource. If set to
+	// a valid deletion propagation value (e.g., "Foreground", "Background", "Orphan"), the controller will use this value
+	// when deleting the object in case it faces an "Invalid" response during an update operation.
+	DeletionPropagationOnInvalidUpdate = "resources.gardener.cloud/deletion-propagation-on-invalid-update"
 	// KeepObject is a constant for an annotation on a resource managed by a ManagedResource. If set to
 	// true then the controller will not delete the object in case it is removed from the ManagedResource or the
 	// ManagedResource itself is deleted.

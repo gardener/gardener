@@ -508,7 +508,15 @@ func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, ori
 			}
 
 			if apierrors.IsInvalid(err) && operationResult == controllerutil.OperationResultUpdated && deleteOnInvalidUpdate(current, err) {
-				if deleteErr := r.TargetClient.Delete(ctx, current); client.IgnoreNotFound(deleteErr) != nil {
+				opts := []client.DeleteOption{}
+				if propagationPolicy, err := deletionPropagation(current); err != nil {
+					return fmt.Errorf("invalid deletion propagation policy on object %s: %w", resource, err)
+				} else if propagationPolicy != "" {
+					resourceLogger.Info("Using custom deletion propagation", "propagationPolicy", propagationPolicy)
+					opts = append(opts, client.PropagationPolicy(propagationPolicy))
+				}
+
+				if deleteErr := r.TargetClient.Delete(ctx, current, opts...); client.IgnoreNotFound(deleteErr) != nil {
 					return fmt.Errorf("error deleting object %q after 'invalid' update error: %s", resource, deleteErr)
 				}
 				// return error directly, so that the create after delete will be retried
@@ -626,6 +634,24 @@ func keyExistsAndValueTrue(kv map[string]string, key string) bool {
 	val, exists := kv[key]
 	valueTrue, _ := strconv.ParseBool(val)
 	return exists && valueTrue
+}
+
+var validPropagationValues = sets.New(
+	metav1.DeletePropagationBackground,
+	metav1.DeletePropagationForeground,
+	metav1.DeletePropagationOrphan,
+)
+
+func deletionPropagation(obj *unstructured.Unstructured) (metav1.DeletionPropagation, error) {
+	raw, ok := obj.GetAnnotations()[resourcesv1alpha1.DeletionPropagationOnInvalidUpdate]
+	if !ok {
+		return "", nil
+	}
+	val := metav1.DeletionPropagation(raw)
+	if !validPropagationValues.Has(val) {
+		return "", fmt.Errorf("%q is invalid", raw)
+	}
+	return val, nil
 }
 
 func (r *Reconciler) cleanOldResources(ctx context.Context, log logr.Logger, mr *resourcesv1alpha1.ManagedResource, index *objectIndex) (bool, error) {

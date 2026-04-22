@@ -200,6 +200,12 @@ In some cases, it is not desirable to update or re-apply some of the cluster com
 For these resources, the annotation "resources.gardener.cloud/ignore" needs to be set to "true" or a truthy value (Truthy values are "1", "t", "T", "true", "TRUE", "True") in the corresponding managed resource secrets.
 This can be done from the components that create the managed resource secrets, for example Gardener extensions or Gardener. Once this is done, the resource will be initially created and later ignored during reconciliation.
 
+#### Handling invalid updates
+
+Sometimes, an update to a resource is forbidden because immutable fields are changes (for example the referenced role of a `(Cluster)RoleBinding`).
+By setting the annotation `resources.gardener.cloud/delete-on-invalid-update=true` (or any trothy value) bhe resource manager can optionally delete and re-create the resource in that case.
+Additionally, the annotation `resources.gardener.cloud/deletion-propagation-on-invalid-update` controls the deletion propagation (defaults to `Background`). Setting `Orphan` might be desirable when changing for example the label selectors of a deployment.
+
 #### Finalizing Deletion of Resources After Grace Period
 
 When a `ManagedResource` is deleted, the controller deletes all managed resources from the target cluster.

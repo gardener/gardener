@@ -7,7 +7,10 @@ package managedresource
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
 var _ = Describe("Controller", func() {
@@ -97,6 +100,30 @@ var _ = Describe("Controller", func() {
 
 			Expect(injectLabels(obj, labels)).To(Succeed())
 			Expect(obj).To(Equal(expected))
+		})
+	})
+
+	Describe("#deletionPropagation", func() {
+		var obj *unstructured.Unstructured
+
+		BeforeEach(func() {
+			obj = &unstructured.Unstructured{Object: map[string]any{}}
+		})
+
+		It("should return an empty string when the deletion propagation is not set", func() {
+			Expect(deletionPropagation(obj)).To(BeEmpty())
+		})
+
+		It("should return an error when the deletion propagation is invalid", func() {
+			Expect(unstructured.SetNestedField(obj.Object, "invalid", "metadata", "annotations", resourcesv1alpha1.DeletionPropagationOnInvalidUpdate)).To(Succeed())
+
+			Expect(deletionPropagation(obj)).Error().To(HaveOccurred())
+		})
+
+		It("should return the correct deletion propagation value when it is set", func() {
+			Expect(unstructured.SetNestedField(obj.Object, string(metav1.DeletePropagationOrphan), "metadata", "annotations", resourcesv1alpha1.DeletionPropagationOnInvalidUpdate)).To(Succeed())
+
+			Expect(deletionPropagation(obj)).To(Equal(metav1.DeletePropagationOrphan))
 		})
 	})
 })
