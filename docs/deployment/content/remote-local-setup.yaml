@@ -332,7 +332,7 @@ spec:
           source /usr/local/bin/tmux_functions.sh
           tmux new -d -s gardener -n gardener -x 2000 -y 2000
           tmux select-pane -T top; rm -f ~/.config/procps/toprc
-          for k in top Enter z C c i t t m m V s 5 Enter E e W; do sleep .2; tmux send $k; done
+          for k in top Enter z Z T 1 Enter C c i t t m m V s 5 Enter E e W; do sleep .2; tmux send $k; done
           new_pane "Set up the KinD cluster (Garden and Seed)" <<"EOF"
             sync_kubeconfig example/gardener-local/kind/local & sleep 1
             nice make kind-down kind-up && kubectl wait --for=condition=ready pod -A --all --timeout=-1s
@@ -367,7 +367,7 @@ spec:
           source /usr/local/bin/tmux_functions.sh
           tmux new -d -s operator -n make -x 2000 -y 2000
           tmux select-pane -T top; rm -f ~/.config/procps/toprc
-          for k in top Enter z C c i t t m m V s 5 Enter E e W; do sleep .2; tmux send $k; done
+          for k in top Enter z Z T 1 Enter C c i t t m m V s 5 Enter E e W; do sleep .2; tmux send $k; done
           new_pane "make kind-multi-zone-up" <<"EOF"
             sync_kubeconfig dev-setup/kubeconfigs/runtime & sleep 1
             nice make kind-multi-zone-down kind-multi-zone-up && kubectl wait --for=condition=ready pod -A --all --timeout=-1s
@@ -425,7 +425,7 @@ spec:
           source /usr/local/bin/tmux_functions.sh
           tmux new -d -s operator-complete -n make -x 2000 -y 2000
           tmux select-pane -T top; rm -f ~/.config/procps/toprc
-          for k in top Enter z C c i t t m m V s 5 Enter E e W; do sleep .2; tmux send $k; done
+          for k in top Enter z Z T 1 Enter C c i t t m m V s 5 Enter E e W; do sleep .2; tmux send $k; done
           new_pane "make kind-multi-zone-up" <<"EOF"
             sync_kubeconfig dev-setup/kubeconfigs/runtime & sleep 1
             nice make kind-multi-zone-down kind-multi-zone-up && kubectl wait --for=condition=ready pod -A --all --timeout=-1s
