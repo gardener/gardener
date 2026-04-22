@@ -1556,7 +1556,7 @@ func (r *Reconciler) newPrometheusGarden(
 		PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
 		StorageCapacity:   resource.MustParse(getValidVolumeSize(garden.Spec.RuntimeCluster.Volume, "200Gi")),
 		Replicas:          2,
-		Retention:         ptr.To(monitoringv1.Duration("10d")),
+		Retention:         ptr.To(monitoringv1.Duration("30d")),
 		RetentionSize:     "190GB",
 		ScrapeTimeout:     "50s", // This is intentionally smaller than the scrape interval of 1m.
 		RuntimeVersion:    r.RuntimeVersion,
