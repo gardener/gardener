@@ -145,13 +145,19 @@ func DeleteExtensionObject(
 	deleteOpts ...client.DeleteOption,
 ) error {
 	if err := gardenerutils.ConfirmDeletion(ctx, c, obj); err != nil {
-		if apierrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
 			return nil
 		}
 		return err
 	}
 
-	return client.IgnoreNotFound(c.Delete(ctx, obj, deleteOpts...))
+	if err := c.Delete(ctx, obj, deleteOpts...); err != nil {
+		if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 // DeleteExtensionObjects lists all extension objects and loops over them. It executes the given predicateFunc for
@@ -220,7 +226,7 @@ func WaitUntilExtensionObjectDeleted(
 
 	if err := retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (bool, error) {
 		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
-			if apierrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
 				return retry.Ok()
 			}
 			return retry.SevereError(err)
@@ -488,6 +494,9 @@ func applyFuncToExtensionObjects(
 	applyFunc func(ctx context.Context, object extensionsv1alpha1.Object) error,
 ) ([]flow.TaskFn, error) {
 	if err := c.List(ctx, listObj, client.InNamespace(namespace)); err != nil {
+		if meta.IsNoMatchError(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 

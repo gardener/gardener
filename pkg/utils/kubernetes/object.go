@@ -77,6 +77,9 @@ func ResourcesExist(ctx context.Context, reader client.Reader, objList client.Ob
 	}
 
 	if err := reader.List(ctx, objects, append(listOpts, client.Limit(1))...); err != nil {
+		if meta.IsNoMatchError(err) {
+			return false, nil
+		}
 		return true, err
 	}
 

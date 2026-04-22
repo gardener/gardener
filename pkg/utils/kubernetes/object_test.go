@@ -207,6 +207,25 @@ var _ = Describe("Object", func() {
 			Expect(inUse).To(BeTrue())
 		})
 
+		It("should return false without error when CRD does not exist (NoMatchError)", func() {
+			noMatchErr := &meta.NoKindMatchError{
+				GroupKind:        schema.GroupKind{Group: "test.gardener.cloud", Kind: "TestResource"},
+				SearchedVersions: []string{"v1alpha1"},
+			}
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetesscheme.Scheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+						return noMatchErr
+					},
+				}).
+				Build()
+
+			inUse, err := ResourcesExist(ctx, fakeClient, objList, scheme, listOpts...)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(inUse).To(BeFalse())
+		})
+
 		Context("with partialObjectMetadataList", func() {
 			BeforeEach(func() {
 				listOpts = append(listOpts, client.MatchingFields{"metadata.name": "foo"})

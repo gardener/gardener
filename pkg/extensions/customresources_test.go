@@ -17,6 +17,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	"go.uber.org/mock/gomock"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	testclock "k8s.io/utils/clock/testing"
@@ -345,6 +346,16 @@ var _ = Describe("extensions", func() {
 			Expect(DeleteExtensionObject(ctx, c, expected)).To(Succeed())
 		})
 
+		It("should not return error if CRD does not exist (NoMatchError)", func() {
+			mc := mockclient.NewMockClient(ctrl)
+			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{}), gomock.Any()).Return(&meta.NoKindMatchError{
+				GroupKind:        expected.GetObjectKind().GroupVersionKind().GroupKind(),
+				SearchedVersions: []string{"v1alpha1"},
+			})
+
+			Expect(DeleteExtensionObject(ctx, mc, expected)).To(Succeed())
+		})
+
 		It("should not return error if deleted successfully", func() {
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing worker succeeds")
 			Expect(DeleteExtensionObject(ctx, c, expected)).To(Succeed())
@@ -391,6 +402,25 @@ var _ = Describe("extensions", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 		})
+
+		It("should not return error if CRD does not exist (NoMatchError)", func() {
+			mc := mockclient.NewMockClient(ctrl)
+			mc.EXPECT().List(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.WorkerList{}), client.InNamespace(namespace)).Return(&meta.NoKindMatchError{
+				GroupKind:        expected.GetObjectKind().GroupVersionKind().GroupKind(),
+				SearchedVersions: []string{"v1alpha1"},
+			})
+
+			list := &extensionsv1alpha1.WorkerList{}
+			err := DeleteExtensionObjects(
+				ctx,
+				mc,
+				list,
+				namespace,
+				func(_ extensionsv1alpha1.Object) bool { return true },
+			)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
 	})
 
 	Describe("#WaitUntilExtensionObjectsDeleted", func() {
@@ -413,11 +443,31 @@ var _ = Describe("extensions", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
-			It("should return success if all extensions CRs are deleted", func() {
+			It("should not return error if all extensions CRs are deleted", func() {
 				list := &extensionsv1alpha1.WorkerList{}
 				err := WaitUntilExtensionObjectsDeleted(
 					ctx,
 					c,
+					log,
+					list,
+					extensionsv1alpha1.WorkerResource,
+					namespace, defaultInterval, defaultTimeout,
+					nil,
+				)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should not return error if CRD does not exist (NoMatchError)", func() {
+				mc := mockclient.NewMockClient(ctrl)
+				mc.EXPECT().List(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.WorkerList{}), client.InNamespace(namespace)).Return(&meta.NoKindMatchError{
+					GroupKind:        expected.GetObjectKind().GroupVersionKind().GroupKind(),
+					SearchedVersions: []string{"v1alpha1"},
+				})
+
+				list := &extensionsv1alpha1.WorkerList{}
+				err := WaitUntilExtensionObjectsDeleted(
+					ctx,
+					mc,
 					log,
 					list,
 					extensionsv1alpha1.WorkerResource,
@@ -521,8 +571,21 @@ var _ = Describe("extensions", func() {
 			Expect(v1beta1helper.ExtractErrorCodes(err)).To(ConsistOf(gardencorev1beta1.ErrorInfraUnauthorized), "should be able to extract error codes from wrapped error")
 		})
 
-		It("should return success if extensions CRs gets deleted", func() {
+		It("should not return error if extensions CRs gets deleted", func() {
 			err := WaitUntilExtensionObjectDeleted(ctx, c, log,
+				expected, extensionsv1alpha1.WorkerResource,
+				defaultInterval, defaultTimeout)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should not return error if CRD does not exist (NoMatchError)", func() {
+			mc := mockclient.NewMockClient(ctrl)
+			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{})).Return(&meta.NoKindMatchError{
+				GroupKind:        expected.GetObjectKind().GroupVersionKind().GroupKind(),
+				SearchedVersions: []string{"v1alpha1"},
+			})
+
+			err := WaitUntilExtensionObjectDeleted(ctx, mc, log,
 				expected, extensionsv1alpha1.WorkerResource,
 				defaultInterval, defaultTimeout)
 			Expect(err).NotTo(HaveOccurred())
