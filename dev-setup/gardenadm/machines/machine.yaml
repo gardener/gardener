@@ -59,6 +59,10 @@ spec:
           - name: IMAGEVECTOR_OVERWRITE_CHARTS
             value: /gardenadm/imagevector-overwrite-charts.yaml
         volumeMounts:
+        - name: run
+          mountPath: /run
+        - name: docker-socket
+          mountPath: /var/run/docker.sock
         - name: containerd
           mountPath: /var/lib/containerd
         - name: modules
@@ -107,6 +111,13 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       volumes:
+      - name: run
+        emptyDir:
+          medium: Memory
+      - name: docker-socket
+        hostPath:
+          path: /var/run/docker.sock
+          type: Socket
       - name: containerd
         emptyDir: {}
       - name: modules
