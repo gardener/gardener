@@ -16,25 +16,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 )
@@ -79,11 +74,6 @@ func (t *GuestBookTest) WaitUntilRedisIsReady(ctx context.Context) {
 // WaitUntilGuestbookDeploymentIsReady waits until the guestbook deployment is ready.
 func (t *GuestBookTest) WaitUntilGuestbookDeploymentIsReady(ctx context.Context) {
 	Expect(t.framework.WaitUntilDeploymentIsReady(ctx, GuestBook, t.framework.Namespace, t.framework.ShootClient)).To(Succeed())
-}
-
-// WaitUntilGuestbookIngressIsReady waits until the guestbook ingress is ready.
-func (t *GuestBookTest) WaitUntilGuestbookIngressIsReady(ctx context.Context) {
-	Expect(t.framework.WaitUntilIngressIsReady(ctx, GuestBook, t.framework.Namespace, t.framework.ShootClient)).To(Succeed())
 }
 
 // WaitUntilGuestbookLoadBalancerIsReady waits until the guestbook Service of type=LoadBalancer is ready.
@@ -134,12 +124,6 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 	}
 
 	shoot := t.framework.Shoot
-	k8sVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
-	Expect(err).NotTo(HaveOccurred())
-
-	if versionutils.ConstraintK8sLess135.Check(k8sVersion) && !v1beta1helper.NginxIngressEnabled(shoot.Spec.Addons) {
-		Fail("The test requires .spec.addons.nginxIngress.enabled to be true for Kubernetes versions less than 1.35")
-	}
 
 	By("Apply redis chart")
 	masterValues := map[string]any{
@@ -203,27 +187,12 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 		"HelmDeployNamespace": t.framework.Namespace,
 		"KubeVersion":         shoot.Spec.Kubernetes.Version,
 	}
-	// TODO(ialidzhikov): Clean up the guestbook test not to use use Ingress when Kubernetes 1.34 is no longer supported.
-	if versionutils.ConstraintK8sLess135.Check(k8sVersion) {
-		allowedCharacters := "0123456789abcdefghijklmnopqrstuvwxyz"
-		randURLSuffix, err := utils.GenerateRandomStringFromCharset(3, allowedCharacters)
-		Expect(err).NotTo(HaveOccurred())
-
-		t.guestBookAppHost = fmt.Sprintf("guestbook-%s.ingress.%s", randURLSuffix, *shoot.Spec.DNS.Domain)
-
-		guestBookValues["ShootDNSHost"] = t.guestBookAppHost
-	}
 
 	Expect(t.framework.RenderAndDeployTemplate(ctx, t.framework.ShootClient, templates.GuestbookAppName, guestBookValues)).To(Succeed())
 
 	t.WaitUntilGuestbookDeploymentIsReady(ctx)
 
-	if versionutils.ConstraintK8sLess135.Check(k8sVersion) {
-		t.WaitUntilGuestbookIngressIsReady(ctx)
-	} else {
-		loadBalancerIngress := t.WaitUntilGuestbookLoadBalancerIsReady(ctx)
-		t.guestBookAppHost = loadBalancerIngress
-	}
+	t.guestBookAppHost = t.WaitUntilGuestbookLoadBalancerIsReady(ctx)
 
 	By("Guestbook app was deployed successfully!")
 }
@@ -283,7 +252,6 @@ func (t *GuestBookTest) Cleanup(ctx context.Context) {
 	By("Clean up guestbook app resources")
 
 	Expect(kubernetesutils.DeleteObjects(ctx, t.framework.ShootClient.Client(),
-		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Namespace: t.framework.Namespace, Name: GuestBook}},
 		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: t.framework.Namespace, Name: GuestBook}},
 		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: t.framework.Namespace, Name: GuestBook}},
 	)).To(Succeed())

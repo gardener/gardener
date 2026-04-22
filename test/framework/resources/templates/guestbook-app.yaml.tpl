@@ -30,39 +30,6 @@ spec:
               name: redis
               key: redis-password
 ---
-{{- if semverCompare "< 1.35-0" .KubeVersion }}
-kind: Service
-apiVersion: v1
-metadata:
-  name: guestbook
-  namespace: {{ .HelmDeployNamespace }}
-spec:
-  selector:
-    app: guestbook
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 8080
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: guestbook
-  namespace: {{ .HelmDeployNamespace }}
-spec:
-  ingressClassName: nginx
-  rules:
-  - host: {{ .ShootDNSHost }}
-    http:
-      paths:
-      - backend:
-          service:
-            name: guestbook
-            port:
-              number: 80
-        path: /
-        pathType: Prefix
-{{- else }}
 kind: Service
 apiVersion: v1
 metadata:
@@ -76,4 +43,3 @@ spec:
       port: 80
       targetPort: 8080
   type: LoadBalancer
-{{- end -}}
