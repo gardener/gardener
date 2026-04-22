@@ -834,10 +834,12 @@ func getLabels() map[string]string {
 
 func getClusterProportionalDNSAutoscalerLabels() map[string]string {
 	return map[string]string{
-		"origin":                        "gardener",
-		v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-		corednsconstants.LabelKey:       clusterProportionalDNSAutoscalerLabelValue,
-		"kubernetes.io/cluster-service": "true",
+		"origin":                                            "gardener",
+		v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleSystemComponent,
+		corednsconstants.LabelKey:                           clusterProportionalDNSAutoscalerLabelValue,
+		"kubernetes.io/cluster-service":                     "true",
+		v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyShootToAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 }
 
