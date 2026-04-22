@@ -38,7 +38,6 @@ var gardenManagedResourceList = []string{
 	"shoot-core-kube-controller-manager",
 	"shoot-core-gardener-resource-manager",
 	"shoot-core-gardeneraccess",
-	"nginx-ingress",
 	"fluent-bit",
 	"fluent-operator",
 	"fluent-operator-custom-resources-garden",
