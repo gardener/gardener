@@ -503,6 +503,8 @@ metadata:
     gardener.cloud/role: system-component
     k8s-app: coredns-autoscaler
     kubernetes.io/cluster-service: "true"
+    networking.gardener.cloud/to-apiserver: allowed
+    networking.gardener.cloud/to-dns: allowed
     origin: gardener
   name: coredns-autoscaler
   namespace: kube-system
@@ -517,6 +519,8 @@ spec:
         gardener.cloud/role: system-component
         k8s-app: coredns-autoscaler
         kubernetes.io/cluster-service: "true"
+        networking.gardener.cloud/to-apiserver: allowed
+        networking.gardener.cloud/to-dns: allowed
         origin: gardener
     spec:
       containers:
