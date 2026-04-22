@@ -91,7 +91,7 @@ func targetGardenerResourceManagerDefaultValues(namespaceName string) resourcema
 		MaxConcurrentTokenRequestorWorkers: ptr.To(5),
 		ResponsibilityMode:                 resourcemanager.ForShootOrVirtualGarden,
 		WatchedNamespace:                   &namespaceName,
-		// The webhook should be enabled only if the target is a shoot not if it is the virtual garden.
+		// The webhook should be enabled only if the target is a shoot — not if it is the virtual garden.
 		SystemComponentsConfigWebhookEnabled: namespaceName != v1beta1constants.GardenNamespace,
 	}
 }

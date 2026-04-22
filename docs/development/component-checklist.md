@@ -49,8 +49,12 @@ This document provides a checklist for them that you can walk through.
 
 7. **Handle shoot system components**
 
-   Shoot system components deployed by `gardener-resource-manager` are labelled with `resource.gardener.cloud/managed-by: gardener`. This makes Gardener adding required label selectors and tolerations so that non-`DaemonSet` managed `Pod`s will exclusively run on selected nodes (for more information, see [System Components Webhook](../concepts/resource-manager.md#system-components-webhook)).
-   `DaemonSet`s on the other hand, should generally tolerate any `NoSchedule` or `NoExecute` taints so that they can run on any `Node`, regardless of user added taints.
+   Shoot system components (e.g., `kube-proxy`, `coredns`, `metrics-server`, etc.) are components that are deployed by `gardenlet` and run in `kube-system` namespace of a Shoot cluster.
+   For self-hosted shoots components deployed by `gardenadm init` and `gardenlet` which are required to run the self-hosted shoot are system components as well.
+
+   Shoot system components deployed via `gardener-resource-manager` are labelled with `resource.gardener.cloud/managed-by: gardener`. This makes Gardener adding required label selectors and tolerations so that non-`DaemonSet` managed `Pod`s will exclusively run on selected nodes (for more information, see [System Components Webhook](../concepts/resource-manager.md#system-components-webhook)).
+   `DaemonSet`s on the other hand, should generally tolerate any `NoSchedule` or `NoExecute` taints so that they can run on any `Node`, regardless of user added taints. 
+   In the self-hosted shoot case the webhook is also enabled in namespaces labeled with `system-components-config.resources.gardener.cloud/consider=true`.
 
 ## Images
 

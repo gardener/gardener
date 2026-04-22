@@ -1917,40 +1917,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					Expect(ValidateShoot(shoot)).To(BeEmpty())
 				})
-
-				Context("systemComponents setting", func() {
-					BeforeEach(func() {
-						nonCPWorker := *shoot.Spec.Provider.Workers[0].DeepCopy()
-						nonCPWorker.Name = "non-cp-pool"
-						nonCPWorker.SystemComponents = &core.WorkerSystemComponents{Allow: false}
-						shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, nonCPWorker)
-						shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
-					})
-
-					It("should allow systemComponents on control plane worker pool", func() {
-						Expect(ValidateShoot(shoot)).To(BeEmpty())
-					})
-
-					It("should allow systemComponents on non control-plane worker pool if its zones are equal to the control-plane worker pool zones", func() {
-						shoot.Spec.Provider.Workers[0].Zones = []string{"1"}
-						shoot.Spec.Provider.Workers[1].Zones = []string{"1"}
-						shoot.Spec.Provider.Workers[1].SystemComponents.Allow = true
-						Expect(ValidateShoot(shoot)).To(BeEmpty())
-					})
-
-					It("should forbid systemComponents on worker pools whose zones are not a subset of the control-plane worker pool zones", func() {
-						shoot.Spec.Provider.Workers[0].Zones = []string{"1"}
-						shoot.Spec.Provider.Workers[1].Zones = []string{"1", "2"}
-						shoot.Spec.Provider.Workers[1].Maximum = 2
-						shoot.Spec.Provider.Workers[1].SystemComponents.Allow = true
-
-						Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.provider.workers[1].systemComponents"),
-							"Detail": ContainSubstring("workers that enable systemComponents must use a subset of the zones of control plane worker"),
-						}))))
-					})
-				})
 			})
 
 			Describe("ClusterAutoscaler options validation", func() {
@@ -9367,6 +9333,61 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})),
 			)),
 		)
+
+		Context("systemComponents setting", func() {
+			var workers []core.Worker
+
+			BeforeEach(func() {
+				workers = []core.Worker{
+					{
+						Name:    "control-plane",
+						Minimum: three,
+						Maximum: three,
+						SystemComponents: &core.WorkerSystemComponents{
+							Allow: true,
+						},
+						ControlPlane: &core.WorkerControlPlane{},
+					},
+					{
+						Name:    "system-components",
+						Minimum: one,
+						Maximum: three,
+						SystemComponents: &core.WorkerSystemComponents{
+							Allow: true,
+						},
+					},
+				}
+			})
+
+			It("should allow systemComponents on control plane worker pool", func() {
+				Expect(ValidateSystemComponentWorkers(workers, field.NewPath("workers"))).To(BeEmpty())
+			})
+
+			It("should allow systemComponents on non control-plane worker pool if its zones are equal to the control-plane worker pool zones", func() {
+				workers[0].Zones = []string{"1"}
+				workers[1].Zones = []string{"1"}
+
+				Expect(ValidateSystemComponentWorkers(workers, field.NewPath("workers"))).To(BeEmpty())
+			})
+
+			It("should allow systemComponents on worker pools whose zones are a subset of the control-plane worker pool zones", func() {
+				workers[0].Zones = []string{"1", "2"}
+				workers[1].Zones = []string{"1"}
+
+				Expect(ValidateSystemComponentWorkers(workers, field.NewPath("workers"))).To(BeEmpty())
+			})
+
+			It("should forbid systemComponents on worker pools whose zones are not a subset of the control-plane worker pool zones", func() {
+				workers[0].Zones = []string{"1"}
+				workers[1].Zones = []string{"1", "2"}
+
+				Expect(ValidateSystemComponentWorkers(workers, field.NewPath("workers"))).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("workers[1].systemComponents"),
+					"Detail": ContainSubstring("workers that enable systemComponents must use a subset of the zones of control plane worker"),
+				}))))
+			})
+		})
 	})
 
 	Describe("#ValidateKubeletConfiguration", func() {

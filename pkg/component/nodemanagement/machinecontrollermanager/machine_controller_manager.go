@@ -296,7 +296,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 			},
 		}
 
-		// If machine-controller-manager runs in the kube-system namespace, then it should be scheduled only on workers that support system components.
+		// If machine-controller-manager runs in the kube-system namespace (self-hosted shoot case), then it should be scheduled only on workers that support system components.
 		if m.namespace == metav1.NamespaceSystem {
 			deployment.Spec.Template.Spec.NodeSelector = map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}
 		}

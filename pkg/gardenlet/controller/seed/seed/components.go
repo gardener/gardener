@@ -140,7 +140,6 @@ func (r *Reconciler) instantiateComponents(
 	alertingSMTPSecret *corev1.Secret,
 	wildCardCertSecret *corev1.Secret,
 	seedIsShoot bool,
-	seedIsSelfHostedShoot bool,
 ) (
 	c components,
 	err error,
@@ -190,7 +189,7 @@ func (r *Reconciler) instantiateComponents(
 	// seed system components
 	c.backupBucket = r.newBackupBucket(log, seed.GetInfo())
 	c.clusterIdentity = r.newClusterIdentity(seed.GetInfo())
-	c.gardenerResourceManager, err = r.newGardenerResourceManager(seed.GetInfo(), secretsManager, seedIsSelfHostedShoot)
+	c.gardenerResourceManager, err = r.newGardenerResourceManager(seed.GetInfo(), secretsManager)
 	if err != nil {
 		return
 	}
@@ -214,7 +213,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.etcdDruid, err = r.newEtcdDruid(secretsManager, seedIsSelfHostedShoot)
+	c.etcdDruid, err = r.newEtcdDruid(secretsManager)
 	if err != nil {
 		return
 	}
@@ -305,7 +304,7 @@ func (r *Reconciler) instantiateComponents(
 	return c, nil
 }
 
-func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, secretsManager secretsmanager.Interface, seedIsSelfHostedShoot bool) (component.DeployWaiter, error) {
+func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	var defaultNotReadyTolerationSeconds, defaultUnreachableTolerationSeconds *int64
 	if nodeToleration := r.Config.NodeToleration; nodeToleration != nil {
 		defaultNotReadyTolerationSeconds = nodeToleration.DefaultNotReadyTolerationSeconds
@@ -341,8 +340,7 @@ func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, se
 		},
 		// TODO(vitanovs): Remove the VPAInPlaceUpdates webhook once the
 		// VPAInPlaceUpdates feature gates is deprecated.
-		VPAInPlaceUpdatesEnabled:             features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates),
-		SystemComponentsConfigWebhookEnabled: seedIsSelfHostedShoot,
+		VPAInPlaceUpdatesEnabled: features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates),
 	})
 }
 
@@ -883,7 +881,7 @@ func (r *Reconciler) newVerticalPodAutoscaler(settings *gardencorev1beta1.SeedSe
 	return verticalPodAutoscaler, nil
 }
 
-func (r *Reconciler) newEtcdDruid(secretsManager secretsmanager.Interface, seedIsSelfHostedShoot bool) (component.DeployWaiter, error) {
+func (r *Reconciler) newEtcdDruid(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	return sharedcomponent.NewEtcdDruid(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
@@ -894,7 +892,7 @@ func (r *Reconciler) newEtcdDruid(secretsManager secretsmanager.Interface, seedI
 		v1beta1constants.SecretNameCASeed,
 		v1beta1constants.PriorityClassNameSeedSystem800,
 		false,
-		seedIsSelfHostedShoot,
+		false,
 	)
 }
 

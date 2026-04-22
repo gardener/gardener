@@ -82,7 +82,7 @@ var _ = Describe("ResourceManager", func() {
 			}))
 		})
 
-		It("should set ForSelfHostedShoot in the values for runtime resource managers deployed to a self-hosted shoot cluster", func() {
+		It("should set SystemComponentsConfigWebhookEnabled in the values for runtime resource managers deployed to a self-hosted shoot cluster", func() {
 			resourceManager, err := NewRuntimeGardenerResourceManager(fakeClient, namespace, sm, resourcemanager.Values{
 				ClusterIdentity:                      ptr.To("foo"),
 				SystemComponentsConfigWebhookEnabled: true,
@@ -132,7 +132,7 @@ var _ = Describe("ResourceManager", func() {
 			}))
 		})
 
-		Context("namespace is garden", func() {
+		When("namespace is garden", func() {
 			BeforeEach(func() {
 				namespace = "garden"
 			})

@@ -2752,21 +2752,6 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 		}
 	}
 
-	if helper.IsShootSelfHosted(workers) {
-		controlPlaneWorkersZonesSet := sets.New[string]()
-		for _, worker := range workers {
-			if worker.ControlPlane != nil {
-				controlPlaneWorkersZonesSet.Insert(worker.Zones...)
-			}
-		}
-
-		for i, worker := range workers {
-			if worker.ControlPlane == nil && helper.SystemComponentsAllowed(&worker) && !controlPlaneWorkersZonesSet.HasAll(worker.Zones...) {
-				allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("systemComponents"), *worker.SystemComponents, "workers that enable systemComponents must use a subset of the zones of control plane worker"))
-			}
-		}
-	}
-
 	return allErrs
 }
 
@@ -2869,6 +2854,21 @@ func ValidateSystemComponentWorkers(workers []core.Worker, fldPath *field.Path) 
 
 	if !atLeastOnePoolWithAllowedSystemComponents {
 		allErrs = append(allErrs, field.Forbidden(fldPath, "at least one active (workers[i].maximum > 0) worker pool with systemComponents.allow=true needed"))
+	}
+
+	if helper.IsShootSelfHosted(workers) {
+		controlPlaneWorkersZonesSet := sets.New[string]()
+		for _, worker := range workers {
+			if worker.ControlPlane != nil {
+				controlPlaneWorkersZonesSet.Insert(worker.Zones...)
+			}
+		}
+
+		for i, worker := range workers {
+			if worker.ControlPlane == nil && helper.SystemComponentsAllowed(&worker) && !controlPlaneWorkersZonesSet.HasAll(worker.Zones...) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("systemComponents"), *worker.SystemComponents, "workers that enable systemComponents must use a subset of the zones of control plane worker"))
+			}
+		}
 	}
 
 	return allErrs
