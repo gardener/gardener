@@ -547,8 +547,7 @@ func maintainAddons(shoot *gardencorev1beta1.Shoot) []string {
 	}
 
 	shoot.Spec.Addons.NginxIngress.Enabled = false
-	reason := ".spec.addons.nginxIngress was disabled. Reason: nginx ingress addon disallowed by landscape operator"
-	return []string{reason}
+	return []string{".spec.addons.nginxIngress was disabled. Reason: nginx ingress addon disallowed by landscape operator"}
 }
 
 func maintainTasks(shoot *gardencorev1beta1.Shoot, config controllermanagerconfigv1alpha1.ShootMaintenanceControllerConfiguration) {

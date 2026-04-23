@@ -117,13 +117,13 @@ const (
 	// DisableNginxIngressInGarden disables the deployment of the nginx ingress controller in the Garden runtime cluster
 	// and removes the nginx ingress controller (if existing) from the Garden runtime cluster.
 	// owner: @ScheererJ
-	// alpha: v1.141.0
+	// alpha: v1.142.0
 	DisableNginxIngressInGarden featuregate.Feature = "DisableNginxIngressInGarden"
 
 	// DisableNginxIngressInSeed disables the deployment of the nginx ingress controller in the Seed cluster
 	// and removes the nginx ingress controller (if existing) from the Seed cluster.
 	// owner: @ScheererJ
-	// alpha: v1.141.0
+	// alpha: v1.142.0
 	DisableNginxIngressInSeed featuregate.Feature = "DisableNginxIngressInSeed"
 
 	// DisableNginxIngressInShoot disables the deployment of the nginx ingress controller in the Shoot cluster
@@ -131,9 +131,8 @@ const (
 	// If set for the gardener-apiserver, the creation of new Shoot clusters with the addon enabled is blocked.
 	// Existing Shoot clusters can only disable the addon, but not enable it anymore.
 	// If set for the gardener-controller-manager, the maintenance controller will disable the addon during the next maintenance operation.
-	// If set for the gardenlet, the nginx ingress controller is removed from existing Shoot clusters during reconciliation.
 	// owner: @ScheererJ
-	// alpha: v1.141.0
+	// alpha: v1.142.0
 	DisableNginxIngressInShoot featuregate.Feature = "DisableNginxIngressInShoot"
 )
 

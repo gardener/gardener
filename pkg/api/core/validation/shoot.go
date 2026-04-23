@@ -185,7 +185,8 @@ var (
 type shootValidationOptions struct {
 	// KubeAPIServerValidationOptions are validation options for the KubeAPIServer fields.
 	KubeAPIServerValidationOptions KubeAPIServerValidationOptions
-	addonsValidationOptions
+	// AddonsValidationOptions are validation options for the Addons fields.
+	AddonsValidationOptions addonsValidationOptions
 }
 
 // KubeAPIServerValidationOptions are validation options for the KubeAPIServer fields.
@@ -223,7 +224,7 @@ func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 				AutoRotationEnabled: helper.IsETCDEncryptionKeyAutoRotationEnabled(shoot.Spec.Maintenance),
 			},
 		},
-		addonsValidationOptions: addonsValidationOptions{
+		AddonsValidationOptions: addonsValidationOptions{
 			AllowNginxIngress: false,
 		},
 	}
@@ -258,7 +259,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 				AutoRotationEnabled: helper.IsETCDEncryptionKeyAutoRotationEnabled(newShoot.Spec.Maintenance),
 			},
 		},
-		addonsValidationOptions: addonsValidationOptions{
+		AddonsValidationOptions: addonsValidationOptions{
 			AllowNginxIngress: oldShoot.Spec.Addons != nil && oldShoot.Spec.Addons.NginxIngress != nil && oldShoot.Spec.Addons.NginxIngress.Enabled,
 		},
 	}
@@ -682,7 +683,7 @@ func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless 
 	}
 
 	if helper.NginxIngressEnabled(addons) {
-		if !opts.AllowNginxIngress && features.DefaultFeatureGate.Enabled(features.DisableNginxIngressInShoot) {
+		if !opts.AddonsValidationOptions.AllowNginxIngress && features.DefaultFeatureGate.Enabled(features.DisableNginxIngressInShoot) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("nginxIngress", "enabled"), "nginx ingress addon disallowed by landscape operator"))
 		}
 

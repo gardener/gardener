@@ -47,7 +47,6 @@ func NewNginxIngress(
 	}
 
 	values := nginxingress.Values{
-		Disabled:                  disabled,
 		ImageController:           imageController.String(),
 		ImageDefaultBackend:       imageDefaultBackend.String(),
 		IngressClass:              ingressClass,
@@ -64,5 +63,10 @@ func NewNginxIngress(
 		SeedIsGarden:              seedIsGarden,
 	}
 
-	return nginxingress.New(c, namespaceName, values), nil
+	nginx := nginxingress.New(c, namespaceName, values)
+	if disabled {
+		nginx = component.OpDestroyWithoutWait(nginx)
+	}
+
+	return nginx, nil
 }
