@@ -75,7 +75,7 @@ var _ = Describe("Garbage collector tests", func() {
 					CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 						RemoteWrite: []monitoringv1.RemoteWriteSpec{
 							{
-								URL: "example.com",
+								URL: "http://example.com",
 								BasicAuth: &monitoringv1.BasicAuth{
 									Username: corev1.SecretKeySelector{
 										LocalObjectReference: corev1.LocalObjectReference{Name: resourceName + "-secret0"},

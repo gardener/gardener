@@ -147,7 +147,7 @@ func (p *prometheus) prometheus(cortexConfigMap *corev1.ConfigMap) *monitoringv1
 	}
 
 	if p.values.RemoteWrite != nil {
-		spec := monitoringv1.RemoteWriteSpec{URL: p.values.RemoteWrite.URL}
+		spec := monitoringv1.RemoteWriteSpec{URL: monitoringv1.URL(p.values.RemoteWrite.URL)}
 
 		if len(p.values.RemoteWrite.KeptMetrics) > 0 {
 			spec.WriteRelabelConfigs = []monitoringv1.RelabelConfig{monitoringutils.StandardMetricRelabelConfig(p.values.RemoteWrite.KeptMetrics...)[0]}
