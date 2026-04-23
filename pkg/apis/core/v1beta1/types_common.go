@@ -72,6 +72,8 @@ const (
 	LastOperationTypeMigrate LastOperationType = "Migrate"
 	// LastOperationTypeRestore indicates a 'restore' operation.
 	LastOperationTypeRestore LastOperationType = "Restore"
+	// LastOperationTypeLiveMigrate indicates a 'livemigrate' operation.
+	LastOperationTypeLiveMigrate LastOperationType = "LiveMigrate"
 )
 
 // LastOperationState is a string alias.
