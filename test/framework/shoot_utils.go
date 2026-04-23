@@ -230,13 +230,6 @@ func setKubernetesVersionDependentSettings(shoot *gardencorev1beta1.Shoot) {
 		if shoot.Spec.Addons == nil {
 			shoot.Spec.Addons = &gardencorev1beta1.Addons{}
 		}
-		if shoot.Spec.Addons.NginxIngress == nil {
-			shoot.Spec.Addons.NginxIngress = &gardencorev1beta1.NginxIngress{
-				Addon: gardencorev1beta1.Addon{
-					Enabled: true,
-				},
-			}
-		}
 		if shoot.Spec.Addons.KubernetesDashboard == nil {
 			shoot.Spec.Addons.KubernetesDashboard = &gardencorev1beta1.KubernetesDashboard{
 				Addon: gardencorev1beta1.Addon{

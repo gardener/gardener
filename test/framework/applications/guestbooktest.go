@@ -185,7 +185,6 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 	By("Deploy the guestbook application")
 	guestBookValues := map[string]any{
 		"HelmDeployNamespace": t.framework.Namespace,
-		"KubeVersion":         shoot.Spec.Kubernetes.Version,
 	}
 
 	Expect(t.framework.RenderAndDeployTemplate(ctx, t.framework.ShootClient, templates.GuestbookAppName, guestBookValues)).To(Succeed())
