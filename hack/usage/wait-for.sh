@@ -71,6 +71,6 @@ while [ "${retries}" -lt "${TIMEOUT}" ]; do
 done
 
 if [ "${retries}" -ge "${TIMEOUT}" ]; then
-  echo -e "${RED}❌ ERROR: Last operation state not 'Succeeded' or ${condition} not met for ${RESOURCE_TYPE}/${OBJECT_NAME} after ${TIMEOUT} seconds.${NO_COLOR}"
+  echo -e "${RED}❌ ERROR: Last operation state not 'Succeeded' or conditions not met for ${RESOURCE_TYPE}/${OBJECT_NAME} after ${TIMEOUT} seconds.${NO_COLOR}"
   exit 1
 fi
