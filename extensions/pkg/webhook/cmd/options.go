@@ -395,12 +395,14 @@ func (c *AddToManagerConfig) reconcileSeedWebhookConfig(mgr manager.Manager, web
 		defer cancel()
 
 		for _, webhookConfig := range webhookConfigs.GetWebhookConfigs() {
-			return retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (bool, error) {
+			if err := retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (bool, error) {
 				if err := extensionswebhook.ReconcileSeedWebhookConfig(ctx, mgr.GetClient(), webhookConfig, c.Server.OwnerNamespace, caBundle); err != nil {
 					return retry.MinorError(fmt.Errorf("error reconciling seed webhook config: %w", err))
 				}
 				return retry.Ok()
-			})
+			}); err != nil {
+				return err
+			}
 		}
 		return nil
 	}
