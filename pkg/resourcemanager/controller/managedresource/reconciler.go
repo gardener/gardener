@@ -508,7 +508,7 @@ func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, ori
 			}
 
 			if apierrors.IsInvalid(err) && operationResult == controllerutil.OperationResultUpdated && deleteOnInvalidUpdate(current, err) {
-				opts := []client.DeleteOption{}
+				var opts []client.DeleteOption
 				if propagationPolicy, err := deletionPropagation(current); err != nil {
 					return fmt.Errorf("invalid deletion propagation policy on object %s: %w", resource, err)
 				} else if propagationPolicy != "" {
@@ -649,7 +649,7 @@ func deletionPropagation(obj *unstructured.Unstructured) (metav1.DeletionPropaga
 	}
 	val := metav1.DeletionPropagation(raw)
 	if !validPropagationValues.Has(val) {
-		return "", fmt.Errorf("%q is invalid", raw)
+		return "", fmt.Errorf("%q is invalid, supported values: %+v", raw, sets.List(validPropagationValues))
 	}
 	return val, nil
 }

@@ -202,8 +202,8 @@ This can be done from the components that create the managed resource secrets, f
 
 #### Handling invalid updates
 
-Sometimes, an update to a resource is forbidden because immutable fields are changes (for example the referenced role of a `(Cluster)RoleBinding`).
-By setting the annotation `resources.gardener.cloud/delete-on-invalid-update=true` (or any trothy value) bhe resource manager can optionally delete and re-create the resource in that case.
+Sometimes, an update to a resource is forbidden because immutable fields are changed (for example the referenced role of a `(Cluster)RoleBinding`).
+By setting the annotation `resources.gardener.cloud/delete-on-invalid-update=true` (or any truthy value), the resource manager can optionally delete and re-create the resource in that case.
 Additionally, the annotation `resources.gardener.cloud/deletion-propagation-on-invalid-update` controls the deletion propagation (defaults to `Background`). Setting `Orphan` might be desirable when changing for example the label selectors of a deployment.
 
 #### Finalizing Deletion of Resources After Grace Period
