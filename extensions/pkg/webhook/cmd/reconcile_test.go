@@ -14,33 +14,23 @@ import (
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
-
-type fakeManager struct {
-	manager.Manager
-
-	client client.Client
-}
-
-func (f *fakeManager) GetClient() client.Client {
-	return f.client
-}
 
 var _ = Describe("reconcileSeedWebhookConfig", func() {
 	var (
 		ctx        = context.Background()
 		fakeClient client.Client
-		mgr        *fakeManager
+		mgr        *test.FakeManager
 		config     *AddToManagerConfig
 		caBundle   = []byte("ca-bundle")
 	)
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-		mgr = &fakeManager{client: fakeClient}
+		mgr = &test.FakeManager{Client: fakeClient}
 		config = &AddToManagerConfig{}
 	})
 
