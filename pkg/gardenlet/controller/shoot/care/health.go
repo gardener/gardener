@@ -717,11 +717,6 @@ func (h *Health) CheckClusterNodes(
 		return &c, nil
 	}
 
-	machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
-	if err := h.seedClient.Client().List(ctx, machineDeploymentList, client.InNamespace(h.shoot.ControlPlaneNamespace)); err != nil {
-		return nil, err
-	}
-
 	nodeList := convertWorkerPoolToNodesMappingToNodeList(workerPoolToNodes)
 	// only nodes that are managed by MCM are considered
 	nodesManagedByMCM := []*corev1.Node{}
@@ -730,12 +725,6 @@ func (h *Health) CheckClusterNodes(
 			continue
 		}
 		nodesManagedByMCM = append(nodesManagedByMCM, &node)
-	}
-	if msg, err := CheckNodesScaling(ctx, h.seedClient.Client(), nodesManagedByMCM, machineDeploymentList, h.shoot.ControlPlaneNamespace); err != nil {
-		if msg == "" {
-			return nil, err
-		}
-		return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, msg, err.Error())), nil
 	}
 
 	leaseList := &coordinationv1.LeaseList{}
@@ -753,7 +742,20 @@ func (h *Health) CheckClusterNodes(
 		return &c, nil
 	}
 
-	if !h.shoot.IsWorkerless && v1beta1helper.SeedSettingDependencyWatchdogProberEnabled(h.seed.GetInfo().Spec.Settings) {
+	if !h.shoot.IsSelfHosted() || h.shoot.HasManagedInfrastructure() {
+		machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
+		if err := h.seedClient.Client().List(ctx, machineDeploymentList, client.InNamespace(h.shoot.ControlPlaneNamespace)); err != nil {
+			return nil, err
+		}
+		if msg, err := CheckNodesScaling(ctx, h.seedClient.Client(), nodesManagedByMCM, machineDeploymentList, h.shoot.ControlPlaneNamespace); err != nil {
+			if msg == "" {
+				return nil, err
+			}
+			return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, msg, err.Error())), nil
+		}
+	}
+
+	if !h.shoot.IsSelfHosted() && !h.shoot.IsWorkerless && v1beta1helper.SeedSettingDependencyWatchdogProberEnabled(h.seed.GetInfo().Spec.Settings) {
 		leaseList := &coordinationv1.LeaseList{}
 		if err := shootClient.Client().List(ctx, leaseList, client.InNamespace(corev1.NamespaceNodeLease)); err != nil {
 			return nil, err
