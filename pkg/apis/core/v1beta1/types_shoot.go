@@ -228,6 +228,9 @@ type ShootStatus struct {
 	// ManualWorkerPoolRollout contains information about the worker pool rollout progress.
 	// +optional
 	ManualWorkerPoolRollout *ManualWorkerPoolRollout `json:"manualWorkerPoolRollout,omitempty" protobuf:"bytes,21,opt,name=manualWorkerPoolRollout"`
+	// LiveMigration contains information about an ongoing live control plane migration of the Shoot.
+	// +optional
+	LiveMigration *ShootLiveMigration `json:"liveMigration,omitempty" protobuf:"bytes,22,opt,name=liveMigration"`
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -358,6 +361,15 @@ type ManualWorkerPoolRollout struct {
 	// PendingWorkersRollouts contains the names of the worker pools that are still pending rollout.
 	// +optional
 	PendingWorkersRollouts []PendingWorkersRollout `json:"pendingWorkersRollouts,omitempty" protobuf:"bytes,1,rep,name=pendingWorkersRollouts"`
+}
+
+// ShootLiveMigration contains information about an ongoing live migration of the Shoot control plane.
+type ShootLiveMigration struct {
+	// Conditions represents the progress of the live migration, one condition per migration step.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +optional
+	Conditions []Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
 }
 
 // ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
@@ -2124,6 +2136,30 @@ const (
 	ShootDNSServiceMigrationReady ConditionType = "DNSServiceMigrationReady"
 	// ShootUsesUnifiedHTTPProxyPort is a constant for a condition type indicating whether the new http-proxy port is consumed from istio.
 	ShootUsesUnifiedHTTPProxyPort ConditionType = "UsesUnifiedHTTPProxyPort"
+	// ShootLiveMigrationSourceEtcdPreparedForPeerJoin indicates that the source etcd cluster
+	// is prepared for destination peers to join.
+	ShootLiveMigrationSourceEtcdPreparedForPeerJoin ConditionType = "SourceEtcdPreparedForPeerJoin"
+	// ShootLiveMigrationDestinationEtcdPeersJoined indicates that destination etcd members
+	// have successfully joined the source etcd cluster.
+	ShootLiveMigrationDestinationEtcdPeersJoined ConditionType = "DestinationEtcdPeersJoined"
+	// ShootLiveMigrationMigrateExtensionsNeededBeforeKAPI indicates that extension resources
+	// required before the kube-apiserver can be migrated have been migrated.
+	ShootLiveMigrationMigrateExtensionsNeededBeforeKAPI ConditionType = "MigrateExtensionsNeededBeforeKAPI"
+	// ShootLiveMigrationDestinationKAPIReady indicates that the destination kube-apiserver
+	// is ready and serving traffic.
+	ShootLiveMigrationDestinationKAPIReady ConditionType = "DestinationKAPIReady"
+	// ShootLiveMigrationMigrateDNSRecords indicates that DNS records have been updated
+	// to point to the destination seed.
+	ShootLiveMigrationMigrateDNSRecords ConditionType = "MigrateDNSRecords"
+	// ShootLiveMigrationEtcdMigrationComplete indicates that the etcd cluster has been
+	// fully migrated to the destination seed.
+	ShootLiveMigrationEtcdMigrationComplete ConditionType = "EtcdMigrationComplete"
+	// ShootLiveMigrationSourceSeedCleanup indicates that cleanup of resources in the
+	// source seed has been completed.
+	ShootLiveMigrationSourceSeedCleanup ConditionType = "SourceSeedCleanup"
+	// ShootLiveMigrationMigrationCompleted indicates that the live control plane migration
+	// has completed successfully.
+	ShootLiveMigrationMigrationCompleted ConditionType = "MigrationCompleted"
 )
 
 // ShootPurpose is a type alias for string.

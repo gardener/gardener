@@ -172,6 +172,8 @@ type ShootStatus struct {
 	InPlaceUpdates *InPlaceUpdatesStatus
 	// ManualWorkerPoolRollout contains information about the worker pool rollout progress.
 	ManualWorkerPoolRollout *ManualWorkerPoolRollout
+	// LiveMigration contains information about an ongoing live control plane migration of the Shoot.
+	LiveMigration *ShootLiveMigration
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -276,6 +278,12 @@ type CARotation struct {
 type ManualWorkerPoolRollout struct {
 	// PendingWorkersRollouts contains the names of the worker pools that are still pending rollout.
 	PendingWorkersRollouts []PendingWorkersRollout
+}
+
+// ShootLiveMigration contains information about an ongoing live migration of the Shoot control plane.
+type ShootLiveMigration struct {
+	// Conditions represents the progress of the live migration, one condition per migration step.
+	Conditions []Condition
 }
 
 // ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
