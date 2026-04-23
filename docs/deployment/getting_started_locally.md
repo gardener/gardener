@@ -223,7 +223,7 @@ kubectl apply -f example/provider-local/shoot-workerless.yaml
 (Optional): You could also execute a simple e2e test (creating and deleting a shoot) by running:
 
 ```shell
-make test-e2e-local-simple KUBECONFIG=dev-setup/kubeconfigs/virtual-garden/kubeconfig
+make test-e2e-local-simple
 ```
 
 ### Accessing the `Shoot` Cluster
@@ -263,7 +263,7 @@ The following steps describe how to do that.
 Start by setting up the second KinD cluster:
 
 ```bash
-make kind-single-node2-up
+make kind2-up
 ```
 
 This command sets up a new KinD cluster named `gardener-local2` and stores its kubeconfig in the `./dev-setup/kubeconfigs/seed2/kubeconfig` file.
@@ -271,7 +271,7 @@ This command sets up a new KinD cluster named `gardener-local2` and stores its k
 In order to deploy required resources in the KinD cluster that you just created, run:
 
 ```bash
-make seed-up KUBECONFIG=dev-setup/kubeconfigs/seed2/kubeconfig
+make seed2-up
 ```
 
 The following steps assume that you are using the kubeconfig that points to the virtual garden cluster: `export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig`.
@@ -300,7 +300,7 @@ If you want to perform control plane migration, you can follow the steps outline
 ## (Optional): Tear Down the Second Seed Cluster
 
 ``` shell
-make kind-single-node2-down
+make kind2-down
 ```
 
 ## Tear Down the Gardener Environment

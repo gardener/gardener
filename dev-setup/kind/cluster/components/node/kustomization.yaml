@@ -19,7 +19,8 @@ patches:
           - hostPath: ${DOCKER_SOCKET}
             containerPath: /var/run/docker.sock
         kubeadmConfigPatches:
-          - ""
+          - "" # empty patch to allow adding kubeadm config patches for the control plane node only, see next patch below
+               # if we'd just append to kubeadmConfigPatches, we would end up with duplication in case this node component is added multiple times (for multi-node kind clusters)
           - |
             apiVersion: kubelet.config.k8s.io/v1beta1
             kind: KubeletConfiguration
@@ -31,7 +32,7 @@ patches:
   target:
     group: kind.x-k8s.io
     kind: Cluster
-    name: local
+    name: gardener-local
 
 # Patches exclusively for the control plane node (always the first one, and always only exactly one)
 - patch: |-
@@ -57,4 +58,4 @@ patches:
   target:
     group: kind.x-k8s.io
     kind: Cluster
-    name: local
+    name: gardener-local

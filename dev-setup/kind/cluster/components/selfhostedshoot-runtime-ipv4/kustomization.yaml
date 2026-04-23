@@ -18,4 +18,4 @@ patches:
   target:
     group: kind.x-k8s.io
     kind: Cluster
-    name: local
+    name: gardener-local

@@ -29,12 +29,6 @@ function detect_scenario() {
   # Check if all providerIDs have a scheme (contain "://") but none start with kind://
   if [[ -n "$provider_ids" && $(echo "$provider_ids" | grep -c '://') -eq $(echo "$provider_ids" | wc -l) && $(echo "$provider_ids" | grep -cv '^kind://') -eq $(echo "$provider_ids" | wc -l) ]]; then
     export SCENARIO="remote"
-  elif grep -q "gardener-local2" <<< "$nodes"; then
-    if [[ $(echo "$nodes" | wc -l) -eq 1 ]]; then
-      export SCENARIO="single-node2"
-    else
-      export SCENARIO="multi-node2"
-    fi
   elif [[ $(echo "$nodes" | wc -l) -eq 1 ]]; then
     export SCENARIO="single-node"
   elif [[ $(echo "$zones" | wc -l) -eq 1 ]]; then
@@ -44,6 +38,10 @@ function detect_scenario() {
   else
     echo "Error: Unable to detect scenario. Please ensure you have a valid Kubernetes cluster with correctly labeled nodes with their availability zone." >&2
     exit 1
+  fi
+
+  if grep -q "gardener-local2" <<< "$nodes"; then
+    export SCENARIO="${SCENARIO}2"
   fi
 
   if [[ "$IPFAMILY" == "ipv6" ]]; then

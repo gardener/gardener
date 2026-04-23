@@ -14,7 +14,7 @@ clamp_mss_to_pmtu
 
 # test setup
 make kind-up
-make kind-single-node2-up
+make kind2-up
 
 # export all container logs and events after test execution
 trap "
@@ -24,7 +24,7 @@ trap "
   ( export KUBECONFIG=$KUBECONFIG_SEED2_CLUSTER; export_artifacts "gardener-local2" )
   ( make seed-down KUBECONFIG="$KUBECONFIG_SEED2_CLUSTER" )
   ( make gardener-down )
-  ( make kind-single-node2-down )
+  ( make kind2-down )
   ( make kind-down )
 " EXIT
 

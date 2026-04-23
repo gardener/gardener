@@ -607,6 +607,8 @@ build:
             variant: AbbrevCommitSha
 profiles:
   - name: dev
+    activation:
+    - command: dev
     patches:
       - op: replace
         path: /build/tagPolicy/customTemplate/template

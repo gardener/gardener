@@ -9,47 +9,17 @@ set -o pipefail
 COMMAND="${1:-up}"
 VALID_COMMANDS=("up" "down" "setup-loopback-devices")
 
+INFRA_COMPOSE_FILE="$(dirname "$0")/infra/docker-compose.yaml"
+DIR_BACKUP_BUCKET="$(dirname "$0")/../dev/local-backupbuckets"
+DIR_REGISTRY="$(dirname "$0")/../dev/local-registry"
+
+SUDO=""
+if [[ "$(id -u)" != "0" ]]; then
+  SUDO="sudo "
+fi
+
 case "$COMMAND" in
   up)
-    WITH_LPP_RESIZE_SUPPORT=${WITH_LPP_RESIZE_SUPPORT:-false}
-    USE_PROW_REGISTRY_CACHE=${CI:-false}
-    CLUSTER_NAME=""
-    KUSTOMIZE_OVERLAY_BASENAME=""
-    # KUBECONFIG_COPY_PATHS is a list of paths to which the kind cluster kubeconfig will be copied.
-    KUBECONFIG_COPY_PATHS=()
-    MULTI_ZONAL=""
-    INFRA_COMPOSE_FILE="$(dirname "$0")/infra/docker-compose.yaml"
-
-    parse_flags() {
-      while test $# -gt 0; do
-        case "$1" in
-        --cluster-name)
-          shift; CLUSTER_NAME="$1"
-          ;;
-        --kustomize-overlay-basename)
-          shift; KUSTOMIZE_OVERLAY_BASENAME="$1"
-          ;;
-        --path-kubeconfig-copy)
-          shift; KUBECONFIG_COPY_PATHS+=("$1")
-          ;;
-        --multi-zonal)
-          MULTI_ZONAL=true
-          ;;
-        --with-lpp-resize-support)
-          shift
-          WITH_LPP_RESIZE_SUPPORT="${1}"
-          ;;
-        esac
-
-        shift
-      done
-    }
-
-    SUDO=""
-    if [[ "$(id -u)" != "0" ]]; then
-      SUDO="sudo "
-    fi
-
     # The local registry needs to be available from the host for pushing and from the containers for pulling.
     # On the host, we bind the registry to localhost (see infra/docker-compose.yaml), because 127.0.0.1 and ::1
     # are configured as HTTP-only (insecure-registries) by default in Docker, which allows `docker push` without
@@ -137,7 +107,7 @@ EOF
         fi
       elif [[ "$OSTYPE" == "linux"* && -f /etc/systemd/resolved.conf ]]; then
         if [[ ! -d /etc/systemd/resolved.conf.d ]]; then
-                ${SUDO}mkdir -p /etc/systemd/resolved.conf.d
+          ${SUDO}mkdir -p /etc/systemd/resolved.conf.d
         fi
         if ! grep -q "$dns_ip" /etc/systemd/resolved.conf.d/gardener-local.conf || ! grep -q "$dns_ipv6" /etc/systemd/resolved.conf.d/gardener-local.conf ; then
           echo "Configuring systemd-resolved to resolve the local.gardener.cloud zone using the local setup's DNS server"
@@ -227,7 +197,7 @@ EOF
     }
 
     change_registry_upstream_urls_to_prow_caches() {
-      if [[ "$USE_PROW_REGISTRY_CACHE" != "true" ]]; then
+      if [[ "${CI:-false}" != "true" ]]; then
         return
       fi
 
@@ -373,13 +343,9 @@ EOF
 
     check_shell_dependencies
 
-    parse_flags "$@"
+    mkdir -m 0755 -p "$DIR_BACKUP_BUCKET" "$DIR_REGISTRY"
 
-    mkdir -m 0755 -p \
-      "$(dirname "$0")/../dev/local-backupbuckets" \
-      "$(dirname "$0")/../dev/local-registry"
-
-    "$(dirname "$0")/kind.sh" setup-loopback-devices --cluster-name "${CLUSTER_NAME}" --ip-family "${IPFAMILY}" ${MULTI_ZONAL:+--multi-zonal}
+    "$(dirname "$0")/kind.sh" setup-loopback-devices
 
     setup_kind_network
 
@@ -390,7 +356,7 @@ EOF
     ensure_local_registry_hosts
     setup_local_dns_resolver
 
-    kustomize build "$(dirname "$0")/kind/cluster/overlays/${KUSTOMIZE_OVERLAY_BASENAME}-${IPFAMILY}" | \
+    kustomize build "$(dirname "$0")/kind/cluster/overlays/${KUSTOMIZE_OVERLAY}-${IPFAMILY}" | \
       yq 'del(.metadata)' | \
       sed "s|\${DOCKER_SOCKET}|$(docker_socket)|g" | \
       kind create cluster \
@@ -406,8 +372,8 @@ EOF
     # this is required for nesting kubelets on cgroupsv2, as the kindest-node entrypoint script assumes an existing cgroupns when the host kernel uses cgroupsv2
     # See containerd CRI: https://github.com/containerd/containerd/commit/687469d3cee18bf0e12defa5c6d0c7b9139a2dbd
     if [ -f "/sys/fs/cgroup/cgroup.controllers" ] || [ "$(uname -s)" == "Darwin" ]; then
-        echo "Host uses cgroupsv2"
-        cat << 'EOF' > "$(dirname "$0")/../dev/adjust_cri_base.sh"
+      echo "Host uses cgroupsv2"
+      cat << 'EOF' > "$(dirname "$0")/../dev/adjust_cri_base.sh"
 #!/bin/bash
 if [ -f /etc/containerd/cri-base.json ]; then
   key=$(cat /etc/containerd/cri-base.json | jq '.linux.namespaces | map(select(.type == "cgroup"))[0]')
@@ -424,13 +390,13 @@ else
 fi
 EOF
 
-        for node_name in $nodes; do
-            echo "Adjusting containerd config for kind node $node_name"
+      for node_name in $nodes; do
+        echo "Adjusting containerd config for kind node $node_name"
 
-            # copy script to the kind's docker container and execute it
-            docker cp "$(dirname "$0")/../dev/adjust_cri_base.sh" "$node_name":/etc/containerd/adjust_cri_base.sh
-            docker exec "$node_name" bash -c "chmod +x /etc/containerd/adjust_cri_base.sh && /etc/containerd/adjust_cri_base.sh && systemctl restart containerd"
-        done
+        # copy script to the kind's docker container and execute it
+        docker cp "$(dirname "$0")/../dev/adjust_cri_base.sh" "$node_name":/etc/containerd/adjust_cri_base.sh
+        docker exec "$node_name" bash -c "chmod +x /etc/containerd/adjust_cri_base.sh && /etc/containerd/adjust_cri_base.sh && systemctl restart containerd"
+      done
     fi
 
     for node in $nodes; do
@@ -438,8 +404,10 @@ EOF
       docker exec "$node" sh -c "sysctl fs.inotify.max_user_instances=8192"
     done
 
-    # copy kind cluster kubeconfig to desired paths
-    for path_kubeconfig in "${KUBECONFIG_COPY_PATHS[@]}"; do
+    # copy kind cluster kubeconfig to additional directories where needed
+    for path_kubeconfig in "${KUBECONFIG_SEED_CLUSTER:-}" "${KUBECONFIG_SEED2_CLUSTER:-}" "${KUBECONFIG_SEED_SECRET_PATH:-}"; do
+      [[ -z "$path_kubeconfig" ]] && continue
+
       if [[ "$(realpath "$KUBECONFIG")" != "$(realpath "$path_kubeconfig")" ]]; then
         cp "$KUBECONFIG" "$path_kubeconfig"
       fi
@@ -448,7 +416,7 @@ EOF
       # cluster as Seed). `gardener-operator` will read this kubeconfig when attempting to deploy `gardenlet` into it.
       # Since `gardener-operator` runs in a pod, 127.0.0.1 would not work to communicate with the second kind cluster - but
       # the Docker container name is resolvable.
-      if [[ "$path_kubeconfig" == *"dev-setup/gardenlet/components/kubeconfigs/seed-local2/kubeconfig" ]]; then
+      if [[ "$path_kubeconfig" == *"seed-local2"* ]]; then
         sed "s/127\.0\.0\.1:[0-9]\+/gardener-local2-control-plane:6443/g" "$path_kubeconfig" > "${path_kubeconfig}-gardener-operator"
       fi
 
@@ -524,39 +492,47 @@ EOF
 
     # Automatically start cloud-provider-local on kind cluster
     make cloud-provider-local-up
+    ;;
 
+  down)
+    kind delete cluster --name "$CLUSTER_NAME"
+
+    if [[ "$CLUSTER_NAME" != "gardener-local2" ]]; then
+      # Only stop the infra containers if deleting the "main" kind cluster.
+      # When deleting the secondary cluster, we might still need DNS/registry for the other cluster.
+      # Reset dynamic updates to the DNS zones by removing the volumes.
+      docker compose -f "$INFRA_COMPOSE_FILE" down --volumes
+
+      # When deleting the "main" kind cluster, remove all load balancer containers (including the ones of shoot clusters)
+      # to remove any orphaned containers.
+      echo "Removing load balancer containers of all clusters"
+      for container in $(docker container ls -aq --filter network=kind --filter label=gardener.cloud/role=loadbalancer); do
+        docker container rm -f "$container"
+      done
+
+      # Only delete the local backup bucket directory if deleting the "main" kind cluster.
+      # When deleting the secondary cluster, we might still need it for the other cluster.
+      # We need root privileges to clean the backup bucket directory, see https://github.com/gardener/gardener/issues/6752
+	    docker run --rm --user root:root -v "$DIR_BACKUP_BUCKET":/dev/local-backupbuckets alpine rm -rf /dev/local-backupbuckets/garden-*
+      rm -rf "$DIR_BACKUP_BUCKET"
+    else
+      echo "Removing load balancer containers of cluster $CLUSTER_NAME"
+      for container in $(docker container ls -aq --filter network=kind --filter label=gardener.cloud/role=loadbalancer --filter label=kubernetes.io/cluster="$CLUSTER_NAME"); do
+        docker container rm -f "$container"
+      done
+    fi
+
+
+
+    # remove kind cluster kubeconfig to additional directories where needed
+    for path_kubeconfig in "$KUBECONFIG" "${KUBECONFIG_SEED_CLUSTER:-}" "${KUBECONFIG_SEED2_CLUSTER:-}" "${KUBECONFIG_SEED_SECRET_PATH:-}"; do
+      [[ -z "$path_kubeconfig" ]] && continue
+
+      rm -f "$path_kubeconfig" "${path_kubeconfig}-gardener-operator"
+    done
     ;;
 
   setup-loopback-devices)
-    MULTI_ZONAL="false"
-    CLUSTER_NAME=""
-    IPFAMILY="ipv4"
-
-    SUDO=""
-    if [[ "$(id -u)" != "0" ]]; then
-      SUDO="sudo "
-    fi
-
-    parse_flags() {
-      while test $# -gt 0; do
-        case "$1" in
-        --cluster-name)
-          shift; CLUSTER_NAME="${1}"
-          ;;
-        --ip-family)
-          shift; IPFAMILY="${1}"
-          ;;
-        --multi-zonal)
-          MULTI_ZONAL=true
-          ;;
-        esac
-
-        shift
-      done
-    }
-
-    parse_flags "$@"
-
     LOOPBACK_IP_ADDRESSES=(172.18.255.3 172.18.255.4 172.18.255.53 fd00:ff::53)
     if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
       LOOPBACK_IP_ADDRESSES+=(fd00:ff::3 fd00:ff::4)
@@ -621,63 +597,6 @@ EOF
 
       echo "Setting up loopback device ${LOOPBACK_DEVICE} with ${ip_func} completed."
     done
-    ;;
-
-  down)
-    CLUSTER_NAME=""
-    PATH_KUBECONFIG=""
-    KEEP_BACKUPBUCKETS_DIRECTORY=false
-
-    parse_flags() {
-      while test $# -gt 0; do
-        case "$1" in
-        --cluster-name)
-          shift; CLUSTER_NAME="$1"
-          ;;
-        --path-kubeconfig)
-          shift; PATH_KUBECONFIG="$1"
-          ;;
-        --keep-backupbuckets-dir)
-          KEEP_BACKUPBUCKETS_DIRECTORY=false
-          ;;
-        esac
-
-        shift
-      done
-    }
-
-    parse_flags "$@"
-
-    kind delete cluster \
-      --name "$CLUSTER_NAME"
-
-    if [[ "$CLUSTER_NAME" != "gardener-local2" ]]; then
-      # Only stop the infra containers if deleting the "main" kind cluster.
-      # When deleting the secondary cluster, we might still need DNS/registry for the other cluster.
-      # Reset dynamic updates to the DNS zones by removing the volumes.
-      docker compose -f "$(dirname "$0")/infra/docker-compose.yaml" down --volumes
-
-      # When deleting the "main" kind cluster, remove all load balancer containers (including the ones of shoot clusters)
-      # to remove any orphaned containers.
-      echo "Removing load balancer containers of all clusters"
-      for container in $(docker container ls -aq --filter network=kind --filter label=gardener.cloud/role=loadbalancer); do
-        docker container rm -f "$container"
-      done
-    else
-      echo "Removing load balancer containers of cluster $CLUSTER_NAME"
-      for container in $(docker container ls -aq --filter network=kind --filter label=gardener.cloud/role=loadbalancer --filter label=kubernetes.io/cluster="$CLUSTER_NAME"); do
-        docker container rm -f "$container"
-      done
-    fi
-
-    rm -f "$PATH_KUBECONFIG"
-    if [[ "$PATH_KUBECONFIG" == *"dev-setup/gardenlet/components/kubeconfigs/seed-local2/kubeconfig" ]]; then
-      rm -f "${PATH_KUBECONFIG}-gardener-operator"
-    fi
-
-    if [[ "$KEEP_BACKUPBUCKETS_DIRECTORY" == "false" ]]; then
-      rm -rf "$(dirname "$0")/../dev/local-backupbuckets"
-    fi
     ;;
 
   *)

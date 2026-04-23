@@ -13,9 +13,9 @@ usage() {
 Usage: $(basename "$0") <command> [flags]
 
 Commands:
-  virtual-garden (vg)       Generate admin kubeconfig for the virtual garden (client certificate)
-  self-hosted-shoot (shs)   Generate admin kubeconfig for a self-hosted shoot (client certificate)
-  shoot                     Generate admin/viewer kubeconfig for a hosted shoot (Gardener API)
+  virtual-garden (vg)       Generate admin kubeconfig for the virtual garden
+  self-hosted-shoot (shs)   Generate admin kubeconfig for a self-hosted shoot
+  shoot                     Generate admin/viewer kubeconfig for a hosted shoot
 
 If no command is given, defaults to 'shoot'.
 

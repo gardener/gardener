@@ -1,17 +1,19 @@
 # `dev-setup/`
 
 This directory contains everything needed to run Gardener locally on KinD or on a remote cluster.
-It replaces the former monolithic root `skaffold.yaml` and the `example/gardener-local` files with a modular, kustomize-based structure.
+It uses a modular, kustomize-based structure.
+
+Walk through the [local setup guide](../docs/deployment/getting_started_locally.md) if you'd like to setup Gardener locally.
 
 ## Design
 
 The local setup deploys three logical layers, each driven by a shell script and a Skaffold config:
 
-| Layer | Script | Skaffold config | What it deploys |
-|---|---|---|---|
-| **Operator** | `operator.sh` | `skaffold-operator.yaml` | `gardener-operator` (Helm) + `provider-local` extension + networking extensions |
-| **Garden** | `garden.sh` | — | `Garden` CR, `Extension` CRs (applied by `operator.sh` via kustomize) |
-| **Seed** | `seed.sh` | `skaffold-seed.yaml` | Garden config (projects, credentials, cloud profiles) + `Gardenlet` CR |
+| Layer | Script | Skaffold config | What it deploys                                                                         |
+|---|---|---|-----------------------------------------------------------------------------------------|
+| **Operator** | `operator.sh` | `skaffold-operator.yaml` | `gardener-operator` (Helm) + `Extension` CRs (`provider-local` + networking extensions) |
+| **Garden** | `garden.sh` | — | `Garden` CR                                                                             |
+| **Seed** | `seed.sh` | `skaffold-seed.yaml` | Garden config (projects, credentials, cloud profiles) + `Gardenlet` CR                  |
 
 `make gardener-up` runs all three in sequence. `make gardener-dev` does the same with Skaffold in `dev` mode (live-reload on code changes).
 

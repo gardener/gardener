@@ -24,7 +24,7 @@ if ! $valid_scenario; then
   exit 1
 fi
 
-garden_runtime_cluster_kubeconfig="$KUBECONFIG"
+garden_runtime_cluster_kubeconfig="$KUBECONFIG_RUNTIME_CLUSTER"
 if [[ "$SCENARIO" == "connect" ]]; then
   garden_runtime_cluster_kubeconfig="$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER"
   ./hack/usage/generate-kubeconfig.sh self-hosted-shoot > "$garden_runtime_cluster_kubeconfig"

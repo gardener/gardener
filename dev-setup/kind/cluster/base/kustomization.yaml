@@ -5,4 +5,4 @@ resources:
 - cluster.yaml
 
 components:
-- ../components/node
+- ../components/node # This is the control plane node
