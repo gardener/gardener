@@ -5,6 +5,7 @@ metadata:
 spec:
   groups:
     - name: healthcheck
+      interval: 5s
       rules:
         # healthcheck{task="target:down"} is present for each scrape job target that is down.
         - record: healthcheck
