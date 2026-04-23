@@ -265,8 +265,8 @@ github.com/gardener/cert-management v0.22.0 h1:82uZiLzYs+W/Qp/z1XnUSN+nmNDCMFUcd
 github.com/gardener/cert-management v0.22.0/go.mod h1:hJvxHEKHwdSywZUxDqO7vUZN4D7udfhgtpdfDOoaKNs=
 github.com/gardener/dependency-watchdog v1.7.0 h1:oTAmbmXbPOT/LnxDZ0A0DO0W8GDYe9oykF+I6lCLKpI=
 github.com/gardener/dependency-watchdog v1.7.0/go.mod h1:3nQlFmW17dWL+90KK3PPa52XSnpjnk5mOaC2Pev+VNo=
-github.com/gardener/etcd-druid/api v0.36.2 h1:KUDICgAGUcu3xbPyejVMhgID9mq3kFUOP+2uffjJ0yw=
-github.com/gardener/etcd-druid/api v0.36.2/go.mod h1:RwZzKp8K415AS0zg8VoODjBxYepCAUYyLgXnZc1bmbo=
+github.com/gardener/etcd-druid/api v0.36.3 h1:mBhDE/TJmcn2BY8Fscd5SfBSeWvtK4ZBPEW+v6XsQIQ=
+github.com/gardener/etcd-druid/api v0.36.3/go.mod h1:RwZzKp8K415AS0zg8VoODjBxYepCAUYyLgXnZc1bmbo=
 github.com/gardener/machine-controller-manager v0.61.3 h1:w0JuHCKLmcK7B8E7mx3TvE3e0hSYwikchsMSiMhocqw=
 github.com/gardener/machine-controller-manager v0.61.3/go.mod h1:8eE1qLztrWIbOM71mHSQGaC6Q+pl5lvOyN08qP39D7o=
 github.com/gardener/terminal-controller-manager v0.35.0 h1:LccE3ZT8KCZtdfMtyVtHuFIXwFnnBpIKE68aoDpgJss=
