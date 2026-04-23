@@ -258,6 +258,7 @@ export KUBECONFIG_VIRTUAL_GARDEN_CLUSTER  := $(DEV_SETUP)/kubeconfigs/virtual-ga
 export KUBECONFIG_SEED_CLUSTER            := $(DEV_SETUP)/kubeconfigs/seed/kubeconfig
 export KUBECONFIG_SEED2_CLUSTER           := $(DEV_SETUP)/kubeconfigs/seed2/kubeconfig
 export KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER := $(DEV_SETUP)/kubeconfigs/self-hosted-shoot/kubeconfig
+export KUBECONFIG_REMOTE_CLUSTER          := $(DEV_SETUP)/kubeconfigs/remote/kubeconfig
 
 # KUBECONFIG
 kind-single-node-% kind-multi-node-% kind-multi-zone-%: export KUBECONFIG = $(KUBECONFIG_RUNTIME_CLUSTER)
@@ -271,6 +272,7 @@ test-e2e-local-operator test-e2e-local-gardenadm-%: export KUBECONFIG = $(KUBECO
 # KUBECONFIG_SEED_SECRET_PATH (used to create a Secret for Seeds containing the kubeconfig such that gardenctl works)
 kind-single-node-% kind-multi-node-% kind-multi-zone-%: export KUBECONFIG_SEED_SECRET_PATH = $(DEV_SETUP)/gardenlet/components/kubeconfigs/seed-local/kubeconfig
 kind-single-node2-% kind-multi-node2-%: export KUBECONFIG_SEED_SECRET_PATH = $(DEV_SETUP)/gardenlet/components/kubeconfigs/seed-local2/kubeconfig
+remote-%: export KUBECONFIG_SEED_SECRET_PATH = $(DEV_SETUP)/gardenlet/components/kubeconfigs/seed-remote/kubeconfig
 
 # CLUSTER_NAME
 kind-single-node-% kind-multi-node-% kind-multi-zone-%: export CLUSTER_NAME = gardener-local

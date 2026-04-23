@@ -59,14 +59,14 @@ command="${1:-up}"
 valid_commands=("up down")
 workload_identity_support="${2:-false}"
 
-cp -f "$SCRIPT_DIR/remote/kubeconfigs/kubeconfig" "$SCRIPT_DIR/kubeconfigs/runtime/kubeconfig"
-cp -f "$SCRIPT_DIR/remote/kubeconfigs/kubeconfig" "$SCRIPT_DIR/gardenlet/components/kubeconfigs/seed-remote/kubeconfig"
+cp -f "$KUBECONFIG_REMOTE_CLUSTER" "$KUBECONFIG_RUNTIME_CLUSTER"
+cp -f "$KUBECONFIG_REMOTE_CLUSTER" "$KUBECONFIG_SEED_SECRET_PATH"
 
 client_certificate_data=$(kubectl config view --raw -o jsonpath='{.users[0].user.client-certificate-data}')
 if [[ -n "$client_certificate_data" ]] && [[ $(echo "$client_certificate_data" | base64 --decode | openssl x509 -noout -checkend 300) == "Certificate will expire" ]]; then
-  echo "Runtime kubeconfig ${SCRIPT_DIR}/remote/kubeconfigs/kubeconfig has expired or will expire in 5min. Please provide a valid kubeconfig and try again!"
-  rm -f "$SCRIPT_DIR/kubeconfigs/runtime/kubeconfig"
-  rm -f "$SCRIPT_DIR/gardenlet/components/kubeconfigs/seed-remote/kubeconfig"
+  echo "Runtime kubeconfig $KUBECONFIG_REMOTE_CLUSTER has expired or will expire in 5min. Please provide a valid kubeconfig and try again!"
+  rm -f "$KUBECONFIG_RUNTIME_CLUSTER"
+  rm -f "$KUBECONFIG_SEED_SECRET_PATH"
   exit 1
 fi
 
@@ -333,8 +333,8 @@ case "$command" in
     kubectl delete validatingwebhookconfigurations kyverno-cel-exception-validating-webhook-cfg kyverno-cleanup-validating-webhook-cfg kyverno-exception-validating-webhook-cfg kyverno-global-context-validating-webhook-cfg kyverno-policy-validating-webhook-cfg kyverno-resource-validating-webhook-cfg kyverno-ttl-validating-webhook-cfg --ignore-not-found
 
     echo "Removing kubeconfigs"
-    rm -f "$SCRIPT_DIR/kubeconfigs/runtime/kubeconfig"
-    rm -f "$SCRIPT_DIR/gardenlet/components/kubeconfigs/seed-remote/kubeconfig"
+    rm -f "$KUBECONFIG_RUNTIME_CLUSTER"
+    rm -f "$KUBECONFIG_SEED_SECRET_PATH"
     ;;
 
   *)

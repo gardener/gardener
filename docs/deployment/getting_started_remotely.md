@@ -66,7 +66,7 @@ There are templates with `.tmpl` suffixes for the files in the corresponding fol
 
 ### Garden Runtime and Soil Cluster Preparation
 
-The `kubeconfig` of your Kubernetes cluster you would like to use as seed should be placed at [`/dev-setup/remote/kubeconfigs/kubeconfig`](/dev-setup/remote/kubeconfigs/kubeconfig).
+The `kubeconfig` of your Kubernetes cluster you would like to use as seed should be placed at [`/dev-setup/kubeconfigs/remote/kubeconfig`](/dev-setup/kubeconfigs/remote/kubeconfig).
 
 > ℹ️ 
 > Do **not** use a kubeconfig created with `gardenctl`. It leads to strange errors when skaffold is running kubectl commands.
