@@ -42,12 +42,19 @@ func (p *Provider) createLoadBalancerContainer(ctx context.Context, name string,
 		return nil, fmt.Errorf("failed to determine port bindings for service: %w", err)
 	}
 
+	// Docker requires ExposedPorts in Config to match PortBindings for port publishing to work.
+	exposedPorts := nat.PortSet{}
+	for port := range portBindings {
+		exposedPorts[port] = struct{}{}
+	}
+
 	_, err = p.DockerClient.ContainerCreate(
 		ctx,
 		&container.Config{
-			Hostname: name,
-			Image:    p.Config.LoadBalancer.Image,
-			Cmd:      []string{"envoy", "-c", envoyConfigFilePath},
+			Hostname:     name,
+			Image:        p.Config.LoadBalancer.Image,
+			Cmd:          []string{"envoy", "-c", envoyConfigFilePath},
+			ExposedPorts: exposedPorts,
 			Healthcheck: &container.HealthConfig{
 				Test:     []string{"CMD", "curl", "-sf", "--unix-socket", envoyAdminSocketPath, "http://localhost/ready"},
 				Interval: time.Second,
