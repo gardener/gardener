@@ -24,6 +24,7 @@ spec:
       operation: ADD
       value:
         name: {{ .TargetClusterAPIServerProxy }}
+        per_connection_buffer_limit_bytes: 32768
         address:
           pipe:
             path: "@kube-apiservers/{{ .ControlPlaneNamespace }}"
@@ -41,6 +42,10 @@ spec:
                     log_format:
                       text_format_source:
                         inline_string: "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% \"%UPSTREAM_TRANSPORT_FAILURE_REASON%\" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% \"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\" %UPSTREAM_CLUSTER_RAW% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%\n"
+              http2_protocol_options:
+                 max_concurrent_streams: 100
+                 initial_stream_window_size: 65536 # 64 KiB
+                 initial_connection_window_size: 1048576 # 1 MiB
               route_config:
                 name: {{ .TargetClusterAPIServerProxy }}
                 virtual_hosts:
@@ -158,6 +163,7 @@ spec:
         name: {{ .TargetClusterAPIServerProxy }}
         type: STATIC
         connect_timeout: 10s
+        per_connection_buffer_limit_bytes: 32768
         upstream_connection_options:
           tcp_keepalive:
             keepalive_interval: 75

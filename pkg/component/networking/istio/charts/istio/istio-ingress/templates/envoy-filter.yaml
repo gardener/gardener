@@ -1,4 +1,3 @@
-{{- if .Values.ports }}
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -8,6 +7,22 @@ metadata:
 {{ .Values.labels | toYaml | indent 4 }}
 spec:
   configPatches:
+  - applyTo: NETWORK_FILTER
+    match:
+      context: GATEWAY
+      listener:
+        filterChain:
+          filter:
+            name: "envoy.filters.network.http_connection_manager"
+    patch:
+      operation: MERGE
+      value:
+        typed_config:
+          "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
+          http2_protocol_options:
+             max_concurrent_streams: 100
+             initial_stream_window_size: 65536 # 64 KiB
+             initial_connection_window_size: 1048576 # 1 MiB
 {{- range .Values.ports }}
   - applyTo: LISTENER
     match:
@@ -59,5 +74,4 @@ spec:
           name: 5
           int_value: 55
           state: STATE_LISTENING
-{{- end }}
 {{- end }}
