@@ -271,6 +271,8 @@ spec:
           mkdir -p ~/go/src/github.com/gardener
           cd ~/go/src/github.com/gardener
           [ -d gardener/.git ] || git clone -q https://github.com/gardener/gardener
+          mkdir -p /etc/docker
+          echo '{"insecure-registries":["registry.local.gardener.cloud:5001"]}' > /etc/docker/daemon.json
           nice dockerd-entrypoint.sh 2>&1 | tee ~/.dockerd.log &
           until docker ps >/dev/null 2>&1; do sleep 1; done
 
