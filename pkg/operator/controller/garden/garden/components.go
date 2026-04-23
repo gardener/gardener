@@ -909,7 +909,9 @@ func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Gard
 		v1beta1constants.DefaultSNIIngressNamespace,
 		v1beta1constants.PriorityClassNameGardenSystemCritical,
 		true,
-		sharedcomponent.GetIstioZoneLabels(nil, nil),
+		sharedcomponent.GetIstioZoneLabels(map[string]string{
+			istio.IstioRoleLabel: istio.IstioRoleVirtualGarden,
+		}, nil),
 		[]string{
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameIstioBasicAuthServer, istiobasicauthserver.Port),
 		},
