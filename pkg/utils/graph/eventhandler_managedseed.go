@@ -76,6 +76,7 @@ func (g *graph) handleManagedSeedCreateOrUpdateForShoots(managedSeed *seedmanage
 	g.deleteAllIncomingEdges(VertexTypeSeed, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
 	g.deleteAllOutgoingEdges(VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name, VertexTypeShoot)
+	g.deleteAllOutgoingEdges(VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name, VertexTypeSeed)
 
 	var (
 		seedVertex        = g.getOrCreateVertex(VertexTypeSeed, "", managedSeed.Name)
@@ -85,6 +86,7 @@ func (g *graph) handleManagedSeedCreateOrUpdateForShoots(managedSeed *seedmanage
 
 	g.addEdge(seedVertex, managedSeedVertex)
 	g.addEdge(managedSeedVertex, shootVertex)
+	g.addEdge(managedSeedVertex, seedVertex) // allows gardenlet to read their own Seed object
 
 	// Always add the bootstrap token edge for self-hosted shoots. The Seed typically doesn't exist yet at this point,
 	// and the self-hosted cache doesn't include Seeds, so we skip the allowBootstrap check.
@@ -102,6 +104,7 @@ func (g *graph) handleManagedSeedCreateOrUpdateForSeeds(ctx context.Context, man
 	g.deleteAllIncomingEdges(VertexTypeServiceAccount, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
 	g.deleteAllIncomingEdges(VertexTypeClusterRoleBinding, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
 	g.deleteAllOutgoingEdges(VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name, VertexTypeShoot)
+	g.deleteAllOutgoingEdges(VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name, VertexTypeSeed)
 
 	var (
 		seedVertex        = g.getOrCreateVertex(VertexTypeSeed, "", managedSeed.Name)
@@ -111,6 +114,7 @@ func (g *graph) handleManagedSeedCreateOrUpdateForSeeds(ctx context.Context, man
 
 	g.addEdge(seedVertex, managedSeedVertex)
 	g.addEdge(managedSeedVertex, shootVertex)
+	g.addEdge(managedSeedVertex, seedVertex) // allows gardenlet to read their own Seed object
 
 	seedTemplate, gardenletConfig, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(managedSeed.Name, &managedSeed.Spec.Gardenlet.Config)
 	if err != nil {
@@ -193,6 +197,7 @@ func (g *graph) handleManagedSeedDelete(managedSeed *seedmanagementv1alpha1.Mana
 		g.deleteAllIncomingEdges(VertexTypeSeed, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
 		g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
 		g.deleteAllOutgoingEdges(VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name, VertexTypeShoot)
+		g.deleteAllOutgoingEdges(VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name, VertexTypeSeed)
 	} else {
 		g.deleteVertex(VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
 	}
