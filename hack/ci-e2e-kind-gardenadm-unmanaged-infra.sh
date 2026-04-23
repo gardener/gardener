@@ -15,7 +15,8 @@ clamp_mss_to_pmtu
 # export all container logs and events after test execution
 trap "
   ( export_artifacts_host_services; export_artifacts_infra; export_artifacts_load_balancers )
-  ( export KUBECONFIG=$KUBECONFIG_RUNTIME_CLUSTER; export_artifacts 'gardener-local'; export_resource_yamls_for garden )
+  ( export KUBECONFIG=$KUBECONFIG_RUNTIME_CLUSTER; export_artifacts 'gardener-local' )
+  ( export KUBECONFIG=$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER; export_artifacts_for_cluster 'self-hosted-shoot'; export_resource_yamls_for garden )
   ( export KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER; export cluster_name='virtual-garden'; export_resource_yamls_for seeds shoots )
   ( make gardenadm-down SCENARIO=connect )
   ( make gardenadm-down SCENARIO=unmanaged-infra )

@@ -255,10 +255,11 @@ verify-extended: check-generate check format test-cov test-cov-clean test-integr
 
 kind-% operator-% gardener-% garden-% seed-% ci-e2e-kind: export IPFAMILY := $(IPFAMILY)
 
-export KUBECONFIG_RUNTIME_CLUSTER        := $(DEV_SETUP)/kubeconfigs/runtime/kubeconfig
-export KUBECONFIG_VIRTUAL_GARDEN_CLUSTER := $(DEV_SETUP)/kubeconfigs/virtual-garden/kubeconfig
-export KUBECONFIG_SEED_CLUSTER           := $(DEV_SETUP)/kubeconfigs/seed/kubeconfig
-export KUBECONFIG_SEED2_CLUSTER          := $(DEV_SETUP)/kubeconfigs/seed2/kubeconfig
+export KUBECONFIG_RUNTIME_CLUSTER         := $(DEV_SETUP)/kubeconfigs/runtime/kubeconfig
+export KUBECONFIG_VIRTUAL_GARDEN_CLUSTER  := $(DEV_SETUP)/kubeconfigs/virtual-garden/kubeconfig
+export KUBECONFIG_SEED_CLUSTER            := $(DEV_SETUP)/kubeconfigs/seed/kubeconfig
+export KUBECONFIG_SEED2_CLUSTER           := $(DEV_SETUP)/kubeconfigs/seed2/kubeconfig
+export KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER := $(DEV_SETUP)/kubeconfigs/self-hosted-shoot/kubeconfig
 
 # KUBECONFIG
 kind-single-node-% kind-multi-node-% kind-multi-zone-%: export KUBECONFIG = $(KUBECONFIG_RUNTIME_CLUSTER)

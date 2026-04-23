@@ -26,7 +26,7 @@ fi
 
 garden_runtime_cluster_kubeconfig="$KUBECONFIG"
 if [[ "$SCENARIO" == "connect" ]]; then
-  garden_runtime_cluster_kubeconfig="$(dirname "$0")/kubeconfigs/self-hosted-shoot/kubeconfig"
+  garden_runtime_cluster_kubeconfig="$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER"
   ./hack/usage/generate-kubeconfig.sh self-hosted-shoot > "$garden_runtime_cluster_kubeconfig"
 fi
 

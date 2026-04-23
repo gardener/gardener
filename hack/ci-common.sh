@@ -43,7 +43,13 @@ export_artifacts() {
   echo "> Exporting logs of kind cluster '$cluster_name'"
   kind export logs "${ARTIFACTS:-}/$cluster_name" --name "$cluster_name" || true
 
-  echo "> Exporting events of kind cluster '$cluster_name' > '$ARTIFACTS/$cluster_name'"
+  export_artifacts_for_cluster "$cluster_name"
+}
+
+export_artifacts_for_cluster() {
+  cluster_name="${1}"
+
+  echo "> Exporting events of cluster '$cluster_name' > '$ARTIFACTS/$cluster_name'"
   export_events_for_cluster "$ARTIFACTS/$cluster_name"
 
   # dump logs from shoot machine pods (similar to `kind export logs`)
