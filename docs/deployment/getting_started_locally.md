@@ -68,7 +68,7 @@ Furthermore, it deploys the [metrics-server](https://github.com/kubernetes-sigs/
 After a restart of your host, the loopback IP addresses that were created for the kind cluster could be removed.
 To avoid recreating the cluster, there is a script that can be used to easily bring back the addresses.
 ```bash
-./dev-setup/kind.sh setup-loopback-devices --cluster-name gardener-local
+./dev-setup/infra.sh setup-loopback-devices
 ```
 
 > Depending on the cluster you are using for your local dev setup you might have to:
