@@ -134,6 +134,12 @@ const (
 	// owner: @ScheererJ
 	// alpha: v1.142.0
 	DisableNginxIngressInShoot featuregate.Feature = "DisableNginxIngressInShoot"
+
+	// LiveControlPlaneMigration enables live migration of Shoot control planes between seeds
+	// without downtime, as described in GEP-0039.
+	// owner: @acumino @ary1992 @shafeeqes @seshachalam-yv
+	// alpha: v1.142.0
+	LiveControlPlaneMigration featuregate.Feature = "LiveControlPlaneMigration"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -179,6 +185,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DisableNginxIngressInGarden:    {Default: false, PreRelease: featuregate.Alpha},
 	DisableNginxIngressInSeed:      {Default: false, PreRelease: featuregate.Alpha},
 	DisableNginxIngressInShoot:     {Default: false, PreRelease: featuregate.Alpha},
+	LiveControlPlaneMigration:      {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
