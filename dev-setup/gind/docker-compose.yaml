@@ -22,6 +22,7 @@ x-machine: &machine
   volumes:
   - /lib/modules:/lib/modules:ro
   - ./init-machine-state.sh:/init-machine-state.sh:ro
+  - ../infra/resolv.conf:/etc/resolv.conf
   - /var/run/docker.sock:/var/run/docker.sock
   - /gardenadm
   - ../../dev/local-backupbuckets:/etc/gardener/local-backupbuckets

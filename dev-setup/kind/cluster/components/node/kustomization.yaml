@@ -14,7 +14,7 @@ patches:
         extraMounts:
           - hostPath: ./dev/local-backupbuckets
             containerPath: /etc/gardener/local-backupbuckets
-          - hostPath: ./dev-setup/kind/cluster/resolv.conf
+          - hostPath: ./dev-setup/infra/resolv.conf
             containerPath: /etc/resolv.conf
           - hostPath: ${DOCKER_SOCKET}
             containerPath: /var/run/docker.sock
