@@ -365,7 +365,9 @@ docker_socket() {
   # If the socket path contains .lima or .colima, we assume that Lima/Colima is used as Docker backend.
   # In this case, the socket on the host is a forward to /var/run/docker.sock in the guest VM.
   # Instead of mounting the socket on the host back into the VM, we directly use /var/run/docker.sock in the VM.
-  if [[ "$socket" == *"/.lima/"* || "$socket" == *"/.colima/"* ]]; then
+  # Similarly, Docker Desktop for Mac uses ~/.docker/run/docker.sock which is also a forwarded socket from its VM
+  # and cannot be bind-mounted into the kind node container.
+  if [[ "$socket" == *"/.lima/"* || "$socket" == *"/.colima/"* || "$socket" == *"/.docker/run/"* ]]; then
     socket="/var/run/docker.sock"
   fi
 
