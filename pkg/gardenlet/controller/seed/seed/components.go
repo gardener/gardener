@@ -128,6 +128,7 @@ type components struct {
 	openTelemetryOperator         component.DeployWaiter
 	openTelemetryCollector        component.Deployer
 	victoriaLogs                  component.DeployWaiter
+	pvcautoscaler                 component.DeployWaiter
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -305,6 +306,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.victoriaLogs, err = r.newVictoriaLogs()
+	if err != nil {
+		return
+	}
+	c.pvcautoscaler, err = r.newPVCAutoscaler(seed.GetInfo().Spec.Settings)
 	if err != nil {
 		return
 	}
@@ -859,6 +864,15 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 		"",
 		centralLoggingConfigurations,
 		output,
+	)
+}
+
+func (r *Reconciler) newPVCAutoscaler(settings *gardencorev1beta1.SeedSettings) (component.DeployWaiter, error) {
+	return sharedcomponent.NewPVCAutoscaler(
+		r.SeedClientSet.Client(),
+		r.GardenNamespace,
+		pvcAutoscalerEnabled(settings),
+		v1beta1constants.PriorityClassNameSeedSystem700,
 	)
 }
 
