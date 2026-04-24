@@ -18,8 +18,8 @@ import (
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -1554,7 +1554,7 @@ func (r *Reconciler) reconcileIstioInternalLoadbalancingConfigMap(ctx context.Co
 
 // getAggregatePrometheusIngressHost fetches the host of the prometheus-aggregate ingress, if it exists. Otherwise, it returns an empty string.
 func (r *Reconciler) getAggregatePrometheusIngressHost(ctx context.Context) (string, error) {
-	ingress := &networkingv1.Ingress{}
+	ingress := &istionetworkingv1beta1.VirtualService{}
 	if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: "prometheus-aggregate"}, ingress); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return "", fmt.Errorf("failed getting aggregate Prometheus ingress: %w", err)
@@ -1562,9 +1562,9 @@ func (r *Reconciler) getAggregatePrometheusIngressHost(ctx context.Context) (str
 		return "", nil
 	}
 
-	if len(ingress.Spec.Rules) == 0 {
+	if len(ingress.Spec.Hosts) == 0 {
 		return "", nil
 	}
 
-	return ingress.Spec.Rules[0].Host, nil
+	return ingress.Spec.Hosts[0], nil
 }
