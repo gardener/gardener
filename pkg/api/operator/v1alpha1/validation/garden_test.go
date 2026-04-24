@@ -2498,25 +2498,25 @@ var _ = Describe("Validation Tests", func() {
 						})
 					})
 
-					Context("IncludeCAForSNI", func() {
-						It("should forbid includeCAForSNI when SNI is not configured", func() {
-							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{IncludeCAForSNI: ptr.To(true)}
+					Context("PropagateCAFromSNI", func() {
+						It("should forbid propagateCAFromSNI when SNI is not configured", func() {
+							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{PropagateCAFromSNI: ptr.To(true)}
 
 							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeForbidden),
-								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.includeCAForSNI"),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.propagateCAFromSNI"),
 							}))))
 						})
 
-						It("should allow includeCAForSNI when SNI is configured", func() {
+						It("should allow propagateCAFromSNI when SNI is configured", func() {
 							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{
 								SNI: &operatorv1alpha1.SNI{DomainPatterns: []string{"api.example.com"}},
 							}
-							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{IncludeCAForSNI: ptr.To(true)}
+							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{PropagateCAFromSNI: ptr.To(true)}
 
 							Expect(ValidateGarden(garden, extensions)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeForbidden),
-								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.includeCAForSNI"),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.propagateCAFromSNI"),
 							}))))
 						})
 					})
