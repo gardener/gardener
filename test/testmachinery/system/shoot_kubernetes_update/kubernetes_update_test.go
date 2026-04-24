@@ -154,6 +154,13 @@ func RunTest(
 	Expect(f.UpdateShootSpec(ctx, f.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
 		if controlPlaneVersion != "" {
 			shoot.Spec.Kubernetes.Version = controlPlaneVersion
+
+			// TODO(plkokanov): Drop this handling when support for Kubernetes 1.34 is dropped.
+			oldK8sLess135 := versionutils.ConstraintK8sLess135.CheckVersion(f.Shoot.Spec.Kubernetes.Version)
+			newK8sGreaterEqual135 := versionutils.ConstraintK8sGreaterEqual135.CheckVersion(shoot.Spec.Kubernetes.Version)
+			if oldK8sLess135 && newK8sGreaterEqual135 {
+				shoot.Spec.Addons = nil
+			}
 		}
 
 		for i, worker := range shoot.Spec.Provider.Workers {
