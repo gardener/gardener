@@ -854,6 +854,11 @@ images:
         value:
           - type: 'githubTeam'
             teamname: 'gardener/gardener-core-networking-maintainers'
+  # Persistent Volume Claim Autoscaler
+  - name: pvc-autoscaler
+    sourceRepository: github.com/gardener/pvc-autoscaler
+    repository: europe-docker.pkg.dev/gardener-project/releases/gardener/pvc-autoscaler
+    tag: "v0.2.0"
   # Istio
   - name: istio-proxy
     sourceRepository: github.com/istio/istio
