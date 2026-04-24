@@ -178,7 +178,7 @@ kubectl wait --for=condition=gardenletready seed remote --timeout=5m
 Alternatively, you can run `kubectl get seed remote` and wait for the `STATUS` to indicate readiness:
 
 ```bash
-NAME                  STATUS   PROVIDER   REGION         AGE    VERSION      K8S VERSION
+NAME     STATUS   PROVIDER   REGION         AGE    VERSION        K8S VERSION
 remote   Ready    gcp        europe-west1   111m   v1.137.0-dev   v1.34.7
 ```
 

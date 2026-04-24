@@ -28,6 +28,11 @@ spec:
       region: ""
       # Enter zones of your runtime cluster
       zones: []
+    settings:
+      verticalPodAutoscaler:
+        # If using a Gardener Shoot, make sure that the Shoot cluster has VPA enabled. Otherwise, enable VPA below in the Garden spec.
+        # Don't enable VPA for both the Shoot control plane and the Garden runtime cluster. 2 VPA deployments acting on the same cluster cause endless VPA eviction loops.
+        enabled: false
   virtualCluster:
     dns:
       domains:
