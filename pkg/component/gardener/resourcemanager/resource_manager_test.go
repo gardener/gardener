@@ -1278,7 +1278,10 @@ metadata:
     app: gardener-resource-manager
   name: gardener-resource-manager-shoot
   namespace: fake-ns
-webhooks:
+webhooks:`
+
+			if !cfg.IsWorkerless {
+				out += `
 - admissionReviewVersions:
   - v1beta1
   - v1
@@ -1425,6 +1428,8 @@ webhooks:
     - pods
   sideEffects: None
   timeoutSeconds: 2`
+			}
+
 			if cfg.PodKubeAPIServerLoadBalancingWebhook.Enabled {
 				out += `
 - admissionReviewVersions:
@@ -1490,7 +1495,9 @@ webhooks:
   sideEffects: None
   timeoutSeconds: 10`
 			}
-			out += `
+
+			if !cfg.IsWorkerless {
+				out += `
 - admissionReviewVersions:
   - v1beta1
   - v1
@@ -1527,7 +1534,9 @@ webhooks:
     - pods
   sideEffects: None
   timeoutSeconds: 10`
-			if matchLabelKeysInPodTopologySpreadFeatureGateDisabled {
+			}
+
+			if matchLabelKeysInPodTopologySpreadFeatureGateDisabled && !cfg.IsWorkerless {
 				out += `
 - admissionReviewVersions:
   - v1beta1
@@ -2480,6 +2489,26 @@ subjects:
 
 				resourceManager = New(fakeClient, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
+
+				compressedData, err := test.BrotliCompressionForManifests(mutatingWebhookConfigurationYAML(), clusterRoleBindingTargetYAML)
+				Expect(err).NotTo(HaveOccurred())
+
+				managedResourceSecret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "managedresource-shoot-core-gardener-resource-manager",
+						Namespace: deployNamespace,
+					},
+					Type: corev1.SecretTypeOpaque,
+					Data: map[string][]byte{
+						"data.yaml.br": compressedData,
+					},
+				}
+				utilruntime.Must(kubernetesutils.MakeUnique(managedResourceSecret))
+
+				managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{
+					{Name: managedResourceSecret.Name},
+				}
+				utilruntime.Must(references.InjectAnnotations(managedResource))
 			})
 
 			It("should disable controllers and webhooks properly in resource manager configuration", func() {

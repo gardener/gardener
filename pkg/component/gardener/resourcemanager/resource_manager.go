@@ -1327,46 +1327,44 @@ func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 		}
 	}
 
-	webhooks := []admissionregistrationv1.MutatingWebhook{
-		r.newProjectedTokenMountMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
+	var webhooks []admissionregistrationv1.MutatingWebhook
+
+	if !r.values.IsWorkerless {
+		webhooks = append(webhooks, r.newProjectedTokenMountMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 
-	if r.values.HighAvailabilityConfigWebhookEnabled {
+	if r.values.HighAvailabilityConfigWebhookEnabled && !r.values.IsWorkerless {
 		webhooks = append(webhooks, NewHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
-	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile == gardencorev1beta1.SchedulingProfileBinPacking {
+	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile == gardencorev1beta1.SchedulingProfileBinPacking && !r.values.IsWorkerless {
 		// pod scheduler name webhook should be active on all namespaces
 		webhooks = append(webhooks, NewPodSchedulerNameMutatingWebhook(&metav1.LabelSelector{}, secretServerCA, buildClientConfigFn))
 	}
 
-	if r.values.DefaultSeccompProfileEnabled {
+	if r.values.DefaultSeccompProfileEnabled && !r.values.IsWorkerless {
 		webhooks = append(webhooks, NewSeccompProfileMutatingWebhook(r.values.NamePrefix, namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 
-	if r.values.KubernetesServiceHost != nil {
+	if r.values.KubernetesServiceHost != nil && !r.values.IsWorkerless {
 		webhooks = append(webhooks, NewKubernetesServiceHostMutatingWebhook(nil, secretServerCA, buildClientConfigFn))
 	}
 
-	if r.values.PodKubeAPIServerLoadBalancingWebhook.Enabled {
+	if r.values.PodKubeAPIServerLoadBalancingWebhook.Enabled && !r.values.IsWorkerless {
 		for _, config := range r.values.PodKubeAPIServerLoadBalancingWebhook.Configs {
 			webhooks = append(webhooks, NewPodKubeAPIServerLoadBalancingMutatingWebhook(&metav1.LabelSelector{MatchLabels: config.NamespaceSelector}, config.ObjectSelector, config.KubeAPIServerNamePrefix, secretServerCA, buildClientConfigFn))
 		}
 	}
 
-	if r.values.SystemComponentsConfigWebhookEnabled {
-		systemComponentsNamespaceSelector := namespaceSelector.DeepCopy()
-		if r.values.ResponsibilityMode == ForRuntime {
-			if systemComponentsNamespaceSelector.MatchLabels == nil {
-				systemComponentsNamespaceSelector.MatchLabels = map[string]string{}
-			}
-			systemComponentsNamespaceSelector.MatchLabels[resourcesv1alpha1.SystemComponentsConfigConsider] = "true"
-		}
-
-		webhooks = append(webhooks, NewSystemComponentsConfigMutatingWebhook(systemComponentsNamespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
+	if r.values.ResponsibilityMode == ForShootOrVirtualGarden {
+		webhooks = append(webhooks, NewSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
-	if r.values.PodTopologySpreadConstraintsEnabled {
+	if r.values.EndpointSliceHintsEnabled {
+		webhooks = append(webhooks, NewEndpointSliceHintsMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
+	}
+
+	if r.values.PodTopologySpreadConstraintsEnabled && !r.values.IsWorkerless {
 		webhooks = append(webhooks, NewPodTopologySpreadConstraintsMutatingWebhook(r.values.NamePrefix, namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
@@ -2168,6 +2166,8 @@ func disableControllersAndWebhooksForWorkerlessShoot(config *resourcemanagerconf
 	config.Webhooks.HighAvailabilityConfig.Enabled = false
 	config.Webhooks.PodTopologySpreadConstraints.Enabled = false
 	config.Webhooks.KubernetesServiceHost.Enabled = false
+	config.Webhooks.SeccompProfile.Enabled = false
+	config.Webhooks.PodKubeAPIServerLoadBalancing.Enabled = false
 }
 
 func (r *resourceManager) healthPort() int32 {
