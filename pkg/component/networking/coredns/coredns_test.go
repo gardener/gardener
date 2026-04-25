@@ -509,6 +509,7 @@ metadata:
   name: coredns-autoscaler
   namespace: kube-system
 spec:
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       k8s-app: coredns-autoscaler

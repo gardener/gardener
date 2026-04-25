@@ -130,6 +130,7 @@ func getShootResources() (map[string][]byte, error) {
 				Labels:    labels,
 			},
 			Spec: appsv1.DeploymentSpec{
+				RevisionHistoryLimit: ptr.To[int32](2),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: labels,
 				},

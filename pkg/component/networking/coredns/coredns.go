@@ -621,6 +621,7 @@ import custom/*.server
 				Labels:    getClusterProportionalDNSAutoscalerLabels(),
 			},
 			Spec: appsv1.DeploymentSpec{
+				RevisionHistoryLimit: ptr.To[int32](2),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{corednsconstants.LabelKey: clusterProportionalDNSAutoscalerLabelValue},
 				},
