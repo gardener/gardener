@@ -3385,6 +3385,26 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 							},
 						},
 					},
+					"additionalShootTargetNamespaces": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "AdditionalShootTargetNamespaces specifies additional namespaces in the shoot cluster that the shoot gardener-resource-manager should watch when this extension is active on a shoot. These namespaces are merged with the default target namespaces (kube-system, kubernetes-dashboard, kube-node-lease). Extensions that deploy ManagedResources targeting custom namespaces on shoots must declare them here so the gardener-resource-manager can manage resources in those namespaces. This field can only be set for resources of kind \"Extension\".",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"kind", "type"},
 			},

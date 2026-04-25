@@ -332,6 +332,7 @@ var _ = Describe("validation", func() {
 			ctrlResource.Lifecycle = &core.ControllerResourceLifecycle{
 				Reconcile: &strategy,
 			}
+			ctrlResource.AdditionalShootTargetNamespaces = []string{"custom-namespace"}
 			resources = []core.ControllerResource{ctrlResource}
 
 			errorList := ValidateControllerResources(resources, validModes, fldPath)
@@ -345,6 +346,9 @@ var _ = Describe("validation", func() {
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
 				"Field": Equal("resources[0].lifecycle"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("resources[0].additionalShootTargetNamespaces"),
 			}))))
 		})
 
@@ -516,6 +520,77 @@ var _ = Describe("validation", func() {
 				"Field": Equal("resources[0].lifecycle.migrate"),
 			}))))
 		})
+
+		It("should allow setting additionalShootTargetNamespaces for kind Extension", func() {
+			resources[0].Kind = "Extension"
+			resources[0].AdditionalShootTargetNamespaces = []string{"custom-namespace", "custom-ns"}
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid setting additionalShootTargetNamespaces for kind != Extension", func() {
+			resources[0].AdditionalShootTargetNamespaces = []string{"custom-namespace"}
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("resources[0].additionalShootTargetNamespaces"),
+			}))))
+		})
+
+		It("should forbid invalid DNS labels in additionalShootTargetNamespaces", func() {
+			resources[0].Kind = "Extension"
+			resources[0].AdditionalShootTargetNamespaces = []string{"UPPER-CASE", "has spaces"}
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("resources[0].additionalShootTargetNamespaces[0]"),
+			}))))
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("resources[0].additionalShootTargetNamespaces[1]"),
+			}))))
+		})
+
+		It("should forbid duplicate namespaces in additionalShootTargetNamespaces", func() {
+			resources[0].Kind = "Extension"
+			resources[0].AdditionalShootTargetNamespaces = []string{"custom-namespace", "custom-namespace"}
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeDuplicate),
+				"Field": Equal("resources[0].additionalShootTargetNamespaces[1]"),
+			}))))
+		})
+
+		It("should forbid default namespaces in additionalShootTargetNamespaces", func() {
+			resources[0].Kind = "Extension"
+			resources[0].AdditionalShootTargetNamespaces = []string{"kube-system", "kubernetes-dashboard", "kube-node-lease"}
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("resources[0].additionalShootTargetNamespaces[0]"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("resources[0].additionalShootTargetNamespaces[1]"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("resources[0].additionalShootTargetNamespaces[2]"),
+				})),
+			))
+		})
+
 	})
 
 	Describe("#ValidateControllerResourcesUpdate", func() {

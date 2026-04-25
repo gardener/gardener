@@ -97,6 +97,15 @@ type ControllerResource struct {
 	// This field can only be set for resources of kind "Extension".
 	// +optional
 	ClusterCompatibility []ClusterType `json:"clusterCompatibility,omitempty" protobuf:"bytes,9,rep,name=clusterCompatibility,casttype=ClusterType"`
+	// AdditionalShootTargetNamespaces specifies additional namespaces in the shoot cluster that the
+	// shoot gardener-resource-manager should watch when this extension is active on a shoot.
+	// These namespaces are merged with the default target namespaces (kube-system, kubernetes-dashboard,
+	// kube-node-lease). Extensions that deploy ManagedResources targeting custom namespaces on shoots
+	// must declare them here so the gardener-resource-manager can manage resources in those namespaces.
+	// This field can only be set for resources of kind "Extension".
+	// +optional
+	// +listType=atomic
+	AdditionalShootTargetNamespaces []string `json:"additionalShootTargetNamespaces,omitempty" protobuf:"bytes,10,rep,name=additionalShootTargetNamespaces"`
 }
 
 // DeploymentRef contains information about `ControllerDeployment` references.

@@ -1584,6 +1584,11 @@ func (in *ControllerResource) DeepCopyInto(out *ControllerResource) {
 		*out = make([]ClusterType, len(*in))
 		copy(*out, *in)
 	}
+	if in.AdditionalShootTargetNamespaces != nil {
+		in, out := &in.AdditionalShootTargetNamespaces, &out.AdditionalShootTargetNamespaces
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

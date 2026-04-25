@@ -108,6 +108,9 @@ type Shoot struct {
 	ResourcesToEncrypt                      []string
 	EncryptedResources                      []string
 	ServiceAccountIssuerHostname            *string
+	// AdditionalGRMTargetNamespaces contains additional namespaces for the shoot gardener-resource-manager,
+	// collected from active ControllerRegistrations.
+	AdditionalGRMTargetNamespaces []string
 
 	Components *Components
 }

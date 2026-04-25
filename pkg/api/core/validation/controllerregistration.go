@@ -14,6 +14,7 @@ import (
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
+	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -127,6 +128,9 @@ func ValidateControllerResources(resources []core.ControllerResource, clusterTyp
 			if resource.Lifecycle != nil {
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("lifecycle"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
 			}
+			if len(resource.AdditionalShootTargetNamespaces) > 0 {
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("additionalShootTargetNamespaces"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
+			}
 
 			continue
 		}
@@ -177,6 +181,30 @@ func ValidateControllerResources(resources []core.ControllerResource, clusterTyp
 			}
 			if resource.Lifecycle.Migrate != nil && !availableExtensionStrategies.Has(*resource.Lifecycle.Migrate) {
 				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("migrate"), *resource.Lifecycle.Migrate, sets.List(availableExtensionStrategies)))
+			}
+		}
+
+		if len(resource.AdditionalShootTargetNamespaces) > 0 {
+			nsPath := idxPath.Child("additionalShootTargetNamespaces")
+
+			defaultNamespaces := sets.New("kube-system", "kubernetes-dashboard", "kube-node-lease")
+			seenNamespaces := sets.New[string]()
+
+			for j, ns := range resource.AdditionalShootTargetNamespaces {
+				nsIdxPath := nsPath.Index(j)
+
+				for _, msg := range utilvalidation.IsDNS1123Label(ns) {
+					allErrs = append(allErrs, field.Invalid(nsIdxPath, ns, msg))
+				}
+
+				if seenNamespaces.Has(ns) {
+					allErrs = append(allErrs, field.Duplicate(nsIdxPath, ns))
+				}
+				seenNamespaces.Insert(ns)
+
+				if defaultNamespaces.Has(ns) {
+					allErrs = append(allErrs, field.Forbidden(nsIdxPath, fmt.Sprintf("namespace %q is already included in the default target namespaces", ns)))
+				}
 			}
 		}
 	}

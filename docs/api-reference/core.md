@@ -3069,6 +3069,18 @@ boolean
 <p>ClusterCompatibility defines the compatibility of this resource with different cluster types.<br />If compatibility is not specified, it will be defaulted to 'shoot'.<br />This field can only be set for resources of kind "Extension".</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>additionalShootTargetNamespaces</code></br>
+<em>
+string array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AdditionalShootTargetNamespaces specifies additional namespaces in the shoot cluster that the<br />shoot gardener-resource-manager should watch when this extension is active on a shoot.<br />These namespaces are merged with the default target namespaces (kube-system, kubernetes-dashboard,<br />kube-node-lease). Extensions that deploy ManagedResources targeting custom namespaces on shoots<br />must declare them here so the gardener-resource-manager can manage resources in those namespaces.<br />This field can only be set for resources of kind "Extension".</p>
+</td>
+</tr>
 
 </tbody>
 </table>

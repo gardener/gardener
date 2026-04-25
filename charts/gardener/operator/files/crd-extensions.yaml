@@ -351,6 +351,18 @@ spec:
                     ControllerResource is a combination of a kind (DNSProvider, Infrastructure, Generic, ...) and the actual type for this
                     kind (aws-route53, gcp, auditlog, ...).
                   properties:
+                    additionalShootTargetNamespaces:
+                      description: |-
+                        AdditionalShootTargetNamespaces specifies additional namespaces in the shoot cluster that the
+                        shoot gardener-resource-manager should watch when this extension is active on a shoot.
+                        These namespaces are merged with the default target namespaces (kube-system, kubernetes-dashboard,
+                        kube-node-lease). Extensions that deploy ManagedResources targeting custom namespaces on shoots
+                        must declare them here so the gardener-resource-manager can manage resources in those namespaces.
+                        This field can only be set for resources of kind "Extension".
+                      items:
+                        type: string
+                      type: array
+                      x-kubernetes-list-type: atomic
                     autoEnable:
                       description: |-
                         AutoEnable determines if this resource is automatically enabled for shoot or seed clusters, or both.

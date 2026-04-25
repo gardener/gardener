@@ -90,6 +90,49 @@ var _ = Describe("ResourceManager", func() {
 			Expect(resourceManager.GetValues().MachineNamespace).To(HaveValue(Equal("shoot--foo--bar")))
 		})
 
+		It("should use default target namespaces when no additional namespaces are configured", func() {
+			resourceManager, err := botanist.DefaultResourceManager()
+			Expect(resourceManager).NotTo(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(resourceManager.GetValues().TargetNamespaces).To(Equal([]string{
+				corev1.NamespaceNodeLease,
+				metav1.NamespaceSystem,
+				v1beta1constants.KubernetesDashboardNamespace,
+			}))
+		})
+
+		It("should merge additional GRM target namespaces with defaults", func() {
+			botanist.Shoot.AdditionalGRMTargetNamespaces = []string{"custom-namespace", "custom-ns"}
+
+			resourceManager, err := botanist.DefaultResourceManager()
+			Expect(resourceManager).NotTo(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(resourceManager.GetValues().TargetNamespaces).To(Equal([]string{
+				"custom-namespace",
+				"custom-ns",
+				corev1.NamespaceNodeLease,
+				metav1.NamespaceSystem,
+				v1beta1constants.KubernetesDashboardNamespace,
+			}))
+		})
+
+		It("should deduplicate additional GRM target namespaces that overlap with defaults", func() {
+			botanist.Shoot.AdditionalGRMTargetNamespaces = []string{"kube-system", "custom-namespace"}
+
+			resourceManager, err := botanist.DefaultResourceManager()
+			Expect(resourceManager).NotTo(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(resourceManager.GetValues().TargetNamespaces).To(Equal([]string{
+				"custom-namespace",
+				corev1.NamespaceNodeLease,
+				metav1.NamespaceSystem,
+				v1beta1constants.KubernetesDashboardNamespace,
+			}))
+		})
+
 		It("should consider node toleration configuration", func() {
 			notReadyTolerationSeconds := ptr.To[int64](60)
 			unreachableTolerationSeconds := ptr.To[int64](120)

@@ -3245,6 +3245,15 @@ func (m *ControllerResource) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.AdditionalShootTargetNamespaces) > 0 {
+		for iNdEx := len(m.AdditionalShootTargetNamespaces) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.AdditionalShootTargetNamespaces[iNdEx])
+			copy(dAtA[i:], m.AdditionalShootTargetNamespaces[iNdEx])
+			i = encodeVarintGenerated(dAtA, i, uint64(len(m.AdditionalShootTargetNamespaces[iNdEx])))
+			i--
+			dAtA[i] = 0x52
+		}
+	}
 	if len(m.ClusterCompatibility) > 0 {
 		for iNdEx := len(m.ClusterCompatibility) - 1; iNdEx >= 0; iNdEx-- {
 			i -= len(m.ClusterCompatibility[iNdEx])
@@ -14620,6 +14629,12 @@ func (m *ControllerResource) Size() (n int) {
 			n += 1 + l + sovGenerated(uint64(l))
 		}
 	}
+	if len(m.AdditionalShootTargetNamespaces) > 0 {
+		for _, s := range m.AdditionalShootTargetNamespaces {
+			l = len(s)
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
 	return n
 }
 
@@ -19187,6 +19202,7 @@ func (this *ControllerResource) String() string {
 		`WorkerlessSupported:` + valueToStringGenerated(this.WorkerlessSupported) + `,`,
 		`AutoEnable:` + fmt.Sprintf("%v", this.AutoEnable) + `,`,
 		`ClusterCompatibility:` + fmt.Sprintf("%v", this.ClusterCompatibility) + `,`,
+		`AdditionalShootTargetNamespaces:` + fmt.Sprintf("%v", this.AdditionalShootTargetNamespaces) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -29961,6 +29977,38 @@ func (m *ControllerResource) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.ClusterCompatibility = append(m.ClusterCompatibility, ClusterType(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 10:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AdditionalShootTargetNamespaces", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AdditionalShootTargetNamespaces = append(m.AdditionalShootTargetNamespaces, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

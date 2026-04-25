@@ -6,15 +6,19 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
@@ -55,8 +59,12 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 			SchedulingProfile:                   v1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
 			SecretNameServerCA:                  v1beta1constants.SecretNameCACluster,
 			SystemComponentTolerations:          gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
-			TargetNamespaces:                    []string{metav1.NamespaceSystem, v1beta1constants.KubernetesDashboardNamespace, corev1.NamespaceNodeLease},
-			TopologyAwareRoutingEnabled:         b.Shoot.TopologyAwareRoutingEnabled,
+			TargetNamespaces: sets.List(sets.New(
+				metav1.NamespaceSystem,
+				v1beta1constants.KubernetesDashboardNamespace,
+				corev1.NamespaceNodeLease,
+			).Insert(b.Shoot.AdditionalGRMTargetNamespaces...)),
+			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
 			// TODO(vitanovs): Remove the VPAInPlaceUpdates webhook once the
 			// VPAInPlaceUpdates feature gates is deprecated.
 			VPAInPlaceUpdatesEnabled: features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates),
@@ -102,4 +110,26 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 // ScaleGardenerResourceManagerToOne scales the gardener-resource-manager deployment
 func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error {
 	return kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameGardenerResourceManager}, 1)
+}
+
+// collectAdditionalGRMTargetNamespaces lists all ControllerRegistrations and collects any
+// AdditionalShootTargetNamespaces declared by Extension resources. These are stored on the Shoot
+// struct so that DefaultResourceManager can merge them with the default target namespaces.
+func (b *Botanist) collectAdditionalGRMTargetNamespaces(ctx context.Context) error {
+	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
+	if err := b.GardenClient.List(ctx, controllerRegistrationList); err != nil {
+		return fmt.Errorf("failed to list controller registrations: %w", err)
+	}
+
+	additionalNamespaces := sets.New[string]()
+	for _, cr := range controllerRegistrationList.Items {
+		for _, resource := range cr.Spec.Resources {
+			if resource.Kind == extensionsv1alpha1.ExtensionResource && len(resource.AdditionalShootTargetNamespaces) > 0 {
+				additionalNamespaces.Insert(resource.AdditionalShootTargetNamespaces...)
+			}
+		}
+	}
+
+	b.Shoot.AdditionalGRMTargetNamespaces = sets.List(additionalNamespaces)
+	return nil
 }
