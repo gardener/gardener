@@ -398,30 +398,6 @@ var _ = Describe("Warnings", func() {
 			),
 		)
 
-		DescribeTable("spec.kubernetes.kubeAPIServer.eventTTL",
-			func(kubeAPIServerConfig *core.KubeAPIServerConfig, matcher gomegatypes.GomegaMatcher) {
-				shoot.Spec.Kubernetes.KubeAPIServer = kubeAPIServerConfig
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(matcher)
-			},
-
-			Entry("should not return a warning when kubeAPIServerConfig is nil",
-				nil,
-				BeEmpty(),
-			),
-			Entry("should not return a warning when eventTTL is nil",
-				&core.KubeAPIServerConfig{EventTTL: nil},
-				BeEmpty(),
-			),
-			Entry("should not return a warning for valid eventTTL duration",
-				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: time.Hour * 24}},
-				BeEmpty(),
-			),
-			Entry("should return a warning for invalid eventTTL duration",
-				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: time.Hour * 24 * 10}},
-				ContainElement(Equal("you are setting the spec.kubernetes.kubeAPIServer.eventTTL field to an invalid value. Invalid value: '240h0m0s', valid values: [0, 24h]. Invalid values for existing resources will be no longer allowed in Gardener v1.142.0. See: https://github.com/gardener/gardener/issues/13825")),
-			),
-		)
-
 		DescribeTable("spec.dns.providers[].secretName",
 			func(dns *core.DNS, matcher gomegatypes.GomegaMatcher) {
 				shoot.Spec.DNS = dns
@@ -486,29 +462,6 @@ var _ = Describe("Warnings", func() {
 			Entry("should return a warning when watchCacheSizes.default is set",
 				&core.KubeAPIServerConfig{WatchCacheSizes: &core.WatchCacheSizes{Default: ptr.To[int32](50)}},
 				ContainElement(Equal("you are setting the kubeAPIServer.watchCacheSizes.default field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.35. The cache size is automatically sized by the kube-apiserver.")),
-			),
-		)
-
-		DescribeTable("eventTTL",
-			func(kubeAPIServerConfig *core.KubeAPIServerConfig, matcher gomegatypes.GomegaMatcher) {
-				Expect(GetKubeAPIServerWarnings(kubeAPIServerConfig, field.NewPath("kubeAPIServer"))).To(matcher)
-			},
-
-			Entry("should not return a warning when kubeAPIServerConfig is nil",
-				nil,
-				BeEmpty(),
-			),
-			Entry("should not return a warning when eventTTL is nil",
-				&core.KubeAPIServerConfig{EventTTL: nil},
-				BeEmpty(),
-			),
-			Entry("should not return a warning for valid eventTTL duration",
-				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: time.Hour * 24}},
-				BeEmpty(),
-			),
-			Entry("should return a warning for invalid eventTTL duration",
-				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: time.Hour * 24 * 10}},
-				ContainElement(Equal("you are setting the kubeAPIServer.eventTTL field to an invalid value. Invalid value: '240h0m0s', valid values: [0, 24h]. Invalid values for existing resources will be no longer allowed in Gardener v1.142.0. See: https://github.com/gardener/gardener/issues/13825")),
 			),
 		)
 	})

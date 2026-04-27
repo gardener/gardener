@@ -119,10 +119,6 @@ func GetKubeAPIServerWarnings(kubeAPIServer *core.KubeAPIServerConfig, fldPath *
 	if kubeAPIServer.WatchCacheSizes != nil && kubeAPIServer.WatchCacheSizes.Default != nil {
 		warnings = append(warnings, fmt.Sprintf("you are setting the %s field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.35. The cache size is automatically sized by the kube-apiserver.", fldPath.Child("watchCacheSizes", "default").String()))
 	}
-	// TODO(ialidzhikov): Remove this in Gardener v1.142.0 when invalid event ttl values for existing Shoots are no longer accepted.
-	if kubeAPIServer.EventTTL != nil && kubeAPIServer.EventTTL.Duration > time.Hour*24 {
-		warnings = append(warnings, fmt.Sprintf("you are setting the %s field to an invalid value. Invalid value: '%s', valid values: [0, 24h]. Invalid values for existing resources will be no longer allowed in Gardener v1.142.0. See: https://github.com/gardener/gardener/issues/13825", fldPath.Child("eventTTL").String(), kubeAPIServer.EventTTL.Duration))
-	}
 
 	return warnings
 }

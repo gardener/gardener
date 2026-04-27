@@ -179,10 +179,6 @@ type shootValidationOptions struct {
 type KubeAPIServerValidationOptions struct {
 	// AllowInvalidAcceptedIssuers specifies whether invalid accepted issuers are allowed.
 	AllowInvalidAcceptedIssuers bool
-	// AllowInvalidEventTTL specifies whether invalid event ttl is allowed.
-	//
-	// TODO(ialidzhikov): Stop accepting invalid event ttl values for existing Shoots in Gardener v1.142.0.
-	AllowInvalidEventTTL bool
 	// ETCDEncryptionConfigValidationOptions are validation options for the encryption configuration fields.
 	ETCDEncryptionConfigValidationOptions ETCDEncryptionConfigValidationOptions
 }
@@ -205,7 +201,6 @@ func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 	opts := shootValidationOptions{
 		KubeAPIServerValidationOptions: KubeAPIServerValidationOptions{
 			AllowInvalidAcceptedIssuers: false,
-			AllowInvalidEventTTL:        false,
 			ETCDEncryptionConfigValidationOptions: ETCDEncryptionConfigValidationOptions{
 				AutoRotationEnabled: helper.IsETCDEncryptionKeyAutoRotationEnabled(shoot.Spec.Maintenance),
 			},
@@ -239,8 +234,6 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 			AllowInvalidAcceptedIssuers: oldShoot.Spec.Kubernetes.KubeAPIServer != nil && newShoot.Spec.Kubernetes.KubeAPIServer != nil &&
 				oldShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil && newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil &&
 				apiequality.Semantic.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers, newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers),
-			AllowInvalidEventTTL: oldShoot.Spec.Kubernetes.KubeAPIServer != nil && newShoot.Spec.Kubernetes.KubeAPIServer != nil &&
-				apiequality.Semantic.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.EventTTL, newShoot.Spec.Kubernetes.KubeAPIServer.EventTTL),
 			ETCDEncryptionConfigValidationOptions: ETCDEncryptionConfigValidationOptions{
 				AutoRotationEnabled: helper.IsETCDEncryptionKeyAutoRotationEnabled(newShoot.Spec.Maintenance),
 			},
@@ -1855,7 +1848,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, kubernetesVe
 		}
 	}
 
-	if kubeAPIServer.EventTTL != nil && !opts.AllowInvalidEventTTL {
+	if kubeAPIServer.EventTTL != nil {
 		if kubeAPIServer.EventTTL.Duration < 0 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("eventTTL"), *kubeAPIServer.EventTTL, "can not be negative"))
 		}

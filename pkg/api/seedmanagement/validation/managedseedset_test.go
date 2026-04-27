@@ -5,8 +5,6 @@
 package validation_test
 
 import (
-	"time"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -469,56 +467,6 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 			newShoot := shootCopy.DeepCopy()
 			newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
 				AcceptedIssuers: []string{"https://issuer.com"},
-			}
-			newManagedSeedSet.Spec.ShootTemplate.Spec = newShoot.Spec
-
-			Expect(ValidateManagedSeedSetUpdate(newManagedSeedSet, managedSeedSet)).To(BeEmpty())
-		})
-
-		It("should allow invalid event ttl in shootTemplate on update if it is unchanged", func() {
-			shootCopy := shoot.DeepCopy()
-			shootCopy.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
-				EventTTL: &metav1.Duration{Duration: time.Hour * 24 * 10},
-			}
-
-			managedSeedSet.Spec.ShootTemplate.Spec = shootCopy.Spec
-			newManagedSeedSet.Spec.ShootTemplate.Spec = shootCopy.Spec
-
-			errorList := ValidateManagedSeedSetUpdate(newManagedSeedSet, managedSeedSet)
-			Expect(errorList).To(BeEmpty())
-		})
-
-		It("should not allow invalid invalid ttl in shootTemplate on update if it is changed", func() {
-			shootCopy := shoot.DeepCopy()
-			shootCopy.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
-				EventTTL: &metav1.Duration{Duration: time.Hour * 24 * 10},
-			}
-			managedSeedSet.Spec.ShootTemplate.Spec = shootCopy.Spec
-
-			newShoot := shootCopy.DeepCopy()
-			newShoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
-				EventTTL: &metav1.Duration{Duration: time.Hour * 24 * 42},
-			}
-			newManagedSeedSet.Spec.ShootTemplate.Spec = newShoot.Spec
-
-			errorList := ValidateManagedSeedSetUpdate(newManagedSeedSet, managedSeedSet)
-			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal("spec.shootTemplate.spec.kubernetes.kubeAPIServer.eventTTL"),
-				"Detail": Equal("can not be longer than 24h"),
-			}))))
-		})
-
-		It("should allow invalid event ttl in shootTemplate to be updated with valid one", func() {
-			shootCopy := shoot.DeepCopy()
-			shootCopy.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
-				EventTTL: &metav1.Duration{Duration: time.Hour * 24 * 10},
-			}
-			managedSeedSet.Spec.ShootTemplate.Spec = shootCopy.Spec
-
-			newShoot := shootCopy.DeepCopy()
-			newShoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
-				EventTTL: &metav1.Duration{Duration: time.Hour * 24},
 			}
 			newManagedSeedSet.Spec.ShootTemplate.Spec = newShoot.Spec
 

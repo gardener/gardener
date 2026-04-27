@@ -73,7 +73,6 @@ func init() {
 func ValidateGarden(garden *operatorv1alpha1.Garden, extensions []operatorv1alpha1.Extension) field.ErrorList {
 	opts := gardencorevalidation.KubeAPIServerValidationOptions{
 		AllowInvalidAcceptedIssuers: false,
-		AllowInvalidEventTTL:        false,
 		// Skip validation for auto rotation of etcd encryption key, since the rotation cannot be automated for the Garden API.
 		// Unlike Shoots, the Garden resource does not have a maintenance controller
 		// that can automatically trigger key rotations when the rotation period has passed.
@@ -121,8 +120,6 @@ func ValidateGardenUpdate(oldGarden, newGarden *operatorv1alpha1.Garden, extensi
 		AllowInvalidAcceptedIssuers: oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil &&
 			oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil && newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil &&
 			apiequality.Semantic.DeepEqual(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers),
-		AllowInvalidEventTTL: oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil &&
-			apiequality.Semantic.DeepEqual(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EventTTL, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EventTTL),
 		// Skip validation for auto rotation of etcd encryption key, since the rotation cannot be automated for the Garden API.
 		// Unlike Shoots, the Garden resource does not have a maintenance controller
 		// that can automatically trigger key rotations when the rotation period has passed.
