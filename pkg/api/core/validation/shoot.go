@@ -225,7 +225,7 @@ func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 			},
 		},
 		AddonsValidationOptions: addonsValidationOptions{
-			AllowNginxIngress: false,
+			AllowNginxIngress: allowNginxIngressAddon(nil),
 		},
 	}
 
@@ -260,7 +260,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 			},
 		},
 		AddonsValidationOptions: addonsValidationOptions{
-			AllowNginxIngress: oldShoot.Spec.Addons != nil && oldShoot.Spec.Addons.NginxIngress != nil && oldShoot.Spec.Addons.NginxIngress.Enabled,
+			AllowNginxIngress: allowNginxIngressAddon(oldShoot.Spec.Addons),
 		},
 	}
 
@@ -683,7 +683,7 @@ func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless 
 	}
 
 	if helper.NginxIngressEnabled(addons) {
-		if !opts.AddonsValidationOptions.AllowNginxIngress && features.DefaultFeatureGate.Enabled(features.DisableNginxIngressInShoot) {
+		if !opts.AddonsValidationOptions.AllowNginxIngress {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("nginxIngress", "enabled"), "nginx ingress addon disallowed by landscape operator"))
 		}
 
@@ -3762,4 +3762,12 @@ func validateCredentialAutoRotationPeriod(rotationPeriod *metav1.Duration, fldPa
 	}
 
 	return allErrs
+}
+
+func allowNginxIngressAddon(oldAddons *core.Addons) bool {
+	if !features.DefaultFeatureGate.Enabled(features.DisableNginxIngressInShoot) {
+		return true
+	}
+
+	return helper.NginxIngressEnabled(oldAddons)
 }
