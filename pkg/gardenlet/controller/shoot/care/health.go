@@ -747,6 +747,7 @@ func (h *Health) CheckClusterNodes(
 		if err := h.seedClient.Client().List(ctx, machineDeploymentList, client.InNamespace(h.shoot.ControlPlaneNamespace)); err != nil {
 			return nil, err
 		}
+
 		if msg, err := CheckNodesScaling(ctx, h.seedClient.Client(), nodesManagedByMCM, machineDeploymentList, h.shoot.ControlPlaneNamespace); err != nil {
 			if msg == "" {
 				return nil, err
