@@ -196,6 +196,7 @@ func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *victoriametricsv1.V
 
 func getLabels() map[string]string {
 	return map[string]string{
+		v1beta1constants.LabelApp:   constants.VLSingleResourceName,
 		v1beta1constants.LabelRole:  v1beta1constants.LabelObservability,
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleObservability,
 		gardenerutils.NetworkPolicyLabel(constants.ServiceName, constants.VictoriaLogsPort): v1beta1constants.LabelNetworkPolicyAllowed,

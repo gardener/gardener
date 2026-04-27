@@ -6,7 +6,6 @@ package victorialogs_test
 
 import (
 	"context"
-	"fmt"
 
 	victoriametricsv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
 	victoriametricsv1beta1 "github.com/VictoriaMetrics/operator/api/operator/v1beta1"
@@ -104,7 +103,7 @@ var _ = Describe("VictoriaLogs", func() {
 			Spec: victoriametricsv1.VLSingleSpec{
 				PodMetadata: &victoriametricsv1beta1.EmbeddedObjectMetadata{
 					Labels: map[string]string{
-						v1beta1constants.LabelObservabilityApplication: victorialogsconstants.VLSingleResourceName,
+						v1beta1constants.LabelObservabilityApplication: "victoria-logs",
 					},
 				},
 				CommonDefaultableParams: victoriametricsv1beta1.CommonDefaultableParams{
@@ -281,7 +280,7 @@ var _ = Describe("VictoriaLogs", func() {
 				expectedVlSingle := vlSingle.DeepCopy()
 				expectedVlSingle.Spec.ManagedMetadata = &victoriametricsv1beta1.ManagedObjectsMetadata{
 					Annotations: map[string]string{
-						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicySeedScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, victorialogsconstants.VictoriaLogsPort),
+						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicySeedScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":9428}]`,
 					},
 				}
 
@@ -324,7 +323,7 @@ var _ = Describe("VictoriaLogs", func() {
 				expectedVlSingle := vlSingle.DeepCopy()
 				expectedVlSingle.Spec.ManagedMetadata = &victoriametricsv1beta1.ManagedObjectsMetadata{
 					Annotations: map[string]string{
-						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicyGardenScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, victorialogsconstants.VictoriaLogsPort),
+						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicyGardenScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":9428}]`,
 					},
 				}
 
@@ -364,8 +363,8 @@ var _ = Describe("VictoriaLogs", func() {
 				expectedVlSingle := vlSingle.DeepCopy()
 				expectedVlSingle.Spec.ManagedMetadata = &victoriametricsv1beta1.ManagedObjectsMetadata{
 					Annotations: map[string]string{
-						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicyScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, victorialogsconstants.VictoriaLogsPort),
-						resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias: v1beta1constants.LabelNetworkPolicyShootNamespaceAlias,
+						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicyScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":9428}]`,
+						resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias: "all-shoots",
 						resourcesv1alpha1.NetworkingNamespaceSelectors:             `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
 					},
 				}
@@ -499,11 +498,12 @@ var _ = Describe("VictoriaLogs", func() {
 
 func getLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelRole:                            v1beta1constants.LabelObservability,
-		v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleObservability,
-		gardenerutils.NetworkPolicyLabel("logging-vl", 9428):  v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelApp:                             "victoria-logs",
+		v1beta1constants.LabelRole:                            "observability",
+		v1beta1constants.GardenRole:                           "observability",
+		gardenerutils.NetworkPolicyLabel("logging-vl", 9428):  "allowed",
+		v1beta1constants.LabelNetworkPolicyToDNS:              "allowed",
+		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: "allowed",
 		v1beta1constants.LabelObservabilityApplication:        "victoria-logs",
 	}
 }

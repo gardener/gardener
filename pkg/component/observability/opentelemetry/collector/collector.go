@@ -795,6 +795,7 @@ func (o *otelCollector) getPrometheusLabel() string {
 
 func getLabels() map[string]string {
 	return map[string]string{
+		v1beta1constants.LabelApp:   managedResourceName,
 		v1beta1constants.LabelRole:  v1beta1constants.LabelObservability,
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleObservability,
 		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort):                         v1beta1constants.LabelNetworkPolicyAllowed,
