@@ -377,7 +377,6 @@ var _ = Describe("ETCD", func() {
 					{Group: "acme.stackit.de", Version: "v1alpha1"}: fmt.Errorf("stale GroupVersion discovery: acme.stackit.de/v1alpha1"),
 				},
 			}
-			DeferCleanup(func() { fakeDiscoveryClient.err = nil })
 
 			list, message, err := GetResourcesForRewrite(fakeDiscoveryClient, resources, resources, defaultGVKs)
 			Expect(err).NotTo(HaveOccurred())
@@ -404,7 +403,6 @@ var _ = Describe("ETCD", func() {
 					{Group: "acme.stackit.de", Version: "v1alpha1"}: fmt.Errorf("stale GroupVersion discovery: acme.stackit.de/v1alpha1"),
 				},
 			}
-			DeferCleanup(func() { fakeDiscoveryClient.err = nil })
 
 			_, _, err := GetResourcesForRewrite(fakeDiscoveryClient, resources, resources, defaultGVKs)
 			Expect(err).To(HaveOccurred())
@@ -413,7 +411,6 @@ var _ = Describe("ETCD", func() {
 
 		It("should fail on non-partial discovery errors", func() {
 			fakeDiscoveryClient.err = fmt.Errorf("connection refused")
-			DeferCleanup(func() { fakeDiscoveryClient.err = nil })
 
 			_, _, err := GetResourcesForRewrite(fakeDiscoveryClient, []string{"configmaps"}, []string{"configmaps"}, nil)
 			Expect(err).To(HaveOccurred())
