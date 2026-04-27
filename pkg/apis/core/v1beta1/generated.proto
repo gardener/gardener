@@ -608,6 +608,11 @@ message ClusterAutoscaler {
   // EmitPerNodeGroupMetrics emits additional per node group metrics (default: false).
   // +optional
   optional bool emitPerNodeGroupMetrics = 22;
+
+  // MaxBinpackingTime is the maximum time spent on binpacking for a single scale-up.
+  // If binpacking is limited by this, scale-up continues with the already calculated scale-up options (default: 5m).
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxBinpackingTime = 23;
 }
 
 // ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.

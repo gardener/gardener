@@ -2201,6 +2201,18 @@ boolean
 <p>EmitPerNodeGroupMetrics emits additional per node group metrics (default: false).</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>maxBinpackingTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#duration-v1-meta">Duration</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxBinpackingTime is the maximum time spent on binpacking for a single scale-up.<br />If binpacking is limited by this, scale-up continues with the already calculated scale-up options (default: 5m).</p>
+</td>
+</tr>
 
 </tbody>
 </table>

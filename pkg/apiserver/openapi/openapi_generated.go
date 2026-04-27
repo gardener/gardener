@@ -2632,6 +2632,12 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 							Format:      "",
 						},
 					},
+					"maxBinpackingTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxBinpackingTime is the maximum time spent on binpacking for a single scale-up. If binpacking is limited by this, scale-up continues with the already calculated scale-up options (default: 5m).",
+							Ref:         ref(metav1.Duration{}.OpenAPIModelName()),
+						},
+					},
 				},
 			},
 		},

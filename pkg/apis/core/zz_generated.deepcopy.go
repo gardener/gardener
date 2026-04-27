@@ -1099,6 +1099,11 @@ func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.MaxBinpackingTime != nil {
+		in, out := &in.MaxBinpackingTime, &out.MaxBinpackingTime
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	if in.Verbosity != nil {
 		in, out := &in.Verbosity, &out.Verbosity
 		*out = new(int32)

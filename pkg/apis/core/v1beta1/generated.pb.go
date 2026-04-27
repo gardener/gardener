@@ -2215,6 +2215,20 @@ func (m *ClusterAutoscaler) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.MaxBinpackingTime != nil {
+		{
+			size, err := m.MaxBinpackingTime.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xba
+	}
 	if m.EmitPerNodeGroupMetrics != nil {
 		i--
 		if *m.EmitPerNodeGroupMetrics {
@@ -14300,6 +14314,10 @@ func (m *ClusterAutoscaler) Size() (n int) {
 	if m.EmitPerNodeGroupMetrics != nil {
 		n += 3
 	}
+	if m.MaxBinpackingTime != nil {
+		l = m.MaxBinpackingTime.Size()
+		n += 2 + l + sovGenerated(uint64(l))
+	}
 	return n
 }
 
@@ -18953,6 +18971,7 @@ func (this *ClusterAutoscaler) String() string {
 		`MaxNodeGroupBackoffDuration:` + strings.Replace(fmt.Sprintf("%v", this.MaxNodeGroupBackoffDuration), "Duration", "v11.Duration", 1) + `,`,
 		`NodeGroupBackoffResetTimeout:` + strings.Replace(fmt.Sprintf("%v", this.NodeGroupBackoffResetTimeout), "Duration", "v11.Duration", 1) + `,`,
 		`EmitPerNodeGroupMetrics:` + valueToStringGenerated(this.EmitPerNodeGroupMetrics) + `,`,
+		`MaxBinpackingTime:` + strings.Replace(fmt.Sprintf("%v", this.MaxBinpackingTime), "Duration", "v11.Duration", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -27460,6 +27479,42 @@ func (m *ClusterAutoscaler) Unmarshal(dAtA []byte) error {
 			}
 			b := bool(v != 0)
 			m.EmitPerNodeGroupMetrics = &b
+		case 23:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MaxBinpackingTime", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.MaxBinpackingTime == nil {
+				m.MaxBinpackingTime = &v11.Duration{}
+			}
+			if err := m.MaxBinpackingTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])
