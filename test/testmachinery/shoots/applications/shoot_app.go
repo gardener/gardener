@@ -77,7 +77,7 @@ var _ = ginkgo.Describe("Shoot application testing", func() {
 		k8sVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
 		framework.ExpectNoError(err)
 
-		if versionutils.ConstraintK8sLess135.Check(k8sVersion) {
+		if versionutils.ConstraintK8sGreaterEqual135.Check(k8sVersion) {
 			ginkgo.Skip("The kubernetes-dashboard addon is forbidden starting with Kubernetes 1.35")
 		}
 
