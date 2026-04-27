@@ -1150,15 +1150,13 @@ func lastErrorsOperationInitializationFailure(lastErrors []gardencorev1beta1.Las
 	return lastErrors
 }
 
-func needsControlPlaneDeployment(ctx context.Context, o *operation.Operation, kubeAPIServerDeploymentFound bool, infrastructure *extensionsv1alpha1.Infrastructure) (bool, error) {
+func needsControlPlaneDeployment(ctx context.Context, o *operation.Operation, infrastructure *extensionsv1alpha1.Infrastructure) (bool, error) {
 	var (
 		namespace = o.Shoot.ControlPlaneNamespace
 		name      = o.Shoot.GetInfo().Name
 	)
 
-	// If the `ControlPlane` resource and the kube-apiserver deployment do no longer exist then we don't want to re-deploy it.
-	// The reason for the second condition is that some providers inject a cloud-provider-config into the kube-apiserver deployment
-	// which is needed for it to run.
+	// If the `ControlPlane` resource no longer exist then we don't want to re-deploy it.
 	exists, markedForDeletion, err := extensionResourceStillExists(ctx, o.SeedClientSet.APIReader(), &extensionsv1alpha1.ControlPlane{}, namespace, name)
 	if err != nil {
 		return false, err
@@ -1168,7 +1166,7 @@ func needsControlPlaneDeployment(ctx context.Context, o *operation.Operation, ku
 	// treat `ControlPlane` in deletion as if it is already gone. If it is marked for deletion, we also shouldn't wait
 	// for it to be reconciled, as it can potentially block the whole deletion flow (deletion depends on other control
 	// plane components like kcm and grm) which are scaled up later in the flow
-	case !exists && !kubeAPIServerDeploymentFound || markedForDeletion:
+	case !exists || markedForDeletion:
 		return false, nil
 	// The infrastructure resource has not been found, no need to redeploy the control plane
 	case infrastructure == nil:

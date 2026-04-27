@@ -124,7 +124,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			return nil
 		}),
 		errors.ToExecute("Check whether control plane deployment is needed", func() error {
-			controlPlaneDeploymentNeeded, err = needsControlPlaneDeployment(ctx, o, kubeAPIServerDeploymentFound, infrastructure)
+			controlPlaneDeploymentNeeded, err = needsControlPlaneDeployment(ctx, o, infrastructure)
 			return err
 		}),
 	)
