@@ -14,9 +14,9 @@ VALID_COMMANDS=("up" "down")
 SCENARIO="${SCENARIO:-default}"
 declare -A SCENARIO_LEVEL=(
   [machines]=1 # Only start gind machine containers and installs gardenadm, but doesn't run it
-  [default]=2       # Like 'machines', but also runs `gardenadm init` and exports the kubeconfig for the self-hosted shoot
-  [join]=3          # Like 'default', but also runs `gardenadm join` on gind-machine-1 to join it as worker node
-  [full]=4          # Like 'join', but also deploys Gardener into the self-hosted shoot and runs `gardenadm connect` to deploy gardenlet which registers the Shoot
+  [default]=2  # Like 'machines', but also runs `gardenadm init` and exports the kubeconfig for the self-hosted shoot
+  [join]=3     # Like 'default', but also runs `gardenadm join` on gind-machine-1 to join it as worker node
+  [full]=4     # Like 'join', but also deploys Gardener into the self-hosted shoot and runs `gardenadm connect` to deploy gardenlet which registers the Shoot
 )
 
 if [[ -z "${SCENARIO_LEVEL[$SCENARIO]+x}" ]]; then

@@ -28,16 +28,7 @@ x-machine: &machine
   - /gardenadm
   - ../../dev/local-backupbuckets:/etc/gardener/local-backupbuckets
   - /var/lib/containerd
-  - /mnt/containerd
-  - /mnt/cni-net-d
-  - /mnt/kubernetes
-  - /mnt/systemd-system
-  - /mnt/static-pods
-  - /mnt/kubelet
-  - /mnt/gardenadm-state
-  - /mnt/gardener-node-agent
-  - /mnt/opt-bin
-  - /mnt/root-home
+  - /mnt/data
   networks:
     kind: {}
 

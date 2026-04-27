@@ -256,7 +256,7 @@ EOF
       docker container rm -f "$container"
     done
 
-      # Delete the local backup bucket directory
+    # Delete the local backup bucket directory
     # When deleting the secondary cluster, we might still need it for the other cluster.
     # We need root privileges to clean the backup bucket directory, see https://github.com/gardener/gardener/issues/6752
     docker run --rm --user root:root -v "$DIR_BACKUP_BUCKET":/dev/local-backupbuckets alpine rm -rf /dev/local-backupbuckets/garden-*
