@@ -506,6 +506,7 @@ func (c *clusterAutoscaler) computeCommand(workersHavePriorityConfigured bool) [
 		fmt.Sprintf("--new-pod-scale-up-delay=%s", c.config.NewPodScaleUpDelay.Duration),
 		fmt.Sprintf("--max-nodes-total=%d", c.maxNodesTotal),
 		fmt.Sprintf("--emit-per-nodegroup-metrics=%t", *c.config.EmitPerNodeGroupMetrics),
+		fmt.Sprintf("--max-binpacking-time=%s", c.config.MaxBinpackingTime.Duration),
 	)
 
 	for _, taint := range c.config.StartupTaints {

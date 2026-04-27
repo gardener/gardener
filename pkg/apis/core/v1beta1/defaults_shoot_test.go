@@ -1071,6 +1071,7 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.InitialNodeGroupBackoffDuration).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxNodeGroupBackoffDuration).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Minute})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.NodeGroupBackoffResetTimeout).To(PointTo(Equal(metav1.Duration{Duration: 3 * time.Hour})))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxBinpackingTime).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
 		})
 
 		It("should not overwrite the already set values for ClusterAutoscaler field", func() {
@@ -1094,6 +1095,7 @@ var _ = Describe("Shoot defaulting", func() {
 				InitialNodeGroupBackoffDuration: &metav1.Duration{Duration: 10 * time.Minute},
 				MaxNodeGroupBackoffDuration:     &metav1.Duration{Duration: 20 * time.Minute},
 				NodeGroupBackoffResetTimeout:    &metav1.Duration{Duration: 1 * time.Hour},
+				MaxBinpackingTime:               &metav1.Duration{Duration: 10 * time.Minute},
 			}
 
 			SetObjectDefaults_Shoot(obj)
@@ -1117,6 +1119,7 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.InitialNodeGroupBackoffDuration).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxNodeGroupBackoffDuration).To(PointTo(Equal(metav1.Duration{Duration: 20 * time.Minute})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.NodeGroupBackoffResetTimeout).To(PointTo(Equal(metav1.Duration{Duration: 1 * time.Hour})))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxBinpackingTime).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
 		})
 
 		It("should sync MaxScaleDownParallelism value with MaxEmptyBulkDelete when the latter is set and the former is not", func() {
@@ -1162,6 +1165,7 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.InitialNodeGroupBackoffDuration).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxNodeGroupBackoffDuration).To(PointTo(Equal(metav1.Duration{Duration: 20 * time.Minute})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.NodeGroupBackoffResetTimeout).To(PointTo(Equal(metav1.Duration{Duration: 1 * time.Hour})))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxBinpackingTime).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
 		})
 	})
 

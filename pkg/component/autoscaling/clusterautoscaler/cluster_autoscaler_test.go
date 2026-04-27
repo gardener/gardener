@@ -119,13 +119,13 @@ var _ = Describe("ClusterAutoscaler", func() {
 			},
 		}
 
-		configExpander                            = gardencorev1beta1.ClusterAutoscalerExpanderRandom
-		configMaxGracefulTerminationSeconds int32 = 60 * 60 * 24
-		configMaxNodeProvisionTime                = &metav1.Duration{Duration: time.Second}
-		// add the 3 new config options here
+		configExpander                              = gardencorev1beta1.ClusterAutoscalerExpanderRandom
+		configMaxGracefulTerminationSeconds   int32 = 60 * 60 * 24
+		configMaxNodeProvisionTime                  = &metav1.Duration{Duration: time.Second}
 		configInitialNodeGroupBackoffDuration       = &metav1.Duration{Duration: 10 * time.Minute}
 		configMaxNodeGroupBackoffDuration           = &metav1.Duration{Duration: 20 * time.Minute}
 		configNodeGroupBackoffResetTimeout          = &metav1.Duration{Duration: time.Hour}
+		configMaxBinpackingTime                     = &metav1.Duration{Duration: 10 * time.Minute}
 		configScaleDownDelayAfterAdd                = &metav1.Duration{Duration: time.Second}
 		configScaleDownDelayAfterDelete             = &metav1.Duration{Duration: time.Second}
 		configScaleDownDelayAfterFailure            = &metav1.Duration{Duration: time.Second}
@@ -163,6 +163,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			MaxScaleDownParallelism:         configMaxScaleDownParallelism,
 			MaxDrainParallelism:             configMaxDrainParallelism,
 			NewPodScaleUpDelay:              configNewPodScaleUpDelay,
+			MaxBinpackingTime:               configMaxBinpackingTime,
 		}
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
@@ -329,6 +330,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					"--new-pod-scale-up-delay=0s",
 					"--max-nodes-total=0",
 					"--emit-per-nodegroup-metrics=false",
+					"--max-binpacking-time=5m0s",
 				)
 			} else {
 				commandConfigFlags = append(commandConfigFlags,
@@ -351,6 +353,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					fmt.Sprintf("--new-pod-scale-up-delay=%s", configNewPodScaleUpDelay.Duration),
 					"--max-nodes-total=0",
 					fmt.Sprintf("--emit-per-nodegroup-metrics=%t", configEmitPerNodeGroupMetrics),
+					fmt.Sprintf("--max-binpacking-time=%s", configMaxBinpackingTime.Duration),
 					fmt.Sprintf("--startup-taint=%s", configTaints[0]),
 					fmt.Sprintf("--startup-taint=%s", configTaints[1]),
 					fmt.Sprintf("--status-taint=%s", configTaints[0]),

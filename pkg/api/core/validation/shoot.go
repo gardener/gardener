@@ -1580,6 +1580,8 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, kubernetesVers
 	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.MaxNodeGroupBackoffDuration, fldPath.Child("maxNodeGroupBackoffDuration"))...)
 	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.NodeGroupBackoffResetTimeout, fldPath.Child("nodeGroupBackoffResetTimeout"))...)
 
+	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.MaxBinpackingTime, fldPath.Child("maxBinpackingTime"))...)
+
 	return allErrs
 }
 

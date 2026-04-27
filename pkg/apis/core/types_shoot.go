@@ -610,6 +610,9 @@ type ClusterAutoscaler struct {
 	IgnoreDaemonsetsUtilization *bool
 	// EmitPerNodeGroupMetrics emits additional per node group metrics (default: false).
 	EmitPerNodeGroupMetrics *bool
+	// MaxBinpackingTime is the maximum time spent on binpacking for a single scale-up.
+	// If binpacking is limited by this, scale-up continues with the already calculated scale-up options (default: 5m).
+	MaxBinpackingTime *metav1.Duration
 	// Verbosity allows CA to modify its log level.
 	Verbosity *int32
 }

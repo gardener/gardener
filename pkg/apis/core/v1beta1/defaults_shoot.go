@@ -427,6 +427,9 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 	if obj.NodeGroupBackoffResetTimeout == nil {
 		obj.NodeGroupBackoffResetTimeout = &metav1.Duration{Duration: 3 * time.Hour}
 	}
+	if obj.MaxBinpackingTime == nil {
+		obj.MaxBinpackingTime = &metav1.Duration{Duration: 5 * time.Minute}
+	}
 }
 
 // SetDefaults_NginxIngress sets default values for NginxIngress objects.

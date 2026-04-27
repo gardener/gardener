@@ -778,6 +778,10 @@ type ClusterAutoscaler struct {
 	// EmitPerNodeGroupMetrics emits additional per node group metrics (default: false).
 	// +optional
 	EmitPerNodeGroupMetrics *bool `json:"emitPerNodeGroupMetrics,omitempty" protobuf:"varint,22,opt,name=emitPerNodeGroupMetrics"`
+	// MaxBinpackingTime is the maximum time spent on binpacking for a single scale-up.
+	// If binpacking is limited by this, scale-up continues with the already calculated scale-up options (default: 5m).
+	// +optional
+	MaxBinpackingTime *metav1.Duration `json:"maxBinpackingTime,omitempty" protobuf:"bytes,23,opt,name=maxBinpackingTime"`
 }
 
 // ExpanderMode is type used for Expander values

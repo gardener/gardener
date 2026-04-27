@@ -4437,6 +4437,16 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field":  Equal("nodeGroupBackoffResetTimeout"),
 					"Detail": Equal("must be non-negative"),
 				})))),
+				Entry("valid with maxBinpackingTime", core.ClusterAutoscaler{
+					MaxBinpackingTime: &metav1.Duration{Duration: time.Minute},
+				}, version_1_32, BeEmpty()),
+				Entry("invalid with negative maxBinpackingTime", core.ClusterAutoscaler{
+					MaxBinpackingTime: &negativeDuration,
+				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("maxBinpackingTime"),
+					"Detail": Equal("must be non-negative"),
+				})))),
 			)
 
 			Describe("taint validation", func() {
