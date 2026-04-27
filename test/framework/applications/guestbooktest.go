@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"path/filepath"
 	"slices"
@@ -200,7 +201,7 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 func (t *GuestBookTest) Test(ctx context.Context) {
 	shoot := t.framework.Shoot
 	// define guestbook app urls
-	guestBookAppURL := "http://" + t.guestBookAppHost
+	guestBookAppURL := "http://" + net.JoinHostPort(t.guestBookAppHost, "80")
 	pushString := "foobar-" + shoot.Name
 	pushURL := fmt.Sprintf("%s/rpush/guestbook/%s", guestBookAppURL, pushString)
 	pullURL := fmt.Sprintf("%s/lrange/guestbook", guestBookAppURL)
