@@ -6,6 +6,7 @@ package backupentry
 
 import (
 	"context"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
@@ -117,7 +118,7 @@ func (r *Reconciler) MapExtensionBackupEntryToCoreBackupEntry(log logr.Logger) h
 		}
 
 		shootTechnicalID, _ := gardenerutils.ExtractShootDetailsFromBackupEntryName(obj.GetName())
-		if shootTechnicalID == "" {
+		if !strings.HasPrefix(shootTechnicalID, v1beta1constants.TechnicalIDPrefix) {
 			return nil
 		}
 

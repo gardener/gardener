@@ -130,6 +130,18 @@ var _ = Describe("Add", func() {
 
 			Expect(reconciler.MapExtensionBackupEntryToCoreBackupEntry(log)(ctx, extensionBackupEntry)).To(BeNil())
 		})
+
+		It("should return nil for backup entries created by gardener-operator", func() {
+			Expect(reconciler.MapExtensionBackupEntryToCoreBackupEntry(log)(ctx, &extensionsv1alpha1.BackupEntry{
+				ObjectMeta: metav1.ObjectMeta{Name: "garden--gardenUID"},
+			})).To(BeNil())
+		})
+
+		It("should return nil for backup entries created by the shoot gardenlet of a self-hosted shoot", func() {
+			Expect(reconciler.MapExtensionBackupEntryToCoreBackupEntry(log)(ctx, &extensionsv1alpha1.BackupEntry{
+				ObjectMeta: metav1.ObjectMeta{Name: "kube-system--shootUID"},
+			})).To(BeNil())
+		})
 	})
 
 	Describe("#MapBackupBucketToBackupEntry", func() {
