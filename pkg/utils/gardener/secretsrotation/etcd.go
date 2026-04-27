@@ -270,10 +270,10 @@ func GetResourcesForRewrite(
 			return encryptedGVKs.UnsortedList(), "", fmt.Errorf("error discovering server preferred resources: %w", err)
 		}
 		for failedGV := range failedGroups {
-			for _, gr := range groupResourcesToEncrypt {
-				if gr.Group == failedGV.Group {
-					return encryptedGVKs.UnsortedList(), "", fmt.Errorf("error discovering server preferred resources: %w", err)
-				}
+			if slices.ContainsFunc(groupResourcesToEncrypt, func(gr schema.GroupResource) bool {
+				return gr.Group == failedGV.Group
+			}) {
+				return encryptedGVKs.UnsortedList(), "", fmt.Errorf("error discovering server preferred resources: %w", err)
 			}
 		}
 	}

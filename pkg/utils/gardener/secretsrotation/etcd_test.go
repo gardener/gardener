@@ -451,6 +451,7 @@ var _ = Describe("ETCD", func() {
 
 type fakeDiscoveryWithServerPreferredResources struct {
 	*fakediscovery.FakeDiscovery
+
 	// err is returned alongside the resource lists (simulates partial discovery failures).
 	err error
 }
