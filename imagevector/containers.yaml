@@ -273,7 +273,7 @@ images:
             teamname: 'gardener/monitoring-maintainers'
   - name: cortex
     repository: quay.io/cortexproject/cortex
-    tag: v1.20.1
+    tag: v1.21.0
     labels:
       - name: gardener.cloud/cve-categorisation
         value:
