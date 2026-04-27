@@ -187,14 +187,29 @@ func MapShootToSeed(log logr.Logger, r *controllerinstallation.Reconciler) handl
 	}
 }
 
-// MapControllerInstallationToSeed returns a reconcile.Request object for the seed specified in the .spec.seedRef.name field.
+// MapControllerInstallationToSeed returns a reconcile.Request object for the seed specified in the .spec.seedRef.name
+// field. For self-hosted shoot seeds, it additionally enqueues the seed matching a .spec.shootRef that points to a
+// shoot in the garden namespace (where the shoot name equals the seed name). This is necessary because the shoot
+// reconciler creates ControllerInstallations without .spec.seedRef, so they wouldn't trigger the seed reconciler via
+// .spec.seedRef alone. The seed reconciler must be re-evaluated to decide whether to skip creation for registrations
+// already covered by the shoot reconciler.
 func MapControllerInstallationToSeed(_ context.Context, obj client.Object) []reconcile.Request {
 	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
-	if !ok || controllerInstallation.Spec.SeedRef == nil {
+	if !ok {
 		return nil
 	}
 
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: controllerInstallation.Spec.SeedRef.Name}}}
+	var requests []reconcile.Request
+
+	if controllerInstallation.Spec.SeedRef != nil {
+		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation.Spec.SeedRef.Name}})
+	}
+
+	if controllerInstallation.Spec.ShootRef != nil && controllerInstallation.Spec.ShootRef.Namespace == v1beta1constants.GardenNamespace {
+		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation.Spec.ShootRef.Name}})
+	}
+
+	return requests
 }
 
 // MapControllerDeploymentToAllSeeds returns reconcile.Request objects for all seeds in case there is at least one

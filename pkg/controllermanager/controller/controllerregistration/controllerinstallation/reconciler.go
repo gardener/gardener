@@ -190,7 +190,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	if err := deleteUnneededInstallations(ctx, log, r.Client, r.Kind, wantedControllerRegistrationNames, registrationNameToInstallation); err != nil {
+	if err := deleteUnneededInstallations(ctx, log, r.Client, r.Kind, selfHostedShoot, wantedControllerRegistrationNames, registrationNameToInstallation); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -512,6 +512,14 @@ func deployNeededInstallations(
 			return fmt.Errorf("cannot deploy new ControllerInstallation for %q because the deletion of the old ControllerInstallation is still pending", registrationName)
 		}
 
+		// When the seed reconciler finds an existing shoot-owned ControllerInstallation (no SeedRefName label) for the
+		// same registration, the registration is already installed — skip it to avoid overwriting shoot-reconciler
+		// ownership with the SeedRefName label.
+		if existingControllerInstallation != nil && kind == SeedKind && selfHostedShoot != nil && !metav1.HasLabel(existingControllerInstallation.ObjectMeta, SeedRefName) {
+			registrationLog.Info("Skipping ControllerInstallation for ControllerRegistration because it is already managed by the shoot reconciler", "controllerInstallationName", existingControllerInstallation.Name)
+			continue
+		}
+
 		if err := deployNeededInstallation(ctx, c, obj, kind, selfHostedShoot, controllerDeployment, controllerRegistration, existingControllerInstallation); err != nil {
 			return err
 		}
@@ -668,7 +676,8 @@ func deployNeededInstallation(
 // ControllerRegistration names to existing ControllerInstallations. It deletes every existing ControllerInstallation
 // whose referenced ControllerRegistration is not part of the given list of required list.
 // For the seed reconciler: ControllerInstallations with the SeedRefName label are not deleted but instead the label is
-// stripped — this hands ownership to the shoot reconciler.
+// stripped — this hands ownership to the shoot reconciler. ControllerInstallations without the SeedRefName label are
+// skipped entirely (the shoot reconciler owns them).
 // For the shoot reconciler: ControllerInstallations with the SeedRefName label are skipped entirely (the seed
 // reconciler owns them).
 func deleteUnneededInstallations(
@@ -676,6 +685,7 @@ func deleteUnneededInstallations(
 	log logr.Logger,
 	c client.Client,
 	kind Kind,
+	selfHostedShoot *gardencorev1beta1.Shoot,
 	wantedControllerRegistrationNames sets.Set[string],
 	registrationNameToInstallation map[string]*gardencorev1beta1.ControllerInstallation,
 ) error {
@@ -698,6 +708,11 @@ func deleteUnneededInstallations(
 			if err := c.Patch(ctx, installation, patch); err != nil {
 				return fmt.Errorf("failed removing %s label from ControllerInstallation %s: %w", SeedRefName, installation.Name, err)
 			}
+			continue
+		}
+
+		if kind == SeedKind && selfHostedShoot != nil {
+			// The seed reconciler must not delete or modify shoot-owned ControllerInstallations.
 			continue
 		}
 
@@ -794,12 +809,12 @@ func controllerInstallationReferencesObject(controllerInstallation gardencorev1b
 	switch kind {
 	case SeedKind:
 		if selfHostedShoot != nil {
-			// For self-hosted-shoot seeds the seed reconciler creates ControllerInstallations with .spec.shootRef
-			// and marks them with the SeedRefName label. Only match those — the shoot reconciler manages the rest.
+			// For self-hosted-shoot seeds, match all ControllerInstallations with .spec.shootRef for this shoot —
+			// both seed-owned (with SeedRefName label) and shoot-owned (without). This allows the seed reconciler to
+			// discover and adopt existing shoot-owned installations instead of creating duplicates.
 			if controllerInstallation.Spec.ShootRef == nil ||
 				controllerInstallation.Spec.ShootRef.Name != selfHostedShoot.Name ||
-				controllerInstallation.Spec.ShootRef.Namespace != selfHostedShoot.Namespace ||
-				!metav1.HasLabel(controllerInstallation.ObjectMeta, SeedRefName) {
+				controllerInstallation.Spec.ShootRef.Namespace != selfHostedShoot.Namespace {
 				return false
 			}
 		} else {

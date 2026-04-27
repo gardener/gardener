@@ -112,6 +112,7 @@ In this case, the seed reconciler subtracts all kind/type combinations already c
 `ControllerInstallations` created for these seed-exclusive extensions reference the shoot via `.spec.shootRef` (not `.spec.seedRef`), so that extensions are not uninstalled if the seed is later deregistered while the shoot still exists.
 These `ControllerInstallation`s are marked with a `seed-ref-name` label so that the shoot reconciler does not accidentally manage or delete them.
 If an extension previously exclusive to the seed becomes also required by the shoot (e.g., because of a shoot spec change), the seed reconciler removes the `seed-ref-name` label instead of deleting the `ControllerInstallation`, handing ownership to the shoot reconciler.
+Conversely, if a `ControllerInstallation` already exists for the shoot (created by the shoot reconciler) when the seed is registered, the seed reconciler skips it instead of creating a duplicate.
 `Always` and `AlwaysExceptNoShoots` deployment policies are also suppressed for the seed reconciler in this case — they are handled by the self-hosted shoot reconciler.
 
 #### ["Self-Hosted Shoot" Reconciler](../../pkg/controllermanager/controller/controllerregistration/controllerinstallation/shoot)

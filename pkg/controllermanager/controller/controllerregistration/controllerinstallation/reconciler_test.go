@@ -1086,7 +1086,7 @@ var _ = Describe("Reconciler", func() {
 						},
 					}).Build()
 
-				err := deleteUnneededInstallations(ctx, log, k8sClient, SeedKind, wantedControllerRegistrationNames, registrationNameToInstallation)
+				err := deleteUnneededInstallations(ctx, log, k8sClient, SeedKind, nil, wantedControllerRegistrationNames, registrationNameToInstallation)
 
 				Expect(err).To(Equal(fakeErr))
 			})
@@ -1105,7 +1105,7 @@ var _ = Describe("Reconciler", func() {
 				Expect(k8sClient.Create(ctx, controllerInstallation2.DeepCopy())).To(Succeed())
 				Expect(k8sClient.Create(ctx, controllerInstallation3.DeepCopy())).To(Succeed())
 
-				err := deleteUnneededInstallations(ctx, log, k8sClient, SeedKind, wantedControllerRegistrationNames, registrationNameToInstallation)
+				err := deleteUnneededInstallations(ctx, log, k8sClient, SeedKind, nil, wantedControllerRegistrationNames, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
 
@@ -1128,7 +1128,7 @@ var _ = Describe("Reconciler", func() {
 
 				Expect(k8sClient.Create(ctx, installation.DeepCopy())).To(Succeed())
 
-				err := deleteUnneededInstallations(ctx, log, k8sClient, SeedKind, wantedControllerRegistrationNames, registrationNameToInstallation)
+				err := deleteUnneededInstallations(ctx, log, k8sClient, SeedKind, nil, wantedControllerRegistrationNames, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
 
@@ -1151,7 +1151,7 @@ var _ = Describe("Reconciler", func() {
 
 				Expect(k8sClient.Create(ctx, installation.DeepCopy())).To(Succeed())
 
-				err := deleteUnneededInstallations(ctx, log, k8sClient, ShootKind, wantedControllerRegistrationNames, registrationNameToInstallation)
+				err := deleteUnneededInstallations(ctx, log, k8sClient, ShootKind, nil, wantedControllerRegistrationNames, registrationNameToInstallation)
 
 				Expect(err).NotTo(HaveOccurred())
 
