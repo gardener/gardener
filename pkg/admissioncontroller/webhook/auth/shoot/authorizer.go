@@ -18,6 +18,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apiserver/pkg/authentication/serviceaccount"
+	"k8s.io/apiserver/pkg/authentication/user"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,18 +35,20 @@ import (
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/graph"
 	authorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer"
 )
 
 // NewAuthorizer returns a new authorizer for requests from gardenlets running in self-hosted shoots.
-func NewAuthorizer(logger logr.Logger, c client.Client, graph graph.Interface, authorizeWithSelectors authorizerwebhook.WithSelectorsChecker) *authorizer {
+func NewAuthorizer(logger logr.Logger, c client.Client, graph graph.Interface, authorizeWithSelectors authorizerwebhook.WithSelectorsChecker, seedAuthorizer auth.Authorizer) *authorizer {
 	return &authorizer{
 		logger:                 logger,
 		client:                 c,
 		graph:                  graph,
 		authorizeWithSelectors: authorizeWithSelectors,
+		seedAuthorizer:         seedAuthorizer,
 	}
 }
 
@@ -53,6 +57,11 @@ type authorizer struct {
 	client                 client.Client
 	graph                  graph.Interface
 	authorizeWithSelectors authorizerwebhook.WithSelectorsChecker
+
+	// seedAuthorizer is used when the self-hosted shoot has been promoted to a seed cluster. The extensions still run
+	// with their self-hosted shoot identity, but we want them to have the same privileges that are granted by the seed
+	// authorizer.
+	seedAuthorizer auth.Authorizer
 }
 
 var (
@@ -106,6 +115,36 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 
 	if userType == gardenletidentity.UserTypeGardenadm {
 		return a.authorizeGardenadmRequests(log, shootNamespace, shootName, attrs)
+	}
+
+	// When the self-hosted shoot has been promoted to a seed, delegate to the seed authorizer for extension requests.
+	// The extensions still authenticate with their shoot identity, but they need seed-level privileges for managing
+	// seed resources. We construct a synthetic ServiceAccount identity matching the seed namespace so that the seed
+	// authorizer recognizes it as an extension. This only applies to shoots in the garden namespace since only those
+	// can be promoted to seeds.
+	if userType == gardenletidentity.UserTypeExtension && shootNamespace == v1beta1constants.GardenNamespace && a.seedAuthorizer != nil && a.graph.HasVertex(graph.VertexTypeSeed, "", shootName) {
+		seedNamespace := gardenerutils.ComputeGardenNamespace(shootName)
+		decision, reason, err := a.seedAuthorizer.Authorize(ctx, auth.AttributesRecord{
+			User: &user.DefaultInfo{
+				Name:   serviceaccount.MakeUsername(seedNamespace, v1beta1constants.ExtensionGardenServiceAccountPrefix+"delegated"),
+				Groups: []string{serviceaccount.AllServiceAccountsGroup, serviceaccount.MakeNamespaceGroupName(seedNamespace)},
+			},
+			Verb:            attrs.GetVerb(),
+			Namespace:       attrs.GetNamespace(),
+			APIGroup:        attrs.GetAPIGroup(),
+			APIVersion:      attrs.GetAPIVersion(),
+			Resource:        attrs.GetResource(),
+			Subresource:     attrs.GetSubresource(),
+			Name:            attrs.GetName(),
+			ResourceRequest: attrs.IsResourceRequest(),
+			Path:            attrs.GetPath(),
+		})
+		if err != nil {
+			return auth.DecisionNoOpinion, "", fmt.Errorf("failed delegating request %+v to seed authorizer: %w", attrs, err)
+		}
+		if decision == auth.DecisionAllow {
+			return decision, reason, nil
+		}
 	}
 
 	if attrs.IsResourceRequest() {

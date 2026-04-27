@@ -7,6 +7,7 @@ package shoot
 import (
 	"context"
 
+	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -23,7 +24,7 @@ const (
 )
 
 // AddToManager adds Handler to the given manager.
-func (w *Webhook) AddToManager(ctx context.Context, mgr manager.Manager, enableDebugHandlers *bool) error {
+func (w *Webhook) AddToManager(ctx context.Context, mgr manager.Manager, enableDebugHandlers *bool, seedAuthorizer auth.Authorizer) error {
 	if w.Handler == nil {
 		g := graph.New(mgr.GetLogger().WithName("shoot-authorizer-graph"), mgr.GetClient(), true)
 		if err := g.Setup(ctx, mgr.GetCache()); err != nil {
@@ -37,6 +38,7 @@ func (w *Webhook) AddToManager(ctx context.Context, mgr manager.Manager, enableD
 				mgr.GetClient(),
 				g,
 				authorizerwebhook.NewWithSelectorsChecker(ctx, w.Logger, w.ClientSet, clock.RealClock{}),
+				seedAuthorizer,
 			),
 		}
 
@@ -47,5 +49,6 @@ func (w *Webhook) AddToManager(ctx context.Context, mgr manager.Manager, enableD
 	}
 
 	mgr.GetWebhookServer().Register(WebhookPath, w.Handler)
+
 	return nil
 }

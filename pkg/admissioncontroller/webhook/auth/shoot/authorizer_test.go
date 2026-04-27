@@ -65,7 +65,7 @@ var _ = Describe("Shoot", func() {
 		graph = mockgraph.NewMockInterface(ctrl)
 		fakeClient = fake.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		fakeWithSelectorsChecker = fakeauthorizerwebhook.NewWithSelectorsChecker(true)
-		authorizer = NewAuthorizer(log, fakeClient, graph, fakeWithSelectorsChecker)
+		authorizer = NewAuthorizer(log, fakeClient, graph, fakeWithSelectorsChecker, nil)
 
 		shootNamespace = "shoot-namespace"
 		shootName = "shoot-name"
@@ -131,6 +131,121 @@ var _ = Describe("Shoot", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
 				Expect(reason).To(BeEmpty())
+			})
+		})
+
+		Context("seed authorizer delegation", func() {
+			var gardenExtensionUser user.Info
+
+			BeforeEach(func() {
+				gardenExtensionUser = &user.DefaultInfo{
+					Name:   "system:serviceaccount:garden:extension-shoot--" + shootName + "--foo",
+					Groups: []string{"system:serviceaccounts"},
+				}
+			})
+
+			It("should delegate to the seed authorizer for extension requests when the shoot is also a seed", func() {
+				seedAuthorizer := auth.AuthorizerFunc(func(_ context.Context, _ auth.Attributes) (auth.Decision, string, error) {
+					return auth.DecisionAllow, "", nil
+				})
+				authorizer = NewAuthorizer(log, fakeClient, graph, fakeWithSelectorsChecker, seedAuthorizer)
+
+				graph.EXPECT().HasVertex(graphutils.VertexTypeSeed, "", shootName).Return(true)
+
+				decision, reason, err := authorizer.Authorize(ctx, auth.AttributesRecord{
+					User:            gardenExtensionUser,
+					Name:            shootName,
+					APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+					Resource:        "seeds",
+					ResourceRequest: true,
+					Verb:            "patch",
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
+			It("should fall through to shoot authorizer when seed authorizer has no opinion", func() {
+				seedAuthorizer := auth.AuthorizerFunc(func(_ context.Context, _ auth.Attributes) (auth.Decision, string, error) {
+					return auth.DecisionNoOpinion, "", nil
+				})
+				authorizer = NewAuthorizer(log, fakeClient, graph, fakeWithSelectorsChecker, seedAuthorizer)
+
+				graph.EXPECT().HasVertex(graphutils.VertexTypeSeed, "", shootName).Return(true)
+
+				decision, reason, err := authorizer.Authorize(ctx, auth.AttributesRecord{
+					User:            gardenExtensionUser,
+					Name:            shootName,
+					APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+					Resource:        "seeds",
+					ResourceRequest: true,
+					Verb:            "get",
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
+			It("should not delegate when the shoot is not a seed", func() {
+				seedAuthorizer := auth.AuthorizerFunc(func(_ context.Context, _ auth.Attributes) (auth.Decision, string, error) {
+					Fail("seed authorizer should not be called")
+					return auth.DecisionNoOpinion, "", nil
+				})
+				authorizer = NewAuthorizer(log, fakeClient, graph, fakeWithSelectorsChecker, seedAuthorizer)
+
+				graph.EXPECT().HasVertex(graphutils.VertexTypeSeed, "", shootName).Return(false)
+
+				decision, reason, err := authorizer.Authorize(ctx, auth.AttributesRecord{
+					User:            gardenExtensionUser,
+					Name:            shootName,
+					APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+					Resource:        "seeds",
+					ResourceRequest: true,
+					Verb:            "patch",
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type"))
+			})
+
+			It("should not delegate for gardenlet requests even when the shoot is a seed", func() {
+				seedAuthorizer := auth.AuthorizerFunc(func(_ context.Context, _ auth.Attributes) (auth.Decision, string, error) {
+					Fail("seed authorizer should not be called")
+					return auth.DecisionNoOpinion, "", nil
+				})
+				authorizer = NewAuthorizer(log, fakeClient, graph, fakeWithSelectorsChecker, seedAuthorizer)
+
+				decision, reason, err := authorizer.Authorize(ctx, auth.AttributesRecord{
+					User:            gardenletUser,
+					Name:            shootName,
+					APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+					Resource:        "seeds",
+					ResourceRequest: true,
+					Verb:            "get",
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
+			It("should not delegate for extension requests when shoot is not in the garden namespace", func() {
+				seedAuthorizer := auth.AuthorizerFunc(func(_ context.Context, _ auth.Attributes) (auth.Decision, string, error) {
+					Fail("seed authorizer should not be called")
+					return auth.DecisionNoOpinion, "", nil
+				})
+				authorizer = NewAuthorizer(log, fakeClient, graph, fakeWithSelectorsChecker, seedAuthorizer)
+
+				decision, reason, err := authorizer.Authorize(ctx, auth.AttributesRecord{
+					User:            extensionUser,
+					Name:            shootName,
+					APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+					Resource:        "seeds",
+					ResourceRequest: true,
+					Verb:            "patch",
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type"))
 			})
 		})
 

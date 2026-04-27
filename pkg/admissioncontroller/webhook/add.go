@@ -90,10 +90,11 @@ func AddToManager(
 		return fmt.Errorf("failed adding %s webhook handler: %w", resourcesize.HandlerName, err)
 	}
 
-	if err := (&seedauthorizer.Webhook{
+	seedAuthorizerWebhook := &seedauthorizer.Webhook{
 		Logger:    mgr.GetLogger().WithName("webhook").WithName(seedauthorizer.HandlerName),
 		ClientSet: clientSet,
-	}).AddToManager(ctx, mgr, cfg.Server.EnableDebugHandlers); err != nil {
+	}
+	if err := seedAuthorizerWebhook.AddToManager(ctx, mgr, cfg.Server.EnableDebugHandlers); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", seedauthorizer.HandlerName, err)
 	}
 
@@ -108,7 +109,7 @@ func AddToManager(
 	if err := (&shootauthorizer.Webhook{
 		Logger:    mgr.GetLogger().WithName("webhook").WithName(shootauthorizer.HandlerName),
 		ClientSet: clientSet,
-	}).AddToManager(ctx, mgr, cfg.Server.EnableDebugHandlers); err != nil {
+	}).AddToManager(ctx, mgr, cfg.Server.EnableDebugHandlers, seedAuthorizerWebhook.Authorizer); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", shootauthorizer.HandlerName, err)
 	}
 

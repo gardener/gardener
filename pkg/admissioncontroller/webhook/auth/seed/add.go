@@ -24,24 +24,28 @@ const (
 
 // AddToManager adds Handler to the given manager.
 func (w *Webhook) AddToManager(ctx context.Context, mgr manager.Manager, enableDebugHandlers *bool) error {
-	if w.Handler == nil {
+	if w.Authorizer == nil {
 		g := graph.New(mgr.GetLogger().WithName("seed-authorizer-graph"), mgr.GetClient(), false)
 		if err := g.Setup(ctx, mgr.GetCache()); err != nil {
 			return err
 		}
 
-		w.Handler = &authorizerwebhook.Handler{
-			Logger: w.Logger,
-			Authorizer: NewAuthorizer(
-				w.Logger,
-				g,
-				authorizerwebhook.NewWithSelectorsChecker(ctx, w.Logger, w.ClientSet, clock.RealClock{}),
-			),
-		}
+		w.Authorizer = NewAuthorizer(
+			w.Logger,
+			g,
+			authorizerwebhook.NewWithSelectorsChecker(ctx, w.Logger, w.ClientSet, clock.RealClock{}),
+		)
 
 		if ptr.Deref(enableDebugHandlers, false) {
 			w.Logger.Info("Registering debug handlers")
 			mgr.GetWebhookServer().Register(graph.DebugHandlerPath, graph.NewDebugHandler(g))
+		}
+	}
+
+	if w.Handler == nil {
+		w.Handler = &authorizerwebhook.Handler{
+			Logger:     w.Logger,
+			Authorizer: w.Authorizer,
 		}
 	}
 
