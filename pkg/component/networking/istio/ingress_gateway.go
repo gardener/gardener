@@ -100,19 +100,15 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			},
 		}
 
-		// TODO(maboehm): Start using "istio=virtual-garden-ingressgateway" after one gardener release:
-		//  - Update istio label on envoy pods (extraEnvoyPodLabels)
-		//  - Keep "istio-role", remove "istio" label in namespaced selectors (labels)
-		//  - Remove the temporary label ("istio-role") from the gateway labels (istioIngressGateway.Labels)
-		// After one more gardener release, remove the migration code and temporary label
+		// TODO(maboehm): Remove this migration logic after one gardener release and after
+		// https://github.com/gardener/gardener/pull/14642 has been merged. Add "cascade: Orphan" annotation to the
+		// deployment.
 		extraEnvoyPodLabels := map[string]string{}
 		labels := maps.Clone(istioIngressGateway.Labels)
-		if v := istioIngressGateway.Labels[IstioRoleLabel]; v == IstioRoleVirtualGarden {
+		if v := istioIngressGateway.Labels[RoleKey]; v == RoleGarden {
 			// don't use the new label yet in namespaced selectors, but make sure it is added to every pod
-			extraEnvoyPodLabels[IstioRoleLabel] = v
-			delete(labels, IstioRoleLabel)
-			// make sure every other component that creates a Gateway does not use the old label
-			delete(istioIngressGateway.Labels, DefaultZoneKey)
+			extraEnvoyPodLabels[RoleKey] = v
+			delete(labels, RoleKey)
 		}
 
 		values := map[string]any{

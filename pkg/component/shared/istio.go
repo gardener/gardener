@@ -222,7 +222,7 @@ const (
 	zoneInfix          = "--zone--"
 )
 
-// GetIstioZoneLabels returns the labels to be used for istio with the mandatory zone label set.
+// GetIstioZoneLabels returns the labels to be used for the seed istio with the mandatory zone label set.
 func GetIstioZoneLabels(labels map[string]string, zone *string) map[string]string {
 	// Use "istio" for the default gateways and v1beta1constants.LabelExposureClassHandlerName for exposure classes
 	zonekey := istio.DefaultZoneKey
@@ -236,7 +236,10 @@ func GetIstioZoneLabels(labels map[string]string, zone *string) map[string]strin
 	if zone != nil {
 		zoneValue = fmt.Sprintf("%s%s%s", zoneValue, zoneInfix, *zone)
 	}
-	return utils.MergeStringMaps(labels, map[string]string{zonekey: zoneValue})
+	return utils.MergeStringMaps(labels, map[string]string{
+		zonekey:       zoneValue,
+		istio.RoleKey: istio.RoleSeed,
+	})
 }
 
 // IsZonalIstioExtension indicates whether the namespace related to the given labels is a zonal istio extension.
