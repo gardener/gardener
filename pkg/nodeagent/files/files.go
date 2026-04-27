@@ -129,7 +129,8 @@ func Move(fs afero.Afero, source, destination string) error {
 }
 
 func moveCrossDevice(fs afero.Afero, source, destination string) error {
-	tmpFilePath := destination + ".tmp"
+	// Use a dot-prefixed tmp file so that it is treated as a hidden file in the destination directory.
+	tmpFilePath := filepath.Join(filepath.Dir(destination), "."+filepath.Base(destination)+".tmp")
 
 	if tmpFile, err := fs.Stat(tmpFilePath); err == nil && tmpFile.Mode().IsRegular() {
 		if err := fs.Remove(tmpFilePath); err != nil {
