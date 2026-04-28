@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/onsi/ginkgo/v2 v2.28.1
-	github.com/onsi/gomega v1.39.0
+	github.com/onsi/gomega v1.40.0
 	k8s.io/api v0.35.4
 	k8s.io/apiextensions-apiserver v0.35.4
 	k8s.io/apimachinery v0.35.4
