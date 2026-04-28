@@ -887,7 +887,7 @@ images:
   - name: istio-basic-auth-server
     sourceRepository: github.com/gardener/ext-authz-server
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/ext-authz-server
-    tag: "v0.2.0"
+    tag: "v0.3.0"
     resourceId:
       name: ext-authz-server
   # API Server SNI, VPN-SeedServer and Kube-ApiServer Proxy
