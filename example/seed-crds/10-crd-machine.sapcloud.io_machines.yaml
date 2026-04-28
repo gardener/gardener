@@ -95,6 +95,10 @@ spec:
                 description: MachineInPlaceUpdateTimeout is the timeout after which
                   in-place update is declared failed.
                 type: string
+              machinePreserveTimeout:
+                description: MachinePreserveTimeout is the timeout after which the
+                  machine preservation is stopped
+                type: string
               maxEvictRetries:
                 description: MaxEvictRetries is the number of retries that will be
                   attempted while draining the node.
@@ -194,9 +198,8 @@ spec:
                                 a node.
                               type: string
                             timeAdded:
-                              description: |-
-                                TimeAdded represents the time at which the taint was added.
-                                It is only written for NoExecute taints.
+                              description: TimeAdded represents the time at which
+                                the taint was added.
                               format: date-time
                               type: string
                             value:
@@ -286,6 +289,11 @@ spec:
                   phase:
                     description: MachinePhase is a label for the condition of a machine
                       at the current time.
+                    type: string
+                  preserveExpiryTime:
+                    description: PreserveExpiryTime is the time at which MCM will
+                      stop preserving the machine
+                    format: date-time
                     type: string
                   timeoutActive:
                     type: boolean
