@@ -776,8 +776,25 @@ func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.EncryptionConfig,
 		}
 	}
 
-	// TODO(AleksandarSavchev): Remove this validation once we have added a gardenlet feature gate to allow changing the encryption provider type.
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newEncryptionProviderType, oldEncryptionProviderType, fldPath.Child("provider", "type"))...)
+	if newEncryptionProviderType != oldEncryptionProviderType {
+		providerTypeFldPath := fldPath.Child("provider", "type")
+
+		if etcdEncryptionKeyRotation != nil && etcdEncryptionKeyRotation.Phase != core.RotationCompleted && etcdEncryptionKeyRotation.Phase != "" {
+			allErrs = append(allErrs, field.Forbidden(providerTypeFldPath, fmt.Sprintf("provider type cannot be changed when .status.credentials.rotation.etcdEncryptionKey.phase is not %q", string(core.RotationCompleted))))
+		}
+
+		if !oldEncryptedResources.Equal(currentEncryptedResources) || oldEncryptionProviderType != currentEncryptionProviderType {
+			allErrs = append(allErrs, field.Forbidden(providerTypeFldPath, "provider type cannot be changed because a previous encryption configuration change is currently being rolled out"))
+		}
+
+		if isClusterInHibernation {
+			allErrs = append(allErrs, field.Forbidden(providerTypeFldPath, "provider type cannot be changed when shoot is in hibernation"))
+		}
+
+		if !newEncryptedResources.Equal(oldEncryptedResources) {
+			allErrs = append(allErrs, field.Forbidden(providerTypeFldPath, "provider type and resources cannot be changed simultaneously"))
+		}
+	}
 
 	return allErrs
 }
