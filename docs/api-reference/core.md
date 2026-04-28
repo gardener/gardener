@@ -2323,7 +2323,7 @@ ClusterType defines the type of cluster.
 
 
 <p>
-(<em>Appears on:</em><a href="#controllerinstallationstatus">ControllerInstallationStatus</a>, <a href="#projectstatus">ProjectStatus</a>, <a href="#seedstatus">SeedStatus</a>, <a href="#shootstatus">ShootStatus</a>)
+(<em>Appears on:</em><a href="#controllerinstallationstatus">ControllerInstallationStatus</a>, <a href="#livemigration">LiveMigration</a>, <a href="#projectstatus">ProjectStatus</a>, <a href="#seedstatus">SeedStatus</a>, <a href="#shootstatus">ShootStatus</a>)
 </p>
 
 <p>
@@ -7067,6 +7067,44 @@ integer
 <td>
 <em>(Optional)</em>
 <p>MaxNodesTotal configures the maximum node count a Shoot cluster can have during runtime.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="livemigration">LiveMigration
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#shootstatus">ShootStatus</a>)
+</p>
+
+<p>
+LiveMigration contains information about an ongoing live migration of the Shoot control plane.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>conditions</code></br>
+<em>
+<a href="#condition">Condition</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Conditions represents the progress of the live migration, one condition per migration step.</p>
 </td>
 </tr>
 
@@ -12979,6 +13017,18 @@ string
 <td>
 <em>(Optional)</em>
 <p>ManualWorkerPoolRollout contains information about the worker pool rollout progress.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>liveMigration</code></br>
+<em>
+<a href="#livemigration">LiveMigration</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LiveMigration contains information about an ongoing live control plane migration of the Shoot.</p>
 </td>
 </tr>
 

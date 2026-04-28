@@ -153,6 +153,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		v1beta1.LastOperation{}.OpenAPIModelName():                                schema_pkg_apis_core_v1beta1_LastOperation(ref),
 		v1beta1.LifecycleStage{}.OpenAPIModelName():                               schema_pkg_apis_core_v1beta1_LifecycleStage(ref),
 		v1beta1.Limits{}.OpenAPIModelName():                                       schema_pkg_apis_core_v1beta1_Limits(ref),
+		v1beta1.LiveMigration{}.OpenAPIModelName():                                schema_pkg_apis_core_v1beta1_LiveMigration(ref),
 		v1beta1.LoadBalancerServicesProxyProtocol{}.OpenAPIModelName():            schema_pkg_apis_core_v1beta1_LoadBalancerServicesProxyProtocol(ref),
 		v1beta1.Machine{}.OpenAPIModelName():                                      schema_pkg_apis_core_v1beta1_Machine(ref),
 		v1beta1.MachineControllerManagerSettings{}.OpenAPIModelName():             schema_pkg_apis_core_v1beta1_MachineControllerManagerSettings(ref),
@@ -5957,6 +5958,41 @@ func schema_pkg_apis_core_v1beta1_Limits(ref common.ReferenceCallback) common.Op
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_LiveMigration(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "LiveMigration contains information about an ongoing live migration of the Shoot control plane.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"conditions": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "type",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Conditions represents the progress of the live migration, one condition per migration step.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref(v1beta1.Condition{}.OpenAPIModelName()),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			v1beta1.Condition{}.OpenAPIModelName()},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_LoadBalancerServicesProxyProtocol(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -10463,12 +10499,18 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 							Ref:         ref(v1beta1.ManualWorkerPoolRollout{}.OpenAPIModelName()),
 						},
 					},
+					"liveMigration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LiveMigration contains information about an ongoing live control plane migration of the Shoot.",
+							Ref:         ref(v1beta1.LiveMigration{}.OpenAPIModelName()),
+						},
+					},
 				},
 				Required: []string{"gardener", "hibernated", "technicalID", "uid"},
 			},
 		},
 		Dependencies: []string{
-			v1beta1.Condition{}.OpenAPIModelName(), v1beta1.Gardener{}.OpenAPIModelName(), v1beta1.InPlaceUpdatesStatus{}.OpenAPIModelName(), v1beta1.LastError{}.OpenAPIModelName(), v1beta1.LastMaintenance{}.OpenAPIModelName(), v1beta1.LastOperation{}.OpenAPIModelName(), v1beta1.ManualWorkerPoolRollout{}.OpenAPIModelName(), v1beta1.NetworkingStatus{}.OpenAPIModelName(), v1beta1.ShootAdvertisedAddress{}.OpenAPIModelName(), v1beta1.ShootCredentials{}.OpenAPIModelName(), metav1.Time{}.OpenAPIModelName()},
+			v1beta1.Condition{}.OpenAPIModelName(), v1beta1.Gardener{}.OpenAPIModelName(), v1beta1.InPlaceUpdatesStatus{}.OpenAPIModelName(), v1beta1.LastError{}.OpenAPIModelName(), v1beta1.LastMaintenance{}.OpenAPIModelName(), v1beta1.LastOperation{}.OpenAPIModelName(), v1beta1.LiveMigration{}.OpenAPIModelName(), v1beta1.ManualWorkerPoolRollout{}.OpenAPIModelName(), v1beta1.NetworkingStatus{}.OpenAPIModelName(), v1beta1.ShootAdvertisedAddress{}.OpenAPIModelName(), v1beta1.ShootCredentials{}.OpenAPIModelName(), metav1.Time{}.OpenAPIModelName()},
 	}
 }
 

@@ -233,6 +233,8 @@ func (*LifecycleStage) ProtoMessage() {}
 
 func (*Limits) ProtoMessage() {}
 
+func (*LiveMigration) ProtoMessage() {}
+
 func (*LoadBalancerServicesProxyProtocol) ProtoMessage() {}
 
 func (*Machine) ProtoMessage() {}

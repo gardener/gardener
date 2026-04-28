@@ -258,6 +258,8 @@ func (m *LifecycleStage) Reset() { *m = LifecycleStage{} }
 
 func (m *Limits) Reset() { *m = Limits{} }
 
+func (m *LiveMigration) Reset() { *m = LiveMigration{} }
+
 func (m *LoadBalancerServicesProxyProtocol) Reset() { *m = LoadBalancerServicesProxyProtocol{} }
 
 func (m *Machine) Reset() { *m = Machine{} }
@@ -6749,6 +6751,43 @@ func (m *Limits) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *LiveMigration) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *LiveMigration) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *LiveMigration) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Conditions) > 0 {
+		for iNdEx := len(m.Conditions) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Conditions[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *LoadBalancerServicesProxyProtocol) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -12111,6 +12150,20 @@ func (m *ShootStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.LiveMigration != nil {
+		{
+			size, err := m.LiveMigration.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xb2
+	}
 	if m.ManualWorkerPoolRollout != nil {
 		{
 			size, err := m.ManualWorkerPoolRollout.MarshalToSizedBuffer(dAtA[:i])
@@ -15757,6 +15810,21 @@ func (m *Limits) Size() (n int) {
 	return n
 }
 
+func (m *LiveMigration) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Conditions) > 0 {
+		for _, e := range m.Conditions {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
+	return n
+}
+
 func (m *LoadBalancerServicesProxyProtocol) Size() (n int) {
 	if m == nil {
 		return 0
@@ -17831,6 +17899,10 @@ func (m *ShootStatus) Size() (n int) {
 		l = m.ManualWorkerPoolRollout.Size()
 		n += 2 + l + sovGenerated(uint64(l))
 	}
+	if m.LiveMigration != nil {
+		l = m.LiveMigration.Size()
+		n += 2 + l + sovGenerated(uint64(l))
+	}
 	return n
 }
 
@@ -19805,6 +19877,21 @@ func (this *Limits) String() string {
 	}, "")
 	return s
 }
+func (this *LiveMigration) String() string {
+	if this == nil {
+		return "nil"
+	}
+	repeatedStringForConditions := "[]Condition{"
+	for _, f := range this.Conditions {
+		repeatedStringForConditions += strings.Replace(strings.Replace(f.String(), "Condition", "Condition", 1), `&`, ``, 1) + ","
+	}
+	repeatedStringForConditions += "}"
+	s := strings.Join([]string{`&LiveMigration{`,
+		`Conditions:` + repeatedStringForConditions + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func (this *LoadBalancerServicesProxyProtocol) String() string {
 	if this == nil {
 		return "nil"
@@ -21304,6 +21391,7 @@ func (this *ShootStatus) String() string {
 		`Networking:` + strings.Replace(this.Networking.String(), "NetworkingStatus", "NetworkingStatus", 1) + `,`,
 		`InPlaceUpdates:` + strings.Replace(this.InPlaceUpdates.String(), "InPlaceUpdatesStatus", "InPlaceUpdatesStatus", 1) + `,`,
 		`ManualWorkerPoolRollout:` + strings.Replace(this.ManualWorkerPoolRollout.String(), "ManualWorkerPoolRollout", "ManualWorkerPoolRollout", 1) + `,`,
+		`LiveMigration:` + strings.Replace(this.LiveMigration.String(), "LiveMigration", "LiveMigration", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -39786,6 +39874,90 @@ func (m *Limits) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *LiveMigration) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: LiveMigration: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: LiveMigration: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Conditions", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Conditions = append(m.Conditions, Condition{})
+			if err := m.Conditions[len(m.Conditions)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *LoadBalancerServicesProxyProtocol) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -56174,6 +56346,42 @@ func (m *ShootStatus) Unmarshal(dAtA []byte) error {
 				m.ManualWorkerPoolRollout = &ManualWorkerPoolRollout{}
 			}
 			if err := m.ManualWorkerPoolRollout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 22:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LiveMigration", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.LiveMigration == nil {
+				m.LiveMigration = &LiveMigration{}
+			}
+			if err := m.LiveMigration.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

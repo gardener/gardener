@@ -1998,6 +1998,15 @@ message Limits {
   optional int32 maxNodesTotal = 1;
 }
 
+// LiveMigration contains information about an ongoing live migration of the Shoot control plane.
+message LiveMigration {
+  // Conditions represents the progress of the live migration, one condition per migration step.
+  // +patchMergeKey=type
+  // +patchStrategy=merge
+  // +optional
+  repeated Condition conditions = 1;
+}
+
 // LoadBalancerServicesProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
 message LoadBalancerServicesProxyProtocol {
   // Allowed controls whether the ProxyProtocol is optionally allowed for the load balancer services.
@@ -3684,6 +3693,10 @@ message ShootStatus {
   // ManualWorkerPoolRollout contains information about the worker pool rollout progress.
   // +optional
   optional ManualWorkerPoolRollout manualWorkerPoolRollout = 21;
+
+  // LiveMigration contains information about an ongoing live control plane migration of the Shoot.
+  // +optional
+  optional LiveMigration liveMigration = 22;
 }
 
 // ShootTemplate is a template for creating a Shoot object.

@@ -565,6 +565,11 @@ func (in Limits) OpenAPIModelName() string {
 }
 
 // OpenAPIModelName returns the OpenAPI model name for this type.
+func (in LiveMigration) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.LiveMigration"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
 func (in LoadBalancerServicesProxyProtocol) OpenAPIModelName() string {
 	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.LoadBalancerServicesProxyProtocol"
 }
