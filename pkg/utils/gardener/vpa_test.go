@@ -11,12 +11,16 @@ import (
 	. "github.com/onsi/gomega"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
@@ -87,6 +91,24 @@ var _ = Describe("VPA", func() {
 			Expect(DeleteVPAForGardenerComponent(ctx, fakeClient, name, namespace)).To(Succeed())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(BeNotFoundError())
+		})
+
+		It("should succeed when CRD does not exist (NoMatchError)", func() {
+			noMatchErr := &meta.NoKindMatchError{
+				GroupKind:        schema.GroupKind{Group: "test.gardener.cloud", Kind: "TestResource"},
+				SearchedVersions: []string{"v1alpha1"},
+			}
+
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetesscheme.Scheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Delete: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.DeleteOption) error {
+						return noMatchErr
+					},
+				}).
+				Build()
+
+			Expect(DeleteVPAForGardenerComponent(ctx, fakeClient, name, namespace)).To(Succeed())
 		})
 	})
 })
