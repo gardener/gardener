@@ -156,7 +156,7 @@ spec:
               require_client_certificate: false
   - applyTo: CLUSTER
     match:
-      context: ANY
+      context: GATEWAY
     patch:
       operation: ADD
       value:

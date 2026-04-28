@@ -62,7 +62,7 @@ spec:
 {{- end }}
   - applyTo: CLUSTER
     match:
-      context: ANY
+      context: GATEWAY
       cluster:
         name: outbound|{{ .Port }}||{{ .ConnectionUpgradeHost }}
     patch:
