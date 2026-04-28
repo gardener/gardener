@@ -53,7 +53,7 @@ require (
 	go.opentelemetry.io/contrib/otelconf v0.23.0
 	go.uber.org/goleak v1.3.0
 	go.uber.org/mock v0.6.0
-	go.uber.org/zap v1.27.1
+	go.uber.org/zap v1.28.0
 	go.yaml.in/yaml/v2 v2.4.4
 	go.yaml.in/yaml/v4 v4.0.0-rc.2
 	golang.org/x/crypto v0.50.0
