@@ -24,6 +24,8 @@ spec:
       type: local
     - kind: OperatingSystemConfig
       type: local
+    - kind: SelfHostedShootExposure
+      type: local
     - kind: Worker
       type: local
     - kind: Extension

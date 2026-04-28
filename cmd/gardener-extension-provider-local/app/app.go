@@ -45,6 +45,7 @@ import (
 	localhealthcheck "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
 	localinfrastructure "github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	localoperatingsystemconfig "github.com/gardener/gardener/pkg/provider-local/controller/operatingsystemconfig"
+	localselfhostedshootexposure "github.com/gardener/gardener/pkg/provider-local/controller/selfhostedshootexposure"
 	localworker "github.com/gardener/gardener/pkg/provider-local/controller/worker"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	prometheuswebhook "github.com/gardener/gardener/pkg/provider-local/webhook/prometheus"
@@ -310,6 +311,7 @@ func applyReconcileOptions(reconcileOpts *extensionscmdcontroller.ReconcilerOpti
 	localdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
 	localinfrastructure.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
 	localoperatingsystemconfig.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
+	localselfhostedshootexposure.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
 	localworker.DefaultAddOptions.IgnoreOperationAnnotation = config.IgnoreOperationAnnotation
 }
 
@@ -327,6 +329,7 @@ func applyGeneralOptions(generalOpts *extensionscmdcontroller.GeneralOptions) {
 	localdnsrecord.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
 	localinfrastructure.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
 	localoperatingsystemconfig.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
+	localselfhostedshootexposure.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
 	localworker.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
 	localhealthcheck.DefaultAddOptions.ExtensionClasses = slices.Clone(config.ExtensionClasses)
 }

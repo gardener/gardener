@@ -879,6 +879,7 @@ build:
             - extensions/pkg/controller/heartbeat/cmd
             - extensions/pkg/controller/infrastructure
             - extensions/pkg/controller/operatingsystemconfig
+            - extensions/pkg/controller/selfhostedshootexposure
             - extensions/pkg/controller/worker
             - extensions/pkg/controller/worker/genericactuator
             - extensions/pkg/controller/worker/helper
@@ -975,6 +976,7 @@ build:
             - pkg/provider-local/controller/infrastructure
             - pkg/provider-local/controller/networkpolicy
             - pkg/provider-local/controller/operatingsystemconfig
+            - pkg/provider-local/controller/selfhostedshootexposure
             - pkg/provider-local/controller/worker
             - pkg/provider-local/imagevector
             - pkg/provider-local/local

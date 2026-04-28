@@ -35,3 +35,5 @@ spec:
     type: local
   - kind: OperatingSystemConfig
     type: local
+  - kind: SelfHostedShootExposure
+    type: local
