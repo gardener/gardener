@@ -2143,10 +2143,10 @@ const (
 	// have successfully joined the source etcd cluster.
 	ShootLiveMigrationDestinationEtcdPeersJoined ConditionType = "DestinationEtcdPeersJoined"
 	// ShootLiveMigrationMigrateExtensionsNeededBeforeKAPI indicates that extension resources
-	// required before the kube-apiserver can be migrated have been migrated.
+	// required before the kube-apiserver have been migrated.
 	ShootLiveMigrationMigrateExtensionsNeededBeforeKAPI ConditionType = "MigrateExtensionsNeededBeforeKAPI"
 	// ShootLiveMigrationDestinationKAPIReady indicates that the destination kube-apiserver
-	// is ready and serving traffic.
+	// is deployed and ready.
 	ShootLiveMigrationDestinationKAPIReady ConditionType = "DestinationKAPIReady"
 	// ShootLiveMigrationMigrateDNSRecords indicates that DNS records have been updated
 	// to point to the destination seed.
