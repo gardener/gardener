@@ -63,10 +63,39 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		kubeRBACProxyImage                          = "kube-rbac-proxy:latest"
 		kubeRBACProxyShootAccessSecretName          = "shoot-access-rbac-proxy"
 		opentelemetryCollectorShootAccessSecretName = "shoot-access-opentelemetry-collector"
+<<<<<<< HEAD
 		values                                      Values
-		c                                           client.Client
-		component                                   Interface
-		consistOf                                   func(...client.Object) types.GomegaMatcher
+||||||| parent of 4b76b7aac1 (feat: add missng app lables on otel-col + vl, hardcode in their test the valus for better regression testing)
+		values                                      = Values{
+			Image:                   image,
+			KubeRBACProxyImage:      kubeRBACProxyImage,
+			LokiEndpoint:            lokiEndpoint,
+			Replicas:                1,
+			ShootNodeLoggingEnabled: true,
+			IngressHost:             ingressHost,
+			ValiHost:                valiHost,
+			SecretNameServerCA:      v1beta1constants.SecretNameCACluster,
+			PriorityClassName:       "gardener-system-100",
+			ClusterType:             "shoot",
+		}
+=======
+		values                                      = Values{
+			Image:                   image,
+			KubeRBACProxyImage:      kubeRBACProxyImage,
+			LokiEndpoint:            lokiEndpoint,
+			Replicas:                1,
+			ShootNodeLoggingEnabled: true,
+			IngressHost:             ingressHost,
+			ValiHost:                valiHost,
+			SecretNameServerCA:      "ca",
+			PriorityClassName:       "gardener-system-100",
+			ClusterType:             "shoot",
+		}
+>>>>>>> 4b76b7aac1 (feat: add missng app lables on otel-col + vl, hardcode in their test the valus for better regression testing)
+
+		c         client.Client
+		component Interface
+		consistOf func(...client.Object) types.GomegaMatcher
 
 		customResourcesManagedResourceName   = "opentelemetry-collector"
 		customResourcesManagedResource       *resourcesv1alpha1.ManagedResource
@@ -92,18 +121,17 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		format.TruncateThreshold = 100000
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
-			Image:                        image,
-			KubeRBACProxyImage:           kubeRBACProxyImage,
-			LokiEndpoint:                 lokiEndpoint,
-			Replicas:                     1,
-			ShootNodeLoggingEnabled:      true,
-			WithRBACProxy:                true,
-			IngressHost:                  ingressHost,
-			ValiHost:                     valiHost,
-			SecretNameServerCA:           v1beta1constants.SecretNameCACluster,
-			PriorityClassName:            "gardener-system-100",
-			ClusterType:                  "shoot",
-			IstioIngressGatewayNamespace: "istio-ingress",
+			Image:                   image,
+			KubeRBACProxyImage:      kubeRBACProxyImage,
+			LokiEndpoint:            lokiEndpoint,
+			Replicas:                1,
+			ShootNodeLoggingEnabled: true,
+			WithRBACProxy:           true,
+			IngressHost:             ingressHost,
+			ValiHost:                valiHost,
+			SecretNameServerCA:      v1beta1constants.SecretNameCACluster,
+			PriorityClassName:       "gardener-system-100",
+			ClusterType:             "shoot",
 		}
 		fakeSecretManager = fakesecretsmanager.New(c, namespace)
 		component = New(c, namespace, values, fakeSecretManager)
@@ -333,8 +361,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":8888}]`,
 					resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias: "all-shoots",
 					resourcesv1alpha1.NetworkingNamespaceSelectors:             `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
-					"networking.istio.io/exportTo":                             "istio-ingress",
-				},
+					"networking.istio.io/exportTo":                             "*"},
 			},
 			Spec: otelv1beta1.OpenTelemetryCollectorSpec{
 				Observability: otelv1beta1.ObservabilitySpec{
@@ -702,8 +729,20 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		})
 
 		It("should use seed CA secret when SecretNameServerCA is set to SecretNameCASeed", func() {
+<<<<<<< HEAD
 			values.SecretNameServerCA = v1beta1constants.SecretNameCASeed
 			values.ShootNodeLoggingEnabled = false // Disable node logging for simpler test
+||||||| parent of 4b76b7aac1 (feat: add missng app lables on otel-col + vl, hardcode in their test the valus for better regression testing)
+			customValues := values
+			customValues.SecretNameServerCA = v1beta1constants.SecretNameCASeed
+			customValues.ShootNodeLoggingEnabled = false // Disable node logging for simpler test
+			customValues.PriorityClassName = "gardener-system-100"
+=======
+			customValues := values
+			customValues.SecretNameServerCA = "ca-seed"
+			customValues.ShootNodeLoggingEnabled = false // Disable node logging for simpler test
+			customValues.PriorityClassName = "gardener-system-100"
+>>>>>>> 4b76b7aac1 (feat: add missng app lables on otel-col + vl, hardcode in their test the valus for better regression testing)
 
 			component = New(c, namespace, values, fakeSecretManager)
 
@@ -880,7 +919,7 @@ func getVirtualService() *istionetworkingv1beta1.VirtualService {
 			Labels:    getLabels(),
 		},
 		Spec: istioapinetworkingv1beta1.VirtualService{
-			ExportTo: []string{"istio-ingress"},
+			ExportTo: []string{"*"},
 			Gateways: []string{"logging"},
 			Hosts:    []string{ingressHost, valiHost},
 			Http: []*istioapinetworkingv1beta1.HTTPRoute{
@@ -927,7 +966,7 @@ func getDestinationRule() *istionetworkingv1beta1.DestinationRule {
 			Labels:    getLabels(),
 		},
 		Spec: istioapinetworkingv1beta1.DestinationRule{
-			ExportTo: []string{"istio-ingress"},
+			ExportTo: []string{"*"},
 			Host:     "opentelemetry-collector-collector.some-namespace.svc.cluster.local",
 			TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
 				LoadBalancer: &istioapinetworkingv1beta1.LoadBalancerSettings{
@@ -945,9 +984,6 @@ func getDestinationRule() *istionetworkingv1beta1.DestinationRule {
 							Interval: &durationpb.Duration{Seconds: 75},
 						},
 						MaxConnectionDuration: &durationpb.Duration{Seconds: 86400},
-					},
-					Http: &istioapinetworkingv1beta1.ConnectionPoolSettings_HTTPSettings{
-						UseClientProtocol: true,
 					},
 				},
 				OutlierDetection: &istioapinetworkingv1beta1.OutlierDetection{},
