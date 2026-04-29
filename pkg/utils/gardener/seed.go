@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -18,6 +20,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 )
 
 const (
@@ -149,4 +152,18 @@ func RequiredExtensionsReady(ctx context.Context, gardenClient client.Client, se
 // It falls back to IPv4 if no IP families are available.
 func GetIPStackForSeed(seed *gardencorev1beta1.Seed) string {
 	return getIPStackForFamilies(seed.Spec.Networks.IPFamilies)
+}
+
+// ClusterIsManagedByManagedSeed checks whether a ManagedSeed object exists for the given seed name. It treats Forbidden
+// errors as NotFound because the SeedAuthorizer only grants access to ManagedSeeds related to this seed via the
+// resource graph — for unmanaged seeds, no graph edge is present and the authorizer returns Forbidden.
+func ClusterIsManagedByManagedSeed(ctx context.Context, gardenReader client.Reader, seedName string) (bool, error) {
+	managedSeed := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace}}
+	if err := gardenReader.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err != nil {
+		if apierrors.IsNotFound(err) || apierrors.IsForbidden(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed checking whether seed %q is managed by a ManagedSeed: %w", seedName, err)
+	}
+	return true, nil
 }

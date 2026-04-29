@@ -227,11 +227,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 
 			return a.authorizeServiceAccount(requestAuthorizer, attrs)
 		case shootResource:
-			return requestAuthorizer.Check(graph.VertexTypeShoot, attrs,
-				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
-				authwebhook.WithAllowedSubresources("status", "finalizers"),
-				authwebhook.WithLabelSelectors(map[string]string{v1beta1constants.LabelPrefixSeedName + seedName: "true"}),
-			)
+			return a.authorizeShoot(requestAuthorizer, attrs)
 		case shootStateResource:
 			return requestAuthorizer.Check(graph.VertexTypeShootState, attrs,
 				authwebhook.WithAllowedVerbs("get", "update", "patch", "delete", "list", "watch"),
@@ -332,6 +328,21 @@ func (a *authorizer) authorizeConfigMap(requestAuthorizer *authwebhook.RequestAu
 	return requestAuthorizer.Check(graph.VertexTypeConfigMap, attrs,
 		authwebhook.WithAllowedVerbs("get", "patch", "update", "delete", "list", "watch"),
 		authwebhook.WithAlwaysAllowedVerbs("create"),
+	)
+}
+
+func (a *authorizer) authorizeShoot(requestAuthorizer *authwebhook.RequestAuthorizer, attrs auth.Attributes) (auth.Decision, string, error) {
+	// Allow gardenlet to get its own Shoot when the seed cluster is a self-hosted shoot.
+	if attrs.GetVerb() == "get" &&
+		attrs.GetNamespace() == v1beta1constants.GardenNamespace &&
+		attrs.GetName() == requestAuthorizer.ToName {
+		return auth.DecisionAllow, "", nil
+	}
+
+	return requestAuthorizer.Check(graph.VertexTypeShoot, attrs,
+		authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
+		authwebhook.WithAllowedSubresources("status", "finalizers"),
+		authwebhook.WithLabelSelectors(map[string]string{v1beta1constants.LabelPrefixSeedName + requestAuthorizer.ToName: "true"}),
 	)
 }
 

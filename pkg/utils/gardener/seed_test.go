@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -761,4 +762,36 @@ var _ = Describe("utils", func() {
 		Entry("dual-stack seed (ipv4 preferred)", &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6}}}}, "dual-stack"),
 		Entry("dual-stack seed (ipv6 preferred)", &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6, gardencorev1beta1.IPFamilyIPv4}}}}, "dual-stack"),
 	)
+
+	Describe("#ClusterIsManagedByManagedSeed", func() {
+		var (
+			ctx        context.Context
+			fakeClient client.Client
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		})
+
+		It("should return true when a ManagedSeed exists", func() {
+			managedSeed := &seedmanagementv1alpha1.ManagedSeed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-seed",
+					Namespace: "garden",
+				},
+			}
+			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
+
+			result, err := ClusterIsManagedByManagedSeed(ctx, fakeClient, "my-seed")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeTrue())
+		})
+
+		It("should return false when no ManagedSeed exists", func() {
+			result, err := ClusterIsManagedByManagedSeed(ctx, fakeClient, "my-seed")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeFalse())
+		})
+	})
 })

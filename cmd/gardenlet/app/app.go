@@ -476,12 +476,26 @@ func (g *garden) Start(ctx context.Context) error {
 			// GCM from creating `ControllerInstallation`s with `.spec.seedRef`. However, if the seed is a self-hosted
 			// shoot, we want all `ControllerInstallation`s to use `.spec.shootRef`. Self-hosted shoots must be in the
 			// garden namespace (for now), so the name is sufficient to identify the Shoot.
-			shoot := &gardencorev1beta1.Shoot{}
-			if err := gardenCluster.GetClient().Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: g.config.SeedConfig.Name}, shoot); err != nil {
+			// Use the API reader here because the cache only sees Shoots with the seed's label selector, but this
+			// self-hosted Shoot will never get this label.
+			shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: g.config.SeedConfig.Name, Namespace: v1beta1constants.GardenNamespace}}
+			if err := gardenCluster.GetAPIReader().Get(ctx, client.ObjectKeyFromObject(shoot), shoot); err != nil {
 				if apierrors.IsNotFound(err) {
 					return fmt.Errorf("seed cluster is a self-hosted shoot but the corresponding Shoot %q does not yet exist in namespace %q; run `gardenadm connect` first", g.config.SeedConfig.Name, v1beta1constants.GardenNamespace)
 				}
 				return fmt.Errorf("failed getting Shoot for self-hosted seed: %w", err)
+			}
+
+			responsibleForManagedSeed, err := gardenerutils.ClusterIsManagedByManagedSeed(ctx, gardenCluster.GetAPIReader(), g.config.SeedConfig.Name)
+			if err != nil {
+				return fmt.Errorf("failed checking whether gardenlet is responsible for a managed seed: %w", err)
+			}
+			if !responsibleForManagedSeed {
+				return fmt.Errorf("seed cluster is a self-hosted shoot but no ManagedSeed object exists for seed %q; the seed gardenlet on self-hosted shoots must be deployed via ManagedSeed", g.config.SeedConfig.Name)
+			}
+
+			if err := bootstrappers.VerifyShootGardenletVersion(log, shoot); err != nil {
+				return fmt.Errorf("failed verifying shoot gardenlet version skew: %w", err)
 			}
 		}
 

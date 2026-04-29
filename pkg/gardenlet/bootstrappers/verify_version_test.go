@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/gardenlet/bootstrappers"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
@@ -90,6 +91,43 @@ var _ = Describe("VerifyVersion", func() {
 			Entry("succeed because gardenlet minor version is lower (by 2) than gardener-apiserver version (gardener-apiserver version suffixed with '-dev')", "v1.2.3-dev", "v1.0.3", Succeed()),
 			Entry("succeed because gardenlet minor version is lower (by 2) than gardener-apiserver version (gardenlet version suffixed with '-dev')", "v1.2.3", "v1.0.3-dev", Succeed()),
 			Entry("succeed because gardenlet minor version is lower (by 2) than gardener-apiserver version (both versions suffixed with '-dev')", "v1.2.3-dev", "v1.0.3-dev", Succeed()),
+		)
+	})
+
+	Describe("#VerifyShootGardenletVersion", func() {
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					Gardener: gardencorev1beta1.Gardener{Version: "v1.100.0"},
+				},
+			}
+		})
+
+		DescribeTable("tests",
+			func(shootGardenletVersion, seedGardenletVersion string, matcher gomegatypes.GomegaMatcher) {
+				shoot.Status.Gardener.Version = shootGardenletVersion
+				DeferCleanup(test.WithVar(&GetCurrentVersion, func() apimachineryversion.Info { return apimachineryversion.Info{GitVersion: seedGardenletVersion} }))
+
+				Expect(VerifyShootGardenletVersion(log, shoot)).To(matcher)
+			},
+
+			Entry("fail because shoot gardenlet version cannot be parsed", "unparsable$version", "v1.2.3", MatchError(ContainSubstring("failed parsing version of shoot gardenlet"))),
+			Entry("fail because seed gardenlet version cannot be parsed", "v1.2.3", "unparsable$version", MatchError(ContainSubstring("failed parsing version of seed gardenlet"))),
+
+			Entry("fail because seed gardenlet version is higher", "v1.2.3", "v1.3.0", MatchError(ContainSubstring("seed gardenlet version must not be newer than shoot gardenlet version"))),
+			Entry("fail because seed gardenlet version is higher (patch)", "v1.2.3", "v1.2.4", MatchError(ContainSubstring("seed gardenlet version must not be newer than shoot gardenlet version"))),
+
+			Entry("fail because seed gardenlet is more than 3 minor versions behind", "v1.4.0", "v1.0.3", MatchError(ContainSubstring("seed gardenlet version must not be more than three minor versions behind"))),
+			Entry("fail because seed gardenlet is more than 3 minor versions behind (with -dev)", "v1.4.0-dev", "v1.0.3-dev", MatchError(ContainSubstring("seed gardenlet version must not be more than three minor versions behind"))),
+
+			Entry("succeed because versions are equal", "v1.2.3", "v1.2.3", Succeed()),
+			Entry("succeed because seed gardenlet is 1 minor version behind", "v1.2.3", "v1.1.3", Succeed()),
+			Entry("succeed because seed gardenlet is 2 minor versions behind", "v1.2.3", "v1.0.3", Succeed()),
+			Entry("succeed because seed gardenlet is 3 minor versions behind", "v1.3.3", "v1.0.3", Succeed()),
+			Entry("succeed because shoot gardenlet patch version is higher", "v1.2.5", "v1.2.3", Succeed()),
+			Entry("succeed with -dev suffix", "v1.2.3-dev", "v1.2.3-dev", Succeed()),
 		)
 	})
 })

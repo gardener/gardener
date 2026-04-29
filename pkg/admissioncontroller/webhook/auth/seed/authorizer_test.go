@@ -1783,6 +1783,17 @@ var _ = Describe("Seed", func() {
 					}
 				})
 
+				It("should allow to get the gardenlet's own Shoot without consulting the graph", func() {
+					attrs.Verb = "get"
+					attrs.Namespace = "garden"
+					attrs.Name = seedName
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+
 				DescribeTable("should not have an opinion because verb is not allowed",
 					func(verb string) {
 						attrs.Verb = verb

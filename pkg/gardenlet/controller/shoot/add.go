@@ -8,16 +8,12 @@ import (
 	"context"
 	"fmt"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
@@ -26,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/state"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/status"
 	"github.com/gardener/gardener/pkg/healthz"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
@@ -50,18 +47,11 @@ func AddToManager(
 	//     GEP-0022).
 	shootStateControllerEnabled := true
 	if !gardenletutils.IsResponsibleForSelfHostedShoot() {
-		var responsibleForUnmanagedSeed bool
-		if err := gardenCluster.GetAPIReader().Get(ctx, client.ObjectKey{Name: cfg.SeedConfig.Name, Namespace: v1beta1constants.GardenNamespace}, &seedmanagementv1alpha1.ManagedSeed{}); err != nil {
-			// Forbidden is treated like NotFound because the SeedAuthorizer only grants access to ManagedSeeds
-			// related to this seed via the resource graph. For unmanaged seeds, no ManagedSeed exists and no graph
-			// edge is present, so the authorizer returns Forbidden.
-			if !apierrors.IsNotFound(err) && !apierrors.IsForbidden(err) {
-				return fmt.Errorf("failed checking whether gardenlet is responsible for a managed seed: %w", err)
-			}
-			// ManagedSeed was not found, hence gardenlet is responsible for an unmanaged seed.
-			responsibleForUnmanagedSeed = true
+		responsibleForManagedSeed, err := gardenerutils.ClusterIsManagedByManagedSeed(ctx, gardenCluster.GetAPIReader(), cfg.SeedConfig.Name)
+		if err != nil {
+			return fmt.Errorf("failed checking whether gardenlet is responsible for a managed seed: %w", err)
 		}
-		shootStateControllerEnabled = responsibleForUnmanagedSeed && ptr.Deref(cfg.Controllers.ShootState.ConcurrentSyncs, 0) > 0
+		shootStateControllerEnabled = !responsibleForManagedSeed && ptr.Deref(cfg.Controllers.ShootState.ConcurrentSyncs, 0) > 0
 	}
 
 	// TODO(rfranzke): Enable this reconciler when the work on GEP-0028 progresses.
