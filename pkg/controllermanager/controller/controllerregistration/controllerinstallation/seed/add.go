@@ -191,8 +191,8 @@ func MapShootToSeed(log logr.Logger, r *controllerinstallation.Reconciler) handl
 // field. For self-hosted shoot seeds, it additionally enqueues the seed matching a .spec.shootRef that points to a
 // shoot in the garden namespace (where the shoot name equals the seed name). This is necessary because the shoot
 // reconciler creates ControllerInstallations without .spec.seedRef, so they wouldn't trigger the seed reconciler via
-// .spec.seedRef alone. The seed reconciler must be re-evaluated to decide whether to skip creation for registrations
-// already covered by the shoot reconciler.
+// .spec.seedRef alone. The seed reconciler must be re-evaluated to patch .spec.seedRef onto shoot-owned CIs and to
+// skip creation for registrations already covered by the shoot reconciler.
 func MapControllerInstallationToSeed(_ context.Context, obj client.Object) []reconcile.Request {
 	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
 	if !ok {

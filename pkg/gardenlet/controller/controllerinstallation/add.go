@@ -36,14 +36,14 @@ func AddToManager(
 	seedName string,
 	gardenNamespace string,
 ) error {
-	if err := (&care.Reconciler{
-		Config:                   *cfg.Controllers.ControllerInstallationCare,
-		ManagedResourceNamespace: gardenNamespace,
-	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
-		return fmt.Errorf("failed adding care reconciler: %w", err)
-	}
-
 	if gardenletutils.IsResponsibleForSelfHostedShoot() || !seedIsSelfHostedShoot {
+		if err := (&care.Reconciler{
+			Config:                   *cfg.Controllers.ControllerInstallationCare,
+			ManagedResourceNamespace: gardenNamespace,
+		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+			return fmt.Errorf("failed adding care reconciler: %w", err)
+		}
+
 		var selfHostedShootMeta *types.NamespacedName
 		if selfHostedShoot != nil {
 			selfHostedShootMeta = &types.NamespacedName{Name: selfHostedShoot.Name, Namespace: selfHostedShoot.Namespace}

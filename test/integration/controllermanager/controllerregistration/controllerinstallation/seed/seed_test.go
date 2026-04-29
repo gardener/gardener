@@ -456,9 +456,12 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 	Context("Self-hosted shoot seed", func() {
 		// When the seed is a self-hosted shoot cluster, the seed reconciler must subtract kind/type combinations
 		// already managed by the shoot reconciler for the corresponding Shoot. ControllerInstallations for
-		// extensions exclusively needed by the seed role are created with .spec.shootRef (not .spec.seedRef) so
-		// that the shoot gardenlet can manage them. They are marked with the SeedRefName label so that the shoot
-		// reconciler does not accidentally manage or delete them.
+		// extensions exclusively needed by the seed role are created with both .spec.seedRef (for seed gardenlet
+		// cache visibility) and .spec.shootRef (for shoot gardenlet deployment). They are marked with the
+		// SeedRefName label so that the shoot reconciler does not accidentally manage or delete them.
+		// For shoot-owned CIs also needed by the seed, the seed reconciler patches .spec.seedRef onto them.
+		// When the seed no longer needs a CI, seed-owned ones are deleted directly and shoot-owned ones have
+		// .spec.seedRef cleared.
 
 		var (
 			selfHostedSeedName                    string
@@ -645,23 +648,24 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 			})
 		})
 
-		It("should create ControllerInstallations with .spec.shootRef for seed-role extensions, not interfering with shoot-role ControllerInstallations", func() {
-			By("Expect seed-role ControllerInstallations to be created with .spec.shootRef and SeedRefName label (seed reconciler)")
+		It("should create ControllerInstallations with both refs for seed-role extensions, not interfering with shoot-role ControllerInstallations", func() {
+			By("Expect seed-role ControllerInstallations to be created with both .spec.seedRef and .spec.shootRef and SeedRefName label (seed reconciler)")
 			Eventually(func(g Gomega) {
 				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
 					core.RegistrationRefName: seedControllerRegistration.Name,
-					core.ShootRefName:        selfHostedSeedName,
-					core.ShootRefNamespace:   v1beta1constants.GardenNamespace,
+					core.SeedRefName:         selfHostedSeedName,
 				})).To(Succeed())
 				g.Expect(controllerInstallationList.Items).To(HaveLen(1))
 				for _, item := range controllerInstallationList.Items {
 					g.Expect(item.Spec.RegistrationRef.Name).To(Equal(seedControllerRegistration.Name), "seed-role ControllerInstallation %q must reference seedControllerRegistration", item.Name)
+					g.Expect(item.Spec.SeedRef).To(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Name": Equal(selfHostedSeedName),
+					})), "seed-role ControllerInstallation %q must have .spec.seedRef", item.Name)
 					g.Expect(item.Spec.ShootRef).To(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Name":      Equal(selfHostedSeedName),
 						"Namespace": Equal(v1beta1constants.GardenNamespace),
 					})), "seed-role ControllerInstallation %q must reference the self-hosted shoot", item.Name)
-					g.Expect(item.Spec.SeedRef).To(BeNil(), "seed-role ControllerInstallation %q must not have .spec.seedRef", item.Name)
 					g.Expect(item.Labels).To(HaveKeyWithValue(controllerinstallation.SeedRefName, selfHostedSeedName), "seed-role ControllerInstallation %q must carry SeedRefName label", item.Name)
 				}
 			}).Should(Succeed())
@@ -786,6 +790,20 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 				g.Expect(controllerInstallationList.Items[0].Name).To(Equal(handoffControllerInstallationName))
 				g.Expect(controllerInstallationList.Items[0].Labels).NotTo(HaveKey(controllerinstallation.SeedRefName))
 			}).Should(Succeed())
+
+			By("Expect seed reconciler to re-patch .spec.seedRef onto the now shoot-owned ControllerInstallation (seed still needs it)")
+			Eventually(func(g Gomega) {
+				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
+					core.RegistrationRefName: handoffControllerRegistration.Name,
+					core.SeedRefName:         selfHostedSeedName,
+				})).To(Succeed())
+				g.Expect(controllerInstallationList.Items).To(HaveLen(1))
+				g.Expect(controllerInstallationList.Items[0].Name).To(Equal(handoffControllerInstallationName))
+				g.Expect(controllerInstallationList.Items[0].Spec.SeedRef).To(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Name": Equal(selfHostedSeedName),
+				})))
+			}).Should(Succeed())
 		})
 
 		It("should not create a duplicate ControllerInstallation when the shoot reconciler already installed the same ControllerRegistration", func() {
@@ -861,8 +879,8 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 			selfHostedSeed.Spec.Extensions = []gardencorev1beta1.Extension{{Type: adoptionSeedExtType}}
 			Expect(testClient.Patch(ctx, selfHostedSeed, seedPatch)).To(Succeed())
 
-			By("Expect no duplicate ControllerInstallation to be created and the shoot-owned installation to remain unchanged")
-			Consistently(func(g Gomega) {
+			By("Expect no duplicate ControllerInstallation to be created and .spec.seedRef to be patched onto the shoot-owned installation")
+			Eventually(func(g Gomega) {
 				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
 					core.RegistrationRefName: adoptionControllerRegistration.Name,
@@ -872,6 +890,178 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 				g.Expect(controllerInstallationList.Items).To(HaveLen(1), "no duplicate ControllerInstallation should be created")
 				g.Expect(controllerInstallationList.Items[0].Name).To(Equal(adoptionControllerInstallationName), "must be the same ControllerInstallation object")
 				g.Expect(controllerInstallationList.Items[0].Labels).NotTo(HaveKey(controllerinstallation.SeedRefName), "seed reconciler must not add SeedRefName label to shoot-owned installation")
+				g.Expect(controllerInstallationList.Items[0].Spec.SeedRef).To(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Name": Equal(selfHostedSeedName),
+				})), "seed reconciler must patch .spec.seedRef onto shoot-owned installation")
+			}).Should(Succeed())
+		})
+
+		It("should delete seed-owned ControllerInstallations directly when the seed no longer needs them", func() {
+			deleteType := "delete-ext"
+
+			By("Enable delete extension on the self-hosted seed")
+			patch := client.MergeFrom(selfHostedSeed.DeepCopy())
+			selfHostedSeed.Spec.Extensions = []gardencorev1beta1.Extension{{Type: deleteType}}
+			Expect(testClient.Patch(ctx, selfHostedSeed, patch)).To(Succeed())
+
+			By("Create ControllerRegistration for the delete extension")
+			deleteControllerRegistration := &gardencorev1beta1.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "ctrlreg-delete-",
+					Labels:       map[string]string{testID: testRunID},
+				},
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Resources: []gardencorev1beta1.ControllerResource{
+						{
+							Kind:                extensionsv1alpha1.ExtensionResource,
+							Type:                deleteType,
+							WorkerlessSupported: ptr.To(true),
+						},
+					},
+				},
+			}
+			Expect(testClient.Create(ctx, deleteControllerRegistration)).To(Succeed())
+			log.Info("Created delete ControllerRegistration", "controllerRegistration", client.ObjectKeyFromObject(deleteControllerRegistration))
+
+			DeferCleanup(func() {
+				By("Revert self-hosted Seed extensions")
+				seedPatch := client.MergeFrom(selfHostedSeed.DeepCopy())
+				selfHostedSeed.Spec.Extensions = nil
+				Expect(testClient.Patch(ctx, selfHostedSeed, seedPatch)).To(Or(Succeed(), BeNotFoundError()))
+
+				By("Delete delete ControllerRegistration")
+				Expect(testClient.Delete(ctx, deleteControllerRegistration)).To(Or(Succeed(), BeNotFoundError()))
+
+				By("Wait until manager has observed delete ControllerRegistration deletion")
+				Eventually(func() error {
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(deleteControllerRegistration), deleteControllerRegistration)
+				}).Should(BeNotFoundError())
+			})
+
+			By("Expect seed-owned ControllerInstallation to be created with SeedRefName label")
+			Eventually(func(g Gomega) {
+				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
+					core.RegistrationRefName: deleteControllerRegistration.Name,
+					core.SeedRefName:         selfHostedSeedName,
+				})).To(Succeed())
+				g.Expect(controllerInstallationList.Items).To(HaveLen(1))
+				g.Expect(controllerInstallationList.Items[0].Labels).To(HaveKeyWithValue(controllerinstallation.SeedRefName, selfHostedSeedName))
+			}).Should(Succeed())
+
+			By("Remove the extension from the seed so it is no longer needed")
+			patch = client.MergeFrom(selfHostedSeed.DeepCopy())
+			selfHostedSeed.Spec.Extensions = nil
+			Expect(testClient.Patch(ctx, selfHostedSeed, patch)).To(Succeed())
+
+			By("Expect seed-owned ControllerInstallation to be deleted directly")
+			Eventually(func(g Gomega) {
+				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
+					core.RegistrationRefName: deleteControllerRegistration.Name,
+					core.SeedRefName:         selfHostedSeedName,
+				})).To(Succeed())
+				g.Expect(controllerInstallationList.Items).To(BeEmpty())
+			}).Should(Succeed())
+		})
+
+		It("should clear .spec.seedRef from shoot-owned ControllerInstallations when the seed no longer needs them", func() {
+			clearType := "clear-ext"
+
+			By("Update self-hosted Shoot to require the clear extension")
+			shootPatch := client.MergeFrom(selfHostedShoot.DeepCopy())
+			selfHostedShoot.Spec.Extensions = append(selfHostedShoot.Spec.Extensions, gardencorev1beta1.Extension{Type: clearType})
+			Expect(testClient.Patch(ctx, selfHostedShoot, shootPatch)).To(Succeed())
+
+			By("Create ControllerRegistration for the clear extension")
+			clearControllerRegistration := &gardencorev1beta1.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "ctrlreg-clear-",
+					Labels:       map[string]string{testID: testRunID},
+				},
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Resources: []gardencorev1beta1.ControllerResource{
+						{
+							Kind:                extensionsv1alpha1.ExtensionResource,
+							Type:                clearType,
+							WorkerlessSupported: ptr.To(true),
+						},
+					},
+				},
+			}
+			Expect(testClient.Create(ctx, clearControllerRegistration)).To(Succeed())
+			log.Info("Created clear ControllerRegistration", "controllerRegistration", client.ObjectKeyFromObject(clearControllerRegistration))
+
+			DeferCleanup(func() {
+				By("Revert self-hosted Seed extensions")
+				seedPatch := client.MergeFrom(selfHostedSeed.DeepCopy())
+				selfHostedSeed.Spec.Extensions = nil
+				Expect(testClient.Patch(ctx, selfHostedSeed, seedPatch)).To(Or(Succeed(), BeNotFoundError()))
+
+				By("Revert self-hosted Shoot extensions")
+				shootRevert := client.MergeFrom(selfHostedShoot.DeepCopy())
+				selfHostedShoot.Spec.Extensions = []gardencorev1beta1.Extension{{Type: selfHostedProviderType}}
+				Expect(testClient.Patch(ctx, selfHostedShoot, shootRevert)).To(Or(Succeed(), BeNotFoundError()))
+
+				By("Wait for the clear ControllerInstallation to be cleaned up")
+				Eventually(func(g Gomega) {
+					controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+					g.Expect(mgrClient.List(ctx, controllerInstallationList, client.MatchingFields{
+						core.RegistrationRefName: clearControllerRegistration.Name,
+					})).To(Succeed())
+					g.Expect(controllerInstallationList.Items).To(BeEmpty())
+				}).Should(Succeed())
+
+				By("Delete clear ControllerRegistration")
+				Expect(testClient.Delete(ctx, clearControllerRegistration)).To(Or(Succeed(), BeNotFoundError()))
+
+				By("Wait until manager has observed clear ControllerRegistration deletion")
+				Eventually(func() error {
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(clearControllerRegistration), clearControllerRegistration)
+				}).Should(BeNotFoundError())
+			})
+
+			By("Expect shoot-owned ControllerInstallation to be created by shoot reconciler")
+			var clearControllerInstallationName string
+			Eventually(func(g Gomega) {
+				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
+					core.RegistrationRefName: clearControllerRegistration.Name,
+					core.ShootRefName:        selfHostedSeedName,
+					core.ShootRefNamespace:   v1beta1constants.GardenNamespace,
+				})).To(Succeed())
+				g.Expect(controllerInstallationList.Items).To(HaveLen(1))
+				g.Expect(controllerInstallationList.Items[0].Labels).NotTo(HaveKey(controllerinstallation.SeedRefName))
+				clearControllerInstallationName = controllerInstallationList.Items[0].Name
+			}).Should(Succeed())
+
+			By("Enable the clear extension on the seed so it also needs this registration")
+			seedPatch := client.MergeFrom(selfHostedSeed.DeepCopy())
+			selfHostedSeed.Spec.Extensions = []gardencorev1beta1.Extension{{Type: clearType}}
+			Expect(testClient.Patch(ctx, selfHostedSeed, seedPatch)).To(Succeed())
+
+			By("Expect seed reconciler to patch .spec.seedRef onto the shoot-owned ControllerInstallation")
+			Eventually(func(g Gomega) {
+				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
+					core.RegistrationRefName: clearControllerRegistration.Name,
+					core.SeedRefName:         selfHostedSeedName,
+				})).To(Succeed())
+				g.Expect(controllerInstallationList.Items).To(HaveLen(1))
+				g.Expect(controllerInstallationList.Items[0].Name).To(Equal(clearControllerInstallationName))
+			}).Should(Succeed())
+
+			By("Remove the extension from the seed so it is no longer needed by the seed")
+			seedPatch = client.MergeFrom(selfHostedSeed.DeepCopy())
+			selfHostedSeed.Spec.Extensions = nil
+			Expect(testClient.Patch(ctx, selfHostedSeed, seedPatch)).To(Succeed())
+
+			By("Expect .spec.seedRef to be cleared (ControllerInstallation remains for the shoot)")
+			Eventually(func(g Gomega) {
+				ci := &gardencorev1beta1.ControllerInstallation{ObjectMeta: metav1.ObjectMeta{Name: clearControllerInstallationName}}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(ci), ci)).To(Succeed())
+				g.Expect(ci.Spec.SeedRef).To(BeNil(), "spec.seedRef must be cleared when seed no longer needs the CI")
+				g.Expect(ci.Spec.ShootRef).NotTo(BeNil(), "spec.shootRef must remain for the shoot gardenlet")
 			}).Should(Succeed())
 		})
 	})

@@ -48,13 +48,15 @@ func ValidateControllerInstallationSpec(spec *core.ControllerInstallationSpec, f
 
 	if spec.SeedRef == nil && spec.ShootRef == nil {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("seedRef"), "either seedRef or shootRef must be set"))
-	} else if spec.SeedRef != nil && spec.ShootRef != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("seedRef"), "cannot set both seedRef and shootRef"))
-	} else if spec.SeedRef != nil {
+	}
+
+	if spec.SeedRef != nil {
 		if len(spec.SeedRef.Name) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("seedRef").Child("name"), "field is required"))
 		}
-	} else if spec.ShootRef != nil {
+	}
+
+	if spec.ShootRef != nil {
 		if len(spec.ShootRef.Name) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("shootRef").Child("name"), "field is required"))
 		}
@@ -77,9 +79,7 @@ func ValidateControllerInstallationSpecUpdate(new, old *core.ControllerInstallat
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.RegistrationRef.Name, old.RegistrationRef.Name, fldPath.Child("registrationRef", "name"))...)
 
-	if old.SeedRef == nil || new.SeedRef == nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.SeedRef, old.SeedRef, fldPath.Child("seedRef"))...)
-	} else if new.SeedRef != nil {
+	if old.SeedRef != nil && new.SeedRef != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.SeedRef.Name, old.SeedRef.Name, fldPath.Child("seedRef", "name"))...)
 	}
 

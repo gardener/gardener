@@ -90,14 +90,10 @@ var _ = Describe("validation", func() {
 			}))))
 		})
 
-		It("should forbid specifying both seedRef and shootRef", func() {
-			controllerInstallation.Spec.ShootRef = &corev1.ObjectReference{Name: "foo"}
+		It("should allow specifying both seedRef and shootRef", func() {
+			controllerInstallation.Spec.ShootRef = &corev1.ObjectReference{Name: "foo", Namespace: "bar"}
 
-			Expect(ValidateControllerInstallation(controllerInstallation)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("spec.seedRef"),
-				"Detail": Equal("cannot set both seedRef and shootRef"),
-			}))))
+			Expect(ValidateControllerInstallation(controllerInstallation)).To(BeEmpty())
 		})
 
 		It("should forbid not specifying required seedRef fields", func() {
@@ -162,14 +158,21 @@ var _ = Describe("validation", func() {
 			}))))
 		})
 
-		It("should forbid resetting seedRef when it was set before", func() {
+		It("should allow setting seedRef when it was previously nil", func() {
+			controllerInstallation.Spec.SeedRef = nil
+			controllerInstallation.Spec.ShootRef = &corev1.ObjectReference{Name: "foo", Namespace: "bar"}
+			newControllerInstallation := prepareControllerInstallationForUpdate(controllerInstallation)
+			newControllerInstallation.Spec.SeedRef = &corev1.ObjectReference{Name: "aws", ResourceVersion: "1"}
+
+			Expect(ValidateControllerInstallationUpdate(newControllerInstallation, controllerInstallation)).To(BeEmpty())
+		})
+
+		It("should allow clearing seedRef", func() {
+			controllerInstallation.Spec.ShootRef = &corev1.ObjectReference{Name: "foo", Namespace: "bar"}
 			newControllerInstallation := prepareControllerInstallationForUpdate(controllerInstallation)
 			newControllerInstallation.Spec.SeedRef = nil
 
-			Expect(ValidateControllerInstallationUpdate(newControllerInstallation, controllerInstallation)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.seedRef"),
-			}))))
+			Expect(ValidateControllerInstallationUpdate(newControllerInstallation, controllerInstallation)).To(BeEmpty())
 		})
 
 		It("should forbid resetting shootRef when it was set before", func() {

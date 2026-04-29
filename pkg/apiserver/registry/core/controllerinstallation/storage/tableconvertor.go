@@ -67,10 +67,10 @@ func (c *convertor) ConvertToTable(_ context.Context, o runtime.Object, _ runtim
 		cells = append(cells, obj.Spec.RegistrationRef.Name)
 
 		switch {
-		case obj.Spec.SeedRef != nil:
-			cells = append(cells, "Seed/"+obj.Spec.SeedRef.Name)
 		case obj.Spec.ShootRef != nil:
 			cells = append(cells, "Shoot/"+obj.Spec.ShootRef.Namespace+"/"+obj.Spec.ShootRef.Name)
+		case obj.Spec.SeedRef != nil:
+			cells = append(cells, "Seed/"+obj.Spec.SeedRef.Name)
 		default:
 			cells = append(cells, "<unknown>")
 		}
