@@ -12,6 +12,13 @@ VALID_COMMANDS=("up" "down")
 SCENARIO="${SCENARIO:-unmanaged-infra}"
 VALID_SCENARIOS=("unmanaged-infra" "managed-infra" "connect" "connect-kind")
 
+# For unmanaged-infra and connect scenarios, there is no cluster to detect the node platform from.
+# Default to the local machine's architecture.
+if [[ "$SCENARIO" == "unmanaged-infra" || "$SCENARIO" == "connect" ]]; then
+  export SKAFFOLD_PLATFORM="${SKAFFOLD_PLATFORM:-linux/$(go env GOARCH)}"
+  export SKAFFOLD_CHECK_CLUSTER_NODE_PLATFORMS=false
+fi
+
 valid_scenario=false
 for scenario in "${VALID_SCENARIOS[@]}"; do
   if [[ "$SCENARIO" == "$scenario" ]]; then

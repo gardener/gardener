@@ -36,7 +36,7 @@ case "$COMMAND" in
     export GIND_MACHINE_IMAGE="gind-machine:$(find "$GIND_BUILD_CONTEXT" -type f | sort | xargs shasum -a 256 | shasum -a 256 | cut -c1-12)"
     docker compose -f "$GIND_COMPOSE_FILE" up -d
 
-    make gardenadm-up SCENARIO=unmanaged-infra SKAFFOLD_PLATFORM="linux/$(go env GOARCH)" SKAFFOLD_CHECK_CLUSTER_NODE_PLATFORMS=false
+    make gardenadm-up SCENARIO=unmanaged-infra
 
     for i in 0 1 2 3; do
       service="machine-$i"
@@ -75,7 +75,7 @@ case "$COMMAND" in
     ;;
 
   down)
-    make gardenadm-down SCENARIO=unmanaged-infra SKAFFOLD_PLATFORM="linux/$(go env GOARCH)" SKAFFOLD_CHECK_CLUSTER_NODE_PLATFORMS=false
+    make gardenadm-down SCENARIO=unmanaged-infra
 
     docker compose -f "$GIND_COMPOSE_FILE" down --volumes
 
