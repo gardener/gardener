@@ -1,6 +1,6 @@
 labels:
   app: istio-ingressgateway
-extraEnvoyPodLabels: {}
+podLabels: {}
 networkPolicyLabels:
   to-target: allowed
 annotations: {}
