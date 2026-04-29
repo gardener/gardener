@@ -14,6 +14,13 @@ RUN arch="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')" && \
 RUN rm -f /etc/systemd/system/kubelet.service && \
     rm -rf /etc/systemd/system/kubelet.service.d/
 
+# Add cgroup namespace to cri-base.json so that containers (including privileged pods running nested
+# kubelets) get their own cgroup namespace. Without this, nested kubelets see the host's cgroup
+# hierarchy and fail to manage cgroups properly. This is the same adjustment that kind.sh performs
+# at cluster creation time for KinD nodes.
+RUN jq '.linux.namespaces += [{"type": "cgroup"}]' /etc/containerd/cri-base.json > /tmp/cri-base.json && \
+    mv /tmp/cri-base.json /etc/containerd/cri-base.json
+
 # copy containerd hosts configurations for local registry mirrors
 COPY containerd /etc/containerd/certs.d/
 # names with colon are not allowed in the directory name checked into Git as it breaks go mod if gardener/gardener is used as a module
