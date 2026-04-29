@@ -230,7 +230,7 @@ type ShootStatus struct {
 	ManualWorkerPoolRollout *ManualWorkerPoolRollout `json:"manualWorkerPoolRollout,omitempty" protobuf:"bytes,21,opt,name=manualWorkerPoolRollout"`
 	// LiveMigration contains information about an ongoing live control plane migration of the Shoot.
 	// +optional
-	LiveMigration *ShootLiveMigration `json:"liveMigration,omitempty" protobuf:"bytes,22,opt,name=liveMigration"`
+	LiveMigration *LiveMigration `json:"liveMigration,omitempty" protobuf:"bytes,22,opt,name=liveMigration"`
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -363,8 +363,8 @@ type ManualWorkerPoolRollout struct {
 	PendingWorkersRollouts []PendingWorkersRollout `json:"pendingWorkersRollouts,omitempty" protobuf:"bytes,1,rep,name=pendingWorkersRollouts"`
 }
 
-// ShootLiveMigration contains information about an ongoing live migration of the Shoot control plane.
-type ShootLiveMigration struct {
+// LiveMigration contains information about an ongoing live migration of the Shoot control plane.
+type LiveMigration struct {
 	// Conditions represents the progress of the live migration, one condition per migration step.
 	// +patchMergeKey=type
 	// +patchStrategy=merge
@@ -2142,12 +2142,12 @@ const (
 	// ShootLiveMigrationDestinationEtcdPeersJoined indicates that destination etcd members
 	// have successfully joined the source etcd cluster.
 	ShootLiveMigrationDestinationEtcdPeersJoined ConditionType = "DestinationEtcdPeersJoined"
-	// ShootLiveMigrationMigrateExtensionsNeededBeforeKAPI indicates that extension resources
+	// ShootLiveMigrationMigrateExtensionsNeededBeforeKubeAPIServer indicates that extension resources
 	// required before the kube-apiserver have been migrated.
-	ShootLiveMigrationMigrateExtensionsNeededBeforeKAPI ConditionType = "MigrateExtensionsNeededBeforeKAPI"
-	// ShootLiveMigrationDestinationKAPIReady indicates that the destination kube-apiserver
+	ShootLiveMigrationMigrateExtensionsNeededBeforeKubeAPIServer ConditionType = "MigrateExtensionsNeededBeforeKubeAPIServer"
+	// ShootLiveMigrationDestinationKubeAPIServerReady indicates that the destination kube-apiserver
 	// is deployed and ready.
-	ShootLiveMigrationDestinationKAPIReady ConditionType = "DestinationKAPIReady"
+	ShootLiveMigrationDestinationKubeAPIServerReady ConditionType = "DestinationKubeAPIServerReady"
 	// ShootLiveMigrationMigrateDNSRecords indicates that DNS records have been updated
 	// to point to the destination seed.
 	ShootLiveMigrationMigrateDNSRecords ConditionType = "MigrateDNSRecords"

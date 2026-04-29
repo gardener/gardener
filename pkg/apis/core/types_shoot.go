@@ -173,7 +173,7 @@ type ShootStatus struct {
 	// ManualWorkerPoolRollout contains information about the worker pool rollout progress.
 	ManualWorkerPoolRollout *ManualWorkerPoolRollout
 	// LiveMigration contains information about an ongoing live control plane migration of the Shoot.
-	LiveMigration *ShootLiveMigration
+	LiveMigration *LiveMigration
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -280,8 +280,8 @@ type ManualWorkerPoolRollout struct {
 	PendingWorkersRollouts []PendingWorkersRollout
 }
 
-// ShootLiveMigration contains information about an ongoing live migration of the Shoot control plane.
-type ShootLiveMigration struct {
+// LiveMigration contains information about an ongoing live migration of the Shoot control plane.
+type LiveMigration struct {
 	// Conditions represents the progress of the live migration, one condition per migration step.
 	Conditions []Condition
 }
