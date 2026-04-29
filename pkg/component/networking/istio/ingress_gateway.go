@@ -105,7 +105,7 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 		// deployment.
 		extraEnvoyPodLabels := map[string]string{}
 		labels := maps.Clone(istioIngressGateway.Labels)
-		if v := istioIngressGateway.Labels[RoleKey]; v == RoleGarden {
+		if v, ok := istioIngressGateway.Labels[RoleKey]; ok {
 			// don't use the new label yet in namespaced selectors, but make sure it is added to every pod
 			extraEnvoyPodLabels[RoleKey] = v
 			delete(labels, RoleKey)
