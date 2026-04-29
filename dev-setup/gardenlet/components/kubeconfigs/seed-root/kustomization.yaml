@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+secretGenerator:
+- files:
+  - kubeconfig
+  name: seed-root
+  namespace: garden
+# enables gardenctl to work
+- files:
+  - kubeconfig
+  name: root.login
+  namespace: garden

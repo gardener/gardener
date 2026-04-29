@@ -41,10 +41,19 @@ SYSTEM_ARCH=$(kubectl get nodes -o yaml | yq '.items[0].status.nodeInfo.architec
 case "$COMMAND" in
   up)
     skaffold run \
-      -v debug \
       -m garden-config \
       --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" \
       --status-check=false --platform="linux/$SYSTEM_ARCH" # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
+
+    if [[ "$SCENARIO" == "multi-node-gardenadm" ]]; then
+      cp "$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER" "$(dirname "$0")/gardenlet/components/kubeconfigs/seed-root/kubeconfig"
+      # TODO(rfranzke): In the gardenadm (self-hosted shoot) scenario, the seed gardenlet is deployed via a
+      #  ManagedSeed (that gets reconciled by the already running shoot gardenlet). The ManagedSeed controller requires
+      #  the Shoot status to indicate successful reconciliation before it attempts to deploy something. As the
+      #  shoot/shoot controller is not yet activated in the shoot gardenlet, we have to manually manipulate the status
+      #  here. This can be removed once the shoot/shoot controller in the shoot gardenlet has been enabled.
+      kubectl --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" -n garden patch shoot root --subresource=status --type=merge --patch='{"status":{"lastOperation":{"state":"Succeeded"},"observedGeneration":1}}'
+    fi
 
     skaffold $skaffold_command \
       -m gardenlet \
@@ -59,9 +68,15 @@ case "$COMMAND" in
 
   down)
     skaffold --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" delete -m gardenlet
-    kubectl  --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" delete seed/"$gardenlet_name" --ignore-not-found --wait --timeout 5m
-    kubectl  -n garden delete deployment gardenlet --ignore-not-found
-    kubectl  -n garden delete secret gardenlet-kubeconfig --ignore-not-found
+
+    if [[ "$SCENARIO" == "multi-node-gardenadm" ]]; then
+      kubectl --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" -n garden wait managedseed/root --for=delete --timeout=5m || true
+    else
+      kubectl --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" delete seed/"$gardenlet_name" --ignore-not-found --wait --timeout 5m
+      kubectl -n garden delete deployment gardenlet --ignore-not-found
+    fi
+
+    kubectl -n garden delete secret gardenlet-kubeconfig --ignore-not-found
 
     if [[ "$SCENARIO" == "remote" ]]; then
       kubectl delete -k "$SCRIPT_DIR/remote/registry/kyverno-policies" --ignore-not-found

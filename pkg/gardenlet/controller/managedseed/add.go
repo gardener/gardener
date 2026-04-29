@@ -87,11 +87,20 @@ func (r *Reconciler) AddToManager(
 
 // SeedPredicate returns true when the Seed is a ManagedSeed controlled by this gardenlet. ManagedSeeds always have two
 // `name.seed.gardener.cloud/` labels, and since the cache for Seeds is already limited on manager.Manager level to only
-// contain Seeds relevant for this gardenlet, we can make this simple check here.
+// contain Seeds relevant for this gardenlet, we can make this simple check here. For self-hosted shoot clusters, there
+// is only one such label since the hosting seed is itself — in that case, the `seed.gardener.cloud/self-hosted-shoot-cluster`
+// label identifies the Seed as a ManagedSeed. The shoot gardenlet's Seed cache is restricted to only its own Seed, so
+// there is no risk of enqueuing unrelated Seeds.
 func (r *Reconciler) SeedPredicate() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(object client.Object) bool {
+		labels := object.GetLabels()
+
+		if labels[v1beta1constants.LabelSelfHostedShootCluster] == "true" {
+			return true
+		}
+
 		count := 0
-		for key := range object.GetLabels() {
+		for key := range labels {
 			if strings.HasPrefix(key, v1beta1constants.LabelPrefixSeedName) {
 				count++
 			}

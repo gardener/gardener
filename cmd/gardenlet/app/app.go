@@ -406,7 +406,9 @@ func (g *garden) Start(ctx context.Context) error {
 						}),
 						Namespaces: map[string]cache.Config{g.selfHostedShootInfo.Meta.Namespace: {}},
 					},
-					&gardencorev1beta1.Seed{}: {},
+					&gardencorev1beta1.Seed{}: {
+						Field: fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: g.selfHostedShootInfo.Meta.Name}),
+					},
 				}
 
 				return kubernetes.AggregatorCacheFunc(
@@ -420,7 +422,6 @@ func (g *garden) Start(ctx context.Context) error {
 						&corev1.ServiceAccount{}:                    kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ServiceAccount{}),
 						&gardencorev1.ControllerDeployment{}:        kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1.ControllerDeployment{}),
 						&gardencorev1beta1.ControllerRegistration{}: kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.ControllerRegistration{}),
-						&gardencorev1beta1.Seed{}:                   kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.Seed{}),
 						&corev1.Namespace{}:                         kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.Namespace{}),
 						&gardencorev1beta1.Project{}:                kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.Project{}),
 					},

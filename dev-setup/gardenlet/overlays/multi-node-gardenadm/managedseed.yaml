@@ -1,0 +1,69 @@
+apiVersion: seedmanagement.gardener.cloud/v1alpha1
+kind: ManagedSeed
+metadata:
+  name: root
+  namespace: garden
+spec:
+  shoot:
+    name: root # defined in /dev-setup/gardenadm/resources/base/shoot.yaml
+  gardenlet:
+    config:
+      apiVersion: gardenlet.config.gardener.cloud/v1alpha1
+      kind: GardenletConfiguration
+      seedConfig:
+        spec:
+          backup:
+            provider: local
+            region: local
+            credentialsRef:
+              apiVersion: v1
+              kind: Secret
+              name: backup-local
+              namespace: garden
+          provider:
+            type: local
+            region: local
+          dns:
+            provider:
+              type: local
+              credentialsRef:
+                apiVersion: v1
+                kind: Secret
+                name: internal-domain-internal-local-gardener-cloud
+                namespace: garden
+            internal:
+              credentialsRef:
+                apiVersion: v1
+                kind: Secret
+                name: internal-domain-internal-local-gardener-cloud
+                namespace: garden
+              type: local
+              domain: internal.local.gardener.cloud
+            defaults:
+              - credentialsRef:
+                  apiVersion: v1
+                  kind: Secret
+                  name: default-domain-external-local-gardener-cloud
+                  namespace: garden
+                type: local
+                domain: external.local.gardener.cloud
+          extensions:
+            - type: local-ext-seed
+          ingress:
+            domain: ingress.root.garden.external.local.gardener.cloud
+            controller:
+              kind: nginx
+          networks:
+            nodes: 172.18.0.0/24
+            pods: 10.0.0.0/15
+            services: 10.2.0.0/16
+            shootDefaults:
+              pods: 10.3.0.0/16
+              services: 10.4.0.0/16
+          settings:
+            excessCapacityReservation:
+              enabled: false
+            scheduling:
+              visible: true
+            verticalPodAutoscaler:
+              enabled: false

@@ -67,6 +67,18 @@ var _ = Describe("Add", func() {
 			Expect(p.Generic(event.TypedGenericEvent[client.Object]{Object: seed})).To(BeTrue())
 		})
 
+		It("should return true for self-hosted shoot clusters with a single name label", func() {
+			seed.Labels = map[string]string{
+				"name.seed.gardener.cloud/root":                 "true",
+				"seed.gardener.cloud/self-hosted-shoot-cluster": "true",
+			}
+
+			Expect(p.Create(event.TypedCreateEvent[client.Object]{Object: seed})).To(BeTrue())
+			Expect(p.Update(event.TypedUpdateEvent[client.Object]{ObjectNew: seed})).To(BeTrue())
+			Expect(p.Delete(event.TypedDeleteEvent[client.Object]{Object: seed})).To(BeTrue())
+			Expect(p.Generic(event.TypedGenericEvent[client.Object]{Object: seed})).To(BeTrue())
+		})
+
 		It("should return false", func() {
 			Expect(p.Create(event.TypedCreateEvent[client.Object]{Object: seed})).To(BeFalse())
 			Expect(p.Update(event.TypedUpdateEvent[client.Object]{ObjectNew: seed})).To(BeFalse())

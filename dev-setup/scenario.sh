@@ -68,6 +68,9 @@ function skaffold_profile() {
     multi-node)
       export SKAFFOLD_PROFILE="multi-node"
       ;;
+    multi-node-gardenadm)
+      export SKAFFOLD_PROFILE="multi-node-gardenadm"
+      ;;
     multi-node2)
       export SKAFFOLD_PROFILE="multi-node2"
       ;;
