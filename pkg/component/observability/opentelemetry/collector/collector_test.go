@@ -947,6 +947,9 @@ func getDestinationRule() *istionetworkingv1beta1.DestinationRule {
 						},
 						MaxConnectionDuration: &durationpb.Duration{Seconds: 86400},
 					},
+					Http: &istioapinetworkingv1beta1.ConnectionPoolSettings_HTTPSettings{
+						UseClientProtocol: true,
+					},
 				},
 				OutlierDetection: &istioapinetworkingv1beta1.OutlierDetection{},
 				Tls:              &istioapinetworkingv1beta1.ClientTLSSettings{},
