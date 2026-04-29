@@ -8,7 +8,7 @@ patches:
       - op: replace
         path: /spec/runtimeCluster/networking/nodes
         value:
-        - 10.0.0.0/16
+        - 172.18.0.0/24
       - op: replace
         path: /spec/runtimeCluster/networking/pods
         value:
