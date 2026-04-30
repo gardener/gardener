@@ -3,7 +3,7 @@ module github.com/gardener/gardener
 go 1.25.7
 
 require (
-	github.com/Masterminds/semver/v3 v3.4.0
+	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/VictoriaMetrics/operator/api v0.66.1
 	github.com/andybalholm/brotli v1.2.1
