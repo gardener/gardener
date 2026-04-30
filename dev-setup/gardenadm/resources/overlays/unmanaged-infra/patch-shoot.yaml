@@ -5,5 +5,13 @@ metadata:
   namespace: garden
 spec:
   networking:
-    # Must be within 172.18.0.0/24 (range of kind Docker network)
+    # Must be within 172.18.0.0/24 (range of kind Docker network), generally same settings as used in a kind cluster
     nodes: 172.18.0.0/24
+    pods: 10.0.0.0/15
+    services: 10.2.0.0/16
+    # Use calico-ipam so that pod IPs are allocated from the Calico IPPool rather than from the node's podCIDR.
+    providerConfig:
+      apiVersion: calico.networking.extensions.gardener.cloud/v1alpha1
+      kind: NetworkConfig
+      ipam:
+        type: calico-ipam

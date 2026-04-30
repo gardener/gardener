@@ -53,6 +53,4 @@ spec:
       failSwapOn: false # Swap is not supported in our kindest/node machine pods.
   networking:
     type: calico
-    pods: 10.3.0.0/16
-    services: 10.4.0.0/16
-  # nodes network range gets injected via patches in overlays based on scenario
+  # network ranges get injected via patches in overlays based on scenario

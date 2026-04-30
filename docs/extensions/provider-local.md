@@ -180,6 +180,16 @@ For the shoot clusters, this empty patch trigger is not needed since the `Mutati
 
 This webhook reacts on the `ConfigMap` used by the `kube-proxy` and sets the `maxPerCore` field to `0` since other values don't work well in conjunction with the `kindest/node` image which is used as base for the shoot worker machine pods ([ref](https://github.com/kubernetes-sigs/kind/blob/fa7d86470f4c0e924fc4c2e767ec8491c45f4304/pkg/cluster/internal/kubeadm/config.go#L283-L285)).
 
+#### Calico Self-Hosted Shoot
+
+This webhook is only active in self-hosted shoots with unmanaged infrastructure (gind).
+It mutates the `calico-node` `DaemonSet` in `kube-system` to set `CALICO_IPV4POOL_CIDR=10.1.0.0/16`, restricting Calico's default IP pool to a `/16` subnet of the full pod network (`10.0.0.0/15`).
+
+Background: The `Infrastructure` controller creates a dedicated Calico `IPPool` for shoot machine pods (e.g., `10.0.0.0/16`) that must not overlap with the seed's own pod CIDR.
+On a kind cluster, this is achieved by patching Calico at installation time (see `dev-setup/kind/calico/components/default-ip4-pool`).
+On a self-hosted shoot (where Calico is deployed by the networking-calico extension), this webhook achieves the same effect.
+Without this, the default pool would span the full pod network and Calico would assign machine pods IPs from the wrong range, causing calico-node inside hosted shoots to fail IP autodetection.
+
 ### cloud-controller-manager-local
 
 `Services` of type `LoadBalancer` in the local setup are handled by `cloud-controller-manager-local`, a dedicated cloud controller manager implementing the Kubernetes [`cloudprovider.LoadBalancer`](https://pkg.go.dev/k8s.io/cloud-provider#LoadBalancer) interface.

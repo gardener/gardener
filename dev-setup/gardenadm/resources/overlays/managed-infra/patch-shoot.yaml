@@ -13,3 +13,5 @@ spec:
   networking:
     # Must be within 10.0.0.0/16 (subnet of kind pod CIDR 10.0.0.0/15, but disjoint with seed pod CIDR 10.1.0.0/16).
     nodes: 10.0.0.0/16
+    pods: 10.3.0.0/16
+    services: 10.4.0.0/16
