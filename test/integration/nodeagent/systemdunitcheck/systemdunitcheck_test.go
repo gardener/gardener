@@ -302,6 +302,28 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		})))
 	})
 
+	It("should not report unhealthy for a disabled unit that is in a failed state", func() {
+		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
+			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+				Units: []extensionsv1alpha1.Unit{
+					{Name: "optional.service", Enable: ptr.To(false)},
+				},
+			},
+		})
+
+		fakeDBus.AddUnitsToList(
+			systemddbus.UnitStatus{Name: "optional.service", ActiveState: "failed"},
+		)
+
+		Eventually(func(g Gomega) *corev1.NodeCondition {
+			return getNodeCondition(g)
+		}).Should(PointTo(MatchFields(IgnoreExtras, Fields{
+			"Type":   Equal(nodeagentconfigv1alpha1.ConditionTypeSystemdUnitsReady),
+			"Status": Equal(corev1.ConditionTrue),
+			"Reason": Equal("AllUnitsHealthy"),
+		})))
+	})
+
 	It("should also monitor gardener-node-agent's own units", func() {
 		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
