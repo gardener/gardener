@@ -15,8 +15,6 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	corev1ac "k8s.io/client-go/applyconfigurations/core/v1"
-	discoveryv1ac "k8s.io/client-go/applyconfigurations/discovery/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -25,6 +23,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/provider-local/local"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
 type actuator struct {
@@ -36,31 +35,27 @@ func newActuator(mgr manager.Manager) selfhostedshootexposure.Actuator {
 }
 
 func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, exposure *extensionsv1alpha1.SelfHostedShootExposure, _ *extensionscontroller.Cluster) ([]corev1.LoadBalancerIngress, error) {
-	if err := a.client.Apply(ctx, serviceForExposure(exposure), local.FieldOwner, client.ForceOwnership); err != nil {
+	service := serviceForExposure(exposure)
+	if err := a.client.Patch(ctx, service, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 		return nil, fmt.Errorf("could not apply Service: %w", err)
 	}
 
 	for _, family := range endpointSliceFamilies {
-		if err := a.client.Apply(ctx, endpointSliceForExposure(exposure, family), local.FieldOwner, client.ForceOwnership); err != nil {
+		if err := a.client.Patch(ctx, endpointSliceForExposure(exposure, family), client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 			return nil, fmt.Errorf("could not apply %s EndpointSlice: %w", family, err)
 		}
 	}
 
-	liveService := &corev1.Service{}
-	if err := a.client.Get(ctx, client.ObjectKey{Name: serviceName(exposure), Namespace: exposure.Namespace}, liveService); err != nil {
-		return nil, fmt.Errorf("could not get Service: %w", err)
-	}
-
-	if len(liveService.Status.LoadBalancer.Ingress) == 0 {
-		log.Info("Waiting for LoadBalancer to get an external address")
+	// wait for LoadBalancer to be ready
+	if err := health.CheckService(service); err != nil {
 		return nil, &reconcilerutils.RequeueAfterError{
 			RequeueAfter: 5 * time.Second,
 			Cause:        fmt.Errorf("LoadBalancer not yet ready"),
 		}
 	}
 
+	return service.Status.LoadBalancer.Ingress, nil
 	log.Info("LoadBalancer ready", "ingress", liveService.Status.LoadBalancer.Ingress)
-	return liveService.Status.LoadBalancer.Ingress, nil
 }
 
 func (a *actuator) Delete(ctx context.Context, _ logr.Logger, exposure *extensionsv1alpha1.SelfHostedShootExposure, _ *extensionscontroller.Cluster) error {
@@ -86,22 +81,31 @@ func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, exposure *e
 // On single-stack clusters the non-matching slice is empty and ignored.
 var endpointSliceFamilies = []discoveryv1.AddressType{discoveryv1.AddressTypeIPv4, discoveryv1.AddressTypeIPv6}
 
-func serviceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposure) *corev1ac.ServiceApplyConfiguration {
-	return corev1ac.Service(serviceName(exposure), exposure.Namespace).
-		WithSpec(corev1ac.ServiceSpec().
-			WithType(corev1.ServiceTypeLoadBalancer).
-			WithIPFamilyPolicy(corev1.IPFamilyPolicyPreferDualStack).
-			WithPorts(corev1ac.ServicePort().
-				WithName("https").
-				WithPort(exposure.Spec.Port).
-				WithTargetPort(intstr.FromInt32(exposure.Spec.Port)).
-				WithProtocol(corev1.ProtocolTCP),
-			),
-		)
+func serviceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposure) *corev1.Service {
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      serviceName(exposure),
+			Namespace: exposure.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Type:           corev1.ServiceTypeLoadBalancer,
+			IPFamilyPolicy: ptr.To(corev1.IPFamilyPolicyPreferDualStack),
+			Ports: []corev1.ServicePort{{
+				Name:       "https",
+				Port:       exposure.Spec.Port,
+				TargetPort: intstr.FromInt32(exposure.Spec.Port),
+				Protocol:   corev1.ProtocolTCP,
+			}},
+		},
+	}
 }
 
-func endpointSliceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposure, family discoveryv1.AddressType) *discoveryv1ac.EndpointSliceApplyConfiguration {
-	var endpoints []*discoveryv1ac.EndpointApplyConfiguration
+func endpointSliceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposure, family discoveryv1.AddressType) *discoveryv1.EndpointSlice {
+	var endpoints []discoveryv1.Endpoint
 	for _, endpoint := range exposure.Spec.Endpoints {
 		for _, address := range endpoint.Addresses {
 			if address.Type != corev1.NodeInternalIP {
@@ -111,23 +115,34 @@ func endpointSliceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposu
 			if isIPv6 != (family == discoveryv1.AddressTypeIPv6) {
 				continue
 			}
-			endpoints = append(endpoints, discoveryv1ac.Endpoint().
-				WithAddresses(address.Address).
-				WithNodeName(endpoint.NodeName).
-				WithConditions(discoveryv1ac.EndpointConditions().WithReady(true)),
-			)
+			endpoints = append(endpoints, discoveryv1.Endpoint{
+				Addresses: []string{address.Address},
+				NodeName:  ptr.To(endpoint.NodeName),
+				Conditions: discoveryv1.EndpointConditions{
+					Ready: ptr.To(true),
+				},
+			})
 		}
 	}
 
-	return discoveryv1ac.EndpointSlice(endpointSliceName(exposure, family), exposure.Namespace).
-		WithLabels(map[string]string{discoveryv1.LabelServiceName: serviceName(exposure)}).
-		WithAddressType(family).
-		WithEndpoints(endpoints...).
-		WithPorts(discoveryv1ac.EndpointPort().
-			WithName("https").
-			WithPort(exposure.Spec.Port).
-			WithProtocol(corev1.ProtocolTCP),
-		)
+	return &discoveryv1.EndpointSlice{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "discovery.k8s.io/v1",
+			Kind:       "EndpointSlice",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      endpointSliceName(exposure, family),
+			Namespace: exposure.Namespace,
+			Labels:    map[string]string{discoveryv1.LabelServiceName: serviceName(exposure)},
+		},
+		AddressType: family,
+		Endpoints:   endpoints,
+		Ports: []discoveryv1.EndpointPort{{
+			Name:     ptr.To("https"),
+			Port:     ptr.To(exposure.Spec.Port),
+			Protocol: ptr.To(corev1.ProtocolTCP),
+		}},
+	}
 }
 
 func serviceName(exposure *extensionsv1alpha1.SelfHostedShootExposure) string {
