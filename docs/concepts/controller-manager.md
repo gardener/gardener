@@ -142,6 +142,9 @@ This loop also watches the `Seed` or `Shoot` objects and adds finalizers to them
 If a `.metadata.deletionTimestamp` is set for the object, then the controller checks for existing `ControllerInstallation` objects which reference this `Seed` or `Shoot`.
 If no such objects exist, then it removes the finalizer and allows the deletion.
 
+For `Seed`s, the controller also watches for updates to `ControllerInstallation` objects where `.spec.seedRef` is cleared.
+This is necessary because for self-hosted shoot seeds, the seed reconciler clears `.spec.seedRef` on shoot-owned `ControllerInstallation`s instead of deleting them (keeping the resource intact for the shoot gardenlet).
+
 #### ["Extension `ClusterRole`" Reconciler](../../pkg/controllermanager/controller/controllerregistration/extensionclusterrole)
 
 This reconciler watches two resources in the garden cluster:

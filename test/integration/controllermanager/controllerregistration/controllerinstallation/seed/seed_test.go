@@ -1064,6 +1064,116 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 				g.Expect(ci.Spec.ShootRef).NotTo(BeNil(), "spec.shootRef must remain for the shoot gardenlet")
 			}).Should(Succeed())
 		})
+
+		It("should release the cluster finalizer on the seed when .spec.seedRef is cleared from ControllerInstallations", func() {
+			clearFinalizerType := "clear-finalizer-ext"
+
+			By("Update self-hosted Shoot to require the extension")
+			shootPatch := client.MergeFrom(selfHostedShoot.DeepCopy())
+			selfHostedShoot.Spec.Extensions = append(selfHostedShoot.Spec.Extensions, gardencorev1beta1.Extension{Type: clearFinalizerType})
+			Expect(testClient.Patch(ctx, selfHostedShoot, shootPatch)).To(Succeed())
+
+			By("Create ControllerRegistration for the extension")
+			finalizerControllerRegistration := &gardencorev1beta1.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "ctrlreg-clear-finalizer-",
+					Labels:       map[string]string{testID: testRunID},
+				},
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Resources: []gardencorev1beta1.ControllerResource{
+						{
+							Kind:                extensionsv1alpha1.ExtensionResource,
+							Type:                clearFinalizerType,
+							WorkerlessSupported: ptr.To(true),
+						},
+					},
+				},
+			}
+			Expect(testClient.Create(ctx, finalizerControllerRegistration)).To(Succeed())
+
+			DeferCleanup(func() {
+				By("Revert self-hosted Shoot extensions")
+				shootRevert := client.MergeFrom(selfHostedShoot.DeepCopy())
+				selfHostedShoot.Spec.Extensions = []gardencorev1beta1.Extension{{Type: selfHostedProviderType}}
+				Expect(testClient.Patch(ctx, selfHostedShoot, shootRevert)).To(Or(Succeed(), BeNotFoundError()))
+
+				By("Wait for the ControllerInstallation to be cleaned up")
+				Eventually(func(g Gomega) {
+					controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+					g.Expect(mgrClient.List(ctx, controllerInstallationList, client.MatchingFields{
+						core.RegistrationRefName: finalizerControllerRegistration.Name,
+					})).To(Succeed())
+					g.Expect(controllerInstallationList.Items).To(BeEmpty())
+				}).Should(Succeed())
+
+				By("Delete ControllerRegistration")
+				Expect(testClient.Delete(ctx, finalizerControllerRegistration)).To(Or(Succeed(), BeNotFoundError()))
+
+				By("Wait until manager has observed ControllerRegistration deletion")
+				Eventually(func() error {
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(finalizerControllerRegistration), finalizerControllerRegistration)
+				}).Should(BeNotFoundError())
+			})
+
+			By("Expect shoot-owned ControllerInstallation to be created")
+			Eventually(func(g Gomega) {
+				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
+					core.RegistrationRefName: finalizerControllerRegistration.Name,
+					core.ShootRefName:        selfHostedSeedName,
+					core.ShootRefNamespace:   v1beta1constants.GardenNamespace,
+				})).To(Succeed())
+				g.Expect(controllerInstallationList.Items).To(HaveLen(1))
+			}).Should(Succeed())
+
+			By("Enable the extension on the seed")
+			seedPatch := client.MergeFrom(selfHostedSeed.DeepCopy())
+			selfHostedSeed.Spec.Extensions = []gardencorev1beta1.Extension{{Type: clearFinalizerType}}
+			Expect(testClient.Patch(ctx, selfHostedSeed, seedPatch)).To(Succeed())
+
+			By("Wait for seed reconciler to patch .spec.seedRef")
+			Eventually(func(g Gomega) {
+				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
+					core.RegistrationRefName: finalizerControllerRegistration.Name,
+					core.SeedRefName:         selfHostedSeedName,
+				})).To(Succeed())
+				g.Expect(controllerInstallationList.Items).To(HaveLen(1))
+			}).Should(Succeed())
+
+			By("Verify cluster finalizer is on the seed")
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(selfHostedSeed), selfHostedSeed)).To(Succeed())
+			Expect(selfHostedSeed.Finalizers).To(ContainElement("core.gardener.cloud/controllerregistration"))
+
+			By("Delete the self-hosted seed (triggers seed reconciler to clear .spec.seedRef on CIs)")
+			Expect(testClient.Delete(ctx, selfHostedSeed)).To(Succeed())
+
+			By("Expect the cluster finalizer to be released even though the ControllerInstallation still exists (with only .spec.shootRef)")
+			Eventually(func(g Gomega) {
+				err := testClient.Get(ctx, client.ObjectKeyFromObject(selfHostedSeed), selfHostedSeed)
+				g.Expect(err).To(BeNotFoundError())
+			}).Should(Succeed())
+
+			By("Re-create the self-hosted seed for other tests")
+			selfHostedSeed = seed.DeepCopy()
+			selfHostedSeed.Name = selfHostedSeedName
+			selfHostedSeed.ResourceVersion = ""
+			selfHostedSeed.Labels = map[string]string{
+				testID: testRunID,
+				v1beta1constants.LabelSelfHostedShootCluster: "true",
+			}
+			selfHostedSeed.Spec.DNS.Internal = &gardencorev1beta1.SeedDNSProviderConfig{
+				Type:   providerType,
+				Domain: "internal.example.com",
+				CredentialsRef: corev1.ObjectReference{
+					APIVersion: "v1",
+					Kind:       "Secret",
+					Name:       internalDomainSecret.Name,
+					Namespace:  gardenerutils.ComputeGardenNamespace(selfHostedSeedName),
+				},
+			}
+			Expect(testClient.Create(ctx, selfHostedSeed)).To(Succeed())
+		})
 	})
 
 	Context("ControllerRegistration w/o resources but deploy policy", func() {

@@ -11,6 +11,9 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -19,61 +22,126 @@ import (
 
 var _ = Describe("Add", func() {
 	var (
-		ctx context.Context
-
-		controllerInstallation *gardencorev1beta1.ControllerInstallation
+		ctx   context.Context
+		queue workqueue.TypedRateLimitingInterface[reconcile.Request]
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
-
-		controllerInstallation = &gardencorev1beta1.ControllerInstallation{}
+		queue = workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]())
 	})
 
-	Describe("#MapControllerInstallationToSeed", func() {
-		var seedName string
+	Describe("#ControllerInstallationEventHandlerForSeed", func() {
+		var hdlr handler.EventHandler
 
 		BeforeEach(func() {
-			seedName = "seed-1"
-			controllerInstallation = &gardencorev1beta1.ControllerInstallation{
+			hdlr = ControllerInstallationEventHandlerForSeed()
+		})
+
+		It("should enqueue the seed on delete when seedRef is set", func() {
+			controllerInstallation := &gardencorev1beta1.ControllerInstallation{
 				Spec: gardencorev1beta1.ControllerInstallationSpec{
-					SeedRef: &corev1.ObjectReference{
-						Name: seedName,
-					},
+					SeedRef: &corev1.ObjectReference{Name: "seed-1"},
 				},
 			}
+
+			hdlr.Delete(ctx, event.DeleteEvent{Object: controllerInstallation}, queue)
+
+			Expect(queue.Len()).To(Equal(1))
+			item, _ := queue.Get()
+			Expect(item).To(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: "seed-1"}}))
 		})
 
-		It("should return a request with the seed name", func() {
-			Expect(MapControllerInstallationToSeed(ctx, controllerInstallation)).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}}))
+		It("should not enqueue on delete when seedRef is nil", func() {
+			controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
+
+			hdlr.Delete(ctx, event.DeleteEvent{Object: controllerInstallation}, queue)
+
+			Expect(queue.Len()).To(Equal(0))
 		})
 
-		It("should return nil when object is not a ControllerInstallation", func() {
-			Expect(MapControllerInstallationToSeed(ctx, nil)).To(BeNil())
+		It("should enqueue the seed on update when seedRef was cleared", func() {
+			oldControllerInstallation := &gardencorev1beta1.ControllerInstallation{
+				Spec: gardencorev1beta1.ControllerInstallationSpec{
+					SeedRef: &corev1.ObjectReference{Name: "seed-1"},
+				},
+			}
+			newControllerInstallation := &gardencorev1beta1.ControllerInstallation{}
+
+			hdlr.Update(ctx, event.UpdateEvent{ObjectOld: oldControllerInstallation, ObjectNew: newControllerInstallation}, queue)
+
+			Expect(queue.Len()).To(Equal(1))
+			item, _ := queue.Get()
+			Expect(item).To(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: "seed-1"}}))
+		})
+
+		It("should not enqueue on update when seedRef was not cleared", func() {
+			oldControllerInstallation := &gardencorev1beta1.ControllerInstallation{
+				Spec: gardencorev1beta1.ControllerInstallationSpec{
+					SeedRef: &corev1.ObjectReference{Name: "seed-1"},
+				},
+			}
+			newControllerInstallation := &gardencorev1beta1.ControllerInstallation{
+				Spec: gardencorev1beta1.ControllerInstallationSpec{
+					SeedRef: &corev1.ObjectReference{Name: "seed-1"},
+				},
+			}
+
+			hdlr.Update(ctx, event.UpdateEvent{ObjectOld: oldControllerInstallation, ObjectNew: newControllerInstallation}, queue)
+
+			Expect(queue.Len()).To(Equal(0))
+		})
+
+		It("should not enqueue on update when old seedRef is nil", func() {
+			oldControllerInstallation := &gardencorev1beta1.ControllerInstallation{}
+			newControllerInstallation := &gardencorev1beta1.ControllerInstallation{}
+
+			hdlr.Update(ctx, event.UpdateEvent{ObjectOld: oldControllerInstallation, ObjectNew: newControllerInstallation}, queue)
+
+			Expect(queue.Len()).To(Equal(0))
 		})
 	})
 
-	Describe("#MapControllerInstallationToShoot", func() {
-		var shootName, shootNamespace string
+	Describe("#ControllerInstallationEventHandlerForShoot", func() {
+		var hdlr handler.EventHandler
 
 		BeforeEach(func() {
-			shootName, shootNamespace = "shoot-1-name", "shoot-1-namespace"
-			controllerInstallation = &gardencorev1beta1.ControllerInstallation{
+			hdlr = ControllerInstallationEventHandlerForShoot()
+		})
+
+		It("should enqueue the shoot on delete when shootRef is set", func() {
+			controllerInstallation := &gardencorev1beta1.ControllerInstallation{
 				Spec: gardencorev1beta1.ControllerInstallationSpec{
-					ShootRef: &corev1.ObjectReference{
-						Name:      shootName,
-						Namespace: shootNamespace,
-					},
+					ShootRef: &corev1.ObjectReference{Name: "shoot-1", Namespace: "garden-project"},
 				},
 			}
+
+			hdlr.Delete(ctx, event.DeleteEvent{Object: controllerInstallation}, queue)
+
+			Expect(queue.Len()).To(Equal(1))
+			item, _ := queue.Get()
+			Expect(item).To(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: "shoot-1", Namespace: "garden-project"}}))
 		})
 
-		It("should return a request with the shoot name", func() {
-			Expect(MapControllerInstallationToShoot(ctx, controllerInstallation)).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: shootName, Namespace: shootNamespace}}))
+		It("should not enqueue on delete when shootRef is nil", func() {
+			controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
+
+			hdlr.Delete(ctx, event.DeleteEvent{Object: controllerInstallation}, queue)
+
+			Expect(queue.Len()).To(Equal(0))
 		})
 
-		It("should return nil when object is not a ControllerInstallation", func() {
-			Expect(MapControllerInstallationToShoot(ctx, nil)).To(BeNil())
+		It("should not enqueue on update events", func() {
+			oldControllerInstallation := &gardencorev1beta1.ControllerInstallation{
+				Spec: gardencorev1beta1.ControllerInstallationSpec{
+					ShootRef: &corev1.ObjectReference{Name: "shoot-1", Namespace: "garden-project"},
+				},
+			}
+			newControllerInstallation := &gardencorev1beta1.ControllerInstallation{}
+
+			hdlr.Update(ctx, event.UpdateEvent{ObjectOld: oldControllerInstallation, ObjectNew: newControllerInstallation}, queue)
+
+			Expect(queue.Len()).To(Equal(0))
 		})
 	})
 })

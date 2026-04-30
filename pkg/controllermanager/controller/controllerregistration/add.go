@@ -29,7 +29,7 @@ func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.Contr
 		NewControllerInstallationSelector: func(obj client.Object) client.MatchingFields {
 			return client.MatchingFields{core.SeedRefName: obj.GetName()}
 		},
-	}).AddToManager(mgr, clusterfinalizer.MapControllerInstallationToSeed, "seed"); err != nil {
+	}).AddToManager(mgr, clusterfinalizer.ControllerInstallationEventHandlerForSeed(), "seed"); err != nil {
 		return fmt.Errorf("failed adding cluster finalizer reconciler for Seeds: %w", err)
 	}
 
@@ -40,7 +40,7 @@ func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.Contr
 		NewControllerInstallationSelector: func(obj client.Object) client.MatchingFields {
 			return client.MatchingFields{core.ShootRefName: obj.GetName(), core.ShootRefNamespace: obj.GetNamespace()}
 		},
-	}).AddToManager(mgr, clusterfinalizer.MapControllerInstallationToShoot, "shoot"); err != nil {
+	}).AddToManager(mgr, clusterfinalizer.ControllerInstallationEventHandlerForShoot(), "shoot"); err != nil {
 		return fmt.Errorf("failed adding cluster finalizer reconciler for Shoots: %w", err)
 	}
 
