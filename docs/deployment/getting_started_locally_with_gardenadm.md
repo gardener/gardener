@@ -70,7 +70,7 @@ Your Shoot cluster control-plane has initialized successfully!
 | `machines` | Only starts the machine containers and installs `gardenadm`, but doesn't run it.                                                                           |
 | `default`  | Like `machines`, but also runs `gardenadm init` and exports the kubeconfig for the self-hosted shoot. This is the default when no `SCENARIO` is specified. |
 | `join`     | Like `default`, but also runs `gardenadm join` on `gind-machine-1` to join it as a worker node.                                                            |
-| `full`     | Like `join`, but also deploys Gardener into the self-hosted shoot and runs `gardenadm connect` to deploy gardenlet which registers the `Shoot`.            |
+| `connect`  | Like `join`, but also deploys Gardener into the self-hosted shoot and runs `gardenadm connect` to deploy gardenlet which registers the `Shoot`.            |
 
 > [!TIP]
 > You can pass `FAST=true` to skip switching etcd management to etcd-druid and keep `gardener-resource-manager` and extensions in the host network.
@@ -146,7 +146,7 @@ gind-machine-0   Ready    control-plane   7m15s   v1.34.3
 ### Joining a Worker Node
 
 > [!TIP]
-> This step is automated when using `make gind-up SCENARIO=join` or `make gind-up SCENARIO=full`.
+> This step is automated when using `make gind-up SCENARIO=join` or `make gind-up SCENARIO=connect`.
 
 If you would like to join a worker node to the cluster manually, generate a bootstrap token and the corresponding `gardenadm join` command on `gind-machine-0` (the control plane node).
 Then exec into the `gind-machine-1` container to run the command:
@@ -250,7 +250,7 @@ make kind-down
 ## Connecting the Self-Hosted Shoot Cluster to Gardener
 
 > [!TIP]
-> For the unmanaged infrastructure scenario, this step is automated when using `make gind-up SCENARIO=full`.
+> For the unmanaged infrastructure scenario, this step is automated when using `make gind-up SCENARIO=connect`.
 
 After you have successfully bootstrapped a self-hosted shoot cluster (either via the [unmanaged infrastructure](#unmanaged-infrastructure-scenario) or the [managed infrastructure](#managed-infrastructure-scenario) scenario), you can connect it to an existing Gardener system.
 For this, you need to deploy Gardener to your self-hosted shoot cluster.
