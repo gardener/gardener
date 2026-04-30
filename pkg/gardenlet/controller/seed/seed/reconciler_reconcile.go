@@ -171,7 +171,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	log.Info("Instantiating component deployers")
-	c, err := r.instantiateComponents(ctx, log, seed, secretsManager, seedIsGarden, globalMonitoringSecretSeed, alertingSMTPSecret, wildcardCertSecret, seedIsShoot)
+	c, err := r.instantiateComponents(ctx, log, seed, secretsManager, seedIsGarden, globalMonitoringSecretSeed, alertingSMTPSecret, wildcardCertSecret, seedIsShoot, seedIsSelfHostedShoot)
 	if err != nil {
 		return err
 	}
@@ -186,16 +186,25 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return fmt.Errorf("failed retrieving controller registrations: %w", err)
 	}
 
+	// When the seed is a self-hosted shoot with managed infrastructure, the machine CRDs are already deployed by
+	// gardenadm init. For unmanaged infrastructure, they are not, so the seed gardenlet must deploy them.
+	selfHostedShootWithManagedInfrastructure, err := selfHostedShootHasManagedInfrastructure(ctx, r.SeedClientSet.Client(), seedIsSelfHostedShoot)
+	if err != nil {
+		return fmt.Errorf("failed to determine whether the seed is a self-hosted shoot with managed infrastructure: %w", err)
+	}
+
 	var (
 		g = flow.NewGraph("Seed reconciliation")
 
 		deployMachineCRDs = g.Add(flow.Task{
-			Name: "Deploying machine-related custom resource definitions",
-			Fn:   component.OpWait(c.machineCRD).Deploy,
+			Name:   "Deploying machine-related custom resource definitions",
+			Fn:     component.OpWait(c.machineCRD).Deploy,
+			SkipIf: selfHostedShootWithManagedInfrastructure,
 		})
 		deployExtensionCRDs = g.Add(flow.Task{
-			Name: "Deploying extensions-related custom resource definitions",
-			Fn:   component.OpWait(c.extensionCRD).Deploy,
+			Name:   "Deploying extensions-related custom resource definitions",
+			Fn:     component.OpWait(c.extensionCRD).Deploy,
+			SkipIf: seedIsSelfHostedShoot,
 		})
 		deployEtcdCRDs = g.Add(flow.Task{
 			Name:   "Deploying ETCD-related custom resource definitions",
@@ -210,17 +219,17 @@ func (r *Reconciler) runReconcileSeedFlow(
 		deployVPACRDs = g.Add(flow.Task{
 			Name:   "Deploying VPA-related custom resource definitions",
 			Fn:     component.OpWait(c.vpaCRD).Deploy,
-			SkipIf: seedIsGarden || !vpaEnabled(seed.GetInfo().Spec.Settings),
+			SkipIf: seedIsGarden || seedIsSelfHostedShoot || !vpaEnabled(seed.GetInfo().Spec.Settings),
 		})
 		deployFluentCRDs = g.Add(flow.Task{
 			Name:   "Deploying logging-related custom resource definitions",
 			Fn:     component.OpWait(c.fluentCRD).Deploy,
-			SkipIf: seedIsGarden,
+			SkipIf: seedIsGarden || seedIsSelfHostedShoot,
 		})
 		deployPrometheusCRDs = g.Add(flow.Task{
 			Name:   "Deploying Prometheus-related custom resource definitions",
 			Fn:     component.OpWait(c.prometheusCRD).Deploy,
-			SkipIf: seedIsGarden,
+			SkipIf: seedIsGarden || seedIsSelfHostedShoot,
 		})
 		deployPersesCRDs = g.Add(flow.Task{
 			Name:   "Deploying Perses-related custom resource definitions",

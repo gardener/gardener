@@ -6,6 +6,7 @@ package seed_test
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -367,7 +368,7 @@ var _ = Describe("Seed controller tests", func() {
 		})
 	})
 
-	Context("when seed namespace does not exist", func() {
+	When("seed namespace does not exist", func() {
 		It("should set the last operation to 'Error'", func() {
 			By("Wait for 'last operation' state to be set to Error")
 			Eventually(func(g Gomega) {
@@ -379,7 +380,7 @@ var _ = Describe("Seed controller tests", func() {
 		})
 	})
 
-	Context("when seed namespace exists", func() {
+	When("seed namespace exists", func() {
 		// Typically, GCM creates the seed-specific namespace, but it doesn't run in this test, hence we have to do it.
 		var seedNamespace *corev1.Namespace
 
@@ -415,7 +416,7 @@ var _ = Describe("Seed controller tests", func() {
 			)
 		})
 
-		Context("when global monitoring secret does not exist", func() {
+		When("global monitoring secret does not exist", func() {
 			It("should set the last operation to 'Error'", func() {
 				By("Wait for 'last operation' state to be set to Error")
 				Eventually(func(g Gomega) {
@@ -427,7 +428,7 @@ var _ = Describe("Seed controller tests", func() {
 			})
 		})
 
-		Context("when global monitoring secret exists", func() {
+		When("global monitoring secret exists", func() {
 			// Typically, GCM creates the global monitoring secret, but it doesn't run in this test, hence we have to do it.
 			var globalMonitoringSecret *corev1.Secret
 
@@ -856,7 +857,7 @@ var _ = Describe("Seed controller tests", func() {
 				test(false)
 			})
 
-			Context("when seed cluster is garden cluster at the same time", func() {
+			When("seed cluster is garden cluster at the same time", func() {
 				BeforeEach(func() {
 					By("Create Garden")
 					garden := &operatorv1alpha1.Garden{
@@ -922,6 +923,234 @@ var _ = Describe("Seed controller tests", func() {
 
 				It("should not manage components managed by gardener-operator", func() {
 					test(true)
+				})
+			})
+
+			When("seed cluster is a self-hosted shoot", func() {
+				BeforeEach(func() {
+					By("Label kube-system namespace to indicate self-hosted shoot")
+					kubeSystemNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kube-system"}}
+					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(kubeSystemNamespace), kubeSystemNamespace)).To(Succeed())
+					patch := client.MergeFrom(kubeSystemNamespace.DeepCopy())
+					metav1.SetMetaDataLabel(&kubeSystemNamespace.ObjectMeta, "gardener.cloud/role", "shoot")
+					Expect(testClient.Patch(ctx, kubeSystemNamespace, patch)).To(Succeed())
+
+					DeferCleanup(func() {
+						By("Remove self-hosted shoot label from kube-system namespace")
+						kubeSystemNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kube-system"}}
+						Expect(testClient.Get(ctx, client.ObjectKeyFromObject(kubeSystemNamespace), kubeSystemNamespace)).To(Succeed())
+						patch := client.MergeFrom(kubeSystemNamespace.DeepCopy())
+						delete(kubeSystemNamespace.Labels, "gardener.cloud/role")
+						Expect(testClient.Patch(ctx, kubeSystemNamespace, patch)).To(Succeed())
+					})
+
+					By("Wait until the manager cache observes the kube-system label")
+					Eventually(func(g Gomega) map[string]string {
+						ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kube-system"}}
+						g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(ns), ns)).To(Succeed())
+						return ns.Labels
+					}).Should(HaveKeyWithValue("gardener.cloud/role", "shoot"))
+
+					By("Create shoot-info ConfigMap in kube-system")
+					shootInfoCM := &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "shoot-info",
+							Namespace: "kube-system",
+						},
+						Data: map[string]string{"projectNamespace": "garden-local"},
+					}
+					Expect(testClient.Create(ctx, shootInfoCM)).To(Succeed())
+					DeferCleanup(func() {
+						Expect(client.IgnoreNotFound(testClient.Delete(ctx, shootInfoCM))).To(Succeed())
+					})
+
+					By("Create Cluster resource in kube-system namespace with managed infrastructure Shoot")
+					shoot := &gardencorev1beta1.Shoot{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "core.gardener.cloud/v1beta1",
+							Kind:       "Shoot",
+						},
+						Spec: gardencorev1beta1.ShootSpec{
+							CredentialsBindingName: ptr.To("my-credentials"),
+						},
+					}
+					shootRaw, err := json.Marshal(shoot)
+					Expect(err).NotTo(HaveOccurred())
+
+					cluster := &extensionsv1alpha1.Cluster{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "kube-system",
+						},
+						Spec: extensionsv1alpha1.ClusterSpec{
+							CloudProfile: runtime.RawExtension{Raw: []byte("{}")},
+							Seed:         runtime.RawExtension{Raw: []byte("{}")},
+							Shoot:        runtime.RawExtension{Raw: shootRaw},
+						},
+					}
+					Expect(testClient.Create(ctx, cluster)).To(Succeed())
+					DeferCleanup(func() {
+						Expect(client.IgnoreNotFound(testClient.Delete(ctx, cluster))).To(Succeed())
+					})
+
+					By("Pre-deploy CRDs that gardenadm init would deploy")
+					var (
+						applier                  = kubernetes.NewApplier(testClient, testClient.RESTMapper())
+						managedResourceCRDReader = kubernetes.NewManifestReader([]byte(managedResourcesCRD))
+					)
+					istioCRDs, err := istio.NewCRD(testClient)
+					Expect(err).NotTo(HaveOccurred())
+					vpaCRD, err := vpa.NewCRD(testClient, nil)
+					Expect(err).NotTo(HaveOccurred())
+					fluentCRD, err := fluentoperator.NewCRDs(testClient)
+					Expect(err).NotTo(HaveOccurred())
+					prometheusCRD, err := prometheusoperator.NewCRDs(testClient)
+					Expect(err).NotTo(HaveOccurred())
+					persesCRD, err := persesoperator.NewCRDs(testClient)
+					Expect(err).NotTo(HaveOccurred())
+					victoriaCRD, err := victoriaoperator.NewCRDs(testClient)
+					Expect(err).NotTo(HaveOccurred())
+					extensionCRD, err := extensionscrds.NewCRD(testClient, true, false)
+					Expect(err).NotTo(HaveOccurred())
+					openTelemetryCRD, err := opentelemetryoperator.NewCRDs(testClient)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(applier.ApplyManifest(ctx, managedResourceCRDReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
+					Expect(component.OpWait(istioCRDs).Deploy(ctx)).To(Succeed())
+					Expect(component.OpWait(vpaCRD).Deploy(ctx)).To(Succeed())
+					Expect(component.OpWait(fluentCRD).Deploy(ctx)).To(Succeed())
+					Expect(component.OpWait(prometheusCRD).Deploy(ctx)).To(Succeed())
+					Expect(component.OpWait(persesCRD).Deploy(ctx)).To(Succeed())
+					Expect(component.OpWait(victoriaCRD).Deploy(ctx)).To(Succeed())
+					Expect(component.OpWait(extensionCRD).Deploy(ctx)).To(Succeed())
+					Expect(component.OpWait(openTelemetryCRD).Deploy(ctx)).To(Succeed())
+
+					DeferCleanup(func() {
+						Expect(applier.DeleteManifest(ctx, managedResourceCRDReader)).To(Succeed())
+						Expect(istioCRDs.Destroy(ctx)).To(Succeed())
+						Expect(vpaCRD.Destroy(ctx)).To(Succeed())
+						Expect(fluentCRD.Destroy(ctx)).To(Succeed())
+						Expect(prometheusCRD.Destroy(ctx)).To(Succeed())
+						Expect(persesCRD.Destroy(ctx)).To(Succeed())
+						Expect(victoriaCRD.Destroy(ctx)).To(Succeed())
+						Expect(extensionCRD.Destroy(ctx)).To(Succeed())
+						Expect(openTelemetryCRD.Destroy(ctx)).To(Succeed())
+					})
+				})
+
+				It("should not manage components managed by the shoot gardenlet", func() {
+					By("Wait for Seed to have finalizer")
+					Eventually(func(g Gomega) []string {
+						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+						return seed.Finalizers
+					}).Should(ConsistOf("gardener"))
+
+					By("Wait for 'last operation' state to be set to Processing")
+					Eventually(func(g Gomega) {
+						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+						g.Expect(seed.Status.LastOperation).NotTo(BeNil())
+						g.Expect(seed.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateProcessing))
+					}).Should(Succeed())
+
+					By("Verify that VPA was created for gardenlet")
+					Eventually(func() error {
+						return testClient.Get(ctx, client.ObjectKey{Name: "gardenlet-vpa", Namespace: testNamespace.Name}, &vpaautoscalingv1.VerticalPodAutoscaler{})
+					}).WithTimeout(kubernetesutils.WaitTimeout).Should(Succeed())
+
+					patchMRHealth := func(mrName string) {
+						By("Patch " + mrName + " managed resource to report healthiness")
+						Eventually(func(g Gomega) {
+							mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: mrName, Namespace: testNamespace.Name}}
+							g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
+
+							patch := client.MergeFrom(mr.DeepCopy())
+							mr.Status.ObservedGeneration = mr.Generation
+							mr.Status.Conditions = []gardencorev1beta1.Condition{
+								{Type: resourcesv1alpha1.ResourcesApplied, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.NewTime(time.Unix(10, 0)), LastUpdateTime: metav1.NewTime(time.Unix(10, 0))},
+								{Type: resourcesv1alpha1.ResourcesHealthy, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.NewTime(time.Unix(10, 0)), LastUpdateTime: metav1.NewTime(time.Unix(10, 0))},
+							}
+							g.Expect(testClient.Status().Patch(ctx, mr, patch)).To(Succeed())
+						}).Should(Succeed())
+					}
+
+					patchMRHealth("plutono")
+					patchMRHealth("prometheus-aggregate")
+
+					controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
+					Expect(testClient.List(ctx, controllerRegistrationList)).To(Succeed())
+
+					Eventually(func() error {
+						return gardenerutils.RequiredExtensionsReady(ctx, testClient, seed.Name, gardenerutils.ComputeRequiredExtensionsForSeed(seed, controllerRegistrationList))
+					}).WithTimeout(time.Minute).Should(Succeed())
+
+					By("Verify that seed system components have been deployed (without components managed by shoot gardenlet)")
+					expectedManagedResources := []string{
+						"cluster-autoscaler",
+						"dependency-watchdog-weeder",
+						"dependency-watchdog-prober",
+						"istio-basic-auth-server",
+						"system",
+						"prometheus-cache",
+						"prometheus-seed",
+						"prometheus-aggregate",
+						"kube-state-metrics-seed",
+						"referenced-resources-" + seedName,
+						// Components not skipped for self-hosted shoots (only for garden):
+						"vpa",
+						"nginx-ingress",
+						"plutono",
+						"vali",
+						"fluent-bit",
+						"fluent-operator",
+						"fluent-operator-custom-resources",
+						"prometheus-operator",
+						"perses-operator",
+						"victoria-operator",
+						"opentelemetry-operator",
+						"opentelemetry-collector",
+					}
+					if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
+						expectedManagedResources = append(expectedManagedResources, "victoria-logs")
+					}
+
+					Eventually(func(g Gomega) []string {
+						managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
+						g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
+						names := make([]string, 0, len(managedResourceList.Items))
+						for _, mr := range managedResourceList.Items {
+							names = append(names, mr.Name)
+						}
+						return names
+					}).WithTimeout(time.Minute).Should(ConsistOf(expectedManagedResources))
+
+					By("Verify that etcd-druid ManagedResource was NOT created")
+					Consistently(func() error {
+						return testClient.Get(ctx, client.ObjectKey{Name: "etcd-druid", Namespace: testNamespace.Name}, &resourcesv1alpha1.ManagedResource{})
+					}).WithTimeout(5 * time.Second).Should(BeNotFoundError())
+
+					By("Verify that gardener-resource-manager Deployment was NOT created")
+					Consistently(func() error {
+						return testClient.Get(ctx, client.ObjectKey{Name: "gardener-resource-manager", Namespace: testNamespace.Name}, &appsv1.Deployment{})
+					}).WithTimeout(5 * time.Second).Should(BeNotFoundError())
+
+					By("Wait for 'last operation' state to be set to Succeeded")
+					Eventually(func(g Gomega) {
+						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+						g.Expect(seed.Status.LastOperation).NotTo(BeNil())
+						g.Expect(seed.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					}).Should(Succeed())
+
+					By("Delete Seed")
+					Expect(testClient.Delete(ctx, seed)).To(Succeed())
+
+					By("Delete ControllerInstallation")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, seedControllerInst))).To(Succeed())
+
+					By("Ensure Seed is gone")
+					// The seed deletion flow destroys Perses/Victoria/OpenTelemetry CRDs, which can be
+					// slow in envtest due to the API server's CRD finalizer controller reinitializing storage.
+					Eventually(func() error {
+						return testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
+					}).WithTimeout(4 * time.Minute).Should(BeNotFoundError())
 				})
 			})
 

@@ -29,6 +29,9 @@ const ManagedResourceName = "system"
 
 // Values is a set of configuration values for the system resources.
 type Values struct {
+	// ManagePriorityClasses specifies whether the seed system component should deploy PriorityClasses.
+	// When the seed is a self-hosted shoot, PriorityClasses are managed by the shoot gardenlet.
+	ManagePriorityClasses bool
 	// ReserveExcessCapacity contains configuration for the deployment of the excess capacity reservation resources.
 	ReserveExcessCapacity ReserveExcessCapacityValues
 }
@@ -107,8 +110,10 @@ func (s *seedSystem) computeResourcesData() (map[string][]byte, error) {
 		}
 	}
 
-	if err := addPriorityClasses(registry); err != nil {
-		return nil, err
+	if s.values.ManagePriorityClasses {
+		if err := addPriorityClasses(registry); err != nil {
+			return nil, err
+		}
 	}
 
 	return registry.SerializedObjects()

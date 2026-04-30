@@ -139,6 +139,7 @@ func (r *Reconciler) instantiateComponents(
 	alertingSMTPSecret *corev1.Secret,
 	wildCardCertSecret *corev1.Secret,
 	seedIsShoot bool,
+	seedIsSelfHostedShoot bool,
 ) (
 	c components,
 	err error,
@@ -192,7 +193,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.system, err = r.newSystem(seed.GetInfo())
+	c.system, err = r.newSystem(seed.GetInfo(), seedIsSelfHostedShoot)
 	if err != nil {
 		return
 	}
@@ -537,7 +538,7 @@ func (r *Reconciler) newIstioBasicAuthServer(secretsManager secretsmanager.Inter
 	)
 }
 
-func (r *Reconciler) newSystem(seed *gardencorev1beta1.Seed) (component.DeployWaiter, error) {
+func (r *Reconciler) newSystem(seed *gardencorev1beta1.Seed, seedIsSelfHostedShoot bool) (component.DeployWaiter, error) {
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNamePauseContainer)
 	if err != nil {
 		return nil, err
@@ -552,6 +553,7 @@ func (r *Reconciler) newSystem(seed *gardencorev1beta1.Seed) (component.DeployWa
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
 		seedsystem.Values{
+			ManagePriorityClasses: !seedIsSelfHostedShoot,
 			ReserveExcessCapacity: seedsystem.ReserveExcessCapacityValues{
 				Enabled:  v1beta1helper.SeedSettingExcessCapacityReservationEnabled(seed.Spec.Settings),
 				Image:    image.String(),

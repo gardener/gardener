@@ -21,10 +21,13 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -289,6 +292,27 @@ func determineClusterIdentity(ctx context.Context, c client.Client) (string, err
 
 func vpaEnabled(settings *gardencorev1beta1.SeedSettings) bool {
 	return settings == nil || settings.VerticalPodAutoscaler == nil || settings.VerticalPodAutoscaler.Enabled
+}
+
+// selfHostedShootHasManagedInfrastructure reads the Cluster resource named kube-system and checks whether the
+// self-hosted shoot has managed infrastructure. This is used to determine whether machine CRDs are already deployed
+// by gardenadm init (managed infra) or whether the seed gardenlet must deploy them (unmanaged infra).
+func selfHostedShootHasManagedInfrastructure(ctx context.Context, reader client.Reader, seedIsSelfHostedShoot bool) (bool, error) {
+	if !seedIsSelfHostedShoot {
+		return false, nil
+	}
+
+	cluster := &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: metav1.NamespaceSystem}}
+	if err := reader.Get(ctx, client.ObjectKeyFromObject(cluster), cluster); err != nil {
+		return false, fmt.Errorf("failed reading Cluster resource for self-hosted shoot: %w", err)
+	}
+
+	shoot, err := gardenerextensions.ShootFromCluster(cluster)
+	if err != nil {
+		return false, fmt.Errorf("failed extracting Shoot from Cluster resource: %w", err)
+	}
+
+	return shoot != nil && v1beta1helper.HasManagedInfrastructure(shoot), nil
 }
 
 func caCertConfigurations() []secretsutils.ConfigInterface {

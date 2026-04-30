@@ -105,7 +105,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 	seedIsSelfHostedShoot bool,
 ) error {
 	log.Info("Instantiating component deployers")
-	c, err := r.instantiateComponents(ctx, log, seed, nil, seedIsGarden, nil, nil, nil, seedIsShoot)
+	c, err := r.instantiateComponents(ctx, log, seed, nil, seedIsGarden, nil, nil, nil, seedIsShoot, seedIsSelfHostedShoot)
 	if err != nil {
 		return err
 	}
@@ -113,6 +113,13 @@ func (r *Reconciler) runDeleteSeedFlow(
 	seedIsOriginOfClusterIdentity, err := clusteridentity.IsClusterIdentityEmptyOrFromOrigin(ctx, r.SeedClientSet.Client(), v1beta1constants.ClusterIdentityOriginSeed)
 	if err != nil {
 		return err
+	}
+
+	// When the seed is a self-hosted shoot with managed infrastructure, the machine CRDs are already deployed by
+	// gardenadm init. For unmanaged infrastructure, they are not, so the seed gardenlet must deploy them.
+	selfHostedShootWithManagedInfrastructure, err := selfHostedShootHasManagedInfrastructure(ctx, r.SeedClientSet.Client(), seedIsSelfHostedShoot)
+	if err != nil {
+		return fmt.Errorf("failed to determine whether the seed is a self-hosted shoot with managed infrastructure: %w", err)
 	}
 
 	var (
@@ -319,12 +326,13 @@ func (r *Reconciler) runDeleteSeedFlow(
 		destroyMachineCRDs = g.Add(flow.Task{
 			Name:         "Destroying machine-controller-manager custom resource definitions",
 			Fn:           component.OpDestroyAndWait(c.machineCRD).Destroy,
+			SkipIf:       selfHostedShootWithManagedInfrastructure,
 			Dependencies: flow.NewTaskIDs(ensureNoControllerInstallationsExist),
 		})
 		destroyExtensionCRDs = g.Add(flow.Task{
 			Name:         "Destroying extensions-related custom resource definitions",
 			Fn:           component.OpDestroyAndWait(c.extensionCRD).Destroy,
-			SkipIf:       seedIsGarden,
+			SkipIf:       seedIsGarden || seedIsSelfHostedShoot,
 			Dependencies: flow.NewTaskIDs(ensureNoControllerInstallationsExist),
 		})
 		destroyEtcdCRDs = g.Add(flow.Task{
@@ -342,14 +350,14 @@ func (r *Reconciler) runDeleteSeedFlow(
 		destroyVPACRDs = g.Add(flow.Task{
 			Name:         "Destroying VPA-related custom resource definitions",
 			Fn:           component.OpDestroyAndWait(c.vpaCRD).Destroy,
-			SkipIf:       seedIsGarden || !vpaEnabled(seed.GetInfo().Spec.Settings),
+			SkipIf:       seedIsGarden || seedIsSelfHostedShoot || !vpaEnabled(seed.GetInfo().Spec.Settings),
 			Dependencies: flow.NewTaskIDs(ensureNoControllerInstallationsExist),
 		})
 		destroyFluentCRDs = g.Add(flow.Task{
 			Name:         "Destroying Fluent Operator custom resource definitions",
 			Fn:           component.OpDestroyAndWait(c.fluentCRD).Destroy,
 			Dependencies: flow.NewTaskIDs(ensureNoControllerInstallationsExist),
-			SkipIf:       seedIsGarden,
+			SkipIf:       seedIsGarden || seedIsSelfHostedShoot,
 		})
 		destroyOpenTelemetryCRDs = g.Add(flow.Task{
 			Name:         "Destroy OpenTelemetry custom resource definitions",
@@ -360,7 +368,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 		destroyPrometheusCRDs = g.Add(flow.Task{
 			Name:         "Destroying Prometheus-related custom resource definitions",
 			Fn:           component.OpDestroyAndWait(c.prometheusCRD).Destroy,
-			SkipIf:       seedIsGarden,
+			SkipIf:       seedIsGarden || seedIsSelfHostedShoot,
 			Dependencies: flow.NewTaskIDs(ensureNoControllerInstallationsExist),
 		})
 		destroyPersesCRDs = g.Add(flow.Task{

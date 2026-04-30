@@ -139,6 +139,7 @@ status: {}
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
+			ManagePriorityClasses: true,
 			ReserveExcessCapacity: ReserveExcessCapacityValues{
 				Enabled:  true,
 				Image:    reserveExcessCapacityImage,
@@ -240,6 +241,17 @@ status: {}
 
 			It("should successfully deploy the resources", func() {
 				Expect(manifests).To(ConsistOf(expectedPriorityClasses()))
+			})
+		})
+
+		When("ManagePriorityClasses is false", func() {
+			BeforeEach(func() {
+				values.ManagePriorityClasses = false
+				component = New(c, namespace, values)
+			})
+
+			It("should successfully deploy only the excess capacity reservation deployment", func() {
+				Expect(manifests).To(ConsistOf(deployment0YAML))
 			})
 		})
 	})

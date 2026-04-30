@@ -176,7 +176,7 @@ func run(ctx context.Context, opts *Options) error {
 		_ = g.Add(flow.Task{
 			Name: "Deploying seed system resources",
 			Fn: func(ctx context.Context) error {
-				return seedsystem.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, seedsystem.Values{}).Deploy(ctx)
+				return seedsystem.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, seedsystem.Values{ManagePriorityClasses: true}).Deploy(ctx)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
