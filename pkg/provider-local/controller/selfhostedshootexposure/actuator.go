@@ -7,6 +7,7 @@ package selfhostedshootexposure
 import (
 	"context"
 	"fmt"
+	"net/netip"
 	"strings"
 	"time"
 
@@ -15,34 +16,49 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/controller/selfhostedshootexposure"
+	extensionselfhostedshootexposure "github.com/gardener/gardener/extensions/pkg/controller/selfhostedshootexposure"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
+const portName = "https"
+
 type actuator struct {
 	client client.Client
 }
 
-func newActuator(mgr manager.Manager) selfhostedshootexposure.Actuator {
+func newActuator(mgr manager.Manager) extensionselfhostedshootexposure.Actuator {
 	return &actuator{client: mgr.GetClient()}
 }
 
-func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, exposure *extensionsv1alpha1.SelfHostedShootExposure, _ *extensionscontroller.Cluster) ([]corev1.LoadBalancerIngress, error) {
+func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, exposure *extensionsv1alpha1.SelfHostedShootExposure, cluster *extensionscontroller.Cluster) ([]corev1.LoadBalancerIngress, error) {
 	service := serviceForExposure(exposure)
+	if err := controllerutil.SetControllerReference(exposure, service, a.client.Scheme()); err != nil {
+		return nil, fmt.Errorf("could not set controller reference on Service: %w", err)
+	}
 	if err := a.client.Patch(ctx, service, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
-		return nil, fmt.Errorf("could not apply Service: %w", err)
+		return nil, fmt.Errorf("could not patch Service: %w", err)
 	}
 
-	for _, family := range endpointSliceFamilies {
-		if err := a.client.Patch(ctx, endpointSliceForExposure(exposure, family), client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
-			return nil, fmt.Errorf("could not apply %s EndpointSlice: %w", family, err)
+	for _, family := range endpointSliceFamiliesForCluster(cluster) {
+		slice, err := endpointSliceForExposure(exposure, family)
+		if err != nil {
+			return nil, fmt.Errorf("could not build %s EndpointSlice: %w", family, err)
+		}
+		if err := controllerutil.SetControllerReference(exposure, slice, a.client.Scheme()); err != nil {
+			return nil, fmt.Errorf("could not set controller reference on %s EndpointSlice: %w", family, err)
+		}
+		if err := a.client.Patch(ctx, slice, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+			return nil, fmt.Errorf("could not patch %s EndpointSlice: %w", family, err)
 		}
 	}
 
@@ -55,31 +71,31 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, exposure *ext
 	}
 
 	return service.Status.LoadBalancer.Ingress, nil
-	log.Info("LoadBalancer ready", "ingress", liveService.Status.LoadBalancer.Ingress)
 }
 
-func (a *actuator) Delete(ctx context.Context, _ logr.Logger, exposure *extensionsv1alpha1.SelfHostedShootExposure, _ *extensionscontroller.Cluster) error {
-	objects := []client.Object{
-		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName(exposure), Namespace: exposure.Namespace}},
-	}
-	for _, family := range endpointSliceFamilies {
-		objects = append(objects, &discoveryv1.EndpointSlice{ObjectMeta: metav1.ObjectMeta{Name: endpointSliceName(exposure, family), Namespace: exposure.Namespace}})
-	}
-	for _, obj := range objects {
-		if err := client.IgnoreNotFound(a.client.Delete(ctx, obj)); err != nil {
-			return fmt.Errorf("could not delete %T %q: %w", obj, client.ObjectKeyFromObject(obj), err)
-		}
-	}
+func (a *actuator) Delete(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.SelfHostedShootExposure, _ *extensionscontroller.Cluster) error {
 	return nil
 }
 
-func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, exposure *extensionsv1alpha1.SelfHostedShootExposure, cluster *extensionscontroller.Cluster) error {
-	return a.Delete(ctx, log, exposure, cluster)
+func (a *actuator) ForceDelete(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.SelfHostedShootExposure, _ *extensionscontroller.Cluster) error {
+	return nil
 }
 
-// endpointSliceFamilies are the address families for which an EndpointSlice is created.
-// On single-stack clusters the non-matching slice is empty and ignored.
-var endpointSliceFamilies = []discoveryv1.AddressType{discoveryv1.AddressTypeIPv4, discoveryv1.AddressTypeIPv6}
+func endpointSliceFamiliesForCluster(cluster *extensionscontroller.Cluster) []discoveryv1.AddressType {
+	if cluster == nil || cluster.Shoot == nil || cluster.Shoot.Spec.Networking == nil {
+		return nil
+	}
+	families := make([]discoveryv1.AddressType, 0, len(cluster.Shoot.Spec.Networking.IPFamilies))
+	for _, f := range cluster.Shoot.Spec.Networking.IPFamilies {
+		switch f {
+		case gardencorev1beta1.IPFamilyIPv4:
+			families = append(families, discoveryv1.AddressTypeIPv4)
+		case gardencorev1beta1.IPFamilyIPv6:
+			families = append(families, discoveryv1.AddressTypeIPv6)
+		}
+	}
+	return families
+}
 
 func serviceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposure) *corev1.Service {
 	return &corev1.Service{
@@ -95,7 +111,7 @@ func serviceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposure) *c
 			Type:           corev1.ServiceTypeLoadBalancer,
 			IPFamilyPolicy: ptr.To(corev1.IPFamilyPolicyPreferDualStack),
 			Ports: []corev1.ServicePort{{
-				Name:       "https",
+				Name:       portName,
 				Port:       exposure.Spec.Port,
 				TargetPort: intstr.FromInt32(exposure.Spec.Port),
 				Protocol:   corev1.ProtocolTCP,
@@ -104,25 +120,33 @@ func serviceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposure) *c
 	}
 }
 
-func endpointSliceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposure, family discoveryv1.AddressType) *discoveryv1.EndpointSlice {
+func endpointSliceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposure, family discoveryv1.AddressType) (*discoveryv1.EndpointSlice, error) {
 	var endpoints []discoveryv1.Endpoint
 	for _, endpoint := range exposure.Spec.Endpoints {
 		for _, address := range endpoint.Addresses {
+			// Use InternalIPs as the Service backends since they are directly reachable
+			// within the cluster network.
 			if address.Type != corev1.NodeInternalIP {
 				continue
 			}
-			isIPv6 := strings.Contains(address.Address, ":")
-			if isIPv6 != (family == discoveryv1.AddressTypeIPv6) {
+			ip, err := netip.ParseAddr(address.Address)
+			if err != nil {
+				continue
+			}
+			// Using ip.Is4() here excludes IPv4-mapped IPv6 addresses (like ::ffff:192.0.2.1)
+			if ip.Is4() != (family == discoveryv1.AddressTypeIPv4) {
 				continue
 			}
 			endpoints = append(endpoints, discoveryv1.Endpoint{
 				Addresses: []string{address.Address},
-				NodeName:  ptr.To(endpoint.NodeName),
 				Conditions: discoveryv1.EndpointConditions{
 					Ready: ptr.To(true),
 				},
 			})
 		}
+	}
+	if len(endpoints) == 0 {
+		return nil, fmt.Errorf("no %s endpoints found for exposure %q", family, exposure.Name)
 	}
 
 	return &discoveryv1.EndpointSlice{
@@ -138,15 +162,15 @@ func endpointSliceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposu
 		AddressType: family,
 		Endpoints:   endpoints,
 		Ports: []discoveryv1.EndpointPort{{
-			Name:     ptr.To("https"),
+			Name:     ptr.To(portName),
 			Port:     ptr.To(exposure.Spec.Port),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}},
-	}
+	}, nil
 }
 
 func serviceName(exposure *extensionsv1alpha1.SelfHostedShootExposure) string {
-	return exposure.Name + "-exposure"
+	return "exposure-" + exposure.Name
 }
 
 func endpointSliceName(exposure *extensionsv1alpha1.SelfHostedShootExposure, family discoveryv1.AddressType) string {
