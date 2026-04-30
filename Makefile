@@ -297,7 +297,7 @@ kind2-up: kind-single-node2-up
 kind2-down: kind-single-node2-down
 
 # gind-{up,down}
-gind-up gind-down: $(KUBECTL) $(YQ) $(KUSTOMIZE)
+gind-up gind-down: $(YQ)
 	$(DEV_SETUP)/gind.sh $(subst gind-,,$@)
 
 # speed-up skaffold deployments by building all images concurrently

@@ -69,7 +69,7 @@ case "$COMMAND" in
     if (( level >= 4 )); then
       make gardenadm-up SCENARIO=connect # deploys gardener-operator, the 'Garden' resource, and waits for reconciliation
       make gardenadm # builds gardenadm binary locally so that we can execute it against the virtual-garden-cluster
-      connect_command="$(KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER gardenadm token create --print-connect-command --shoot-namespace garden --shoot-name root)"
+      connect_command="$(KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER "$(dirname "$0")/../bin/gardenadm" token create --print-connect-command --shoot-namespace garden --shoot-name root)"
       docker compose -f "$GIND_COMPOSE_FILE" exec machine-0 bash -c "$connect_command"
     fi
     ;;

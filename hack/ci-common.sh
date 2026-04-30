@@ -81,7 +81,7 @@ export_artifacts_for_cluster() {
       # container logs
       kubectl cp "$namespace/$node":/var/log "$node_dir" || true
     done < <(kubectl -n "$namespace" get po -l 'app in (machine,bastion)' -oname | cut -d/ -f2)
-  done < <(kubectl get ns -l gardener.cloud/role=shoot -oname | cut -d/ -f2; kubectl get ns -l export-artifacts=true -oname | cut -d/ -f2)
+  done < <(kubectl get ns -l gardener.cloud/role=shoot -oname | cut -d/ -f2)
 }
 
 export_artifacts_gind() {
@@ -89,15 +89,19 @@ export_artifacts_gind() {
   for container in $(yq '.services | keys() | .[]' ./dev-setup/gind/docker-compose.yaml); do
     container_name="gind-$container"
     node_dir="${ARTIFACTS:-}/gind/$container_name"
+    mkdir -p "$node_dir"
 
     docker compose -f ./dev-setup/gind/docker-compose.yaml logs --no-log-prefix "$container" > "${ARTIFACTS:-}/gind/$container.log" || true
     docker container inspect "$container_name" > "${ARTIFACTS:-}/gind/$container_name.json" || true
 
-    export_node_artifacts "$node_dir" docker exec "$container_name"
+    # Only export node-level artifacts for machine containers (not load balancers).
+    if [[ "$container" == machine-* ]]; then
+      export_node_artifacts "$node_dir" docker exec "$container_name"
 
-    # container logs
-    mkdir -p "$node_dir/var-log"
-    docker cp "$container_name":/var/log/. "$node_dir/var-log" || true
+      # container logs
+      mkdir -p "$node_dir/var-log"
+      docker cp "$container_name":/var/log/. "$node_dir/var-log" || true
+    fi
   done
 }
 

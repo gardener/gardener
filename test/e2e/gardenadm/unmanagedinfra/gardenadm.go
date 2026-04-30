@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -308,4 +309,8 @@ func execute(ctx context.Context, ordinal int, command ...string) (*gbytes.Buffe
 	cmd.Stderr = io.MultiWriter(stdErrBuffer, gexec.NewPrefixedWriter("[err] ", GinkgoWriter))
 
 	return stdOutBuffer, stdErrBuffer, cmd.Run()
+}
+
+func machineContainerName(ordinal int) string {
+	return "gind-machine-" + strconv.Itoa(ordinal)
 }
