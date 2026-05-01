@@ -168,7 +168,10 @@ func (r *Reconciler) checkUnits(ctx context.Context, units []unitInfo) (unhealth
 			}
 
 		case "failed":
-			unhealthyMessages = append(unhealthyMessages, fmt.Sprintf("%s: failed", unit.name))
+			// Only enabled units should be marked as erroring in case they are in a failed state.
+			if unit.enabled {
+				unhealthyMessages = append(unhealthyMessages, fmt.Sprintf("%s: failed", unit.name))
+			}
 
 		case "activating", "deactivating":
 			// Services configured with Restart=always/on-success cycle through "activating (auto-restart)"
