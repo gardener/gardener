@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -46,22 +47,40 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 
 	Describe("Single-node control plane", Ordered, Label("single"), func() {
 		var (
-			shootClientSet kubernetes.Interface
-
 			configDirectory = "/gardenadm/resources"
+
+			shootClientSet                   kubernetes.Interface
+			shootClusterKubeconfigPathOnHost = filepath.Join("..", "..", "..", "dev-setup", "kubeconfigs", "self-hosted-shoot", "kubeconfig")
+
+			gardenClientSet                   kubernetes.Interface
+			gardenClusterKubeconfigPathOnHost = filepath.Join("..", "..", "..", "dev-setup", "kubeconfigs", "virtual-garden", "kubeconfig")
 		)
+
+		initClientSet := func(ctx context.Context, clientSet *kubernetes.Interface, kubeconfigPath string, scheme client.Options) {
+			if *clientSet != nil {
+				return
+			}
+			Eventually(ctx, func() error {
+				var err error
+				*clientSet, err = kubernetes.NewClientFromFile("", kubeconfigPath,
+					kubernetes.WithDisabledCachedClient(),
+					kubernetes.WithClientOptions(scheme),
+				)
+				return err
+			}).Should(Succeed())
+		}
+
+		initGardenClientSet := func(ctx context.Context) {
+			initClientSet(ctx, &gardenClientSet, gardenClusterKubeconfigPathOnHost, client.Options{Scheme: kubernetes.GardenScheme})
+		}
+
+		initShootClientSet := func(ctx context.Context) {
+			initClientSet(ctx, &shootClientSet, shootClusterKubeconfigPathOnHost, client.Options{Scheme: kubernetes.SeedScheme})
+		}
 
 		Context("gardenadm init + join", Ordered, Label("initjoin"), func() {
 			It("should create a client for the self-hosted shoot API server", func(ctx SpecContext) {
-				Eventually(ctx, func() error {
-					var err error
-					shootClientSet, err = kubernetes.NewClientFromFile("",
-						filepath.Join("..", "..", "..", "dev-setup", "kubeconfigs", "self-hosted-shoot", "kubeconfig"),
-						kubernetes.WithDisabledCachedClient(),
-						kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
-					)
-					return err
-				}).Should(Succeed())
+				initShootClientSet(ctx)
 			}, SpecTimeout(time.Minute))
 
 			It("should be able to communicate with the API server and see the node and the control plane pods", func(ctx SpecContext) {
@@ -178,23 +197,12 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 
 		Context("gardenadm connect", Ordered, Label("connect"), func() {
 			var (
-				gardenClientSet                      kubernetes.Interface
 				gardenKomega                         Komega
-				gardenClusterKubeconfigPathOnHost    = filepath.Join("..", "..", "..", "dev-setup", "kubeconfigs", "virtual-garden", "kubeconfig")
 				gardenClusterKubeconfigPathOnMachine = "/tmp/virtual-garden-kubeconfig"
 			)
 
 			It("should create a client for garden cluster", func(ctx SpecContext) {
-				By("Create client set")
-				Eventually(ctx, func() error {
-					var err error
-					gardenClientSet, err = kubernetes.NewClientFromFile("", gardenClusterKubeconfigPathOnHost,
-						kubernetes.WithDisabledCachedClient(),
-						kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}),
-					)
-					return err
-				}).Should(Succeed())
-
+				initGardenClientSet(ctx)
 				gardenKomega = New(gardenClientSet.Client())
 			}, SpecTimeout(time.Minute))
 
@@ -295,6 +303,40 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 					))
 				}
 			}, SpecTimeout(5*time.Minute))
+		})
+
+		Context("self-hosted shoot -> seed promotion", Ordered, Label("seed"), func() {
+			It("should create a client for garden cluster", func(ctx SpecContext) {
+				initGardenClientSet(ctx)
+			}, SpecTimeout(time.Minute))
+
+			It("should create a client for the self-hosted shoot API server", func(ctx SpecContext) {
+				initShootClientSet(ctx)
+			}, SpecTimeout(time.Minute))
+
+			It("should ensure the ManagedSeed is healthy", func(ctx SpecContext) {
+				managedSeed := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
+				Eventually(ctx, func(g Gomega) {
+					g.Expect(gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
+					g.Expect(health.CheckManagedSeed(managedSeed)).To(Succeed())
+				}).Should(Succeed())
+			}, SpecTimeout(5*time.Minute))
+
+			It("should ensure the Seed is healthy", func(ctx SpecContext) {
+				seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: shootName}}
+				Eventually(ctx, func(g Gomega) {
+					g.Expect(gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+					g.Expect(health.CheckSeed(seed, seed.Status.Gardener)).To(Succeed())
+				}).Should(Succeed())
+			}, SpecTimeout(5*time.Minute))
+
+			It("should ensure the seed gardenlet runs in the garden namespace", func(ctx SpecContext) {
+				Eventually(ctx, func(g Gomega) []corev1.Pod {
+					podList := &corev1.PodList{}
+					g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace("garden"), client.MatchingLabels{"app": "gardenlet"})).To(Succeed())
+					return podList.Items
+				}).ShouldNot(BeEmpty())
+			}, SpecTimeout(2*time.Minute))
 		})
 	})
 })

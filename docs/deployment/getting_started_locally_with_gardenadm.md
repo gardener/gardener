@@ -357,9 +357,12 @@ root   Ready    Reconcile Succeeded (100%)   local      local    37m   vX.Y.Z-de
 Based on the described setup, you can execute the e2e test suite for `gardenadm`:
 
 ```shell
-make gardenadm-up SCENARIO=unmanaged-infra
+make gind-up
+make test-e2e-local-gardenadm-unmanaged-infra-initjoin
 make gardenadm-up SCENARIO=connect
-make test-e2e-local-gardenadm-unmanaged-infra
+make test-e2e-local-gardenadm-unmanaged-infra-connect
+make seed-up KUBECONFIG=./dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
+make test-e2e-local-gardenadm-unmanaged-infra-seed
 
 # or
 make gardenadm-up SCENARIO=managed-infra
