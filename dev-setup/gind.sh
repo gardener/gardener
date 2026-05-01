@@ -17,6 +17,7 @@ declare -A SCENARIO_LEVEL=(
   [default]=2  # Like 'machines', but also runs `gardenadm init` and exports the kubeconfig for the self-hosted shoot
   [join]=3     # Like 'default', but also runs `gardenadm join` on gind-machine-1 to join it as worker node
   [connect]=4  # Like 'join', but also deploys Gardener into the self-hosted shoot and runs `gardenadm connect` to deploy gardenlet which registers the Shoot
+  [full]=5     # Like 'connect', but also registers the self-hosted shoot as a seed via a ManagedSeed
 )
 
 if [[ -z "${SCENARIO_LEVEL[$SCENARIO]+x}" ]]; then
@@ -72,9 +73,18 @@ case "$COMMAND" in
       connect_command="$(KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER "$(dirname "$0")/../bin/gardenadm" token create --print-connect-command --shoot-namespace garden --shoot-name root)"
       docker compose -f "$GIND_COMPOSE_FILE" exec machine-0 bash -c "$connect_command"
     fi
+
+    # Register the self-hosted shoot as a seed via a ManagedSeed
+    if (( level >= 5 )); then
+      make seed-up KUBECONFIG="$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER"
+    fi
     ;;
 
   down)
+    if kubectl --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" -n garden get managedseed root &>/dev/null; then
+      make seed-down KUBECONFIG="$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER"
+    fi
+
     make gardenadm-down SCENARIO=unmanaged-infra
 
     docker compose -f "$GIND_COMPOSE_FILE" down --volumes

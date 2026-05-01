@@ -71,6 +71,7 @@ Your Shoot cluster control-plane has initialized successfully!
 | `default`  | Like `machines`, but also runs `gardenadm init` and exports the kubeconfig for the self-hosted shoot. This is the default when no `SCENARIO` is specified. |
 | `join`     | Like `default`, but also runs `gardenadm join` on `gind-machine-1` to join it as a worker node.                                                            |
 | `connect`  | Like `join`, but also deploys Gardener into the self-hosted shoot and runs `gardenadm connect` to deploy gardenlet which registers the `Shoot`.            |
+| `full`     | Like `connect`, but also registers the self-hosted shoot as a seed via a `ManagedSeed`, enabling it to host shoot clusters.                                |
 
 > [!TIP]
 > You can pass `FAST=true` to skip switching etcd management to etcd-druid and keep `gardener-resource-manager` and extensions in the host network.
@@ -110,7 +111,7 @@ Just exec into the machine container via the `docker` CLI and run `bash`:
 $ docker exec -ti gind-machine-0 bash
 root@gind-machine-0:/# kubectl get node
 NAME             STATUS   ROLES           AGE     VERSION
-gind-machine-0   Ready    control-plane   7m15s   v1.34.3
+gind-machine-0   Ready    control-plane   7m15s   v1.35.0
 ```
 
 #### Host Machine Access
@@ -122,7 +123,7 @@ You can directly use it from there:
 $ export KUBECONFIG=dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
 $ kubectl get no
 NAME             STATUS   ROLES           AGE     VERSION
-gind-machine-0   Ready    control-plane   7m15s   v1.34.3
+gind-machine-0   Ready    control-plane   7m15s   v1.35.0
 ```
 
 > [!TIP]
@@ -172,8 +173,8 @@ Using the kubeconfig as described in [this section](#connecting-to-the-self-host
 $ kubectl get no
 NAME        STATUS   ROLES    AGE   VERSION
 NAME             STATUS   ROLES           AGE     VERSION
-gind-machine-0   Ready    control-plane   7m15s   v1.34.3
-gind-machine-1   Ready    worker          8m48s   v1.34.3
+gind-machine-0   Ready    control-plane   7m15s   v1.35.0
+gind-machine-1   Ready    worker          8m48s   v1.35.0
 ```
 
 ## "Managed Infrastructure" Scenario
@@ -221,7 +222,7 @@ $ kubectl -n shoot--garden--root exec -it $machine -- bash
 root@machine-shoot--garden--root-control-plane-58ffc-2l6s7:/# export KUBECONFIG=/etc/kubernetes/admin.conf
 root@machine-shoot--garden--root-control-plane-58ffc-2l6s7:/# kubectl get node
 NAME                                                    STATUS   ROLES    AGE     VERSION
-machine-shoot--garden--root-control-plane-58ffc-2l6s7   Ready    <none>   4m11s   v1.33.0
+machine-shoot--garden--root-control-plane-58ffc-2l6s7   Ready    <none>   4m11s   v1.35.0
 ```
 
 `gardenadm bootstrap` copies the kubeconfig from the control plane machine to the bootstrap cluster.
@@ -236,7 +237,7 @@ $ kubectl -n shoot--garden--root port-forward pod/$machine 6443:443
 $ export KUBECONFIG=/tmp/shoot--garden--root.conf
 $ kubectl get no
 NAME                                                    STATUS   ROLES    AGE     VERSION
-machine-shoot--garden--root-control-plane-58ffc-2l6s7   Ready    <none>   4m11s   v1.33.0
+machine-shoot--garden--root-control-plane-58ffc-2l6s7   Ready    <none>   4m11s   v1.35.0
 ```
 
 ### Tearing Down the KinD Cluster
@@ -319,6 +320,36 @@ You can also observe that the self-hosted shoot cluster is now registered as a s
 kubectl --kubeconfig=./dev-setup/kubeconfigs/virtual-garden/kubeconfig get shoots -A
 NAMESPACE   NAME   CLOUDPROFILE   PROVIDER   REGION   K8S VERSION   HIBERNATION   LAST OPERATION   STATUS    AGE
 garden      root   local          local      local    1.33.0        Awake         <pending>        healthy   42m
+```
+
+## Promoting the Self-Hosted Shoot to a Seed
+
+> [!TIP]
+> For the unmanaged infrastructure scenario, this step is automated when using `make gind-up SCENARIO=full`.
+
+After the self-hosted shoot has been connected to Gardener (see above), you can register it as a seed by creating a `ManagedSeed` resource.
+This enables the self-hosted shoot to host other shoot clusters.
+
+```shell
+make seed-up KUBECONFIG=./dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
+```
+
+This deploys a seed gardenlet via a `ManagedSeed` into the self-hosted shoot.
+
+> ![NOTE]
+> The following steps assume that you are using the kubeconfig that points to the virtual garden cluster: `export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig`.
+
+You can wait for the `Seed` to be ready by running:
+
+```bash
+./hack/usage/wait-for.sh seed root GardenletReady SeedSystemComponentsHealthy ExtensionsReady
+```
+
+Alternatively, you can run `kubectl get seed root` and wait for the `STATUS` to indicate readiness:
+
+```bash
+NAME   STATUS   LAST OPERATION               PROVIDER   REGION   AGE   VERSION      K8S VERSION
+root   Ready    Reconcile Succeeded (100%)   local      local    37m   vX.Y.Z-dev   v1.35.0
 ```
 
 ## Running E2E Tests for `gardenadm`
