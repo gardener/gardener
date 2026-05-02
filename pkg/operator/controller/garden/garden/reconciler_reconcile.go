@@ -1216,7 +1216,7 @@ func (r *Reconciler) deployGardenerDashboard(ctx context.Context, dashboard gard
 			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 		}
 		dashboard.SetAPIServerCABundle(ptr.To(utils.EncodeBase64(caSecret.Data[secretsutils.DataKeyCertificateBundle])))
-	} else {
+	} else if ptr.Deref(garden.Spec.VirtualCluster.Gardener.Dashboard.PropagateCAFromSNI, false) {
 		tlsSecretName := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI.SecretName
 		if tlsSecretName == nil {
 			tlsSecret, err := gardenerutils.GetRequiredGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace)
