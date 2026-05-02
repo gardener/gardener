@@ -673,6 +673,10 @@ func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardC
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("enableTokenLogin"), "OIDC must be configured when token login is disabled"))
 	}
 
+	if ptr.Deref(config.PropagateCAFromSNI, false) && (kubeAPIServerConfig == nil || kubeAPIServerConfig.SNI == nil) {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("propagateCAFromSNI"), "can only be enabled when .spec.virtualCluster.kubernetes.kubeAPIServer.sni is configured"))
+	}
+
 	if oidc := config.OIDCConfig; oidc != nil {
 		oidcPath := fldPath.Child("oidcConfig")
 

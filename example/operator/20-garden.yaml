@@ -313,6 +313,7 @@ spec:
     #       description: A nice container for debugging purposes
     #   ingress:
     #     enabled: true
+    #   propagateCAFromSNI: false # set to true when SNI CA is not in client trust stores
       gardenerDiscoveryServer:
       # domain:
       #   name: discovery.local.gardener.cloud

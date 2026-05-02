@@ -2498,6 +2498,29 @@ var _ = Describe("Validation Tests", func() {
 						})
 					})
 
+					Context("PropagateCAFromSNI", func() {
+						It("should forbid propagateCAFromSNI when SNI is not configured", func() {
+							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{PropagateCAFromSNI: ptr.To(true)}
+
+							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeForbidden),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.propagateCAFromSNI"),
+							}))))
+						})
+
+						It("should allow propagateCAFromSNI when SNI is configured", func() {
+							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{
+								SNI: &operatorv1alpha1.SNI{DomainPatterns: []string{"api.example.com"}},
+							}
+							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{PropagateCAFromSNI: ptr.To(true)}
+
+							Expect(ValidateGarden(garden, extensions)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeForbidden),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.propagateCAFromSNI"),
+							}))))
+						})
+					})
+
 					Context("OIDC config", func() {
 						It("should complain when OIDC config is configured while it is unset in kube-apiserver config", func() {
 							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{OIDCConfig: &operatorv1alpha1.DashboardOIDC{}}
