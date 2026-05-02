@@ -352,6 +352,62 @@ NAME   STATUS   LAST OPERATION               PROVIDER   REGION   AGE   VERSION  
 root   Ready    Reconcile Succeeded (100%)   local      local    37m   vX.Y.Z-dev   v1.35.0
 ```
 
+Once the `Seed` is ready, you can create shoot clusters on top of it.
+
+### Creating a (Hosted) `Shoot` Cluster
+
+In order to create a first (hosted) shoot cluster, just run:
+
+```bash
+kubectl apply -f example/provider-local/shoot.yaml
+```
+
+You can wait for the `Shoot` to be ready by running:
+
+```bash
+NAMESPACE=garden-local ./hack/usage/wait-for.sh shoot local APIServerAvailable ControlPlaneHealthy ObservabilityComponentsHealthy EveryNodeReady SystemComponentsHealthy
+```
+
+Alternatively, you can run `kubectl -n garden-local get shoot local` and wait for the `LAST OPERATION` to reach `100%`:
+
+```bash
+NAME    CLOUDPROFILE   PROVIDER   REGION   K8S VERSION   HIBERNATION   LAST OPERATION            STATUS    AGE
+local   local          local      local    1.35.0        Awake         Create Processing (43%)   healthy   94s
+```
+
+If you don't need any worker pools, you can create a workerless `Shoot` by running:
+
+```bash
+kubectl apply -f example/provider-local/shoot-workerless.yaml
+```
+
+#### Accessing the `Shoot` Cluster
+
+To access the `Shoot`, you can acquire a `kubeconfig` by using the [`shoots/adminkubeconfig` subresource](../usage/shoot/shoot_access.md#shootsadminkubeconfig-subresource).
+
+For convenience a [helper script](../../hack/usage/generate-kubeconfig.sh) is provided in the `hack` directory.
+By default, the script will generate an admin kubeconfig for a `Shoot` named "local" in the `garden-local` namespace valid for one hour.
+
+```bash
+./hack/usage/generate-kubeconfig.sh > admin-kubeconf.yaml
+```
+
+To generate a viewer kubeconfig instead of an admin kubeconfig, use the `--viewer` flag:
+
+```bash
+./hack/usage/generate-kubeconfig.sh --viewer > viewer-kubeconf.yaml
+```
+
+> [!NOTE]
+> Keep in mind that using a VPN on your local machine could cause problems with the setup, and the shoot's kubeconfig could fail with connection issues.
+> If you experience connection problems using the shoot's kubeconfig, try disabling the VPN first.
+
+If you want to change the default namespace or shoot name, you can do so by passing different values as arguments.
+
+```bash
+./hack/usage/generate-kubeconfig.sh --namespace <namespace> --shoot-name <shootname> > admin-kubeconf.yaml
+```
+
 ## Running E2E Tests for `gardenadm`
 
 Based on the described setup, you can execute the e2e test suite for `gardenadm`:
