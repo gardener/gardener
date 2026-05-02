@@ -965,6 +965,141 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 			}).Should(Succeed())
 		})
 
+		It("should set .spec.seedRef on shoot-owned ControllerInstallations when the kind/type is shared between the self-hosted shoot and a hosted shoot", func() {
+			sharedExtType := "shared-ext"
+
+			By("Create ControllerRegistration for the shared extension type")
+			sharedControllerRegistration := &gardencorev1beta1.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "ctrlreg-shared-",
+					Labels:       map[string]string{testID: testRunID},
+				},
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Resources: []gardencorev1beta1.ControllerResource{
+						{Kind: extensionsv1alpha1.ExtensionResource, Type: sharedExtType, WorkerlessSupported: ptr.To(true)},
+					},
+				},
+			}
+			Expect(testClient.Create(ctx, sharedControllerRegistration)).To(Succeed())
+			log.Info("Created shared ControllerRegistration", "controllerRegistration", client.ObjectKeyFromObject(sharedControllerRegistration))
+
+			DeferCleanup(func() {
+				By("Revert self-hosted Shoot extensions")
+				shootRevert := client.MergeFrom(selfHostedShoot.DeepCopy())
+				selfHostedShoot.Spec.Extensions = []gardencorev1beta1.Extension{{Type: selfHostedProviderType}}
+				Expect(testClient.Patch(ctx, selfHostedShoot, shootRevert)).To(Or(Succeed(), BeNotFoundError()))
+
+				By("Delete hosted shoot")
+				hostedShoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "hosted-" + selfHostedSeedName, Namespace: testNamespace.Name}}
+				Expect(testClient.Delete(ctx, hostedShoot)).To(Or(Succeed(), BeNotFoundError()))
+
+				By("Wait for the shared ControllerInstallation to be cleaned up")
+				Eventually(func(g Gomega) {
+					controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+					g.Expect(mgrClient.List(ctx, controllerInstallationList, client.MatchingFields{
+						core.RegistrationRefName: sharedControllerRegistration.Name,
+					})).To(Succeed())
+					g.Expect(controllerInstallationList.Items).To(BeEmpty())
+				}).Should(Succeed())
+
+				By("Wait for hosted shoot to be fully deleted")
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(hostedShoot), hostedShoot)
+				}).Should(BeNotFoundError())
+
+				By("Delete shared ControllerRegistration")
+				Expect(testClient.Delete(ctx, sharedControllerRegistration)).To(Or(Succeed(), BeNotFoundError()))
+
+				By("Wait until manager has observed shared ControllerRegistration deletion")
+				Eventually(func() error {
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(sharedControllerRegistration), sharedControllerRegistration)
+				}).Should(BeNotFoundError())
+			})
+
+			By("Update self-hosted Shoot to use the shared extension type")
+			shootPatch := client.MergeFrom(selfHostedShoot.DeepCopy())
+			selfHostedShoot.Spec.Extensions = append(selfHostedShoot.Spec.Extensions, gardencorev1beta1.Extension{Type: sharedExtType})
+			Expect(testClient.Patch(ctx, selfHostedShoot, shootPatch)).To(Succeed())
+
+			By("Create a hosted Shoot on the self-hosted seed that also uses the shared extension type")
+			hostedShoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "hosted-" + selfHostedSeedName,
+					Namespace: testNamespace.Name,
+					Labels:    map[string]string{testID: testRunID},
+				},
+				Spec: gardencorev1beta1.ShootSpec{
+					SecretBindingName: ptr.To("my-provider-account"),
+					CloudProfile: &gardencorev1beta1.CloudProfileReference{
+						Kind: "CloudProfile",
+						Name: "test-cloudprofile",
+					},
+					Region: "foo-region",
+					Provider: gardencorev1beta1.Provider{
+						Type: selfHostedProviderType,
+						Workers: []gardencorev1beta1.Worker{{
+							Name:    "worker",
+							Minimum: 1,
+							Maximum: 1,
+							Machine: gardencorev1beta1.Machine{
+								Type: "large",
+								Image: &gardencorev1beta1.ShootMachineImage{
+									Name:    selfHostedProviderType,
+									Version: ptr.To("0.0.0"),
+								},
+							},
+							CRI: &gardencorev1beta1.CRI{
+								Name: gardencorev1beta1.CRINameContainerD,
+								ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{
+									Type: selfHostedProviderType,
+								}},
+							},
+						}},
+					},
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						Version: "1.31.1",
+					},
+					Networking: &gardencorev1beta1.Networking{
+						Type: ptr.To(selfHostedProviderType),
+					},
+					Extensions: []gardencorev1beta1.Extension{
+						{Type: sharedExtType},
+					},
+					SeedName: &selfHostedSeedName,
+				},
+			}
+			Expect(testClient.Create(ctx, hostedShoot)).To(Succeed())
+			log.Info("Created hosted Shoot on self-hosted seed", "shoot", client.ObjectKeyFromObject(hostedShoot))
+
+			By("Expect shoot reconciler to create a ControllerInstallation for the shared registration (for the self-hosted shoot)")
+			Eventually(func(g Gomega) {
+				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
+					core.RegistrationRefName: sharedControllerRegistration.Name,
+					core.ShootRefName:        selfHostedSeedName,
+					core.ShootRefNamespace:   v1beta1constants.GardenNamespace,
+				})).To(Succeed())
+				g.Expect(controllerInstallationList.Items).To(HaveLen(1))
+			}).Should(Succeed())
+
+			By("Expect seed reconciler to patch .spec.seedRef because the hosted shoot also needs this kind/type on the seed")
+			Eventually(func(g Gomega) {
+				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
+					core.RegistrationRefName: sharedControllerRegistration.Name,
+					core.SeedRefName:         selfHostedSeedName,
+				})).To(Succeed())
+				g.Expect(controllerInstallationList.Items).To(HaveLen(1))
+				g.Expect(controllerInstallationList.Items[0].Spec.SeedRef).To(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Name": Equal(selfHostedSeedName),
+				})), "seed reconciler must set .spec.seedRef when hosted shoots also need this kind/type")
+				g.Expect(controllerInstallationList.Items[0].Spec.ShootRef).To(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Name":      Equal(selfHostedSeedName),
+					"Namespace": Equal(v1beta1constants.GardenNamespace),
+				})), "spec.shootRef must remain for the shoot gardenlet")
+			}).Should(Succeed())
+		})
+
 		It("should clear .spec.seedRef from shoot-owned ControllerInstallations when the seed no longer needs them", func() {
 			clearType := "clear-ext"
 

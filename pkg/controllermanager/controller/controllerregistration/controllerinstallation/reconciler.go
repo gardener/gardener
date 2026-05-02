@@ -132,15 +132,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	// selfHostedShoot is non-nil when the seed being reconciled is a self-hosted shoot cluster. In that case the
 	// shoot reconciler already manages ControllerInstallations with .spec.shootRef for this shoot. The seed reconciler
-	// must only handle extensions exclusively needed by the seed role (i.e., not already covered by the shoot
-	// reconciler), and creates those ControllerInstallations with .spec.shootRef as well (not .spec.seedRef).
+	// subtracts kind/types exclusively needed by the self-hosted shoot (i.e., those not also needed by shoots hosted
+	// on this seed and not independently needed by the seed itself) to avoid creating duplicate ControllerInstallations
+	// for them. Kind/types needed by both the self-hosted shoot and hosted shoots or the seed itself remain so that
+	// the seed reconciler can set .spec.seedRef on the existing shoot-owned ControllerInstallations.
 	var selfHostedShoot *gardencorev1beta1.Shoot
+	var seedKindTypes sets.Set[string]
 	if r.Kind == SeedKind {
 		seed, ok := obj.(*gardencorev1beta1.Seed)
 		if !ok {
 			return reconcile.Result{}, fmt.Errorf("cannot convert object of type %T to *gardencorev1beta1.Seed", obj)
 		}
-		wantedKindTypeCombinations = wantedKindTypeCombinations.Union(computeKindTypesForSeed(seed, controllerRegistrationList))
+		seedKindTypes = computeKindTypesForSeed(seed, controllerRegistrationList)
+		wantedKindTypeCombinations = wantedKindTypeCombinations.Union(seedKindTypes)
 
 		if metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSelfHostedShootCluster) {
 			shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: seed.Name, Namespace: v1beta1constants.GardenNamespace}}
@@ -174,7 +178,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			Union(computeKindTypesForBackupBuckets(shootBackupBucketNameToObject, selfHostedShoot, ShootKind)).
 			Union(computeKindTypesForBackupEntries(log, shootBackupEntryList, shootBackupBucketNameToObject)).
 			Union(gardenerutils.ComputeRequiredExtensionsForShoot(selfHostedShoot, nil, controllerRegistrationList, nil, nil))
-		wantedKindTypeCombinations = wantedKindTypeCombinations.Difference(shootKindTypeCombinations)
+		wantedKindTypeCombinations = wantedKindTypeCombinations.Difference(shootKindTypeCombinations.Difference(wantedKindTypeCombinationForShoots).Difference(seedKindTypes))
 
 		shootNeededRegistrationNames = registrationNamesForKindTypes(shootKindTypeCombinations, controllerRegistrations)
 	}

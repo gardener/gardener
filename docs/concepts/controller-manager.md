@@ -108,7 +108,8 @@ It also deletes every existing `ControllerInstallation` whose referenced `Contro
 For example, if the shoots in the seed are no longer using the DNS provider `aws-route53`, then the controller proceeds to delete the respective `ControllerInstallation` object.
 
 When the `Seed` carries the label `seed.gardener.cloud/self-hosted-shoot-cluster=true`, the seed cluster is also a self-hosted shoot cluster managed by the ["Self-Hosted Shoot" Reconciler](#self-hosted-shoot-reconciler).
-In this case, the seed reconciler subtracts all kind/type combinations already covered by the self-hosted shoot (its own extensions, `BackupBucket`s, and `BackupEntry`s referencing the shoot) from the set of required kind/types, so that only extensions exclusively needed by the seed role remain.
+In this case, the seed reconciler subtracts kind/type combinations that are exclusively needed by the self-hosted shoot (i.e., not also needed by shoots hosted on this seed) from the set of required kind/types.
+Kind/types needed by both the self-hosted shoot and hosted shoots remain in the set so that the seed reconciler can set `.spec.seedRef` on the existing shoot-owned `ControllerInstallation`s.
 `ControllerInstallation`s created by the seed reconciler for these seed-exclusive extensions carry both `.spec.seedRef` and `.spec.shootRef`, making them visible to the seed gardenlet's cache while ensuring extensions are not uninstalled if the seed is later deregistered.
 These `ControllerInstallation`s are marked with a `seed-ref-name` label so that the shoot reconciler does not accidentally manage or delete them.
 If a `ControllerInstallation` already exists for the shoot (created by the shoot reconciler) and the seed also needs it, the seed reconciler patches `.spec.seedRef` onto it instead of creating a duplicate.
