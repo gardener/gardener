@@ -34,7 +34,7 @@ x-machine: &machine
 
 services:
   apiserver-lb:
-    image: envoyproxy/envoy:v1.37.2
+    image: envoyproxy/envoy:v1.38.0
     container_name: gind-apiserver-lb
     ports:
     - "172.18.255.123:443:443"
