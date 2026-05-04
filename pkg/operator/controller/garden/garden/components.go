@@ -241,7 +241,7 @@ func (r *Reconciler) instantiateComponents(
 	c.extensions = r.newExtensions(log, garden, extensionList)
 
 	// etcd backup entry
-	if helper.GetETCDMainBackup(garden) != nil {
+	if helper.GetETCDMainBackup(garden) != nil && features.DefaultFeatureGate.Enabled(features.BackupEntryForGarden) {
 		c.etcdMainBackupEntry = r.newEtcdMainBackupEntry(log, garden)
 	}
 

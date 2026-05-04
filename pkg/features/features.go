@@ -140,6 +140,13 @@ const (
 	// owner: @acumino @ary1992 @shafeeqes @seshachalam-yv
 	// alpha: v1.142.0
 	LiveControlPlaneMigration featuregate.Feature = "LiveControlPlaneMigration"
+
+	// BackupEntryForGarden enables deploying a BackupEntry extension object in the garden controller
+	// alongside the BackupBucket when etcd backup is configured. The generic actuator then creates the
+	// etcd-backup secret, aligning the garden with the same extension contract that shoot clusters use.
+	// owner: @rfranzke
+	// alpha: v1.142.0
+	BackupEntryForGarden featuregate.Feature = "BackupEntryForGarden"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -186,6 +193,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DisableNginxIngressInSeed:      {Default: false, PreRelease: featuregate.Alpha},
 	DisableNginxIngressInShoot:     {Default: false, PreRelease: featuregate.Alpha},
 	LiveControlPlaneMigration:      {Default: false, PreRelease: featuregate.Alpha},
+	BackupEntryForGarden:           {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

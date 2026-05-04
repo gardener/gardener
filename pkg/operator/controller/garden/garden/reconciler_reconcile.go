@@ -164,6 +164,7 @@ func (r *Reconciler) reconcile(
 
 	var (
 		backupConfigured        = helper.GetETCDMainBackup(garden) != nil
+		backupEntryForGarden    = features.DefaultFeatureGate.Enabled(features.BackupEntryForGarden)
 		virtualClusterClientSet kubernetes.Interface
 		virtualClusterClient    client.Client
 		defaultEncryptedGVKs    = append(gardenerutils.DefaultGardenerGVKsForEncryption(), gardenerutils.DefaultGVKsForEncryption()...)
@@ -280,12 +281,12 @@ func (r *Reconciler) reconcile(
 				c.etcdMainBackupEntry.SetBackupBucketProviderStatus(backupBucket.Status.ProviderStatus)
 				return component.OpWait(c.etcdMainBackupEntry).Deploy(ctx)
 			},
-			SkipIf:       !backupConfigured,
+			SkipIf:       !backupConfigured || !backupEntryForGarden,
 			Dependencies: flow.NewTaskIDs(deployEtcdBackupBucket),
 		})
 		deployEtcds = g.Add(flow.Task{
 			Name:         "Deploying main and events ETCDs of virtual garden",
-			Fn:           r.deployEtcdsFunc(garden, c.etcdMain, c.etcdEvents),
+			Fn:           r.deployEtcdsFunc(garden, c.etcdMain, c.etcdEvents, backupBucket, backupEntryForGarden),
 			Dependencies: flow.NewTaskIDs(waitUntilEtcdDruidReady, deployEtcdBackupEntry),
 		})
 		waitUntilEtcdsReady = g.Add(flow.Task{
@@ -914,7 +915,7 @@ func etcdMainBackupBucketNameAndPrefix(garden *operatorv1alpha1.Garden) (string,
 	return "garden-" + string(garden.UID), prefix
 }
 
-func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, etcdEvents etcd.Interface) func(context.Context) error {
+func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, etcdEvents etcd.Interface, backupBucket *extensionsv1alpha1.BackupBucket, backupEntryForGarden bool) func(context.Context) error {
 	return func(ctx context.Context) error {
 		if backup := helper.GetETCDMainBackup(garden); backup != nil {
 			snapshotSchedule, err := timewindow.DetermineSchedule(
@@ -934,11 +935,19 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 				backupLeaderElection = r.Config.Controllers.Garden.ETCDConfig.BackupLeaderElection
 			}
 
+			secretRefName := v1beta1constants.BackupSecretName
+			if !backupEntryForGarden {
+				secretRefName = backup.SecretRef.Name
+				if backupBucket.Status.GeneratedSecretRef != nil {
+					secretRefName = backupBucket.Status.GeneratedSecretRef.Name
+				}
+			}
+
 			container, prefix := etcdMainBackupBucketNameAndPrefix(garden)
 
 			etcdMain.SetBackupConfig(&etcd.BackupConfig{
 				Provider:             backup.Provider,
-				SecretRefName:        v1beta1constants.BackupSecretName,
+				SecretRefName:        secretRefName,
 				Container:            container,
 				Prefix:               prefix,
 				FullSnapshotSchedule: snapshotSchedule,
