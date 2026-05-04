@@ -147,6 +147,7 @@ func run(ctx context.Context, opts *Options) error {
 
 	var (
 		g                       = flow.NewGraph("join")
+		reporter                = flow.NewCommandLineProgressReporter(opts.ErrOut)
 		gardenerNodeAgentSecret *corev1.Secret
 		etcdRoleToTLSSecretsMap = make(etcdRoleToTLSSecrets, 2)
 
@@ -269,7 +270,8 @@ func run(ctx context.Context, opts *Options) error {
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
-		Log: opts.Log,
+		Log:              opts.Log,
+		ProgressReporter: reporter,
 	}); err != nil {
 		return flow.Errors(err)
 	}
@@ -467,7 +469,7 @@ func (e etcdRoleToTLSSecrets) writeToDisk(fs afero.Afero) error {
 
 			for key, value := range secret.Data {
 				path := filepath.Join(dir, key)
-				if err := fs.WriteFile(path, value, 0640); err != nil {
+				if err := fs.WriteFile(path, value, 0o640); err != nil {
 					return fmt.Errorf("failed to write file to %s: %w", path, err)
 				}
 			}

@@ -95,7 +95,8 @@ func run(ctx context.Context, opts *Options) error {
 	}
 
 	var (
-		g = flow.NewGraph("bootstrap")
+		g        = flow.NewGraph("bootstrap")
+		reporter = flow.NewCommandLineProgressReporter(opts.ErrOut)
 
 		deployNamespace = g.Add(flow.Task{
 			Name: "Deploying control plane namespace",
@@ -320,7 +321,8 @@ func run(ctx context.Context, opts *Options) error {
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
-		Log: opts.Log,
+		Log:              opts.Log,
+		ProgressReporter: reporter,
 	}); err != nil {
 		return flow.Errors(err)
 	}

@@ -73,7 +73,7 @@ func run(ctx context.Context, opts *Options) error {
 	if err := b.FS.MkdirAll(dir, os.ModeDir); err != nil {
 		return fmt.Errorf("failed creating config directory location dir %s: %w", dir, err)
 	}
-	if err := b.FS.WriteFile(cmd.ConfigDirLocation, []byte(opts.ConfigDir), 0640); err != nil {
+	if err := b.FS.WriteFile(cmd.ConfigDirLocation, []byte(opts.ConfigDir), 0o640); err != nil {
 		return fmt.Errorf("failed writing config directory location file %s: %w", cmd.ConfigDirLocation, err)
 	}
 
@@ -91,6 +91,7 @@ func run(ctx context.Context, opts *Options) error {
 
 	var (
 		g                = flow.NewGraph("init")
+		reporter         = flow.NewCommandLineProgressReporter(opts.ErrOut)
 		allowBackup      = v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil) != nil
 		kubeProxyEnabled = v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 
@@ -444,7 +445,8 @@ func run(ctx context.Context, opts *Options) error {
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
-		Log: opts.Log,
+		Log:              opts.Log,
+		ProgressReporter: reporter,
 	}); err != nil {
 		return flow.Errors(err)
 	}
@@ -508,6 +510,7 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Garden
 	var (
 		clientSet kubernetes.Interface
 		g         = flow.NewGraph("bootstrap")
+		reporter  = flow.NewCommandLineProgressReporter(opts.ErrOut)
 
 		initializeSecretsManagement = g.Add(flow.Task{
 			Name:   "Initializing secrets management",
@@ -562,7 +565,8 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Garden
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
-		Log: b.Logger,
+		Log:              b.Logger,
+		ProgressReporter: reporter,
 	}); err != nil {
 		return nil, flow.Errors(err)
 	}
