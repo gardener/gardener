@@ -106,6 +106,8 @@ type ResourceManagerControllerConfiguration struct {
 	CSRApprover CSRApproverControllerConfig `json:"csrApprover"`
 	// ManagedResource is the configuration for the managed resource controller.
 	ManagedResource ManagedResourceControllerConfig `json:"managedResource"`
+	// IstioClusterConfiguration is the configuration for the istio-cluster-configuration controller.
+	IstioClusterConfiguration IstioClusterConfigurationControllerConfig `json:"istioClusterConfiguration"`
 	// NetworkPolicy is the configuration for the networkpolicy controller.
 	NetworkPolicy NetworkPolicyControllerConfig `json:"networkPolicy"`
 	// NodeCriticalComponents is the configuration for the node critical components controller.
@@ -135,6 +137,15 @@ type GarbageCollectorControllerConfig struct {
 	// SyncPeriod is the duration how often the controller performs its reconciliation.
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
+}
+
+// IstioClusterConfigurationControllerConfig is the configuration for the istio-cluster-configuration controller.
+type IstioClusterConfigurationControllerConfig struct {
+	// Enabled defines whether this controller is enabled.
+	Enabled bool `json:"enabled"`
+	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // HealthControllerConfig is the configuration for the health controller.

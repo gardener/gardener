@@ -323,6 +323,7 @@ build:
             - pkg/resourcemanager/controller/health/health
             - pkg/resourcemanager/controller/health/progressing
             - pkg/resourcemanager/controller/health/utils
+            - pkg/resourcemanager/controller/istioclusterconfiguration
             - pkg/resourcemanager/controller/managedresource
             - pkg/resourcemanager/controller/networkpolicy
             - pkg/resourcemanager/controller/node
@@ -349,6 +350,7 @@ build:
             - pkg/utils/errors
             - pkg/utils/flow
             - pkg/utils/gardener
+            - pkg/utils/istio
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/client
             - pkg/utils/kubernetes/health

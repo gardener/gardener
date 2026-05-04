@@ -38,6 +38,7 @@ func SetObjectDefaults_ResourceManagerConfiguration(in *ResourceManagerConfigura
 	SetDefaults_HealthControllerConfig(&in.Controllers.Health)
 	SetDefaults_CSRApproverControllerConfig(&in.Controllers.CSRApprover)
 	SetDefaults_ManagedResourceControllerConfig(&in.Controllers.ManagedResource)
+	SetDefaults_IstioClusterConfigurationControllerConfig(&in.Controllers.IstioClusterConfiguration)
 	SetDefaults_NetworkPolicyControllerConfig(&in.Controllers.NetworkPolicy)
 	SetDefaults_NodeCriticalComponentsControllerConfig(&in.Controllers.NodeCriticalComponents)
 	SetDefaults_NodeAgentReconciliationDelayControllerConfig(&in.Controllers.NodeAgentReconciliationDelay)
