@@ -33,6 +33,10 @@ const ControllerName = "controllerinstallation-shoot"
 
 // AddToManager adds the ControllerInstallation Reconciler to the given manager.
 func AddToManager(mgr manager.Manager, config controllermanagerconfigv1alpha1.ControllerRegistrationControllerConfiguration) error {
+	if ptr.Deref(config.ConcurrentSyncs, -1) == 0 {
+		return nil
+	}
+
 	var (
 		log = mgr.GetLogger().WithValues("controller", ControllerName)
 		r   = &controllerinstallation.Reconciler{

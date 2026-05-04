@@ -33,6 +33,10 @@ const ControllerName = "managedseedset"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
+	if ptr.Deref(r.Config.ConcurrentSyncs, -1) == 0 {
+		return nil
+	}
+
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}

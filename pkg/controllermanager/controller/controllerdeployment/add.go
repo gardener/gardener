@@ -24,6 +24,10 @@ const (
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager) error {
+	if ptr.Deref(r.Config.ConcurrentSyncs, -1) == 0 {
+		return nil
+	}
+
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
