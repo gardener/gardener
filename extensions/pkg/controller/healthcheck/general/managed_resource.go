@@ -47,7 +47,7 @@ func (healthChecker *ManagedResourceHealthChecker) InjectSourceClient(client cli
 
 // SetLoggerSuffix injects the logger
 func (healthChecker *ManagedResourceHealthChecker) SetLoggerSuffix(provider, extension string) {
-	healthChecker.logger = log.Log.WithName(fmt.Sprintf("%s-%s-healthcheck-managed-resource", provider, extension))
+	healthChecker.logger = log.Log.WithName("healthcheck-managed-resource").WithValues("provider", provider, "extension", extension)
 }
 
 // configurationProblemRegex is used to check if a not healthy managed resource has a configuration problem.

@@ -74,7 +74,7 @@ func (h *ShootDeploymentHealthChecker) InjectTargetClient(targetClient client.Cl
 
 // SetLoggerSuffix injects the logger
 func (h *deploymentHealthChecker) SetLoggerSuffix(provider, extension string) {
-	h.logger = log.Log.WithName(fmt.Sprintf("%s-%s-healthcheck-deployment", provider, extension))
+	h.logger = log.Log.WithName("healthcheck-deployment").WithValues("provider", provider, "extension", extension)
 }
 
 // Check executes the health check

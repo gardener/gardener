@@ -74,7 +74,7 @@ func (h *ShootDaemonSetHealthChecker) InjectTargetClient(targetClient client.Cli
 
 // SetLoggerSuffix injects the logger
 func (h *daemonSetHealthChecker) SetLoggerSuffix(provider, extension string) {
-	h.logger = log.Log.WithName(fmt.Sprintf("%s-%s-healthcheck-daemonset", provider, extension))
+	h.logger = log.Log.WithName("healthcheck-daemonset").WithValues("provider", provider, "extension", extension)
 }
 
 // Check executes the health check

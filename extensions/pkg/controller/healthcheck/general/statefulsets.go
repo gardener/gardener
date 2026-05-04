@@ -74,7 +74,7 @@ func (h *ShootStatefulSetHealthChecker) InjectTargetClient(targetClient client.C
 
 // SetLoggerSuffix injects the logger
 func (h *statefulSetHealthChecker) SetLoggerSuffix(provider, extension string) {
-	h.logger = log.Log.WithName(fmt.Sprintf("%s-%s-healthcheck-statefulset", provider, extension))
+	h.logger = log.Log.WithName("healthcheck-statefulset").WithValues("provider", provider, "extension", extension)
 }
 
 // Check executes the health check

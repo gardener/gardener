@@ -84,7 +84,7 @@ func (h *DefaultHealthChecker) InjectTargetClient(targetClient client.Client) {
 
 // SetLoggerSuffix injects the logger.
 func (h *DefaultHealthChecker) SetLoggerSuffix(provider, extension string) {
-	h.logger = log.Log.WithName(fmt.Sprintf("%s-%s-healthcheck-nodes", provider, extension))
+	h.logger = log.Log.WithName("healthcheck-nodes").WithValues("provider", provider, "extension", extension)
 }
 
 // Check executes the health check.
