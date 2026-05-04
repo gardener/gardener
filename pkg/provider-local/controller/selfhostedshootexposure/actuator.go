@@ -120,12 +120,9 @@ func (a *actuator) ForceDelete(_ context.Context, _ logr.Logger, _ *extensionsv1
 }
 
 func endpointSliceFamiliesForCluster(cluster *extensionscontroller.Cluster) []discoveryv1.AddressType {
-	if cluster == nil || cluster.Shoot == nil || cluster.Shoot.Spec.Networking == nil {
-		return nil
-	}
 	families := make([]discoveryv1.AddressType, 0, len(cluster.Shoot.Spec.Networking.IPFamilies))
-	for _, f := range cluster.Shoot.Spec.Networking.IPFamilies {
-		switch f {
+	for _, family := range cluster.Shoot.Spec.Networking.IPFamilies {
+		switch family {
 		case gardencorev1beta1.IPFamilyIPv4:
 			families = append(families, discoveryv1.AddressTypeIPv4)
 		case gardencorev1beta1.IPFamilyIPv6:
@@ -169,7 +166,7 @@ func endpointSliceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposu
 			}
 			ip, err := netip.ParseAddr(address.Address)
 			if err != nil {
-				continue
+				return nil, fmt.Errorf("could not parse address %q for endpoint %q: %w", address.Address, endpoint.NodeName, err)
 			}
 			// Using ip.Is4() here excludes IPv4-mapped IPv6 addresses (like ::ffff:192.0.2.1)
 			if ip.Is4() != (family == discoveryv1.AddressTypeIPv4) {
