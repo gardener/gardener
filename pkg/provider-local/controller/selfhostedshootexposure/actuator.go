@@ -14,11 +14,11 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -33,19 +33,27 @@ import (
 const portName = "https"
 
 type actuator struct {
-	client client.Client
+	// runtimeClient uses provider-local's in-cluster config, e.g., for the seed/bootstrap cluster it runs in.
+	// It's used to interact with extension objects. By default, it's also used as the provider runtimeClient to interact with
+	// infrastructure resources, unless a kubeconfig is specified in the cloudprovider secret.
+	runtimeClient client.Client
 }
 
 func newActuator(mgr manager.Manager) extensionselfhostedshootexposure.Actuator {
-	return &actuator{client: mgr.GetClient()}
+	return &actuator{runtimeClient: mgr.GetClient()}
 }
 
 func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, exposure *extensionsv1alpha1.SelfHostedShootExposure, cluster *extensionscontroller.Cluster) ([]corev1.LoadBalancerIngress, error) {
-	service := serviceForExposure(exposure)
-	if err := controllerutil.SetControllerReference(exposure, service, a.client.Scheme()); err != nil {
-		return nil, fmt.Errorf("could not set controller reference on Service: %w", err)
+	providerClient, err := local.GetProviderClient(ctx, log, a.runtimeClient, corev1.SecretReference{
+		Name:      exposure.Spec.CredentialsRef.Name,
+		Namespace: exposure.Spec.CredentialsRef.Namespace,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not create ProviderClient: %w", err)
 	}
-	if err := a.client.Patch(ctx, service, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+
+	service := serviceForExposure(exposure)
+	if err := providerClient.Patch(ctx, service, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 		return nil, fmt.Errorf("could not patch Service: %w", err)
 	}
 
@@ -54,10 +62,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, exposure *ext
 		if err != nil {
 			return nil, fmt.Errorf("could not build %s EndpointSlice: %w", family, err)
 		}
-		if err := controllerutil.SetControllerReference(exposure, slice, a.client.Scheme()); err != nil {
-			return nil, fmt.Errorf("could not set controller reference on %s EndpointSlice: %w", family, err)
-		}
-		if err := a.client.Patch(ctx, slice, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+		if err := providerClient.Patch(ctx, slice, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 			return nil, fmt.Errorf("could not patch %s EndpointSlice: %w", family, err)
 		}
 	}
@@ -73,8 +78,41 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, exposure *ext
 	return service.Status.LoadBalancer.Ingress, nil
 }
 
-func (a *actuator) Delete(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.SelfHostedShootExposure, _ *extensionscontroller.Cluster) error {
-	return nil
+func (a *actuator) Delete(ctx context.Context, log logr.Logger, exposure *extensionsv1alpha1.SelfHostedShootExposure, _ *extensionscontroller.Cluster) error {
+	providerClient, err := local.GetProviderClient(ctx, log, a.runtimeClient, corev1.SecretReference{
+		Name:      exposure.Spec.CredentialsRef.Name,
+		Namespace: exposure.Spec.CredentialsRef.Namespace,
+	})
+	if err != nil {
+		return fmt.Errorf("could not create ProviderClient: %w", err)
+	}
+
+	// Explicitly delete the Service and wait for it to be gone so the LoadBalancer is deprovisioned before
+	// releasing the SelfHostedShootExposure.
+	if err := providerClient.Delete(ctx, serviceForExposure(exposure)); err != nil {
+		if apierrors.IsNotFound(err) {
+			// Service is gone, delete the EndpointSlices. They have no owner references in the provider
+			// cluster so they won't be garbage collected automatically.
+			for _, family := range []discoveryv1.AddressType{discoveryv1.AddressTypeIPv4, discoveryv1.AddressTypeIPv6} {
+				if err := providerClient.Delete(ctx, &discoveryv1.EndpointSlice{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      endpointSliceName(exposure, family),
+						Namespace: exposure.Namespace,
+					},
+				}); client.IgnoreNotFound(err) != nil {
+					return fmt.Errorf("could not delete %s EndpointSlice: %w", family, err)
+				}
+			}
+			log.Info("Service gone, releasing SelfHostedShootExposure")
+			return nil
+		}
+		return err
+	}
+
+	return &reconcilerutils.RequeueAfterError{
+		RequeueAfter: 5 * time.Second,
+		Cause:        fmt.Errorf("waiting for Service to be deleted"),
+	}
 }
 
 func (a *actuator) ForceDelete(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.SelfHostedShootExposure, _ *extensionscontroller.Cluster) error {
